@@ -1,0 +1,6 @@
+version: v2
+deps:
+  - buf.build/bufbuild/protovalidate
+modules:
+  - path: proto
+    name: buf.build/fivebits/cotton
