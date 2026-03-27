@@ -12,6 +12,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -144,20 +145,22 @@ const AppSidebar = () => {
                   <ChevronsUpDown className='ml-auto size-4' />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className='min-w-56 rounded-lg' align='start' sideOffset={4}>
-                  <DropdownMenuLabel className='text-xs text-muted-foreground'>Projects</DropdownMenuLabel>
-                  {projects.map(proj => (
-                    <DropdownMenuItem
-                      key={proj.id}
-                      onSelect={() => {
-                        setActiveProject(proj)
-                        navigate(`/p/${proj.id}/${pagePath}`)
-                      }}
-                    >
-                      <FolderOpen className='size-4' />
-                      {proj.displayName}
-                      {proj.id === activeProject?.id && <Check className='ml-auto size-4' />}
-                    </DropdownMenuItem>
-                  ))}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className='text-xs text-muted-foreground'>Projects</DropdownMenuLabel>
+                    {projects.map(proj => (
+                      <DropdownMenuItem
+                        key={proj.id}
+                        onSelect={() => {
+                          setActiveProject(proj)
+                          navigate(`/p/${proj.id}/${pagePath}`)
+                        }}
+                      >
+                        <FolderOpen className='size-4' />
+                        {proj.displayName}
+                        {proj.id === activeProject?.id && <Check className='ml-auto size-4' />}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
                   {projects.length === 0 && !creatingProject && (
                     <DropdownMenuItem disabled>No projects yet</DropdownMenuItem>
                   )}
