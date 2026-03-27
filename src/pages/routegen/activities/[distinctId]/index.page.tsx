@@ -120,8 +120,12 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
                   <Calendar className='w-3 h-3' />
                   First seen{' '}
                   <HoverSwap
-                    primary={firstSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    secondary={formatClock(firstSeen)}
+                    primary={
+                      firstSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+                      ', ' +
+                      firstSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                    }
+                    secondary={formatRelative(firstSeen)}
                   />
                 </span>
               )}
@@ -130,8 +134,12 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
                   <Clock className='w-3 h-3' />
                   Last seen{' '}
                   <HoverSwap
-                    primary={lastSeenRelative}
-                    secondary={lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    primary={
+                      lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+                      ', ' +
+                      lastSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+                    }
+                    secondary={lastSeenRelative}
                   />
                 </span>
               )}

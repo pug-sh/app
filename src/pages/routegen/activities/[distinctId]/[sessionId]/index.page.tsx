@@ -155,13 +155,9 @@ const SessionSummary = ({
           {startTime && (
             <span className='flex items-center gap-1'>
               <Calendar className='w-3 h-3' />
-              {startTime.toLocaleString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
-              {endTime && ` — ${endTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+              {startTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })},{' '}
+              {startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+              {endTime && ` — ${endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`}
             </span>
           )}
           {(browser || os) && (
