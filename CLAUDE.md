@@ -58,6 +58,25 @@ Standard shadcn/ui with default Base UI primitives. Uses `render` prop for compo
 
 Update components: `pnpm dlx shadcn@latest add <component> --overwrite`
 
+### Design Aesthetic
+
+Minimal, card-free layouts. Avoid wrapping content in Card components — use section divider headers instead:
+
+```tsx
+<div className='flex items-center gap-2 mb-2'>
+  <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Section Title</span>
+  <div className='flex-1 h-px bg-border' />
+  <span className='text-[10px] text-muted-foreground'>count</span>
+</div>
+```
+
+Tables use plain `<table>` elements (not the Table component), with:
+- Headers: `text-[11px] font-medium text-muted-foreground uppercase tracking-wider`
+- Rows: `border-b border-border/50 transition-colors hover:bg-muted/40`
+- Destructive/edit actions hidden until row hover (`opacity-0 group-hover:opacity-100`)
+
+Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
+
 ### Form Validation
 
 Lightweight inline validation only — disable buttons when required fields are empty, basic format checks. The protovalidate interceptor does the heavy lifting: it validates every outgoing message against buf.validate constraints (required, string patterns, ranges, CEL expressions) before the request leaves the browser. Don't duplicate proto constraints in the UI.

@@ -7,9 +7,7 @@ import {
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
@@ -18,6 +16,7 @@ import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Loader2, Play, Plus, TrendingUp, Users, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+import ProjectLink from '@/components/project-link'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -62,14 +61,19 @@ const tsToDate = (ts: Timestamp | undefined): Date | null => {
 }
 
 const formatAxisDate = (d: Date, granularity: Granularity): string => {
-  if (granularity === Granularity.HOUR) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  if (granularity === Granularity.HOUR)
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
   if (granularity === Granularity.MONTH) return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const formatTooltipDate = (d: Date, granularity: Granularity): string => {
   if (granularity === Granularity.HOUR)
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    return (
+      d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ', ' +
+      d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    )
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
@@ -148,18 +152,15 @@ const LineChart = ({
   const cw = W - pad.left - pad.right
   const ch = H - pad.top - pad.bottom
 
-  // Compute y range
   const allVals = data.flatMap(d => d.values)
   const rawMax = Math.max(...allVals, 0)
   const yMax = niceMax(rawMax)
   const yTicks = 5
   const yStep = yMax / yTicks
 
-  // Scales
   const xScale = (i: number) => pad.left + (i / Math.max(data.length - 1, 1)) * cw
   const yScale = (v: number) => pad.top + ch - (v / yMax) * ch
 
-  // Build paths per series
   const paths = seriesNames.map((_, si) => {
     const pts = data.map((d, i) => ({ x: xScale(i), y: yScale(d.values[si] ?? 0) }))
     const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
@@ -167,7 +168,6 @@ const LineChart = ({
     return { line, area, pts }
   })
 
-  // X-axis labels — show every Nth label to avoid crowding
   const labelStep = Math.max(1, Math.ceil(data.length / 8))
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -188,7 +188,6 @@ const LineChart = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverIdx(null)}
       >
-        {/* Gridlines */}
         {Array.from({ length: yTicks + 1 }, (_, i) => {
           const y = yScale(i * yStep)
           return (
@@ -201,12 +200,10 @@ const LineChart = ({
           )
         })}
 
-        {/* Area fills */}
         {paths.map((p, si) => (
           <path key={`area-${si}`} d={p.area} fill={SERIES_COLORS[si % SERIES_COLORS.length].fill} />
         ))}
 
-        {/* Lines */}
         {paths.map((p, si) => (
           <path
             key={`line-${si}`}
@@ -218,7 +215,6 @@ const LineChart = ({
           />
         ))}
 
-        {/* Dots at hover */}
         {hoverIdx !== null &&
           paths.map((p, si) => (
             <circle
@@ -232,7 +228,6 @@ const LineChart = ({
             />
           ))}
 
-        {/* Hover vertical line */}
         {hoverIdx !== null && (
           <line
             x1={xScale(hoverIdx)}
@@ -245,7 +240,6 @@ const LineChart = ({
           />
         )}
 
-        {/* X-axis labels */}
         {data.map((d, i) => {
           if (i % labelStep !== 0 && i !== data.length - 1) return null
           return (
@@ -255,7 +249,6 @@ const LineChart = ({
           )
         })}
 
-        {/* Invisible hover zones */}
         {data.map((_, i) => (
           <rect
             key={`zone-${i}`}
@@ -269,7 +262,6 @@ const LineChart = ({
         ))}
       </svg>
 
-      {/* Tooltip */}
       {hoverIdx !== null && (
         <div
           className='absolute top-2 pointer-events-none z-10 bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm'
@@ -342,39 +334,37 @@ const DataTable = ({
 }) => {
   if (data.length === 0) return null
   return (
-    <div className='border-t'>
-      <div className='max-h-64 overflow-y-auto'>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className='sticky top-0 bg-card'>Date</TableHead>
-              {seriesNames.map((name, i) => (
-                <TableHead key={i} className='sticky top-0 bg-card text-right'>
-                  <span className='flex items-center gap-1.5 justify-end'>
-                    <span
-                      className='w-2 h-2 rounded-full'
-                      style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
-                    />
-                    {name}
-                  </span>
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((d, i) => (
-              <TableRow key={i}>
-                <TableCell className='text-muted-foreground text-xs'>{formatAxisDate(d.date, granularity)}</TableCell>
-                {d.values.map((v, si) => (
-                  <TableCell key={si} className='text-right font-mono text-sm tabular-nums'>
-                    {v.toLocaleString()}
-                  </TableCell>
-                ))}
-              </TableRow>
+    <div className='max-h-64 overflow-y-auto mt-4'>
+      <table className='w-full'>
+        <thead>
+          <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+            <th className='py-2 pr-2 text-left font-medium sticky top-0 bg-background'>Date</th>
+            {seriesNames.map((name, i) => (
+              <th key={i} className='py-2 pr-2 text-right font-medium sticky top-0 bg-background'>
+                <span className='flex items-center gap-1.5 justify-end'>
+                  <span
+                    className='w-2 h-2 rounded-full'
+                    style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
+                  />
+                  {name}
+                </span>
+              </th>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d, i) => (
+            <tr key={i} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
+              <td className='py-2 pr-2 text-xs text-muted-foreground'>{formatAxisDate(d.date, granularity)}</td>
+              {d.values.map((v, si) => (
+                <td key={si} className='py-2 pr-2 text-right font-mono text-sm tabular-nums'>
+                  {v.toLocaleString()}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -453,7 +443,6 @@ const Insights = () => {
     else handleSegmentQuery()
   }
 
-  // Transform series into chart data
   const seriesNames = series.map(s => s.eventKind || 'unknown')
   const chartData: ChartPoint[] =
     series.length > 0
@@ -490,82 +479,86 @@ const Insights = () => {
         </TabsList>
 
         {/* Query Builder */}
-        <Card className='mb-5'>
-          <CardContent className='pt-4 pb-3'>
-            <form onSubmit={handleSubmit}>
-              <div className='flex flex-wrap items-center gap-2 mb-3'>
-                {eventKinds.map((kind, i) => (
-                  <div key={i} className='flex items-center gap-1'>
-                    <span
-                      className='w-2 h-2 rounded-full shrink-0'
-                      style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
-                    />
-                    <Input
-                      placeholder='event_name'
-                      value={kind}
-                      onChange={e => updateEvent(i, e.target.value)}
-                      className='w-40 h-7 text-sm'
-                    />
-                    {eventKinds.length > 1 && (
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon-xs'
-                        onClick={() => removeEvent(i)}
-                        className='hover:bg-destructive/10 hover:text-destructive'
-                      >
-                        <X />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button type='button' variant='ghost' size='sm' onClick={addEvent}>
-                  <Plus className='w-3 h-3' />
-                  Add
-                </Button>
-              </div>
+        <div className='mb-5'>
+          <div className='flex items-center gap-2 mb-3'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Query</span>
+            <div className='flex-1 h-px bg-border' />
+          </div>
+          <form onSubmit={handleSubmit}>
+            <div className='flex flex-wrap items-center gap-2 mb-3'>
+              {eventKinds.map((kind, i) => (
+                <div key={i} className='flex items-center gap-1'>
+                  <span
+                    className='w-2 h-2 rounded-full shrink-0'
+                    style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
+                  />
+                  <Input
+                    placeholder='event_name'
+                    value={kind}
+                    onChange={e => updateEvent(i, e.target.value)}
+                    className='w-40 h-7 text-sm'
+                  />
+                  {eventKinds.length > 1 && (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon-xs'
+                      onClick={() => removeEvent(i)}
+                      className='hover:bg-destructive/10 hover:text-destructive'
+                    >
+                      <X />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button type='button' variant='ghost' size='sm' onClick={addEvent}>
+                <Plus className='w-3 h-3' />
+                Add
+              </Button>
+            </div>
 
-              <div className='flex flex-wrap items-center gap-3'>
-                <PillGroup
-                  options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
-                  value={rangeIdx}
-                  onChange={setRangeIdx}
-                />
+            <div className='flex flex-wrap items-center gap-3'>
+              <PillGroup
+                options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
+                value={rangeIdx}
+                onChange={setRangeIdx}
+              />
 
-                {tab === 'trends' && (
-                  <>
-                    <div className='w-px h-5 bg-border' />
-                    <PillGroup options={granularities} value={granularity} onChange={setGranularity} />
-                    <div className='w-px h-5 bg-border' />
-                    <PillGroup options={aggregations} value={aggregation} onChange={setAggregation} />
-                  </>
-                )}
+              {tab === 'trends' && (
+                <>
+                  <div className='w-px h-5 bg-border' />
+                  <PillGroup options={granularities} value={granularity} onChange={setGranularity} />
+                  <div className='w-px h-5 bg-border' />
+                  <PillGroup options={aggregations} value={aggregation} onChange={setAggregation} />
+                </>
+              )}
 
-                <Button type='submit' size='sm' disabled={loading || validEvents.length === 0} className='ml-auto'>
-                  {loading ? <Loader2 className='animate-spin' /> : <Play className='w-3.5 h-3.5' />}
-                  Run query
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+              <Button type='submit' size='sm' disabled={loading || validEvents.length === 0} className='ml-auto'>
+                {loading ? <Loader2 className='animate-spin' /> : <Play className='w-3.5 h-3.5' />}
+                Run query
+              </Button>
+            </div>
+          </form>
+        </div>
 
         {/* Trends results */}
         <TabsContent value='trends'>
           {chartData.length > 0 ? (
-            <Card>
-              <CardContent className='pt-4'>
-                <SummaryStats series={seriesNames} data={chartData} />
-                {allZero ? (
-                  <div className='flex items-center justify-center h-48 text-muted-foreground'>
-                    <p className='text-sm'>No events recorded in this period</p>
-                  </div>
-                ) : (
-                  <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
-                )}
-              </CardContent>
+            <div>
+              <div className='flex items-center gap-2 mb-3'>
+                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Results</span>
+                <div className='flex-1 h-px bg-border' />
+              </div>
+              <SummaryStats series={seriesNames} data={chartData} />
+              {allZero ? (
+                <div className='flex items-center justify-center h-48 text-muted-foreground'>
+                  <p className='text-sm'>No events recorded in this period</p>
+                </div>
+              ) : (
+                <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+              )}
               <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
-            </Card>
+            </div>
           ) : (
             !loading && (
               <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
@@ -580,27 +573,38 @@ const Insights = () => {
         {/* Segments results */}
         <TabsContent value='segments'>
           {segmentIds.length > 0 ? (
-            <Card>
-              <CardContent className='pt-4 pb-0'>
-                <p className='text-sm font-medium mb-3'>{segmentIds.length} users found</p>
-              </CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className='w-16'>#</TableHead>
-                    <TableHead>Distinct ID</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+            <div>
+              <div className='flex items-center gap-2 mb-2'>
+                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
+                  Users found
+                </span>
+                <div className='flex-1 h-px bg-border' />
+                <span className='text-[10px] text-muted-foreground'>{segmentIds.length}</span>
+              </div>
+              <table className='w-full'>
+                <thead>
+                  <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+                    <th className='py-2 pr-2 text-left font-medium w-16'>#</th>
+                    <th className='py-2 pr-2 text-left font-medium'>Distinct ID</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {segmentIds.map((id, i) => (
-                    <TableRow key={id}>
-                      <TableCell className='text-muted-foreground tabular-nums'>{i + 1}</TableCell>
-                      <TableCell className='font-mono text-sm'>{id}</TableCell>
-                    </TableRow>
+                    <tr key={id} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
+                      <td className='py-2 pr-2 text-muted-foreground tabular-nums text-xs'>{i + 1}</td>
+                      <td className='py-2 pr-2 text-sm'>
+                        <ProjectLink
+                          href={`/activities/${encodeURIComponent(id)}`}
+                          className='font-mono text-primary hover:underline underline-offset-4'
+                        >
+                          {id}
+                        </ProjectLink>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-            </Card>
+                </tbody>
+              </table>
+            </div>
           ) : (
             !loading && (
               <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>

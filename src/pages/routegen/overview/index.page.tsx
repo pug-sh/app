@@ -1,6 +1,5 @@
 import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
 import { campaignsRPCAtom } from '@/api/rpc'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Page from '@/components/layout/page'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -21,20 +20,24 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
   const display = revealed ? value : value.slice(0, 8) + '••••••••••••'
 
   return (
-    <div>
-      <p className='text-xs font-medium text-muted-foreground mb-1'>{label}</p>
-      <div className='flex items-center gap-1'>
-        <code className='text-xs bg-muted px-2.5 py-1.5 rounded-md flex-1 font-mono break-all'>{display}</code>
-        {masked && (
-          <Button variant='ghost' size='icon-xs' onClick={() => setRevealed(!revealed)}>
-            {revealed ? <EyeOff className='w-3 h-3' /> : <Eye className='w-3 h-3' />}
+    <tr className='border-b border-border/50'>
+      <td className='py-2.5 pr-4 text-xs text-muted-foreground whitespace-nowrap align-middle'>{label}</td>
+      <td className='py-2.5 pr-2 align-middle'>
+        <code className='text-xs font-mono break-all'>{display}</code>
+      </td>
+      <td className='py-2.5 whitespace-nowrap align-middle'>
+        <span className='inline-flex gap-0.5'>
+          {masked && (
+            <Button variant='ghost' size='icon-xs' onClick={() => setRevealed(!revealed)}>
+              {revealed ? <EyeOff className='w-3 h-3' /> : <Eye className='w-3 h-3' />}
+            </Button>
+          )}
+          <Button variant='ghost' size='icon-xs' onClick={handleCopy}>
+            {copied ? <Check className='w-3 h-3 text-green-600' /> : <Copy className='w-3 h-3' />}
           </Button>
-        )}
-        <Button variant='ghost' size='icon-xs' onClick={handleCopy}>
-          {copied ? <Check className='w-3 h-3 text-green-600' /> : <Copy className='w-3 h-3' />}
-        </Button>
-      </div>
-    </div>
+        </span>
+      </td>
+    </tr>
   )
 }
 
@@ -90,47 +93,55 @@ const Overview = () => {
           <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
         </div>
       ) : (
-        <>
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8'>
-            {stats.map(stat => (
-              <Card key={stat.label}>
-                <CardHeader className='flex flex-row items-center justify-between pb-2 space-y-0'>
-                  <CardTitle className='text-sm font-medium text-muted-foreground'>{stat.label}</CardTitle>
-                  <stat.icon className='w-4 h-4 text-muted-foreground' />
-                </CardHeader>
-                <CardContent>
-                  <p className='text-3xl font-semibold tracking-tight'>{stat.value}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className='space-y-8'>
+          {/* Stats */}
+          <section>
+            <div className='flex items-center gap-2 mb-4'>
+              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Campaigns</span>
+              <div className='flex-1 h-px bg-border' />
+              <span className='text-[10px] text-muted-foreground'>{campaigns.length} total</span>
+            </div>
+            <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4'>
+              {stats.map(stat => (
+                <div key={stat.label} className='flex items-center gap-3'>
+                  <stat.icon className='w-4 h-4 text-muted-foreground shrink-0' />
+                  <div>
+                    <p className='text-2xl font-semibold tabular-nums'>{stat.value}</p>
+                    <p className='text-[10px] text-muted-foreground'>{stat.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-            <Card>
-              <CardHeader>
-                <CardTitle className='text-base'>API Keys</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-3'>
+          {/* API Keys */}
+          <section>
+            <div className='flex items-center gap-2 mb-2'>
+              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>API Keys</span>
+              <div className='flex-1 h-px bg-border' />
+            </div>
+            <table className='w-full max-w-xl'>
+              <tbody>
                 <CopyableCode label='Public Key' value={project.publicApiKey} />
                 <CopyableCode label='Private Key' value={project.privateApiKey} masked />
-              </CardContent>
-            </Card>
+              </tbody>
+            </table>
+          </section>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className='text-base'>Quick Start</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ol className='text-sm text-muted-foreground space-y-2.5 list-decimal list-inside'>
-                  <li>Add your FCM service account JSON in Settings</li>
-                  <li>Integrate the Cotton SDK in your app</li>
-                  <li>Register devices using the public API key</li>
-                  <li>Create and schedule your first campaign</li>
-                </ol>
-              </CardContent>
-            </Card>
-          </div>
-        </>
+          {/* Quick Start */}
+          <section>
+            <div className='flex items-center gap-2 mb-3'>
+              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Quick Start</span>
+              <div className='flex-1 h-px bg-border' />
+            </div>
+            <ol className='text-sm text-muted-foreground space-y-2 list-decimal list-inside'>
+              <li>Add your FCM service account JSON in Settings</li>
+              <li>Integrate the Cotton SDK in your app</li>
+              <li>Register devices using the public API key</li>
+              <li>Create and schedule your first campaign</li>
+            </ol>
+          </section>
+        </div>
       )}
     </Page>
   )

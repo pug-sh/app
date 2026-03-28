@@ -2,7 +2,6 @@ import { campaignsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
 import { useProjectNavigate } from '@/lib/project-path'
@@ -75,6 +73,7 @@ const Campaigns = () => {
     return (
       <Page title='Campaigns'>
         <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
+          <Megaphone className='w-8 h-8 mb-3 opacity-20' />
           <p className='text-sm'>Select a project first</p>
         </div>
       </Page>
@@ -97,66 +96,62 @@ const Campaigns = () => {
           <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
         </div>
       ) : campaigns.length === 0 ? (
-        <Card>
-          <CardContent className='flex flex-col items-center justify-center py-16'>
-            <div className='w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4'>
-              <Megaphone className='w-6 h-6 text-primary' />
-            </div>
-            <p className='text-sm font-medium mb-1'>No campaigns yet</p>
-            <p className='text-xs text-muted-foreground mb-4'>
-              Create your first campaign to start sending notifications
-            </p>
-            <Button onClick={() => setDialogOpen(true)} size='sm'>
-              <Plus className='w-4 h-4' />
-              New campaign
-            </Button>
-          </CardContent>
-        </Card>
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Megaphone className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>No campaigns yet</p>
+          <p className='text-xs text-muted-foreground mb-4'>
+            Create your first campaign to start sending notifications
+          </p>
+          <Button onClick={() => setDialogOpen(true)} size='sm'>
+            <Plus className='w-4 h-4' />
+            New campaign
+          </Button>
+        </div>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Scheduled</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className='w-20' />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.map(c => (
-                <TableRow key={c.id}>
-                  <TableCell className='font-medium'>
-                    <ProjectLink href={`/campaigns/${c.id}`} className='hover:underline underline-offset-4'>
-                      {c.name}
-                    </ProjectLink>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(c.status)}>{c.status || 'DRAFT'}</Badge>
-                  </TableCell>
-                  <TableCell className='text-muted-foreground text-xs'>{formatTime(c.scheduledTime)}</TableCell>
-                  <TableCell className='text-muted-foreground text-xs'>{formatTime(c.createTime)}</TableCell>
-                  <TableCell>
-                    <div className='flex items-center gap-1'>
-                      <Button variant='ghost' size='icon-xs' render={<ProjectLink href={`/campaigns/${c.id}`} />}>
-                        <Pencil />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='icon-xs'
-                        onClick={e => handleDelete(e, c.id)}
-                        className='hover:bg-destructive/10 hover:text-destructive'
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        <table className='w-full'>
+          <thead>
+            <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+              <th className='py-2 pr-2 text-left font-medium'>Name</th>
+              <th className='py-2 pr-2 text-left font-medium'>Status</th>
+              <th className='py-2 pr-2 text-left font-medium'>Scheduled</th>
+              <th className='py-2 pr-2 text-left font-medium'>Created</th>
+              <th className='py-2 w-20' />
+            </tr>
+          </thead>
+          <tbody>
+            {campaigns.map(c => (
+              <tr key={c.id} className='group border-b border-border/50 transition-colors hover:bg-muted/40'>
+                <td className='py-2.5 pr-2 text-sm font-medium'>
+                  <ProjectLink href={`/campaigns/${c.id}`} className='text-primary hover:underline underline-offset-4'>
+                    {c.name}
+                  </ProjectLink>
+                </td>
+                <td className='py-2.5 pr-2'>
+                  <Badge variant={statusVariant(c.status)} className='text-[11px]'>
+                    {c.status || 'DRAFT'}
+                  </Badge>
+                </td>
+                <td className='py-2.5 pr-2 text-xs text-muted-foreground'>{formatTime(c.scheduledTime)}</td>
+                <td className='py-2.5 pr-2 text-xs text-muted-foreground'>{formatTime(c.createTime)}</td>
+                <td className='py-2.5'>
+                  <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+                    <Button variant='ghost' size='icon-xs' render={<ProjectLink href={`/campaigns/${c.id}`} />}>
+                      <Pencil className='w-3.5 h-3.5' />
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='icon-xs'
+                      onClick={e => handleDelete(e, c.id)}
+                      className='hover:bg-destructive/10 hover:text-destructive'
+                    >
+                      <Trash2 className='w-3.5 h-3.5' />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

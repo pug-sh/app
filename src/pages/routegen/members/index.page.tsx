@@ -3,7 +3,6 @@ import { orgsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { Loader2, Mail, Plus, Trash2, Users } from 'lucide-react'
@@ -73,6 +71,7 @@ const Members = () => {
     return (
       <Page title='Members'>
         <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
+          <Users className='w-8 h-8 mb-3 opacity-20' />
           <p className='text-sm'>Select an organization first</p>
         </div>
       </Page>
@@ -95,79 +94,84 @@ const Members = () => {
           <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
         </div>
       ) : (
-        <div className='space-y-6'>
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Member</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className='w-12' />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className='text-center py-8 text-muted-foreground'>
-                      <Users className='w-5 h-5 mx-auto mb-2 opacity-40' />
-                      <p className='text-sm'>No members</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  members.map(m => (
-                    <TableRow key={m.customerId}>
-                      <TableCell className='font-medium'>{m.displayName || m.email.split('@')[0]}</TableCell>
-                      <TableCell className='text-muted-foreground text-sm'>{m.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={m.role === 1 ? 'default' : 'secondary'}>
-                          {m.role === 1 ? 'Admin' : 'Member'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant='ghost'
-                          size='icon-xs'
-                          onClick={() => handleRemove(m.customerId)}
-                          className='hover:bg-destructive/10 hover:text-destructive'
-                        >
-                          <Trash2 />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
+        <div className='space-y-8'>
+          {members.length > 0 ? (
+            <table className='w-full'>
+              <thead>
+                <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+                  <th className='py-2 pr-2 text-left font-medium'>Member</th>
+                  <th className='py-2 pr-2 text-left font-medium'>Email</th>
+                  <th className='py-2 pr-2 text-left font-medium'>Role</th>
+                  <th className='py-2 w-8' />
+                </tr>
+              </thead>
+              <tbody>
+                {members.map(m => (
+                  <tr key={m.customerId} className='group border-b border-border/50 transition-colors hover:bg-muted/40'>
+                    <td className='py-2.5 pr-2 text-sm font-medium'>
+                      {m.displayName || m.email.split('@')[0]}
+                    </td>
+                    <td className='py-2.5 pr-2 text-sm text-muted-foreground font-mono'>
+                      {m.email}
+                    </td>
+                    <td className='py-2.5 pr-2'>
+                      <Badge variant={m.role === 1 ? 'default' : 'secondary'} className='text-[11px]'>
+                        {m.role === 1 ? 'Admin' : 'Member'}
+                      </Badge>
+                    </td>
+                    <td className='py-2.5'>
+                      <Button
+                        variant='ghost'
+                        size='icon-xs'
+                        onClick={() => handleRemove(m.customerId)}
+                        className='opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive'
+                      >
+                        <Trash2 className='w-3.5 h-3.5' />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className='flex flex-col items-center justify-center py-16'>
+              <Users className='w-10 h-10 mb-4 opacity-15' />
+              <p className='text-sm font-medium mb-1'>No members</p>
+              <p className='text-xs text-muted-foreground'>Invite someone to get started</p>
+            </div>
+          )}
 
           {invitations.length > 0 && (
             <div>
-              <h2 className='text-sm font-medium mb-3 text-muted-foreground'>Pending invitations</h2>
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Expires</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invitations.map(inv => (
-                      <TableRow key={inv.id}>
-                        <TableCell className='font-medium'>{inv.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={inv.status === 2 ? 'default' : 'secondary'}>
-                            {inv.status === 2 ? 'Accepted' : 'Pending'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className='text-muted-foreground text-xs'>{inv.expiresAt}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
+              <div className='flex items-center gap-2 mb-2'>
+                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
+                  Pending invitations
+                </span>
+                <div className='flex-1 h-px bg-border' />
+                <span className='text-[10px] text-muted-foreground'>{invitations.length}</span>
+              </div>
+              <table className='w-full'>
+                <thead>
+                  <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+                    <th className='py-2 pr-2 text-left font-medium'>Email</th>
+                    <th className='py-2 pr-2 text-left font-medium'>Status</th>
+                    <th className='py-2 pr-2 text-left font-medium'>Expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitations.map(inv => (
+                    <tr key={inv.id} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
+                      <td className='py-2.5 pr-2 text-sm font-mono'>{inv.email}</td>
+                      <td className='py-2.5 pr-2'>
+                        <Badge variant={inv.status === 2 ? 'default' : 'secondary'} className='text-[11px]'>
+                          {inv.status === 2 ? 'Accepted' : 'Pending'}
+                        </Badge>
+                      </td>
+                      <td className='py-2.5 pr-2 text-xs text-muted-foreground'>{inv.expiresAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

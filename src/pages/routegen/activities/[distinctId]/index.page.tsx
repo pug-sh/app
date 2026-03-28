@@ -5,7 +5,6 @@ import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Toggle } from '@/components/ui/toggle'
@@ -106,14 +105,13 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
   const city = structGet(lastAuto, '$city')
 
   return (
-    <Card className='mb-5'>
-      <CardContent className='pt-4'>
-        <div className='flex items-start gap-4'>
-          <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0'>
-            <Activity className='w-5 h-5 text-primary' />
-          </div>
-          <div className='flex-1 min-w-0'>
-            <p className='font-mono text-sm font-medium truncate'>{distinctId}</p>
+    <div className='mb-5 pb-4 border-b border-border'>
+      <div className='flex items-start gap-4'>
+        <div className='w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0'>
+          <Activity className='w-5 h-5 text-primary' />
+        </div>
+        <div className='flex-1 min-w-0'>
+          <p className='font-mono text-sm font-medium truncate'>{distinctId}</p>
             <div className='flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground'>
               {firstSeen && (
                 <span className='flex items-center gap-1'>
@@ -176,8 +174,7 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 
@@ -453,22 +450,20 @@ const UserActivity = () => {
           </div>
 
           {showFilters && (
-            <Card className='mb-4'>
-              <div className='px-4 py-3 flex items-end gap-3'>
-                <div className='space-y-1'>
-                  <Label className='text-xs'>Event kind</Label>
-                  <Input
-                    placeholder='e.g. page_view'
-                    value={kindFilter}
-                    onChange={e => setKindFilter(e.target.value)}
-                    className='w-48 h-7 text-sm'
-                  />
-                </div>
-                <Button size='sm' onClick={() => fetchEvents()}>
-                  Apply
-                </Button>
+            <div className='mb-4 flex items-end gap-3'>
+              <div className='space-y-1'>
+                <Label className='text-xs'>Event kind</Label>
+                <Input
+                  placeholder='e.g. page_view'
+                  value={kindFilter}
+                  onChange={e => setKindFilter(e.target.value)}
+                  className='w-48 h-7 text-sm'
+                />
               </div>
-            </Card>
+              <Button size='sm' onClick={() => fetchEvents()}>
+                Apply
+              </Button>
+            </div>
           )}
 
           {groupedEvents.map(group => {

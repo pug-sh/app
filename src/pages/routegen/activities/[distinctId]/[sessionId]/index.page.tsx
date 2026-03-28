@@ -3,7 +3,6 @@ import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 import { Toggle } from '@/components/ui/toggle'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
@@ -105,10 +104,9 @@ const SessionSummary = ({
   const exitEvent = events.length > 0 ? events[0].kind : null
 
   return (
-    <Card className='mb-5'>
-      <CardContent className='pt-4 space-y-4'>
-        {/* Header row */}
-        <div className='flex items-start gap-4'>
+    <div className='mb-5 pb-4 border-b border-border space-y-4'>
+      {/* Header row */}
+      <div className='flex items-start gap-4'>
           <div className='w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0'>
             <Timer className='w-5 h-5 text-violet-500' />
           </div>
@@ -188,8 +186,7 @@ const SessionSummary = ({
             {uniqueKinds} event types
           </span>
         </div>
-      </CardContent>
-    </Card>
+    </div>
   )
 }
 
