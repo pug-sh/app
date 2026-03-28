@@ -1,12 +1,11 @@
-import { projectsRPCAtom } from '@/api/rpc'
+import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { activeOrgAtom, activeProjectAtom, orgsAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtom, useAtomValue } from 'jotai'
-import { Building2, Check, ChevronsUpDown, Copy, Loader2, Save } from 'lucide-react'
+import { Check, Copy, Loader2, Save } from 'lucide-react'
 import { useState } from 'react'
 
 const SectionHeader = ({ title, description }: { title: string; description: string }) => (
@@ -38,16 +37,27 @@ const CopyId = ({ value }: { value: string }) => {
 
 const Settings = () => {
   const project = useAtomValue(activeProjectAtom)
-  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
-  const [, setActiveProject] = useAtom(activeProjectAtom)
-  const orgs = useAtomValue(orgsAtom)
+  const [activeOrg] = useAtom(activeOrgAtom)
   const org = activeOrg
   const projectHeaders = useAtomValue(projectHeaderAtom)
+  const orgsRPC = useAtomValue(orgsRPCAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
 
+  const [orgName, setOrgName] = useState(org?.displayName ?? '')
   const [projectName, setProjectName] = useState(project?.displayName ?? '')
   const [fcmJSON, setFcmJSON] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const handleRenameOrg = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!org || !orgName.trim()) return
+    setSaving(true)
+    try {
+      await orgsRPC.updateDisplayName({ orgId: org.id, displayName: orgName })
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const handleRenameProject = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,32 +94,15 @@ const Settings = () => {
 
         {org && (
           <section>
-            <SectionHeader title='Organization' description='Switch between your organizations' />
+            <SectionHeader title='Organization' description='Rename your organization' />
             <div className='space-y-2'>
-              <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant='outline' className='w-full justify-between' />}>
-                  <span className='flex items-center gap-2'>
-                    <Building2 className='size-4' />
-                    {org.displayName}
-                  </span>
-                  <ChevronsUpDown className='size-4 text-muted-foreground' />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className='min-w-56 rounded-lg' align='start'>
-                  {orgs.map(o => (
-                    <DropdownMenuItem
-                      key={o.id}
-                      onSelect={() => {
-                        setActiveOrg(o)
-                        setActiveProject(null)
-                      }}
-                    >
-                      <Building2 className='size-4' />
-                      {o.displayName}
-                      {o.id === org.id && <Check className='ml-auto size-4' />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <form onSubmit={handleRenameOrg} className='flex gap-2'>
+                <Input value={orgName} onChange={e => setOrgName(e.target.value)} maxLength={150} />
+                <Button type='submit' variant='outline' size='sm' disabled={saving || !orgName.trim()}>
+                  {saving ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+                  Save
+                </Button>
+              </form>
               <CopyId value={org.id} />
             </div>
           </section>

@@ -9,15 +9,7 @@ import {
   orgsAtom,
   projectsAtom,
 } from '@/data/workspace.atoms'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import {
   Sidebar,
   SidebarContent,
@@ -36,7 +28,7 @@ import {
   Bell,
   BookOpen,
   Check,
-  ChevronsUpDown,
+  ChevronDown,
   FolderOpen,
   LayoutDashboard,
   Loader2,
@@ -80,6 +72,7 @@ const AppSidebar = () => {
     const match = location.match(/^\/p\/[^/]+\/(.*)$/)
     return match ? match[1] : 'overview'
   }, [location])
+  const [projectsExpanded, setProjectsExpanded] = useState(false)
   const [creatingProject, setCreatingProject] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -138,35 +131,42 @@ const AppSidebar = () => {
           <SidebarGroupLabel>Project</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger render={<SidebarMenuButton />}>
-                  <FolderOpen className='size-4' />
-                  <span>{activeProject?.displayName ?? 'Select project'}</span>
-                  <ChevronsUpDown className='ml-auto size-4' />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className='min-w-56 rounded-lg' align='start' sideOffset={4}>
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel className='text-xs text-muted-foreground'>Projects</DropdownMenuLabel>
-                    {projects.map(proj => (
-                      <DropdownMenuItem
-                        key={proj.id}
-                        onSelect={() => {
+              <SidebarMenuButton
+                onClick={() => setProjectsExpanded(!projectsExpanded)}
+                tooltip={activeProject?.displayName ?? 'Select project'}
+              >
+                <FolderOpen className='size-4' />
+                <span>{activeProject?.displayName ?? 'Select project'}</span>
+                <ChevronDown
+                  className={cn(
+                    'ml-auto size-4 text-muted-foreground transition-transform duration-200',
+                    projectsExpanded && 'rotate-180'
+                  )}
+                />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            {projectsExpanded && (
+              <>
+                {projects
+                  .filter(p => p.id !== activeProject?.id)
+                  .map(proj => (
+                    <SidebarMenuItem key={proj.id}>
+                      <SidebarMenuButton
+                        onClick={() => {
                           setActiveProject(proj)
                           navigate(`/p/${proj.id}/${pagePath}`)
+                          setProjectsExpanded(false)
                         }}
+                        className='pl-8'
+                        tooltip={proj.displayName}
                       >
-                        <FolderOpen className='size-4' />
-                        {proj.displayName}
-                        {proj.id === activeProject?.id && <Check className='ml-auto size-4' />}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
-                  {projects.length === 0 && !creatingProject && (
-                    <DropdownMenuItem disabled>No projects yet</DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  {creatingProject ? (
-                    <div className='px-2 py-1.5'>
+                        <span>{proj.displayName}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                {creatingProject ? (
+                  <SidebarMenuItem>
+                    <div className='pl-8 pr-2 py-1'>
                       <div className='flex items-center gap-1'>
                         <input
                           ref={inputRef}
@@ -192,17 +192,19 @@ const AppSidebar = () => {
                         </button>
                       </div>
                     </div>
-                  ) : (
-                    activeOrg && (
-                      <DropdownMenuItem onSelect={() => setCreatingProject(true)}>
+                  </SidebarMenuItem>
+                ) : (
+                  activeOrg && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton onClick={() => setCreatingProject(true)} className='pl-8' tooltip='New project'>
                         <Plus className='size-4' />
-                        New project
-                      </DropdownMenuItem>
-                    )
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
+                        <span>New project</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                )}
+              </>
+            )}
           </SidebarMenu>
         </SidebarGroup>
 
