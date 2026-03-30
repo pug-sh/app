@@ -4,7 +4,6 @@ import { activityRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
@@ -556,13 +555,11 @@ const EventExplorer = () => {
           )}
         </>
       ) : (
-        <Card>
-          <div className='flex flex-col items-center justify-center py-16'>
-            <List className='w-10 h-10 mb-4 opacity-15' />
-            <p className='text-sm font-medium mb-1'>No events found</p>
-            <p className='text-xs text-muted-foreground'>Try adjusting filters or check a different time range</p>
-          </div>
-        </Card>
+        <div className='flex flex-col items-center justify-center py-16'>
+          <List className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>No events found</p>
+          <p className='text-xs text-muted-foreground'>Try adjusting filters or check a different time range</p>
+        </div>
       )}
     </Page>
   )

@@ -60,7 +60,14 @@ Update components: `pnpm dlx shadcn@latest add <component> --overwrite`
 
 ### Design Aesthetic
 
-Minimal, card-free layouts. Avoid wrapping content in Card components — use section divider headers instead:
+Light and minimal. This is a deliberate design direction — do not add visual or interaction weight:
+
+- **No Cards** — use section divider headers (see below) instead of wrapping content in Card components
+- **No nested menus** — no DropdownMenuSub, no multi-level popover trees. Use flat inline interactions: expand/collapse in-place, inline inputs, single-level dropdowns at most
+- **No modals for simple actions** — inline editing, inline create forms, confirmation via button state (not confirm dialogs)
+- **No external CDN dependencies** for UI assets — bundle or self-host everything
+
+Section divider header pattern:
 
 ```tsx
 <div className='flex items-center gap-2 mb-2'>
@@ -71,9 +78,12 @@ Minimal, card-free layouts. Avoid wrapping content in Card components — use se
 ```
 
 Tables use plain `<table>` elements (not the Table component), with:
+
 - Headers: `text-[11px] font-medium text-muted-foreground uppercase tracking-wider`
 - Rows: `border-b border-border/50 transition-colors hover:bg-muted/40`
 - Destructive/edit actions hidden until row hover (`opacity-0 group-hover:opacity-100`)
+
+Empty states are minimal — a faded icon + one or two lines of text. No illustrations, no big CTAs, no onboarding wizards.
 
 Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
 
