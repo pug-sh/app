@@ -7,15 +7,16 @@ import {
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { cn } from '@/lib/utils'
-import { useAtomValue } from 'jotai'
-import { Loader2, Play, Plus, TrendingUp, Users, X } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { Loader2, Play, TrendingUp, Users } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import ProjectLink from '@/components/project-link'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -375,22 +376,45 @@ const Insights = () => {
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
+  const schema = useAtomValue(filterSchemaAtom)
+  const schemaError = useAtomValue(filterSchemaErrorAtom)
+  const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
-  const [eventKinds, setEventKinds] = useState<string[]>([''])
+  const [eventKinds, setEventKinds] = useState<string[]>([])
   const [rangeIdx, setRangeIdx] = useState(1)
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
   const [tab, setTab] = useState('trends')
+  const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
   const [series, setSeries] = useState<Series[]>([])
   const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  const addEvent = () => setEventKinds([...eventKinds, ''])
-  const removeEvent = (idx: number) => setEventKinds(eventKinds.filter((_, i) => i !== idx))
-  const updateEvent = (idx: number, val: string) => setEventKinds(eventKinds.map((e, i) => (i === idx ? val : e)))
+  useEffect(() => {
+    if (project) fetchSchema()
+  }, [project, fetchSchema])
+
+  const updateEvent = (idx: number, val: string) => {
+    if (!val) {
+      setEventKinds(eventKinds.filter((_, i) => i !== idx))
+    } else {
+      setEventKinds(eventKinds.map((e, i) => (i === idx ? val : e)))
+    }
+  }
+
+  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
+  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
+  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
 
   const validEvents = eventKinds.filter(e => e.trim())
+
+  const filtersForRPC = propFilters.map(f => ({
+    property: f.property,
+    operator: f.operator,
+    value: f.value,
+    values: f.values,
+  }))
 
   const handleTrendsQuery = async () => {
     if (validEvents.length === 0) return
@@ -403,7 +427,7 @@ const Insights = () => {
           insightType: InsightType.TRENDS,
           granularity,
           timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
-          events: validEvents.map(kind => ({ kind, aggregation, filters: [] })),
+          events: validEvents.map(kind => ({ kind, aggregation, filters: filtersForRPC })),
         },
         { headers }
       )
@@ -424,7 +448,7 @@ const Insights = () => {
       const resp = await insightsRPC.segmentUsers(
         {
           timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
-          events: validEvents.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters: [] })),
+          events: validEvents.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters: filtersForRPC })),
           pageSize: 100,
         },
         { headers }
@@ -487,34 +511,30 @@ const Insights = () => {
           <form onSubmit={handleSubmit}>
             <div className='flex flex-wrap items-center gap-2 mb-3'>
               {eventKinds.map((kind, i) => (
-                <div key={i} className='flex items-center gap-1'>
-                  <span
-                    className='w-2 h-2 rounded-full shrink-0'
-                    style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
-                  />
-                  <Input
-                    placeholder='event_name'
-                    value={kind}
-                    onChange={e => updateEvent(i, e.target.value)}
-                    className='w-40 h-7 text-sm'
-                  />
-                  {eventKinds.length > 1 && (
-                    <Button
-                      type='button'
-                      variant='ghost'
-                      size='icon-xs'
-                      onClick={() => removeEvent(i)}
-                      className='hover:bg-destructive/10 hover:text-destructive'
-                    >
-                      <X />
-                    </Button>
-                  )}
-                </div>
+                <EventChip
+                  key={i}
+                  value={kind}
+                  onChange={v => updateEvent(i, v)}
+                  events={schema?.events ?? []}
+                  schemaError={schemaError}
+                />
               ))}
-              <Button type='button' variant='ghost' size='sm' onClick={addEvent}>
-                <Plus className='w-3 h-3' />
-                Add
-              </Button>
+              <EventChip
+                value=''
+                onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
+                events={schema?.events ?? []}
+                schemaError={schemaError}
+              />
+              {propFilters.map((f, i) => (
+                <FilterChip
+                  key={`f-${i}`}
+                  filter={f}
+                  schema={schema}
+                  onRemove={() => removeFilter(i)}
+                  onUpdate={next => updateFilter(i, next)}
+                />
+              ))}
+              <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
             </div>
 
             <div className='flex flex-wrap items-center gap-3'>
