@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Toggle } from '@/components/ui/toggle'
 import { AlertCircle, Braces, Check, ChevronDown, ChevronRight, List, Loader2, Plus, Search, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -200,288 +200,397 @@ const EventCombobox = ({
   )
 }
 
-// ── Property Picker ─────────────────────────────────────────────────────────
+// ── Suggestions hook ────────────────────────────────────────────────────────
 
-const PropertyPicker = ({
+const useSuggestions = (propertyKey: string, source: PropertySource) => {
+  const insightsRPC = useAtomValue(insightsRPCAtom)
+  const headers = useAtomValue(projectHeaderAtom)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!propertyKey) return
+    setLoaded(false)
+    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
+      resp => { setSuggestions(resp.values); setLoaded(true) },
+      () => setLoaded(true)
+    )
+  }, [propertyKey, source, insightsRPC, headers])
+
+  return { suggestions, loaded }
+}
+
+// ── Filter Builder (single-popover stepped flow) ────────────────────────────
+
+type BuilderStep = 'property' | 'operator' | 'value'
+
+const FilterBuilder = ({
   schema,
   schemaError,
-  onSelect,
+  onAdd,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
-  onSelect: (property: string, source: PropertySource) => void
+  onAdd: (filter: ActiveFilter) => void
 }) => {
   const [open, setOpen] = useState(false)
+  const [step, setStep] = useState<BuilderStep>('property')
+  const [prop, setProp] = useState('')
+  const [propSource, setPropSource] = useState<PropertySource>(PropertySource.UNSPECIFIED)
+  const [op, setOp] = useState<FilterOperator>(FilterOperator.EQUALS)
+  const [val, setVal] = useState('')
+  const [vals, setVals] = useState<string[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const opMeta = OPERATORS.find(o => o.value === op)
+  const { suggestions, loaded } = useSuggestions(
+    step === 'value' ? prop : '',
+    propSource
+  )
+
+  const reset = () => {
+    setStep('property')
+    setProp('')
+    setPropSource(PropertySource.UNSPECIFIED)
+    setOp(FilterOperator.EQUALS)
+    setVal('')
+    setVals([])
+  }
+
+  const pickProperty = (key: string, source: PropertySource) => {
+    setProp(key)
+    setPropSource(source)
+    setStep('operator')
+  }
+
+  const pickOperator = (operator: FilterOperator) => {
+    setOp(operator)
+    const meta = OPERATORS.find(o => o.value === operator)
+    if (meta?.noValue) {
+      onAdd({ property: prop, operator, value: '', values: [] })
+      setOpen(false)
+      reset()
+    } else {
+      setVal('')
+      setVals([])
+      setStep('value')
+    }
+  }
+
+  const commitFilter = () => {
+    if (opMeta?.multiValue) {
+      if (vals.length === 0) return
+      onAdd({ property: prop, operator: op, value: '', values: vals })
+    } else {
+      if (!val.trim()) return
+      onAdd({ property: prop, operator: op, value: val.trim(), values: [] })
+    }
+    setOpen(false)
+    reset()
+  }
+
+  const toggleVal = (v: string) => {
+    setVals(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
+  }
+
+  const handleOpenChange = (next: boolean) => {
+    setOpen(next)
+    if (!next) reset()
+  }
 
   const hasSystem = schema && schema.autoPropertyKeys.length > 0
   const hasCustom = schema && schema.customPropertyKeys.length > 0
   const hasProfile = schema && schema.profilePropertyKeys.length > 0
 
-  const pick = (key: string, source: PropertySource) => {
-    onSelect(key, source)
-    setOpen(false)
-  }
-
-  const emptyMessage = schemaError
-    ? 'Failed to load properties'
-    : schema
-      ? 'No properties found'
-      : 'Loading properties...'
+  const breadcrumb = (
+    <div className='flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground'>
+      {step !== 'property' && (
+        <>
+          <button type='button' onClick={() => { setStep('property'); setProp(''); setOp(FilterOperator.EQUALS) }} className='hover:text-foreground cursor-pointer'>
+            Property
+          </button>
+          <ChevronRight className='w-2.5 h-2.5' />
+          <span className='font-mono text-foreground'>{prop}</span>
+        </>
+      )}
+      {step === 'value' && (
+        <>
+          <ChevronRight className='w-2.5 h-2.5' />
+          <button type='button' onClick={() => setStep('operator')} className='hover:text-foreground cursor-pointer'>
+            {opMeta?.label}
+          </button>
+        </>
+      )}
+    </div>
+  )
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         className={cn(
-          'inline-flex items-center gap-1 border border-input rounded-md px-2.5 h-7 text-xs bg-background cursor-pointer',
-          'hover:bg-muted/40 transition-colors',
-          open && 'ring-1 ring-ring'
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+          'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
+          open && 'border-foreground/20 text-foreground'
         )}
       >
-        <Plus className='w-3 h-3 text-muted-foreground' />
-        <span className='text-muted-foreground'>Filter</span>
+        <Plus className='w-3 h-3' />
+        Filter
       </PopoverTrigger>
       <PopoverContent align='start' className='w-64 p-0'>
-        <Command>
-          <CommandInput placeholder='Search properties...' className='text-xs' />
-          <CommandList>
-            <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
-            {!schema && !schemaError && (
-              <div className='py-4 text-xs text-center text-muted-foreground'>Loading properties...</div>
-            )}
-            {hasSystem && (
-              <CommandGroup heading='System'>
-                {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                  <CommandItem key={pk.name} value={pk.name} onSelect={() => pick(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
-                    <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
-                    <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
-                      {compactNumber(pk.count)}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {hasCustom && (
-              <CommandGroup heading='Custom'>
-                {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                  <CommandItem key={pk.name} value={pk.name} onSelect={() => pick(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
-                    <span className='truncate'>{pk.name}</span>
-                    <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
-                      {compactNumber(pk.count)}
-                    </span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-            {hasProfile && (
-              <CommandGroup heading='Profile'>
-                {schema.profilePropertyKeys.map(key => (
-                  <CommandItem key={key} value={key} onSelect={() => pick(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                    {key}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
+        {step !== 'property' && breadcrumb}
 
-// ── Value Combobox ──────────────────────────────────────────────────────────
-
-const ValueCombobox = ({
-  value,
-  onChange,
-  onCommit,
-  propertyKey,
-  source,
-}: {
-  value: string
-  onChange: (v: string) => void
-  onCommit: () => void
-  propertyKey: string
-  source: PropertySource
-}) => {
-  const insightsRPC = useAtomValue(insightsRPCAtom)
-  const headers = useAtomValue(projectHeaderAtom)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [open, setOpen] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    if (!propertyKey) return
-    setLoaded(false)
-    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
-      resp => {
-        setSuggestions(resp.values)
-        setLoaded(true)
-      },
-      () => setLoaded(true)
-    )
-  }, [propertyKey, source, insightsRPC, headers])
-
-  const hasSuggestions = loaded && suggestions.length > 0
-
-  if (!hasSuggestions) {
-    return (
-      <Input
-        placeholder='Value'
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') onCommit()
-        }}
-        className='w-40 h-7 text-sm'
-        autoFocus
-      />
-    )
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={cn(
-          'inline-flex items-center gap-1 border border-input rounded-md px-2.5 h-7 text-xs bg-background cursor-pointer',
-          'hover:bg-muted/40 transition-colors min-w-[10rem]',
-          open && 'ring-1 ring-ring'
-        )}
-      >
-        <span className={cn('text-xs truncate', value ? 'text-foreground font-mono' : 'text-muted-foreground')}>
-          {value || 'Select value...'}
-        </span>
-        <ChevronDown className='w-3 h-3 text-muted-foreground ml-auto shrink-0' />
-      </PopoverTrigger>
-      <PopoverContent align='start' className='w-56 p-0'>
-        <Command>
-          <CommandInput placeholder='Search values...' className='text-xs' />
-          <CommandList>
-            <CommandEmpty className='py-3 text-xs'>No match</CommandEmpty>
-            <CommandGroup>
-              {suggestions.map(s => (
-                <CommandItem
-                  key={s}
-                  value={s}
-                  onSelect={() => {
-                    onChange(s)
-                    setOpen(false)
-                  }}
-                  className='text-xs py-1.5 font-mono'
-                >
-                  {s}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-// ── Multi Value Picker ──────────────────────────────────────────────────────
-
-const MultiValuePicker = ({
-  values,
-  onChange,
-  propertyKey,
-  source,
-}: {
-  values: string[]
-  onChange: (v: string[]) => void
-  propertyKey: string
-  source: PropertySource
-}) => {
-  const insightsRPC = useAtomValue(insightsRPCAtom)
-  const headers = useAtomValue(projectHeaderAtom)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [open, setOpen] = useState(false)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    if (!propertyKey) return
-    setLoaded(false)
-    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
-      resp => {
-        setSuggestions(resp.values)
-        setLoaded(true)
-      },
-      () => setLoaded(true)
-    )
-  }, [propertyKey, source, insightsRPC, headers])
-
-  const toggle = (v: string) => {
-    if (values.includes(v)) {
-      onChange(values.filter(x => x !== v))
-    } else {
-      onChange([...values, v])
-    }
-  }
-
-  const remove = (v: string) => onChange(values.filter(x => x !== v))
-
-  return (
-    <div className='flex items-center gap-1.5 flex-wrap'>
-      {values.map(v => (
-        <span key={v} className='inline-flex items-center gap-1 text-xs font-mono bg-muted px-1.5 py-0.5 rounded'>
-          {v}
-          <button type='button' onClick={() => remove(v)} className='text-muted-foreground hover:text-foreground'>
-            <X className='w-2.5 h-2.5' />
-          </button>
-        </span>
-      ))}
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          className={cn(
-            'inline-flex items-center gap-1 border border-dashed border-input rounded-md px-2 h-6 text-xs bg-background cursor-pointer',
-            'hover:bg-muted/40 transition-colors',
-            open && 'ring-1 ring-ring'
-          )}
-        >
-          <Plus className='w-3 h-3 text-muted-foreground' />
-          <span className='text-muted-foreground'>Add</span>
-        </PopoverTrigger>
-        <PopoverContent align='start' className='w-52 p-0'>
+        {/* Step 1: pick property */}
+        {step === 'property' && (
           <Command>
-            <CommandInput placeholder='Search values...' className='text-xs' />
+            <CommandInput placeholder='Filter by property...' className='text-xs' />
             <CommandList>
-              <CommandEmpty className='py-3 text-xs'>
-                {loaded ? 'No values found' : 'Loading...'}
+              <CommandEmpty className='py-4 text-xs'>
+                {schemaError ? 'Failed to load' : schema ? 'No properties' : 'Loading...'}
               </CommandEmpty>
-              <CommandGroup>
-                {suggestions.map(s => {
-                  const isSelected = values.includes(s)
-                  return (
-                    <CommandItem
-                      key={s}
-                      value={s}
-                      onSelect={() => toggle(s)}
-                      className='text-xs py-1.5 font-mono gap-1.5'
-                    >
-                      <Check className={cn('w-3 h-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
-                      {s}
+              {hasSystem && (
+                <CommandGroup heading='System'>
+                  {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
+                      <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
+                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
                     </CommandItem>
-                  )
-                })}
+                  ))}
+                </CommandGroup>
+              )}
+              {hasCustom && (
+                <CommandGroup heading='Custom'>
+                  {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
+                      <span className='truncate'>{pk.name}</span>
+                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              {hasProfile && (
+                <CommandGroup heading='Profile'>
+                  {schema.profilePropertyKeys.map(key => (
+                    <CommandItem key={key} value={key} onSelect={() => pickProperty(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
+                      {key}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        )}
+
+        {/* Step 2: pick operator */}
+        {step === 'operator' && (
+          <Command>
+            <CommandList>
+              <CommandGroup>
+                {OPERATORS.map(o => (
+                  <CommandItem key={o.value} value={o.label} onSelect={() => pickOperator(o.value)} className='text-xs py-1.5 gap-2'>
+                    <span className='w-5 text-center text-muted-foreground font-mono text-[10px]'>{o.symbol}</span>
+                    {o.label}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
+        )}
+
+        {/* Step 3: pick value(s) */}
+        {step === 'value' && opMeta?.multiValue && (
+          <div>
+            {vals.length > 0 && (
+              <div className='flex flex-wrap gap-1 px-3 pt-2'>
+                {vals.map(v => (
+                  <span key={v} className='inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded'>
+                    {v}
+                    <button type='button' onClick={() => setVals(prev => prev.filter(x => x !== v))} className='text-muted-foreground hover:text-foreground'>
+                      <X className='w-2.5 h-2.5' />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <Command>
+              <CommandInput placeholder='Search values...' className='text-xs' />
+              <CommandList>
+                <CommandEmpty className='py-3 text-xs'>{loaded ? 'No values' : 'Loading...'}</CommandEmpty>
+                <CommandGroup>
+                  {suggestions.map(s => (
+                    <CommandItem key={s} value={s} onSelect={() => toggleVal(s)} className='text-xs py-1.5 font-mono gap-1.5'>
+                      <Check className={cn('w-3 h-3 shrink-0', vals.includes(s) ? 'opacity-100' : 'opacity-0')} />
+                      {s}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+            <div className='border-t border-border px-3 py-2 flex justify-end'>
+              <Button size='sm' className='h-6 text-xs px-3' onClick={commitFilter} disabled={vals.length === 0}>
+                Apply
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === 'value' && !opMeta?.multiValue && (
+          <div>
+            {loaded && suggestions.length > 0 ? (
+              <Command>
+                <CommandInput placeholder='Search values...' className='text-xs' />
+                <CommandList>
+                  <CommandEmpty className='py-3 text-xs'>No match</CommandEmpty>
+                  <CommandGroup>
+                    {suggestions.map(s => (
+                      <CommandItem
+                        key={s}
+                        value={s}
+                        onSelect={() => { setVal(s); onAdd({ property: prop, operator: op, value: s, values: [] }); setOpen(false); reset() }}
+                        className='text-xs py-1.5 font-mono'
+                      >
+                        {s}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            ) : (
+              <div className='p-2'>
+                <input
+                  ref={inputRef}
+                  placeholder='Type a value...'
+                  value={val}
+                  onChange={e => setVal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') commitFilter() }}
+                  className='w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring'
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   )
 }
 
-// ── Filter Pill ──────────────────────────────────────────────────────────────
+// ── Filter Chip (segmented, editable) ───────────────────────────────────────
 
-const FilterPill = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
-  <span className='inline-flex items-center gap-1.5 text-xs bg-primary/5 border border-primary/15 text-foreground rounded-full px-2.5 py-0.5'>
-    {label}
-    <button type='button' onClick={onRemove} className='text-muted-foreground hover:text-foreground cursor-pointer'>
-      <X className='w-3 h-3' />
-    </button>
-  </span>
-)
+const FilterChip = ({
+  filter,
+  onRemove,
+  onUpdate,
+  schema,
+}: {
+  filter: ActiveFilter
+  onRemove: () => void
+  onUpdate: (f: ActiveFilter) => void
+  schema: GetFilterSchemaResponse | null
+}) => {
+  const op = OPERATORS.find(o => o.value === filter.operator)
+  const [editOpen, setEditOpen] = useState(false)
+
+  const propSource = schema
+    ? schema.autoPropertyKeys.some(pk => pk.name === filter.property) ? PropertySource.AUTO
+      : schema.customPropertyKeys.some(pk => pk.name === filter.property) ? PropertySource.CUSTOM
+        : PropertySource.PROFILE
+    : PropertySource.UNSPECIFIED
+
+  const { suggestions, loaded } = useSuggestions(editOpen ? filter.property : '', propSource)
+
+  const valueLabel = op?.noValue
+    ? null
+    : op?.multiValue
+      ? filter.values.join(', ')
+      : filter.value
+
+  return (
+    <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
+      <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]'>
+        {filter.property}
+      </span>
+      <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>
+        {op?.symbol}
+      </span>
+      {valueLabel !== null && (
+        <Popover open={editOpen} onOpenChange={setEditOpen}>
+          <PopoverTrigger className='px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer'>
+            {valueLabel || '...'}
+          </PopoverTrigger>
+          <PopoverContent align='start' className='w-52 p-0'>
+            {op?.multiValue ? (
+              <Command>
+                <CommandInput placeholder='Search...' className='text-xs' />
+                <CommandList>
+                  <CommandEmpty className='py-3 text-xs'>{loaded ? 'No values' : 'Loading...'}</CommandEmpty>
+                  <CommandGroup>
+                    {suggestions.map(s => {
+                      const isSelected = filter.values.includes(s)
+                      return (
+                        <CommandItem
+                          key={s}
+                          value={s}
+                          onSelect={() => {
+                            const next = isSelected ? filter.values.filter(x => x !== s) : [...filter.values, s]
+                            onUpdate({ ...filter, values: next })
+                          }}
+                          className='text-xs py-1.5 font-mono gap-1.5'
+                        >
+                          <Check className={cn('w-3 h-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
+                          {s}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            ) : loaded && suggestions.length > 0 ? (
+              <Command>
+                <CommandInput placeholder='Search...' className='text-xs' />
+                <CommandList>
+                  <CommandEmpty className='py-3 text-xs'>No match</CommandEmpty>
+                  <CommandGroup>
+                    {suggestions.map(s => (
+                      <CommandItem
+                        key={s}
+                        value={s}
+                        onSelect={() => { onUpdate({ ...filter, value: s }); setEditOpen(false) }}
+                        className='text-xs py-1.5 font-mono'
+                      >
+                        {s}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            ) : (
+              <div className='p-2'>
+                <input
+                  defaultValue={filter.value}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      onUpdate({ ...filter, value: (e.target as HTMLInputElement).value.trim() })
+                      setEditOpen(false)
+                    }
+                  }}
+                  className='w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+                  autoFocus
+                />
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+      )}
+      <button
+        type='button'
+        onClick={onRemove}
+        className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+      >
+        <X className='w-3 h-3' />
+      </button>
+    </span>
+  )
+}
 
 // ── Event Row ───────────────────────────────────────────────────────────────
 
@@ -652,61 +761,22 @@ const EventExplorer = () => {
   const [rangeIdx, setRangeIdx] = useState(2) // 14d
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
-  // Add property filter UI
-  const [addingFilter, setAddingFilter] = useState(false)
-  const [newProp, setNewProp] = useState('')
-  const [newPropSource, setNewPropSource] = useState<PropertySource>(PropertySource.UNSPECIFIED)
-  const [newOp, setNewOp] = useState<FilterOperator>(FilterOperator.EQUALS)
-  const [newVal, setNewVal] = useState('')
-  const [newVals, setNewVals] = useState<string[]>([])
-
   // Data
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const newOpMeta = OPERATORS.find(o => o.value === newOp)
-
   // Fetch schema once when project is available
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
 
-  const startAddFilter = (property: string, source: PropertySource) => {
-    setNewProp(property)
-    setNewPropSource(source)
-    setNewOp(FilterOperator.EQUALS)
-    setNewVal('')
-    setNewVals([])
-    setAddingFilter(true)
-  }
+  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
 
-  const addFilter = () => {
-    if (!newProp.trim()) return
-    if (newOpMeta?.multiValue && newVals.length === 0) return
-    if (!newOpMeta?.multiValue && !newOpMeta?.noValue && !newVal.trim()) return
-    setPropFilters([
-      ...propFilters,
-      {
-        property: newProp.trim(),
-        operator: newOp,
-        value: newOpMeta?.multiValue ? '' : newOpMeta?.noValue ? '' : newVal.trim(),
-        values: newOpMeta?.multiValue ? newVals : [],
-      },
-    ])
-    resetFilterForm()
-  }
+  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
 
-  const resetFilterForm = () => {
-    setNewProp('')
-    setNewOp(FilterOperator.EQUALS)
-    setNewVal('')
-    setNewVals([])
-    setAddingFilter(false)
-  }
-
-  const cancelAddFilter = () => resetFilterForm()
+  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
 
   const commitUserFilter = () => {
     setUserFilter(userInput.trim())
@@ -755,8 +825,6 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
-  const hasActiveFilters = userFilter || propFilters.length > 0
-
   if (!project) {
     return (
       <Page title='Events'>
@@ -796,8 +864,8 @@ const EventExplorer = () => {
           )}
         </div>
 
-        {/* Event combobox + User ID + Property picker */}
-        <div className='flex items-center gap-2'>
+        {/* Filters row */}
+        <div className='flex items-center gap-2 flex-wrap'>
           <EventCombobox value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
           <Input
             placeholder='User ID'
@@ -808,91 +876,31 @@ const EventExplorer = () => {
             }}
             className='w-40 h-7 text-sm'
           />
-          {!addingFilter && <PropertyPicker schema={schema} schemaError={schemaError} onSelect={startAddFilter} />}
+          {userFilter && (
+            <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
+              <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>user</span>
+              <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>=</span>
+              <span className='px-2 h-full flex items-center font-mono'>{userFilter}</span>
+              <button
+                type='button'
+                onClick={() => { setUserFilter(''); setUserInput('') }}
+                className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+              >
+                <X className='w-3 h-3' />
+              </button>
+            </span>
+          )}
+          {propFilters.map((f, i) => (
+            <FilterChip
+              key={i}
+              filter={f}
+              schema={schema}
+              onRemove={() => removeFilter(i)}
+              onUpdate={next => updateFilter(i, next)}
+            />
+          ))}
+          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
         </div>
-
-        {/* Inline add property filter */}
-        {addingFilter && (
-          <div className='flex items-center gap-2 p-2 bg-primary/[0.02] border border-primary/10 rounded-lg'>
-            <span className='text-xs font-mono bg-muted px-1.5 py-0.5 rounded'>{newProp}</span>
-            <select
-              value={newOp}
-              onChange={e => {
-                setNewOp(Number(e.target.value) as FilterOperator)
-                setNewVal('')
-                setNewVals([])
-              }}
-              className='h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground outline-none focus:ring-1 focus:ring-ring cursor-pointer'
-            >
-              {OPERATORS.map(op => (
-                <option key={op.value} value={op.value}>
-                  {op.label}
-                </option>
-              ))}
-            </select>
-            {newOpMeta?.multiValue ? (
-              <MultiValuePicker
-                values={newVals}
-                onChange={setNewVals}
-                propertyKey={newProp}
-                source={newPropSource}
-              />
-            ) : !newOpMeta?.noValue ? (
-              <ValueCombobox
-                value={newVal}
-                onChange={setNewVal}
-                onCommit={addFilter}
-                propertyKey={newProp}
-                source={newPropSource}
-              />
-            ) : null}
-            <Button
-              variant='ghost'
-              size='sm'
-              className='h-7 px-1.5'
-              onClick={addFilter}
-              disabled={!newProp.trim() || (newOpMeta?.multiValue ? newVals.length === 0 : false)}
-            >
-              <Check className='w-3.5 h-3.5' />
-            </Button>
-            <Button variant='ghost' size='sm' className='h-7 px-1.5' onClick={cancelAddFilter}>
-              <X className='w-3.5 h-3.5' />
-            </Button>
-          </div>
-        )}
-
-        {/* Active filter pills */}
-        {hasActiveFilters && (
-          <div className='flex flex-wrap gap-1.5'>
-            {userFilter && (
-              <FilterPill
-                label={`user = ${userFilter}`}
-                onRemove={() => {
-                  setUserFilter('')
-                  setUserInput('')
-                }}
-              />
-            )}
-            {propFilters.map((f, i) => {
-              const op = OPERATORS.find(o => o.value === f.operator)
-              let label: string
-              if (op?.noValue) {
-                label = `${f.property} ${op.symbol}`
-              } else if (op?.multiValue) {
-                label = `${f.property} ${op.symbol} [${f.values.join(', ')}]`
-              } else {
-                label = `${f.property} ${op?.symbol ?? '='} ${f.value}`
-              }
-              return (
-                <FilterPill
-                  key={i}
-                  label={label}
-                  onRemove={() => setPropFilters(propFilters.filter((_, j) => j !== i))}
-                />
-              )
-            })}
-          </div>
-        )}
       </div>
 
       {/* Results */}
