@@ -1,7 +1,8 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import type { GetFilterSchemaResponse } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import type { EventNameMeta, GetFilterSchemaResponse } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import { PropertySource } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
-import { activityRPCAtom } from '@/api/rpc'
+import { activityRPCAtom, insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -88,11 +89,13 @@ const TIME_RANGES = [
   { label: '90d', ms: 90 * 24 * 60 * 60 * 1000 },
 ] as const
 
-const OPERATORS: readonly { value: FilterOperator; label: string; symbol: string; noValue?: boolean }[] = [
+const OPERATORS: readonly { value: FilterOperator; label: string; symbol: string; noValue?: boolean; multiValue?: boolean }[] = [
   { value: FilterOperator.EQUALS, label: 'equals', symbol: '=' },
   { value: FilterOperator.NOT_EQUALS, label: 'not equals', symbol: '≠' },
-  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '~' },
-  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '!~' },
+  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', multiValue: true },
+  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', multiValue: true },
+  { value: FilterOperator.IN, label: 'in', symbol: '∈', multiValue: true },
+  { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', multiValue: true },
   { value: FilterOperator.IS_SET, label: 'is set', symbol: 'is set', noValue: true },
   { value: FilterOperator.IS_NOT_SET, label: 'is not set', symbol: 'is not set', noValue: true },
   { value: FilterOperator.GT, label: 'greater than', symbol: '>' },
@@ -105,6 +108,14 @@ interface ActiveFilter {
   property: string
   operator: FilterOperator
   value: string
+  values: string[]
+}
+
+const compactNumber = (n: bigint): string => {
+  const v = Number(n)
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, '') + 'k'
+  return v.toString()
 }
 
 // ── Event Combobox ──────────────────────────────────────────────────────────
@@ -112,12 +123,12 @@ interface ActiveFilter {
 const EventCombobox = ({
   value,
   onChange,
-  eventNames,
+  events,
   schemaError,
 }: {
   value: string
   onChange: (v: string) => void
-  eventNames: string[]
+  events: EventNameMeta[]
   schemaError: string | null
 }) => {
   const [open, setOpen] = useState(false)
@@ -129,7 +140,7 @@ const EventCombobox = ({
 
   const emptyMessage = schemaError
     ? 'Failed to load events'
-    : eventNames.length === 0
+    : events.length === 0
       ? 'Loading event names...'
       : 'No events found'
 
@@ -154,27 +165,30 @@ const EventCombobox = ({
           <ChevronDown className='w-3 h-3 text-muted-foreground ml-auto' />
         )}
       </PopoverTrigger>
-      <PopoverContent align='start' className='w-52 p-0'>
+      <PopoverContent align='start' className='w-64 p-0'>
         <Command>
           <CommandInput placeholder='Search events...' className='text-xs' />
           <CommandList>
             <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
             <CommandGroup>
-              {eventNames.map(name => {
-                const colors = kindStyle(name)
+              {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
+                const colors = kindStyle(ev.name)
                 return (
                   <CommandItem
-                    key={name}
-                    value={name}
+                    key={ev.name}
+                    value={ev.name}
                     onSelect={() => {
-                      onChange(name)
+                      onChange(ev.name)
                       setOpen(false)
                     }}
-                    data-checked={value === name}
-                    className='text-xs gap-2'
+                    data-checked={value === ev.name}
+                    className='text-xs gap-1.5 py-1.5'
                   >
-                    <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', colors.dot)} />
-                    {name}
+                    <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />
+                    <span className='flex-1 truncate'>{ev.name}</span>
+                    <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                      {compactNumber(ev.count)}
+                    </span>
                   </CommandItem>
                 )
               })}
@@ -195,7 +209,7 @@ const PropertyPicker = ({
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
-  onSelect: (property: string) => void
+  onSelect: (property: string, source: PropertySource) => void
 }) => {
   const [open, setOpen] = useState(false)
 
@@ -203,8 +217,8 @@ const PropertyPicker = ({
   const hasCustom = schema && schema.customPropertyKeys.length > 0
   const hasProfile = schema && schema.profilePropertyKeys.length > 0
 
-  const pick = (key: string) => {
-    onSelect(key)
+  const pick = (key: string, source: PropertySource) => {
+    onSelect(key, source)
     setOpen(false)
   }
 
@@ -226,7 +240,7 @@ const PropertyPicker = ({
         <Plus className='w-3 h-3 text-muted-foreground' />
         <span className='text-muted-foreground'>Filter</span>
       </PopoverTrigger>
-      <PopoverContent align='start' className='w-56 p-0'>
+      <PopoverContent align='start' className='w-64 p-0'>
         <Command>
           <CommandInput placeholder='Search properties...' className='text-xs' />
           <CommandList>
@@ -236,18 +250,24 @@ const PropertyPicker = ({
             )}
             {hasSystem && (
               <CommandGroup heading='System'>
-                {schema.autoPropertyKeys.map(key => (
-                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
-                    <span className='font-mono text-muted-foreground'>{key}</span>
+                {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                  <CommandItem key={pk.name} value={pk.name} onSelect={() => pick(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
+                    <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
+                    <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                      {compactNumber(pk.count)}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
             )}
             {hasCustom && (
               <CommandGroup heading='Custom'>
-                {schema.customPropertyKeys.map(key => (
-                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
-                    {key}
+                {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                  <CommandItem key={pk.name} value={pk.name} onSelect={() => pick(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
+                    <span className='truncate'>{pk.name}</span>
+                    <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                      {compactNumber(pk.count)}
+                    </span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -255,7 +275,7 @@ const PropertyPicker = ({
             {hasProfile && (
               <CommandGroup heading='Profile'>
                 {schema.profilePropertyKeys.map(key => (
-                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
+                  <CommandItem key={key} value={key} onSelect={() => pick(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
                     {key}
                   </CommandItem>
                 ))}
@@ -265,6 +285,190 @@ const PropertyPicker = ({
         </Command>
       </PopoverContent>
     </Popover>
+  )
+}
+
+// ── Value Combobox ──────────────────────────────────────────────────────────
+
+const ValueCombobox = ({
+  value,
+  onChange,
+  onCommit,
+  propertyKey,
+  source,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onCommit: () => void
+  propertyKey: string
+  source: PropertySource
+}) => {
+  const insightsRPC = useAtomValue(insightsRPCAtom)
+  const headers = useAtomValue(projectHeaderAtom)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!propertyKey) return
+    setLoaded(false)
+    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
+      resp => {
+        setSuggestions(resp.values)
+        setLoaded(true)
+      },
+      () => setLoaded(true)
+    )
+  }, [propertyKey, source, insightsRPC, headers])
+
+  const hasSuggestions = loaded && suggestions.length > 0
+
+  if (!hasSuggestions) {
+    return (
+      <Input
+        placeholder='Value'
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') onCommit()
+        }}
+        className='w-40 h-7 text-sm'
+        autoFocus
+      />
+    )
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'inline-flex items-center gap-1 border border-input rounded-md px-2.5 h-7 text-xs bg-background cursor-pointer',
+          'hover:bg-muted/40 transition-colors min-w-[10rem]',
+          open && 'ring-1 ring-ring'
+        )}
+      >
+        <span className={cn('text-xs truncate', value ? 'text-foreground font-mono' : 'text-muted-foreground')}>
+          {value || 'Select value...'}
+        </span>
+        <ChevronDown className='w-3 h-3 text-muted-foreground ml-auto shrink-0' />
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-56 p-0'>
+        <Command>
+          <CommandInput placeholder='Search values...' className='text-xs' />
+          <CommandList>
+            <CommandEmpty className='py-3 text-xs'>No match</CommandEmpty>
+            <CommandGroup>
+              {suggestions.map(s => (
+                <CommandItem
+                  key={s}
+                  value={s}
+                  onSelect={() => {
+                    onChange(s)
+                    setOpen(false)
+                  }}
+                  className='text-xs py-1.5 font-mono'
+                >
+                  {s}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ── Multi Value Picker ──────────────────────────────────────────────────────
+
+const MultiValuePicker = ({
+  values,
+  onChange,
+  propertyKey,
+  source,
+}: {
+  values: string[]
+  onChange: (v: string[]) => void
+  propertyKey: string
+  source: PropertySource
+}) => {
+  const insightsRPC = useAtomValue(insightsRPCAtom)
+  const headers = useAtomValue(projectHeaderAtom)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!propertyKey) return
+    setLoaded(false)
+    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
+      resp => {
+        setSuggestions(resp.values)
+        setLoaded(true)
+      },
+      () => setLoaded(true)
+    )
+  }, [propertyKey, source, insightsRPC, headers])
+
+  const toggle = (v: string) => {
+    if (values.includes(v)) {
+      onChange(values.filter(x => x !== v))
+    } else {
+      onChange([...values, v])
+    }
+  }
+
+  const remove = (v: string) => onChange(values.filter(x => x !== v))
+
+  return (
+    <div className='flex items-center gap-1.5 flex-wrap'>
+      {values.map(v => (
+        <span key={v} className='inline-flex items-center gap-1 text-xs font-mono bg-muted px-1.5 py-0.5 rounded'>
+          {v}
+          <button type='button' onClick={() => remove(v)} className='text-muted-foreground hover:text-foreground'>
+            <X className='w-2.5 h-2.5' />
+          </button>
+        </span>
+      ))}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          className={cn(
+            'inline-flex items-center gap-1 border border-dashed border-input rounded-md px-2 h-6 text-xs bg-background cursor-pointer',
+            'hover:bg-muted/40 transition-colors',
+            open && 'ring-1 ring-ring'
+          )}
+        >
+          <Plus className='w-3 h-3 text-muted-foreground' />
+          <span className='text-muted-foreground'>Add</span>
+        </PopoverTrigger>
+        <PopoverContent align='start' className='w-52 p-0'>
+          <Command>
+            <CommandInput placeholder='Search values...' className='text-xs' />
+            <CommandList>
+              <CommandEmpty className='py-3 text-xs'>
+                {loaded ? 'No values found' : 'Loading...'}
+              </CommandEmpty>
+              <CommandGroup>
+                {suggestions.map(s => {
+                  const isSelected = values.includes(s)
+                  return (
+                    <CommandItem
+                      key={s}
+                      value={s}
+                      onSelect={() => toggle(s)}
+                      className='text-xs py-1.5 font-mono gap-1.5'
+                    >
+                      <Check className={cn('w-3 h-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
+                      {s}
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 
@@ -451,8 +655,10 @@ const EventExplorer = () => {
   // Add property filter UI
   const [addingFilter, setAddingFilter] = useState(false)
   const [newProp, setNewProp] = useState('')
+  const [newPropSource, setNewPropSource] = useState<PropertySource>(PropertySource.UNSPECIFIED)
   const [newOp, setNewOp] = useState<FilterOperator>(FilterOperator.EQUALS)
   const [newVal, setNewVal] = useState('')
+  const [newVals, setNewVals] = useState<string[]>([])
 
   // Data
   const [events, setEvents] = useState<ActivityEvent[]>([])
@@ -467,35 +673,40 @@ const EventExplorer = () => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
 
-  const startAddFilter = (property: string) => {
+  const startAddFilter = (property: string, source: PropertySource) => {
     setNewProp(property)
+    setNewPropSource(source)
     setNewOp(FilterOperator.EQUALS)
     setNewVal('')
+    setNewVals([])
     setAddingFilter(true)
   }
 
   const addFilter = () => {
     if (!newProp.trim()) return
+    if (newOpMeta?.multiValue && newVals.length === 0) return
+    if (!newOpMeta?.multiValue && !newOpMeta?.noValue && !newVal.trim()) return
     setPropFilters([
       ...propFilters,
       {
         property: newProp.trim(),
         operator: newOp,
-        value: newOpMeta?.noValue ? '' : newVal.trim(),
+        value: newOpMeta?.multiValue ? '' : newOpMeta?.noValue ? '' : newVal.trim(),
+        values: newOpMeta?.multiValue ? newVals : [],
       },
     ])
+    resetFilterForm()
+  }
+
+  const resetFilterForm = () => {
     setNewProp('')
     setNewOp(FilterOperator.EQUALS)
     setNewVal('')
+    setNewVals([])
     setAddingFilter(false)
   }
 
-  const cancelAddFilter = () => {
-    setNewProp('')
-    setNewOp(FilterOperator.EQUALS)
-    setNewVal('')
-    setAddingFilter(false)
-  }
+  const cancelAddFilter = () => resetFilterForm()
 
   const commitUserFilter = () => {
     setUserFilter(userInput.trim())
@@ -517,7 +728,7 @@ const EventExplorer = () => {
               property: f.property,
               operator: f.operator,
               value: f.value,
-              values: [],
+              values: f.values,
             })),
             pageSize: 100,
             pageToken,
@@ -587,7 +798,7 @@ const EventExplorer = () => {
 
         {/* Event combobox + User ID + Property picker */}
         <div className='flex items-center gap-2'>
-          <EventCombobox value={kindFilter} onChange={setKindFilter} eventNames={schema?.eventNames ?? []} schemaError={schemaError} />
+          <EventCombobox value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
           <Input
             placeholder='User ID'
             value={userInput}
@@ -606,7 +817,11 @@ const EventExplorer = () => {
             <span className='text-xs font-mono bg-muted px-1.5 py-0.5 rounded'>{newProp}</span>
             <select
               value={newOp}
-              onChange={e => setNewOp(Number(e.target.value) as FilterOperator)}
+              onChange={e => {
+                setNewOp(Number(e.target.value) as FilterOperator)
+                setNewVal('')
+                setNewVals([])
+              }}
               className='h-7 text-xs rounded-md border border-input bg-background px-2 text-foreground outline-none focus:ring-1 focus:ring-ring cursor-pointer'
             >
               {OPERATORS.map(op => (
@@ -615,20 +830,29 @@ const EventExplorer = () => {
                 </option>
               ))}
             </select>
-            {!newOpMeta?.noValue && (
-              <Input
-                placeholder='Value'
-                value={newVal}
-                onChange={e => setNewVal(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') addFilter()
-                  if (e.key === 'Escape') cancelAddFilter()
-                }}
-                className='w-40 h-7 text-sm'
-                autoFocus
+            {newOpMeta?.multiValue ? (
+              <MultiValuePicker
+                values={newVals}
+                onChange={setNewVals}
+                propertyKey={newProp}
+                source={newPropSource}
               />
-            )}
-            <Button variant='ghost' size='sm' className='h-7 px-1.5' onClick={addFilter} disabled={!newProp.trim()}>
+            ) : !newOpMeta?.noValue ? (
+              <ValueCombobox
+                value={newVal}
+                onChange={setNewVal}
+                onCommit={addFilter}
+                propertyKey={newProp}
+                source={newPropSource}
+              />
+            ) : null}
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-7 px-1.5'
+              onClick={addFilter}
+              disabled={!newProp.trim() || (newOpMeta?.multiValue ? newVals.length === 0 : false)}
+            >
               <Check className='w-3.5 h-3.5' />
             </Button>
             <Button variant='ghost' size='sm' className='h-7 px-1.5' onClick={cancelAddFilter}>
@@ -651,7 +875,14 @@ const EventExplorer = () => {
             )}
             {propFilters.map((f, i) => {
               const op = OPERATORS.find(o => o.value === f.operator)
-              const label = op?.noValue ? `${f.property} ${op.symbol}` : `${f.property} ${op?.symbol ?? '='} ${f.value}`
+              let label: string
+              if (op?.noValue) {
+                label = `${f.property} ${op.symbol}`
+              } else if (op?.multiValue) {
+                label = `${f.property} ${op.symbol} [${f.values.join(', ')}]`
+              } else {
+                label = `${f.property} ${op?.symbol ?? '='} ${f.value}`
+              }
               return (
                 <FilterPill
                   key={i}
