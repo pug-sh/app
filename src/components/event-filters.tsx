@@ -79,20 +79,24 @@ export const compactNumber = (n: bigint): string => {
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
 
-const useSuggestions = (propertyKey: string, source: PropertySource) => {
+const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?: string) => {
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const [suggestions, setSuggestions] = useState<string[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(true)
 
   useEffect(() => {
     if (!propertyKey) return
-    setLoaded(false)
-    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
-      resp => { setSuggestions(resp.values); setLoaded(true) },
-      () => setLoaded(true)
+
+    let cancelled = false
+    const setLoading = (v: boolean) => { if (!cancelled) setLoaded(v) }
+    setLoading(false)
+    insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers }).then(
+      resp => { if (!cancelled) { setSuggestions(resp.values); setLoading(true) } },
+      () => { setLoading(true) }
     )
-  }, [propertyKey, source, insightsRPC, headers])
+    return () => { cancelled = true }
+  }, [propertyKey, source, eventKind, insightsRPC, headers])
 
   return { suggestions, loaded }
 }
@@ -206,10 +210,12 @@ export const FilterBuilder = ({
   schema,
   schemaError,
   onAdd,
+  kindFilter,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   onAdd: (filter: ActiveFilter) => void
+  kindFilter?: string
 }) => {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<BuilderStep>('property')
@@ -221,7 +227,7 @@ export const FilterBuilder = ({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const opMeta = OPERATORS.find(o => o.value === op)
-  const { suggestions, loaded } = useSuggestions(step === 'value' ? prop : '', propSource)
+  const { suggestions, loaded } = useSuggestions(step === 'value' ? prop : '', propSource, kindFilter)
 
   const reset = () => {
     setStep('property')
@@ -453,11 +459,13 @@ export const FilterChip = ({
   onRemove,
   onUpdate,
   schema,
+  kindFilter,
 }: {
   filter: ActiveFilter
   onRemove: () => void
   onUpdate: (f: ActiveFilter) => void
   schema: GetFilterSchemaResponse | null
+  kindFilter?: string
 }) => {
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
@@ -468,7 +476,7 @@ export const FilterChip = ({
         : PropertySource.PROFILE
     : PropertySource.UNSPECIFIED
 
-  const { suggestions, loaded } = useSuggestions(editOpen ? filter.property : '', propSource)
+  const { suggestions, loaded } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   const valueLabel = op?.noValue
     ? null

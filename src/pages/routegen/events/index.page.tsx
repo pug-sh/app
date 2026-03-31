@@ -68,7 +68,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         )}
         onClick={() => hasMore && setExpanded(!expanded)}
       >
-        <td className='py-2.5 pr-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle w-[120px]'>
+        <td className='py-2.5 pr-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle w-30'>
           {d && <HoverSwap primary={formatRelative(d)} secondary={formatAbsolute(d)} />}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
@@ -125,7 +125,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
       </tr>
       {expanded && (
         <tr>
-          <td className='pb-3 pt-1 align-top w-[120px]' onClick={e => e.stopPropagation()}>
+          <td className='pb-3 pt-1 align-top w-30' onClick={e => e.stopPropagation()}>
             <Toggle size='sm' pressed={jsonMode} onPressedChange={setJsonMode}>
               <Braces className='w-3.5 h-3.5' />
             </Toggle>
@@ -228,10 +228,10 @@ const EventExplorer = () => {
     return () => ro.disconnect()
   }, [])
 
-  // Fetch schema once when project is available
+  // Fetch schema when project or selected event kind changes
   useEffect(() => {
-    if (project) fetchSchema()
-  }, [project, fetchSchema])
+    if (project) fetchSchema(kindFilter)
+  }, [project, fetchSchema, kindFilter])
 
   const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
 
@@ -352,11 +352,12 @@ const EventExplorer = () => {
               key={i}
               filter={f}
               schema={schema}
+              kindFilter={kindFilter}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} kindFilter={kindFilter} />
           {events.length > 0 && (
             <span className='ml-auto text-xs text-muted-foreground tabular-nums'>{events.length} events</span>
           )}

@@ -6,12 +6,12 @@ import { atom } from 'jotai'
 export const filterSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
 export const filterSchemaErrorAtom = atom<string | null>(null)
 
-export const fetchFilterSchemaAtom = atom(null, async (get, set) => {
+export const fetchFilterSchemaAtom = atom(null, async (get, set, kindFilter?: string) => {
   const insightsRPC = get(insightsRPCAtom)
   const headers = get(projectHeaderAtom)
   set(filterSchemaErrorAtom, null)
   try {
-    const resp = await insightsRPC.getFilterSchema({}, { headers })
+    const resp = await insightsRPC.getFilterSchema({ eventKind: kindFilter ?? '' }, { headers })
     set(filterSchemaAtom, resp)
     return resp
   } catch (err) {
