@@ -1,6 +1,7 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
+import { kindStyle } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Toggle } from '@/components/ui/toggle'
@@ -38,40 +39,6 @@ const formatDuration = (ms: number): string => {
 
 const formatClock = (d: Date): string => {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-}
-
-const COLOR_PALETTE = [
-  { dot: 'bg-blue-500', bg: 'bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-  { dot: 'bg-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-  { dot: 'bg-violet-500', bg: 'bg-violet-500/10', text: 'text-violet-700 dark:text-violet-400' },
-  { dot: 'bg-amber-500', bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
-  { dot: 'bg-rose-500', bg: 'bg-rose-500/10', text: 'text-rose-700 dark:text-rose-400' },
-  { dot: 'bg-cyan-500', bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400' },
-  { dot: 'bg-pink-500', bg: 'bg-pink-500/10', text: 'text-pink-700 dark:text-pink-400' },
-  { dot: 'bg-teal-500', bg: 'bg-teal-500/10', text: 'text-teal-700 dark:text-teal-400' },
-]
-
-const FIXED_KIND_COLORS: Record<string, number> = {
-  click: 0,
-  form_start: 1,
-  form_submit: 2,
-  rage_click: 4,
-  dead_click: 6,
-  page_view: 3,
-  scroll: 5,
-}
-
-const hashString = (s: string): number => {
-  let hash = 0
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash)
-}
-
-const kindStyle = (kind: string) => {
-  if (kind in FIXED_KIND_COLORS) return COLOR_PALETTE[FIXED_KIND_COLORS[kind]]
-  return COLOR_PALETTE[hashString(kind) % COLOR_PALETTE.length]
 }
 
 // ── Session Summary ─────────────────────────────────────────────────────────

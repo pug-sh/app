@@ -1,20 +1,20 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
+import { EventChip, FilterBuilder, FilterChip, kindStyle, type ActiveFilter } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Toggle } from '@/components/ui/toggle'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { cn } from '@/lib/utils'
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
   Braces,
@@ -22,7 +22,6 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  Filter,
   Globe,
   Loader2,
   Monitor,
@@ -54,40 +53,6 @@ const formatDateHeader = (d: Date): string => {
 
 const formatClock = (d: Date): string => {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
-}
-
-const COLOR_PALETTE = [
-  { dot: 'bg-blue-500', bg: 'bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-  { dot: 'bg-emerald-500', bg: 'bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-  { dot: 'bg-violet-500', bg: 'bg-violet-500/10', text: 'text-violet-700 dark:text-violet-400' },
-  { dot: 'bg-amber-500', bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
-  { dot: 'bg-rose-500', bg: 'bg-rose-500/10', text: 'text-rose-700 dark:text-rose-400' },
-  { dot: 'bg-cyan-500', bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400' },
-  { dot: 'bg-pink-500', bg: 'bg-pink-500/10', text: 'text-pink-700 dark:text-pink-400' },
-  { dot: 'bg-teal-500', bg: 'bg-teal-500/10', text: 'text-teal-700 dark:text-teal-400' },
-]
-
-const FIXED_KIND_COLORS: Record<string, number> = {
-  click: 0,
-  form_start: 1,
-  form_submit: 2,
-  rage_click: 4,
-  dead_click: 6,
-  page_view: 3,
-  scroll: 5,
-}
-
-const hashString = (s: string): number => {
-  let hash = 0
-  for (let i = 0; i < s.length; i++) {
-    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash)
-}
-
-const kindStyle = (kind: string) => {
-  if (kind in FIXED_KIND_COLORS) return COLOR_PALETTE[FIXED_KIND_COLORS[kind]]
-  return COLOR_PALETTE[hashString(kind) % COLOR_PALETTE.length]
 }
 
 // ── Profile Summary ─────────────────────────────────────────────────────────
@@ -344,12 +309,23 @@ const UserActivity = () => {
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
+  const schema = useAtomValue(filterSchemaAtom)
+  const schemaError = useAtomValue(filterSchemaErrorAtom)
+  const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
   const [kindFilter, setKindFilter] = useState('')
+  const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    if (project) fetchSchema()
+  }, [project, fetchSchema])
+
+  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
+  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
+  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
@@ -363,6 +339,12 @@ const UserActivity = () => {
             distinctId,
             kind: kindFilter.trim() || undefined,
             timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            propertyFilters: propFilters.map(f => ({
+              property: f.property,
+              operator: f.operator,
+              value: f.value,
+              values: f.values,
+            })),
             pageSize: 200,
             pageToken,
           },
@@ -380,7 +362,7 @@ const UserActivity = () => {
         setLoading(false)
       }
     },
-    [distinctId, kindFilter, headers, activityRPC]
+    [distinctId, kindFilter, propFilters, headers, activityRPC]
   )
 
   useEffect(() => {
@@ -400,18 +382,6 @@ const UserActivity = () => {
       groups[groups.length - 1].events.push(event)
     }
     return groups
-  }, [events])
-
-  const uniqueKinds = useMemo(() => {
-    const kinds: string[] = []
-    const seen = new Set<string>()
-    for (const e of events) {
-      if (!seen.has(e.kind)) {
-        seen.add(e.kind)
-        kinds.push(e.kind)
-      }
-    }
-    return kinds
   }, [events])
 
   if (!project) {
@@ -435,36 +405,24 @@ const UserActivity = () => {
         <>
           <ProfileSummary distinctId={distinctId ?? ''} events={events} />
 
-          <div className='flex items-center gap-2 mb-4'>
-            <div className='flex flex-wrap gap-1.5'>
-              {uniqueKinds.map(kind => (
-                <span key={kind} className='inline-flex items-center gap-1.5 text-xs text-muted-foreground'>
-                  <span className={cn('w-2 h-2 rounded-full', kindStyle(kind).dot)} />
-                  {kind}
-                </span>
-              ))}
-            </div>
-            <Button variant='outline' size='sm' className='ml-auto' onClick={() => setShowFilters(!showFilters)}>
-              <Filter className='w-3.5 h-3.5' /> Filter
-            </Button>
+          <div className='flex flex-wrap items-center gap-2 mb-4'>
+            <EventChip
+              value={kindFilter}
+              onChange={setKindFilter}
+              events={schema?.events ?? []}
+              schemaError={schemaError}
+            />
+            {propFilters.map((f, i) => (
+              <FilterChip
+                key={i}
+                filter={f}
+                schema={schema}
+                onRemove={() => removeFilter(i)}
+                onUpdate={next => updateFilter(i, next)}
+              />
+            ))}
+            <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
           </div>
-
-          {showFilters && (
-            <div className='mb-4 flex items-end gap-3'>
-              <div className='space-y-1'>
-                <Label className='text-xs'>Event kind</Label>
-                <Input
-                  placeholder='e.g. page_view'
-                  value={kindFilter}
-                  onChange={e => setKindFilter(e.target.value)}
-                  className='w-48 h-7 text-sm'
-                />
-              </div>
-              <Button size='sm' onClick={() => fetchEvents()}>
-                Apply
-              </Button>
-            </div>
-          )}
 
           {groupedEvents.map(group => {
             const lanes = computeSessionLanes(group.events)
