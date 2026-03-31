@@ -1,10 +1,13 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import type { GetFilterSchemaResponse } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
@@ -13,10 +16,11 @@ import { formatRelative } from '@/hooks/use-relative-time'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { cn } from '@/lib/utils'
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { Toggle } from '@/components/ui/toggle'
-import { Braces, Check, ChevronDown, ChevronRight, List, Loader2, Plus, X } from 'lucide-react'
+import { AlertCircle, Braces, Check, ChevronDown, ChevronRight, List, Loader2, Plus, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -24,7 +28,8 @@ const tsToDate = (ts: Timestamp | undefined): Date | null => {
   if (!ts) return null
   try {
     return timestampDate(ts)
-  } catch {
+  } catch (err) {
+    console.warn('Invalid timestamp:', ts, err)
     return null
   }
 }
@@ -38,14 +43,14 @@ const formatAbsolute = (d: Date): string => {
 }
 
 const COLOR_PALETTE = [
-  { bg: 'bg-blue-500/10', text: 'text-blue-700 dark:text-blue-400' },
-  { bg: 'bg-emerald-500/10', text: 'text-emerald-700 dark:text-emerald-400' },
-  { bg: 'bg-violet-500/10', text: 'text-violet-700 dark:text-violet-400' },
-  { bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-400' },
-  { bg: 'bg-rose-500/10', text: 'text-rose-700 dark:text-rose-400' },
-  { bg: 'bg-cyan-500/10', text: 'text-cyan-700 dark:text-cyan-400' },
-  { bg: 'bg-pink-500/10', text: 'text-pink-700 dark:text-pink-400' },
-  { bg: 'bg-teal-500/10', text: 'text-teal-700 dark:text-teal-400' },
+  { bg: 'bg-blue-500/10', dot: 'bg-blue-500', text: 'text-blue-700 dark:text-blue-400' },
+  { bg: 'bg-emerald-500/10', dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-400' },
+  { bg: 'bg-violet-500/10', dot: 'bg-violet-500', text: 'text-violet-700 dark:text-violet-400' },
+  { bg: 'bg-amber-500/10', dot: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-400' },
+  { bg: 'bg-rose-500/10', dot: 'bg-rose-500', text: 'text-rose-700 dark:text-rose-400' },
+  { bg: 'bg-cyan-500/10', dot: 'bg-cyan-500', text: 'text-cyan-700 dark:text-cyan-400' },
+  { bg: 'bg-pink-500/10', dot: 'bg-pink-500', text: 'text-pink-700 dark:text-pink-400' },
+  { bg: 'bg-teal-500/10', dot: 'bg-teal-500', text: 'text-teal-700 dark:text-teal-400' },
 ]
 
 const FIXED_KIND_COLORS: Record<string, number> = {
@@ -66,7 +71,7 @@ const hashString = (s: string): number => {
   return Math.abs(hash)
 }
 
-const kindStyle = (kind: string): { bg: string; text: string } => {
+const kindStyle = (kind: string): { bg: string; dot: string; text: string } => {
   if (kind in FIXED_KIND_COLORS) {
     return COLOR_PALETTE[FIXED_KIND_COLORS[kind]]
   }
@@ -100,6 +105,167 @@ interface ActiveFilter {
   property: string
   operator: FilterOperator
   value: string
+}
+
+// ── Event Combobox ──────────────────────────────────────────────────────────
+
+const EventCombobox = ({
+  value,
+  onChange,
+  eventNames,
+  schemaError,
+}: {
+  value: string
+  onChange: (v: string) => void
+  eventNames: string[]
+  schemaError: string | null
+}) => {
+  const [open, setOpen] = useState(false)
+
+  const clear = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onChange('')
+  }
+
+  const emptyMessage = schemaError
+    ? 'Failed to load events'
+    : eventNames.length === 0
+      ? 'Loading event names...'
+      : 'No events found'
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'inline-flex items-center gap-1.5 border border-input rounded-md px-2.5 h-7 text-sm bg-background cursor-pointer',
+          'hover:bg-muted/40 transition-colors',
+          open && 'ring-1 ring-ring'
+        )}
+      >
+        <Search className='w-3 h-3 text-muted-foreground' />
+        <span className={cn('text-xs', value ? 'text-foreground' : 'text-muted-foreground')}>
+          {value || 'All events'}
+        </span>
+        {value ? (
+          <button type='button' onClick={clear} className='text-muted-foreground hover:text-foreground ml-auto'>
+            <X className='w-3 h-3' />
+          </button>
+        ) : (
+          <ChevronDown className='w-3 h-3 text-muted-foreground ml-auto' />
+        )}
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-52 p-0'>
+        <Command>
+          <CommandInput placeholder='Search events...' className='text-xs' />
+          <CommandList>
+            <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {eventNames.map(name => {
+                const colors = kindStyle(name)
+                return (
+                  <CommandItem
+                    key={name}
+                    value={name}
+                    onSelect={() => {
+                      onChange(name)
+                      setOpen(false)
+                    }}
+                    data-checked={value === name}
+                    className='text-xs gap-2'
+                  >
+                    <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', colors.dot)} />
+                    {name}
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+// ── Property Picker ─────────────────────────────────────────────────────────
+
+const PropertyPicker = ({
+  schema,
+  schemaError,
+  onSelect,
+}: {
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  onSelect: (property: string) => void
+}) => {
+  const [open, setOpen] = useState(false)
+
+  const hasSystem = schema && schema.autoPropertyKeys.length > 0
+  const hasCustom = schema && schema.customPropertyKeys.length > 0
+  const hasProfile = schema && schema.profilePropertyKeys.length > 0
+
+  const pick = (key: string) => {
+    onSelect(key)
+    setOpen(false)
+  }
+
+  const emptyMessage = schemaError
+    ? 'Failed to load properties'
+    : schema
+      ? 'No properties found'
+      : 'Loading properties...'
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'inline-flex items-center gap-1 border border-input rounded-md px-2.5 h-7 text-xs bg-background cursor-pointer',
+          'hover:bg-muted/40 transition-colors',
+          open && 'ring-1 ring-ring'
+        )}
+      >
+        <Plus className='w-3 h-3 text-muted-foreground' />
+        <span className='text-muted-foreground'>Filter</span>
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-56 p-0'>
+        <Command>
+          <CommandInput placeholder='Search properties...' className='text-xs' />
+          <CommandList>
+            <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
+            {!schema && !schemaError && (
+              <div className='py-4 text-xs text-center text-muted-foreground'>Loading properties...</div>
+            )}
+            {hasSystem && (
+              <CommandGroup heading='System'>
+                {schema.autoPropertyKeys.map(key => (
+                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
+                    <span className='font-mono text-muted-foreground'>{key}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {hasCustom && (
+              <CommandGroup heading='Custom'>
+                {schema.customPropertyKeys.map(key => (
+                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
+                    {key}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {hasProfile && (
+              <CommandGroup heading='Profile'>
+                {schema.profilePropertyKeys.map(key => (
+                  <CommandItem key={key} value={key} onSelect={() => pick(key)} className='text-xs'>
+                    {key}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ── Filter Pill ──────────────────────────────────────────────────────────────
@@ -271,13 +437,13 @@ const EventExplorer = () => {
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
-
-  // Text input state (not applied until Enter)
-  const [kindInput, setKindInput] = useState('')
-  const [userInput, setUserInput] = useState('')
+  const schema = useAtomValue(filterSchemaAtom)
+  const schemaError = useAtomValue(filterSchemaErrorAtom)
+  const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
   // Applied filter state (drives API calls)
   const [kindFilter, setKindFilter] = useState('')
+  const [userInput, setUserInput] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [rangeIdx, setRangeIdx] = useState(2) // 14d
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
@@ -292,12 +458,20 @@ const EventExplorer = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const newOpMeta = OPERATORS.find(o => o.value === newOp)
 
-  const commitTextFilters = () => {
-    setKindFilter(kindInput)
-    setUserFilter(userInput)
+  // Fetch schema once when project is available
+  useEffect(() => {
+    if (project) fetchSchema()
+  }, [project, fetchSchema])
+
+  const startAddFilter = (property: string) => {
+    setNewProp(property)
+    setNewOp(FilterOperator.EQUALS)
+    setNewVal('')
+    setAddingFilter(true)
   }
 
   const addFilter = () => {
@@ -323,16 +497,21 @@ const EventExplorer = () => {
     setAddingFilter(false)
   }
 
+  const commitUserFilter = () => {
+    setUserFilter(userInput.trim())
+  }
+
   const fetchEvents = useCallback(
     async (pageToken = '') => {
       setLoading(true)
+      setError(null)
       try {
         const now = new Date()
         const from = new Date(now.getTime() - TIME_RANGES[rangeIdx].ms)
         const resp = await activityRPC.getEventExplorer(
           {
-            distinctId: userFilter.trim() || undefined,
-            kind: kindFilter.trim() || undefined,
+            distinctId: userFilter || undefined,
+            kind: kindFilter || undefined,
             timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
             propertyFilters: propFilters.map(f => ({
               property: f.property,
@@ -353,6 +532,7 @@ const EventExplorer = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Event explorer failed:', err)
+        setError(pageToken ? 'Failed to load more events' : 'Failed to load events')
       } finally {
         setLoading(false)
       }
@@ -364,7 +544,7 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
-  const hasActiveFilters = kindFilter || userFilter || propFilters.length > 0
+  const hasActiveFilters = userFilter || propFilters.length > 0
 
   if (!project) {
     return (
@@ -405,47 +585,25 @@ const EventExplorer = () => {
           )}
         </div>
 
-        {/* Quick filters + add property */}
+        {/* Event combobox + User ID + Property picker */}
         <div className='flex items-center gap-2'>
-          <Input
-            placeholder='Event name'
-            value={kindInput}
-            onChange={e => setKindInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitTextFilters()
-            }}
-            className='w-40 h-7 text-sm'
-          />
+          <EventCombobox value={kindFilter} onChange={setKindFilter} eventNames={schema?.eventNames ?? []} schemaError={schemaError} />
           <Input
             placeholder='User ID'
             value={userInput}
             onChange={e => setUserInput(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter') commitTextFilters()
+              if (e.key === 'Enter') commitUserFilter()
             }}
             className='w-40 h-7 text-sm'
           />
-          {!addingFilter && (
-            <Button variant='outline' size='sm' onClick={() => setAddingFilter(true)} className='h-7 text-xs'>
-              <Plus className='w-3 h-3' />
-              Property
-            </Button>
-          )}
+          {!addingFilter && <PropertyPicker schema={schema} schemaError={schemaError} onSelect={startAddFilter} />}
         </div>
 
         {/* Inline add property filter */}
         {addingFilter && (
-          <div className='flex items-center gap-2'>
-            <Input
-              placeholder='e.g. $browser'
-              value={newProp}
-              onChange={e => setNewProp(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Escape') cancelAddFilter()
-              }}
-              className='w-40 h-7 text-sm'
-              autoFocus
-            />
+          <div className='flex items-center gap-2 p-2 bg-primary/[0.02] border border-primary/10 rounded-lg'>
+            <span className='text-xs font-mono bg-muted px-1.5 py-0.5 rounded'>{newProp}</span>
             <select
               value={newOp}
               onChange={e => setNewOp(Number(e.target.value) as FilterOperator)}
@@ -467,6 +625,7 @@ const EventExplorer = () => {
                   if (e.key === 'Escape') cancelAddFilter()
                 }}
                 className='w-40 h-7 text-sm'
+                autoFocus
               />
             )}
             <Button variant='ghost' size='sm' className='h-7 px-1.5' onClick={addFilter} disabled={!newProp.trim()}>
@@ -481,15 +640,6 @@ const EventExplorer = () => {
         {/* Active filter pills */}
         {hasActiveFilters && (
           <div className='flex flex-wrap gap-1.5'>
-            {kindFilter && (
-              <FilterPill
-                label={`event = ${kindFilter}`}
-                onRemove={() => {
-                  setKindFilter('')
-                  setKindInput('')
-                }}
-              />
-            )}
             {userFilter && (
               <FilterPill
                 label={`user = ${userFilter}`}
@@ -519,6 +669,14 @@ const EventExplorer = () => {
         <div className='flex items-center justify-center py-24'>
           <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
         </div>
+      ) : error && events.length === 0 ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <AlertCircle className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchEvents()}>
+            Retry
+          </Button>
+        </div>
       ) : events.length > 0 ? (
         <>
           <table className='w-full'>
@@ -540,7 +698,17 @@ const EventExplorer = () => {
             </tbody>
           </table>
 
-          {nextToken && (
+          {error && (
+            <div className='mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground'>
+              <AlertCircle className='w-3.5 h-3.5' />
+              <span>{error}</span>
+              <Button variant='outline' size='sm' className='h-6 text-xs' onClick={() => fetchEvents(nextToken)}>
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {!error && nextToken && (
             <div className='mt-4 mb-8'>
               <Button
                 variant='outline'
