@@ -6,8 +6,6 @@ import {
 } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
@@ -15,9 +13,8 @@ import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Loader2, Play, TrendingUp, Users } from 'lucide-react'
+import { Loader2, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import ProjectLink from '@/components/project-link'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -384,11 +381,9 @@ const Insights = () => {
   const [rangeIdx, setRangeIdx] = useState(1)
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
-  const [tab, setTab] = useState('trends')
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
   const [series, setSeries] = useState<Series[]>([])
-  const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -407,65 +402,46 @@ const Insights = () => {
   const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
   const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
 
-  const validEvents = eventKinds.filter(e => e.trim())
+  // Auto-run query when params change
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const queryKey = JSON.stringify({ eventKinds, rangeIdx, granularity, aggregation, propFilters })
 
-  const filtersForRPC = propFilters.map(f => ({
-    property: f.property,
-    operator: f.operator,
-    value: f.value,
-    values: f.values,
-  }))
+  useEffect(() => {
+    const events = eventKinds.filter(e => e.trim())
+    if (!project || events.length === 0) return
 
-  const handleTrendsQuery = async () => {
-    if (validEvents.length === 0) return
-    setLoading(true)
-    try {
-      const now = new Date()
-      const from = new Date(now.getTime() - timeRanges[rangeIdx].ms)
-      const resp = await insightsRPC.query(
-        {
-          insightType: InsightType.TRENDS,
-          granularity,
-          timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
-          events: validEvents.map(kind => ({ kind, aggregation, filters: filtersForRPC })),
-        },
-        { headers }
-      )
-      setSeries(resp.series)
-    } catch (err) {
-      console.error('Insights query failed:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    const filters = propFilters.map(f => ({
+      property: f.property,
+      operator: f.operator,
+      value: f.value,
+      values: f.values,
+    }))
 
-  const handleSegmentQuery = async () => {
-    if (validEvents.length === 0) return
-    setLoading(true)
-    try {
-      const now = new Date()
-      const from = new Date(now.getTime() - timeRanges[rangeIdx].ms)
-      const resp = await insightsRPC.segmentUsers(
-        {
-          timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
-          events: validEvents.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters: filtersForRPC })),
-          pageSize: 100,
-        },
-        { headers }
-      )
-      setSegmentIds(resp.distinctIds)
-    } catch (err) {
-      console.error('Segment query failed:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (tab === 'trends') handleTrendsQuery()
-    else handleSegmentQuery()
-  }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const now = new Date()
+        const from = new Date(now.getTime() - timeRanges[rangeIdx].ms)
+        const resp = await insightsRPC.query(
+          {
+            insightType: InsightType.TRENDS,
+            granularity,
+            timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            events: events.map(kind => ({ kind, aggregation, filters })),
+          },
+          { headers }
+        )
+        setSeries(resp.series)
+      } catch (err) {
+        console.error('Insights query failed:', err)
+      } finally {
+        setLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(debounceRef.current)
+  }, [queryKey, project, insightsRPC, headers])
 
   const seriesNames = series.map(s => s.eventKind || 'unknown')
   const chartData: ChartPoint[] =
@@ -489,153 +465,77 @@ const Insights = () => {
   }
 
   return (
-    <Page title='Insights' description='Analyze event trends and user segments'>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className='mb-5'>
-          <TabsTrigger value='trends'>
-            <TrendingUp className='w-3.5 h-3.5' />
-            Trends
-          </TabsTrigger>
-          <TabsTrigger value='segments'>
-            <Users className='w-3.5 h-3.5' />
-            Segments
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Query Builder */}
-        <div className='mb-5'>
-          <div className='flex items-center gap-2 mb-3'>
-            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Query</span>
-            <div className='flex-1 h-px bg-border' />
-          </div>
-          <form onSubmit={handleSubmit}>
-            <div className='flex flex-wrap items-center gap-2 mb-3'>
-              {eventKinds.map((kind, i) => (
+    <Page title='Insights' description='Analyze event trends'>
+      {/* Query builder */}
+        <div className='space-y-3 mb-5'>
+          <div className='flex flex-wrap items-center gap-2'>
+            {eventKinds.map((kind, i) => (
+              <span key={i} className='inline-flex items-center gap-1.5'>
+                <span
+                  className='w-2 h-2 rounded-full shrink-0'
+                  style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
+                />
                 <EventChip
-                  key={i}
                   value={kind}
                   onChange={v => updateEvent(i, v)}
                   events={schema?.events ?? []}
                   schemaError={schemaError}
                 />
-              ))}
-              <EventChip
-                value=''
-                onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
-                events={schema?.events ?? []}
-                schemaError={schemaError}
+              </span>
+            ))}
+            <EventChip
+              value=''
+              onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
+              events={schema?.events ?? []}
+              schemaError={schemaError}
+            />
+            {propFilters.map((f, i) => (
+              <FilterChip
+                key={`f-${i}`}
+                filter={f}
+                schema={schema}
+                onRemove={() => removeFilter(i)}
+                onUpdate={next => updateFilter(i, next)}
               />
-              {propFilters.map((f, i) => (
-                <FilterChip
-                  key={`f-${i}`}
-                  filter={f}
-                  schema={schema}
-                  onRemove={() => removeFilter(i)}
-                  onUpdate={next => updateFilter(i, next)}
-                />
-              ))}
-              <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
-            </div>
+            ))}
+            <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+            {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
+          </div>
 
-            <div className='flex flex-wrap items-center gap-3'>
-              <PillGroup
-                options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
-                value={rangeIdx}
-                onChange={setRangeIdx}
-              />
-
-              {tab === 'trends' && (
-                <>
-                  <div className='w-px h-5 bg-border' />
-                  <PillGroup options={granularities} value={granularity} onChange={setGranularity} />
-                  <div className='w-px h-5 bg-border' />
-                  <PillGroup options={aggregations} value={aggregation} onChange={setAggregation} />
-                </>
-              )}
-
-              <Button type='submit' size='sm' disabled={loading || validEvents.length === 0} className='ml-auto'>
-                {loading ? <Loader2 className='animate-spin' /> : <Play className='w-3.5 h-3.5' />}
-                Run query
-              </Button>
-            </div>
-          </form>
+          <div className='flex flex-wrap items-center gap-3'>
+            <PillGroup
+              options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
+              value={rangeIdx}
+              onChange={setRangeIdx}
+            />
+            <div className='w-px h-5 bg-border' />
+            <PillGroup options={granularities} value={granularity} onChange={setGranularity} />
+            <div className='w-px h-5 bg-border' />
+            <PillGroup options={aggregations} value={aggregation} onChange={setAggregation} />
+          </div>
         </div>
 
-        {/* Trends results */}
-        <TabsContent value='trends'>
-          {chartData.length > 0 ? (
-            <div>
-              <div className='flex items-center gap-2 mb-3'>
-                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Results</span>
-                <div className='flex-1 h-px bg-border' />
+        {chartData.length > 0 ? (
+          <div>
+            <SummaryStats series={seriesNames} data={chartData} />
+            {allZero ? (
+              <div className='flex items-center justify-center h-48 text-muted-foreground'>
+                <p className='text-sm'>No events recorded in this period</p>
               </div>
-              <SummaryStats series={seriesNames} data={chartData} />
-              {allZero ? (
-                <div className='flex items-center justify-center h-48 text-muted-foreground'>
-                  <p className='text-sm'>No events recorded in this period</p>
-                </div>
-              ) : (
-                <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
-              )}
-              <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            ) : (
+              <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            )}
+            <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+          </div>
+        ) : (
+          !loading && (
+            <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
+              <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+              <p className='text-sm font-medium mb-1'>No data yet</p>
+              <p className='text-xs'>Pick an event above to start</p>
             </div>
-          ) : (
-            !loading && (
-              <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-                <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-                <p className='text-sm font-medium mb-1'>No data yet</p>
-                <p className='text-xs'>Add event names above and click Run query</p>
-              </div>
-            )
-          )}
-        </TabsContent>
-
-        {/* Segments results */}
-        <TabsContent value='segments'>
-          {segmentIds.length > 0 ? (
-            <div>
-              <div className='flex items-center gap-2 mb-2'>
-                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-                  Users found
-                </span>
-                <div className='flex-1 h-px bg-border' />
-                <span className='text-[10px] text-muted-foreground'>{segmentIds.length}</span>
-              </div>
-              <table className='w-full'>
-                <thead>
-                  <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
-                    <th className='py-2 pr-2 text-left font-medium w-16'>#</th>
-                    <th className='py-2 pr-2 text-left font-medium'>Distinct ID</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {segmentIds.map((id, i) => (
-                    <tr key={id} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
-                      <td className='py-2 pr-2 text-muted-foreground tabular-nums text-xs'>{i + 1}</td>
-                      <td className='py-2 pr-2 text-sm'>
-                        <ProjectLink
-                          href={`/activities/${encodeURIComponent(id)}`}
-                          className='font-mono text-primary hover:underline underline-offset-4'
-                        >
-                          {id}
-                        </ProjectLink>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            !loading && (
-              <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-                <Users className='w-10 h-10 mb-4 opacity-15' />
-                <p className='text-sm font-medium mb-1'>Find your users</p>
-                <p className='text-xs'>Add event criteria and run a segment query</p>
-              </div>
-            )
-          )}
-        </TabsContent>
-      </Tabs>
+          )
+        )}
     </Page>
   )
 }

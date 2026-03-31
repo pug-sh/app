@@ -41,6 +41,7 @@ import {
   Sun,
   TrendingUp,
   Users,
+  UsersRound,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'wouter'
@@ -49,6 +50,7 @@ const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },
   { path: 'campaigns', label: 'Campaigns', icon: Megaphone },
   { path: 'insights', label: 'Insights', icon: TrendingUp },
+  { path: 'segments', label: 'Segments', icon: UsersRound },
   { path: 'events', label: 'Events', icon: BookOpen },
   { path: 'members', label: 'Members', icon: Users },
   { path: 'settings', label: 'Settings', icon: Settings },
