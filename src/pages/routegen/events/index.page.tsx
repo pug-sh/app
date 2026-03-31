@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
 import { EventChip, FilterBuilder, FilterChip, kindStyle, type ActiveFilter } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
@@ -39,14 +40,6 @@ const formatAbsolute = (d: Date): string => {
     d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false })
   )
 }
-
-const TIME_RANGES = [
-  { label: '24h', ms: 24 * 60 * 60 * 1000 },
-  { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
-  { label: '14d', ms: 14 * 24 * 60 * 60 * 1000 },
-  { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
-  { label: '90d', ms: 90 * 24 * 60 * 60 * 1000 },
-] as const
 
 // OPERATORS, ActiveFilter, EventChip, FilterBuilder, FilterChip, kindStyle
 // are imported from @/components/event-filters
@@ -216,7 +209,7 @@ const EventExplorer = () => {
   const [kindFilter, setKindFilter] = useState('')
   const [userInput, setUserInput] = useState('')
   const [userFilter, setUserFilter] = useState('')
-  const [rangeIdx, setRangeIdx] = useState(2) // 14d
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
   // Data
@@ -245,13 +238,13 @@ const EventExplorer = () => {
       setLoading(true)
       setError(null)
       try {
-        const now = new Date()
-        const from = new Date(now.getTime() - TIME_RANGES[rangeIdx].ms)
         const resp = await activityRPC.getEventExplorer(
           {
             distinctId: userFilter || undefined,
             kind: kindFilter || undefined,
-            timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            timeRange: timeRange
+              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
+              : undefined,
             propertyFilters: propFilters.map(f => ({
               property: f.property,
               operator: f.operator,
@@ -276,7 +269,7 @@ const EventExplorer = () => {
         setLoading(false)
       }
     },
-    [activityRPC, headers, kindFilter, userFilter, rangeIdx, propFilters]
+    [activityRPC, headers, kindFilter, userFilter, timeRange, propFilters]
   )
 
   useEffect(() => {
@@ -298,32 +291,9 @@ const EventExplorer = () => {
     <Page title='Events' description='Browse raw events across all users'>
       {/* Filter bar */}
       <div className='space-y-3 mb-5'>
-        {/* Time range + count */}
-        <div className='flex items-center gap-3'>
-          <div className='inline-flex rounded-lg border border-border bg-muted/30 p-0.5'>
-            {TIME_RANGES.map((range, i) => (
-              <button
-                key={range.label}
-                type='button'
-                onClick={() => setRangeIdx(i)}
-                className={cn(
-                  'px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer',
-                  i === rangeIdx
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {range.label}
-              </button>
-            ))}
-          </div>
-          {events.length > 0 && (
-            <span className='ml-auto text-xs text-muted-foreground tabular-nums'>{events.length} events</span>
-          )}
-        </div>
-
-        {/* Filters row */}
+        {/* Filters */}
         <div className='flex items-center gap-2 flex-wrap'>
+          <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
           <EventChip value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
           {userFilter ? (
             <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
@@ -376,6 +346,9 @@ const EventExplorer = () => {
             />
           ))}
           <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          {events.length > 0 && (
+            <span className='ml-auto text-xs text-muted-foreground tabular-nums'>{events.length} events</span>
+          )}
         </div>
       </div>
 

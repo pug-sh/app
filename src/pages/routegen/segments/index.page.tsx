@@ -4,52 +4,12 @@ import Page from '@/components/layout/page'
 import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
+import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
-import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import ProjectLink from '@/components/project-link'
-
-// ── Constants ───────────────────────────────────────────────────────────────
-
-const timeRanges = [
-  { label: '24h', ms: 24 * 60 * 60 * 1000 },
-  { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
-  { label: '14d', ms: 14 * 24 * 60 * 60 * 1000 },
-  { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
-  { label: '90d', ms: 90 * 24 * 60 * 60 * 1000 },
-] as const
-
-// ── Pill Selector ───────────────────────────────────────────────────────────
-
-const PillGroup = <T extends string | number>({
-  options,
-  value,
-  onChange,
-}: {
-  options: readonly { label: string; value: T }[]
-  value: T
-  onChange: (v: T) => void
-}) => (
-  <div className='inline-flex rounded-lg border border-border bg-muted/30 p-0.5'>
-    {options.map(opt => (
-      <button
-        key={String(opt.value)}
-        type='button'
-        onClick={() => onChange(opt.value)}
-        className={cn(
-          'px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer',
-          opt.value === value
-            ? 'bg-background text-foreground shadow-sm'
-            : 'text-muted-foreground hover:text-foreground'
-        )}
-      >
-        {opt.label}
-      </button>
-    ))}
-  </div>
-)
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -62,7 +22,7 @@ const Segments = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
   const [eventKinds, setEventKinds] = useState<string[]>([])
-  const [rangeIdx, setRangeIdx] = useState(1)
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
   const [segmentIds, setSegmentIds] = useState<string[]>([])
@@ -87,7 +47,7 @@ const Segments = () => {
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const queryKey = JSON.stringify({ eventKinds, rangeIdx, propFilters })
+  const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
@@ -104,11 +64,11 @@ const Segments = () => {
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const now = new Date()
-        const from = new Date(now.getTime() - timeRanges[rangeIdx].ms)
         const resp = await insightsRPC.segmentUsers(
           {
-            timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            timeRange: timeRange
+              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
+              : undefined,
             events: events.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters })),
             pageSize: 100,
           },
@@ -139,6 +99,7 @@ const Segments = () => {
     <Page title='Segments' description='Find users matching event criteria'>
       <div className='space-y-3 mb-5'>
         <div className='flex flex-wrap items-center gap-2'>
+          <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
           {eventKinds.map((kind, i) => (
             <EventChip
               key={i}
@@ -166,12 +127,6 @@ const Segments = () => {
           <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>
-
-        <PillGroup
-          options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
-          value={rangeIdx}
-          onChange={setRangeIdx}
-        />
       </div>
 
       {segmentIds.length > 0 ? (

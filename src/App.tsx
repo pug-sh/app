@@ -1,6 +1,7 @@
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import AppSidebar from '@/components/layout/sidebar'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
+import { Toaster } from '@/components/ui/sonner'
 import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import Router from '@/pages/router'
 import SignIn from '@/pages/sign-in'
@@ -43,6 +44,7 @@ const App = () => {
     <>
       <ThemeSync />
       {authenticated ? <AuthenticatedApp /> : <SignIn />}
+      <Toaster position='bottom-right' />
     </>
   )
 }

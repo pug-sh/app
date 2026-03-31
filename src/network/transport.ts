@@ -1,7 +1,8 @@
-import { ConnectError, type Interceptor } from '@connectrpc/connect'
+import { Code, ConnectError, type Interceptor } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
 import { createValidator } from '@bufbuild/protovalidate'
 import { atom } from 'jotai'
+import { toast } from 'sonner'
 
 const validator = createValidator()
 
@@ -26,7 +27,15 @@ const authBearer: Interceptor = next => async req => {
       req.header.set('authorization', `Bearer ${jwt}`)
     }
   }
-  return next(req)
+  try {
+    return await next(req)
+  } catch (err) {
+    if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+      localStorage.setItem(JWT_STORAGE_KEY, JSON.stringify(''))
+      toast.error('Session expired — please sign in again')
+    }
+    throw err
+  }
 }
 
 export const transportAtom = atom(() => {

@@ -1,6 +1,7 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventChip, FilterBuilder, FilterChip, kindStyle, type ActiveFilter } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import Page from '@/components/layout/page'
@@ -314,6 +315,7 @@ const UserActivity = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
   const [kindFilter, setKindFilter] = useState('')
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
@@ -332,13 +334,13 @@ const UserActivity = () => {
       if (!distinctId) return
       setLoading(true)
       try {
-        const now = new Date()
-        const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
         const resp = await activityRPC.getActivityFeed(
           {
             distinctId,
             kind: kindFilter.trim() || undefined,
-            timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            timeRange: timeRange
+              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
+              : undefined,
             propertyFilters: propFilters.map(f => ({
               property: f.property,
               operator: f.operator,
@@ -362,7 +364,7 @@ const UserActivity = () => {
         setLoading(false)
       }
     },
-    [distinctId, kindFilter, propFilters, headers, activityRPC]
+    [distinctId, kindFilter, timeRange, propFilters, headers, activityRPC]
   )
 
   useEffect(() => {
@@ -406,6 +408,7 @@ const UserActivity = () => {
           <ProfileSummary distinctId={distinctId ?? ''} events={events} />
 
           <div className='flex flex-wrap items-center gap-2 mb-4'>
+            <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
             <EventChip
               value={kindFilter}
               onChange={setKindFilter}
@@ -520,7 +523,7 @@ const UserActivity = () => {
         <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
           <Activity className='w-10 h-10 mb-4 opacity-15' />
           <p className='text-sm font-medium mb-1'>No events found</p>
-          <p className='text-xs'>No activity for this user in the last 90 days</p>
+          <p className='text-xs'>No activity for this user</p>
         </div>
       )}
     </Page>
