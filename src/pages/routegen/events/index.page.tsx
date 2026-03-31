@@ -19,7 +19,7 @@ import { structGet, structToEntries } from '@/lib/struct'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Toggle } from '@/components/ui/toggle'
-import { AlertCircle, Braces, Check, ChevronDown, ChevronRight, List, Loader2, Plus, Search, X } from 'lucide-react'
+import { AlertCircle, Braces, Check, ChevronDown, ChevronRight, List, Loader2, Plus, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
@@ -118,9 +118,51 @@ const compactNumber = (n: bigint): string => {
   return v.toString()
 }
 
-// ── Event Combobox ──────────────────────────────────────────────────────────
+// ── Event Picker ────────────────────────────────────────────────────────────
 
-const EventCombobox = ({
+const eventPopoverList = (
+  events: EventNameMeta[],
+  value: string,
+  schemaError: string | null,
+  onSelect: (name: string) => void,
+) => {
+  const emptyMessage = schemaError
+    ? 'Failed to load events'
+    : events.length === 0
+      ? 'Loading event names...'
+      : 'No events found'
+
+  return (
+    <Command>
+      <CommandInput placeholder='Search events...' className='text-xs' />
+      <CommandList>
+        <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
+        <CommandGroup>
+          {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
+            const colors = kindStyle(ev.name)
+            return (
+              <CommandItem
+                key={ev.name}
+                value={ev.name}
+                onSelect={() => onSelect(ev.name)}
+                data-checked={value === ev.name}
+                className='text-xs gap-1.5 py-1.5'
+              >
+                <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />
+                <span className='flex-1 truncate'>{ev.name}</span>
+                <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                  {compactNumber(ev.count)}
+                </span>
+              </CommandItem>
+            )
+          })}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+}
+
+const EventChip = ({
   value,
   onChange,
   events,
@@ -132,71 +174,50 @@ const EventCombobox = ({
   schemaError: string | null
 }) => {
   const [open, setOpen] = useState(false)
+  const colors = value ? kindStyle(value) : null
 
-  const clear = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onChange('')
+  // No event selected — show "+ Event" trigger
+  if (!value) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          className={cn(
+            'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+            'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
+            open && 'border-foreground/20 text-foreground'
+          )}
+        >
+          <Plus className='w-3 h-3' />
+          Event
+        </PopoverTrigger>
+        <PopoverContent align='start' className='w-64 p-0'>
+          {eventPopoverList(events, value, schemaError, name => { onChange(name); setOpen(false) })}
+        </PopoverContent>
+      </Popover>
+    )
   }
 
-  const emptyMessage = schemaError
-    ? 'Failed to load events'
-    : events.length === 0
-      ? 'Loading event names...'
-      : 'No events found'
-
+  // Event selected — show as segmented chip
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={cn(
-          'inline-flex items-center gap-1.5 border border-input rounded-md px-2.5 h-7 text-sm bg-background cursor-pointer',
-          'hover:bg-muted/40 transition-colors',
-          open && 'ring-1 ring-ring'
-        )}
+    <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
+      <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>event</span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger className='px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer'>
+          <span className={cn('w-1 h-1 rounded-full shrink-0', colors!.dot)} />
+          {value}
+        </PopoverTrigger>
+        <PopoverContent align='start' className='w-64 p-0'>
+          {eventPopoverList(events, value, schemaError, name => { onChange(name); setOpen(false) })}
+        </PopoverContent>
+      </Popover>
+      <button
+        type='button'
+        onClick={() => onChange('')}
+        className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
       >
-        <Search className='w-3 h-3 text-muted-foreground' />
-        <span className={cn('text-xs', value ? 'text-foreground' : 'text-muted-foreground')}>
-          {value || 'All events'}
-        </span>
-        {value ? (
-          <button type='button' onClick={clear} className='text-muted-foreground hover:text-foreground ml-auto'>
-            <X className='w-3 h-3' />
-          </button>
-        ) : (
-          <ChevronDown className='w-3 h-3 text-muted-foreground ml-auto' />
-        )}
-      </PopoverTrigger>
-      <PopoverContent align='start' className='w-64 p-0'>
-        <Command>
-          <CommandInput placeholder='Search events...' className='text-xs' />
-          <CommandList>
-            <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
-                const colors = kindStyle(ev.name)
-                return (
-                  <CommandItem
-                    key={ev.name}
-                    value={ev.name}
-                    onSelect={() => {
-                      onChange(ev.name)
-                      setOpen(false)
-                    }}
-                    data-checked={value === ev.name}
-                    className='text-xs gap-1.5 py-1.5'
-                  >
-                    <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />
-                    <span className='flex-1 truncate'>{ev.name}</span>
-                    <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
-                      {compactNumber(ev.count)}
-                    </span>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+        <X className='w-3 h-3' />
+      </button>
+    </span>
   )
 }
 
@@ -866,21 +887,29 @@ const EventExplorer = () => {
 
         {/* Filters row */}
         <div className='flex items-center gap-2 flex-wrap'>
-          <EventCombobox value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
-          <Input
-            placeholder='User ID'
-            value={userInput}
-            onChange={e => setUserInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitUserFilter()
-            }}
-            className='w-40 h-7 text-sm'
-          />
-          {userFilter && (
+          <EventChip value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
+          {userFilter ? (
             <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
               <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>user</span>
-              <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>=</span>
-              <span className='px-2 h-full flex items-center font-mono'>{userFilter}</span>
+              <Popover>
+                <PopoverTrigger className='px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer'>
+                  {userFilter}
+                </PopoverTrigger>
+                <PopoverContent align='start' className='w-52 p-2'>
+                  <input
+                    defaultValue={userFilter}
+                    placeholder='User ID'
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const v = (e.target as HTMLInputElement).value.trim()
+                        if (v) { setUserFilter(v); setUserInput(v) }
+                      }
+                    }}
+                    className='w-full h-7 px-2 text-xs font-mono rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring'
+                    autoFocus
+                  />
+                </PopoverContent>
+              </Popover>
               <button
                 type='button'
                 onClick={() => { setUserFilter(''); setUserInput('') }}
@@ -889,6 +918,16 @@ const EventExplorer = () => {
                 <X className='w-3 h-3' />
               </button>
             </span>
+          ) : (
+            <Input
+              placeholder='User ID'
+              value={userInput}
+              onChange={e => setUserInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitUserFilter()
+              }}
+              className='w-40 h-7 text-sm'
+            />
           )}
           {propFilters.map((f, i) => (
             <FilterChip
