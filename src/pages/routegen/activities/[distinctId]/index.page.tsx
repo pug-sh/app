@@ -407,8 +407,11 @@ const UserActivity = () => {
         <>
           <ProfileSummary distinctId={distinctId ?? ''} events={events} />
 
-          <div className='flex flex-wrap items-center gap-2 mb-4'>
-            <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+          <div className='space-y-2 mb-4'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+            </div>
+            <div className='flex flex-wrap items-center gap-2'>
             <EventChip
               value={kindFilter}
               onChange={setKindFilter}
@@ -425,6 +428,7 @@ const UserActivity = () => {
               />
             ))}
             <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+            </div>
           </div>
 
           {groupedEvents.map(group => {

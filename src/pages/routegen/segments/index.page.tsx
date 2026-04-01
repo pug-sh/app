@@ -97,9 +97,11 @@ const Segments = () => {
 
   return (
     <Page title='Segments' description='Find users matching event criteria'>
-      <div className='space-y-3 mb-5'>
+      <div className='space-y-2 mb-5'>
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+        </div>
+        <div className='flex flex-wrap items-center gap-2'>
           {eventKinds.map((kind, i) => (
             <EventChip
               key={i}

@@ -290,10 +290,11 @@ const EventExplorer = () => {
   return (
     <Page title='Events' description='Browse raw events across all users'>
       {/* Filter bar */}
-      <div className='space-y-3 mb-5'>
-        {/* Filters */}
+      <div className='space-y-2 mb-5'>
         <div className='flex items-center gap-2 flex-wrap'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+        </div>
+        <div className='flex items-center gap-2 flex-wrap'>
           <EventChip value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
           {userFilter ? (
             <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>

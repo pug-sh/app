@@ -9,16 +9,30 @@ export interface TimeRange {
   to: Date
 }
 
-type PresetFn = () => TimeRange
+export interface DatePreset {
+  label: string
+  resolve: () => TimeRange
+}
 
 const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const endOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 
-const PRESETS: { label: string; resolve: PresetFn }[] = [
-  {
-    label: 'Today',
-    resolve: () => ({ from: startOfDay(new Date()), to: new Date() }),
-  },
+const lastNDays = (n: number): TimeRange => {
+  const now = new Date()
+  const from = new Date(now)
+  from.setDate(from.getDate() - n)
+  return { from: startOfDay(from), to: now }
+}
+
+const lastNMonths = (n: number): TimeRange => {
+  const now = new Date()
+  const from = new Date(now)
+  from.setMonth(from.getMonth() - n)
+  return { from: startOfDay(from), to: now }
+}
+
+export const ACTIVITY_PRESETS: DatePreset[] = [
+  { label: 'Today', resolve: () => ({ from: startOfDay(new Date()), to: new Date() }) },
   {
     label: 'Yesterday',
     resolve: () => {
@@ -33,7 +47,7 @@ const PRESETS: { label: string; resolve: PresetFn }[] = [
       const now = new Date()
       const day = now.getDay()
       const from = new Date(now)
-      from.setDate(now.getDate() - (day === 0 ? 6 : day - 1)) // Monday
+      from.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
       return { from: startOfDay(from), to: now }
     },
   },
@@ -58,15 +72,16 @@ const PRESETS: { label: string; resolve: PresetFn }[] = [
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now }
     },
   },
-  {
-    label: 'Last 6 months',
-    resolve: () => {
-      const now = new Date()
-      const from = new Date(now)
-      from.setMonth(from.getMonth() - 6)
-      return { from: startOfDay(from), to: now }
-    },
-  },
+  { label: 'Last 6 months', resolve: () => lastNMonths(6) },
+]
+
+export const INSIGHTS_PRESETS: DatePreset[] = [
+  { label: 'Last 7 days', resolve: () => lastNDays(7) },
+  { label: 'Last 14 days', resolve: () => lastNDays(14) },
+  { label: 'Last 30 days', resolve: () => lastNDays(30) },
+  { label: 'Last 3 months', resolve: () => lastNMonths(3) },
+  { label: 'Last 6 months', resolve: () => lastNMonths(6) },
+  { label: 'Last 12 months', resolve: () => lastNMonths(12) },
 ]
 
 const fmtDate = (d: Date): string => {
@@ -74,16 +89,18 @@ const fmtDate = (d: Date): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-const defaultRange = (): TimeRange => PRESETS[4].resolve() // This month
+const defaultRange = (): TimeRange => ACTIVITY_PRESETS[4].resolve() // This month
 
 export function DateRangePicker({
   value,
   onChange,
   allowUnset,
+  presets = ACTIVITY_PRESETS,
 }: {
   value: TimeRange | undefined
   onChange: (range: TimeRange | undefined) => void
   allowUnset?: boolean
+  presets?: DatePreset[]
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<'from' | 'to'>('from')
@@ -162,20 +179,26 @@ export function DateRangePicker({
           </button>
         </div>
         <div className='flex'>
-          <div className='border-r border-border/50 py-1.5 px-1 w-[120px] flex flex-col gap-0.5'>
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type='button'
-                onClick={() => {
-                  onChange(preset.resolve())
-                  setOpen(false)
-                }}
-                className='px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
-              >
-                {preset.label}
-              </button>
-            ))}
+          <div className='border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5'>
+            {presets.map((preset) => {
+              const r = preset.resolve()
+              return (
+                <button
+                  key={preset.label}
+                  type='button'
+                  onClick={() => {
+                    onChange(r)
+                    setOpen(false)
+                  }}
+                  className='px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
+                >
+                  {preset.label}
+                  <span className='block text-[10px] text-muted-foreground/50'>
+                    {fmtDate(r.from)} – {fmtDate(r.to)}
+                  </span>
+                </button>
+              )
+            })}
             {allowUnset && (
               <button
                 type='button'

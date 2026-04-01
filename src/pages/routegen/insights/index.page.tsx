@@ -6,14 +6,16 @@ import {
 } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
+import { DateRangePicker, INSIGHTS_PRESETS, type TimeRange } from '@/components/date-range-picker'
 import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Loader2, TrendingUp } from 'lucide-react'
+import { type LucideIcon, BarChart3, Clock, Loader2, Ruler, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -26,25 +28,26 @@ const SERIES_COLORS = [
   { line: '#6e56cf', fill: 'rgba(110,86,207,0.08)', dot: '#6e56cf' },
 ]
 
-const timeRanges = [
-  { label: '24h', ms: 24 * 60 * 60 * 1000 },
-  { label: '7d', ms: 7 * 24 * 60 * 60 * 1000 },
-  { label: '14d', ms: 14 * 24 * 60 * 60 * 1000 },
-  { label: '30d', ms: 30 * 24 * 60 * 60 * 1000 },
-  { label: '90d', ms: 90 * 24 * 60 * 60 * 1000 },
-] as const
-
-const granularities = [
+const GRANULARITIES = [
   { label: 'Hour', value: Granularity.HOUR },
   { label: 'Day', value: Granularity.DAY },
   { label: 'Week', value: Granularity.WEEK },
   { label: 'Month', value: Granularity.MONTH },
 ] as const
 
-const aggregations = [
+const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
   { label: 'Unique users', value: AggregationType.UNIQUE_USERS },
   { label: 'Avg per user', value: AggregationType.PER_USER_AVG },
+] as const
+
+type ViewMode = 'line' | 'bar-grouped' | 'bar-stacked' | 'table'
+
+const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
+  { label: 'Line', value: 'line' },
+  { label: 'Bar (grouped)', value: 'bar-grouped' },
+  { label: 'Bar (stacked)', value: 'bar-stacked' },
+  { label: 'Table', value: 'table' },
 ] as const
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -65,14 +68,24 @@ const formatAxisDate = (d: Date, granularity: Granularity): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+const fmtD = (d: Date): string => {
+  const thisYear = new Date().getFullYear()
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
+}
+
 const formatTooltipDate = (d: Date, granularity: Granularity): string => {
   if (granularity === Granularity.HOUR)
-    return (
-      d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-      ', ' +
-      d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-    )
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    return fmtD(d) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (granularity === Granularity.WEEK) {
+    const end = new Date(d)
+    end.setDate(end.getDate() + 6)
+    return fmtD(d) + ' – ' + fmtD(end)
+  }
+  if (granularity === Granularity.MONTH) {
+    const thisYear = new Date().getFullYear()
+    return d.toLocaleDateString('en-US', { month: 'long', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
+  }
+  return fmtD(d)
 }
 
 const formatNum = (n: number): string => {
@@ -91,35 +104,52 @@ const niceMax = (v: number): number => {
   return 10 * mag
 }
 
-// ── Pill Selector ───────────────────────────────────────────────────────────
+// ── Option Chip ─────────────────────────────────────────────────────────────
 
-const PillGroup = <T extends string | number>({
+const OptionChip = <T extends string | number>({
+  label,
+  icon: Icon,
   options,
   value,
   onChange,
 }: {
+  label: string
+  icon?: LucideIcon
   options: readonly { label: string; value: T }[]
   value: T
   onChange: (v: T) => void
 }) => {
+  const [open, setOpen] = useState(false)
+  const current = options.find(o => o.value === value)
   return (
-    <div className='inline-flex rounded-lg border border-border bg-muted/30 p-0.5'>
-      {options.map(opt => (
-        <button
-          key={String(opt.value)}
-          type='button'
-          onClick={() => onChange(opt.value)}
-          className={cn(
-            'px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer',
-            opt.value === value
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          )}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors'>
+        <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1'>
+          {Icon && <Icon className='w-3 h-3' />}
+          {label}
+        </span>
+        <span className='px-2 h-full flex items-center'>{current?.label}</span>
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-auto p-1'>
+        <div className='flex flex-col gap-0.5'>
+          {options.map(opt => (
+            <button
+              key={String(opt.value)}
+              type='button'
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={cn(
+                'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
+                opt.value === value
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -289,6 +319,194 @@ const LineChart = ({
   )
 }
 
+// ── SVG Bar Chart ──────────────────────────────────────────────────────────
+
+const BarChart = ({
+  data,
+  seriesNames,
+  granularity,
+  stacked,
+}: {
+  data: ChartPoint[]
+  seriesNames: string[]
+  granularity: Granularity
+  stacked: boolean
+}) => {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+
+  if (data.length === 0) return null
+
+  const W = 800,
+    H = 280
+  const pad = { top: 20, right: 24, bottom: 36, left: 52 }
+  const cw = W - pad.left - pad.right
+  const ch = H - pad.top - pad.bottom
+  const n = data.length
+  const sc = seriesNames.length
+
+  const allVals = stacked
+    ? data.map(d => d.values.reduce((a, b) => a + b, 0))
+    : data.flatMap(d => d.values)
+  const rawMax = Math.max(...allVals, 0)
+  const yMax = niceMax(rawMax)
+  const yTicks = 5
+  const yStep = yMax / yTicks
+
+  const yScale = (v: number) => pad.top + ch - (v / yMax) * ch
+  const bandW = cw / n
+  const barGap = Math.max(1, bandW * 0.15)
+  const barArea = bandW - barGap
+  const barW = stacked ? barArea : barArea / sc
+
+  const labelStep = Math.max(1, Math.ceil(n / 8))
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    const mx = ((e.clientX - rect.left) / rect.width) * W
+    const idx = Math.floor((mx - pad.left) / bandW)
+    setHoverIdx(Math.max(0, Math.min(n - 1, idx)))
+  }
+
+  return (
+    <div className='relative'>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className='w-full h-auto'
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoverIdx(null)}
+      >
+        {Array.from({ length: yTicks + 1 }, (_, i) => {
+          const y = yScale(i * yStep)
+          return (
+            <g key={i}>
+              <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
+              <text x={pad.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
+                {formatNum(i * yStep)}
+              </text>
+            </g>
+          )
+        })}
+
+        {data.map((d, i) => {
+          const x0 = pad.left + i * bandW + barGap / 2
+          if (stacked) {
+            let cumY = 0
+            return (
+              <g key={i}>
+                {d.values.map((v, si) => {
+                  const barH = (v / yMax) * ch
+                  cumY += barH
+                  return (
+                    <rect
+                      key={si}
+                      x={x0}
+                      y={pad.top + ch - cumY}
+                      width={barArea}
+                      height={barH}
+                      rx={2}
+                      fill={SERIES_COLORS[si % SERIES_COLORS.length].line}
+                      opacity={hoverIdx !== null && hoverIdx !== i ? 0.4 : 0.85}
+                    />
+                  )
+                })}
+              </g>
+            )
+          }
+          return (
+            <g key={i}>
+              {d.values.map((v, si) => {
+                const barH = (v / yMax) * ch
+                return (
+                  <rect
+                    key={si}
+                    x={x0 + si * barW}
+                    y={pad.top + ch - barH}
+                    width={barW - 1}
+                    height={barH}
+                    rx={2}
+                    fill={SERIES_COLORS[si % SERIES_COLORS.length].line}
+                    opacity={hoverIdx !== null && hoverIdx !== i ? 0.4 : 0.85}
+                  />
+                )
+              })}
+            </g>
+          )
+        })}
+
+        {hoverIdx !== null && (
+          <line
+            x1={pad.left + hoverIdx * bandW + bandW / 2}
+            x2={pad.left + hoverIdx * bandW + bandW / 2}
+            y1={pad.top}
+            y2={pad.top + ch}
+            stroke='currentColor'
+            strokeOpacity={0.1}
+            strokeDasharray='3,3'
+          />
+        )}
+
+        {data.map((d, i) => {
+          if (i % labelStep !== 0 && i !== n - 1) return null
+          return (
+            <text
+              key={i}
+              x={pad.left + i * bandW + bandW / 2}
+              y={H - 8}
+              textAnchor='middle'
+              className='fill-muted-foreground'
+              fontSize={10}
+            >
+              {formatAxisDate(d.date, granularity)}
+            </text>
+          )
+        })}
+
+        {data.map((_, i) => (
+          <rect
+            key={`zone-${i}`}
+            x={pad.left + i * bandW}
+            y={pad.top}
+            width={bandW}
+            height={ch}
+            fill='transparent'
+            onMouseEnter={() => setHoverIdx(i)}
+          />
+        ))}
+      </svg>
+
+      {hoverIdx !== null && (
+        <div
+          className='absolute top-2 pointer-events-none z-10 bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm'
+          style={{
+            left: `${((pad.left + hoverIdx * bandW + bandW / 2) / W) * 100}%`,
+            transform: hoverIdx > n / 2 ? 'translateX(-100%)' : 'translateX(0)',
+          }}
+        >
+          <p className='text-xs text-muted-foreground mb-1.5 font-medium'>
+            {formatTooltipDate(data[hoverIdx].date, granularity)}
+          </p>
+          {seriesNames.map((name, si) => (
+            <div key={si} className='flex items-center gap-2 py-0.5'>
+              <span
+                className='w-2 h-2 rounded-full shrink-0'
+                style={{ background: SERIES_COLORS[si % SERIES_COLORS.length].dot }}
+              />
+              <span className='text-muted-foreground flex-1'>{name}</span>
+              <span className='font-mono font-medium tabular-nums'>
+                {(data[hoverIdx].values[si] ?? 0).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Summary Stats ───────────────────────────────────────────────────────────
 
 const SummaryStats = ({ series, data }: { series: string[]; data: ChartPoint[] }) => {
@@ -353,7 +571,7 @@ const DataTable = ({
         <tbody>
           {data.map((d, i) => (
             <tr key={i} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
-              <td className='py-2 pr-2 text-xs text-muted-foreground'>{formatAxisDate(d.date, granularity)}</td>
+              <td className='py-2 pr-2 text-xs text-muted-foreground'>{formatTooltipDate(d.date, granularity)}</td>
               {d.values.map((v, si) => (
                 <td key={si} className='py-2 pr-2 text-right font-mono text-sm tabular-nums'>
                   {v.toLocaleString()}
@@ -378,9 +596,10 @@ const Insights = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
   const [eventKinds, setEventKinds] = useState<string[]>([])
-  const [rangeIdx, setRangeIdx] = useState(1)
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
+  const [viewMode, setViewMode] = useState<ViewMode>('line')
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
 
   const [series, setSeries] = useState<Series[]>([])
@@ -405,11 +624,11 @@ const Insights = () => {
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const queryKey = JSON.stringify({ eventKinds, rangeIdx, granularity, aggregation, propFilters })
+  const queryKey = JSON.stringify({ eventKinds, timeRange, granularity, aggregation, propFilters })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
-    if (!project || events.length === 0) return
+    if (!project || events.length === 0 || !timeRange) return
 
     const filters = propFilters.map(f => ({
       property: f.property,
@@ -422,13 +641,11 @@ const Insights = () => {
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const now = new Date()
-        const from = new Date(now.getTime() - timeRanges[rangeIdx].ms)
         const resp = await insightsRPC.query(
           {
             insightType: InsightType.TRENDS,
             granularity,
-            timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+            timeRange: { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) },
             events: events.map(kind => ({ kind, aggregation, filters })),
           },
           { headers }
@@ -466,8 +683,16 @@ const Insights = () => {
 
   return (
     <Page title='Insights' description='Analyze event trends'>
-      {/* Query builder */}
-        <div className='space-y-3 mb-5'>
+      {/* Query config */}
+        <div className='space-y-2 mb-5'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
+            <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
+            <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={aggregation} onChange={setAggregation} />
+            <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+          </div>
+
+          {/* Events + filters */}
           <div className='flex flex-wrap items-center gap-2'>
             {eventKinds.map((kind, i) => (
               <span key={i} className='inline-flex items-center gap-1.5'>
@@ -501,18 +726,6 @@ const Insights = () => {
             <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
             {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
           </div>
-
-          <div className='flex flex-wrap items-center gap-3'>
-            <PillGroup
-              options={timeRanges.map((t, i) => ({ label: t.label, value: i }))}
-              value={rangeIdx}
-              onChange={setRangeIdx}
-            />
-            <div className='w-px h-5 bg-border' />
-            <PillGroup options={granularities} value={granularity} onChange={setGranularity} />
-            <div className='w-px h-5 bg-border' />
-            <PillGroup options={aggregations} value={aggregation} onChange={setAggregation} />
-          </div>
         </div>
 
         {chartData.length > 0 ? (
@@ -522,10 +735,16 @@ const Insights = () => {
               <div className='flex items-center justify-center h-48 text-muted-foreground'>
                 <p className='text-sm'>No events recorded in this period</p>
               </div>
-            ) : (
+            ) : viewMode === 'line' ? (
               <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            ) : viewMode === 'table' ? (
+              <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            ) : (
+              <BarChart data={chartData} seriesNames={seriesNames} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
             )}
-            <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            {viewMode !== 'table' && (
+              <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+            )}
           </div>
         ) : (
           !loading && (
