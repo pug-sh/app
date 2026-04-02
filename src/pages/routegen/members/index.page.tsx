@@ -5,10 +5,12 @@ import SectionHeader from '@/components/section-header'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
+import { ConnectError } from '@connectrpc/connect'
 import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 const ORG_ROLE_ADMIN = 1
@@ -27,26 +29,38 @@ const Members = () => {
   const [members, setMembers] = useState<OrgMember[]>([])
   const [invitations, setInvitations] = useState<OrgInvitation[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showInvite, setShowInvite] = useState(false)
   const [email, setEmail] = useState('')
   const [inviting, setInviting] = useState(false)
-  const inputRef = React.useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
     if (!org) return
     setLoading(true)
-    try {
-      const [membersResp, invitesResp] = await Promise.all([
-        orgsRPC.listMembers({ orgId: org.id }),
-        orgsRPC.listInvitations({ orgId: org.id }),
-      ])
-      setMembers(membersResp.members)
-      setInvitations(invitesResp.invitations)
-    } catch {
-      toast.error('Failed to load members')
-    } finally {
-      setLoading(false)
+    setError(null)
+    const [membersResult, invitesResult] = await Promise.allSettled([
+      orgsRPC.listMembers({ orgId: org.id }),
+      orgsRPC.listInvitations({ orgId: org.id }),
+    ])
+    if (membersResult.status === 'fulfilled') {
+      setMembers(membersResult.value.members)
+    } else {
+      console.error('Failed to load members:', membersResult.reason)
     }
+    if (invitesResult.status === 'fulfilled') {
+      setInvitations(invitesResult.value.invitations)
+    } else {
+      console.error('Failed to load invitations:', invitesResult.reason)
+    }
+    if (membersResult.status === 'rejected' && invitesResult.status === 'rejected') {
+      setError('Failed to load members')
+    } else if (membersResult.status === 'rejected') {
+      setError('Failed to load members list')
+    } else if (invitesResult.status === 'rejected') {
+      toast.error('Failed to load invitations')
+    }
+    setLoading(false)
   }, [org, orgsRPC])
 
   useEffect(() => {
@@ -61,8 +75,9 @@ const Members = () => {
       setEmail('')
       setShowInvite(false)
       fetchData()
-    } catch {
-      toast.error('Failed to send invitation')
+    } catch (err) {
+      console.error('Failed to send invitation:', err)
+      toast.error(err instanceof ConnectError ? err.message : 'Failed to send invitation')
     } finally {
       setInviting(false)
     }
@@ -73,8 +88,9 @@ const Members = () => {
     try {
       await orgsRPC.removeMember({ orgId: org.id, customerId })
       fetchData()
-    } catch {
-      toast.error('Failed to remove member')
+    } catch (err) {
+      console.error('Failed to remove member:', err)
+      toast.error(err instanceof ConnectError ? err.message : 'Failed to remove member')
     }
   }
 
@@ -93,6 +109,14 @@ const Members = () => {
     <Page title='Members' description={`Manage members of ${org.displayName}`}>
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Users className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchData()}>
+            Retry
+          </Button>
+        </div>
       ) : (
         <div className='space-y-8'>
           {/* Members */}

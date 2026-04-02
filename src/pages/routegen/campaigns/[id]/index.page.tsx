@@ -10,6 +10,7 @@ import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useProjectNavigate } from '@/lib/project-path'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { useAtomValue } from 'jotai'
+import { ConnectError } from '@connectrpc/connect'
 import { Loader2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
@@ -26,6 +27,7 @@ const CampaignDetail = () => {
   const [fetchError, setFetchError] = useState(false)
   const [name, setName] = useState('')
   const [notif, setNotif] = useState({ title: '', body: '', image_url: '', deep_link: '' })
+  const [notifParseError, setNotifParseError] = useState(false)
   const [scheduledAt, setScheduledAt] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -39,7 +41,9 @@ const CampaignDetail = () => {
         if (!c) return
         setCampaign(c)
         setName(c.name)
-        setNotif(parseNotificationData(c.notificationData))
+        const { data, parseError } = parseNotificationData(c.notificationData)
+        setNotif(data)
+        setNotifParseError(parseError)
         if (c.scheduledTime) {
           setScheduledAt(new Date(Number(c.scheduledTime.seconds) * 1000).toISOString().slice(0, 16))
         }
@@ -66,8 +70,9 @@ const CampaignDetail = () => {
         { headers }
       )
       navigate('/campaigns')
-    } catch {
-      toast.error('Failed to save campaign')
+    } catch (err) {
+      console.error('Campaign save failed:', err)
+      toast.error(err instanceof ConnectError ? err.message : 'Failed to save campaign')
     } finally {
       setSaving(false)
     }
@@ -98,7 +103,7 @@ const CampaignDetail = () => {
     )
   }
 
-  const readOnly = campaign.status === 'COMPLETED' || campaign.status === 'IN_PROGRESS'
+  const readOnly = campaign.status === 'COMPLETED' || campaign.status === 'IN_PROGRESS' || notifParseError
 
   return (
     <Page title={campaign.name} description={`Campaign ${campaign.id}`}>
@@ -109,6 +114,12 @@ const CampaignDetail = () => {
             <span className='text-xs text-muted-foreground'>Created {formatTime(campaign.createTime)}</span>
           )}
         </div>
+
+        {notifParseError && (
+          <p className='text-xs text-destructive'>
+            Notification data could not be parsed. Editing is disabled to prevent data loss.
+          </p>
+        )}
 
         <div>
           <div className='flex items-center gap-2 mb-3'>

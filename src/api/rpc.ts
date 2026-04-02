@@ -12,9 +12,11 @@ import { ProjectsService } from './genproto/dashboard/projects/v1/projects_pb'
 // Public
 export const authRPCAtom = atom(get => createClient(AuthService, get(transportAtom)))
 
-// Dashboard (JWT auth)
+// Dashboard — org-scoped (JWT auth)
 export const orgsRPCAtom = atom(get => createClient(OrgsService, get(transportAtom)))
 export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(transportAtom)))
+
+// Dashboard — project-scoped (JWT auth + x-project-id header from projectHeaderAtom)
 export const campaignsRPCAtom = atom(get => createClient(CampaignService, get(transportAtom)))
 export const insightsRPCAtom = atom(get => createClient(InsightsService, get(transportAtom)))
 export const activityRPCAtom = atom(get => createClient(ActivityService, get(transportAtom)))

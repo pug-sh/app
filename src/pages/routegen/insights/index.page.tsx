@@ -183,8 +183,8 @@ const Insights = () => {
 
   return (
     <Page title='Insights' description='Analyze event trends'>
-      {/* Query config */}
-        <div className='space-y-2 mb-5'>
+      {/* Query config — sticky */}
+        <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
           <div className='flex flex-wrap items-center gap-2'>
             <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
             <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />

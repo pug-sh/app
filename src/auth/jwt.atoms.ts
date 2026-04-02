@@ -1,14 +1,16 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
-const JWT_KEY = 'cotton:jwt'
+// Shared with transport.ts — both read the same localStorage key
+export const JWT_KEY = 'cotton:jwt'
 
 // Read synchronously so the first render already knows the auth state (no sign-in flash)
 const storedJwt = (() => {
   try {
     const raw = localStorage.getItem(JWT_KEY)
     return raw ? (JSON.parse(raw) as string) : ''
-  } catch {
+  } catch (err) {
+    console.error('Failed to read stored JWT:', err)
     return ''
   }
 })()
@@ -37,7 +39,8 @@ export const jwtDataAtom = atom(get => {
   try {
     const data = readJWT(jwt)
     return { exp: data.exp, customerId: data.sub }
-  } catch {
+  } catch (err) {
+    console.error('JWT parse failed:', err)
     return undefined
   }
 })

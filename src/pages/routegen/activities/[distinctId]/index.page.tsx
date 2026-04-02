@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
+import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { tsToDate, formatClock, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -94,11 +95,7 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
               )}
               {(browser || os) && (
                 <span className='flex items-center gap-1'>
-                  {os?.toLowerCase().includes('android') || os?.toLowerCase().includes('ios') ? (
-                    <Smartphone className='w-3 h-3' />
-                  ) : (
-                    <Monitor className='w-3 h-3' />
-                  )}
+                  {isMobileOS(os) ? <Smartphone className='w-3 h-3' /> : <Monitor className='w-3 h-3' />}
                   {[browser, os].filter(Boolean).join(' / ')}
                 </span>
               )}
@@ -258,7 +255,7 @@ const UserActivity = () => {
         <>
           <ProfileSummary distinctId={distinctId ?? ''} events={events} />
 
-          <div className='space-y-2 mb-4'>
+          <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
             <div className='flex flex-wrap items-center gap-2'>
               <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
             </div>

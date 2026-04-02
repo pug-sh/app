@@ -2,15 +2,16 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import { activityRPCAtom } from '@/api/rpc'
 import LoadingSpinner from '@/components/loading-spinner'
 import TimelineEventItem from '@/components/timeline-event-item'
-import { kindStyle } from '@/components/event-filters'
+import { kindStyle } from '@/lib/kind-style'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
+import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
-import { tsToDate, formatClock, toProtoTimeRange } from '@/lib/timestamp'
+import { tsToDate, formatClock } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
@@ -115,11 +116,7 @@ const SessionSummary = ({
           )}
           {(browser || os) && (
             <span className='flex items-center gap-1'>
-              {os?.toLowerCase().includes('android') || os?.toLowerCase().includes('ios') ? (
-                <Smartphone className='w-3 h-3' />
-              ) : (
-                <Monitor className='w-3 h-3' />
-              )}
+              {isMobileOS(os) ? <Smartphone className='w-3 h-3' /> : <Monitor className='w-3 h-3' />}
               {[
                 browser && browserVersion ? `${browser} ${browserVersion}` : browser,
                 os && osVersion ? `${os} ${osVersion}` : os,
@@ -162,13 +159,10 @@ const SessionView = () => {
     setLoading(true)
     setError(null)
     try {
-      const now = new Date()
-      const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
       const resp = await activityRPC.getActivityFeed(
         {
           distinctId,
           sessionId,
-          timeRange: toProtoTimeRange({ from, to: now }),
           pageSize: 1000,
         },
         { headers }
@@ -186,11 +180,11 @@ const SessionView = () => {
     if (project && distinctId && sessionId) fetchEvents()
   }, [project, distinctId, sessionId, fetchEvents])
 
-  // Compute elapsed time from session start for each event
+  // Compute elapsed time from session start for each event.
+  // Events are sorted newest-first from the API, so the last element is the oldest (session start).
   const sessionStart = events.length > 0 ? tsToDate(events[events.length - 1].occurTime) : null
   const elapsedTimes = useMemo(() => {
     if (!sessionStart) return events.map(() => '')
-    // sessionStart is the oldest event; elapsed = event.time - sessionStart
     return events.map(e => {
       const d = tsToDate(e.occurTime)
       if (!d) return ''
@@ -233,8 +227,8 @@ const SessionView = () => {
         <>
           <SessionSummary sessionId={sessionId ?? ''} distinctId={distinctId ?? ''} events={events} />
 
-          {/* Kind legend */}
-          <div className='flex flex-wrap gap-1.5 mb-4'>
+          {/* Kind legend — sticky */}
+          <div className='sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5'>
             {uniqueKinds.map(kind => (
               <span key={kind} className='inline-flex items-center gap-1.5 text-xs text-muted-foreground'>
                 <span className={cn('w-2 h-2 rounded-full', kindStyle(kind).dot)} />

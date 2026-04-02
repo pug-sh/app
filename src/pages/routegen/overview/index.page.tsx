@@ -9,6 +9,7 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { Bell, Check, Clock, Copy, Eye, EyeOff, MousePointerClick, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
   const [copied, setCopied] = useState(false)
@@ -20,7 +21,7 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // clipboard unavailable
+      toast.error('Copy failed — select and copy the text manually')
     }
   }
 

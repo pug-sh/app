@@ -1,7 +1,7 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
-import { kindStyle } from '@/components/event-filters'
+import { kindStyle } from '@/lib/kind-style'
 import { Badge } from '@/components/ui/badge'
 import { structToEntries } from '@/lib/struct'
 import { cn } from '@/lib/utils'

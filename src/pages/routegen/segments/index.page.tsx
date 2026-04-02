@@ -2,6 +2,7 @@ import { AggregationType } from '@/api/genproto/dashboard/insights/v1/insights_p
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
+import SectionHeader from '@/components/section-header'
 import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
@@ -117,13 +118,7 @@ const Segments = () => {
         </div>
       ) : segmentIds.length > 0 ? (
         <div>
-          <div className='flex items-center gap-2 mb-2'>
-            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-              Users found
-            </span>
-            <div className='flex-1 h-px bg-border' />
-            <span className='text-[10px] text-muted-foreground'>{segmentIds.length}</span>
-          </div>
+          <SectionHeader title='Users found' count={segmentIds.length} />
           <table className='w-full'>
             <thead>
               <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>

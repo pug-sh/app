@@ -49,8 +49,13 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   if (!org) return
   const projectsRPC = get(projectsRPCAtom)
   const resp = await projectsRPC.create({ displayName, orgId: org.id })
-  const refreshed = await projectsRPC.batchGet({ orgId: org.id })
-  set(projectsAtom, refreshed.projects)
+  // Refresh the project list — if this fails, the project was still created server-side
+  try {
+    const refreshed = await projectsRPC.batchGet({ orgId: org.id })
+    set(projectsAtom, refreshed.projects)
+  } catch (err) {
+    console.error('Project created but list refresh failed:', err)
+  }
   if (resp.project) set(activeProjectAtom, resp.project)
 })
 

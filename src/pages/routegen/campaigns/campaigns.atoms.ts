@@ -34,19 +34,24 @@ export interface NotificationData {
   deep_link: string
 }
 
-export const parseNotificationData = (raw: Uint8Array | undefined): NotificationData => {
-  if (!raw || raw.length === 0) return { title: '', body: '', image_url: '', deep_link: '' }
+const EMPTY_NOTIFICATION: NotificationData = { title: '', body: '', image_url: '', deep_link: '' }
+
+export const parseNotificationData = (raw: Uint8Array | undefined): { data: NotificationData; parseError: boolean } => {
+  if (!raw || raw.length === 0) return { data: EMPTY_NOTIFICATION, parseError: false }
   try {
     const parsed = JSON.parse(new TextDecoder().decode(raw))
     return {
-      title: typeof parsed.title === 'string' ? parsed.title : '',
-      body: typeof parsed.body === 'string' ? parsed.body : '',
-      image_url: typeof parsed.image_url === 'string' ? parsed.image_url : '',
-      deep_link: typeof parsed.deep_link === 'string' ? parsed.deep_link : '',
+      data: {
+        title: typeof parsed.title === 'string' ? parsed.title : '',
+        body: typeof parsed.body === 'string' ? parsed.body : '',
+        image_url: typeof parsed.image_url === 'string' ? parsed.image_url : '',
+        deep_link: typeof parsed.deep_link === 'string' ? parsed.deep_link : '',
+      },
+      parseError: false,
     }
   } catch (err) {
     console.error('Failed to parse notification data:', err)
-    return { title: '', body: '', image_url: '', deep_link: '' }
+    return { data: EMPTY_NOTIFICATION, parseError: true }
   }
 }
 
