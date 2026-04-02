@@ -764,32 +764,36 @@ export const EventQueryRow = ({
   color?: string
   children?: React.ReactNode
 }) => (
-  <div className='flex items-center gap-2 flex-wrap'>
-    {letter && (
-      <span className='flex items-center gap-1.5'>
-        {color && <span className='w-2 h-2 rounded-full shrink-0' style={{ background: color }} />}
-        <span className='text-[10px] font-semibold text-muted-foreground w-3'>{letter}</span>
-      </span>
-    )}
-    <EventChip value={entry.kind} onChange={onUpdateKind} events={events} schemaError={schemaError} />
-    {entry.filters.map((f, fi) => (
-      <FilterChip
-        key={fi}
-        filter={f}
-        schema={schema}
-        kindFilter={entry.kind}
-        onRemove={() => onRemoveFilter(fi)}
-        onUpdate={next => onUpdateFilter(fi, next)}
-      />
-    ))}
-    {entry.kind && (
-      <FilterBuilder schema={schema} schemaError={schemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
-    )}
-    {children}
+  <div className='flex items-center gap-2'>
+    <div className='inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1'>
+      {letter && (
+        <span className='flex items-center gap-1.5'>
+          {color && <span className='w-2 h-2 rounded-full shrink-0' style={{ background: color }} />}
+          <span className='text-[10px] font-semibold text-muted-foreground w-3'>{letter}</span>
+        </span>
+      )}
+      <EventChip value={entry.kind} onChange={onUpdateKind} events={events} schemaError={schemaError} />
+      {entry.kind && (
+        <>
+          {entry.filters.map((f, fi) => (
+            <FilterChip
+              key={fi}
+              filter={f}
+              schema={schema}
+              kindFilter={entry.kind}
+              onRemove={() => onRemoveFilter(fi)}
+              onUpdate={next => onUpdateFilter(fi, next)}
+            />
+          ))}
+          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
+          {children}
+        </>
+      )}
+    </div>
     <button
       type='button'
       onClick={onRemove}
-      className='p-1 text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer'
+      className='self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
     >
       <X className='w-3 h-3' />
     </button>
