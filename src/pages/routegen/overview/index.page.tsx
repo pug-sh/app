@@ -1,11 +1,13 @@
 import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
 import { campaignsRPCAtom } from '@/api/rpc'
+import LoadingSpinner from '@/components/loading-spinner'
+import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
-import { Bell, Check, Clock, Copy, Eye, EyeOff, Loader2, MousePointerClick, Send } from 'lucide-react'
+import { Bell, Check, Clock, Copy, Eye, EyeOff, MousePointerClick, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
@@ -52,14 +54,17 @@ const Overview = () => {
   const campaignsRPC = useAtomValue(campaignsRPCAtom)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const resp = await campaignsRPC.batchGet({}, { headers })
       setCampaigns(resp.campaigns)
     } catch (err) {
       console.error('fetchOverview failed:', err)
+      setError('Failed to load overview')
     } finally {
       setLoading(false)
     }
@@ -85,18 +90,20 @@ const Overview = () => {
   return (
     <Page title='Overview' description={`Project: ${project.displayName}`}>
       {loading ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
+        <LoadingSpinner />
+      ) : error ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Bell className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchData()}>
+            Retry
+          </Button>
         </div>
       ) : (
         <div className='space-y-8'>
           {/* Stats */}
           <section>
-            <div className='flex items-center gap-2 mb-4'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Campaigns</span>
-              <div className='flex-1 h-px bg-border' />
-              <span className='text-[10px] text-muted-foreground'>{campaigns.length} total</span>
-            </div>
+            <SectionHeader title='Campaigns' count={`${campaigns.length} total`} />
             <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4'>
               {stats.map(stat => (
                 <div key={stat.label} className='flex items-center gap-3'>
@@ -112,10 +119,7 @@ const Overview = () => {
 
           {/* API Keys */}
           <section>
-            <div className='flex items-center gap-2 mb-2'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>API Keys</span>
-              <div className='flex-1 h-px bg-border' />
-            </div>
+            <SectionHeader title='API Keys' />
             <table className='w-full max-w-xl'>
               <tbody>
                 <CopyableCode label='Public Key' value={project.publicApiKey} />
@@ -126,10 +130,7 @@ const Overview = () => {
 
           {/* Quick Start */}
           <section>
-            <div className='flex items-center gap-2 mb-3'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Quick Start</span>
-              <div className='flex-1 h-px bg-border' />
-            </div>
+            <SectionHeader title='Quick Start' />
             <ol className='text-sm text-muted-foreground space-y-2 list-decimal list-inside'>
               <li>Add your FCM service account JSON in Settings</li>
               <li>Integrate the Cotton SDK in your app</li>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { Check, Copy, Loader2, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
@@ -41,8 +41,8 @@ const CopyId = ({ value }: { value: string }) => {
 }
 
 const Settings = () => {
-  const project = useAtomValue(activeProjectAtom)
-  const org = useAtomValue(activeOrgAtom)
+  const [org, setOrg] = useAtom(activeOrgAtom)
+  const [project, setProject] = useAtom(activeProjectAtom)
   const projectHeaders = useAtomValue(projectHeaderAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
@@ -61,6 +61,7 @@ const Settings = () => {
     setSaving(true)
     try {
       await orgsRPC.updateDisplayName({ orgId: org.id, displayName: orgName })
+      setOrg({ ...org, displayName: orgName })
     } catch {
       toast.error('Failed to rename organization')
     } finally {
@@ -74,6 +75,7 @@ const Settings = () => {
     setSaving(true)
     try {
       await projectsRPC.updateDisplayName({ displayName: projectName }, { headers: projectHeaders })
+      setProject({ ...project!, displayName: projectName })
     } catch {
       toast.error('Failed to rename project')
     } finally {

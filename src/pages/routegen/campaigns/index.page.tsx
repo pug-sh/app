@@ -1,4 +1,6 @@
+import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
 import { campaignsRPCAtom } from '@/api/rpc'
+import LoadingSpinner from '@/components/loading-spinner'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
@@ -7,18 +9,19 @@ import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
 import { useProjectNavigate } from '@/lib/project-path'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { Check, Loader2, Megaphone, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { campaignsAtom, formatTime, statusVariant } from './campaigns.atoms'
+import { formatTime, statusVariant } from './campaigns.atoms'
 
 const Campaigns = () => {
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const campaignsRPC = useAtomValue(campaignsRPCAtom)
-  const [campaigns, setCampaigns] = useAtom(campaignsAtom)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
   const [creatingInline, setCreatingInline] = useState(false)
@@ -27,15 +30,17 @@ const Campaigns = () => {
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const resp = await campaignsRPC.batchGet({}, { headers })
       setCampaigns(resp.campaigns)
     } catch (err) {
       console.error('fetchCampaigns failed:', err)
+      setError('Failed to load campaigns')
     } finally {
       setLoading(false)
     }
-  }, [campaignsRPC, headers, setCampaigns])
+  }, [campaignsRPC, headers])
 
   useEffect(() => {
     if (project) fetchCampaigns()
@@ -56,7 +61,7 @@ const Campaigns = () => {
       setCreatingInline(false)
       await fetchCampaigns()
       if (resp.campaign) navigate(`/campaigns/${resp.campaign.id}`)
-    } catch (err) {
+    } catch {
       toast.error('Failed to create campaign')
     } finally {
       setCreating(false)
@@ -126,8 +131,14 @@ const Campaigns = () => {
       )}
 
       {loading ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
+        <LoadingSpinner />
+      ) : error ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Megaphone className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchCampaigns()}>
+            Retry
+          </Button>
         </div>
       ) : campaigns.length === 0 ? (
         <div className='flex flex-col items-center justify-center py-16'>

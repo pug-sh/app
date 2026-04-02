@@ -14,5 +14,5 @@ export const useFilterState = () => {
   const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
   const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => (i === idx ? f : x)))
   const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
-  return { propFilters, setPropFilters, addFilter, updateFilter, removeFilter }
+  return { propFilters, addFilter, updateFilter, removeFilter }
 }

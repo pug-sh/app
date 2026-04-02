@@ -12,9 +12,9 @@ import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
-import { tsToDate } from '@/lib/timestamp'
+import { useEventKinds } from '@/hooks/use-event-kinds'
+import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { type LucideIcon, BarChart3, Clock, Loader2, Ruler, TrendingUp } from 'lucide-react'
@@ -104,7 +104,7 @@ const Insights = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
-  const [eventKinds, setEventKinds] = useState<string[]>([])
+  const { eventKinds, setEventKinds, updateEvent } = useEventKinds()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
@@ -118,14 +118,6 @@ const Insights = () => {
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
-
-  const updateEvent = (idx: number, val: string) => {
-    if (!val) {
-      setEventKinds(eventKinds.filter((_, i) => i !== idx))
-    } else {
-      setEventKinds(eventKinds.map((e, i) => (i === idx ? val : e)))
-    }
-  }
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -148,7 +140,7 @@ const Insights = () => {
           {
             insightType: InsightType.TRENDS,
             granularity,
-            timeRange: { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) },
+            timeRange: toProtoTimeRange(timeRange),
             events: events.map(kind => ({ kind, aggregation, filters })),
           },
           { headers }

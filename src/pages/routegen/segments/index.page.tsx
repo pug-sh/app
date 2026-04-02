@@ -6,8 +6,9 @@ import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
+import { useEventKinds } from '@/hooks/use-event-kinds'
+import { toProtoTimeRange } from '@/lib/timestamp'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -23,24 +24,17 @@ const Segments = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
-  const [eventKinds, setEventKinds] = useState<string[]>([])
+  const { eventKinds, setEventKinds, updateEvent } = useEventKinds()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
 
   const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
-
-  const updateEvent = (idx: number, val: string) => {
-    if (!val) {
-      setEventKinds(eventKinds.filter((_, i) => i !== idx))
-    } else {
-      setEventKinds(eventKinds.map((e, i) => (i === idx ? val : e)))
-    }
-  }
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -57,12 +51,11 @@ const Segments = () => {
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
+      setError(null)
       try {
         const resp = await insightsRPC.segmentUsers(
           {
-            timeRange: timeRange
-              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
-              : undefined,
+            timeRange: toProtoTimeRange(timeRange),
             events: events.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters })),
             pageSize: 100,
           },
@@ -71,6 +64,7 @@ const Segments = () => {
         if (!cancelled) setSegmentIds(resp.distinctIds)
       } catch (err) {
         console.error('Segment query failed:', err)
+        if (!cancelled) setError('Segment query failed')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -116,7 +110,12 @@ const Segments = () => {
         </div>
       </div>
 
-      {segmentIds.length > 0 ? (
+      {error ? (
+        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <Users className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+        </div>
+      ) : segmentIds.length > 0 ? (
         <div>
           <div className='flex items-center gap-2 mb-2'>
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>

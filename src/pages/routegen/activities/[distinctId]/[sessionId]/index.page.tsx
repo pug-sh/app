@@ -1,19 +1,19 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
-import { EventDetails } from '@/components/event-details'
-import HoverSwap from '@/components/hover-swap'
+import LoadingSpinner from '@/components/loading-spinner'
+import TimelineEventItem from '@/components/timeline-event-item'
 import { kindStyle } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
-import { structGet, structToEntries } from '@/lib/struct'
-import { tsToDate, formatClock } from '@/lib/timestamp'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { structGet } from '@/lib/struct'
+import { tsToDate, formatClock, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
-import { Calendar, ChevronDown, ChevronRight, Clock, Globe, Loader2, Monitor, Smartphone, Timer } from 'lucide-react'
+import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 
@@ -145,67 +145,6 @@ const SessionSummary = ({
   )
 }
 
-// ── Event Item (simplified for session — no session badges) ─────────────────
-
-const EventItem = ({ event, elapsed }: { event: ActivityEvent; elapsed: string }) => {
-  const [expanded, setExpanded] = useState(false)
-  const d = tsToDate(event.occurTime)
-  const autoProps = structToEntries(event.autoProperties)
-  const customProps = structToEntries(event.customProperties)
-  const inlineProps = customProps.slice(0, 3)
-  const hasMore = autoProps.length > 0 || customProps.length > 3
-  const colors = kindStyle(event.kind)
-
-  return (
-    <div
-      className={cn('group relative pl-8 border-b border-border/50', hasMore && 'cursor-pointer')}
-      onClick={() => hasMore && setExpanded(!expanded)}
-    >
-      <div className='absolute left-[11px] top-0 bottom-0 w-px bg-border' />
-      <div
-        className={cn('absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background', colors.dot)}
-      />
-
-      <div className={cn('py-2.5 pr-3 transition-colors', hasMore && 'hover:bg-muted/40')}>
-        <div className='flex items-center gap-2'>
-          <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>
-            {event.kind}
-          </Badge>
-          {d && (
-            <span className='text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
-              <HoverSwap primary={elapsed} secondary={formatClock(d)} />
-            </span>
-          )}
-          {inlineProps.length > 0 && (
-            <div className='flex items-center gap-2 overflow-hidden'>
-              {inlineProps.map(([k, v]) => (
-                <span key={k} className='text-[11px] text-muted-foreground whitespace-nowrap'>
-                  {k}: <span className='font-mono'>{v}</span>
-                </span>
-              ))}
-            </div>
-          )}
-          {hasMore && (
-            <span className='ml-auto'>
-              {expanded ? (
-                <ChevronDown className='w-3.5 h-3.5 text-muted-foreground' />
-              ) : (
-                <ChevronRight className='w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity' />
-              )}
-            </span>
-          )}
-        </div>
-
-        {expanded && (
-          <div className='mt-2'>
-            <EventDetails event={event} />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const SessionView = () => {
@@ -216,10 +155,12 @@ const SessionView = () => {
 
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchEvents = useCallback(async () => {
     if (!distinctId || !sessionId) return
     setLoading(true)
+    setError(null)
     try {
       const now = new Date()
       const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
@@ -227,7 +168,7 @@ const SessionView = () => {
         {
           distinctId,
           sessionId,
-          timeRange: { from: timestampFromDate(from), to: timestampFromDate(now) },
+          timeRange: toProtoTimeRange({ from, to: now }),
           pageSize: 1000,
         },
         { headers }
@@ -235,6 +176,7 @@ const SessionView = () => {
       setEvents(resp.events)
     } catch (err) {
       console.error('Session feed failed:', err)
+      setError('Failed to load session')
     } finally {
       setLoading(false)
     }
@@ -248,7 +190,7 @@ const SessionView = () => {
   const sessionStart = events.length > 0 ? tsToDate(events[events.length - 1].occurTime) : null
   const elapsedTimes = useMemo(() => {
     if (!sessionStart) return events.map(() => '')
-    // Events are newest-first, reverse for elapsed calculation
+    // sessionStart is the oldest event; elapsed = event.time - sessionStart
     return events.map(e => {
       const d = tsToDate(e.occurTime)
       if (!d) return ''
@@ -278,8 +220,14 @@ const SessionView = () => {
   return (
     <Page title='Session' description={sessionId}>
       {loading ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
+        <LoadingSpinner />
+      ) : error ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Timer className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchEvents()}>
+            Retry
+          </Button>
         </div>
       ) : events.length > 0 ? (
         <>
@@ -296,9 +244,16 @@ const SessionView = () => {
           </div>
 
           {/* Session timeline */}
-          {events.map((event, i) => (
-            <EventItem key={event.eventId} event={event} elapsed={elapsedTimes[i]} />
-          ))}
+          {events.map((event, i) => {
+            const d = tsToDate(event.occurTime)
+            return (
+              <TimelineEventItem
+                key={event.eventId}
+                event={event}
+                timeLabel={d ? { primary: elapsedTimes[i], secondary: formatClock(d) } : null}
+              />
+            )
+          })}
         </>
       ) : (
         <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>

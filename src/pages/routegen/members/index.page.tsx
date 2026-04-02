@@ -1,5 +1,7 @@
 import type { OrgInvitation, OrgMember } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
+import LoadingSpinner from '@/components/loading-spinner'
+import SectionHeader from '@/components/section-header'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -90,18 +92,12 @@ const Members = () => {
   return (
     <Page title='Members' description={`Manage members of ${org.displayName}`}>
       {loading ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
-        </div>
+        <LoadingSpinner />
       ) : (
         <div className='space-y-8'>
           {/* Members */}
           <section>
-            <div className='flex items-center gap-2 mb-2'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Members</span>
-              <div className='flex-1 h-px bg-border' />
-              <span className='text-[10px] text-muted-foreground'>{members.length}</span>
-            </div>
+            <SectionHeader title='Members' count={members.length} />
 
             {members.length > 0 && (
               <div className='space-y-0.5'>
@@ -196,13 +192,7 @@ const Members = () => {
           {/* Pending invitations */}
           {invitations.length > 0 && (
             <section>
-              <div className='flex items-center gap-2 mb-2'>
-                <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>
-                  Pending invitations
-                </span>
-                <div className='flex-1 h-px bg-border' />
-                <span className='text-[10px] text-muted-foreground'>{invitations.length}</span>
-              </div>
+              <SectionHeader title='Pending invitations' count={invitations.length} />
               <div className='space-y-0.5'>
                 {invitations.map(inv => (
                   <div

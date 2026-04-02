@@ -10,13 +10,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
 import { EventChip, FilterBuilder, FilterChip, kindStyle } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import HoverSwap from '@/components/hover-swap'
+import LoadingSpinner from '@/components/loading-spinner'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
-import { tsToDate } from '@/lib/timestamp'
+import { tsToDate, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
@@ -29,7 +29,7 @@ const formatAbsolute = (d: Date): string => {
   return (
     d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
     ', ' +
-    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: false })
+    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
   )
 }
 
@@ -174,9 +174,7 @@ const EventExplorer = () => {
           {
             distinctId: userFilter || undefined,
             kind: kindFilter || undefined,
-            timeRange: timeRange
-              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
-              : undefined,
+            timeRange: toProtoTimeRange(timeRange),
             propertyFilters: toProtoFilters(propFilters),
             pageSize: 100,
             pageToken,
@@ -274,9 +272,7 @@ const EventExplorer = () => {
 
       {/* Results */}
       {loading && events.length === 0 ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
-        </div>
+        <LoadingSpinner />
       ) : error && events.length === 0 ? (
         <div className='flex flex-col items-center justify-center py-16'>
           <AlertCircle className='w-10 h-10 mb-4 opacity-15' />

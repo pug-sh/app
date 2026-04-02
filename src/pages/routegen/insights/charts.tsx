@@ -92,6 +92,17 @@ const ChartTooltip = ({
   </div>
 )
 
+// ── Chart Layout Constants ──────────────────────────────────────────────────
+
+const W = 800
+const H = 280
+const PAD = { top: 20, right: 24, bottom: 36, left: 52 }
+const CW = W - PAD.left - PAD.right
+const CH = H - PAD.top - PAD.bottom
+const Y_TICKS = 5
+
+const yScale = (v: number, yMax: number) => PAD.top + CH - (v / yMax) * CH
+
 // ── SVG Line Chart ──────────────────────────────────────────────────────────
 
 export const LineChart = ({
@@ -108,25 +119,17 @@ export const LineChart = ({
 
   if (data.length === 0) return null
 
-  const W = 800,
-    H = 280
-  const pad = { top: 20, right: 24, bottom: 36, left: 52 }
-  const cw = W - pad.left - pad.right
-  const ch = H - pad.top - pad.bottom
-
   const allVals = data.flatMap(d => d.values)
   const rawMax = Math.max(...allVals, 0)
   const yMax = niceMax(rawMax)
-  const yTicks = 5
-  const yStep = yMax / yTicks
+  const yStep = yMax / Y_TICKS
 
-  const xScale = (i: number) => pad.left + (i / Math.max(data.length - 1, 1)) * cw
-  const yScale = (v: number) => pad.top + ch - (v / yMax) * ch
+  const xScale = (i: number) => PAD.left + (i / Math.max(data.length - 1, 1)) * CW
 
   const paths = seriesNames.map((_, si) => {
-    const pts = data.map((d, i) => ({ x: xScale(i), y: yScale(d.values[si] ?? 0) }))
+    const pts = data.map((d, i) => ({ x: xScale(i), y: yScale(d.values[si] ?? 0, yMax) }))
     const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-    const area = line + ` L${pts[pts.length - 1].x},${yScale(0)} L${pts[0].x},${yScale(0)} Z`
+    const area = line + ` L${pts[pts.length - 1].x},${yScale(0, yMax)} L${pts[0].x},${yScale(0, yMax)} Z`
     return { line, area, pts }
   })
 
@@ -137,7 +140,7 @@ export const LineChart = ({
     if (!svg) return
     const rect = svg.getBoundingClientRect()
     const mx = ((e.clientX - rect.left) / rect.width) * W
-    const idx = Math.round(((mx - pad.left) / cw) * (data.length - 1))
+    const idx = Math.round(((mx - PAD.left) / CW) * (data.length - 1))
     setHoverIdx(Math.max(0, Math.min(data.length - 1, idx)))
   }
 
@@ -150,12 +153,12 @@ export const LineChart = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverIdx(null)}
       >
-        {Array.from({ length: yTicks + 1 }, (_, i) => {
-          const y = yScale(i * yStep)
+        {Array.from({ length: Y_TICKS + 1 }, (_, i) => {
+          const y = yScale(i * yStep, yMax)
           return (
             <g key={i}>
-              <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
-              <text x={pad.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
+              <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
+              <text x={PAD.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
                 {compactNumber(i * yStep)}
               </text>
             </g>
@@ -194,8 +197,8 @@ export const LineChart = ({
           <line
             x1={xScale(hoverIdx)}
             x2={xScale(hoverIdx)}
-            y1={pad.top}
-            y2={pad.top + ch}
+            y1={PAD.top}
+            y2={PAD.top + CH}
             stroke='currentColor'
             strokeOpacity={0.1}
             strokeDasharray='3,3'
@@ -214,10 +217,10 @@ export const LineChart = ({
         {data.map((_, i) => (
           <rect
             key={`zone-${i}`}
-            x={xScale(i) - cw / data.length / 2}
-            y={pad.top}
-            width={cw / data.length}
-            height={ch}
+            x={xScale(i) - CW / data.length / 2}
+            y={PAD.top}
+            width={CW / data.length}
+            height={CH}
             fill='transparent'
             onMouseEnter={() => setHoverIdx(i)}
           />
@@ -249,11 +252,6 @@ export const BarChart = ({
 
   if (data.length === 0) return null
 
-  const W = 800,
-    H = 280
-  const pad = { top: 20, right: 24, bottom: 36, left: 52 }
-  const cw = W - pad.left - pad.right
-  const ch = H - pad.top - pad.bottom
   const n = data.length
   const sc = seriesNames.length
 
@@ -262,11 +260,9 @@ export const BarChart = ({
     : data.flatMap(d => d.values)
   const rawMax = Math.max(...allVals, 0)
   const yMax = niceMax(rawMax)
-  const yTicks = 5
-  const yStep = yMax / yTicks
+  const yStep = yMax / Y_TICKS
 
-  const yScale = (v: number) => pad.top + ch - (v / yMax) * ch
-  const bandW = cw / n
+  const bandW = CW / n
   const barGap = Math.max(1, bandW * 0.15)
   const barArea = bandW - barGap
   const barW = stacked ? barArea : barArea / sc
@@ -278,7 +274,7 @@ export const BarChart = ({
     if (!svg) return
     const rect = svg.getBoundingClientRect()
     const mx = ((e.clientX - rect.left) / rect.width) * W
-    const idx = Math.floor((mx - pad.left) / bandW)
+    const idx = Math.floor((mx - PAD.left) / bandW)
     setHoverIdx(Math.max(0, Math.min(n - 1, idx)))
   }
 
@@ -291,12 +287,12 @@ export const BarChart = ({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoverIdx(null)}
       >
-        {Array.from({ length: yTicks + 1 }, (_, i) => {
-          const y = yScale(i * yStep)
+        {Array.from({ length: Y_TICKS + 1 }, (_, i) => {
+          const y = yScale(i * yStep, yMax)
           return (
             <g key={i}>
-              <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
-              <text x={pad.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
+              <line x1={PAD.left} x2={W - PAD.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
+              <text x={PAD.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
                 {compactNumber(i * yStep)}
               </text>
             </g>
@@ -304,19 +300,19 @@ export const BarChart = ({
         })}
 
         {data.map((d, i) => {
-          const x0 = pad.left + i * bandW + barGap / 2
+          const x0 = PAD.left + i * bandW + barGap / 2
           if (stacked) {
             let cumY = 0
             return (
               <g key={i}>
                 {d.values.map((v, si) => {
-                  const barH = (v / yMax) * ch
+                  const barH = (v / yMax) * CH
                   cumY += barH
                   return (
                     <rect
                       key={si}
                       x={x0}
-                      y={pad.top + ch - cumY}
+                      y={PAD.top + CH - cumY}
                       width={barArea}
                       height={barH}
                       rx={2}
@@ -331,12 +327,12 @@ export const BarChart = ({
           return (
             <g key={i}>
               {d.values.map((v, si) => {
-                const barH = (v / yMax) * ch
+                const barH = (v / yMax) * CH
                 return (
                   <rect
                     key={si}
                     x={x0 + si * barW}
-                    y={pad.top + ch - barH}
+                    y={PAD.top + CH - barH}
                     width={barW - 1}
                     height={barH}
                     rx={2}
@@ -351,10 +347,10 @@ export const BarChart = ({
 
         {hoverIdx !== null && (
           <line
-            x1={pad.left + hoverIdx * bandW + bandW / 2}
-            x2={pad.left + hoverIdx * bandW + bandW / 2}
-            y1={pad.top}
-            y2={pad.top + ch}
+            x1={PAD.left + hoverIdx * bandW + bandW / 2}
+            x2={PAD.left + hoverIdx * bandW + bandW / 2}
+            y1={PAD.top}
+            y2={PAD.top + CH}
             stroke='currentColor'
             strokeOpacity={0.1}
             strokeDasharray='3,3'
@@ -366,7 +362,7 @@ export const BarChart = ({
           return (
             <text
               key={i}
-              x={pad.left + i * bandW + bandW / 2}
+              x={PAD.left + i * bandW + bandW / 2}
               y={H - 8}
               textAnchor='middle'
               className='fill-muted-foreground'
@@ -380,10 +376,10 @@ export const BarChart = ({
         {data.map((_, i) => (
           <rect
             key={`zone-${i}`}
-            x={pad.left + i * bandW}
-            y={pad.top}
+            x={PAD.left + i * bandW}
+            y={PAD.top}
             width={bandW}
-            height={ch}
+            height={CH}
             fill='transparent'
             onMouseEnter={() => setHoverIdx(i)}
           />
@@ -391,7 +387,7 @@ export const BarChart = ({
       </svg>
 
       {hoverIdx !== null && (
-        <ChartTooltip data={data} hoverIdx={hoverIdx} seriesNames={seriesNames} granularity={granularity} xPct={((pad.left + hoverIdx * bandW + bandW / 2) / W) * 100} />
+        <ChartTooltip data={data} hoverIdx={hoverIdx} seriesNames={seriesNames} granularity={granularity} xPct={((PAD.left + hoverIdx * bandW + bandW / 2) / W) * 100} />
       )}
     </div>
   )

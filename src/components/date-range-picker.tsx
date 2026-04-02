@@ -113,7 +113,7 @@ export function DateRangePicker({
       setDraftTo(value?.to ?? fallback.to)
       setEditing('from')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset draft state only when popover opens/closes, not when value or fallback change
   }, [open])
 
   const applyAndClose = (from: Date, to: Date) => {

@@ -23,6 +23,7 @@ const CampaignDetail = () => {
   const campaignsRPC = useAtomValue(campaignsRPCAtom)
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState(false)
   const [name, setName] = useState('')
   const [notif, setNotif] = useState({ title: '', body: '', image_url: '', deep_link: '' })
   const [scheduledAt, setScheduledAt] = useState('')
@@ -43,7 +44,10 @@ const CampaignDetail = () => {
           setScheduledAt(new Date(Number(c.scheduledTime.seconds) * 1000).toISOString().slice(0, 16))
         }
       })
-      .catch(err => console.error('Failed to fetch campaign:', err))
+      .catch(err => {
+        console.error('Failed to fetch campaign:', err)
+        setFetchError(true)
+      })
       .finally(() => setLoading(false))
   }, [id, headers, campaignsRPC])
 
@@ -83,7 +87,12 @@ const CampaignDetail = () => {
     return (
       <Page title='Campaign'>
         <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <p className='text-sm'>Campaign not found</p>
+          <p className='text-sm'>{fetchError ? 'Failed to load campaign' : 'Campaign not found'}</p>
+          {fetchError && (
+            <Button variant='outline' size='sm' className='mt-3' onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          )}
         </div>
       </Page>
     )

@@ -1,28 +1,25 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
-import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
+import LoadingSpinner from '@/components/loading-spinner'
+import TimelineEventItem from '@/components/timeline-event-item'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventChip, FilterBuilder, FilterChip, kindStyle } from '@/components/event-filters'
+import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
-import { structGet, structToEntries } from '@/lib/struct'
-import { tsToDate, formatClock } from '@/lib/timestamp'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { structGet } from '@/lib/struct'
+import { tsToDate, formatClock, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
   Calendar,
-  ChevronDown,
-  ChevronRight,
   Clock,
   Globe,
   Loader2,
@@ -168,70 +165,6 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
 }
 
 
-// ── Event Item ──────────────────────────────────────────────────────────────
-
-const EventItem = ({ event, isToday }: { event: ActivityEvent; isToday: boolean }) => {
-  const [expanded, setExpanded] = useState(false)
-  const d = tsToDate(event.occurTime)
-  const autoProps = structToEntries(event.autoProperties)
-  const customProps = structToEntries(event.customProperties)
-  const inlineProps = customProps.slice(0, 3)
-  const hasMore = autoProps.length > 0 || customProps.length > 3
-  const colors = kindStyle(event.kind)
-
-  return (
-    <div className={cn('group relative pl-8 border-b border-border/50', hasMore && 'cursor-pointer')} onClick={() => hasMore && setExpanded(!expanded)}>
-      <div className='absolute left-[11px] top-0 bottom-0 w-px bg-border' />
-      <div
-        className={cn(
-          'absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background',
-          colors.dot
-        )}
-      />
-
-      <div className={cn('py-2.5 pr-3 transition-colors', hasMore && 'hover:bg-muted/40')}>
-        <div className='flex items-center gap-2'>
-          <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>
-            {event.kind}
-          </Badge>
-          {d && (
-            <span className='text-xs text-muted-foreground tabular-nums whitespace-nowrap w-12'>
-              <HoverSwap
-                primary={isToday ? formatRelative(d) : formatClock(d)}
-                secondary={isToday ? formatClock(d) : formatRelative(d)}
-              />
-            </span>
-          )}
-          {inlineProps.length > 0 && (
-            <div className='flex items-center gap-2 overflow-hidden'>
-              {inlineProps.map(([k, v]) => (
-                <span key={k} className='text-[11px] text-muted-foreground whitespace-nowrap'>
-                  {k}: <span className='font-mono'>{v}</span>
-                </span>
-              ))}
-            </div>
-          )}
-          {hasMore && (
-            <span className='ml-auto'>
-              {expanded ? (
-                <ChevronDown className='w-3.5 h-3.5 text-muted-foreground' />
-              ) : (
-                <ChevronRight className='w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity' />
-              )}
-            </span>
-          )}
-        </div>
-
-        {expanded && (
-          <div className='mt-2'>
-            <EventDetails event={event} />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const UserActivity = () => {
@@ -249,6 +182,7 @@ const UserActivity = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (project) fetchSchema(kindFilter)
@@ -258,14 +192,13 @@ const UserActivity = () => {
     async (pageToken = '') => {
       if (!distinctId) return
       setLoading(true)
+      setError(null)
       try {
         const resp = await activityRPC.getActivityFeed(
           {
             distinctId,
             kind: kindFilter.trim() || undefined,
-            timeRange: timeRange
-              ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
-              : undefined,
+            timeRange: toProtoTimeRange(timeRange),
             propertyFilters: toProtoFilters(propFilters),
             pageSize: 200,
             pageToken,
@@ -280,6 +213,7 @@ const UserActivity = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Activity feed failed:', err)
+        setError('Failed to load activity feed')
       } finally {
         setLoading(false)
       }
@@ -311,8 +245,14 @@ const UserActivity = () => {
   return (
     <Page title='User Activity' description={distinctId}>
       {loading && events.length === 0 ? (
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
+        <LoadingSpinner />
+      ) : error && events.length === 0 ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <Activity className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchEvents()}>
+            Retry
+          </Button>
         </div>
       ) : events.length > 0 ? (
         <>
@@ -358,10 +298,22 @@ const UserActivity = () => {
                 </div>
                 {group.events.map((event, i) => {
                   const activeLanes = lanes.filter(l => i >= l.firstIdx && i <= l.lastIdx)
+                  const d = tsToDate(event.occurTime)
+                  const isToday = group.label === 'Today'
                   return (
                     <div key={event.eventId} className='flex'>
                       <div className='flex-1 min-w-0'>
-                        <EventItem event={event} isToday={group.label === 'Today'} />
+                        <TimelineEventItem
+                          event={event}
+                          timeLabel={
+                            d
+                              ? {
+                                  primary: isToday ? formatRelative(d) : formatClock(d),
+                                  secondary: isToday ? formatClock(d) : formatRelative(d),
+                                }
+                              : null
+                          }
+                        />
                       </div>
                       {maxCol > 0 && (
                         <div className='relative shrink-0' style={{ width: maxCol * LANE_W }}>
