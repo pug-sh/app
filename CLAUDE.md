@@ -99,6 +99,15 @@ Lightweight inline validation only — disable buttons when required fields are 
 - Project-scoped endpoints need JWT + `x-project-id` header
 - SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend
 
+### TypeScript Style
+
+Prefer implicit types — don't annotate what TypeScript can infer:
+
+- **No return types on functions** unless the inferred type would be wrong or the function is exported from a shared library with a complex return shape
+- **No explicit variable types** when the RHS makes it obvious (`const x = 'hello'` not `const x: string = 'hello'`)
+- **No redundant generics** on `useState`/`useRef` when the initial value already has the right type (`useState(false)` not `useState<boolean>(false)`)
+- **Keep generics** when removal would change the type: `useState<T[]>([])` (infers `never[]` without it), `useState<T | null>(null)` (infers `null`), `atom<T[]>([])`, `useRef<HTMLElement>(null)`
+
 ### Prettier
 
 Config in package.json: no semis, single quotes, 120 char width, trailing commas ES5.
