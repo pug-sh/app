@@ -1,4 +1,4 @@
-import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType, LogicalOperator } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
@@ -11,6 +11,7 @@ import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import { useEventFilters } from '@/hooks/use-event-filters'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
@@ -30,6 +31,11 @@ const Segments = () => {
   const eventFilters = useEventFilters()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
 
   const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,12 +50,20 @@ const Segments = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters, retryCount })
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
     if (!project || validEntries.length === 0) return
 
     const globalFilters = toProtoFilters(propFilters)
+    const filterGroups =
+      globalFilters.length > 0
+        ? [
+          {
+            filters: globalFilters,
+            operator: LogicalOperator.AND,
+          },
+        ]
+        : []
 
     let cancelled = false
     clearTimeout(debounceRef.current)
@@ -67,7 +81,8 @@ const Segments = () => {
               },
               aggregation: AggregationType.TOTAL,
             })),
-            filters: globalFilters,
+            filterGroups,
+            filterGroupsOperator: LogicalOperator.AND,
             pageSize: 100,
           },
           { headers }
@@ -81,6 +96,7 @@ const Segments = () => {
       }
     }, 300)
     return () => { cancelled = true; clearTimeout(debounceRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
   }, [queryKey, project, insightsRPC, headers])
 
   if (!project) return <NoProject title='Segments' icon={Users} />
@@ -102,12 +118,12 @@ const Segments = () => {
             <FilterChip
               key={`f-${i}`}
               filter={f}
-              schema={schema}
+              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>
       </div>

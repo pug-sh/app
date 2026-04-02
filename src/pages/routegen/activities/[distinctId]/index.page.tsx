@@ -8,6 +8,7 @@ import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-fi
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -165,6 +166,11 @@ const UserActivity = () => {
   const eventFilters = useEventFilters()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
@@ -260,12 +266,12 @@ const UserActivity = () => {
                 <FilterChip
                   key={i}
                   filter={f}
-                  schema={schema}
+                  schema={globalSchema}
                   onRemove={() => removeFilter(i)}
                   onUpdate={next => updateFilter(i, next)}
                 />
               ))}
-              <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+              <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
             </div>
           </div>
 

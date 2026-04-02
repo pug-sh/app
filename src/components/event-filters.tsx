@@ -43,30 +43,84 @@ const OPERATORS: readonly {
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
 ]
 
+const scopedSchemaCache = new Map<string, GetFilterSchemaResponse>()
+
 // ── Suggestions hook ────────────────────────────────────────────────────────
 
 const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?: string) => {
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [loaded, setLoaded] = useState(true)
-  const [error, setError] = useState(false)
+  const requestKey = propertyKey ? `${source}|${eventKind ?? ''}|${propertyKey}` : ''
+  const [result, setResult] = useState<{ key: string; suggestions: string[]; error: boolean }>({
+    key: '',
+    suggestions: [],
+    error: false,
+  })
 
   useEffect(() => {
     if (!propertyKey) return
 
     let cancelled = false
-    setLoaded(false)
-    setError(false)
-    setSuggestions([])
     insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers }).then(
-      resp => { if (!cancelled) { setSuggestions(resp.values); setLoaded(true) } },
-      (err) => { if (!cancelled) { console.error('getPropertyValues failed:', err); setError(true); setLoaded(true) } }
+      resp => {
+        if (!cancelled) {
+          setResult({ key: requestKey, suggestions: resp.values, error: false })
+        }
+      },
+      err => {
+        if (!cancelled) {
+          console.error('getPropertyValues failed:', err)
+          setResult({ key: requestKey, suggestions: [], error: true })
+        }
+      }
     )
     return () => { cancelled = true }
-  }, [propertyKey, source, eventKind, insightsRPC, headers])
+  }, [propertyKey, source, eventKind, insightsRPC, headers, requestKey])
 
+  const loaded = !requestKey || result.key === requestKey
+  const error = loaded ? result.error : false
+  const suggestions = loaded ? result.suggestions : []
   return { suggestions, loaded, error }
+}
+
+const useScopedSchema = (kindFilter?: string) => {
+  const insightsRPC = useAtomValue(insightsRPCAtom)
+  const headers = useAtomValue(projectHeaderAtom)
+  const kind = kindFilter?.trim() ?? ''
+  const cachedSchema = kind ? (scopedSchemaCache.get(kind) ?? null) : null
+  const [result, setResult] = useState<{ key: string; schema: GetFilterSchemaResponse | null; error: string | null }>({
+    key: '',
+    schema: null,
+    error: null,
+  })
+
+  useEffect(() => {
+    if (!kind || cachedSchema) return
+
+    let cancelled = false
+    insightsRPC.getFilterSchema({ eventKind: kind }, { headers }).then(
+      resp => {
+        if (cancelled) return
+        scopedSchemaCache.set(kind, resp)
+        setResult({ key: kind, schema: resp, error: null })
+      },
+      err => {
+        if (cancelled) return
+        console.error('getFilterSchema(kind) failed:', err)
+        setResult({
+          key: kind,
+          schema: null,
+          error: err instanceof Error ? err.message : 'Failed to load filter schema',
+        })
+      }
+    )
+    return () => { cancelled = true }
+  }, [kind, cachedSchema, insightsRPC, headers])
+
+  const isCurrent = result.key === kind
+  const schema = kind ? (cachedSchema ?? (isCurrent ? result.schema : null)) : null
+  const schemaError = kind && isCurrent ? result.error : null
+  return { schema, schemaError }
 }
 
 // ── Event Picker ────────────────────────────────────────────────────────────
@@ -175,8 +229,8 @@ export const EventChip = ({
 type BuilderStep = 'property' | 'operator' | 'value'
 
 export const FilterBuilder = ({
-  schema,
-  schemaError,
+  schema: baseSchema,
+  schemaError: baseSchemaError,
   onAdd,
   kindFilter,
 }: {
@@ -193,9 +247,12 @@ export const FilterBuilder = ({
   const [val, setVal] = useState('')
   const [vals, setVals] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const { schema: scopedSchema, schemaError: scopedSchemaError } = useScopedSchema(kindFilter)
 
   const opMeta = OPERATORS.find(o => o.value === op)
   const { suggestions, loaded, error } = useSuggestions(step === 'value' ? prop : '', propSource, kindFilter)
+  const schema = kindFilter ? (scopedSchema ?? baseSchema) : baseSchema
+  const schemaError = kindFilter ? (scopedSchemaError ?? baseSchemaError) : baseSchemaError
 
   const reset = () => {
     setStep('property')
@@ -426,7 +483,7 @@ export const FilterChip = ({
   filter,
   onRemove,
   onUpdate,
-  schema,
+  schema: baseSchema,
   kindFilter,
 }: {
   filter: ActiveFilter
@@ -437,6 +494,8 @@ export const FilterChip = ({
 }) => {
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
+  const { schema: scopedSchema } = useScopedSchema(kindFilter)
+  const schema = kindFilter ? (scopedSchema ?? baseSchema) : baseSchema
 
   let propSource = PropertySource.UNSPECIFIED
   if (schema) {

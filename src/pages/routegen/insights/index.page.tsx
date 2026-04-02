@@ -2,6 +2,7 @@ import {
   AggregationType,
   Granularity,
   InsightType,
+  LogicalOperator,
   type Series,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
@@ -14,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -145,6 +147,11 @@ const Insights = () => {
       }
     },
   }
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
 
   const [series, setSeries] = useState<Series[]>([])
   const [loading, setLoading] = useState(false)
@@ -164,6 +171,15 @@ const Insights = () => {
     if (!project || validEntries.length === 0 || !timeRange) return
 
     const globalFilters = toProtoFilters(propFilters)
+    const filterGroups =
+      globalFilters.length > 0
+        ? [
+          {
+            filters: globalFilters,
+            operator: LogicalOperator.AND,
+          },
+        ]
+        : []
 
     let cancelled = false
     clearTimeout(debounceRef.current)
@@ -183,7 +199,8 @@ const Insights = () => {
               },
               aggregation: getAggregation(i),
             })),
-            filters: globalFilters,
+            filterGroups,
+            filterGroupsOperator: LogicalOperator.AND,
           },
           { headers }
         )
@@ -254,12 +271,12 @@ const Insights = () => {
             <FilterChip
               key={`f-${i}`}
               filter={f}
-              schema={schema}
+              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>
       </div>

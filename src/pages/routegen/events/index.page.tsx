@@ -17,6 +17,7 @@ import LoadingSpinner from '@/components/loading-spinner'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
@@ -132,6 +133,11 @@ const EventExplorer = () => {
   const [userFilter, setUserFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
 
   // Data
   const [events, setEvents] = useState<ActivityEvent[]>([])
@@ -256,12 +262,12 @@ const EventExplorer = () => {
             <FilterChip
               key={i}
               filter={f}
-              schema={schema}
+              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {events.length > 0 && (
             <span className='ml-auto text-xs text-muted-foreground tabular-nums'>{events.length} events</span>
           )}
@@ -282,7 +288,7 @@ const EventExplorer = () => {
       ) : events.length > 0 ? (
         <>
           <table className='w-full'>
-            <thead className='sticky z-[9] bg-background' style={{ top: filterH }}>
+            <thead className='sticky z-9 bg-background' style={{ top: filterH }}>
               <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
                 <th className='py-2 pr-2 text-left font-medium'>Time</th>
                 <th className='py-2 pr-2 text-left font-medium'>Event</th>
