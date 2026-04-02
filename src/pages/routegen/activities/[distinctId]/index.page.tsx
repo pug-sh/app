@@ -322,8 +322,8 @@ const UserActivity = () => {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (project) fetchSchema()
-  }, [project, fetchSchema])
+    if (project) fetchSchema(kindFilter)
+  }, [project, fetchSchema, kindFilter])
 
   const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
   const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
@@ -412,22 +412,23 @@ const UserActivity = () => {
               <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
             </div>
             <div className='flex flex-wrap items-center gap-2'>
-            <EventChip
-              value={kindFilter}
-              onChange={setKindFilter}
-              events={schema?.events ?? []}
-              schemaError={schemaError}
-            />
-            {propFilters.map((f, i) => (
-              <FilterChip
-                key={i}
-                filter={f}
-                schema={schema}
-                onRemove={() => removeFilter(i)}
-                onUpdate={next => updateFilter(i, next)}
+              <EventChip
+                value={kindFilter}
+                onChange={setKindFilter}
+                events={schema?.events ?? []}
+                schemaError={schemaError}
               />
-            ))}
-            <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+              {propFilters.map((f, i) => (
+                <FilterChip
+                  key={i}
+                  filter={f}
+                  schema={schema}
+                  kindFilter={kindFilter}
+                  onRemove={() => removeFilter(i)}
+                  onUpdate={next => updateFilter(i, next)}
+                />
+              ))}
+              <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} kindFilter={kindFilter} />
             </div>
           </div>
 

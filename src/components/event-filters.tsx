@@ -79,22 +79,28 @@ export const compactNumber = (n: bigint): string => {
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
 
-const useSuggestions = (propertyKey: string, source: PropertySource) => {
+const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?: string) => {
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const [suggestions, setSuggestions] = useState<string[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const [loaded, setLoaded] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!propertyKey) return
-    setLoaded(false)
-    insightsRPC.getPropertyValues({ propertyKey, source }, { headers }).then(
-      resp => { setSuggestions(resp.values); setLoaded(true) },
-      () => setLoaded(true)
-    )
-  }, [propertyKey, source, insightsRPC, headers])
 
-  return { suggestions, loaded }
+    let cancelled = false
+    setLoaded(false)
+    setError(false)
+    setSuggestions([])
+    insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers }).then(
+      resp => { if (!cancelled) { setSuggestions(resp.values); setLoaded(true) } },
+      (err) => { if (!cancelled) { console.error('getPropertyValues failed:', err); setError(true); setLoaded(true) } }
+    )
+    return () => { cancelled = true }
+  }, [propertyKey, source, eventKind, insightsRPC, headers])
+
+  return { suggestions, loaded, error }
 }
 
 // ── Event Picker ────────────────────────────────────────────────────────────
@@ -206,10 +212,12 @@ export const FilterBuilder = ({
   schema,
   schemaError,
   onAdd,
+  kindFilter,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   onAdd: (filter: ActiveFilter) => void
+  kindFilter?: string
 }) => {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<BuilderStep>('property')
@@ -221,7 +229,7 @@ export const FilterBuilder = ({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const opMeta = OPERATORS.find(o => o.value === op)
-  const { suggestions, loaded } = useSuggestions(step === 'value' ? prop : '', propSource)
+  const { suggestions, loaded, error } = useSuggestions(step === 'value' ? prop : '', propSource, kindFilter)
 
   const reset = () => {
     setStep('property')
@@ -386,7 +394,7 @@ export const FilterBuilder = ({
             <Command>
               <CommandInput placeholder='Search values...' className='text-xs' />
               <CommandList>
-                <CommandEmpty className='py-3 text-xs'>{loaded ? 'No values' : 'Loading...'}</CommandEmpty>
+                <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
                 <CommandGroup>
                   {suggestions.map(s => (
                     <CommandItem key={s} value={s} onSelect={() => toggleVal(s)} className='text-xs py-1.5 font-mono gap-1.5'>
@@ -453,11 +461,13 @@ export const FilterChip = ({
   onRemove,
   onUpdate,
   schema,
+  kindFilter,
 }: {
   filter: ActiveFilter
   onRemove: () => void
   onUpdate: (f: ActiveFilter) => void
   schema: GetFilterSchemaResponse | null
+  kindFilter?: string
 }) => {
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
@@ -468,7 +478,7 @@ export const FilterChip = ({
         : PropertySource.PROFILE
     : PropertySource.UNSPECIFIED
 
-  const { suggestions, loaded } = useSuggestions(editOpen ? filter.property : '', propSource)
+  const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   const valueLabel = op?.noValue
     ? null
@@ -494,7 +504,7 @@ export const FilterChip = ({
               <Command>
                 <CommandInput placeholder='Search...' className='text-xs' />
                 <CommandList>
-                  <CommandEmpty className='py-3 text-xs'>{loaded ? 'No values' : 'Loading...'}</CommandEmpty>
+                  <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
                   <CommandGroup>
                     {suggestions.map(s => {
                       const isSelected = filter.values.includes(s)
