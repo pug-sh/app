@@ -1,6 +1,7 @@
 export { AreaChart } from './charts/area-chart'
 export { BarChart } from './charts/bar-chart'
 export { DataTable } from './charts/data-table'
+export { FunnelChart } from './charts/funnel-chart'
 export { LineChart } from './charts/line-chart'
 export { SummaryStats } from './charts/summary-stats'
 export type { ChartPoint } from './charts/types'

@@ -25,7 +25,7 @@ import { BarChart3, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'l
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { SERIES_COLORS } from './chart-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, LineChart, SummaryStats } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -40,6 +40,11 @@ const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
   { label: 'Unique users', value: AggregationType.UNIQUE_USERS },
   { label: 'Avg per user', value: AggregationType.PER_USER_AVG },
+] as const
+
+const INSIGHT_TYPES = [
+  { label: 'Trends', value: InsightType.TRENDS },
+  { label: 'Funnel', value: InsightType.FUNNEL },
 ] as const
 
 type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
@@ -117,6 +122,7 @@ const Insights = () => {
 
   const baseFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
+  const [insightType, setInsightType] = useState(InsightType.TRENDS)
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregations, setAggregations] = useState<AggregationType[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('line')
@@ -173,7 +179,15 @@ const Insights = () => {
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, granularity, aggregations, propFilters, retryCount })
+  const queryKey = JSON.stringify({
+    entries: eventFilters.entries,
+    timeRange,
+    insightType,
+    granularity,
+    aggregations,
+    propFilters,
+    retryCount,
+  })
 
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
@@ -198,7 +212,7 @@ const Insights = () => {
       try {
         const resp = await insightsRPC.query(
           {
-            insightType: InsightType.TRENDS,
+            insightType,
             granularity,
             timeRange: toProtoTimeRange(timeRange),
             events: validEntries.map((entry, i) => ({
@@ -206,7 +220,7 @@ const Insights = () => {
                 kind: entry.kind,
                 filters: toProtoFilters(entry.filters),
               },
-              aggregation: getAggregation(i),
+              aggregation: insightType === InsightType.FUNNEL ? AggregationType.TOTAL : getAggregation(i),
             })),
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
@@ -225,7 +239,7 @@ const Insights = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey already captures all user-controlled query inputs
   }, [queryKey, project, insightsRPC, headers])
 
-  const seriesNames = series.map(s => s.eventKind || 'unknown')
+  const seriesNames = series.map((s, i) => s.eventKind || `step ${i + 1}`)
   const chartData: ChartPoint[] =
     series.length > 0
       ? series[0].points.map((p, i) => ({
@@ -233,6 +247,13 @@ const Insights = () => {
         values: series.map(s => Number(s.points[i]?.value) || 0),
       }))
       : []
+  const funnelSteps = series.map((s, i) => ({
+    name: s.eventKind || `Step ${i + 1}`,
+    count: Number(s.total) || 0,
+  }))
+
+  const isTrends = insightType === InsightType.TRENDS
+  const hasFunnelData = funnelSteps.some(step => step.count > 0)
   const allZero = chartData.every(d => d.values.every(v => v === 0))
 
   const renderChart = () => {
@@ -252,13 +273,21 @@ const Insights = () => {
   if (!project) return <NoProject title='Insights' icon={TrendingUp} />
 
   return (
-    <Page title='Insights' description='Analyze event trends'>
+    <Page
+      title='Insights'
+      description={isTrends ? 'Analyze event trends' : 'Analyze step-by-step conversion'}
+    >
       {/* Query config — sticky */}
       <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
-          <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
-          <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+          <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
+          {isTrends && (
+            <>
+              <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
+              <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+            </>
+          )}
         </div>
 
         {/* Events + per-event filters + per-event aggregation */}
@@ -269,9 +298,11 @@ const Insights = () => {
           schemaError={schemaError}
           showLetters
           seriesColors={SERIES_COLORS}
-          renderRowExtra={i => (
-            <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
-          )}
+          renderRowExtra={isTrends
+            ? i => (
+              <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+            )
+            : undefined}
         />
 
         {/* Global filters */}
@@ -298,11 +329,19 @@ const Insights = () => {
             Retry
           </Button>
         </div>
-      ) : chartData.length > 0 ? (
+      ) : isTrends && chartData.length > 0 ? (
         <div>
           <SummaryStats series={seriesNames} data={chartData} />
           {renderChart()}
         </div>
+      ) : !isTrends && funnelSteps.length > 0 ? (
+        hasFunnelData ? (
+          <FunnelChart steps={funnelSteps} />
+        ) : (
+          <div className='flex items-center justify-center h-48 text-muted-foreground'>
+            <p className='text-sm'>No events recorded in this period</p>
+          </div>
+        )
       ) : (
         !loading && (
           <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>

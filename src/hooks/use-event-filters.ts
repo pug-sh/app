@@ -45,7 +45,9 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
     )
   }
 
-  return { entries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter } as const
+  const reset = (nextEntries: EventFilterEntry[] = []) => setEntries(nextEntries)
+
+  return { entries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, reset } as const
 }
 
 export type EventFiltersHandle = ReturnType<typeof useEventFilters>
