@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 
 export const toProtoFilters = (filters: ActiveFilter[]) =>
   filters.map(f => ({
@@ -8,6 +9,14 @@ export const toProtoFilters = (filters: ActiveFilter[]) =>
     value: f.kind === 'single' ? f.value : '',
     values: f.kind === 'multi' ? f.values : [],
   }))
+
+export const toProtoEventFilters = (entries: EventFilterEntry[]) =>
+  entries
+    .filter(e => e.kind)
+    .map(e => ({
+      kind: e.kind,
+      filters: toProtoFilters(e.filters),
+    }))
 
 export const useFilterState = () => {
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])

@@ -1,16 +1,16 @@
-import { AggregationType } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
-import { useEventKinds } from '@/hooks/use-event-kinds'
+import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
@@ -27,7 +27,7 @@ const Segments = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
-  const { eventKinds, setEventKinds, updateEvent } = useEventKinds()
+  const eventFilters = useEventFilters()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
 
@@ -42,14 +42,14 @@ const Segments = () => {
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters, retryCount })
+
   // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters, retryCount })
-
   useEffect(() => {
-    const events = eventKinds.filter(e => e.trim())
-    if (!project || events.length === 0) return
+    const validEntries = eventFilters.entries.filter(e => e.kind.trim())
+    if (!project || validEntries.length === 0) return
 
-    const filters = toProtoFilters(propFilters)
+    const globalFilters = toProtoFilters(propFilters)
 
     let cancelled = false
     clearTimeout(debounceRef.current)
@@ -60,7 +60,14 @@ const Segments = () => {
         const resp = await insightsRPC.segmentUsers(
           {
             timeRange: toProtoTimeRange(timeRange),
-            events: events.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters })),
+            events: validEntries.map(entry => ({
+              event: {
+                kind: entry.kind,
+                filters: toProtoFilters(entry.filters),
+              },
+              aggregation: AggregationType.TOTAL,
+            })),
+            filters: globalFilters,
             pageSize: 100,
           },
           { headers }
@@ -84,22 +91,13 @@ const Segments = () => {
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
+        <EventFilterBar
+          filters={eventFilters}
+          events={schema?.events ?? []}
+          schema={schema}
+          schemaError={schemaError}
+        />
         <div className='flex flex-wrap items-center gap-2'>
-          {eventKinds.map((kind, i) => (
-            <EventChip
-              key={i}
-              value={kind}
-              onChange={v => updateEvent(i, v)}
-              events={schema?.events ?? []}
-              schemaError={schemaError}
-            />
-          ))}
-          <EventChip
-            value=''
-            onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
-            events={schema?.events ?? []}
-            schemaError={schemaError}
-          />
           {propFilters.map((f, i) => (
             <FilterChip
               key={`f-${i}`}

@@ -30,6 +30,7 @@ src/api/genproto
 *.sw?
 .playwright-mcp/
 .superpowers/
+docs/superpowers/
 
 # Qwen settings
 .qwen/settings.json

@@ -1,5 +1,6 @@
-import type { EventNameMeta, GetFilterSchemaResponse } from '@/api/genproto/dashboard/insights/v1/insights_pb'
-import { PropertySource } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import type { GetFilterSchemaResponse } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { kindStyle } from '@/lib/kind-style'
 import { useEffect, useRef, useState } from 'react'
+import type { EventFilterEntry, EventFiltersHandle } from '@/hooks/use-event-filters'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -539,3 +541,116 @@ export const FilterChip = ({
     </span>
   )
 }
+
+// ── Event Query Row ──────────────────────────────────────────────────────────
+
+const SERIES_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+export const EventQueryRow = ({
+  entry,
+  events,
+  schema,
+  schemaError,
+  onUpdateKind,
+  onRemove,
+  onAddFilter,
+  onRemoveFilter,
+  onUpdateFilter,
+  letter,
+  color,
+  children,
+}: {
+  entry: EventFilterEntry
+  events: EventNameMeta[]
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  onUpdateKind: (kind: string) => void
+  onRemove: () => void
+  onAddFilter: (filter: ActiveFilter) => void
+  onRemoveFilter: (filterIdx: number) => void
+  onUpdateFilter: (filterIdx: number, filter: ActiveFilter) => void
+  letter?: string
+  color?: string
+  children?: React.ReactNode
+}) => (
+  <div className='flex items-center gap-2 flex-wrap'>
+    {letter && (
+      <span className='flex items-center gap-1.5'>
+        {color && <span className='w-2 h-2 rounded-full shrink-0' style={{ background: color }} />}
+        <span className='text-[10px] font-semibold text-muted-foreground w-3'>{letter}</span>
+      </span>
+    )}
+    <EventChip value={entry.kind} onChange={onUpdateKind} events={events} schemaError={schemaError} />
+    {entry.filters.map((f, fi) => (
+      <FilterChip
+        key={fi}
+        filter={f}
+        schema={schema}
+        kindFilter={entry.kind}
+        onRemove={() => onRemoveFilter(fi)}
+        onUpdate={next => onUpdateFilter(fi, next)}
+      />
+    ))}
+    {entry.kind && (
+      <FilterBuilder schema={schema} schemaError={schemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
+    )}
+    {children}
+    <button
+      type='button'
+      onClick={onRemove}
+      className='p-1 text-muted-foreground/40 hover:text-foreground transition-colors cursor-pointer'
+    >
+      <X className='w-3 h-3' />
+    </button>
+  </div>
+)
+
+// ── Event Filter Bar ─────────────────────────────────────────────────────────
+
+export const EventFilterBar = ({
+  filters,
+  events,
+  schema,
+  schemaError,
+  showLetters,
+  seriesColors,
+  renderRowExtra,
+}: {
+  filters: EventFiltersHandle
+  events: EventNameMeta[]
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  showLetters?: boolean
+  seriesColors?: { dot: string }[]
+  renderRowExtra?: (index: number) => React.ReactNode
+}) => (
+  <div className='flex flex-col gap-1.5'>
+    {filters.entries.map((entry, i) => (
+      <EventQueryRow
+        key={i}
+        entry={entry}
+        events={events}
+        schema={schema}
+        schemaError={schemaError}
+        onUpdateKind={kind => filters.updateEventKind(i, kind)}
+        onRemove={() => filters.removeEvent(i)}
+        onAddFilter={filter => filters.addEventFilter(i, filter)}
+        onRemoveFilter={fi => filters.removeEventFilter(i, fi)}
+        onUpdateFilter={(fi, filter) => filters.updateEventFilter(i, fi, filter)}
+        letter={showLetters ? SERIES_LETTERS[i] : undefined}
+        color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
+      >
+        {renderRowExtra?.(i)}
+      </EventQueryRow>
+    ))}
+    <div className='flex items-center gap-2'>
+      {showLetters && filters.entries.length > 0 && <span className='w-7' />}
+      <EventChip
+        value=''
+        onChange={kind => { if (kind) filters.addEvent(kind) }}
+        events={events}
+        schemaError={schemaError}
+      />
+    </div>
+  </div>
+)

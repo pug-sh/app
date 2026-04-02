@@ -1,4 +1,4 @@
-import { Granularity } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { fmtDate } from '@/lib/date-presets'
 import { compactNumber } from '@/lib/format'
 import { useRef, useState } from 'react'

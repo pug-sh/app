@@ -3,19 +3,19 @@ import {
   InsightType,
   AggregationType,
   type Series,
-} from '@/api/genproto/dashboard/insights/v1/insights_pb'
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
-import { useEventKinds } from '@/hooks/use-event-kinds'
+import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -107,12 +107,43 @@ const Insights = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
 
-  const { eventKinds, setEventKinds, updateEvent } = useEventKinds()
+  const baseFilters = useEventFilters()
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
   const [granularity, setGranularity] = useState(Granularity.DAY)
-  const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
+  const [aggregations, setAggregations] = useState<AggregationType[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+
+  const getAggregation = (idx: number) => aggregations[idx] ?? AggregationType.TOTAL
+  const setAggregation = (idx: number, agg: AggregationType) => {
+    setAggregations(prev => {
+      const next = [...prev]
+      while (next.length <= idx) next.push(AggregationType.TOTAL)
+      next[idx] = agg
+      return next
+    })
+  }
+
+  // Wrap mutations to keep aggregations array in sync with entries
+  const removeWithAgg = (idx: number) => {
+    baseFilters.removeEvent(idx)
+    setAggregations(prev => prev.filter((_, i) => i !== idx))
+  }
+  const eventFilters = {
+    ...baseFilters,
+    addEvent: (kind: string) => {
+      baseFilters.addEvent(kind)
+      setAggregations(prev => [...prev, AggregationType.TOTAL])
+    },
+    removeEvent: removeWithAgg,
+    updateEventKind: (idx: number, kind: string) => {
+      if (!kind) {
+        removeWithAgg(idx)
+      } else {
+        baseFilters.updateEventKind(idx, kind)
+      }
+    },
+  }
 
   const [series, setSeries] = useState<Series[]>([])
   const [loading, setLoading] = useState(false)
@@ -125,14 +156,14 @@ const Insights = () => {
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, granularity, aggregations, propFilters, retryCount })
+
   // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  const queryKey = JSON.stringify({ eventKinds, timeRange, granularity, aggregation, propFilters, retryCount })
-
   useEffect(() => {
-    const events = eventKinds.filter(e => e.trim())
-    if (!project || events.length === 0 || !timeRange) return
+    const validEntries = eventFilters.entries.filter(e => e.kind.trim())
+    if (!project || validEntries.length === 0 || !timeRange) return
 
-    const filters = toProtoFilters(propFilters)
+    const globalFilters = toProtoFilters(propFilters)
 
     let cancelled = false
     clearTimeout(debounceRef.current)
@@ -145,7 +176,14 @@ const Insights = () => {
             insightType: InsightType.TRENDS,
             granularity,
             timeRange: toProtoTimeRange(timeRange),
-            events: events.map(kind => ({ kind, aggregation, filters })),
+            events: validEntries.map((entry, i) => ({
+              event: {
+                kind: entry.kind,
+                filters: toProtoFilters(entry.filters),
+              },
+              aggregation: getAggregation(i),
+            })),
+            filters: globalFilters,
           },
           { headers }
         )
@@ -192,32 +230,24 @@ const Insights = () => {
           <div className='flex flex-wrap items-center gap-2'>
             <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
             <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
-            <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={aggregation} onChange={setAggregation} />
             <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
           </div>
 
-          {/* Events + filters */}
+          {/* Events + per-event filters + per-event aggregation */}
+          <EventFilterBar
+            filters={eventFilters}
+            events={schema?.events ?? []}
+            schema={schema}
+            schemaError={schemaError}
+            showLetters
+            seriesColors={SERIES_COLORS}
+            renderRowExtra={i => (
+              <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+            )}
+          />
+
+          {/* Global filters */}
           <div className='flex flex-wrap items-center gap-2'>
-            {eventKinds.map((kind, i) => (
-              <span key={i} className='inline-flex items-center gap-1.5'>
-                <span
-                  className='w-2 h-2 rounded-full shrink-0'
-                  style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
-                />
-                <EventChip
-                  value={kind}
-                  onChange={v => updateEvent(i, v)}
-                  events={schema?.events ?? []}
-                  schemaError={schemaError}
-                />
-              </span>
-            ))}
-            <EventChip
-              value=''
-              onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
-              events={schema?.events ?? []}
-              schemaError={schemaError}
-            />
             {propFilters.map((f, i) => (
               <FilterChip
                 key={`f-${i}`}
