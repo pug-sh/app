@@ -14,12 +14,10 @@ import { useEffect, useRef, useState } from 'react'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export interface ActiveFilter {
-  property: string
-  operator: FilterOperator
-  value: string
-  values: string[]
-}
+export type ActiveFilter =
+  | { property: string; operator: FilterOperator; kind: 'single'; value: string }
+  | { property: string; operator: FilterOperator; kind: 'multi'; values: string[] }
+  | { property: string; operator: FilterOperator; kind: 'presence' }
 
 export const OPERATORS: readonly {
   value: FilterOperator
@@ -244,7 +242,7 @@ export const FilterBuilder = ({
     setOp(operator)
     const meta = OPERATORS.find(o => o.value === operator)
     if (meta?.noValue) {
-      onAdd({ property: prop, operator, value: '', values: [] })
+      onAdd({ property: prop, operator, kind: 'presence' })
       setOpen(false)
       reset()
     } else {
@@ -257,10 +255,10 @@ export const FilterBuilder = ({
   const commitFilter = () => {
     if (opMeta?.multiValue) {
       if (vals.length === 0) return
-      onAdd({ property: prop, operator: op, value: '', values: vals })
+      onAdd({ property: prop, operator: op, kind: 'multi', values: vals })
     } else {
       if (!val.trim()) return
-      onAdd({ property: prop, operator: op, value: val.trim(), values: [] })
+      onAdd({ property: prop, operator: op, kind: 'single', value: val.trim() })
     }
     setOpen(false)
     reset()
@@ -419,7 +417,7 @@ export const FilterBuilder = ({
                       <CommandItem
                         key={s}
                         value={s}
-                        onSelect={() => { setVal(s); onAdd({ property: prop, operator: op, value: s, values: [] }); setOpen(false); reset() }}
+                        onSelect={() => { setVal(s); onAdd({ property: prop, operator: op, kind: 'single', value: s }); setOpen(false); reset() }}
                         className='text-xs py-1.5 font-mono'
                       >
                         {s}
@@ -476,8 +474,10 @@ export const FilterChip = ({
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   let valueLabel: string | null = null
-  if (!op?.noValue) {
-    valueLabel = op?.multiValue ? filter.values.join(', ') : filter.value
+  if (filter.kind === 'multi') {
+    valueLabel = filter.values.join(', ')
+  } else if (filter.kind === 'single') {
+    valueLabel = filter.value
   }
 
   return (
@@ -494,7 +494,7 @@ export const FilterChip = ({
             {valueLabel || '...'}
           </PopoverTrigger>
           <PopoverContent align='start' className='w-52 p-0'>
-            {op?.multiValue ? (
+            {filter.kind === 'multi' ? (
               <Command>
                 <CommandInput placeholder='Search...' className='text-xs' />
                 <CommandList>
@@ -508,7 +508,7 @@ export const FilterChip = ({
                           value={s}
                           onSelect={() => {
                             const next = isSelected ? filter.values.filter(x => x !== s) : [...filter.values, s]
-                            onUpdate({ ...filter, values: next })
+                            onUpdate({ property: filter.property, operator: filter.operator, kind: 'multi' as const, values: next })
                           }}
                           className='text-xs py-1.5 font-mono gap-1.5'
                         >
@@ -530,7 +530,7 @@ export const FilterChip = ({
                       <CommandItem
                         key={s}
                         value={s}
-                        onSelect={() => { onUpdate({ ...filter, value: s }); setEditOpen(false) }}
+                        onSelect={() => { onUpdate({ property: filter.property, operator: filter.operator, kind: 'single' as const, value: s }); setEditOpen(false) }}
                         className='text-xs py-1.5 font-mono'
                       >
                         {s}
@@ -542,10 +542,10 @@ export const FilterChip = ({
             ) : (
               <div className='p-2'>
                 <input
-                  defaultValue={filter.value}
+                  defaultValue={filter.kind === 'single' ? filter.value : ''}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
-                      onUpdate({ ...filter, value: (e.target as HTMLInputElement).value.trim() })
+                      onUpdate({ property: filter.property, operator: filter.operator, kind: 'single' as const, value: (e.target as HTMLInputElement).value.trim() })
                       setEditOpen(false)
                     }
                   }}

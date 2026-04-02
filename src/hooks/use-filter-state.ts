@@ -5,8 +5,8 @@ export const toProtoFilters = (filters: ActiveFilter[]) =>
   filters.map(f => ({
     property: f.property,
     operator: f.operator,
-    value: f.value,
-    values: f.values,
+    value: f.kind === 'single' ? f.value : '',
+    values: f.kind === 'multi' ? f.values : [],
   }))
 
 export const useFilterState = () => {

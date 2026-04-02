@@ -1,6 +1,7 @@
 import { AggregationType } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
 import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
@@ -77,16 +78,7 @@ const Segments = () => {
     return () => { cancelled = true; clearTimeout(debounceRef.current) }
   }, [queryKey, project, insightsRPC, headers])
 
-  if (!project) {
-    return (
-      <Page title='Segments'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <Users className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select a project first</p>
-        </div>
-      </Page>
-    )
-  }
+  if (!project) return <NoProject title='Segments' icon={Users} />
 
   return (
     <Page title='Segments' description='Find users matching event criteria'>

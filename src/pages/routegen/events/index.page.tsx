@@ -2,6 +2,7 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import { activityRPCAtom } from '@/api/rpc'
 import { EventDetails } from '@/components/event-details'
 import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -202,16 +203,7 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
-  if (!project) {
-    return (
-      <Page title='Events'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <List className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select a project first</p>
-        </div>
-      </Page>
-    )
-  }
+  if (!project) return <NoProject title='Events' icon={List} />
 
   return (
     <Page title='Events' description='Browse raw events across all users'>

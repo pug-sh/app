@@ -2,6 +2,7 @@ import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
 import { campaignsRPCAtom } from '@/api/rpc'
 import { Button } from '@/components/ui/button'
 import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { Bell, Check, Clock, Copy, Eye, EyeOff, Loader2, MousePointerClick, Send } from 'lucide-react'
@@ -68,16 +69,7 @@ const Overview = () => {
     if (project) fetchData()
   }, [project, fetchData])
 
-  if (!project) {
-    return (
-      <Page title='Overview'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <Bell className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select a project to get started</p>
-        </div>
-      </Page>
-    )
-  }
+  if (!project) return <NoProject title='Overview' icon={Bell} />
 
   const scheduled = campaigns.filter(c => c.status === 'SCHEDULED').length
   const completed = campaigns.filter(c => c.status === 'COMPLETED').length

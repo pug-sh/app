@@ -7,6 +7,7 @@ import { EventChip, FilterBuilder, FilterChip, kindStyle } from '@/components/ev
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -305,16 +306,7 @@ const UserActivity = () => {
     return groups
   }, [events])
 
-  if (!project) {
-    return (
-      <Page title='Activities'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <Activity className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select a project first</p>
-        </div>
-      </Page>
-    )
-  }
+  if (!project) return <NoProject title='Activities' icon={Activity} />
 
   return (
     <Page title='User Activity' description={distinctId}>

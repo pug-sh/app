@@ -5,15 +5,18 @@ import { atom } from 'jotai'
 
 // Orgs
 export const orgsAtom = atom<Org[]>([])
+export const workspaceErrorAtom = atom<string | null>(null)
 
 export const fetchOrgsAtom = atom(null, async (get, set) => {
   const orgsRPC = get(orgsRPCAtom)
   try {
     const resp = await orgsRPC.list({})
     set(orgsAtom, resp.orgs)
+    set(workspaceErrorAtom, null)
     return resp.orgs
   } catch (err) {
     console.error('fetchOrgs failed:', err)
+    set(workspaceErrorAtom, 'Failed to load your workspace. Please check your connection and try again.')
     return []
   }
 })
@@ -30,9 +33,11 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
     set(projectsAtom, resp.projects)
+    set(workspaceErrorAtom, null)
     return resp.projects
   } catch (err) {
     console.error('fetchProjects failed:', err)
+    set(workspaceErrorAtom, 'Failed to load projects. Please check your connection and try again.')
     return []
   }
 })

@@ -4,6 +4,7 @@ import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
 import { kindStyle } from '@/components/event-filters'
 import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
@@ -272,16 +273,7 @@ const SessionView = () => {
     return kinds
   }, [events])
 
-  if (!project) {
-    return (
-      <Page title='Session'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <Timer className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select a project first</p>
-        </div>
-      </Page>
-    )
-  }
+  if (!project) return <NoProject title='Session' icon={Timer} />
 
   return (
     <Page title='Session' description={sessionId}>
