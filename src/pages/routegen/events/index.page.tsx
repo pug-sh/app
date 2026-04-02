@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Toggle } from '@/components/ui/toggle'
 import { AlertCircle, Braces, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -218,6 +218,16 @@ const EventExplorer = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const filterRef = useRef<HTMLDivElement>(null)
+  const [filterH, setFilterH] = useState(0)
+  useEffect(() => {
+    const el = filterRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setFilterH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   // Fetch schema once when project is available
   useEffect(() => {
     if (project) fetchSchema()
@@ -290,7 +300,7 @@ const EventExplorer = () => {
   return (
     <Page title='Events' description='Browse raw events across all users'>
       {/* Filter bar */}
-      <div className='space-y-2 mb-5'>
+      <div ref={filterRef} className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
         <div className='flex items-center gap-2 flex-wrap'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
@@ -369,7 +379,7 @@ const EventExplorer = () => {
       ) : events.length > 0 ? (
         <>
           <table className='w-full'>
-            <thead>
+            <thead className='sticky z-[9] bg-background' style={{ top: filterH }}>
               <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
                 <th className='py-2 pr-2 text-left font-medium'>Time</th>
                 <th className='py-2 pr-2 text-left font-medium'>Event</th>
