@@ -18,13 +18,14 @@ import { formatRelative } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Event Row ───────────────────────────────────────────────────────────────
@@ -126,13 +127,17 @@ const EventExplorer = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(
+    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
+    []
+  )
 
   // Applied filter state (drives API calls)
-  const eventFilters = useEventFilters()
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [userInput, setUserInput] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -159,6 +164,10 @@ const EventExplorer = () => {
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   const commitUserFilter = () => {
     setUserFilter(userInput.trim())

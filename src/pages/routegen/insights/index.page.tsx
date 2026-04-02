@@ -16,12 +16,13 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { SERIES_COLORS } from './chart-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, LineChart, SummaryStats } from './charts'
@@ -109,13 +110,17 @@ const Insights = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(
+    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
+    []
+  )
 
-  const baseFilters = useEventFilters()
+  const baseFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregations, setAggregations] = useState<AggregationType[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('line')
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
 
   const getAggregation = (idx: number) => aggregations[idx] ?? AggregationType.TOTAL
   const setAggregation = (idx: number, agg: AggregationType) => {
@@ -161,6 +166,10 @@ const Insights = () => {
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)

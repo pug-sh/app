@@ -6,8 +6,8 @@ export type EventFilterEntry = {
   filters: ActiveFilter[]
 }
 
-export const useEventFilters = () => {
-  const [entries, setEntries] = useState<EventFilterEntry[]>([])
+export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
+  const [entries, setEntries] = useState<EventFilterEntry[]>(initialEntries)
 
   const addEvent = (kind: string) => {
     setEntries(prev => [...prev, { kind, filters: [] }])

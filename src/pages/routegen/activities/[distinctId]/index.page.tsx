@@ -9,6 +9,7 @@ import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -162,10 +163,14 @@ const UserActivity = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(
+    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
+    []
+  )
 
-  const eventFilters = useEventFilters()
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -179,6 +184,10 @@ const UserActivity = () => {
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {

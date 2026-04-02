@@ -12,10 +12,11 @@ import { defaultRange } from '@/lib/date-presets'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ProjectLink from '@/components/project-link'
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -27,10 +28,14 @@ const Segments = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(
+    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
+    []
+  )
 
-  const eventFilters = useEventFilters()
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -45,6 +50,10 @@ const Segments = () => {
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)

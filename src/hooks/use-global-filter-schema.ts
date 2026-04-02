@@ -88,6 +88,7 @@ export const useGlobalFilterSchema = ({
   const kindsKey = [...new Set(selectedEventKinds.map(k => k.trim()).filter(Boolean))].sort().join('\u0000')
 
   useEffect(() => {
+    if (!headers) return
     const kinds = kindsKey ? kindsKey.split('\u0000') : []
     if (kinds.length === 0) return
 

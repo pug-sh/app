@@ -99,6 +99,22 @@ Lightweight inline validation only — disable buttons when required fields are 
 - Project-scoped endpoints need JWT + `x-project-id` header
 - SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend
 
+### Filters & Query Semantics
+
+- Shared insights proto now uses grouped global filters:
+  - `QueryRequest.filter_groups` + `filter_groups_operator`
+  - `SegmentUsersRequest.filter_groups` + `filter_groups_operator`
+  - Do not send legacy top-level `filters` in these requests.
+- Current frontend behavior for global filters:
+  - If no event kinds are selected, use the base/unscoped schema.
+  - If event kinds are selected, show only property keys common to all selected kinds (intersection for auto/custom keys).
+  - Keep profile keys available in global filters.
+- Event-row filters are event-scoped (`kindFilter`) and should only show properties for that event kind.
+- Value input UX:
+  - Always allow free text for values (suggestions are optional, not required).
+  - Multi-value operators (`in`, `not in`, `contains`, `not contains`) support manual multi-entry via Enter/comma + Add.
+  - Presence operators (`is set`, `is not set`) are no-value operators and should commit immediately.
+
 ### TypeScript Style
 
 Prefer implicit types — don't annotate what TypeScript can infer:
