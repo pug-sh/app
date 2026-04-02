@@ -1,28 +1,28 @@
 import {
+  AggregationType,
   Granularity,
   InsightType,
-  AggregationType,
   type Series,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import { useEventFilters } from '@/hooks/use-event-filters'
+import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { type LucideIcon, BarChart3, Clock, Loader2, Ruler, TrendingUp } from 'lucide-react'
+import { BarChart3, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { SERIES_COLORS } from './chart-colors'
-import { type ChartPoint, LineChart, BarChart, SummaryStats, DataTable } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, LineChart, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -39,10 +39,11 @@ const AGGREGATIONS = [
   { label: 'Avg per user', value: AggregationType.PER_USER_AVG },
 ] as const
 
-type ViewMode = 'line' | 'bar-grouped' | 'bar-stacked' | 'table'
+type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
 
 const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
+  { label: 'Area', value: 'area' },
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
   { label: 'Table', value: 'table' },
@@ -158,7 +159,6 @@ const Insights = () => {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, granularity, aggregations, propFilters, retryCount })
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
     if (!project || validEntries.length === 0 || !timeRange) return
@@ -196,15 +196,16 @@ const Insights = () => {
       }
     }, 300)
     return () => { cancelled = true; clearTimeout(debounceRef.current) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey already captures all user-controlled query inputs
   }, [queryKey, project, insightsRPC, headers])
 
   const seriesNames = series.map(s => s.eventKind || 'unknown')
   const chartData: ChartPoint[] =
     series.length > 0
       ? series[0].points.map((p, i) => ({
-          date: tsToDate(p.time) ?? new Date(),
-          values: series.map(s => Number(s.points[i]?.value) || 0),
-        }))
+        date: tsToDate(p.time) ?? new Date(),
+        values: series.map(s => Number(s.points[i]?.value) || 0),
+      }))
       : []
   const allZero = chartData.every(d => d.values.every(v => v === 0))
 
@@ -217,6 +218,7 @@ const Insights = () => {
       )
     }
     if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+    if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
     if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
     return <BarChart data={chartData} seriesNames={seriesNames} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
   }
@@ -226,67 +228,64 @@ const Insights = () => {
   return (
     <Page title='Insights' description='Analyze event trends'>
       {/* Query config — sticky */}
-        <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
-          <div className='flex flex-wrap items-center gap-2'>
-            <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
-            <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
-            <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
-          </div>
-
-          {/* Events + per-event filters + per-event aggregation */}
-          <EventFilterBar
-            filters={eventFilters}
-            events={schema?.events ?? []}
-            schema={schema}
-            schemaError={schemaError}
-            showLetters
-            seriesColors={SERIES_COLORS}
-            renderRowExtra={i => (
-              <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
-            )}
-          />
-
-          {/* Global filters */}
-          <div className='flex flex-wrap items-center gap-2'>
-            {propFilters.map((f, i) => (
-              <FilterChip
-                key={`f-${i}`}
-                filter={f}
-                schema={schema}
-                onRemove={() => removeFilter(i)}
-                onUpdate={next => updateFilter(i, next)}
-              />
-            ))}
-            <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
-            {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
-          </div>
+      <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
+        <div className='flex flex-wrap items-center gap-2'>
+          <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
+          <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
+          <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
         </div>
 
-        {error ? (
-          <div className='flex flex-col items-center justify-center py-16'>
+        {/* Events + per-event filters + per-event aggregation */}
+        <EventFilterBar
+          filters={eventFilters}
+          events={schema?.events ?? []}
+          schema={schema}
+          schemaError={schemaError}
+          showLetters
+          seriesColors={SERIES_COLORS}
+          renderRowExtra={i => (
+            <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+          )}
+        />
+
+        {/* Global filters */}
+        <div className='flex flex-wrap items-center gap-2'>
+          {propFilters.map((f, i) => (
+            <FilterChip
+              key={`f-${i}`}
+              filter={f}
+              schema={schema}
+              onRemove={() => removeFilter(i)}
+              onUpdate={next => updateFilter(i, next)}
+            />
+          ))}
+          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
+        </div>
+      </div>
+
+      {error ? (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+            Retry
+          </Button>
+        </div>
+      ) : chartData.length > 0 ? (
+        <div>
+          <SummaryStats series={seriesNames} data={chartData} />
+          {renderChart()}
+        </div>
+      ) : (
+        !loading && (
+          <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
             <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-            <p className='text-sm font-medium mb-1'>{error}</p>
-            <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
-              Retry
-            </Button>
+            <p className='text-sm font-medium mb-1'>No data yet</p>
+            <p className='text-xs'>Pick an event above to start</p>
           </div>
-        ) : chartData.length > 0 ? (
-          <div>
-            <SummaryStats series={seriesNames} data={chartData} />
-            {renderChart()}
-            {viewMode !== 'table' && (
-              <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
-            )}
-          </div>
-        ) : (
-          !loading && (
-            <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-              <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-              <p className='text-sm font-medium mb-1'>No data yet</p>
-              <p className='text-xs'>Pick an event above to start</p>
-            </div>
-          )
-        )}
+        )
+      )}
     </Page>
   )
 }
