@@ -33,3 +33,6 @@ src/api/genproto
 
 # Qwen settings
 .qwen/settings.json
+
+# PR review notes
+pr-*review.md
