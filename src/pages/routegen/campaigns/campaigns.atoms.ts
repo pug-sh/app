@@ -24,6 +24,7 @@ export const formatTime = (ts: { seconds: bigint } | undefined) => {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   })
 }
 
@@ -38,7 +39,8 @@ export const parseNotificationData = (raw: Uint8Array | undefined): Notification
   if (!raw || raw.length === 0) return { title: '', body: '', image_url: '', deep_link: '' }
   try {
     return JSON.parse(new TextDecoder().decode(raw))
-  } catch {
+  } catch (err) {
+    console.error('Failed to parse notification data:', err)
     return { title: '', body: '', image_url: '', deep_link: '' }
   }
 }

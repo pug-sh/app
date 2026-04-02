@@ -1,24 +1,24 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventChip, FilterBuilder, FilterChip, kindStyle, type ActiveFilter } from '@/components/event-filters'
+import { EventChip, FilterBuilder, FilterChip, kindStyle } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Toggle } from '@/components/ui/toggle'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
-import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { tsToDate, formatClock } from '@/lib/timestamp'
+import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
-  Braces,
   Calendar,
   ChevronDown,
   ChevronRight,
@@ -33,15 +33,6 @@ import { useParams } from 'wouter'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const tsToDate = (ts: Timestamp | undefined): Date | null => {
-  if (!ts) return null
-  try {
-    return timestampDate(ts)
-  } catch {
-    return null
-  }
-}
-
 const formatDateHeader = (d: Date): string => {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -50,10 +41,6 @@ const formatDateHeader = (d: Date): string => {
   if (target.getTime() === today.getTime()) return 'Today'
   if (target.getTime() === yesterday.getTime()) return 'Yesterday'
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-}
-
-const formatClock = (d: Date): string => {
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 }
 
 // ── Profile Summary ─────────────────────────────────────────────────────────
@@ -156,6 +143,7 @@ type SessionLane = {
 
 const LANE_W = 80
 
+/** Assigns each session to a lane (column) so overlapping sessions don't share a column. Greedy first-fit. */
 function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
   const ranges = new Map<string, { first: number; last: number }>()
   events.forEach((e, i) => {
@@ -183,7 +171,6 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
 
 const EventItem = ({ event, isToday }: { event: ActivityEvent; isToday: boolean }) => {
   const [expanded, setExpanded] = useState(false)
-  const [jsonMode, setJsonMode] = useState(false)
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
   const customProps = structToEntries(event.customProperties)
@@ -235,67 +222,8 @@ const EventItem = ({ event, isToday }: { event: ActivityEvent; isToday: boolean 
         </div>
 
         {expanded && (
-          <div className='mt-2 space-y-2' onClick={e => e.stopPropagation()}>
-            <Toggle size='sm' pressed={jsonMode} onPressedChange={setJsonMode}>
-              <Braces className='w-3.5 h-3.5' />
-            </Toggle>
-            {jsonMode ? (
-              <pre className='text-xs font-mono bg-muted/50 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-all'>
-                {JSON.stringify(
-                  {
-                    event_id: event.eventId,
-                    kind: event.kind,
-                    distinct_id: event.distinctId,
-                    session_id: event.sessionId || undefined,
-                    occur_time: d?.toISOString(),
-                    auto_properties: event.autoProperties,
-                    custom_properties: event.customProperties,
-                  },
-                  null,
-                  2
-                )}
-              </pre>
-            ) : (
-              <>
-                {autoProps.length > 0 && (
-                  <div>
-                    <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>
-                      System
-                    </p>
-                    <div className='flex flex-wrap gap-1'>
-                      {autoProps.map(([k, v]) => (
-                        <span
-                          key={k}
-                          className='inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-md'
-                        >
-                          <span className='text-muted-foreground'>{k}</span>
-                          <span className='font-mono'>{v}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {customProps.length > 0 && (
-                  <div>
-                    <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>
-                      Custom
-                    </p>
-                    <div className='flex flex-wrap gap-1'>
-                      {customProps.map(([k, v]) => (
-                        <span
-                          key={k}
-                          className='inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-md'
-                        >
-                          <span className='text-muted-foreground'>{k}</span>
-                          <span className='font-mono'>{v}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <p className='text-[10px] text-muted-foreground/40 font-mono'>{event.eventId}</p>
-              </>
-            )}
+          <div className='mt-2'>
+            <EventDetails event={event} />
           </div>
         )}
       </div>
@@ -316,7 +244,7 @@ const UserActivity = () => {
 
   const [kindFilter, setKindFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
-  const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
@@ -324,10 +252,6 @@ const UserActivity = () => {
   useEffect(() => {
     if (project) fetchSchema(kindFilter)
   }, [project, fetchSchema, kindFilter])
-
-  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
-  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
-  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
@@ -341,12 +265,7 @@ const UserActivity = () => {
             timeRange: timeRange
               ? { from: timestampFromDate(timeRange.from), to: timestampFromDate(timeRange.to) }
               : undefined,
-            propertyFilters: propFilters.map(f => ({
-              property: f.property,
-              operator: f.operator,
-              value: f.value,
-              values: f.values,
-            })),
+            propertyFilters: toProtoFilters(propFilters),
             pageSize: 200,
             pageToken,
           },

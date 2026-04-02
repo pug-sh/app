@@ -43,9 +43,9 @@ const SignIn = () => {
           </div>
           <div className='max-w-sm'>
             <p className='text-3xl font-semibold leading-tight tracking-tight'>
-              Push notifications
+              Analytics and
               <br />
-              that deliver.
+              engagement, unified.
             </p>
             <p className='mt-4 text-sm opacity-70 leading-relaxed'>
               Manage campaigns, track delivery, and understand your users — all from one dashboard.

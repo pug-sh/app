@@ -1,11 +1,12 @@
 import { AggregationType } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
-import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
+import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -23,7 +24,7 @@ const Segments = () => {
 
   const [eventKinds, setEventKinds] = useState<string[]>([])
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
-  const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
 
   const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -40,26 +41,18 @@ const Segments = () => {
     }
   }
 
-  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
-  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
-  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
-
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
   const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
     if (!project || events.length === 0) return
 
-    const filters = propFilters.map(f => ({
-      property: f.property,
-      operator: f.operator,
-      value: f.value,
-      values: f.values,
-    }))
+    const filters = toProtoFilters(propFilters)
 
+    let cancelled = false
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
@@ -74,14 +67,14 @@ const Segments = () => {
           },
           { headers }
         )
-        setSegmentIds(resp.distinctIds)
+        if (!cancelled) setSegmentIds(resp.distinctIds)
       } catch (err) {
         console.error('Segment query failed:', err)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }, 300)
-    return () => clearTimeout(debounceRef.current)
+    return () => { cancelled = true; clearTimeout(debounceRef.current) }
   }, [queryKey, project, insightsRPC, headers])
 
   if (!project) {

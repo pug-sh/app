@@ -88,7 +88,7 @@ export const fmtDate = (d: Date): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-export const defaultRange = (): TimeRange => ACTIVITY_PRESETS[4].resolve() // This month
+export const defaultRange = (): TimeRange => ACTIVITY_PRESETS.find(p => p.label === 'This month')!.resolve()
 
 export function DateRangePicker({
   value,

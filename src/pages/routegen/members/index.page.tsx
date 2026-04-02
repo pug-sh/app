@@ -7,6 +7,10 @@ import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import React, { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
+
+const ORG_ROLE_ADMIN = 1
+const INVITE_STATUS_ACCEPTED = 2
 
 const initials = (name: string) =>
   name
@@ -36,6 +40,8 @@ const Members = () => {
       ])
       setMembers(membersResp.members)
       setInvitations(invitesResp.invitations)
+    } catch {
+      toast.error('Failed to load members')
     } finally {
       setLoading(false)
     }
@@ -53,6 +59,8 @@ const Members = () => {
       setEmail('')
       setShowInvite(false)
       fetchData()
+    } catch {
+      toast.error('Failed to send invitation')
     } finally {
       setInviting(false)
     }
@@ -60,8 +68,12 @@ const Members = () => {
 
   const handleRemove = async (customerId: string) => {
     if (!org) return
-    await orgsRPC.removeMember({ orgId: org.id, customerId })
-    fetchData()
+    try {
+      await orgsRPC.removeMember({ orgId: org.id, customerId })
+      fetchData()
+    } catch {
+      toast.error('Failed to remove member')
+    }
   }
 
   if (!org) {
@@ -107,8 +119,8 @@ const Members = () => {
                         <p className='text-sm font-medium truncate'>{name}</p>
                         <p className='text-xs text-muted-foreground font-mono truncate'>{m.email}</p>
                       </div>
-                      <Badge variant={m.role === 1 ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
-                        {m.role === 1 ? 'Admin' : 'Member'}
+                      <Badge variant={m.role === ORG_ROLE_ADMIN ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
+                        {m.role === ORG_ROLE_ADMIN ? 'Admin' : 'Member'}
                       </Badge>
                       <button
                         onClick={() => handleRemove(m.customerId)}
@@ -203,8 +215,8 @@ const Members = () => {
                       </span>
                     </div>
                     <p className='flex-1 text-sm font-mono text-muted-foreground truncate'>{inv.email}</p>
-                    <Badge variant={inv.status === 2 ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
-                      {inv.status === 2 ? 'Accepted' : 'Pending'}
+                    <Badge variant={inv.status === INVITE_STATUS_ACCEPTED ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
+                      {inv.status === INVITE_STATUS_ACCEPTED ? 'Accepted' : 'Pending'}
                     </Badge>
                   </div>
                 ))}

@@ -21,10 +21,15 @@ const JWT_STORAGE_KEY = 'cotton:jwt'
 const authBearer: Interceptor = next => async req => {
   const token = localStorage.getItem(JWT_STORAGE_KEY)
   if (token) {
-    // atomWithStorage wraps the value in JSON, so it's stored as a quoted string
-    const jwt = JSON.parse(token) as string
-    if (jwt) {
-      req.header.set('authorization', `Bearer ${jwt}`)
+    // The interceptor reads localStorage directly because interceptors run outside Jotai's store context.
+    // atomWithStorage serializes values as JSON, so the raw localStorage entry is a JSON-quoted string.
+    try {
+      const jwt = JSON.parse(token) as string
+      if (jwt) {
+        req.header.set('authorization', `Bearer ${jwt}`)
+      }
+    } catch {
+      localStorage.setItem(JWT_STORAGE_KEY, JSON.stringify(''))
     }
   }
   try {

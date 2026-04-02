@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
@@ -68,13 +69,6 @@ const hashString = (s: string): number => {
 export const kindStyle = (kind: string): { bg: string; dot: string; text: string } => {
   if (kind in FIXED_KIND_COLORS) return COLOR_PALETTE[FIXED_KIND_COLORS[kind]]
   return COLOR_PALETTE[hashString(kind) % COLOR_PALETTE.length]
-}
-
-export const compactNumber = (n: bigint): string => {
-  const v = Number(n)
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
-  if (v >= 1_000) return (v / 1_000).toFixed(1).replace(/\.0$/, '') + 'k'
-  return v.toString()
 }
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
@@ -472,19 +466,19 @@ export const FilterChip = ({
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
 
-  const propSource = schema
-    ? schema.autoPropertyKeys.some(pk => pk.name === filter.property) ? PropertySource.AUTO
-      : schema.customPropertyKeys.some(pk => pk.name === filter.property) ? PropertySource.CUSTOM
-        : PropertySource.PROFILE
-    : PropertySource.UNSPECIFIED
+  let propSource = PropertySource.UNSPECIFIED
+  if (schema) {
+    if (schema.autoPropertyKeys.some(pk => pk.name === filter.property)) propSource = PropertySource.AUTO
+    else if (schema.customPropertyKeys.some(pk => pk.name === filter.property)) propSource = PropertySource.CUSTOM
+    else propSource = PropertySource.PROFILE
+  }
 
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
-  const valueLabel = op?.noValue
-    ? null
-    : op?.multiValue
-      ? filter.values.join(', ')
-      : filter.value
+  let valueLabel: string | null = null
+  if (!op?.noValue) {
+    valueLabel = op?.multiValue ? filter.values.join(', ') : filter.value
+  }
 
   return (
     <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>

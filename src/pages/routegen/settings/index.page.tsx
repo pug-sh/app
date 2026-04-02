@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtomValue } from 'jotai'
 import { Check, Copy, Loader2, Save } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 const SectionHeader = ({ title, description }: { title: string; description: string }) => (
   <div className='mb-4'>
@@ -23,9 +24,13 @@ const CopyId = ({ value }: { value: string }) => {
   return (
     <button
       onClick={async () => {
-        await navigator.clipboard.writeText(value)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
+        try {
+          await navigator.clipboard.writeText(value)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        } catch {
+          // clipboard unavailable (insecure context, no focus, etc.)
+        }
       }}
       className='inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer'
     >
@@ -37,8 +42,7 @@ const CopyId = ({ value }: { value: string }) => {
 
 const Settings = () => {
   const project = useAtomValue(activeProjectAtom)
-  const [activeOrg] = useAtom(activeOrgAtom)
-  const org = activeOrg
+  const org = useAtomValue(activeOrgAtom)
   const projectHeaders = useAtomValue(projectHeaderAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
@@ -48,12 +52,17 @@ const Settings = () => {
   const [fcmJSON, setFcmJSON] = useState('')
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => { setOrgName(org?.displayName ?? '') }, [org])
+  useEffect(() => { setProjectName(project?.displayName ?? '') }, [project])
+
   const handleRenameOrg = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!org || !orgName.trim()) return
     setSaving(true)
     try {
       await orgsRPC.updateDisplayName({ orgId: org.id, displayName: orgName })
+    } catch {
+      toast.error('Failed to rename organization')
     } finally {
       setSaving(false)
     }
@@ -65,6 +74,8 @@ const Settings = () => {
     setSaving(true)
     try {
       await projectsRPC.updateDisplayName({ displayName: projectName }, { headers: projectHeaders })
+    } catch {
+      toast.error('Failed to rename project')
     } finally {
       setSaving(false)
     }
@@ -77,6 +88,8 @@ const Settings = () => {
     try {
       await projectsRPC.updateFCMServiceJSON({ fcmServiceJson: fcmJSON }, { headers: projectHeaders })
       setFcmJSON('')
+    } catch {
+      toast.error('Failed to upload FCM config')
     } finally {
       setSaving(false)
     }

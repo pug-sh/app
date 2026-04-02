@@ -20,5 +20,5 @@ export const structToEntries = (s: JsonObject | undefined): [string, string][] =
 
 export const structGet = (s: JsonObject | undefined, key: string): string | undefined => {
   if (!s || !(key in s)) return undefined
-  return jsonValueToString(s[key]) ?? undefined
+  return jsonValueToString(s[key])
 }

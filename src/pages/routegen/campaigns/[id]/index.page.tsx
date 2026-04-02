@@ -3,7 +3,6 @@ import { campaignsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +11,7 @@ import { useProjectNavigate } from '@/lib/project-path'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { useAtomValue } from 'jotai'
 import { Loader2, Save } from 'lucide-react'
+import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
 import { useParams } from 'wouter'
 import { encodeNotificationData, formatTime, parseNotificationData, statusVariant } from '../campaigns.atoms'
@@ -62,6 +62,8 @@ const CampaignDetail = () => {
         { headers }
       )
       navigate('/campaigns')
+    } catch {
+      toast.error('Failed to save campaign')
     } finally {
       setSaving(false)
     }
@@ -99,11 +101,12 @@ const CampaignDetail = () => {
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className='text-base'>Details</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-4'>
+        <div>
+          <div className='flex items-center gap-2 mb-3'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Details</span>
+            <div className='flex-1 h-px bg-border' />
+          </div>
+          <div className='space-y-4'>
             <div className='space-y-1.5'>
               <Label>Name</Label>
               <Input value={name} onChange={e => setName(e.target.value)} disabled={readOnly} />
@@ -118,15 +121,16 @@ const CampaignDetail = () => {
               />
               <p className='text-xs text-muted-foreground'>Leave empty to save as draft</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className='text-base'>Notification</CardTitle>
-            <CardDescription>The push notification content sent to devices</CardDescription>
-          </CardHeader>
-          <CardContent className='space-y-4'>
+        <div>
+          <div className='flex items-center gap-2 mb-3'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Notification</span>
+            <div className='flex-1 h-px bg-border' />
+          </div>
+          <p className='text-xs text-muted-foreground mb-3'>The push notification content sent to devices</p>
+          <div className='space-y-4'>
             <div className='space-y-1.5'>
               <Label>Title</Label>
               <Input
@@ -165,8 +169,8 @@ const CampaignDetail = () => {
                 disabled={readOnly}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {!readOnly && (
           <div className='flex gap-2'>

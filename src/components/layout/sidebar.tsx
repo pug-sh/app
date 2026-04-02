@@ -44,6 +44,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 
 const navItems = [
@@ -103,6 +104,8 @@ const AppSidebar = () => {
       await createProject(newProjectName.trim())
       setNewProjectName('')
       setCreatingProject(false)
+    } catch {
+      toast.error('Failed to create project')
     } finally {
       setSaving(false)
     }

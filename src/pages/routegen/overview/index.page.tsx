@@ -12,9 +12,13 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
   const [revealed, setRevealed] = useState(!masked)
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(value)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard unavailable
+    }
   }
 
   const display = revealed ? value : value.slice(0, 8) + '••••••••••••'

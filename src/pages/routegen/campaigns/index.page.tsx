@@ -2,23 +2,14 @@ import { campaignsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
 import { useProjectNavigate } from '@/lib/project-path'
-import { useAtomValue } from 'jotai'
-import { useAtom } from 'jotai'
-import { Loader2, Megaphone, Pencil, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useAtom, useAtomValue } from 'jotai'
+import { Check, Loader2, Megaphone, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { campaignsAtom, formatTime, statusVariant } from './campaigns.atoms'
 
 const Campaigns = () => {
@@ -27,10 +18,11 @@ const Campaigns = () => {
   const campaignsRPC = useAtomValue(campaignsRPCAtom)
   const [campaigns, setCampaigns] = useAtom(campaignsAtom)
   const [loading, setLoading] = useState(false)
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [creatingInline, setCreatingInline] = useState(false)
   const navigate = useProjectNavigate()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchCampaigns = useCallback(async () => {
     setLoading(true)
@@ -48,16 +40,23 @@ const Campaigns = () => {
     if (project) fetchCampaigns()
   }, [project, fetchCampaigns])
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    if (creatingInline) {
+      inputRef.current?.focus()
+    }
+  }, [creatingInline])
+
+  const handleCreate = async () => {
     if (!newName.trim()) return
     setCreating(true)
     try {
       const resp = await campaignsRPC.create({ name: newName }, { headers })
       setNewName('')
-      setDialogOpen(false)
+      setCreatingInline(false)
       await fetchCampaigns()
       if (resp.campaign) navigate(`/campaigns/${resp.campaign.id}`)
+    } catch (err) {
+      toast.error('Failed to create campaign')
     } finally {
       setCreating(false)
     }
@@ -65,8 +64,12 @@ const Campaigns = () => {
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    await campaignsRPC.delete({ id }, { headers })
-    fetchCampaigns()
+    try {
+      await campaignsRPC.delete({ id }, { headers })
+      fetchCampaigns()
+    } catch {
+      toast.error('Failed to delete campaign')
+    }
   }
 
   if (!project) {
@@ -85,12 +88,51 @@ const Campaigns = () => {
       title='Campaigns'
       description='Manage push notification campaigns'
       actions={
-        <Button onClick={() => setDialogOpen(true)} size='sm'>
-          <Plus className='w-4 h-4' />
-          New campaign
-        </Button>
+        !creatingInline && (
+          <Button onClick={() => setCreatingInline(true)} size='sm'>
+            <Plus className='w-4 h-4' />
+            New campaign
+          </Button>
+        )
       }
     >
+      {creatingInline && (
+        <div className='flex items-center gap-2 mb-4'>
+          <Input
+            ref={inputRef}
+            placeholder='Campaign name, e.g. Welcome new users'
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleCreate()
+              if (e.key === 'Escape') {
+                setCreatingInline(false)
+                setNewName('')
+              }
+            }}
+            disabled={creating}
+            className='max-w-sm'
+          />
+          <button
+            onClick={handleCreate}
+            disabled={creating || !newName.trim()}
+            className='p-1.5 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer'
+          >
+            {creating ? <Loader2 className='w-4 h-4 animate-spin' /> : <Check className='w-4 h-4' />}
+          </button>
+          <button
+            onClick={() => {
+              setCreatingInline(false)
+              setNewName('')
+            }}
+            disabled={creating}
+            className='p-1.5 rounded-md hover:bg-muted text-muted-foreground disabled:opacity-50 cursor-pointer'
+          >
+            <X className='w-4 h-4' />
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className='flex items-center justify-center py-24'>
           <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
@@ -102,10 +144,12 @@ const Campaigns = () => {
           <p className='text-xs text-muted-foreground mb-4'>
             Create your first campaign to start sending notifications
           </p>
-          <Button onClick={() => setDialogOpen(true)} size='sm'>
-            <Plus className='w-4 h-4' />
-            New campaign
-          </Button>
+          {!creatingInline && (
+            <Button onClick={() => setCreatingInline(true)} size='sm'>
+              <Plus className='w-4 h-4' />
+              New campaign
+            </Button>
+          )}
         </div>
       ) : (
         <table className='w-full'>
@@ -153,35 +197,6 @@ const Campaigns = () => {
           </tbody>
         </table>
       )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New campaign</DialogTitle>
-            <DialogDescription>Create a new push notification campaign</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreate} className='space-y-4'>
-            <div className='space-y-1.5'>
-              <Label>Campaign name</Label>
-              <Input
-                placeholder='e.g. Welcome new users'
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                required
-              />
-            </div>
-            <DialogFooter>
-              <Button type='button' variant='outline' onClick={() => setDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type='submit' disabled={creating || !newName.trim()}>
-                {creating && <Loader2 className='animate-spin' />}
-                Create
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </Page>
   )
 }

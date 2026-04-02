@@ -7,12 +7,14 @@ import {
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import { DateRangePicker, fmtDate, INSIGHTS_PRESETS, type TimeRange } from '@/components/date-range-picker'
-import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
+import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
+import { compactNumber } from '@/lib/format'
+import { tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { type LucideIcon, BarChart3, Clock, Loader2, Ruler, TrendingUp } from 'lucide-react'
@@ -52,15 +54,6 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const tsToDate = (ts: Timestamp | undefined): Date | null => {
-  if (!ts) return null
-  try {
-    return timestampDate(ts)
-  } catch {
-    return null
-  }
-}
-
 const formatAxisDate = (d: Date, granularity: Granularity): string => {
   if (granularity === Granularity.HOUR)
     return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -81,12 +74,6 @@ const formatTooltipDate = (d: Date, granularity: Granularity): string => {
     return d.toLocaleDateString('en-US', { month: 'long', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
   }
   return fmtDate(d)
-}
-
-const formatNum = (n: number): string => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
-  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K'
-  return n.toLocaleString()
 }
 
 const niceMax = (v: number): number => {
@@ -257,7 +244,7 @@ const LineChart = ({
             <g key={i}>
               <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
               <text x={pad.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
-                {formatNum(i * yStep)}
+                {compactNumber(i * yStep)}
               </text>
             </g>
           )
@@ -398,7 +385,7 @@ const BarChart = ({
             <g key={i}>
               <line x1={pad.left} x2={W - pad.right} y1={y} y2={y} stroke='currentColor' strokeOpacity={0.06} />
               <text x={pad.left - 8} y={y + 4} textAnchor='end' className='fill-muted-foreground' fontSize={10}>
-                {formatNum(i * yStep)}
+                {compactNumber(i * yStep)}
               </text>
             </g>
           )
@@ -516,9 +503,9 @@ const SummaryStats = ({ series, data }: { series: string[]; data: ChartPoint[] }
             />
             <div className='min-w-0'>
               <p className='text-xs text-muted-foreground truncate'>{name}</p>
-              <p className='text-lg font-semibold tabular-nums tracking-tight'>{formatNum(total)}</p>
+              <p className='text-lg font-semibold tabular-nums tracking-tight'>{compactNumber(total)}</p>
               <p className='text-[11px] text-muted-foreground'>
-                avg {formatNum(Math.round(avg))} &middot; peak {formatNum(max)}
+                avg {compactNumber(Math.round(avg))} &middot; peak {compactNumber(max)}
               </p>
             </div>
           </div>
@@ -591,7 +578,7 @@ const Insights = () => {
   const [granularity, setGranularity] = useState(Granularity.DAY)
   const [aggregation, setAggregation] = useState(AggregationType.TOTAL)
   const [viewMode, setViewMode] = useState<ViewMode>('line')
-  const [propFilters, setPropFilters] = useState<ActiveFilter[]>([])
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
 
   const [series, setSeries] = useState<Series[]>([])
   const [loading, setLoading] = useState(false)
@@ -609,25 +596,16 @@ const Insights = () => {
     }
   }
 
-  const addFilter = (f: ActiveFilter) => setPropFilters(prev => [...prev, f])
-  const updateFilter = (idx: number, f: ActiveFilter) => setPropFilters(prev => prev.map((x, i) => i === idx ? f : x))
-  const removeFilter = (idx: number) => setPropFilters(prev => prev.filter((_, i) => i !== idx))
-
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
   const queryKey = JSON.stringify({ eventKinds, timeRange, granularity, aggregation, propFilters })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
     if (!project || events.length === 0 || !timeRange) return
 
-    const filters = propFilters.map(f => ({
-      property: f.property,
-      operator: f.operator,
-      value: f.value,
-      values: f.values,
-    }))
+    const filters = toProtoFilters(propFilters)
 
     let cancelled = false
     clearTimeout(debounceRef.current)
