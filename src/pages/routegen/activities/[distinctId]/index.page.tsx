@@ -15,11 +15,12 @@ import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
-import { tsToDate, formatClock, toProtoTimeRange } from '@/lib/timestamp'
+import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
+  AlertCircle,
   Calendar,
   Clock,
   Globe,
@@ -32,7 +33,7 @@ import { useParams } from 'wouter'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const formatDateHeader = (d: Date): string => {
+const formatDateHeader = (d: Date) => {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const yesterday = new Date(today.getTime() - 86_400_000)
@@ -44,6 +45,7 @@ const formatDateHeader = (d: Date): string => {
 
 // ── Profile Summary ─────────────────────────────────────────────────────────
 
+// Events are sorted newest-first from the API
 const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: ActivityEvent[] }) => {
   const firstSeen = events.length > 0 ? tsToDate(events[events.length - 1].occurTime) : null
   const lastSeen = events.length > 0 ? tsToDate(events[0].occurTime) : null
@@ -69,28 +71,14 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
                 <span className='flex items-center gap-1'>
                   <Calendar className='w-3 h-3' />
                   First seen{' '}
-                  <HoverSwap
-                    primary={
-                      firstSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-                      ', ' +
-                      firstSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-                    }
-                    secondary={formatRelative(firstSeen)}
-                  />
+                  <HoverSwap primary={formatDateTime(firstSeen)} secondary={formatRelative(firstSeen)} />
                 </span>
               )}
               {lastSeen && (
                 <span className='flex items-center gap-1'>
                   <Clock className='w-3 h-3' />
                   Last seen{' '}
-                  <HoverSwap
-                    primary={
-                      lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-                      ', ' +
-                      lastSeen.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-                    }
-                    secondary={lastSeenRelative}
-                  />
+                  <HoverSwap primary={formatDateTime(lastSeen)} secondary={lastSeenRelative} />
                 </span>
               )}
               {(browser || os) && (
@@ -370,7 +358,17 @@ const UserActivity = () => {
             )
           })}
 
-          {nextToken && (
+          {error && (
+            <div className='mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground'>
+              <AlertCircle className='w-3.5 h-3.5' />
+              <span>{error}</span>
+              <Button variant='outline' size='sm' className='h-6 text-xs' onClick={() => fetchEvents(nextToken)}>
+                Retry
+              </Button>
+            </div>
+          )}
+
+          {!error && nextToken && (
             <div className='mb-8'>
               <Button
                 variant='outline'

@@ -2,7 +2,7 @@ import { activeProjectAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { useLocation } from 'wouter'
 
-export const useProjectPrefix = (): string => {
+export const useProjectPrefix = () => {
   const project = useAtomValue(activeProjectAtom)
   if (!project) return ''
   return `/p/${project.id}`

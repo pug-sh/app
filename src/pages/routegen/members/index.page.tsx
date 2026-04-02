@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
-import { ConnectError } from '@connectrpc/connect'
+import { toastRPCError } from '@/lib/rpc-error'
 import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -76,8 +76,7 @@ const Members = () => {
       setShowInvite(false)
       fetchData()
     } catch (err) {
-      console.error('Failed to send invitation:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to send invitation')
+      toastRPCError(err, 'Failed to send invitation')
     } finally {
       setInviting(false)
     }
@@ -89,8 +88,7 @@ const Members = () => {
       await orgsRPC.removeMember({ orgId: org.id, customerId })
       fetchData()
     } catch (err) {
-      console.error('Failed to remove member:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to remove member')
+      toastRPCError(err, 'Failed to remove member')
     }
   }
 

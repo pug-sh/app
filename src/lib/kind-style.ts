@@ -14,13 +14,13 @@ const FIXED_KIND_COLORS: Record<string, number> = {
   dead_click: 6, page_view: 3, scroll: 5,
 }
 
-const hashString = (s: string): number => {
+const hashString = (s: string) => {
   let hash = 0
   for (let i = 0; i < s.length; i++) hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0
   return Math.abs(hash)
 }
 
-export const kindStyle = (kind: string): { bg: string; dot: string; text: string } => {
+export const kindStyle = (kind: string) => {
   if (kind in FIXED_KIND_COLORS) return COLOR_PALETTE[FIXED_KIND_COLORS[kind]]
   return COLOR_PALETTE[hashString(kind) % COLOR_PALETTE.length]
 }

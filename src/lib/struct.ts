@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from '@bufbuild/protobuf'
 
-const jsonValueToString = (v: JsonValue): string | undefined => {
+const jsonValueToString = (v: JsonValue) => {
   if (v === null || v === undefined) return undefined
   if (typeof v === 'string') return v
   if (typeof v === 'number') return String(v)
@@ -8,7 +8,7 @@ const jsonValueToString = (v: JsonValue): string | undefined => {
   return undefined
 }
 
-export const structToEntries = (s: JsonObject | undefined): [string, string][] => {
+export const structToEntries = (s: JsonObject | undefined) => {
   if (!s) return []
   const entries: [string, string][] = []
   for (const [k, v] of Object.entries(s)) {
@@ -18,7 +18,7 @@ export const structToEntries = (s: JsonObject | undefined): [string, string][] =
   return entries
 }
 
-export const structGet = (s: JsonObject | undefined, key: string): string | undefined => {
+export const structGet = (s: JsonObject | undefined, key: string) => {
   if (!s || !(key in s)) return undefined
   return jsonValueToString(s[key])
 }

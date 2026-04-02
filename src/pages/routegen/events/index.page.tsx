@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { defaultRange } from '@/lib/date-presets'
 import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { kindStyle } from '@/lib/kind-style'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -17,22 +18,12 @@ import { formatRelative } from '@/hooks/use-relative-time'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
-import { tsToDate, toProtoTimeRange } from '@/lib/timestamp'
+import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-const formatAbsolute = (d: Date): string => {
-  return (
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
-    ', ' +
-    d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  )
-}
 
 // ── Event Row ───────────────────────────────────────────────────────────────
 
@@ -59,7 +50,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         onClick={() => hasMore && setExpanded(!expanded)}
       >
         <td className='py-2.5 pr-2 text-xs text-muted-foreground tabular-nums whitespace-nowrap align-middle w-30'>
-          {d && <HoverSwap primary={formatRelative(d)} secondary={formatAbsolute(d)} />}
+          {d && <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
           <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>

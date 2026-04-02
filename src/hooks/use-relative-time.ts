@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /** Format a date as relative time string. */
-export function formatRelative(d: Date): string {
+export function formatRelative(d: Date) {
   const diff = Date.now() - d.getTime()
   if (diff < 60_000) return 'just now'
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
@@ -10,7 +10,7 @@ export function formatRelative(d: Date): string {
 }
 
 /** Returns a live-updating relative time string that refreshes every 30s. */
-export function useRelativeTime(date: Date | null): string {
+export function useRelativeTime(date: Date | null) {
   const [text, setText] = useState(() => (date ? formatRelative(date) : ''))
 
   useEffect(() => {

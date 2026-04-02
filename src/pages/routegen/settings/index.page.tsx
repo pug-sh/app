@@ -5,25 +5,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { ConnectError } from '@connectrpc/connect'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { toastRPCError } from '@/lib/rpc-error'
 import { useAtom, useAtomValue } from 'jotai'
 import { Check, Copy, Loader2, Save } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { toast } from 'sonner'
 
 const CopyId = ({ value }: { value: string }) => {
-  const [copied, setCopied] = useState(false)
+  const { copied, copy } = useCopyToClipboard()
   return (
     <button
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
-        } catch {
-          toast.error('Copy failed — select and copy the text manually')
-        }
-      }}
+      onClick={() => copy(value)}
       className='inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer'
     >
       {value}
@@ -57,8 +49,7 @@ const Settings = () => {
       await orgsRPC.updateDisplayName({ orgId: org.id, displayName: orgName })
       setOrg({ ...org, displayName: orgName })
     } catch (err) {
-      console.error('Failed to rename organization:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to rename organization')
+      toastRPCError(err, 'Failed to rename organization')
     } finally {
       setSavingOrg(false)
     }
@@ -72,8 +63,7 @@ const Settings = () => {
       await projectsRPC.updateDisplayName({ displayName: projectName }, { headers: projectHeaders })
       setProject({ ...project!, displayName: projectName })
     } catch (err) {
-      console.error('Failed to rename project:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to rename project')
+      toastRPCError(err, 'Failed to rename project')
     } finally {
       setSavingProject(false)
     }
@@ -87,8 +77,7 @@ const Settings = () => {
       await projectsRPC.updateFCMServiceJSON({ fcmServiceJson: fcmJSON }, { headers: projectHeaders })
       setFcmJSON('')
     } catch (err) {
-      console.error('Failed to upload FCM config:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to upload FCM config')
+      toastRPCError(err, 'Failed to upload FCM config')
     } finally {
       setSavingFcm(false)
     }

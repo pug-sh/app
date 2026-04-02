@@ -3,10 +3,12 @@ import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import SectionHeader from '@/components/section-header'
+import { Button } from '@/components/ui/button'
 import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { DateRangePicker, defaultRange, type TimeRange } from '@/components/date-range-picker'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { defaultRange } from '@/lib/date-presets'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
 import { useEventKinds } from '@/hooks/use-event-kinds'
 import { toProtoTimeRange } from '@/lib/timestamp'
@@ -32,6 +34,7 @@ const Segments = () => {
   const [segmentIds, setSegmentIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -40,7 +43,7 @@ const Segments = () => {
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters })
+  const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters, retryCount })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
@@ -112,9 +115,12 @@ const Segments = () => {
       </div>
 
       {error ? (
-        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+        <div className='flex flex-col items-center justify-center py-16'>
           <Users className='w-10 h-10 mb-4 opacity-15' />
           <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+            Retry
+          </Button>
         </div>
       ) : segmentIds.length > 0 ? (
         <div>

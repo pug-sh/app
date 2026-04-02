@@ -7,23 +7,13 @@ import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { Bell, Check, Clock, Copy, Eye, EyeOff, MousePointerClick, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
 
 const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
-  const [copied, setCopied] = useState(false)
+  const { copied, copy } = useCopyToClipboard()
   const [revealed, setRevealed] = useState(!masked)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('Copy failed — select and copy the text manually')
-    }
-  }
 
   const display = revealed ? value : value.slice(0, 8) + '••••••••••••'
 
@@ -40,7 +30,7 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
               {revealed ? <EyeOff className='w-3 h-3' /> : <Eye className='w-3 h-3' />}
             </Button>
           )}
-          <Button variant='ghost' size='icon-xs' onClick={handleCopy}>
+          <Button variant='ghost' size='icon-xs' onClick={() => copy(value)}>
             {copied ? <Check className='w-3 h-3 text-green-600' /> : <Copy className='w-3 h-3' />}
           </Button>
         </span>

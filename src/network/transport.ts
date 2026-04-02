@@ -14,7 +14,7 @@ const protovalidate: Interceptor = next => async req => {
       throw new ConnectError(result.violations.map(v => `${v.field}: ${v.message}`).join('; '))
     }
     if (result.kind === 'error') {
-      console.error('Proto validation error:', result.error)
+      throw new ConnectError(`Proto validation error: ${result.error}`)
     }
   }
   return next(req)

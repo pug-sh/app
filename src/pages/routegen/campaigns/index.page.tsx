@@ -10,10 +10,9 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
 import { useProjectNavigate } from '@/lib/project-path'
 import { useAtomValue } from 'jotai'
-import { ConnectError } from '@connectrpc/connect'
+import { toastRPCError } from '@/lib/rpc-error'
 import { Check, Loader2, Megaphone, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
 import { formatTime, statusVariant } from './campaigns.atoms'
 
 const Campaigns = () => {
@@ -63,8 +62,7 @@ const Campaigns = () => {
       await fetchCampaigns()
       if (resp.campaign) navigate(`/campaigns/${resp.campaign.id}`)
     } catch (err) {
-      console.error('Campaign create failed:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to create campaign')
+      toastRPCError(err, 'Failed to create campaign')
     } finally {
       setCreating(false)
     }
@@ -76,8 +74,7 @@ const Campaigns = () => {
       await campaignsRPC.delete({ id }, { headers })
       await fetchCampaigns()
     } catch (err) {
-      console.error('Campaign delete failed:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to delete campaign')
+      toastRPCError(err, 'Failed to delete campaign')
     }
   }
 

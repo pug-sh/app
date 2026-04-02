@@ -24,7 +24,7 @@ interface JWTPayload {
   sub: string
 }
 
-export const readJWT = (token: string): JWTPayload => {
+export const readJWT = (token: string) => {
   const parts = token.split('.')
   if (parts.length !== 3) throw new Error('invalid jwt')
   const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')

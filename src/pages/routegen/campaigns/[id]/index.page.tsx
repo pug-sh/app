@@ -10,9 +10,8 @@ import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useProjectNavigate } from '@/lib/project-path'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { useAtomValue } from 'jotai'
-import { ConnectError } from '@connectrpc/connect'
+import { toastRPCError } from '@/lib/rpc-error'
 import { Loader2, Save } from 'lucide-react'
-import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
 import { useParams } from 'wouter'
 import { encodeNotificationData, formatTime, parseNotificationData, statusVariant } from '../campaigns.atoms'
@@ -71,8 +70,7 @@ const CampaignDetail = () => {
       )
       navigate('/campaigns')
     } catch (err) {
-      console.error('Campaign save failed:', err)
-      toast.error(err instanceof ConnectError ? err.message : 'Failed to save campaign')
+      toastRPCError(err, 'Failed to save campaign')
     } finally {
       setSaving(false)
     }

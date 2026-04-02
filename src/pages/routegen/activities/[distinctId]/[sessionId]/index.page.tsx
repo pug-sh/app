@@ -11,7 +11,7 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
-import { tsToDate, formatClock } from '@/lib/timestamp'
+import { tsToDate, formatClock, formatDateTime } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
@@ -20,7 +20,7 @@ import { useParams } from 'wouter'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-const formatDuration = (ms: number): string => {
+const formatDuration = (ms: number) => {
   if (ms < 1000) return '< 1s'
   const s = Math.floor(ms / 1000)
   if (s < 60) return `${s}s`
@@ -31,6 +31,7 @@ const formatDuration = (ms: number): string => {
 }
 
 // ── Session Summary ─────────────────────────────────────────────────────────
+// Events are sorted newest-first from the API
 
 const SessionSummary = ({
   sessionId,
@@ -109,9 +110,8 @@ const SessionSummary = ({
           {startTime && (
             <span className='flex items-center gap-1'>
               <Calendar className='w-3 h-3' />
-              {startTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })},{' '}
-              {startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-              {endTime && ` — ${endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+              {formatDateTime(startTime)}
+              {endTime && ` — ${formatClock(endTime)}`}
             </span>
           )}
           {(browser || os) && (

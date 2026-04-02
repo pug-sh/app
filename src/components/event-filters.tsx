@@ -10,6 +10,7 @@ import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
+import { kindStyle } from '@/lib/kind-style'
 import { useEffect, useRef, useState } from 'react'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ export type ActiveFilter =
   | { property: string; operator: FilterOperator; kind: 'multi'; values: string[] }
   | { property: string; operator: FilterOperator; kind: 'presence' }
 
-export const OPERATORS: readonly {
+const OPERATORS: readonly {
   value: FilterOperator
   label: string
   symbol: string
@@ -39,10 +40,6 @@ export const OPERATORS: readonly {
   { value: FilterOperator.LT, label: 'less than', symbol: '<' },
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
 ]
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-import { kindStyle } from '@/lib/kind-style'
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
 
@@ -189,8 +186,8 @@ export const FilterBuilder = ({
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<BuilderStep>('property')
   const [prop, setProp] = useState('')
-  const [propSource, setPropSource] = useState<PropertySource>(PropertySource.UNSPECIFIED)
-  const [op, setOp] = useState<FilterOperator>(FilterOperator.EQUALS)
+  const [propSource, setPropSource] = useState(PropertySource.UNSPECIFIED)
+  const [op, setOp] = useState(FilterOperator.EQUALS)
   const [val, setVal] = useState('')
   const [vals, setVals] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)

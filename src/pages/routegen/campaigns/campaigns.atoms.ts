@@ -36,7 +36,7 @@ export interface NotificationData {
 
 const EMPTY_NOTIFICATION: NotificationData = { title: '', body: '', image_url: '', deep_link: '' }
 
-export const parseNotificationData = (raw: Uint8Array | undefined): { data: NotificationData; parseError: boolean } => {
+export const parseNotificationData = (raw: Uint8Array | undefined) => {
   if (!raw || raw.length === 0) return { data: EMPTY_NOTIFICATION, parseError: false }
   try {
     const parsed = JSON.parse(new TextDecoder().decode(raw))
@@ -55,6 +55,6 @@ export const parseNotificationData = (raw: Uint8Array | undefined): { data: Noti
   }
 }
 
-export const encodeNotificationData = (data: NotificationData): Uint8Array => {
+export const encodeNotificationData = (data: NotificationData) => {
   return new TextEncoder().encode(JSON.stringify(data))
 }

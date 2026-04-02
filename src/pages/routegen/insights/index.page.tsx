@@ -7,7 +7,9 @@ import {
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
-import { DateRangePicker, INSIGHTS_PRESETS, type TimeRange } from '@/components/date-range-picker'
+import { Button } from '@/components/ui/button'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -19,7 +21,8 @@ import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { type LucideIcon, BarChart3, Clock, Loader2, Ruler, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { SERIES_COLORS, type ChartPoint, LineChart, BarChart, SummaryStats, DataTable } from './charts'
+import { SERIES_COLORS } from './chart-colors'
+import { type ChartPoint, LineChart, BarChart, SummaryStats, DataTable } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -114,6 +117,7 @@ const Insights = () => {
   const [series, setSeries] = useState<Series[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -122,7 +126,7 @@ const Insights = () => {
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  const queryKey = JSON.stringify({ eventKinds, timeRange, granularity, aggregation, propFilters })
+  const queryKey = JSON.stringify({ eventKinds, timeRange, granularity, aggregation, propFilters, retryCount })
 
   useEffect(() => {
     const events = eventKinds.filter(e => e.trim())
@@ -229,9 +233,12 @@ const Insights = () => {
         </div>
 
         {error ? (
-          <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <div className='flex flex-col items-center justify-center py-16'>
             <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
             <p className='text-sm font-medium mb-1'>{error}</p>
+            <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+              Retry
+            </Button>
           </div>
         ) : chartData.length > 0 ? (
           <div>
