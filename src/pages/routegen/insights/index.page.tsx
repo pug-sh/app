@@ -6,7 +6,7 @@ import {
 } from '@/api/genproto/dashboard/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
-import { DateRangePicker, INSIGHTS_PRESETS, type TimeRange } from '@/components/date-range-picker'
+import { DateRangePicker, fmtDate, INSIGHTS_PRESETS, type TimeRange } from '@/components/date-range-picker'
 import { EventChip, FilterBuilder, FilterChip, type ActiveFilter } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -48,7 +48,7 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
   { label: 'Table', value: 'table' },
-] as const
+]
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -68,24 +68,19 @@ const formatAxisDate = (d: Date, granularity: Granularity): string => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const fmtD = (d: Date): string => {
-  const thisYear = new Date().getFullYear()
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
-}
-
 const formatTooltipDate = (d: Date, granularity: Granularity): string => {
   if (granularity === Granularity.HOUR)
-    return fmtD(d) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return fmtDate(d) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
   if (granularity === Granularity.WEEK) {
     const end = new Date(d)
     end.setDate(end.getDate() + 6)
-    return fmtD(d) + ' – ' + fmtD(end)
+    return fmtDate(d) + ' – ' + fmtDate(end)
   }
   if (granularity === Granularity.MONTH) {
     const thisYear = new Date().getFullYear()
     return d.toLocaleDateString('en-US', { month: 'long', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
   }
-  return fmtD(d)
+  return fmtDate(d)
 }
 
 const formatNum = (n: number): string => {
@@ -153,12 +148,52 @@ const OptionChip = <T extends string | number>({
   )
 }
 
-// ── SVG Line Chart ──────────────────────────────────────────────────────────
+// ── Chart Tooltip ───────────────────────────────────────────────────────────
 
 interface ChartPoint {
   date: Date
   values: number[]
 }
+
+const ChartTooltip = ({
+  data,
+  hoverIdx,
+  seriesNames,
+  granularity,
+  xPct,
+}: {
+  data: ChartPoint[]
+  hoverIdx: number
+  seriesNames: string[]
+  granularity: Granularity
+  xPct: number
+}) => (
+  <div
+    className='absolute top-2 pointer-events-none z-10 bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm'
+    style={{
+      left: `${xPct}%`,
+      transform: hoverIdx > data.length / 2 ? 'translateX(-100%)' : 'translateX(0)',
+    }}
+  >
+    <p className='text-xs text-muted-foreground mb-1.5 font-medium'>
+      {formatTooltipDate(data[hoverIdx].date, granularity)}
+    </p>
+    {seriesNames.map((name, si) => (
+      <div key={si} className='flex items-center gap-2 py-0.5'>
+        <span
+          className='w-2 h-2 rounded-full shrink-0'
+          style={{ background: SERIES_COLORS[si % SERIES_COLORS.length].dot }}
+        />
+        <span className='text-muted-foreground flex-1'>{name}</span>
+        <span className='font-mono font-medium tabular-nums'>
+          {(data[hoverIdx].values[si] ?? 0).toLocaleString()}
+        </span>
+      </div>
+    ))}
+  </div>
+)
+
+// ── SVG Line Chart ──────────────────────────────────────────────────────────
 
 const LineChart = ({
   data,
@@ -291,29 +326,7 @@ const LineChart = ({
       </svg>
 
       {hoverIdx !== null && (
-        <div
-          className='absolute top-2 pointer-events-none z-10 bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm'
-          style={{
-            left: `${(xScale(hoverIdx) / W) * 100}%`,
-            transform: hoverIdx > data.length / 2 ? 'translateX(-100%)' : 'translateX(0)',
-          }}
-        >
-          <p className='text-xs text-muted-foreground mb-1.5 font-medium'>
-            {formatTooltipDate(data[hoverIdx].date, granularity)}
-          </p>
-          {seriesNames.map((name, si) => (
-            <div key={si} className='flex items-center gap-2 py-0.5'>
-              <span
-                className='w-2 h-2 rounded-full shrink-0'
-                style={{ background: SERIES_COLORS[si % SERIES_COLORS.length].dot }}
-              />
-              <span className='text-muted-foreground flex-1'>{name}</span>
-              <span className='font-mono font-medium tabular-nums'>
-                {(data[hoverIdx].values[si] ?? 0).toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ChartTooltip data={data} hoverIdx={hoverIdx} seriesNames={seriesNames} granularity={granularity} xPct={(xScale(hoverIdx) / W) * 100} />
       )}
     </div>
   )
@@ -479,29 +492,7 @@ const BarChart = ({
       </svg>
 
       {hoverIdx !== null && (
-        <div
-          className='absolute top-2 pointer-events-none z-10 bg-popover border border-border rounded-lg shadow-lg px-3 py-2 text-sm'
-          style={{
-            left: `${((pad.left + hoverIdx * bandW + bandW / 2) / W) * 100}%`,
-            transform: hoverIdx > n / 2 ? 'translateX(-100%)' : 'translateX(0)',
-          }}
-        >
-          <p className='text-xs text-muted-foreground mb-1.5 font-medium'>
-            {formatTooltipDate(data[hoverIdx].date, granularity)}
-          </p>
-          {seriesNames.map((name, si) => (
-            <div key={si} className='flex items-center gap-2 py-0.5'>
-              <span
-                className='w-2 h-2 rounded-full shrink-0'
-                style={{ background: SERIES_COLORS[si % SERIES_COLORS.length].dot }}
-              />
-              <span className='text-muted-foreground flex-1'>{name}</span>
-              <span className='font-mono font-medium tabular-nums'>
-                {(data[hoverIdx].values[si] ?? 0).toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ChartTooltip data={data} hoverIdx={hoverIdx} seriesNames={seriesNames} granularity={granularity} xPct={((pad.left + hoverIdx * bandW + bandW / 2) / W) * 100} />
       )}
     </div>
   )
@@ -604,6 +595,7 @@ const Insights = () => {
 
   const [series, setSeries] = useState<Series[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -637,9 +629,11 @@ const Insights = () => {
       values: f.values,
     }))
 
+    let cancelled = false
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
+      setError(null)
       try {
         const resp = await insightsRPC.query(
           {
@@ -650,14 +644,15 @@ const Insights = () => {
           },
           { headers }
         )
-        setSeries(resp.series)
+        if (!cancelled) setSeries(resp.series)
       } catch (err) {
         console.error('Insights query failed:', err)
+        if (!cancelled) { setSeries([]); setError('Failed to load insights') }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }, 300)
-    return () => clearTimeout(debounceRef.current)
+    return () => { cancelled = true; clearTimeout(debounceRef.current) }
   }, [queryKey, project, insightsRPC, headers])
 
   const seriesNames = series.map(s => s.eventKind || 'unknown')
@@ -669,6 +664,19 @@ const Insights = () => {
         }))
       : []
   const allZero = chartData.every(d => d.values.every(v => v === 0))
+
+  const renderChart = () => {
+    if (allZero) {
+      return (
+        <div className='flex items-center justify-center h-48 text-muted-foreground'>
+          <p className='text-sm'>No events recorded in this period</p>
+        </div>
+      )
+    }
+    if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+    if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+    return <BarChart data={chartData} seriesNames={seriesNames} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
+  }
 
   if (!project) {
     return (
@@ -728,20 +736,15 @@ const Insights = () => {
           </div>
         </div>
 
-        {chartData.length > 0 ? (
+        {error ? (
+          <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+            <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+            <p className='text-sm font-medium mb-1'>{error}</p>
+          </div>
+        ) : chartData.length > 0 ? (
           <div>
             <SummaryStats series={seriesNames} data={chartData} />
-            {allZero ? (
-              <div className='flex items-center justify-center h-48 text-muted-foreground'>
-                <p className='text-sm'>No events recorded in this period</p>
-              </div>
-            ) : viewMode === 'line' ? (
-              <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
-            ) : viewMode === 'table' ? (
-              <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
-            ) : (
-              <BarChart data={chartData} seriesNames={seriesNames} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
-            )}
+            {renderChart()}
             {viewMode !== 'table' && (
               <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
             )}

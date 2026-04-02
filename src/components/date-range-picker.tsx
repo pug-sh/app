@@ -26,8 +26,7 @@ const lastNDays = (n: number): TimeRange => {
 
 const lastNMonths = (n: number): TimeRange => {
   const now = new Date()
-  const from = new Date(now)
-  from.setMonth(from.getMonth() - n)
+  const from = new Date(now.getFullYear(), now.getMonth() - n, 1)
   return { from: startOfDay(from), to: now }
 }
 
@@ -84,12 +83,12 @@ export const INSIGHTS_PRESETS: DatePreset[] = [
   { label: 'Last 12 months', resolve: () => lastNMonths(12) },
 ]
 
-const fmtDate = (d: Date): string => {
+export const fmtDate = (d: Date): string => {
   const sameYear = d.getFullYear() === new Date().getFullYear()
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-const defaultRange = (): TimeRange => ACTIVITY_PRESETS[4].resolve() // This month
+export const defaultRange = (): TimeRange => ACTIVITY_PRESETS[4].resolve() // This month
 
 export function DateRangePicker({
   value,
@@ -104,7 +103,7 @@ export function DateRangePicker({
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<'from' | 'to'>('from')
-  const fallback = defaultRange()
+  const fallback = presets[0].resolve()
   const [draftFrom, setDraftFrom] = useState<Date>(value?.from ?? fallback.from)
   const [draftTo, setDraftTo] = useState<Date>(value?.to ?? fallback.to)
 
@@ -181,20 +180,20 @@ export function DateRangePicker({
         <div className='flex'>
           <div className='border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5'>
             {presets.map((preset) => {
-              const r = preset.resolve()
+              const display = preset.resolve()
               return (
                 <button
                   key={preset.label}
                   type='button'
                   onClick={() => {
-                    onChange(r)
+                    onChange(preset.resolve())
                     setOpen(false)
                   }}
                   className='px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
                 >
                   {preset.label}
                   <span className='block text-[10px] text-muted-foreground/50'>
-                    {fmtDate(r.from)} – {fmtDate(r.to)}
+                    {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>
               )
@@ -224,5 +223,3 @@ export function DateRangePicker({
     </Popover>
   )
 }
-
-export { defaultRange }
