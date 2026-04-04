@@ -2,14 +2,14 @@ import { compactNumber } from '@/lib/format'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { useMemo } from 'react'
 import { Bar, BarChart as ReBarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
-import { SERIES_COLORS } from '../chart-colors'
+import type { SeriesColor } from '../colors'
 
 export interface FunnelStep {
   name: string
   count: number
 }
 
-export const FunnelChart = ({ steps }: { steps: FunnelStep[] }) => {
+export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seriesColors: SeriesColor[] }) => {
   const chartConfig = useMemo(() => ({
     conversion: { label: 'Conversion %', color: 'hsl(var(--chart-1))' },
   } satisfies ChartConfig), [])
@@ -88,7 +88,7 @@ export const FunnelChart = ({ steps }: { steps: FunnelStep[] }) => {
           />
           <Bar dataKey='conversion' fill='var(--color-conversion)' radius={[6, 6, 0, 0]}>
             {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={SERIES_COLORS[index % SERIES_COLORS.length].line} />
+              <Cell key={`cell-${index}`} fill={seriesColors[index]?.line} />
             ))}
           </Bar>
         </ReBarChart>

@@ -3,7 +3,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { compactNumber } from '@/lib/format'
 import { useMemo } from 'react'
 import { Bar, CartesianGrid, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
-import { SERIES_COLORS } from '../chart-colors'
+import type { SeriesColor } from '../colors'
 import { buildChartConfig, buildChartData, formatTooltipLabel } from './common'
 import { niceMax } from './helpers'
 import { type ChartPoint } from './types'
@@ -11,15 +11,17 @@ import { type ChartPoint } from './types'
 export const BarChart = ({
   data,
   seriesNames,
+  seriesColors,
   granularity,
   stacked,
 }: {
   data: ChartPoint[]
   seriesNames: string[]
+  seriesColors: SeriesColor[]
   granularity: Granularity
   stacked: boolean
 }) => {
-  const chartConfig = useMemo(() => buildChartConfig(seriesNames), [seriesNames])
+  const chartConfig = useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors])
   const chartData = useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity])
   const yMax = useMemo(() => {
     const allVals = stacked
@@ -63,8 +65,8 @@ export const BarChart = ({
           <Bar
             key={si}
             dataKey={`series${si}`}
-            fill={SERIES_COLORS[si % SERIES_COLORS.length].line}
-            stroke={SERIES_COLORS[si % SERIES_COLORS.length].line}
+            fill={seriesColors[si]?.line}
+            stroke={seriesColors[si]?.line}
             strokeWidth={1}
             isAnimationActive={false}
             stackId={stacked ? 'stack' : `group-${si}`}

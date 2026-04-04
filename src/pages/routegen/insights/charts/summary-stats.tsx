@@ -1,8 +1,16 @@
-import { compactNumber } from '@/lib/format';
-import { SERIES_COLORS } from '../chart-colors';
-import { type ChartPoint } from './types';
+import { compactNumber } from '@/lib/format'
+import type { SeriesColor } from '../colors'
+import { type ChartPoint } from './types'
 
-export const SummaryStats = ({ series, data }: { series: string[]; data: ChartPoint[] }) => {
+export const SummaryStats = ({
+  series,
+  data,
+  seriesColors,
+}: {
+  series: string[]
+  data: ChartPoint[]
+  seriesColors: SeriesColor[]
+}) => {
   return (
     <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 mb-1'>
       {series.map((name, si) => {
@@ -14,7 +22,7 @@ export const SummaryStats = ({ series, data }: { series: string[]; data: ChartPo
           <div key={si} className='flex items-start gap-2'>
             <span
               className='w-2 h-2 rounded-full mt-1.5 shrink-0'
-              style={{ background: SERIES_COLORS[si % SERIES_COLORS.length].dot }}
+              style={{ background: seriesColors[si]?.dot }}
             />
             <div className='min-w-0'>
               <p className='text-xs text-muted-foreground truncate'>{name}</p>

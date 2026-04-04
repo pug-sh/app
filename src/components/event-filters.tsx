@@ -129,6 +129,7 @@ const eventPopoverList = (
   events: EventNameMeta[],
   value: string,
   schemaError: string | null,
+  getEventColor: ((eventName: string) => string) | undefined,
   onSelect: (name: string) => void,
 ) => {
   const emptyMessage = schemaError
@@ -145,6 +146,7 @@ const eventPopoverList = (
         <CommandGroup>
           {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
             const colors = kindStyle(ev.name)
+            const customColor = getEventColor?.(ev.name)
             return (
               <CommandItem
                 key={ev.name}
@@ -153,7 +155,9 @@ const eventPopoverList = (
                 data-checked={value === ev.name}
                 className='text-xs gap-1.5 py-1.5'
               >
-                <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />
+                {customColor
+                  ? <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: customColor }} />
+                  : <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />}
                 <span className='flex-1 truncate'>{ev.name}</span>
                 <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
                   {compactNumber(ev.count)}
@@ -172,11 +176,15 @@ export const EventChip = ({
   onChange,
   events,
   schemaError,
+  color,
+  getEventColor,
 }: {
   value: string
   onChange: (v: string) => void
   events: EventNameMeta[]
   schemaError: string | null
+  color?: string
+  getEventColor?: (eventName: string) => string
 }) => {
   const [open, setOpen] = useState(false)
   const colors = value ? kindStyle(value) : null
@@ -195,7 +203,7 @@ export const EventChip = ({
           Event
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          {eventPopoverList(events, value, schemaError, name => { onChange(name); setOpen(false) })}
+          {eventPopoverList(events, value, schemaError, getEventColor, name => { onChange(name); setOpen(false) })}
         </PopoverContent>
       </Popover>
     )
@@ -206,11 +214,15 @@ export const EventChip = ({
       <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>event</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger className='px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer'>
-          <span className={cn('w-1 h-1 rounded-full shrink-0', colors!.dot)} />
+          {color ? (
+            <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: color }} />
+          ) : (
+            <span className={cn('w-1 h-1 rounded-full shrink-0', colors!.dot)} />
+          )}
           {value}
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          {eventPopoverList(events, value, schemaError, name => { onChange(name); setOpen(false) })}
+          {eventPopoverList(events, value, schemaError, getEventColor, name => { onChange(name); setOpen(false) })}
         </PopoverContent>
       </Popover>
       <button
@@ -750,6 +762,7 @@ export const EventQueryRow = ({
   letter,
   color,
   children,
+  getEventColor,
 }: {
   entry: EventFilterEntry
   events: EventNameMeta[]
@@ -763,6 +776,7 @@ export const EventQueryRow = ({
   letter?: string
   color?: string
   children?: React.ReactNode
+  getEventColor?: (eventName: string) => string
 }) => (
   <div className='flex items-center gap-2'>
     <div className='inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1'>
@@ -772,7 +786,14 @@ export const EventQueryRow = ({
           <span className='text-[10px] font-semibold text-muted-foreground w-3'>{letter}</span>
         </span>
       )}
-      <EventChip value={entry.kind} onChange={onUpdateKind} events={events} schemaError={schemaError} />
+      <EventChip
+        value={entry.kind}
+        onChange={onUpdateKind}
+        events={events}
+        schemaError={schemaError}
+        color={color}
+        getEventColor={getEventColor}
+      />
       {entry.kind && (
         <>
           {entry.filters.map((f, fi) => (
@@ -811,6 +832,7 @@ export const EventFilterBar = ({
   seriesColors,
   renderRowExtra,
   maxEvents,
+  getEventColor,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -820,6 +842,7 @@ export const EventFilterBar = ({
   seriesColors?: { dot: string }[]
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
+  getEventColor?: (eventName: string) => string
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -836,6 +859,7 @@ export const EventFilterBar = ({
         onUpdateFilter={(fi, filter) => filters.updateEventFilter(i, fi, filter)}
         letter={showLetters ? SERIES_LETTERS[i] : undefined}
         color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
+        getEventColor={getEventColor}
       >
         {renderRowExtra?.(i)}
       </EventQueryRow>
@@ -848,6 +872,7 @@ export const EventFilterBar = ({
           onChange={kind => { if (kind) filters.addEvent(kind) }}
           events={events}
           schemaError={schemaError}
+          getEventColor={getEventColor}
         />
       </div>
     )}

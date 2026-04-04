@@ -3,7 +3,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { compactNumber } from '@/lib/format'
 import { useMemo } from 'react'
 import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
-import { SERIES_COLORS } from '../chart-colors'
+import type { SeriesColor } from '../colors'
 import { buildChartConfig, buildChartData, formatTooltipLabel } from './common'
 import { niceMax } from './helpers'
 import { type ChartPoint } from './types'
@@ -11,13 +11,15 @@ import { type ChartPoint } from './types'
 export const AreaChart = ({
   data,
   seriesNames,
+  seriesColors,
   granularity,
 }: {
   data: ChartPoint[]
   seriesNames: string[]
+  seriesColors: SeriesColor[]
   granularity: Granularity
 }) => {
-  const chartConfig = useMemo(() => buildChartConfig(seriesNames), [seriesNames])
+  const chartConfig = useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors])
   const chartData = useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity])
   const yMax = useMemo(() => {
     const allVals = data.flatMap(d => d.values)
@@ -54,8 +56,8 @@ export const AreaChart = ({
             key={si}
             type='monotone'
             dataKey={`series${si}`}
-            stroke={SERIES_COLORS[si % SERIES_COLORS.length].line}
-            fill={SERIES_COLORS[si % SERIES_COLORS.length].line}
+            stroke={seriesColors[si]?.line}
+            fill={seriesColors[si]?.line}
             fillOpacity={0.22}
             strokeWidth={2}
             isAnimationActive={false}

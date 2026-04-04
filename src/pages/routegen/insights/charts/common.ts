@@ -1,14 +1,14 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { type ChartConfig } from '@/components/ui/chart'
-import { SERIES_COLORS } from '../chart-colors'
+import type { SeriesColor } from '../colors'
 import { formatAxisDate, formatTooltipDate } from './helpers'
 import { type ChartPoint, type InsightsDatum } from './types'
 
-export const buildChartConfig = (seriesNames: string[]): ChartConfig =>
+export const buildChartConfig = (seriesNames: string[], seriesColors: SeriesColor[]): ChartConfig =>
   seriesNames.reduce<ChartConfig>((acc, name, si) => {
     acc[`series${si}`] = {
       label: name,
-      color: SERIES_COLORS[si % SERIES_COLORS.length].line,
+      color: seriesColors[si]?.line,
     }
     return acc
   }, {})

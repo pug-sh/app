@@ -25,7 +25,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { SERIES_COLORS } from './chart-colors'
+import { getSeriesColor } from './colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -210,7 +210,12 @@ const Insights = () => {
 
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
-    if (!project || validEntries.length === 0 || !timeRange) return
+    if (!project || validEntries.length === 0 || !timeRange) {
+      setSeries([])
+      setLoading(false)
+      setError(null)
+      return
+    }
 
     const globalFilters = toProtoFilters(propFilters)
     const filterGroups =
@@ -262,6 +267,14 @@ const Insights = () => {
     if (insightType === InsightType.RETENTION) return s.breakdown?.cohort || `Cohort ${i + 1}`
     return s.eventKind || `step ${i + 1}`
   })
+  const seriesColors = useMemo(
+    () => seriesNames.map((name, i) => getSeriesColor(name, i)),
+    [seriesNames]
+  )
+  const eventFilterColors = useMemo(
+    () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
+    [eventFilters.entries]
+  )
   const chartData: ChartPoint[] =
     series.length > 0
       ? series[0].points.map((p, i) => ({
@@ -288,10 +301,10 @@ const Insights = () => {
         </div>
       )
     }
-    if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
-    if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} granularity={granularity} />
+    if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+    if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
     if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
-    return <BarChart data={chartData} seriesNames={seriesNames} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
+    return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
   }
 
   if (!project) return <NoProject title='Insights' icon={TrendingUp} />
@@ -333,7 +346,8 @@ const Insights = () => {
             schema={schema}
             schemaError={schemaError}
             showLetters
-            seriesColors={SERIES_COLORS}
+            seriesColors={eventFilterColors}
+            getEventColor={eventName => getSeriesColor(eventName).dot}
             renderRowExtra={isTrends
               ? i => (
                 <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
@@ -382,15 +396,15 @@ const Insights = () => {
           </Button>
         </div>
       ) : isRetention && series.length > 0 ? (
-        <RetentionCohort series={series} granularity={granularity} />
+        <RetentionCohort series={series} granularity={granularity} seriesColors={seriesColors} />
       ) : isTimeSeriesInsight && chartData.length > 0 ? (
         <div>
-          <SummaryStats series={seriesNames} data={chartData} />
+          <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
           {renderChart()}
         </div>
       ) : !isTrends && funnelSteps.length > 0 ? (
         hasFunnelData ? (
-          <FunnelChart steps={funnelSteps} />
+          <FunnelChart steps={funnelSteps} seriesColors={seriesColors} />
         ) : (
           <div className='flex items-center justify-center h-48 text-muted-foreground'>
             <p className='text-sm'>No events recorded in this period</p>

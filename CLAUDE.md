@@ -87,6 +87,24 @@ Empty states are minimal — a faded icon + one or two lines of text. No illustr
 
 Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
 
+### Insights Color System
+
+For Insights (event filters + charts), do **not** use index-based colors or `kindStyle()` colors.
+
+- Single source of truth: `src/pages/routegen/insights/colors.ts`
+- Use `getSeriesColor(name, fallbackIndex)` to resolve colors
+- Color assignment is family/name-based and deterministic (same event family should keep same color across views)
+- Keep colors consistent across:
+  - event row markers (A/B/C)
+  - selected event chips
+  - event dropdown dots
+  - summary stat dots
+  - line/area/bar/funnel series
+  - chart tooltip indicators
+- Retention cohort:
+  - Heatmap cell colors stay value-intensity based
+  - Cohort label markers should still use the shared series/family color mapping
+
 ### Form Validation
 
 Lightweight inline validation only — disable buttons when required fields are empty, basic format checks. The protovalidate interceptor does the heavy lifting: it validates every outgoing message against buf.validate constraints (required, string patterns, ranges, CEL expressions) before the request leaves the browser. Don't duplicate proto constraints in the UI.

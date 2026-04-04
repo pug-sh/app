@@ -1,5 +1,6 @@
 import { Granularity, type Series } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
+import type { SeriesColor } from '../colors'
 import { formatTooltipDate } from './helpers'
 
 type CohortRow = {
@@ -33,7 +34,15 @@ const formatCohortLabel = (value: string) => {
   return trimmed
 }
 
-export const RetentionCohort = ({ series, granularity }: { series: Series[]; granularity: Granularity }) => {
+export const RetentionCohort = ({
+  series,
+  granularity,
+  seriesColors,
+}: {
+  series: Series[]
+  granularity: Granularity
+  seriesColors: SeriesColor[]
+}) => {
   if (series.length === 0) return null
 
   const rawMax = Math.max(...series.flatMap(s => s.points.map(p => Number(p.value) || 0)), 0)
@@ -77,7 +86,13 @@ export const RetentionCohort = ({ series, granularity }: { series: Series[]; gra
           {rows.map((row, ri) => (
             <tr key={ri} className='border-b last:border-b-0 border-border/50'>
               <td className='sticky left-0 z-10 bg-background py-2 px-3 text-xs text-foreground whitespace-nowrap min-w-55'>
-                {formatCohortLabel(row.label)}
+                <div className='inline-flex items-center gap-1.5'>
+                  <span
+                    className='w-2 h-2 rounded-full shrink-0'
+                    style={{ backgroundColor: seriesColors[ri]?.dot }}
+                  />
+                  <span>{formatCohortLabel(row.label)}</span>
+                </div>
               </td>
               <td className='sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60'>
                 {row.size.toLocaleString()}

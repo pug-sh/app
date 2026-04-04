@@ -1,5 +1,5 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { SERIES_COLORS } from '../chart-colors'
+import { SERIES_COLORS } from '../colors'
 import { formatTooltipDate } from './helpers'
 import { type ChartPoint } from './types'
 
