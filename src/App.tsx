@@ -1,15 +1,17 @@
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
-import AppSidebar from '@/components/layout/sidebar'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import { workspaceErrorAtom } from '@/data/workspace.atoms'
-import Router from '@/pages/router'
-import SignIn from '@/pages/sign-in'
 import { useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
+
+const AppSidebar = lazy(() => import('@/components/layout/sidebar'))
+const Router = lazy(() => import('@/pages/router'))
+const SignIn = lazy(() => import('@/pages/sign-in'))
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -28,13 +30,17 @@ const ThemeSync = () => {
 const AuthenticatedApp = () => {
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <Suspense fallback={null}>
+        <AppSidebar />
+      </Suspense>
       <SidebarInset>
         <div className='fixed top-3 left-3 z-30'>
           <SidebarTrigger />
         </div>
         <main className='flex-1 min-w-0'>
-          <Router />
+          <Suspense fallback={<LoadingSpinner />}>
+            <Router />
+          </Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>
@@ -60,7 +66,13 @@ const App = () => {
   return (
     <>
       <ThemeSync />
-      {!authenticated ? <SignIn /> : workspaceError ? <WorkspaceError message={workspaceError} /> : <AuthenticatedApp />}
+      {!authenticated
+        ? (
+          <Suspense fallback={<LoadingSpinner />}>
+            <SignIn />
+          </Suspense>
+        )
+        : workspaceError ? <WorkspaceError message={workspaceError} /> : <AuthenticatedApp />}
       <Toaster position='bottom-right' />
     </>
   )

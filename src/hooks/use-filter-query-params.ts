@@ -113,33 +113,29 @@ export const writeFilterQueryParams = (
 ) => {
   if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
-  if (eventFilters.length > 0) {
-    url.searchParams.set(EVENT_FILTERS_PARAM, JSON.stringify(eventFilters))
-  } else {
-    url.searchParams.delete(EVENT_FILTERS_PARAM)
+
+  const setOrDelete = (key: string, value: string | undefined) => {
+    if (value === undefined) {
+      url.searchParams.delete(key)
+      return
+    }
+    url.searchParams.set(key, value)
   }
-  if (propFilters.length > 0) {
-    url.searchParams.set(PROP_FILTERS_PARAM, JSON.stringify(propFilters))
-  } else {
-    url.searchParams.delete(PROP_FILTERS_PARAM)
+
+  const setJSONParam = (key: string, value: unknown[]) => {
+    setOrDelete(key, value.length > 0 ? JSON.stringify(value) : undefined)
   }
-  if (opts?.insightType !== undefined) {
-    url.searchParams.set(INSIGHT_TYPE_PARAM, String(opts.insightType))
-  } else {
-    url.searchParams.delete(INSIGHT_TYPE_PARAM)
-  }
-  if (opts?.granularity !== undefined) {
-    url.searchParams.set(GRANULARITY_PARAM, String(opts.granularity))
-  } else {
-    url.searchParams.delete(GRANULARITY_PARAM)
-  }
-  if (opts?.timeRange) {
-    url.searchParams.set(TIME_FROM_PARAM, String(opts.timeRange.from.getTime()))
-    url.searchParams.set(TIME_TO_PARAM, String(opts.timeRange.to.getTime()))
-  } else {
-    url.searchParams.delete(TIME_FROM_PARAM)
-    url.searchParams.delete(TIME_TO_PARAM)
-  }
+
+  setJSONParam(EVENT_FILTERS_PARAM, eventFilters)
+  setJSONParam(PROP_FILTERS_PARAM, propFilters)
+
+  setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
+  setOrDelete(GRANULARITY_PARAM, opts?.granularity !== undefined ? String(opts.granularity) : undefined)
+
+  const timeFrom = opts?.timeRange ? String(opts.timeRange.from.getTime()) : undefined
+  const timeTo = opts?.timeRange ? String(opts.timeRange.to.getTime()) : undefined
+  setOrDelete(TIME_FROM_PARAM, timeFrom)
+  setOrDelete(TIME_TO_PARAM, timeTo)
 
   const next = `${url.pathname}${url.search}${url.hash}`
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`

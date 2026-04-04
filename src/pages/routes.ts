@@ -1,16 +1,20 @@
-import type React from 'react'
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
 
-const pages = import.meta.glob('./routegen/**/index.page.tsx', { eager: true }) as {
-  [key: string]: { default: React.FC }
+type PageModule = { default: ComponentType }
+
+type RouteDef = {
+  component: LazyExoticComponent<ComponentType>
 }
 
-export const routes: Record<string, { component: React.FC }> = {}
+const pages = import.meta.glob<PageModule>('./routegen/**/index.page.tsx')
 
-for (const [key, { default: component }] of Object.entries(pages)) {
+export const routes: Record<string, RouteDef> = {}
+
+for (const [key, loader] of Object.entries(pages)) {
   const segments = key
     .split('/')
-    .slice(2, -1) // strip ./routegen and index.page.tsx
+    .slice(2, -1)
     .map(s => (s.startsWith('[') && s.endsWith(']') ? ':' + s.slice(1, -1) : s))
   const path = '/p/:projectId/' + segments.join('/')
-  routes[path] = { component }
+  routes[path] = { component: lazy(loader) }
 }
