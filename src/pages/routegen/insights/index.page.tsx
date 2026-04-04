@@ -12,6 +12,7 @@ import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
@@ -21,11 +22,11 @@ import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { BarChart3, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { SERIES_COLORS } from './chart-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, SummaryStats } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ const GRANULARITIES = [
   { label: 'Week', value: Granularity.WEEK },
   { label: 'Month', value: Granularity.MONTH },
 ] as const
+const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
 
 const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
@@ -45,7 +47,9 @@ const AGGREGATIONS = [
 const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
   { label: 'Funnel', value: InsightType.FUNNEL },
+  { label: 'Retention', value: InsightType.RETENTION },
 ] as const
+const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
 type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
 
@@ -121,9 +125,17 @@ const Insights = () => {
   )
 
   const baseFilters = useEventFilters(initialFilterState.eventFilters)
-  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
-  const [insightType, setInsightType] = useState(InsightType.TRENDS)
-  const [granularity, setGranularity] = useState(Granularity.DAY)
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve())
+  const [insightType, setInsightType] = useState<InsightType>(() =>
+    initialFilterState.insightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialFilterState.insightType)
+      ? initialFilterState.insightType
+      : InsightType.TRENDS
+  )
+  const [granularity, setGranularity] = useState<Granularity>(() =>
+    initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
+      ? initialFilterState.granularity
+      : Granularity.DAY
+  )
   const [aggregations, setAggregations] = useState<AggregationType[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
@@ -139,10 +151,10 @@ const Insights = () => {
   }
 
   // Wrap mutations to keep aggregations array in sync with entries
-  const removeWithAgg = (idx: number) => {
+  const removeWithAgg = useCallback((idx: number) => {
     baseFilters.removeEvent(idx)
     setAggregations(prev => prev.filter((_, i) => i !== idx))
-  }
+  }, [baseFilters])
   const eventFilters = {
     ...baseFilters,
     addEvent: (kind: string) => {
@@ -158,6 +170,13 @@ const Insights = () => {
       }
     },
   }
+
+  useEffect(() => {
+    if (insightType !== InsightType.RETENTION || eventFilters.entries.length <= 2) return
+    for (let i = eventFilters.entries.length - 1; i >= 2; i -= 1) {
+      removeWithAgg(i)
+    }
+  }, [insightType, eventFilters.entries.length, removeWithAgg])
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -174,8 +193,8 @@ const Insights = () => {
   }, [project, fetchSchema])
 
   useEffect(() => {
-    writeFilterQueryParams(eventFilters.entries, propFilters)
-  }, [eventFilters.entries, propFilters])
+    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange })
+  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange])
 
   // Auto-run query when params change
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -220,7 +239,7 @@ const Insights = () => {
                 kind: entry.kind,
                 filters: toProtoFilters(entry.filters),
               },
-              aggregation: insightType === InsightType.FUNNEL ? AggregationType.TOTAL : getAggregation(i),
+              aggregation: insightType === InsightType.TRENDS ? getAggregation(i) : AggregationType.TOTAL,
             })),
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
@@ -239,7 +258,10 @@ const Insights = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey already captures all user-controlled query inputs
   }, [queryKey, project, insightsRPC, headers])
 
-  const seriesNames = series.map((s, i) => s.eventKind || `step ${i + 1}`)
+  const seriesNames = series.map((s, i) => {
+    if (insightType === InsightType.RETENTION) return s.breakdown?.cohort || `Cohort ${i + 1}`
+    return s.eventKind || `step ${i + 1}`
+  })
   const chartData: ChartPoint[] =
     series.length > 0
       ? series[0].points.map((p, i) => ({
@@ -253,6 +275,8 @@ const Insights = () => {
   }))
 
   const isTrends = insightType === InsightType.TRENDS
+  const isRetention = insightType === InsightType.RETENTION
+  const isTimeSeriesInsight = isTrends || isRetention
   const hasFunnelData = funnelSteps.some(step => step.count > 0)
   const allZero = chartData.every(d => d.values.every(v => v === 0))
 
@@ -275,35 +299,63 @@ const Insights = () => {
   return (
     <Page
       title='Insights'
-      description={isTrends ? 'Analyze event trends' : 'Analyze step-by-step conversion'}
+      description={
+        isTrends
+          ? 'Analyze event trends'
+          : isRetention
+            ? 'Analyze cohort retention over time'
+            : 'Analyze step-by-step conversion'
+      }
     >
       {/* Query config — sticky */}
-      <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50'>
+      <div className={cn(
+        '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2',
+        isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
+      )}>
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
           <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
-          {isTrends && (
+          {isTimeSeriesInsight && (
             <>
               <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
-              <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+              {isTrends && (
+                <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+              )}
             </>
           )}
         </div>
 
         {/* Events + per-event filters + per-event aggregation */}
-        <EventFilterBar
-          filters={eventFilters}
-          events={schema?.events ?? []}
-          schema={schema}
-          schemaError={schemaError}
-          showLetters
-          seriesColors={SERIES_COLORS}
-          renderRowExtra={isTrends
-            ? i => (
-              <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
-            )
-            : undefined}
-        />
+        <div className='space-y-1'>
+          <EventFilterBar
+            filters={eventFilters}
+            events={schema?.events ?? []}
+            schema={schema}
+            schemaError={schemaError}
+            showLetters
+            seriesColors={SERIES_COLORS}
+            renderRowExtra={isTrends
+              ? i => (
+                <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+              )
+              : undefined}
+            maxEvents={isRetention ? 2 : undefined}
+          />
+          {isRetention && (
+            <div className='flex items-center gap-1.5 text-[11px] text-muted-foreground'>
+              <Tooltip>
+                <TooltipTrigger className='inline-flex items-center cursor-help'>
+                  <CircleHelp className='w-3.5 h-3.5' />
+                </TooltipTrigger>
+                <TooltipContent side='bottom' align='start' className='max-w-xs text-xs'>
+                  Use up to two events: A defines the cohort entry event, B defines the return event.
+                  If B is omitted, A is used for both cohort and return.
+                </TooltipContent>
+              </Tooltip>
+              <span>Retention supports up to 2 events (A = cohort, B = return).</span>
+            </div>
+          )}
+        </div>
 
         {/* Global filters */}
         <div className='flex flex-wrap items-center gap-2'>
@@ -329,7 +381,9 @@ const Insights = () => {
             Retry
           </Button>
         </div>
-      ) : isTrends && chartData.length > 0 ? (
+      ) : isRetention && series.length > 0 ? (
+        <RetentionCohort series={series} granularity={granularity} />
+      ) : isTimeSeriesInsight && chartData.length > 0 ? (
         <div>
           <SummaryStats series={seriesNames} data={chartData} />
           {renderChart()}

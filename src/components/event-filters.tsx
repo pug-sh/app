@@ -810,6 +810,7 @@ export const EventFilterBar = ({
   showLetters,
   seriesColors,
   renderRowExtra,
+  maxEvents,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -818,6 +819,7 @@ export const EventFilterBar = ({
   showLetters?: boolean
   seriesColors?: { dot: string }[]
   renderRowExtra?: (index: number) => React.ReactNode
+  maxEvents?: number
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -838,14 +840,16 @@ export const EventFilterBar = ({
         {renderRowExtra?.(i)}
       </EventQueryRow>
     ))}
-    <div className='flex items-center gap-2'>
-      {showLetters && filters.entries.length > 0 && <span className='w-7' />}
-      <EventChip
-        value=''
-        onChange={kind => { if (kind) filters.addEvent(kind) }}
-        events={events}
-        schemaError={schemaError}
-      />
-    </div>
+    {(maxEvents === undefined || filters.entries.length < maxEvents) && (
+      <div className='flex items-center gap-2'>
+        {showLetters && filters.entries.length > 0 && <span className='w-7' />}
+        <EventChip
+          value=''
+          onChange={kind => { if (kind) filters.addEvent(kind) }}
+          events={events}
+          schemaError={schemaError}
+        />
+      </div>
+    )}
   </div>
 )
