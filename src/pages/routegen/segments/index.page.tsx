@@ -20,6 +20,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import ProjectLink from '@/components/project-link'
+import { toast } from 'sonner'
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -31,6 +32,7 @@ const Segments = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
@@ -49,7 +51,7 @@ const Segments = () => {
     writeFilterQueryParams(eventFilters.entries, propFilters)
   }, [eventFilters.entries, propFilters])
 
-  const validEntries = useMemo(() => eventFilters.entries.filter(e => e.kind.trim()), [eventFilters.entries])
+  const validEntries = eventFilters.validEntries
 
   const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters })
 

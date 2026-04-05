@@ -20,6 +20,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
@@ -126,15 +127,16 @@ const Insights = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve())
-  const [insightType, setInsightType] = useState<InsightType>(() =>
+  const [insightType, setInsightType] = useState(() =>
     initialFilterState.insightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialFilterState.insightType)
       ? initialFilterState.insightType
       : InsightType.TRENDS
   )
-  const [granularity, setGranularity] = useState<Granularity>(() =>
+  const [granularity, setGranularity] = useState(() =>
     initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
       ? initialFilterState.granularity
       : Granularity.DAY
@@ -167,7 +169,7 @@ const Insights = () => {
     writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange })
   }, [eventFilters.entries, propFilters, insightType, granularity, timeRange])
 
-  const validEntries = useMemo(() => eventFilters.entries.filter(e => e.kind.trim()), [eventFilters.entries])
+  const validEntries = eventFilters.validEntries
 
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
@@ -208,15 +210,18 @@ const Insights = () => {
   )
 
   const result = queryResult ?? { case: undefined, value: undefined }
-  if (result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention') {
-    console.warn('Unrecognized insight result case:', result.case)
-  }
+
+  useEffect(() => {
+    if (result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention') {
+      console.warn('Unrecognized insight result case:', result.case)
+    }
+  }, [result.case])
 
   const trendSeries = result.case === 'trends' ? result.value.series : []
   const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
   const funnelSteps = useMemo(() => {
     if (result.case !== 'funnel') return []
-    const kindEntries = eventFilters.entries.filter(e => e.kind.trim())
+    const kindEntries = eventFilters.validEntries
     return [...result.value.steps]
       .sort((a, b) => {
         const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
@@ -224,13 +229,13 @@ const Insights = () => {
         return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
       })
       .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
-  }, [result, eventFilters.entries])
+  }, [result, eventFilters.validEntries])
 
   const seriesNames = useMemo(
     () => result.case === 'retention'
       ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
       : trendSeries.map((s, i) => s.eventKind || `series ${i + 1}`),
-    [result, trendSeries, retentionCohorts]
+    [result.case, trendSeries, retentionCohorts]
   )
   const seriesColors = useMemo(
     () => seriesNames.map((name, i) => getSeriesColor(name, i)),

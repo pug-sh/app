@@ -12,7 +12,9 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
   const [entries, setEntries] = useState<EventFilterEntry[]>(initialEntries)
 
   const addEvent = (kind: string) => {
-    setEntries(prev => [...prev, { kind, filters: [] }])
+    const trimmed = kind.trim()
+    if (!trimmed) return
+    setEntries(prev => [...prev, { kind: trimmed, filters: [] }])
   }
 
   const removeEvent = (idx: number) => {
@@ -20,11 +22,12 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
   }
 
   const updateEventKind = (idx: number, kind: string) => {
-    if (!kind) {
+    const trimmed = kind.trim()
+    if (!trimmed) {
       removeEvent(idx)
       return
     }
-    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, kind, filters: [] } : e)))
+    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, kind: trimmed, filters: [] } : e)))
   }
 
   const addEventFilter = (eventIdx: number, filter: ActiveFilter) => {
@@ -53,7 +56,9 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
 
   const reset = (nextEntries: EventFilterEntry[] = []) => setEntries(nextEntries)
 
-  return { entries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
+  const validEntries = entries.filter(e => e.kind)
+
+  return { entries, validEntries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
 }
 
 export type EventFiltersHandle = ReturnType<typeof useEventFilters>

@@ -5,12 +5,15 @@ import { useAtomValue } from 'jotai'
 import { useEffect, useMemo, useState } from 'react'
 
 const CACHE_TTL = 300_000 // 5 minutes
+const FAILURE_TTL = 30_000 // 30 seconds
 const schemaCache = new Map<string, { data: GetFilterSchemaResponse; ts: number }>()
+const failureCache = new Map<string, number>()
 const inFlight = new Map<string, Promise<GetFilterSchemaResponse>>()
 
 export const clearSchemaCache = () => {
   schemaCache.clear()
   inFlight.clear()
+  failureCache.clear()
 }
 
 const cacheKey = (kind: string, headers: HeadersInit | undefined) => {
@@ -40,6 +43,11 @@ export const fetchSchemaForKind = (
     }
   }
 
+  const failedAt = failureCache.get(key)
+  if (failedAt && Date.now() - failedAt < FAILURE_TTL) {
+    return Promise.reject(new Error('Schema fetch recently failed'))
+  }
+
   const running = inFlight.get(key)
   if (running) return running
 
@@ -47,7 +55,11 @@ export const fetchSchemaForKind = (
     try {
       const resp = await rpc.getFilterSchema({ eventKind: kind }, { headers })
       schemaCache.set(key, { data: resp, ts: Date.now() })
+      failureCache.delete(key)
       return resp
+    } catch (err) {
+      failureCache.set(key, Date.now())
+      throw err
     } finally {
       inFlight.delete(key)
     }
@@ -115,11 +127,14 @@ export const useGlobalFilterSchema = ({
     error: null,
   })
 
-  const kindsKey = [...new Set(selectedEventKinds.map(k => k.trim()).filter(Boolean))].sort().join('\u0000')
+  const kindsKey = useMemo(() => {
+    const sorted = [...new Set(selectedEventKinds.map(k => k.trim()).filter(Boolean))].sort()
+    return JSON.stringify(sorted)
+  }, [selectedEventKinds])
 
   useEffect(() => {
     if (!headers) return
-    const kinds = kindsKey ? kindsKey.split('\u0000') : []
+    const kinds = JSON.parse(kindsKey) as string[]
     if (kinds.length === 0) return
 
     let cancelled = false
@@ -132,12 +147,13 @@ export const useGlobalFilterSchema = ({
         if (r.status === 'fulfilled') schemas.push(r.value)
         else failures.push(r.reason instanceof Error ? r.reason.message : 'Unknown error')
       }
-      if (failures.length > 0) console.warn('Some filter schemas failed to load:', failures)
+      const failedKinds = kinds.filter((_, i) => results[i].status === 'rejected')
+      if (failedKinds.length > 0) console.warn('Filter schemas failed for:', failedKinds, failures)
       let error: string | null = null
       if (schemas.length === 0) {
-        error = failures[0] ?? 'Failed to load filter schema'
-      } else if (failures.length > 0) {
-        error = 'Some filter schemas failed to load — filter properties may be incomplete'
+        error = `Failed to load filter schema for ${failedKinds.join(', ')}`
+      } else if (failedKinds.length > 0) {
+        error = `Filter schemas failed for: ${failedKinds.join(', ')} — filter properties may be incomplete`
       }
       setResult({
         key: kindsKey,
@@ -149,9 +165,10 @@ export const useGlobalFilterSchema = ({
     return () => { cancelled = true }
   }, [kindsKey, insightsRPC, headers])
 
+  const hasKinds = kindsKey !== '[]'
   const isCurrent = result.key === kindsKey
-  const scopedSchemas = kindsKey ? (isCurrent ? result.schemas : null) : null
-  const scopedError = kindsKey && isCurrent ? result.error : null
+  const scopedSchemas = hasKinds && isCurrent ? result.schemas : null
+  const scopedError = hasKinds && isCurrent ? result.error : null
   const schema = useMemo(
     () => (scopedSchemas ? buildCommonSchema(baseSchema, scopedSchemas) : baseSchema),
     [baseSchema, scopedSchemas]

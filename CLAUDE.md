@@ -85,7 +85,7 @@ Tables use plain `<table>` elements (not the Table component), with:
 
 Empty states are minimal — a faded icon + one or two lines of text. No illustrations, no big CTAs, no onboarding wizards.
 
-Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
+Event kinds use colored `Badge` with `getSeriesColor()` from `src/lib/event-colors.ts` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
 
 ### Insights Color System
 
@@ -93,7 +93,7 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
 
 - Single source of truth: `src/lib/event-colors.ts`
 - Use `getSeriesColor(name, fallbackIndex)` to resolve colors
-- Color assignment is family/name-based and deterministic (same event family should keep same color across views)
+- Color assignment is name-based and deterministic — events in the semantic map get their assigned color, unmapped events get a stable hash-based fallback. Related events are manually grouped under the same hue.
 - Keep colors consistent across:
   - event row markers (A/B/C)
   - selected event chips

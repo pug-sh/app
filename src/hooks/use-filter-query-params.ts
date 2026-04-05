@@ -35,7 +35,7 @@ type ParsedBaseFilter = {
 const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
-  if (typeof v.property !== 'string' || typeof v.operator !== 'number') return null
+  if (typeof v.property !== 'string' || !v.property || typeof v.operator !== 'number') return null
   if (!VALID_OPERATORS.has(v.operator as FilterOperator)) return null
   return { property: v.property, operator: v.operator as FilterOperator }
 }
@@ -72,11 +72,13 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
   if (typeof v.kind !== 'string' || !Array.isArray(v.filters)) return null
+  const kind = v.kind.trim()
+  if (!kind) return null
   const filters = v.filters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
   const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
     ? (v.aggregation as AggregationType)
     : undefined
-  return { kind: v.kind, filters, ...(aggregation !== undefined && { aggregation }) }
+  return { kind, filters, ...(aggregation !== undefined && { aggregation }) }
 }
 
 const parseJSONParam = (raw: string | null): unknown => {
@@ -102,6 +104,9 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const rawTimeFrom = rawTimeFromParam === null ? NaN : Number(rawTimeFromParam)
   const rawTimeTo = rawTimeToParam === null ? NaN : Number(rawTimeToParam)
 
+  const hasEf = params.has(EVENT_FILTERS_PARAM)
+  const hasPf = params.has(PROP_FILTERS_PARAM)
+
   const eventFilters = Array.isArray(rawEventFilters)
     ? rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[]
     : []
@@ -109,14 +114,19 @@ export const readFilterQueryParams = (search = window.location.search) => {
     ? rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
     : []
 
+  const warnings: string[] = []
+  if (hasEf && rawEventFilters !== null && eventFilters.length === 0) warnings.push('event filters')
+  if (hasPf && rawPropFilters !== null && propFilters.length === 0) warnings.push('property filters')
+  const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
+
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
   const granularity = VALID_GRANULARITIES.includes(rawGranularity) ? (rawGranularity as Granularity) : undefined
   const timeRange: TimeRange | undefined =
-    Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo)
+    Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo) && rawTimeFrom <= rawTimeTo
       ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }
       : undefined
 
-  return { eventFilters, propFilters, insightType, granularity, timeRange }
+  return { eventFilters, propFilters, insightType, granularity, timeRange, parseWarning }
 }
 
 export const writeFilterQueryParams = (

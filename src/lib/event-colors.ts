@@ -4,6 +4,7 @@ export type SeriesColor = {
   dot: string
 }
 
+/** Expects a 6-char hex color (e.g. '#2563eb'). Derives fill by appending alpha. */
 const color = (hex: string): SeriesColor => ({
   line: hex,
   fill: hex + '1a',
@@ -20,7 +21,7 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
   page_view:            color('#2563eb'),
   scroll:               color('#3b82f6'),
 
-  // interactions — cyan
+  // interactions — cyan (click) + red (degraded: dead/rage)
   click:                color('#0891b2'),
   dead_click:           color('#f87171'),
   rage_click:           color('#dc2626'),

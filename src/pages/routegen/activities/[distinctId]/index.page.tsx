@@ -20,6 +20,7 @@ import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
@@ -164,6 +165,7 @@ const UserActivity = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)

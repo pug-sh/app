@@ -27,6 +27,7 @@ export const formatTooltipDate = (d: Date, granularity: Granularity): string => 
   return fmtDate(d)
 }
 
+/** Round v up to the next "nice" number (1, 2, 5, or 10 * 10^n) for clean Y-axis ticks. */
 export const niceMax = (v: number): number => {
   if (v <= 0) return 10
   const mag = Math.pow(10, Math.floor(Math.log10(v)))

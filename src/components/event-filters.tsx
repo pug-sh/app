@@ -47,9 +47,9 @@ const OPERATORS: readonly {
 // eslint-disable-next-line react-refresh/only-export-components
 export const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
   const meta = OPERATORS.find(o => o.value === operator)
-  if (!meta) console.warn('Unknown filter operator:', operator)
-  if (meta?.noValue) return { property, operator, kind: 'presence' }
-  if (meta?.multiValue) {
+  if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
+  if (meta.noValue) return { property, operator, kind: 'presence' }
+  if (meta.multiValue) {
     const values = Array.isArray(payload) ? payload : payload ? [payload] : []
     return { property, operator, kind: 'multi', values }
   }
@@ -128,9 +128,10 @@ const useScopedSchema = (kindFilter?: string) => {
     schema: null,
     error: null,
   })
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
-    if (!kind) return
+    if (!kind || !headers) return
 
     let cancelled = false
     fetchSchemaForKind(kind, insightsRPC, headers)
@@ -141,12 +142,12 @@ const useScopedSchema = (kindFilter?: string) => {
         setResult({ key: kind, schema: null, error: err instanceof Error ? err.message : 'Failed to load filter schema' })
       })
     return () => { cancelled = true }
-  }, [kind, insightsRPC, headers])
+  }, [kind, insightsRPC, headers, retryCount])
 
   const isCurrent = result.key === kind
   const schema = kind && isCurrent ? result.schema : null
   const schemaError = kind && isCurrent ? result.error : null
-  return { schema, schemaError }
+  return { schema, schemaError, retry: () => setRetryCount(c => c + 1) }
 }
 
 // ── Shared sub-components ────────────────────────────────────────────────────
@@ -764,9 +765,9 @@ export const EventQueryRow = ({
   children?: React.ReactNode
   getEventColor?: (eventName: string) => string
 }) => {
-  const { schema: scopedSchema, schemaError: scopedSchemaError } = useScopedSchema(entry.kind)
-  const resolvedSchema = entry.kind ? (scopedSchema ?? schema) : schema
-  const resolvedSchemaError = entry.kind ? (scopedSchemaError ?? schemaError) : schemaError
+  const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
+  const resolvedSchema = entry.kind ? scopedSchema : schema
+  const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
 
   return (
     <div className='flex items-center gap-2'>
@@ -798,6 +799,15 @@ export const EventQueryRow = ({
               />
             ))}
             <FilterBuilder schema={resolvedSchema} schemaError={resolvedSchemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
+            {scopedSchemaError && (
+              <button
+                type='button'
+                onClick={retryScopedSchema}
+                className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+              >
+                retry schema
+              </button>
+            )}
             {children}
           </>
         )}

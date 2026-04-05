@@ -23,6 +23,7 @@ import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -128,6 +129,7 @@ const EventExplorer = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   // Applied filter state (drives API calls)
   const eventFilters = useEventFilters(initialFilterState.eventFilters)

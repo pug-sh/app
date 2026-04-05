@@ -11,6 +11,8 @@ export const useDebouncedQuery = <T,>(
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const queryFnRef = useRef(queryFn)
+  queryFnRef.current = queryFn
 
   useEffect(() => {
     if (!enabled) {
@@ -21,15 +23,15 @@ export const useDebouncedQuery = <T,>(
     }
 
     let cancelled = false
+    setLoading(true)
+    setError(null)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
       try {
-        const resp = await queryFn()
+        const resp = await queryFnRef.current()
         if (!cancelled) setData(resp)
       } catch (err) {
-        console.error('Query failed:', err)
+        console.error(`Query failed [${queryKey.slice(0, 80)}]:`, err)
         if (!cancelled) {
           setData(undefined)
           setError(err instanceof Error ? err.message : 'Query failed')
@@ -39,8 +41,7 @@ export const useDebouncedQuery = <T,>(
       }
     }, debounceMs)
     return () => { cancelled = true; clearTimeout(debounceRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryFn identity changes every render; queryKey drives re-execution
-  }, [queryKey, enabled, retryCount])
+  }, [queryKey, enabled, retryCount, debounceMs])
 
   return { data, loading, error, retry: () => setRetryCount(c => c + 1) }
 }

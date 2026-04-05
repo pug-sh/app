@@ -6,5 +6,4 @@ export interface ChartPoint {
 export type InsightsDatum = {
   axisLabel: string
   tooltipLabel: string
-  [k: string]: string | number
-}
+} & Record<`series${number}`, number>

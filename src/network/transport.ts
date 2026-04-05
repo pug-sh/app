@@ -8,8 +8,9 @@ import { clearJwt, JWT_KEY } from '@/auth/jwt.atoms'
 import { atom } from 'jotai'
 import { toast } from 'sonner'
 
-// Provide the app's file descriptors so the CEL evaluator can resolve cross-file
-// type references in proto constraints (e.g. common.v1.FilterOperator in PropertyFilter).
+// Register the app's file descriptors so the validator can compile rules defined
+// in these protos (e.g. buf.validate constraints on PropertyFilter which references
+// common.v1.FilterOperator).
 const validator = createValidator({ registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights) })
 
 const protovalidate: Interceptor = next => async req => {

@@ -1,6 +1,9 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { type ChartConfig } from '@/components/ui/chart'
+import { compactNumber } from '@/lib/format'
 import type { SeriesColor } from '@/lib/event-colors'
+import { useMemo } from 'react'
+import { computeYMax } from './helpers'
 import { formatAxisDate, formatTooltipDate } from './helpers'
 import { type ChartPoint, type InsightsDatum } from './types'
 
@@ -21,7 +24,7 @@ export const buildChartData = (
   let warned = false
   return data.map(point => {
     if (!warned && point.values.length !== seriesNames.length) {
-      console.warn('Chart data misalignment: expected', seriesNames.length, 'values per point, got', point.values.length)
+      console.error('Chart data misalignment: expected', seriesNames.length, 'values per point, got', point.values.length)
       warned = true
     }
 
@@ -42,3 +45,34 @@ export const formatTooltipLabel = (_: unknown, payload: Array<Record<string, unk
   const entry = payload[0] as { payload?: InsightsDatum } | undefined
   return entry?.payload?.tooltipLabel ?? ''
 }
+
+export const useChartPrep = (
+  data: ChartPoint[],
+  seriesNames: string[],
+  seriesColors: SeriesColor[],
+  granularity: Granularity,
+  stacked?: boolean
+) => ({
+  chartConfig: useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors]),
+  chartData: useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity]),
+  yMax: useMemo(() => computeYMax(data, stacked), [data, stacked]),
+})
+
+export const SHARED_MARGIN = { top: 12, right: 8, left: 0, bottom: 8 }
+
+export const SHARED_X_AXIS = {
+  dataKey: 'axisLabel' as const,
+  tickLine: false,
+  axisLine: false,
+  minTickGap: 24,
+  interval: 'preserveStartEnd' as const,
+}
+
+export const sharedYAxis = (yMax: number) => ({
+  tickLine: false,
+  axisLine: false,
+  width: 44,
+  domain: [0, yMax] as [number, number],
+  allowDecimals: false,
+  tickFormatter: compactNumber,
+})

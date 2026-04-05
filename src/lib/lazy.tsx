@@ -7,6 +7,7 @@ const isChunkLoadError = (error: unknown): boolean => {
   return /dynamically imported module|Loading chunk|Failed to fetch|load failed/i.test(error.message)
 }
 
+// Storage availability is guaranteed by the check in main.tsx — no defensive try-catch needed here.
 export const lazyWithRetry = (loader: () => Promise<{ default: ComponentType }>, name?: string) => {
   const storageKey = name ? `chunk-retry:${name}` : 'chunk-retry'
   return lazy(async () => {
