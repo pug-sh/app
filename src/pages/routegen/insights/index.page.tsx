@@ -2,9 +2,9 @@ import {
   AggregationType,
   Granularity,
   InsightType,
-  LogicalOperator,
-  type Series,
+  type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
@@ -25,7 +25,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { getSeriesColor } from './colors'
+import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -161,35 +161,36 @@ const Insights = () => {
     baseFilters.removeEvent(idx)
     setAggregations(prev => prev.filter((_, i) => i !== idx))
   }, [baseFilters])
-  const eventFilters = {
+  const addEventWithAgg = useCallback((kind: string) => {
+    baseFilters.addEvent(kind)
+    setAggregations(prev => [...prev, AggregationType.TOTAL])
+  }, [baseFilters])
+  const updateEventKindWithAgg = useCallback((idx: number, kind: string) => {
+    if (!kind) {
+      removeWithAgg(idx)
+    } else {
+      baseFilters.updateEventKind(idx, kind)
+    }
+  }, [baseFilters, removeWithAgg])
+  const eventFilters = useMemo(() => ({
     ...baseFilters,
-    addEvent: (kind: string) => {
-      baseFilters.addEvent(kind)
-      setAggregations(prev => [...prev, AggregationType.TOTAL])
-    },
+    addEvent: addEventWithAgg,
     removeEvent: removeWithAgg,
-    updateEventKind: (idx: number, kind: string) => {
-      if (!kind) {
-        removeWithAgg(idx)
-      } else {
-        baseFilters.updateEventKind(idx, kind)
-      }
-    },
-  }
+    updateEventKind: updateEventKindWithAgg,
+  }), [baseFilters, addEventWithAgg, removeWithAgg, updateEventKindWithAgg])
 
   useEffect(() => {
     if (insightType !== InsightType.RETENTION || eventFilters.entries.length <= 2) return
-    for (let i = eventFilters.entries.length - 1; i >= 2; i -= 1) {
-      removeWithAgg(i)
-    }
-  }, [insightType, eventFilters.entries.length, removeWithAgg])
+    baseFilters.reset(eventFilters.entries.slice(0, 2))
+    setAggregations(prev => prev.slice(0, 2))
+  }, [insightType, eventFilters.entries.length, baseFilters])
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
     selectedEventKinds: eventFilters.entries.map(e => e.kind),
   })
 
-  const [series, setSeries] = useState<Series[]>([])
+  const [result, setResult] = useState<QueryResponse['result']>({ case: undefined })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -217,7 +218,7 @@ const Insights = () => {
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
     if (!project || validEntries.length === 0 || !timeRange) {
-      setSeries([])
+      setResult({ case: undefined })
       setLoading(false)
       setError(null)
       return
@@ -257,10 +258,10 @@ const Insights = () => {
           },
           { headers }
         )
-        if (!cancelled) setSeries(resp.series)
+        if (!cancelled) setResult(resp.result)
       } catch (err) {
         console.error('Insights query failed:', err)
-        if (!cancelled) { setSeries([]); setError('Failed to load insights') }
+        if (!cancelled) { setResult({ case: undefined }); setError(err instanceof Error ? err.message : 'Failed to load insights') }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -269,10 +270,22 @@ const Insights = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey already captures all user-controlled query inputs
   }, [queryKey, project, insightsRPC, headers])
 
-  const seriesNames = series.map((s, i) => {
-    if (insightType === InsightType.RETENTION) return s.breakdown?.cohort || `Cohort ${i + 1}`
-    return s.eventKind || `step ${i + 1}`
-  })
+  const trendSeries = result.case === 'trends' ? result.value.series : []
+  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
+  const funnelSteps = useMemo(() => {
+    if (result.case !== 'funnel') return []
+    const inputOrder = new Map(eventFilters.entries.filter(e => e.kind.trim()).map((e, i) => [e.kind, i]))
+    return [...result.value.steps]
+      .sort((a, b) => (inputOrder.get(a.eventKind) ?? 999) - (inputOrder.get(b.eventKind) ?? 999))
+      .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
+  }, [result, eventFilters.entries])
+
+  const seriesNames = useMemo(
+    () => result.case === 'retention'
+      ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
+      : trendSeries.map((s, i) => s.eventKind || `series ${i + 1}`),
+    [result, trendSeries, retentionCohorts]
+  )
   const seriesColors = useMemo(
     () => seriesNames.map((name, i) => getSeriesColor(name, i)),
     [seriesNames]
@@ -282,16 +295,12 @@ const Insights = () => {
     [eventFilters.entries]
   )
   const chartData: ChartPoint[] =
-    series.length > 0
-      ? series[0].points.map((p, i) => ({
+    trendSeries.length > 0
+      ? trendSeries[0].points.map((p, i) => ({
         date: tsToDate(p.time) ?? new Date(),
-        values: series.map(s => Number(s.points[i]?.value) || 0),
+        values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
       }))
       : []
-  const funnelSteps = series.map((s, i) => ({
-    name: s.eventKind || `Step ${i + 1}`,
-    count: Number(s.total) || 0,
-  }))
 
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
@@ -316,7 +325,7 @@ const Insights = () => {
     }
     if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
     if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-    if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} granularity={granularity} />
+    if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
     return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
   }
 
@@ -336,7 +345,7 @@ const Insights = () => {
     if (funnelSteps.length === 0) return renderLoadingEmptyState()
 
     if (hasFunnelData) {
-      return <FunnelChart steps={funnelSteps} seriesColors={seriesColors} />
+      return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
     }
 
     return (
@@ -359,11 +368,11 @@ const Insights = () => {
       )
     }
 
-    if (isRetention && series.length > 0) {
-      return <RetentionCohort series={series} granularity={granularity} seriesColors={seriesColors} />
+    if (isRetention && retentionCohorts.length > 0) {
+      return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
     }
 
-    if (isTimeSeriesInsight && chartData.length > 0) {
+    if (isTrends && chartData.length > 0) {
       return (
         <div>
           <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
@@ -386,7 +395,7 @@ const Insights = () => {
     >
       {/* Query config — sticky */}
       <div className={cn(
-        '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2',
+        '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
         stickyClassName
       )}>
         <div className='flex flex-wrap items-center gap-2'>

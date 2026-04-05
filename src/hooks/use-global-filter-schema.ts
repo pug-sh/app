@@ -7,7 +7,14 @@ import { useEffect, useMemo, useState } from 'react'
 const schemaCache = new Map<string, GetFilterSchemaResponse>()
 const inFlight = new Map<string, Promise<GetFilterSchemaResponse>>()
 
-const fetchSchemaForKind = (
+const cacheKey = (kind: string, headers: HeadersInit | undefined) => {
+  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
+    ? (headers as Record<string, string>)['x-project-id'] ?? ''
+    : ''
+  return `${projectId}\0${kind}`
+}
+
+export const fetchSchemaForKind = (
   kind: string,
   rpc: {
     getFilterSchema: (
@@ -17,22 +24,23 @@ const fetchSchemaForKind = (
   },
   headers: HeadersInit | undefined
 ) => {
-  const cached = schemaCache.get(kind)
+  const key = cacheKey(kind, headers)
+  const cached = schemaCache.get(key)
   if (cached) return Promise.resolve(cached)
 
-  const running = inFlight.get(kind)
+  const running = inFlight.get(key)
   if (running) return running
 
   const request = (async () => {
     try {
       const resp = await rpc.getFilterSchema({ eventKind: kind }, { headers })
-      schemaCache.set(kind, resp)
+      schemaCache.set(key, resp)
       return resp
     } finally {
-      inFlight.delete(kind)
+      inFlight.delete(key)
     }
   })()
-  inFlight.set(kind, request)
+  inFlight.set(key, request)
   return request
 }
 
@@ -43,7 +51,7 @@ const intersectByName = <T extends { name: string }>(lists: T[][]): T[] => {
   const presentInAll = new Set(lists[0].map(x => x.name))
   for (let i = 1; i < lists.length; i++) {
     const current = new Set(lists[i].map(x => x.name))
-    for (const name of [...presentInAll]) {
+    for (const name of presentInAll) {
       if (!current.has(name)) presentInAll.delete(name)
     }
   }
@@ -95,21 +103,24 @@ export const useGlobalFilterSchema = ({
 
     let cancelled = false
     const loadSchemas = async () => {
-      try {
-        const schemas = await Promise.all(kinds.map(kind => fetchSchemaForKind(kind, insightsRPC, headers)))
-        if (!cancelled) {
-          setResult({ key: kindsKey, schemas, error: null })
-        }
-      } catch (err) {
-        if (!cancelled) {
-          console.error('fetch common global filter schema failed:', err)
-          setResult({
-            key: kindsKey,
-            schemas: null,
-            error: err instanceof Error ? err.message : 'Failed to load filter schema',
-          })
-        }
+      const results = await Promise.allSettled(kinds.map(kind => fetchSchemaForKind(kind, insightsRPC, headers)))
+      if (cancelled) return
+      const schemas: GetFilterSchemaResponse[] = []
+      const failures: string[] = []
+      for (const r of results) {
+        if (r.status === 'fulfilled') schemas.push(r.value)
+        else failures.push(r.reason instanceof Error ? r.reason.message : 'Unknown error')
       }
+      if (failures.length > 0) console.warn('Some filter schemas failed to load:', failures)
+      setResult({
+        key: kindsKey,
+        schemas: schemas.length > 0 ? schemas : null,
+        error: schemas.length === 0
+          ? (failures[0] ?? 'Failed to load filter schema')
+          : failures.length > 0
+            ? 'Some filter schemas failed to load — filter properties may be incomplete'
+            : null,
+      })
     }
     void loadSchemas()
     return () => { cancelled = true }

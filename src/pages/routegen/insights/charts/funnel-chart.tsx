@@ -2,7 +2,7 @@ import { compactNumber } from '@/lib/format'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { useMemo } from 'react'
 import { Bar, BarChart as ReBarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
-import type { SeriesColor } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 
 export interface FunnelStep {
   name: string

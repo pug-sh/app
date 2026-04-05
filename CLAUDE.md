@@ -91,7 +91,7 @@ Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pa
 
 For Insights (event filters + charts), do **not** use index-based colors or `kindStyle()` colors.
 
-- Single source of truth: `src/pages/routegen/insights/colors.ts`
+- Single source of truth: `src/lib/event-colors.ts`
 - Use `getSeriesColor(name, fallbackIndex)` to resolve colors
 - Color assignment is family/name-based and deterministic (same event family should keep same color across views)
 - Keep colors consistent across:

@@ -1,6 +1,6 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { type ChartConfig } from '@/components/ui/chart'
-import type { SeriesColor } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 import { formatAxisDate, formatTooltipDate } from './helpers'
 import { type ChartPoint, type InsightsDatum } from './types'
 

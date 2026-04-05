@@ -22,7 +22,7 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
       removeEvent(idx)
       return
     }
-    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, kind } : e)))
+    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, kind, filters: [] } : e)))
   }
 
   const addEventFilter = (eventIdx: number, filter: ActiveFilter) => {

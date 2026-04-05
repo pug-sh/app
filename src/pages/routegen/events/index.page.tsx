@@ -56,7 +56,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
           {d && <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
-          <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>
+          <Badge variant='secondary' className='text-[11px] font-medium px-2 py-0.5' style={{ backgroundColor: colors.bg, color: colors.text }}>
             {event.kind}
           </Badge>
         </td>
@@ -198,7 +198,7 @@ const EventExplorer = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Event explorer failed:', err)
-        setError(pageToken ? 'Failed to load more events' : 'Failed to load events')
+        setError(err instanceof Error ? err.message : (pageToken ? 'Failed to load more events' : 'Failed to load events'))
       } finally {
         setLoading(false)
       }

@@ -1,15 +1,17 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { SERIES_COLORS } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 import { formatTooltipDate } from './helpers'
 import { type ChartPoint } from './types'
 
 export const DataTable = ({
   data,
   seriesNames,
+  seriesColors,
   granularity,
 }: {
   data: ChartPoint[]
   seriesNames: string[]
+  seriesColors: SeriesColor[]
   granularity: Granularity
 }) => {
   if (data.length === 0) return null
@@ -24,7 +26,7 @@ export const DataTable = ({
                 <span className='flex items-center gap-1.5 justify-end'>
                   <span
                     className='w-2 h-2 rounded-full'
-                    style={{ background: SERIES_COLORS[i % SERIES_COLORS.length].dot }}
+                    style={{ background: seriesColors[i]?.dot }}
                   />
                   {name}
                 </span>

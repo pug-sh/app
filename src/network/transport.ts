@@ -3,13 +3,14 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 import { createValidator } from '@bufbuild/protovalidate'
 import { createRegistry } from '@bufbuild/protobuf'
 import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
+import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { clearJwt, JWT_KEY } from '@/auth/jwt.atoms'
 import { atom } from 'jotai'
 import { toast } from 'sonner'
 
 // Provide the app's file descriptors so the CEL evaluator can resolve cross-file
 // type references in proto constraints (e.g. common.v1.FilterOperator in PropertyFilter).
-const validator = createValidator({ registry: createRegistry(file_common_v1_filters) })
+const validator = createValidator({ registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights) })
 
 const protovalidate: Interceptor = next => async req => {
   if (!req.stream) {

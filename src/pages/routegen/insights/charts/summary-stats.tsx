@@ -1,5 +1,5 @@
 import { compactNumber } from '@/lib/format'
-import type { SeriesColor } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 import { type ChartPoint } from './types'
 
 export const SummaryStats = ({

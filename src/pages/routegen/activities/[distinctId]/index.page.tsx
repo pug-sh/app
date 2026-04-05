@@ -215,7 +215,7 @@ const UserActivity = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Activity feed failed:', err)
-        setError('Failed to load activity feed')
+        setError(err instanceof Error ? err.message : 'Failed to load activity feed')
       } finally {
         setLoading(false)
       }

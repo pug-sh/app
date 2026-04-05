@@ -12,7 +12,6 @@ import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { tsToDate, formatClock, formatDateTime } from '@/lib/timestamp'
-import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -231,7 +230,7 @@ const SessionView = () => {
           <div className='sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5'>
             {uniqueKinds.map(kind => (
               <span key={kind} className='inline-flex items-center gap-1.5 text-xs text-muted-foreground'>
-                <span className={cn('w-2 h-2 rounded-full', kindStyle(kind).dot)} />
+                <span className='w-2 h-2 rounded-full' style={{ backgroundColor: kindStyle(kind).dot }} />
                 {kind}
               </span>
             ))}

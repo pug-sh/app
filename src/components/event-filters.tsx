@@ -14,6 +14,7 @@ import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { kindStyle } from '@/lib/kind-style'
 import { useEffect, useState } from 'react'
 import type { EventFilterEntry, EventFiltersHandle } from '@/hooks/use-event-filters'
+import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,20 @@ const OPERATORS: readonly {
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
 ]
 
-const scopedSchemaCache = new Map<string, GetFilterSchemaResponse>()
+const mergeUniqueValues = (existing: string[], input: string): string[] => {
+  const incoming = input.split(',').map(v => v.trim()).filter(Boolean)
+  if (incoming.length === 0) return existing
+  const seen = new Set(existing)
+  const next = [...existing]
+  for (const item of incoming) {
+    if (!seen.has(item)) {
+      seen.add(item)
+      next.push(item)
+    }
+  }
+  return next
+}
+
 
 const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
   if (!loaded) return 'Loading...'
@@ -94,7 +108,6 @@ const useScopedSchema = (kindFilter?: string) => {
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const kind = kindFilter?.trim() ?? ''
-  const cachedSchema = kind ? (scopedSchemaCache.get(kind) ?? null) : null
   const [result, setResult] = useState<{ key: string; schema: GetFilterSchemaResponse | null; error: string | null }>({
     key: '',
     schema: null,
@@ -102,31 +115,21 @@ const useScopedSchema = (kindFilter?: string) => {
   })
 
   useEffect(() => {
-    if (!kind || cachedSchema) return
+    if (!kind) return
 
     let cancelled = false
-    const loadSchema = async () => {
-      try {
-        const resp = await insightsRPC.getFilterSchema({ eventKind: kind }, { headers })
-        if (cancelled) return
-        scopedSchemaCache.set(kind, resp)
-        setResult({ key: kind, schema: resp, error: null })
-      } catch (err) {
+    fetchSchemaForKind(kind, insightsRPC, headers)
+      .then(resp => { if (!cancelled) setResult({ key: kind, schema: resp, error: null }) })
+      .catch(err => {
         if (cancelled) return
         console.error('getFilterSchema(kind) failed:', err)
-        setResult({
-          key: kind,
-          schema: null,
-          error: err instanceof Error ? err.message : 'Failed to load filter schema',
-        })
-      }
-    }
-    void loadSchema()
+        setResult({ key: kind, schema: null, error: err instanceof Error ? err.message : 'Failed to load filter schema' })
+      })
     return () => { cancelled = true }
-  }, [kind, cachedSchema, insightsRPC, headers])
+  }, [kind, insightsRPC, headers])
 
   const isCurrent = result.key === kind
-  const schema = kind ? (cachedSchema ?? (isCurrent ? result.schema : null)) : null
+  const schema = kind && isCurrent ? result.schema : null
   const schemaError = kind && isCurrent ? result.error : null
   return { schema, schemaError }
 }
@@ -163,9 +166,7 @@ const eventPopoverList = (
                 data-checked={value === ev.name}
                 className='text-xs gap-1.5 py-1.5'
               >
-                {customColor
-                  ? <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: customColor }} />
-                  : <span className={cn('w-1 h-1 rounded-full shrink-0', colors.dot)} />}
+                <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: customColor ?? colors.dot }} />
                 <span className='flex-1 truncate'>{ev.name}</span>
                 <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
                   {compactNumber(ev.count)}
@@ -222,11 +223,7 @@ export const EventChip = ({
       <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>event</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger className='px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer'>
-          {color ? (
-            <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: color }} />
-          ) : (
-            <span className={cn('w-1 h-1 rounded-full shrink-0', colors?.dot)} />
-          )}
+          <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: color ?? colors?.dot }} />
           {value}
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
@@ -321,21 +318,7 @@ export const FilterBuilder = ({
     setVals(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
   }
 
-  const addMultiValues = (input: string) => {
-    const incoming = input.split(',').map(v => v.trim()).filter(Boolean)
-    if (incoming.length === 0) return
-    setVals(prev => {
-      const seen = new Set(prev)
-      const next = [...prev]
-      for (const item of incoming) {
-        if (!seen.has(item)) {
-          seen.add(item)
-          next.push(item)
-        }
-      }
-      return next
-    })
-  }
+  const addMultiValues = (input: string) => setVals(prev => mergeUniqueValues(prev, input))
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -574,17 +557,10 @@ export const FilterChip = ({
 
   const addMultiValues = (input: string) => {
     if (filter.kind !== 'multi') return
-    const incoming = input.split(',').map(v => v.trim()).filter(Boolean)
-    if (incoming.length === 0) return
-    const seen = new Set(filter.values)
-    const next = [...filter.values]
-    for (const item of incoming) {
-      if (!seen.has(item)) {
-        seen.add(item)
-        next.push(item)
-      }
+    const next = mergeUniqueValues(filter.values, input)
+    if (next.length !== filter.values.length) {
+      onUpdate({ property: filter.property, operator: filter.operator, kind: 'multi', values: next })
     }
-    onUpdate({ property: filter.property, operator: filter.operator, kind: 'multi', values: next })
   }
   const handleEditOpenChange = (next: boolean) => {
     setEditOpen(next)

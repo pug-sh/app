@@ -1,4 +1,5 @@
-import { AggregationType, LogicalOperator } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
@@ -61,7 +62,12 @@ const Segments = () => {
 
   useEffect(() => {
     const validEntries = eventFilters.entries.filter(e => e.kind.trim())
-    if (!project || validEntries.length === 0) return
+    if (!project || validEntries.length === 0) {
+      setSegmentIds([])
+      setLoading(false)
+      setError(null)
+      return
+    }
 
     const globalFilters = toProtoFilters(propFilters)
     const filterGroups =
@@ -99,7 +105,7 @@ const Segments = () => {
         if (!cancelled) setSegmentIds(resp.distinctIds)
       } catch (err) {
         console.error('Segment query failed:', err)
-        if (!cancelled) setError('Segment query failed')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Segment query failed')
       } finally {
         if (!cancelled) setLoading(false)
       }

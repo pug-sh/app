@@ -1,6 +1,6 @@
-import { Granularity, type Series } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Granularity, type RetentionCohort as RetentionCohortProto } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
-import type { SeriesColor } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 import { formatTooltipDate } from './helpers'
 
 type CohortRow = {
@@ -35,23 +35,23 @@ const formatCohortLabel = (value: string) => {
 }
 
 export const RetentionCohort = ({
-  series,
+  cohorts,
   granularity,
   seriesColors,
 }: {
-  series: Series[]
+  cohorts: RetentionCohortProto[]
   granularity: Granularity
   seriesColors: SeriesColor[]
 }) => {
-  if (series.length === 0) return null
+  if (cohorts.length === 0) return null
 
-  const rawMax = Math.max(...series.flatMap(s => s.points.map(p => Number(p.value) || 0)), 0)
+  const rawMax = Math.max(...cohorts.flatMap(c => c.points.map(p => Number(p.value) || 0)), 0)
   const ratioInput = rawMax <= 1
-  const columnCount = Math.max(...series.map(s => s.points.length), 0)
-  const rows: CohortRow[] = series.map((s, i) => ({
-    label: s.breakdown?.cohort || `Cohort ${i + 1}`,
-    size: Math.max(0, Math.round(Number(s.total) || 0)),
-    values: s.points.map(p => toPercent(Number(p.value) || 0, ratioInput)),
+  const columnCount = Math.max(...cohorts.map(c => c.points.length), 0)
+  const rows: CohortRow[] = cohorts.map((c, i) => ({
+    label: c.cohort || `Cohort ${i + 1}`,
+    size: Math.max(0, Math.round(c.cohortSize)),
+    values: c.points.map(p => toPercent(Number(p.value) || 0, ratioInput)),
   }))
 
   return (
@@ -100,7 +100,7 @@ export const RetentionCohort = ({
               {Array.from({ length: columnCount }).map((_, ci) => {
                 const value = row.values[ci]
                 const hasValue = typeof value === 'number'
-                const cellDate = series[ri]?.points[ci]?.time
+                const cellDate = cohorts[ri]?.points[ci]?.time
                 const title = hasValue
                   ? `${row.label} · ${formatTooltipDate(tsToDate(cellDate) ?? new Date(), granularity)} · ${value.toFixed(1)}%`
                   : `${row.label} · N/A`

@@ -3,7 +3,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { compactNumber } from '@/lib/format'
 import { useMemo } from 'react'
 import { CartesianGrid, Line, LineChart as ReLineChart, XAxis, YAxis } from 'recharts'
-import type { SeriesColor } from '../colors'
+import type { SeriesColor } from '@/lib/event-colors'
 import { buildChartConfig, buildChartData, formatTooltipLabel } from './common'
 import { niceMax } from './helpers'
 import { type ChartPoint } from './types'

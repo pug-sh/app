@@ -67,7 +67,8 @@ const parseJSONParam = (raw: string | null): unknown => {
   if (!raw) return null
   try {
     return JSON.parse(raw)
-  } catch {
+  } catch (err) {
+    console.warn('Failed to parse query param JSON:', raw, err)
     return null
   }
 }

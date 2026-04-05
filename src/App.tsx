@@ -7,11 +7,19 @@ import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import { workspaceErrorAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, type ComponentType } from 'react'
 
-const AppSidebar = lazy(() => import('@/components/layout/sidebar'))
-const Router = lazy(() => import('@/pages/router'))
-const SignIn = lazy(() => import('@/pages/sign-in'))
+const lazyWithRetry = (loader: () => Promise<{ default: ComponentType }>) =>
+  lazy(() =>
+    loader().catch(() => {
+      window.location.reload()
+      return new Promise<{ default: ComponentType }>(() => {})
+    })
+  )
+
+const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'))
+const Router = lazyWithRetry(() => import('@/pages/router'))
+const SignIn = lazyWithRetry(() => import('@/pages/sign-in'))
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
