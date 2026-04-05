@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { kindStyle } from '@/lib/kind-style'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { EventFilterEntry, EventFiltersHandle } from '@/hooks/use-event-filters'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -45,6 +45,12 @@ const OPERATORS: readonly {
 
 const scopedSchemaCache = new Map<string, GetFilterSchemaResponse>()
 
+const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
+  if (!loaded) return 'Loading...'
+  if (error) return 'Failed to load values'
+  return 'No values'
+}
+
 // ── Suggestions hook ────────────────────────────────────────────────────────
 
 const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?: string) => {
@@ -61,19 +67,20 @@ const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?:
     if (!propertyKey) return
 
     let cancelled = false
-    insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers }).then(
-      resp => {
+    const loadSuggestions = async () => {
+      try {
+        const resp = await insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers })
         if (!cancelled) {
           setResult({ key: requestKey, suggestions: resp.values, error: false })
         }
-      },
-      err => {
+      } catch (err) {
         if (!cancelled) {
           console.error('getPropertyValues failed:', err)
           setResult({ key: requestKey, suggestions: [], error: true })
         }
       }
-    )
+    }
+    void loadSuggestions()
     return () => { cancelled = true }
   }, [propertyKey, source, eventKind, insightsRPC, headers, requestKey])
 
@@ -98,13 +105,13 @@ const useScopedSchema = (kindFilter?: string) => {
     if (!kind || cachedSchema) return
 
     let cancelled = false
-    insightsRPC.getFilterSchema({ eventKind: kind }, { headers }).then(
-      resp => {
+    const loadSchema = async () => {
+      try {
+        const resp = await insightsRPC.getFilterSchema({ eventKind: kind }, { headers })
         if (cancelled) return
         scopedSchemaCache.set(kind, resp)
         setResult({ key: kind, schema: resp, error: null })
-      },
-      err => {
+      } catch (err) {
         if (cancelled) return
         console.error('getFilterSchema(kind) failed:', err)
         setResult({
@@ -113,7 +120,8 @@ const useScopedSchema = (kindFilter?: string) => {
           error: err instanceof Error ? err.message : 'Failed to load filter schema',
         })
       }
-    )
+    }
+    void loadSchema()
     return () => { cancelled = true }
   }, [kind, cachedSchema, insightsRPC, headers])
 
@@ -132,17 +140,17 @@ const eventPopoverList = (
   getEventColor: ((eventName: string) => string) | undefined,
   onSelect: (name: string) => void,
 ) => {
-  const emptyMessage = schemaError
-    ? 'Failed to load events'
-    : events.length === 0
-      ? 'Loading event names...'
-      : 'No events found'
+  const getEmptyMessage = () => {
+    if (schemaError) return 'Failed to load events'
+    if (events.length === 0) return 'Loading event names...'
+    return 'No events found'
+  }
 
   return (
     <Command>
       <CommandInput placeholder='Search events...' className='text-xs' />
       <CommandList>
-        <CommandEmpty className='py-4 text-xs'>{emptyMessage}</CommandEmpty>
+        <CommandEmpty className='py-4 text-xs'>{getEmptyMessage()}</CommandEmpty>
         <CommandGroup>
           {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
             const colors = kindStyle(ev.name)
@@ -187,7 +195,7 @@ export const EventChip = ({
   getEventColor?: (eventName: string) => string
 }) => {
   const [open, setOpen] = useState(false)
-  const colors = value ? kindStyle(value) : null
+  const colors = value ? kindStyle(value) : undefined
 
   if (!value) {
     return (
@@ -217,7 +225,7 @@ export const EventChip = ({
           {color ? (
             <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: color }} />
           ) : (
-            <span className={cn('w-1 h-1 rounded-full shrink-0', colors!.dot)} />
+            <span className={cn('w-1 h-1 rounded-full shrink-0', colors?.dot)} />
           )}
           {value}
         </PopoverTrigger>
@@ -259,7 +267,6 @@ export const FilterBuilder = ({
   const [val, setVal] = useState('')
   const [vals, setVals] = useState<string[]>([])
   const [multiInput, setMultiInput] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
   const { schema: scopedSchema, schemaError: scopedSchemaError } = useScopedSchema(kindFilter)
 
   const opMeta = OPERATORS.find(o => o.value === op)
@@ -474,7 +481,7 @@ export const FilterBuilder = ({
             <Command>
               <CommandInput placeholder='Search values...' className='text-xs' />
               <CommandList>
-                <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
+                <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
                 <CommandGroup>
                   {suggestions.map(s => (
                     <CommandItem key={s} value={s} onSelect={() => toggleVal(s)} className='text-xs py-1.5 font-mono gap-1.5'>
@@ -497,7 +504,6 @@ export const FilterBuilder = ({
           <div>
             <div className='p-2 border-b border-border/60'>
               <input
-                ref={inputRef}
                 placeholder='Type a value...'
                 value={val}
                 onChange={e => setVal(e.target.value)}
@@ -509,7 +515,7 @@ export const FilterBuilder = ({
             <Command>
               <CommandInput placeholder='Search values...' className='text-xs' />
               <CommandList>
-                <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
+                <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
                 <CommandGroup>
                   {suggestions.map(s => (
                     <CommandItem
@@ -655,7 +661,7 @@ export const FilterChip = ({
                 <Command>
                   <CommandInput placeholder='Search...' className='text-xs' />
                   <CommandList>
-                    <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
+                    <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
                     <CommandGroup>
                       {suggestions.map(s => {
                         const isSelected = filter.values.includes(s)
@@ -699,7 +705,7 @@ export const FilterChip = ({
                 <Command>
                   <CommandInput placeholder='Search...' className='text-xs' />
                   <CommandList>
-                    <CommandEmpty className='py-3 text-xs'>{!loaded ? 'Loading...' : error ? 'Failed to load values' : 'No values'}</CommandEmpty>
+                    <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
                     <CommandGroup>
                       {suggestions.map(s => (
                         <CommandItem

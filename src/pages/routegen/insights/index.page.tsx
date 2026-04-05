@@ -61,6 +61,12 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Table', value: 'table' },
 ]
 
+const getPageDescription = (insightType: InsightType): string => {
+  if (insightType === InsightType.TRENDS) return 'Analyze event trends'
+  if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
+  return 'Analyze step-by-step conversion'
+}
+
 // ── Option Chip ─────────────────────────────────────────────────────────────
 
 const OptionChip = <T extends string | number>({
@@ -292,6 +298,13 @@ const Insights = () => {
   const isTimeSeriesInsight = isTrends || isRetention
   const hasFunnelData = funnelSteps.some(step => step.count > 0)
   const allZero = chartData.every(d => d.values.every(v => v === 0))
+  const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
+  const maxEvents = isRetention ? 2 : undefined
+  const renderRowExtra = isTrends
+    ? (i: number) => (
+      <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+    )
+    : undefined
 
   const renderChart = () => {
     if (allZero) {
@@ -307,23 +320,74 @@ const Insights = () => {
     return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
   }
 
+  const renderLoadingEmptyState = () => {
+    if (loading) return null
+
+    return (
+      <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
+        <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+        <p className='text-sm font-medium mb-1'>No data yet</p>
+        <p className='text-xs'>Pick an event above to start</p>
+      </div>
+    )
+  }
+
+  const renderFunnelContent = () => {
+    if (funnelSteps.length === 0) return renderLoadingEmptyState()
+
+    if (hasFunnelData) {
+      return <FunnelChart steps={funnelSteps} seriesColors={seriesColors} />
+    }
+
+    return (
+      <div className='flex items-center justify-center h-48 text-muted-foreground'>
+        <p className='text-sm'>No events recorded in this period</p>
+      </div>
+    )
+  }
+
+  const renderMainContent = () => {
+    if (error) {
+      return (
+        <div className='flex flex-col items-center justify-center py-16'>
+          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm font-medium mb-1'>{error}</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+            Retry
+          </Button>
+        </div>
+      )
+    }
+
+    if (isRetention && series.length > 0) {
+      return <RetentionCohort series={series} granularity={granularity} seriesColors={seriesColors} />
+    }
+
+    if (isTimeSeriesInsight && chartData.length > 0) {
+      return (
+        <div>
+          <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
+          {renderChart()}
+        </div>
+      )
+    }
+
+    if (!isTrends) return renderFunnelContent()
+
+    return renderLoadingEmptyState()
+  }
+
   if (!project) return <NoProject title='Insights' icon={TrendingUp} />
 
   return (
     <Page
       title='Insights'
-      description={
-        isTrends
-          ? 'Analyze event trends'
-          : isRetention
-            ? 'Analyze cohort retention over time'
-            : 'Analyze step-by-step conversion'
-      }
+      description={getPageDescription(insightType)}
     >
       {/* Query config — sticky */}
       <div className={cn(
         '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2',
-        isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
+        stickyClassName
       )}>
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
@@ -348,12 +412,8 @@ const Insights = () => {
             showLetters
             seriesColors={eventFilterColors}
             getEventColor={eventName => getSeriesColor(eventName).dot}
-            renderRowExtra={isTrends
-              ? i => (
-                <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
-              )
-              : undefined}
-            maxEvents={isRetention ? 2 : undefined}
+            renderRowExtra={renderRowExtra}
+            maxEvents={maxEvents}
           />
           {isRetention && (
             <div className='flex items-center gap-1.5 text-[11px] text-muted-foreground'>
@@ -387,38 +447,7 @@ const Insights = () => {
         </div>
       </div>
 
-      {error ? (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
-            Retry
-          </Button>
-        </div>
-      ) : isRetention && series.length > 0 ? (
-        <RetentionCohort series={series} granularity={granularity} seriesColors={seriesColors} />
-      ) : isTimeSeriesInsight && chartData.length > 0 ? (
-        <div>
-          <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
-          {renderChart()}
-        </div>
-      ) : !isTrends && funnelSteps.length > 0 ? (
-        hasFunnelData ? (
-          <FunnelChart steps={funnelSteps} seriesColors={seriesColors} />
-        ) : (
-          <div className='flex items-center justify-center h-48 text-muted-foreground'>
-            <p className='text-sm'>No events recorded in this period</p>
-          </div>
-        )
-      ) : (
-        !loading && (
-          <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-            <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-            <p className='text-sm font-medium mb-1'>No data yet</p>
-            <p className='text-xs'>Pick an event above to start</p>
-          </div>
-        )
-      )}
+      {renderMainContent()}
     </Page>
   )
 }

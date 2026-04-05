@@ -23,14 +23,15 @@ const fetchSchemaForKind = (
   const running = inFlight.get(kind)
   if (running) return running
 
-  const request = rpc.getFilterSchema({ eventKind: kind }, { headers })
-    .then(resp => {
+  const request = (async () => {
+    try {
+      const resp = await rpc.getFilterSchema({ eventKind: kind }, { headers })
       schemaCache.set(kind, resp)
       return resp
-    })
-    .finally(() => {
+    } finally {
       inFlight.delete(kind)
-    })
+    }
+  })()
   inFlight.set(kind, request)
   return request
 }
@@ -93,13 +94,13 @@ export const useGlobalFilterSchema = ({
     if (kinds.length === 0) return
 
     let cancelled = false
-    Promise.all(kinds.map(kind => fetchSchemaForKind(kind, insightsRPC, headers))).then(
-      schemas => {
+    const loadSchemas = async () => {
+      try {
+        const schemas = await Promise.all(kinds.map(kind => fetchSchemaForKind(kind, insightsRPC, headers)))
         if (!cancelled) {
           setResult({ key: kindsKey, schemas, error: null })
         }
-      },
-      err => {
+      } catch (err) {
         if (!cancelled) {
           console.error('fetch common global filter schema failed:', err)
           setResult({
@@ -109,7 +110,8 @@ export const useGlobalFilterSchema = ({
           })
         }
       }
-    )
+    }
+    void loadSchemas()
     return () => { cancelled = true }
   }, [kindsKey, insightsRPC, headers])
 

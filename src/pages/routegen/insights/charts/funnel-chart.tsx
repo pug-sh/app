@@ -19,12 +19,15 @@ export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seri
     const currentCount = Math.max(step.count, 0)
     const prevCount = Math.max(steps[index - 1]?.count ?? currentCount, 0)
     const fromStart = firstStepCount > 0 ? (currentCount / firstStepCount) * 100 : 0
-    const fromPrev = index === 0
-      ? 100
-      : prevCount > 0
-        ? (currentCount / prevCount) * 100
-        : 0
-    const dropOff = index === 0 ? 0 : Math.max(prevCount - currentCount, 0)
+    let fromPrev = 100
+    if (index > 0) {
+      fromPrev = prevCount > 0 ? (currentCount / prevCount) * 100 : 0
+    }
+
+    let dropOff = 0
+    if (index > 0) {
+      dropOff = Math.max(prevCount - currentCount, 0)
+    }
 
     return {
       event: step.name || `Step ${index + 1}`,
