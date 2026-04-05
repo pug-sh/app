@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 /** Format a date as relative time string. */
 export function formatRelative(d: Date) {
@@ -11,14 +11,13 @@ export function formatRelative(d: Date) {
 
 /** Returns a live-updating relative time string that refreshes every 30s. */
 export function useRelativeTime(date: Date | null) {
-  const [text, setText] = useState(() => (date ? formatRelative(date) : ''))
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
     if (!date) return
-    setText(formatRelative(date))
-    const id = setInterval(() => setText(formatRelative(date)), 30_000)
+    const id = setInterval(() => setTick((t) => t + 1), 30_000)
     return () => clearInterval(id)
   }, [date])
 
-  return text
+  return useMemo(() => (date ? formatRelative(date) : ''), [date, tick])
 }
