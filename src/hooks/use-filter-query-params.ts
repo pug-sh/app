@@ -89,7 +89,7 @@ const parseJSONParam = (raw: string | null): unknown => {
   }
 }
 
-export const readFilterQueryParams = (search = typeof window === 'undefined' ? '' : window.location.search) => {
+export const readFilterQueryParams = (search = window.location.search) => {
   const params = new URLSearchParams(search)
   const rawEventFilters = parseJSONParam(params.get(EVENT_FILTERS_PARAM))
   const rawPropFilters = parseJSONParam(params.get(PROP_FILTERS_PARAM))
@@ -109,12 +109,8 @@ export const readFilterQueryParams = (search = typeof window === 'undefined' ? '
     ? rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
     : []
 
-  const insightType = Number.isFinite(rawInsightType) && VALID_INSIGHT_TYPES.includes(rawInsightType)
-    ? (rawInsightType as InsightType)
-    : undefined
-  const granularity = Number.isFinite(rawGranularity) && VALID_GRANULARITIES.includes(rawGranularity)
-    ? (rawGranularity as Granularity)
-    : undefined
+  const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
+  const granularity = VALID_GRANULARITIES.includes(rawGranularity) ? (rawGranularity as Granularity) : undefined
   const timeRange: TimeRange | undefined =
     Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo)
       ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }
@@ -132,7 +128,6 @@ export const writeFilterQueryParams = (
     timeRange?: TimeRange
   }
 ) => {
-  if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
 
   const setOrDelete = (key: string, value: string | undefined) => {
