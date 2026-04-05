@@ -39,7 +39,7 @@ export const useDebouncedQuery = <T,>(
       }
     }, debounceMs)
     return () => { cancelled = true; clearTimeout(debounceRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryFn identity changes every render; queryKey drives re-execution
   }, [queryKey, enabled, retryCount])
 
   return { data, loading, error, retry: () => setRetryCount(c => c + 1) }

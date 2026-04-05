@@ -17,5 +17,5 @@ for (const [key, loader] of Object.entries(pages)) {
     .slice(2, -1)
     .map(s => (s.startsWith('[') && s.endsWith(']') ? ':' + s.slice(1, -1) : s))
   const path = '/p/:projectId/' + segments.join('/')
-  routes[path] = { component: lazyWithRetry(loader) }
+  routes[path] = { component: lazyWithRetry(loader, path) }
 }

@@ -47,6 +47,7 @@ const OPERATORS: readonly {
 // eslint-disable-next-line react-refresh/only-export-components
 export const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
   const meta = OPERATORS.find(o => o.value === operator)
+  if (!meta) console.warn('Unknown filter operator:', operator)
   if (meta?.noValue) return { property, operator, kind: 'presence' }
   if (meta?.multiValue) {
     const values = Array.isArray(payload) ? payload : payload ? [payload] : []
@@ -570,7 +571,7 @@ export const FilterBuilder = ({
         {step === 'value' && opMeta?.multiValue && (
           <MultiValueEditor
             values={vals}
-            onAdd={input => { addMultiValues(input) }}
+            onAdd={addMultiValues}
             onRemove={v => setVals(prev => prev.filter(x => x !== v))}
             onToggle={toggleVal}
             suggestions={suggestions}
@@ -636,6 +637,13 @@ export const FilterChip = ({
 
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
+  const commitEdit = () => {
+    const next = editInput.trim()
+    if (!next) return
+    onUpdate(createFilter(filter.property, filter.operator, next))
+    setEditOpen(false)
+  }
+
   const addMultiValues = (input: string) => {
     if (filter.kind !== 'multi') return
     const next = mergeUniqueValues(filter.values, input)
@@ -691,12 +699,7 @@ export const FilterChip = ({
               <SingleValueEditor
                 value={editInput}
                 onChange={setEditInput}
-                onCommit={() => {
-                  const next = editInput.trim()
-                  if (!next) return
-                  onUpdate(createFilter(filter.property, filter.operator, next))
-                  setEditOpen(false)
-                }}
+                onCommit={commitEdit}
                 suggestions={suggestions}
                 loaded={loaded}
                 error={error}
@@ -705,12 +708,7 @@ export const FilterChip = ({
                     <Button
                       size='sm'
                       className='h-6 text-xs px-3'
-                      onClick={() => {
-                        const next = editInput.trim()
-                        if (!next) return
-                        onUpdate(createFilter(filter.property, filter.operator, next))
-                        setEditOpen(false)
-                      }}
+                      onClick={commitEdit}
                       disabled={!editInput.trim()}
                     >
                       Apply

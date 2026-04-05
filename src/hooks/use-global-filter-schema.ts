@@ -133,14 +133,16 @@ export const useGlobalFilterSchema = ({
         else failures.push(r.reason instanceof Error ? r.reason.message : 'Unknown error')
       }
       if (failures.length > 0) console.warn('Some filter schemas failed to load:', failures)
+      let error: string | null = null
+      if (schemas.length === 0) {
+        error = failures[0] ?? 'Failed to load filter schema'
+      } else if (failures.length > 0) {
+        error = 'Some filter schemas failed to load — filter properties may be incomplete'
+      }
       setResult({
         key: kindsKey,
         schemas: schemas.length > 0 ? schemas : null,
-        error: schemas.length === 0
-          ? (failures[0] ?? 'Failed to load filter schema')
-          : failures.length > 0
-            ? 'Some filter schemas failed to load — filter properties may be incomplete'
-            : null,
+        error,
       })
     }
     void loadSchemas()

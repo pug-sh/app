@@ -54,15 +54,15 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
   notification_received: color('#db2777'),
   notification_clicked:  color('#ec4899'),
 
-  // errors — red (distinct from rage/dead click which are orange-red)
+  // errors — dark red (same hue family as rage/dead click but darker)
   error_occurred:       color('#b91c1c'),
 
   // sharing — orange
   share:                color('#ea580c'),
 }
 
-// Fallback palette for unmapped events — visually distinct from the semantic
-// colors above so unknown events don't accidentally look related.
+// Fallback palette for unmapped events — broad hue range for variety.
+// Some overlap with the semantic map; collisions are unlikely when few events are unmapped.
 const FALLBACK_COLORS: SeriesColor[] = [
   color('#3b6cf0'),
   color('#059669'),

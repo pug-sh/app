@@ -61,7 +61,7 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Table', value: 'table' },
 ]
 
-const getPageDescription = (insightType: InsightType): string => {
+const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
   return 'Analyze step-by-step conversion'
@@ -142,7 +142,7 @@ const Insights = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
 
-  const getAggregation = (idx: number) => (eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL) as AggregationType
+  const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
 
   // Cap entries at 2 when switching to retention mode
   const eventFiltersRef = useRef(eventFilters)
@@ -150,7 +150,7 @@ const Insights = () => {
   useEffect(() => {
     if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
     eventFiltersRef.current.reset(eventFiltersRef.current.entries.slice(0, 2))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to insightType changes; entries read via ref
   }, [insightType])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
@@ -208,14 +208,21 @@ const Insights = () => {
   )
 
   const result = queryResult ?? { case: undefined, value: undefined }
+  if (result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention') {
+    console.warn('Unrecognized insight result case:', result.case)
+  }
 
   const trendSeries = result.case === 'trends' ? result.value.series : []
   const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
   const funnelSteps = useMemo(() => {
     if (result.case !== 'funnel') return []
-    const inputOrder = new Map(eventFilters.entries.filter(e => e.kind.trim()).map((e, i) => [e.kind, i]))
+    const kindEntries = eventFilters.entries.filter(e => e.kind.trim())
     return [...result.value.steps]
-      .sort((a, b) => (inputOrder.get(a.eventKind) ?? 999) - (inputOrder.get(b.eventKind) ?? 999))
+      .sort((a, b) => {
+        const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
+        const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+      })
       .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
   }, [result, eventFilters.entries])
 

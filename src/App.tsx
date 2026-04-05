@@ -10,9 +10,9 @@ import { useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 
-const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'))
-const Router = lazyWithRetry(() => import('@/pages/router'))
-const SignIn = lazyWithRetry(() => import('@/pages/sign-in'))
+const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
+const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
+const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -67,13 +67,15 @@ const App = () => {
   return (
     <>
       <ThemeSync />
-      {!authenticated
-        ? (
-          <Suspense fallback={<LoadingSpinner />}>
-            <SignIn />
-          </Suspense>
-        )
-        : workspaceError ? <WorkspaceError message={workspaceError} /> : <AuthenticatedApp />}
+      {!authenticated ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <SignIn />
+        </Suspense>
+      ) : workspaceError ? (
+        <WorkspaceError message={workspaceError} />
+      ) : (
+        <AuthenticatedApp />
+      )}
       <Toaster position='bottom-right' />
     </>
   )

@@ -1,11 +1,20 @@
 import type { ActiveFilter } from '@/components/event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
-import { Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 
 const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
+const VALID_AGGREGATIONS = [AggregationType.TOTAL, AggregationType.UNIQUE_USERS, AggregationType.PER_USER_AVG]
+const VALID_OPERATORS = new Set([
+  FilterOperator.EQUALS, FilterOperator.NOT_EQUALS,
+  FilterOperator.CONTAINS, FilterOperator.NOT_CONTAINS,
+  FilterOperator.IN, FilterOperator.NOT_IN,
+  FilterOperator.IS_SET, FilterOperator.IS_NOT_SET,
+  FilterOperator.GT, FilterOperator.GTE,
+  FilterOperator.LT, FilterOperator.LTE,
+])
 
 const EVENT_FILTERS_PARAM = 'ef'
 const PROP_FILTERS_PARAM = 'pf'
@@ -27,6 +36,7 @@ const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
   if (typeof v.property !== 'string' || typeof v.operator !== 'number') return null
+  if (!VALID_OPERATORS.has(v.operator as FilterOperator)) return null
   return { property: v.property, operator: v.operator as FilterOperator }
 }
 
@@ -63,7 +73,10 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   const v = value as Record<string, unknown>
   if (typeof v.kind !== 'string' || !Array.isArray(v.filters)) return null
   const filters = v.filters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
-  return { kind: v.kind, filters }
+  const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
+    ? (v.aggregation as AggregationType)
+    : undefined
+  return { kind: v.kind, filters, ...(aggregation !== undefined && { aggregation }) }
 }
 
 const parseJSONParam = (raw: string | null): unknown => {

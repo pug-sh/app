@@ -1,10 +1,11 @@
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 
 export type EventFilterEntry = {
   kind: string
   filters: ActiveFilter[]
-  aggregation?: number // AggregationType enum value — kept as number to stay generic
+  aggregation?: AggregationType
 }
 
 export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
@@ -46,7 +47,7 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
     )
   }
 
-  const setAggregation = (idx: number, aggregation: number) => {
+  const setAggregation = (idx: number, aggregation: AggregationType) => {
     setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, aggregation } : e)))
   }
 
