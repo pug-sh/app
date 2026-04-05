@@ -17,8 +17,14 @@ export const buildChartData = (
   data: ChartPoint[],
   seriesNames: string[],
   granularity: Granularity
-): InsightsDatum[] =>
-  data.map(point => {
+): InsightsDatum[] => {
+  let warned = false
+  return data.map(point => {
+    if (!warned && point.values.length !== seriesNames.length) {
+      console.warn('Chart data misalignment: expected', seriesNames.length, 'values per point, got', point.values.length)
+      warned = true
+    }
+
     const row: InsightsDatum = {
       axisLabel: formatAxisDate(point.date, granularity),
       tooltipLabel: formatTooltipDate(point.date, granularity),
@@ -30,6 +36,7 @@ export const buildChartData = (
 
     return row
   })
+}
 
 export const formatTooltipLabel = (_: unknown, payload: Array<Record<string, unknown>> = []) => {
   const entry = payload[0] as { payload?: InsightsDatum } | undefined

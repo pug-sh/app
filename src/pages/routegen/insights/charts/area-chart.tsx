@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
 import type { SeriesColor } from '@/lib/event-colors'
 import { buildChartConfig, buildChartData, formatTooltipLabel } from './common'
-import { niceMax } from './helpers'
+import { computeYMax } from './helpers'
 import { type ChartPoint } from './types'
 
 export const AreaChart = ({
@@ -21,10 +21,7 @@ export const AreaChart = ({
 }) => {
   const chartConfig = useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors])
   const chartData = useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity])
-  const yMax = useMemo(() => {
-    const allVals = data.flatMap(d => d.values)
-    return niceMax(Math.max(...allVals, 0))
-  }, [data])
+  const yMax = useMemo(() => computeYMax(data), [data])
 
   if (data.length === 0) return null
 

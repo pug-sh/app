@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
-import { kindStyle } from '@/lib/kind-style'
+import { getSeriesColor } from '@/lib/event-colors'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -37,7 +37,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const customProps = structToEntries(event.customProperties)
   const inlineProps = customProps.slice(0, 3)
   const hasMore = autoProps.length > 0 || customProps.length > 3
-  const colors = kindStyle(event.kind)
+  const colors = getSeriesColor(event.kind)
   const platform = structGet(event.autoProperties, '$platform')
   const osVersion = structGet(event.autoProperties, '$os_version')
   const city = structGet(event.autoProperties, '$city')
@@ -56,7 +56,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
           {d && <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
-          <Badge variant='secondary' className='text-[11px] font-medium px-2 py-0.5' style={{ backgroundColor: colors.bg, color: colors.text }}>
+          <Badge variant='secondary' className='text-[11px] font-medium px-2 py-0.5' style={{ backgroundColor: colors.fill, color: colors.dot }}>
             {event.kind}
           </Badge>
         </td>
@@ -127,10 +127,7 @@ const EventExplorer = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
-  const initialFilterState = useMemo(
-    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
-    []
-  )
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
   // Applied filter state (drives API calls)
   const eventFilters = useEventFilters(initialFilterState.eventFilters)

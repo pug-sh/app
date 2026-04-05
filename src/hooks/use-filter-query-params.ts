@@ -4,6 +4,9 @@ import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 
+const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
+const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
+
 const EVENT_FILTERS_PARAM = 'ef'
 const PROP_FILTERS_PARAM = 'pf'
 const INSIGHT_TYPE_PARAM = 'it'
@@ -73,7 +76,7 @@ const parseJSONParam = (raw: string | null): unknown => {
   }
 }
 
-export const readFilterQueryParams = (search: string) => {
+export const readFilterQueryParams = (search = typeof window === 'undefined' ? '' : window.location.search) => {
   const params = new URLSearchParams(search)
   const rawEventFilters = parseJSONParam(params.get(EVENT_FILTERS_PARAM))
   const rawPropFilters = parseJSONParam(params.get(PROP_FILTERS_PARAM))
@@ -93,8 +96,12 @@ export const readFilterQueryParams = (search: string) => {
     ? rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
     : []
 
-  const insightType = Number.isFinite(rawInsightType) ? rawInsightType as InsightType : undefined
-  const granularity = Number.isFinite(rawGranularity) ? rawGranularity as Granularity : undefined
+  const insightType = Number.isFinite(rawInsightType) && VALID_INSIGHT_TYPES.includes(rawInsightType)
+    ? (rawInsightType as InsightType)
+    : undefined
+  const granularity = Number.isFinite(rawGranularity) && VALID_GRANULARITIES.includes(rawGranularity)
+    ? (rawGranularity as Granularity)
+    : undefined
   const timeRange: TimeRange | undefined =
     Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo)
       ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }

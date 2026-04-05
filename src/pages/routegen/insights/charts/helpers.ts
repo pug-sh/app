@@ -1,5 +1,6 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { fmtDate } from '@/lib/date-presets'
+import type { ChartPoint } from './types'
 
 export const formatAxisDate = (d: Date, granularity: Granularity): string => {
   if (granularity === Granularity.HOUR)
@@ -34,4 +35,11 @@ export const niceMax = (v: number): number => {
   if (norm <= 2) return 2 * mag
   if (norm <= 5) return 5 * mag
   return 10 * mag
+}
+
+export const computeYMax = (data: ChartPoint[], stacked = false) => {
+  const allVals = stacked
+    ? data.map(d => d.values.reduce((a, b) => a + b, 0))
+    : data.flatMap(d => d.values)
+  return niceMax(Math.max(...allVals, 0))
 }

@@ -4,8 +4,14 @@ import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { useEffect, useMemo, useState } from 'react'
 
-const schemaCache = new Map<string, GetFilterSchemaResponse>()
+const CACHE_TTL = 300_000 // 5 minutes
+const schemaCache = new Map<string, { data: GetFilterSchemaResponse; ts: number }>()
 const inFlight = new Map<string, Promise<GetFilterSchemaResponse>>()
+
+export const clearSchemaCache = () => {
+  schemaCache.clear()
+  inFlight.clear()
+}
 
 const cacheKey = (kind: string, headers: HeadersInit | undefined) => {
   const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
@@ -26,7 +32,13 @@ export const fetchSchemaForKind = (
 ) => {
   const key = cacheKey(kind, headers)
   const cached = schemaCache.get(key)
-  if (cached) return Promise.resolve(cached)
+  if (cached) {
+    if (Date.now() - cached.ts > CACHE_TTL) {
+      schemaCache.delete(key)
+    } else {
+      return Promise.resolve(cached.data)
+    }
+  }
 
   const running = inFlight.get(key)
   if (running) return running
@@ -34,7 +46,7 @@ export const fetchSchemaForKind = (
   const request = (async () => {
     try {
       const resp = await rpc.getFilterSchema({ eventKind: kind }, { headers })
-      schemaCache.set(key, resp)
+      schemaCache.set(key, { data: resp, ts: Date.now() })
       return resp
     } finally {
       inFlight.delete(key)
@@ -84,6 +96,15 @@ export const useGlobalFilterSchema = ({
 }) => {
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
+
+  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
+    ? (headers as Record<string, string>)['x-project-id'] ?? ''
+    : ''
+
+  useEffect(() => {
+    clearSchemaCache()
+  }, [projectId])
+
   const [result, setResult] = useState<{
     key: string
     schemas: GetFilterSchemaResponse[] | null

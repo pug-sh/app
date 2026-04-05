@@ -5,17 +5,10 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Toaster } from '@/components/ui/sonner'
 import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import { workspaceErrorAtom } from '@/data/workspace.atoms'
+import { lazyWithRetry } from '@/lib/lazy'
 import { useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { lazy, Suspense, useEffect, type ComponentType } from 'react'
-
-const lazyWithRetry = (loader: () => Promise<{ default: ComponentType }>) =>
-  lazy(() =>
-    loader().catch(() => {
-      window.location.reload()
-      return new Promise<{ default: ComponentType }>(() => {})
-    })
-  )
+import { Suspense, useEffect } from 'react'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'))
 const Router = lazyWithRetry(() => import('@/pages/router'))

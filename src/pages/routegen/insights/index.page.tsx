@@ -2,7 +2,6 @@ import {
   AggregationType,
   Granularity,
   InsightType,
-  type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
@@ -21,9 +20,10 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
@@ -125,12 +125,9 @@ const Insights = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
-  const initialFilterState = useMemo(
-    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
-    []
-  )
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
-  const baseFilters = useEventFilters(initialFilterState.eventFilters)
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve())
   const [insightType, setInsightType] = useState<InsightType>(() =>
     initialFilterState.insightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialFilterState.insightType)
@@ -142,58 +139,25 @@ const Insights = () => {
       ? initialFilterState.granularity
       : Granularity.DAY
   )
-  const [aggregations, setAggregations] = useState<AggregationType[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
 
-  const getAggregation = (idx: number) => aggregations[idx] ?? AggregationType.TOTAL
-  const setAggregation = (idx: number, agg: AggregationType) => {
-    setAggregations(prev => {
-      const next = [...prev]
-      while (next.length <= idx) next.push(AggregationType.TOTAL)
-      next[idx] = agg
-      return next
-    })
-  }
+  const getAggregation = (idx: number) => (eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL) as AggregationType
 
-  // Wrap mutations to keep aggregations array in sync with entries
-  const removeWithAgg = useCallback((idx: number) => {
-    baseFilters.removeEvent(idx)
-    setAggregations(prev => prev.filter((_, i) => i !== idx))
-  }, [baseFilters])
-  const addEventWithAgg = useCallback((kind: string) => {
-    baseFilters.addEvent(kind)
-    setAggregations(prev => [...prev, AggregationType.TOTAL])
-  }, [baseFilters])
-  const updateEventKindWithAgg = useCallback((idx: number, kind: string) => {
-    if (!kind) {
-      removeWithAgg(idx)
-    } else {
-      baseFilters.updateEventKind(idx, kind)
-    }
-  }, [baseFilters, removeWithAgg])
-  const eventFilters = useMemo(() => ({
-    ...baseFilters,
-    addEvent: addEventWithAgg,
-    removeEvent: removeWithAgg,
-    updateEventKind: updateEventKindWithAgg,
-  }), [baseFilters, addEventWithAgg, removeWithAgg, updateEventKindWithAgg])
-
+  // Cap entries at 2 when switching to retention mode
+  const eventFiltersRef = useRef(eventFilters)
+  eventFiltersRef.current = eventFilters
   useEffect(() => {
-    if (insightType !== InsightType.RETENTION || eventFilters.entries.length <= 2) return
-    baseFilters.reset(eventFilters.entries.slice(0, 2))
-    setAggregations(prev => prev.slice(0, 2))
-  }, [insightType, eventFilters.entries.length, baseFilters])
+    if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
+    eventFiltersRef.current.reset(eventFiltersRef.current.entries.slice(0, 2))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insightType])
+
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
     selectedEventKinds: eventFilters.entries.map(e => e.kind),
   })
-
-  const [result, setResult] = useState<QueryResponse['result']>({ case: undefined })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -203,72 +167,47 @@ const Insights = () => {
     writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange })
   }, [eventFilters.entries, propFilters, insightType, granularity, timeRange])
 
-  // Auto-run query when params change
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const validEntries = useMemo(() => eventFilters.entries.filter(e => e.kind.trim()), [eventFilters.entries])
+
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
     timeRange,
     insightType,
     granularity,
-    aggregations,
     propFilters,
-    retryCount,
   })
 
-  useEffect(() => {
-    const validEntries = eventFilters.entries.filter(e => e.kind.trim())
-    if (!project || validEntries.length === 0 || !timeRange) {
-      setResult({ case: undefined })
-      setLoading(false)
-      setError(null)
-      return
-    }
+  const { data: queryResult, loading, error, retry } = useDebouncedQuery(
+    queryKey,
+    async () => {
+      const globalFilters = toProtoFilters(propFilters)
+      const filterGroups =
+        globalFilters.length > 0
+          ? [{ filters: globalFilters, operator: LogicalOperator.AND }]
+          : []
+      const resp = await insightsRPC.query(
+        {
+          insightType,
+          granularity,
+          timeRange: toProtoTimeRange(timeRange),
+          events: validEntries.map((entry, i) => ({
+            event: {
+              kind: entry.kind,
+              filters: toProtoFilters(entry.filters),
+            },
+            aggregation: insightType === InsightType.TRENDS ? getAggregation(i) : AggregationType.TOTAL,
+          })),
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+        },
+        { headers }
+      )
+      return resp.result
+    },
+    { enabled: !!project && validEntries.length > 0 && !!timeRange }
+  )
 
-    const globalFilters = toProtoFilters(propFilters)
-    const filterGroups =
-      globalFilters.length > 0
-        ? [
-          {
-            filters: globalFilters,
-            operator: LogicalOperator.AND,
-          },
-        ]
-        : []
-
-    let cancelled = false
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const resp = await insightsRPC.query(
-          {
-            insightType,
-            granularity,
-            timeRange: toProtoTimeRange(timeRange),
-            events: validEntries.map((entry, i) => ({
-              event: {
-                kind: entry.kind,
-                filters: toProtoFilters(entry.filters),
-              },
-              aggregation: insightType === InsightType.TRENDS ? getAggregation(i) : AggregationType.TOTAL,
-            })),
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-          },
-          { headers }
-        )
-        if (!cancelled) setResult(resp.result)
-      } catch (err) {
-        console.error('Insights query failed:', err)
-        if (!cancelled) { setResult({ case: undefined }); setError(err instanceof Error ? err.message : 'Failed to load insights') }
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }, 300)
-    return () => { cancelled = true; clearTimeout(debounceRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey already captures all user-controlled query inputs
-  }, [queryKey, project, insightsRPC, headers])
+  const result = queryResult ?? { case: undefined, value: undefined }
 
   const trendSeries = result.case === 'trends' ? result.value.series : []
   const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
@@ -296,10 +235,16 @@ const Insights = () => {
   )
   const chartData: ChartPoint[] =
     trendSeries.length > 0
-      ? trendSeries[0].points.map((p, i) => ({
-        date: tsToDate(p.time) ?? new Date(),
-        values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-      }))
+      ? trendSeries[0].points
+        .map((p, i) => {
+          const date = tsToDate(p.time)
+          if (!date) return null
+          return {
+            date,
+            values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
+          }
+        })
+        .filter((d): d is ChartPoint => d !== null)
       : []
 
   const isTrends = insightType === InsightType.TRENDS
@@ -311,7 +256,7 @@ const Insights = () => {
   const maxEvents = isRetention ? 2 : undefined
   const renderRowExtra = isTrends
     ? (i: number) => (
-      <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => setAggregation(i, v)} />
+      <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => eventFilters.setAggregation(i, v)} />
     )
     : undefined
 
@@ -361,7 +306,7 @@ const Insights = () => {
         <div className='flex flex-col items-center justify-center py-16'>
           <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
           <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
             Retry
           </Button>
         </div>

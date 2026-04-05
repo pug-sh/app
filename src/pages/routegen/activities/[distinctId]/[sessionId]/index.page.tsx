@@ -2,7 +2,7 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import { activityRPCAtom } from '@/api/rpc'
 import LoadingSpinner from '@/components/loading-spinner'
 import TimelineEventItem from '@/components/timeline-event-item'
-import { kindStyle } from '@/lib/kind-style'
+import { getSeriesColor } from '@/lib/event-colors'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Badge } from '@/components/ui/badge'
@@ -230,7 +230,7 @@ const SessionView = () => {
           <div className='sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5'>
             {uniqueKinds.map(kind => (
               <span key={kind} className='inline-flex items-center gap-1.5 text-xs text-muted-foreground'>
-                <span className='w-2 h-2 rounded-full' style={{ backgroundColor: kindStyle(kind).dot }} />
+                <span className='w-2 h-2 rounded-full' style={{ backgroundColor: getSeriesColor(kind).dot }} />
                 {kind}
               </span>
             ))}

@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { Bar, CartesianGrid, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
 import type { SeriesColor } from '@/lib/event-colors'
 import { buildChartConfig, buildChartData, formatTooltipLabel } from './common'
-import { niceMax } from './helpers'
+import { computeYMax } from './helpers'
 import { type ChartPoint } from './types'
 
 export const BarChart = ({
@@ -23,12 +23,7 @@ export const BarChart = ({
 }) => {
   const chartConfig = useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors])
   const chartData = useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity])
-  const yMax = useMemo(() => {
-    const allVals = stacked
-      ? data.map(d => d.values.reduce((a, b) => a + b, 0))
-      : data.flatMap(d => d.values)
-    return niceMax(Math.max(...allVals, 0))
-  }, [data, stacked])
+  const yMax = useMemo(() => computeYMax(data, stacked), [data, stacked])
 
   if (data.length === 0) return null
 

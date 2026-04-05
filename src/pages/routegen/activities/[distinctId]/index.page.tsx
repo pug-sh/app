@@ -163,10 +163,7 @@ const UserActivity = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
-  const initialFilterState = useMemo(
-    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
-    []
-  )
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)

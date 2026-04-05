@@ -15,9 +15,10 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ProjectLink from '@/components/project-link'
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -29,10 +30,7 @@ const Segments = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
-  const initialFilterState = useMemo(
-    () => readFilterQueryParams(typeof window === 'undefined' ? '' : window.location.search),
-    []
-  )
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
@@ -43,11 +41,6 @@ const Segments = () => {
     selectedEventKinds: eventFilters.entries.map(e => e.kind),
   })
 
-  const [segmentIds, setSegmentIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
-
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
@@ -56,63 +49,40 @@ const Segments = () => {
     writeFilterQueryParams(eventFilters.entries, propFilters)
   }, [eventFilters.entries, propFilters])
 
-  // Auto-run query when params change
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters, retryCount })
+  const validEntries = useMemo(() => eventFilters.entries.filter(e => e.kind.trim()), [eventFilters.entries])
 
-  useEffect(() => {
-    const validEntries = eventFilters.entries.filter(e => e.kind.trim())
-    if (!project || validEntries.length === 0) {
-      setSegmentIds([])
-      setLoading(false)
-      setError(null)
-      return
-    }
+  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters })
 
-    const globalFilters = toProtoFilters(propFilters)
-    const filterGroups =
-      globalFilters.length > 0
-        ? [
-          {
-            filters: globalFilters,
-            operator: LogicalOperator.AND,
-          },
-        ]
-        : []
+  const { data, loading, error, retry } = useDebouncedQuery(
+    queryKey,
+    async () => {
+      const globalFilters = toProtoFilters(propFilters)
+      const filterGroups =
+        globalFilters.length > 0
+          ? [{ filters: globalFilters, operator: LogicalOperator.AND }]
+          : []
+      const resp = await insightsRPC.segmentUsers(
+        {
+          timeRange: toProtoTimeRange(timeRange),
+          events: validEntries.map(entry => ({
+            event: {
+              kind: entry.kind,
+              filters: toProtoFilters(entry.filters),
+            },
+            aggregation: AggregationType.TOTAL,
+          })),
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          pageSize: 100,
+        },
+        { headers }
+      )
+      return resp.distinctIds
+    },
+    { enabled: !!project && validEntries.length > 0 }
+  )
 
-    let cancelled = false
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const resp = await insightsRPC.segmentUsers(
-          {
-            timeRange: toProtoTimeRange(timeRange),
-            events: validEntries.map(entry => ({
-              event: {
-                kind: entry.kind,
-                filters: toProtoFilters(entry.filters),
-              },
-              aggregation: AggregationType.TOTAL,
-            })),
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-            pageSize: 100,
-          },
-          { headers }
-        )
-        if (!cancelled) setSegmentIds(resp.distinctIds)
-      } catch (err) {
-        console.error('Segment query failed:', err)
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Segment query failed')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }, 300)
-    return () => { cancelled = true; clearTimeout(debounceRef.current) }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  }, [queryKey, project, insightsRPC, headers])
+  const segmentIds = data ?? []
 
   if (!project) return <NoProject title='Segments' icon={Users} />
 
@@ -147,7 +117,7 @@ const Segments = () => {
         <div className='flex flex-col items-center justify-center py-16'>
           <Users className='w-10 h-10 mb-4 opacity-15' />
           <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
             Retry
           </Button>
         </div>

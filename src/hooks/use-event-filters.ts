@@ -4,6 +4,7 @@ import type { ActiveFilter } from '@/components/event-filters'
 export type EventFilterEntry = {
   kind: string
   filters: ActiveFilter[]
+  aggregation?: number // AggregationType enum value — kept as number to stay generic
 }
 
 export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
@@ -45,9 +46,13 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
     )
   }
 
+  const setAggregation = (idx: number, aggregation: number) => {
+    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, aggregation } : e)))
+  }
+
   const reset = (nextEntries: EventFilterEntry[] = []) => setEntries(nextEntries)
 
-  return { entries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, reset } as const
+  return { entries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
 }
 
 export type EventFiltersHandle = ReturnType<typeof useEventFilters>

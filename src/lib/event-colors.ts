@@ -64,7 +64,7 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
 // Fallback palette for unmapped events — visually distinct from the semantic
 // colors above so unknown events don't accidentally look related.
 const FALLBACK_COLORS: SeriesColor[] = [
-  color('#2563eb'),
+  color('#3b6cf0'),
   color('#059669'),
   color('#d97706'),
   color('#7c3aed'),
@@ -102,6 +102,3 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
   const idx = hashString(seriesName) % FALLBACK_COLORS.length
   return FALLBACK_COLORS[idx]
 }
-
-// Re-export for DataTable (should migrate to getSeriesColor)
-export const SERIES_COLORS = FALLBACK_COLORS

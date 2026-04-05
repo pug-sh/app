@@ -1,18 +1,11 @@
-import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
+import { lazyWithRetry } from '@/lib/lazy'
+import { type ComponentType, type LazyExoticComponent } from 'react'
 
 type PageModule = { default: ComponentType }
 
 type RouteDef = {
   component: LazyExoticComponent<ComponentType>
 }
-
-const lazyWithRetry = (loader: () => Promise<PageModule>) =>
-  lazy(() =>
-    loader().catch(() => {
-      window.location.reload()
-      return new Promise<PageModule>(() => {})
-    })
-  )
 
 const pages = import.meta.glob<PageModule>('./routegen/**/index.page.tsx')
 
