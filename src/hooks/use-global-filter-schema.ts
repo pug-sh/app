@@ -2,6 +2,7 @@ import type { GetFilterSchemaResponse } from '@/api/genproto/shared/insights/v1/
 import { insightsRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
+import { toast } from 'sonner'
 import { useEffect, useMemo, useState } from 'react'
 
 const CACHE_TTL = 300_000 // 5 minutes
@@ -31,7 +32,8 @@ export const fetchSchemaForKind = (
       options?: { headers?: HeadersInit }
     ) => Promise<GetFilterSchemaResponse>
   },
-  headers: HeadersInit | undefined
+  headers: HeadersInit | undefined,
+  opts?: { force?: boolean }
 ) => {
   const key = cacheKey(kind, headers)
   const cached = schemaCache.get(key)
@@ -43,9 +45,13 @@ export const fetchSchemaForKind = (
     }
   }
 
-  const failedAt = failureCache.get(key)
-  if (failedAt && Date.now() - failedAt < FAILURE_TTL) {
-    return Promise.reject(new Error('Schema fetch recently failed'))
+  if (!opts?.force) {
+    const failedAt = failureCache.get(key)
+    if (failedAt && Date.now() - failedAt < FAILURE_TTL) {
+      return Promise.reject(new Error('Schema fetch recently failed — retry in a few seconds'))
+    }
+  } else {
+    failureCache.delete(key)
   }
 
   const running = inFlight.get(key)
@@ -155,6 +161,7 @@ export const useGlobalFilterSchema = ({
       } else if (failedKinds.length > 0) {
         error = `Filter schemas failed for: ${failedKinds.join(', ')} — filter properties may be incomplete`
       }
+      if (error && schemas.length > 0) toast.warning(error)
       setResult({
         key: kindsKey,
         schemas: schemas.length > 0 ? schemas : null,

@@ -63,7 +63,7 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
 }
 
 // Fallback palette for unmapped events — broad hue range for variety.
-// Some overlap with the semantic map; collisions are unlikely when few events are unmapped.
+// Most colors are shared with the semantic map for palette coherence.
 const FALLBACK_COLORS: SeriesColor[] = [
   color('#3b6cf0'),
   color('#059669'),

@@ -115,8 +115,8 @@ export const readFilterQueryParams = (search = window.location.search) => {
     : []
 
   const warnings: string[] = []
-  if (hasEf && rawEventFilters !== null && eventFilters.length === 0) warnings.push('event filters')
-  if (hasPf && rawPropFilters !== null && propFilters.length === 0) warnings.push('property filters')
+  if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) warnings.push('event filters')
+  if (hasPf && params.get(PROP_FILTERS_PARAM) && propFilters.length === 0) warnings.push('property filters')
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined

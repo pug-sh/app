@@ -1,5 +1,5 @@
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 
 export type EventFilterEntry = {
@@ -56,7 +56,7 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
 
   const reset = (nextEntries: EventFilterEntry[] = []) => setEntries(nextEntries)
 
-  const validEntries = entries.filter(e => e.kind)
+  const validEntries = useMemo(() => entries.filter(e => e.kind), [entries])
 
   return { entries, validEntries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
 }

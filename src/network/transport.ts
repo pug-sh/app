@@ -39,6 +39,7 @@ const authBearer: Interceptor = next => async req => {
     } catch (err) {
       console.error('Failed to parse JWT from localStorage, resetting:', err)
       clearJwt()
+      throw new ConnectError('Invalid session — please sign in again', Code.Unauthenticated)
     }
   }
   try {

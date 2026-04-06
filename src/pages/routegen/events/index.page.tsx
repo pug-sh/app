@@ -143,7 +143,6 @@ const EventExplorer = () => {
     selectedEventKinds: eventFilters.entries.map(e => e.kind),
   })
 
-  // Data
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)

@@ -134,11 +134,11 @@ const useScopedSchema = (kindFilter?: string) => {
     if (!kind || !headers) return
 
     let cancelled = false
-    fetchSchemaForKind(kind, insightsRPC, headers)
+    fetchSchemaForKind(kind, insightsRPC, headers, retryCount > 0 ? { force: true } : undefined)
       .then(resp => { if (!cancelled) setResult({ key: kind, schema: resp, error: null }) })
       .catch(err => {
         if (cancelled) return
-        console.error('getFilterSchema(kind) failed:', err)
+        console.error(`getFilterSchema("${kind}") failed:`, err)
         setResult({ key: kind, schema: null, error: err instanceof Error ? err.message : 'Failed to load filter schema' })
       })
     return () => { cancelled = true }

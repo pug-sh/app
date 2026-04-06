@@ -62,6 +62,8 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Table', value: 'table' },
 ]
 
+const EMPTY_RESULT = { case: undefined, value: undefined } as const
+
 const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
@@ -209,13 +211,12 @@ const Insights = () => {
     { enabled: !!project && validEntries.length > 0 && !!timeRange }
   )
 
-  const result = queryResult ?? { case: undefined, value: undefined }
+  const result = queryResult ?? EMPTY_RESULT
 
+  const unknownResultCase = result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
   useEffect(() => {
-    if (result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention') {
-      console.warn('Unrecognized insight result case:', result.case)
-    }
-  }, [result.case])
+    if (unknownResultCase) console.warn('Unrecognized insight result case:', result.case)
+  }, [unknownResultCase, result.case])
 
   const trendSeries = result.case === 'trends' ? result.value.series : []
   const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
@@ -321,6 +322,15 @@ const Insights = () => {
           <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
             Retry
           </Button>
+        </div>
+      )
+    }
+
+    if (unknownResultCase) {
+      return (
+        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm'>Unsupported result type</p>
         </div>
       )
     }
