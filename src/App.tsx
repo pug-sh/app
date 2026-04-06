@@ -35,9 +35,9 @@ const AuthenticatedApp = () => {
         <AppSidebar />
       </Suspense>
       <SidebarInset>
-        <div className='fixed top-3 left-3 z-30'>
-          <SidebarTrigger />
-        </div>
+        <header className='flex h-12 shrink-0 items-center gap-2 border-b px-4'>
+          <SidebarTrigger className='-ml-1' />
+        </header>
         <main className='flex-1 min-w-0'>
           <Suspense fallback={<LoadingSpinner />}>
             <Router />
