@@ -63,6 +63,7 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
 ]
 
 const EMPTY_RESULT = { case: undefined, value: undefined } as const
+const EMPTY_ARRAY: never[] = []
 
 const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
@@ -218,8 +219,16 @@ const Insights = () => {
     if (unknownResultCase) console.warn('Unrecognized insight result case:', result.case)
   }, [unknownResultCase, result.case])
 
-  const trendSeries = useMemo(() => result.case === 'trends' ? result.value.series : [], [result])
-  const retentionCohorts = useMemo(() => result.case === 'retention' ? result.value.cohorts : [], [result])
+  const trendSeries = useMemo(() => {
+    if (result.case !== 'trends') return EMPTY_ARRAY
+    const kindEntries = eventFilters.validEntries
+    return [...result.value.series].sort((a, b) => {
+      const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
+      const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+    })
+  }, [result, eventFilters.validEntries])
+  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : EMPTY_ARRAY
   const funnelSteps = useMemo(() => {
     if (result.case !== 'funnel') return []
     const kindEntries = eventFilters.validEntries
