@@ -1,4 +1,5 @@
 import { Toggle } from '@/components/ui/toggle'
+import { PropChip } from '@/components/ui/prop-chip'
 import { structToEntries, structGet } from '@/lib/struct'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { tsToDate } from '@/lib/timestamp'
@@ -15,13 +16,6 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
     ? wellKnownFields.flatMap(k => { const v = structGet(event.customProperties, k); return v != null ? [[k, v] as [string, string]] : [] })
     : structToEntries(event.customProperties)
   const sectionLabel = wellKnownFields.length > 0 ? 'Properties' : 'Custom'
-
-  const PropChip = ({ k, v }: { k: string; v: string }) => (
-    <span className='inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-md'>
-      <span className='text-muted-foreground'>{k}</span>
-      <span className='font-mono'>{v}</span>
-    </span>
-  )
 
   return (
     <div className='space-y-2' onClick={e => e.stopPropagation()}>
