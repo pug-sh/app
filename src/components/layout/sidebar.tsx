@@ -255,11 +255,7 @@ const AppSidebar = () => {
         <SidebarSeparator />
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => signOut()}
-              tooltip='Sign out'
-              className='hover:text-destructive'
-            >
+            <SidebarMenuButton onClick={() => signOut()} tooltip='Sign out'>
               <LogOut />
               <span>Sign out</span>
             </SidebarMenuButton>
