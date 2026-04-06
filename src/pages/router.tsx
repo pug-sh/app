@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom } from '@/data/workspace.atoms'
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Component, useEffect, useState, type ReactNode } from 'react'
+import { Component, Suspense, useEffect, type ReactNode } from 'react'
 import { Route, Switch, useLocation, useParams } from 'wouter'
 import { routes } from './routes'
 
@@ -43,20 +43,20 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   const { projectId } = useParams<{ projectId: string }>()
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const projects = useAtomValue(projectsAtom)
-  const [notFound, setNotFound] = useState(false)
   const [, navigate] = useLocation()
 
   useEffect(() => {
     if (!projectId || projects.length === 0) return
-    if (activeProject?.id === projectId) { setNotFound(false); return }
+    if (activeProject?.id === projectId) return
+
     const match = projects.find(p => p.id === projectId)
-    if (match) {
-      setActiveProject(match)
-      setNotFound(false)
-    } else {
-      setNotFound(true)
-    }
+    if (match) setActiveProject(match)
   }, [projectId, projects, activeProject, setActiveProject])
+
+  const notFound =
+    !!projectId &&
+    projects.length > 0 &&
+    !projects.some(p => p.id === projectId)
 
   if (notFound) {
     return (
@@ -97,7 +97,9 @@ const Router = () => {
         <Route key={path} path={path}>
           <ProjectSync>
             <RouteErrorBoundary>
-              <Component />
+              <Suspense fallback={<LoadingSpinner />}>
+                <Component />
+              </Suspense>
             </RouteErrorBoundary>
           </ProjectSync>
         </Route>

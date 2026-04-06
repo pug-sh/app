@@ -1,4 +1,4 @@
-import type { GetFilterSchemaResponse } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import type { GetFilterSchemaResponse } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { atom } from 'jotai'

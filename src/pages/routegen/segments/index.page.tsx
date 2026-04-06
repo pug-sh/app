@@ -1,21 +1,26 @@
-import { AggregationType } from '@/api/genproto/dashboard/insights/v1/insights_pb'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
 import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
-import { useEventKinds } from '@/hooks/use-event-kinds'
+import { useEventFilters } from '@/hooks/use-event-filters'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ProjectLink from '@/components/project-link'
+import { toast } from 'sonner'
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -26,55 +31,60 @@ const Segments = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
-  const { eventKinds, setEventKinds, updateEvent } = useEventKinds()
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
-
-  const [segmentIds, setSegmentIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
 
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
 
-  // Auto-run query when params change
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- queryKey serializes all query params; using it as sole dep deduplicates identical queries
-  const queryKey = JSON.stringify({ eventKinds, timeRange, propFilters, retryCount })
-
   useEffect(() => {
-    const events = eventKinds.filter(e => e.trim())
-    if (!project || events.length === 0) return
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
-    const filters = toProtoFilters(propFilters)
+  const validEntries = eventFilters.validEntries
 
-    let cancelled = false
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const resp = await insightsRPC.segmentUsers(
-          {
-            timeRange: toProtoTimeRange(timeRange),
-            events: events.map(kind => ({ kind, aggregation: AggregationType.TOTAL, filters })),
-            pageSize: 100,
-          },
-          { headers }
-        )
-        if (!cancelled) setSegmentIds(resp.distinctIds)
-      } catch (err) {
-        console.error('Segment query failed:', err)
-        if (!cancelled) setError('Segment query failed')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }, 300)
-    return () => { cancelled = true; clearTimeout(debounceRef.current) }
-  }, [queryKey, project, insightsRPC, headers])
+  const queryKey = JSON.stringify({ entries: eventFilters.entries, timeRange, propFilters })
+
+  const { data, loading, error, retry } = useDebouncedQuery(
+    queryKey,
+    async () => {
+      const globalFilters = toProtoFilters(propFilters)
+      const filterGroups =
+        globalFilters.length > 0
+          ? [{ filters: globalFilters, operator: LogicalOperator.AND }]
+          : []
+      const resp = await insightsRPC.segmentUsers(
+        {
+          timeRange: toProtoTimeRange(timeRange),
+          events: validEntries.map(entry => ({
+            event: {
+              kind: entry.kind,
+              filters: toProtoFilters(entry.filters),
+            },
+            aggregation: AggregationType.TOTAL,
+          })),
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          pageSize: 100,
+        },
+        { headers }
+      )
+      return resp.distinctIds
+    },
+    { enabled: !!project && validEntries.length > 0 }
+  )
+
+  const segmentIds = data ?? []
 
   if (!project) return <NoProject title='Segments' icon={Users} />
 
@@ -84,32 +94,23 @@ const Segments = () => {
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
+        <EventFilterBar
+          filters={eventFilters}
+          events={schema?.events ?? []}
+          schema={schema}
+          schemaError={schemaError}
+        />
         <div className='flex flex-wrap items-center gap-2'>
-          {eventKinds.map((kind, i) => (
-            <EventChip
-              key={i}
-              value={kind}
-              onChange={v => updateEvent(i, v)}
-              events={schema?.events ?? []}
-              schemaError={schemaError}
-            />
-          ))}
-          <EventChip
-            value=''
-            onChange={v => { if (v) setEventKinds([...eventKinds, v]) }}
-            events={schema?.events ?? []}
-            schemaError={schemaError}
-          />
           {propFilters.map((f, i) => (
             <FilterChip
               key={`f-${i}`}
               filter={f}
-              schema={schema}
+              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} />
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>
       </div>
@@ -118,7 +119,7 @@ const Segments = () => {
         <div className='flex flex-col items-center justify-center py-16'>
           <Users className='w-10 h-10 mb-4 opacity-15' />
           <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => setRetryCount(c => c + 1)}>
+          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
             Retry
           </Button>
         </div>

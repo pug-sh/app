@@ -1,15 +1,18 @@
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
-import AppSidebar from '@/components/layout/sidebar'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import { workspaceErrorAtom } from '@/data/workspace.atoms'
-import Router from '@/pages/router'
-import SignIn from '@/pages/sign-in'
+import { lazyWithRetry } from '@/lib/lazy'
 import { useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
+
+const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
+const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
+const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -28,13 +31,17 @@ const ThemeSync = () => {
 const AuthenticatedApp = () => {
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <Suspense fallback={null}>
+        <AppSidebar />
+      </Suspense>
       <SidebarInset>
         <header className='flex h-12 shrink-0 items-center gap-2 border-b px-4'>
           <SidebarTrigger className='-ml-1' />
         </header>
         <main className='flex-1 min-w-0'>
-          <Router />
+          <Suspense fallback={<LoadingSpinner />}>
+            <Router />
+          </Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>
@@ -60,7 +67,15 @@ const App = () => {
   return (
     <>
       <ThemeSync />
-      {!authenticated ? <SignIn /> : workspaceError ? <WorkspaceError message={workspaceError} /> : <AuthenticatedApp />}
+      {!authenticated ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <SignIn />
+        </Suspense>
+      ) : workspaceError ? (
+        <WorkspaceError message={workspaceError} />
+      ) : (
+        <AuthenticatedApp />
+      )}
       <Toaster position='bottom-right' />
     </>
   )

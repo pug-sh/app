@@ -85,7 +85,25 @@ Tables use plain `<table>` elements (not the Table component), with:
 
 Empty states are minimal — a faded icon + one or two lines of text. No illustrations, no big CTAs, no onboarding wizards.
 
-Event kinds use colored `Badge` with `kindStyle()` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
+Event kinds use colored `Badge` with `getSeriesColor()` from `src/lib/event-colors.ts` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
+
+### Insights Color System
+
+For Insights (event filters + charts), do **not** use index-based colors or `kindStyle()` colors.
+
+- Single source of truth: `src/lib/event-colors.ts`
+- Use `getSeriesColor(name, fallbackIndex)` to resolve colors
+- Color assignment is name-based and deterministic — events in the semantic map get their assigned color, unmapped events get a stable hash-based fallback. Related events are manually grouped under the same hue.
+- Keep colors consistent across:
+  - event row markers (A/B/C)
+  - selected event chips
+  - event dropdown dots
+  - summary stat dots
+  - line/area/bar/funnel series
+  - chart tooltip indicators
+- Retention cohort:
+  - Heatmap cell colors stay value-intensity based
+  - Cohort label markers should still use the shared series/family color mapping
 
 ### Form Validation
 
@@ -98,6 +116,22 @@ Lightweight inline validation only — disable buttons when required fields are 
 - Dashboard endpoints need JWT (handled by interceptor)
 - Project-scoped endpoints need JWT + `x-project-id` header
 - SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend
+
+### Filters & Query Semantics
+
+- Shared insights proto now uses grouped global filters:
+  - `QueryRequest.filter_groups` + `filter_groups_operator`
+  - `SegmentUsersRequest.filter_groups` + `filter_groups_operator`
+  - Do not send legacy top-level `filters` in these requests.
+- Current frontend behavior for global filters:
+  - If no event kinds are selected, use the base/unscoped schema.
+  - If event kinds are selected, show only property keys common to all selected kinds (intersection for auto/custom keys).
+  - Keep profile keys available in global filters.
+- Event-row filters are event-scoped (`kindFilter`) and should only show properties for that event kind.
+- Value input UX:
+  - Always allow free text for values (suggestions are optional, not required).
+  - Multi-value operators (`in`, `not in`, `contains`, `not contains`) support manual multi-entry via Enter/comma + Add.
+  - Presence operators (`is set`, `is not set`) are no-value operators and should commit immediately.
 
 ### TypeScript Style
 

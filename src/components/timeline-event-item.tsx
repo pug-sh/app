@@ -1,7 +1,7 @@
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
-import { kindStyle } from '@/lib/kind-style'
+import { getSeriesColor } from '@/lib/event-colors'
 import { Badge } from '@/components/ui/badge'
 import { structToEntries } from '@/lib/struct'
 import { cn } from '@/lib/utils'
@@ -20,7 +20,7 @@ const TimelineEventItem = ({
   const customProps = structToEntries(event.customProperties)
   const inlineProps = customProps.slice(0, 3)
   const hasMore = autoProps.length > 0 || customProps.length > 3
-  const colors = kindStyle(event.kind)
+  const colors = getSeriesColor(event.kind)
 
   return (
     <div
@@ -29,12 +29,13 @@ const TimelineEventItem = ({
     >
       <div className='absolute left-[11px] top-0 bottom-0 w-px bg-border' />
       <div
-        className={cn('absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background', colors.dot)}
+        className='absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background'
+        style={{ backgroundColor: colors.dot }}
       />
 
       <div className={cn('py-2.5 pr-3 transition-colors', hasMore && 'hover:bg-muted/40')}>
         <div className='flex items-center gap-2'>
-          <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>
+          <Badge variant='secondary' className='text-[11px] font-medium px-2 py-0.5' style={{ backgroundColor: colors.fill, color: colors.dot }}>
             {event.kind}
           </Badge>
           {timeLabel && (

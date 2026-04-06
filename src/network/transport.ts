@@ -1,11 +1,17 @@
 import { Code, ConnectError, type Interceptor } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
 import { createValidator } from '@bufbuild/protovalidate'
+import { createRegistry } from '@bufbuild/protobuf'
+import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
+import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { clearJwt, JWT_KEY } from '@/auth/jwt.atoms'
 import { atom } from 'jotai'
 import { toast } from 'sonner'
 
-const validator = createValidator()
+// Register the app's file descriptors so the validator can compile rules defined
+// in these protos (e.g. buf.validate constraints on PropertyFilter which references
+// common.v1.FilterOperator).
+const validator = createValidator({ registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights) })
 
 const protovalidate: Interceptor = next => async req => {
   if (!req.stream) {
@@ -33,6 +39,7 @@ const authBearer: Interceptor = next => async req => {
     } catch (err) {
       console.error('Failed to parse JWT from localStorage, resetting:', err)
       clearJwt()
+      throw new ConnectError('Invalid session — please sign in again', Code.Unauthenticated)
     }
   }
   try {

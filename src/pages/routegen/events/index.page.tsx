@@ -9,20 +9,24 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
-import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
-import { kindStyle } from '@/lib/kind-style'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { getSeriesColor } from '@/lib/event-colors'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
+import { useEventFilters } from '@/hooks/use-event-filters'
+import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import ProjectLink from '@/components/project-link'
 import { structGet, structToEntries } from '@/lib/struct'
 import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Event Row ───────────────────────────────────────────────────────────────
@@ -34,7 +38,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const customProps = structToEntries(event.customProperties)
   const inlineProps = customProps.slice(0, 3)
   const hasMore = autoProps.length > 0 || customProps.length > 3
-  const colors = kindStyle(event.kind)
+  const colors = getSeriesColor(event.kind)
   const platform = structGet(event.autoProperties, '$platform')
   const osVersion = structGet(event.autoProperties, '$os_version')
   const city = structGet(event.autoProperties, '$city')
@@ -53,7 +57,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
           {d && <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
-          <Badge variant='secondary' className={cn('text-[11px] font-medium px-2 py-0.5', colors.bg, colors.text)}>
+          <Badge variant='secondary' className='text-[11px] font-medium px-2 py-0.5' style={{ backgroundColor: colors.fill, color: colors.dot }}>
             {event.kind}
           </Badge>
         </td>
@@ -124,15 +128,21 @@ const EventExplorer = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   // Applied filter state (drives API calls)
-  const [kindFilter, setKindFilter] = useState('')
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [userInput, setUserInput] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
 
-  // Data
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
@@ -148,10 +158,14 @@ const EventExplorer = () => {
     return () => ro.disconnect()
   }, [])
 
-  // Fetch schema when project or selected event kind changes
+  // Fetch schema on project load
   useEffect(() => {
-    if (project) fetchSchema(kindFilter)
-  }, [project, fetchSchema, kindFilter])
+    if (project) fetchSchema()
+  }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   const commitUserFilter = () => {
     setUserFilter(userInput.trim())
@@ -162,12 +176,13 @@ const EventExplorer = () => {
       setLoading(true)
       setError(null)
       try {
+        const protoEvents = toProtoEventFilters(eventFilters.entries)
         const resp = await activityRPC.getEventExplorer(
           {
             distinctId: userFilter || undefined,
-            kind: kindFilter || undefined,
             timeRange: toProtoTimeRange(timeRange),
             propertyFilters: toProtoFilters(propFilters),
+            events: protoEvents,
             pageSize: 100,
             pageToken,
           },
@@ -181,12 +196,12 @@ const EventExplorer = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Event explorer failed:', err)
-        setError(pageToken ? 'Failed to load more events' : 'Failed to load events')
+        setError(err instanceof Error ? err.message : (pageToken ? 'Failed to load more events' : 'Failed to load events'))
       } finally {
         setLoading(false)
       }
     },
-    [activityRPC, headers, kindFilter, userFilter, timeRange, propFilters]
+    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters]
   )
 
   useEffect(() => {
@@ -202,8 +217,13 @@ const EventExplorer = () => {
         <div className='flex items-center gap-2 flex-wrap'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
+        <EventFilterBar
+          filters={eventFilters}
+          events={schema?.events ?? []}
+          schema={schema}
+          schemaError={schemaError}
+        />
         <div className='flex items-center gap-2 flex-wrap'>
-          <EventChip value={kindFilter} onChange={setKindFilter} events={schema?.events ?? []} schemaError={schemaError} />
           {userFilter ? (
             <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
               <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>user</span>
@@ -249,13 +269,12 @@ const EventExplorer = () => {
             <FilterChip
               key={i}
               filter={f}
-              schema={schema}
-              kindFilter={kindFilter}
+              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
           ))}
-          <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} kindFilter={kindFilter} />
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {events.length > 0 && (
             <span className='ml-auto text-xs text-muted-foreground tabular-nums'>{events.length} events</span>
           )}
@@ -276,7 +295,7 @@ const EventExplorer = () => {
       ) : events.length > 0 ? (
         <>
           <table className='w-full'>
-            <thead className='sticky z-[9] bg-background' style={{ top: filterH }}>
+            <thead className='sticky z-9 bg-background' style={{ top: filterH }}>
               <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
                 <th className='py-2 pr-2 text-left font-medium'>Time</th>
                 <th className='py-2 pr-2 text-left font-medium'>Event</th>

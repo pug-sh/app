@@ -4,9 +4,12 @@ import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventChip, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
-import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
+import { useEventFilters } from '@/hooks/use-event-filters'
+import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -17,6 +20,7 @@ import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import {
   Activity,
@@ -160,18 +164,29 @@ const UserActivity = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
-  const [kindFilter, setKindFilter] = useState('')
+  const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState()
+  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
+    baseSchema: schema,
+    baseSchemaError: schemaError,
+    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+  })
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (project) fetchSchema(kindFilter)
-  }, [project, fetchSchema, kindFilter])
+    if (project) fetchSchema()
+  }, [project, fetchSchema])
+
+  useEffect(() => {
+    writeFilterQueryParams(eventFilters.entries, propFilters)
+  }, [eventFilters.entries, propFilters])
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
@@ -179,12 +194,13 @@ const UserActivity = () => {
       setLoading(true)
       setError(null)
       try {
+        const protoEvents = toProtoEventFilters(eventFilters.entries)
         const resp = await activityRPC.getActivityFeed(
           {
             distinctId,
-            kind: kindFilter.trim() || undefined,
             timeRange: toProtoTimeRange(timeRange),
             propertyFilters: toProtoFilters(propFilters),
+            events: protoEvents,
             pageSize: 200,
             pageToken,
           },
@@ -198,12 +214,12 @@ const UserActivity = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Activity feed failed:', err)
-        setError('Failed to load activity feed')
+        setError(err instanceof Error ? err.message : 'Failed to load activity feed')
       } finally {
         setLoading(false)
       }
     },
-    [distinctId, kindFilter, timeRange, propFilters, headers, activityRPC]
+    [distinctId, eventFilters.entries, timeRange, propFilters, headers, activityRPC]
   )
 
   useEffect(() => {
@@ -247,24 +263,23 @@ const UserActivity = () => {
             <div className='flex flex-wrap items-center gap-2'>
               <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
             </div>
+            <EventFilterBar
+              filters={eventFilters}
+              events={schema?.events ?? []}
+              schema={schema}
+              schemaError={schemaError}
+            />
             <div className='flex flex-wrap items-center gap-2'>
-              <EventChip
-                value={kindFilter}
-                onChange={setKindFilter}
-                events={schema?.events ?? []}
-                schemaError={schemaError}
-              />
               {propFilters.map((f, i) => (
                 <FilterChip
                   key={i}
                   filter={f}
-                  schema={schema}
-                  kindFilter={kindFilter}
+                  schema={globalSchema}
                   onRemove={() => removeFilter(i)}
                   onUpdate={next => updateFilter(i, next)}
                 />
               ))}
-              <FilterBuilder schema={schema} schemaError={schemaError} onAdd={addFilter} kindFilter={kindFilter} />
+              <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
             </div>
           </div>
 

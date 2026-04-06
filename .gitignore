@@ -30,9 +30,11 @@ src/api/genproto
 *.sw?
 .playwright-mcp/
 .superpowers/
+docs/superpowers/
 
 # Qwen settings
 .qwen/settings.json
 
 # PR review notes
 pr-*review.md
+pr-review.md
