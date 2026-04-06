@@ -33,6 +33,7 @@ const Members = () => {
   const [showInvite, setShowInvite] = useState(false)
   const [email, setEmail] = useState('')
   const [inviting, setInviting] = useState(false)
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
@@ -129,6 +130,7 @@ const Members = () => {
                     <div
                       key={m.customerId}
                       className='group flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40'
+                      onMouseLeave={() => setConfirmingRemove(null)}
                     >
                       <div className='w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0'>
                         <span className='text-[10px] font-medium text-muted-foreground'>{initials(name)}</span>
@@ -140,12 +142,21 @@ const Members = () => {
                       <Badge variant={m.role === ORG_ROLE_ADMIN ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
                         {m.role === ORG_ROLE_ADMIN ? 'Admin' : 'Member'}
                       </Badge>
-                      <button
-                        onClick={() => handleRemove(m.customerId)}
-                        className='p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer'
-                      >
-                        <Trash2 className='w-3.5 h-3.5' />
-                      </button>
+                      {confirmingRemove === m.customerId ? (
+                        <button
+                          onClick={() => handleRemove(m.customerId)}
+                          className='text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer'
+                        >
+                          Remove?
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmingRemove(m.customerId)}
+                          className='p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer'
+                        >
+                          <Trash2 className='w-3.5 h-3.5' />
+                        </button>
+                      )}
                     </div>
                   )
                 })}

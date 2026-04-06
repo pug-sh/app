@@ -251,8 +251,15 @@ const AppSidebar = () => {
               <span className='capitalize'>{theme}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarSeparator />
+        <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => signOut()} tooltip='Sign out'>
+            <SidebarMenuButton
+              onClick={() => signOut()}
+              tooltip='Sign out'
+              className='text-muted-foreground hover:text-destructive'
+            >
               <LogOut />
               <span>Sign out</span>
             </SidebarMenuButton>

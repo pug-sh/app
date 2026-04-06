@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSetAtom } from 'jotai'
-import { Bell, Loader2 } from 'lucide-react'
+import { Bell, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 
 const SignIn = () => {
@@ -14,6 +14,7 @@ const SignIn = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -86,14 +87,25 @@ const SignIn = () => {
             </div>
             <div className='space-y-1.5'>
               <Label htmlFor='password'>Password</Label>
-              <Input
-                id='password'
-                type='password'
-                placeholder='••••••••'
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
+              <div className='relative'>
+                <Input
+                  id='password'
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder='••••••••'
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className='pr-9'
+                  required
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowPassword(!showPassword)}
+                  className='absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                </button>
+              </div>
             </div>
 
             {error && <p className='text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2'>{error}</p>}
