@@ -44,8 +44,7 @@ const OPERATORS: readonly {
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
 ]
 
-// eslint-disable-next-line react-refresh/only-export-components
-export const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
+const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
   const meta = OPERATORS.find(o => o.value === operator)
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
   if (meta.noValue) return { property, operator, kind: 'presence' }
