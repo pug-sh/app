@@ -17,6 +17,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { GRANULARITIES, useGranularity } from '@/hooks/use-granularity'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -31,12 +32,6 @@ import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const GRANULARITIES = [
-  { label: 'Hour', value: Granularity.HOUR },
-  { label: 'Day', value: Granularity.DAY },
-  { label: 'Week', value: Granularity.WEEK },
-  { label: 'Month', value: Granularity.MONTH },
-] as const
 const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
 
 const AGGREGATIONS = [
@@ -82,7 +77,7 @@ const OptionChip = <T extends string | number>({
 }: {
   label: string
   icon?: LucideIcon
-  options: readonly { label: string; value: T }[]
+  options: readonly { label: string; value: T; disabled?: boolean }[]
   value: T
   onChange: (v: T) => void
 }) => {
@@ -103,12 +98,13 @@ const OptionChip = <T extends string | number>({
             <button
               key={String(opt.value)}
               type='button'
+              disabled={opt.disabled}
               onClick={() => { onChange(opt.value); setOpen(false) }}
               className={cn(
                 'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
-                opt.value === value
-                  ? 'bg-muted text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                opt.value === value && 'bg-muted text-foreground font-medium',
+                opt.disabled && 'text-muted-foreground/40 cursor-default',
               )}
             >
               {opt.label}
@@ -139,9 +135,10 @@ const Insights = () => {
       ? initialFilterState.insightType
       : InsightType.TRENDS
   )
-  const [granularity, setGranularity] = useState(() =>
-    initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
-      ? initialFilterState.granularity
+  const { granularity, setGranularity, options: granularityOptions } = useGranularity(
+    timeRange,
+    GRANULARITY_VALUES.includes(initialFilterState.granularity as Granularity)
+      ? initialFilterState.granularity as Granularity
       : Granularity.DAY
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
@@ -240,7 +237,6 @@ const Insights = () => {
       })
       .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
   }, [result, eventFilters.validEntries])
-
   const seriesNames = useMemo(
     () => result.case === 'retention'
       ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
@@ -379,7 +375,7 @@ const Insights = () => {
           <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTimeSeriesInsight && (
             <>
-              <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
+              <OptionChip label='granularity' icon={Clock} options={granularityOptions} value={granularity} onChange={setGranularity} />
               {isTrends && (
                 <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
               )}
