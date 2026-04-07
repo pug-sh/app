@@ -8,8 +8,9 @@ import NoProject from '@/components/no-project'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
-import { Bell, Check, Clock, Copy, Eye, EyeOff, MousePointerClick, Send } from 'lucide-react'
+import { Bell, Check, Clock, Copy, Eye, EyeOff, Megaphone, MousePointerClick, Send } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'wouter'
 
 const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
   const { copied, copy } = useCopyToClipboard()
@@ -95,17 +96,30 @@ const Overview = () => {
           {/* Stats */}
           <section>
             <SectionHeader title='Campaigns' count={`${campaigns.length} total`} />
-            <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4'>
-              {stats.map(stat => (
-                <div key={stat.label} className='flex items-center gap-3'>
-                  <stat.icon className='w-4 h-4 text-muted-foreground shrink-0' />
-                  <div>
-                    <p className='text-2xl font-semibold tabular-nums'>{stat.value}</p>
-                    <p className='text-[10px] text-muted-foreground'>{stat.label}</p>
+            {campaigns.length === 0 ? (
+              <div className='py-8 flex flex-col items-center text-center'>
+                <Megaphone className='w-8 h-8 mb-3 opacity-15' />
+                <p className='text-sm text-muted-foreground'>No campaigns yet</p>
+                <Link
+                  href={`/p/${project.id}/campaigns`}
+                  className='text-sm text-primary hover:underline underline-offset-4 mt-1'
+                >
+                  Create your first campaign
+                </Link>
+              </div>
+            ) : (
+              <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4'>
+                {stats.map(stat => (
+                  <div key={stat.label} className='flex items-center gap-3'>
+                    <stat.icon className='w-4 h-4 text-muted-foreground shrink-0' />
+                    <div>
+                      <p className='text-2xl font-semibold tabular-nums'>{stat.value}</p>
+                      <p className='text-[10px] text-muted-foreground'>{stat.label}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* API Keys */}
