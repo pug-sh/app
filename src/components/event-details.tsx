@@ -1,7 +1,9 @@
 import { Toggle } from '@/components/ui/toggle'
+import { PropChip } from '@/components/ui/prop-chip'
 import { structToEntries } from '@/lib/struct'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { tsToDate } from '@/lib/timestamp'
+import { partitionEventProps } from '@/lib/well-known-events'
 import { Braces } from 'lucide-react'
 import { useState } from 'react'
 
@@ -9,7 +11,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
   const [jsonMode, setJsonMode] = useState(false)
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
-  const customProps = structToEntries(event.customProperties)
+  const { schemaProps, extraProps } = partitionEventProps(event.kind, event.customProperties)
 
   return (
     <div className='space-y-2' onClick={e => e.stopPropagation()}>
@@ -38,25 +40,23 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
             <div>
               <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>System</p>
               <div className='flex flex-wrap gap-1'>
-                {autoProps.map(([k, v]) => (
-                  <span key={k} className='inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-md'>
-                    <span className='text-muted-foreground'>{k}</span>
-                    <span className='font-mono'>{v}</span>
-                  </span>
-                ))}
+                {autoProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
               </div>
             </div>
           )}
-          {customProps.length > 0 && (
+          {schemaProps.length > 0 && (
+            <div>
+              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>Properties</p>
+              <div className='flex flex-wrap gap-1'>
+                {schemaProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
+              </div>
+            </div>
+          )}
+          {extraProps.length > 0 && (
             <div>
               <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>Custom</p>
               <div className='flex flex-wrap gap-1'>
-                {customProps.map(([k, v]) => (
-                  <span key={k} className='inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-md'>
-                    <span className='text-muted-foreground'>{k}</span>
-                    <span className='font-mono'>{v}</span>
-                  </span>
-                ))}
+                {extraProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
               </div>
             </div>
           )}

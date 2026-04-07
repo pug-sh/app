@@ -3,7 +3,9 @@ import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
 import { getSeriesColor } from '@/lib/event-colors'
 import { Badge } from '@/components/ui/badge'
+import { InlineEventProps } from '@/components/inline-event-props'
 import { structToEntries } from '@/lib/struct'
+import { resolveInlineProps } from '@/lib/well-known-events'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
@@ -18,7 +20,7 @@ const TimelineEventItem = ({
   const [expanded, setExpanded] = useState(false)
   const autoProps = structToEntries(event.autoProperties)
   const customProps = structToEntries(event.customProperties)
-  const inlineProps = customProps.slice(0, 3)
+  const inlineResult = resolveInlineProps(event.kind, event.customProperties)
   const hasMore = autoProps.length > 0 || customProps.length > 3
   const colors = getSeriesColor(event.kind)
 
@@ -27,7 +29,7 @@ const TimelineEventItem = ({
       className={cn('group relative pl-8 border-b border-border/50', hasMore && 'cursor-pointer')}
       onClick={() => hasMore && setExpanded(!expanded)}
     >
-      <div className='absolute left-[11px] top-0 bottom-0 w-px bg-border' />
+      <div className='absolute left-2.75 top-0 bottom-0 w-px bg-border' />
       <div
         className='absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background'
         style={{ backgroundColor: colors.dot }}
@@ -43,15 +45,7 @@ const TimelineEventItem = ({
               <HoverSwap primary={timeLabel.primary} secondary={timeLabel.secondary} />
             </span>
           )}
-          {inlineProps.length > 0 && (
-            <div className='flex items-center gap-2 overflow-hidden'>
-              {inlineProps.map(([k, v]) => (
-                <span key={k} className='text-[11px] text-muted-foreground whitespace-nowrap'>
-                  {k}: <span className='font-mono'>{v}</span>
-                </span>
-              ))}
-            </div>
-          )}
+          <InlineEventProps {...inlineResult} />
           {hasMore && (
             <span className='ml-auto'>
               {expanded ? (

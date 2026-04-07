@@ -63,6 +63,7 @@ const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
 ]
 
 const EMPTY_RESULT = { case: undefined, value: undefined } as const
+const EMPTY_ARRAY: never[] = []
 
 const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
@@ -150,11 +151,11 @@ const Insights = () => {
 
   // Cap entries at 2 when switching to retention mode
   const eventFiltersRef = useRef(eventFilters)
+  // eslint-disable-next-line react-hooks/refs -- intentional: sync ref in render so effect reads latest entries without re-triggering
   eventFiltersRef.current = eventFilters
   useEffect(() => {
     if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
     eventFiltersRef.current.reset(eventFiltersRef.current.entries.slice(0, 2))
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to insightType changes; entries read via ref
   }, [insightType])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
@@ -218,8 +219,16 @@ const Insights = () => {
     if (unknownResultCase) console.warn('Unrecognized insight result case:', result.case)
   }, [unknownResultCase, result.case])
 
-  const trendSeries = result.case === 'trends' ? result.value.series : []
-  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : []
+  const trendSeries = useMemo(() => {
+    if (result.case !== 'trends') return EMPTY_ARRAY
+    const kindEntries = eventFilters.validEntries
+    return [...result.value.series].sort((a, b) => {
+      const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
+      const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+    })
+  }, [result, eventFilters.validEntries])
+  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : EMPTY_ARRAY
   const funnelSteps = useMemo(() => {
     if (result.case !== 'funnel') return []
     const kindEntries = eventFilters.validEntries

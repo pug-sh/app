@@ -19,5 +19,7 @@ export function useRelativeTime(date: Date | null) {
     return () => clearInterval(id)
   }, [date])
 
+  // tick is intentionally in deps to force recomputation when the interval fires
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => (date ? formatRelative(date) : ''), [date, tick])
 }

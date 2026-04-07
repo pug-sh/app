@@ -20,7 +20,9 @@ import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import ProjectLink from '@/components/project-link'
+import { InlineEventProps } from '@/components/inline-event-props'
 import { structGet, structToEntries } from '@/lib/struct'
+import { resolveInlineProps } from '@/lib/well-known-events'
 import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -36,7 +38,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
   const customProps = structToEntries(event.customProperties)
-  const inlineProps = customProps.slice(0, 3)
+  const inlineResult = resolveInlineProps(event.kind, event.customProperties)
   const hasMore = autoProps.length > 0 || customProps.length > 3
   const colors = getSeriesColor(event.kind)
   const platform = structGet(event.autoProperties, '$platform')
@@ -68,15 +70,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
           {(platform || osVersion) && [platform, osVersion].filter(Boolean).join(' ')}
         </td>
         <td className='py-2.5 pr-2 align-middle'>
-          {inlineProps.length > 0 && (
-            <div className='flex items-center gap-2 overflow-hidden'>
-              {inlineProps.map(([k, v]) => (
-                <span key={k} className='text-[11px] text-muted-foreground whitespace-nowrap'>
-                  {k}: <span className='font-mono'>{v}</span>
-                </span>
-              ))}
-            </div>
-          )}
+          <InlineEventProps {...inlineResult} />
         </td>
         <td className='py-2.5 pr-2 text-right whitespace-nowrap align-middle'>
           <ProjectLink

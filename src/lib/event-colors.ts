@@ -83,14 +83,6 @@ const FALLBACK_COLORS: SeriesColor[] = [
 
 const GENERIC_LABEL_RE = /^(step|cohort|series)\s+\d+$/i
 
-const hashString = (value: string): number => {
-  let hash = 0
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) | 0
-  }
-  return Math.abs(hash)
-}
-
 export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesColor => {
   if (!seriesName || GENERIC_LABEL_RE.test(seriesName)) {
     return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
@@ -99,7 +91,9 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
   const mapped = EVENT_COLORS[seriesName]
   if (mapped) return mapped
 
-  // Unmapped event — deterministic fallback from hash
-  const idx = hashString(seriesName) % FALLBACK_COLORS.length
-  return FALLBACK_COLORS[idx]
+  // Unmapped event — neutral gray in single-event contexts (no index),
+  // indexed fallback in multi-series charts so custom events are distinguishable
+  return fallbackIndex > 0
+    ? FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
+    : color('#94a3b8')
 }
