@@ -1,27 +1,42 @@
 import { signInAtom, signUpAtom } from '@/auth/auth.atoms'
 import { Button } from '@/components/ui/button'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useSetAtom } from 'jotai'
 import { Bell, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod/v4'
+
+const authSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
+})
+
+type AuthFormData = z.infer<typeof authSchema>
 
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const signUp = useSetAtom(signUpAtom)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const form = useForm<AuthFormData>({
+    resolver: zodResolver(authSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  })
+
+  const onSubmit = async (data: AuthFormData) => {
     setError('')
     setLoading(true)
     const action = mode === 'signin' ? signIn : signUp
-    const result = await action({ email, password })
+    const result = await action(data)
     setLoading(false)
     if (!result.ok) setError(result.error)
   }
@@ -73,44 +88,59 @@ const SignIn = () => {
             {mode === 'signin' ? 'Sign in to your account to continue' : 'Get started with Cotton'}
           </p>
 
-          <form onSubmit={handleSubmit} className='space-y-4'>
-            <div className='space-y-1.5'>
-              <Label htmlFor='email'>Email</Label>
-              <Input
-                id='email'
-                type='email'
-                placeholder='you@company.com'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className='space-y-1.5'>
-              <Label htmlFor='password'>Password</Label>
-              <div className='relative'>
-                <Input
-                  id='password'
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder='••••••••'
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className='pr-9'
-                  required
-                />
-                <button
-                  type='button'
-                  onClick={() => setShowPassword(!showPassword)}
-                  className='absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
-                </button>
-              </div>
-            </div>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+            <Controller
+              name='email'
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    type='email'
+                    placeholder='you@company.com'
+                    aria-invalid={fieldState.invalid}
+                    autoComplete='email'
+                  />
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            <Controller
+              name='password'
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                  <div className='relative'>
+                    <Input
+                      {...field}
+                      id={field.name}
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder='••••••••'
+                      className='pr-9'
+                      aria-invalid={fieldState.invalid}
+                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                    />
+                    <button
+                      type='button'
+                      onClick={() => setShowPassword(!showPassword)}
+                      className='absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className='w-4 h-4' /> : <Eye className='w-4 h-4' />}
+                    </button>
+                  </div>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
 
             {error && <p className='text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2'>{error}</p>}
 
-            <Button type='submit' className='w-full' disabled={loading || !email.trim() || !password}>
+            <Button type='submit' className='w-full' disabled={loading}>
               {loading && <Loader2 className='animate-spin' />}
               {mode === 'signin' ? 'Sign in' : 'Create account'}
             </Button>

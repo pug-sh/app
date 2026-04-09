@@ -2,14 +2,44 @@ import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
 import { useAtom, useAtomValue } from 'jotai'
-import { Check, Copy, Loader2, Lock, Save } from 'lucide-react'
+import { Check, Copy, Lock, Loader2, Save } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod/v4'
+
+const orgSchema = z.object({
+  displayName: z.string().min(1, 'Organization name is required').max(150, 'Name must be at most 150 characters'),
+})
+
+const projectSchema = z.object({
+  displayName: z.string().min(1, 'Project name is required').max(150, 'Name must be at most 150 characters'),
+})
+
+const fcmSchema = z.object({
+  fcmJSON: z
+    .string()
+    .min(1, 'FCM JSON is required')
+    .refine(val => {
+      try {
+        JSON.parse(val)
+        return true
+      } catch {
+        return false
+      }
+    }, 'Invalid JSON'),
+})
+
+type OrgFormData = z.infer<typeof orgSchema>
+type ProjectFormData = z.infer<typeof projectSchema>
+type FcmFormData = z.infer<typeof fcmSchema>
 
 const CopyId = ({ value }: { value: string }) => {
   const { copied, copy } = useCopyToClipboard()
@@ -31,9 +61,6 @@ const Settings = () => {
   const orgsRPC = useAtomValue(orgsRPCAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
 
-  const [orgName, setOrgName] = useState(org?.displayName ?? '')
-  const [projectName, setProjectName] = useState(project?.displayName ?? '')
-  const [fcmJSON, setFcmJSON] = useState('')
   const [savingOrg, setSavingOrg] = useState(false)
   const [savingProject, setSavingProject] = useState(false)
   const [savingFcm, setSavingFcm] = useState(false)
@@ -44,19 +71,45 @@ const Settings = () => {
   const savedProjectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const savedFcmTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  useEffect(() => { setOrgName(org?.displayName ?? '') }, [org])
-  useEffect(() => { setProjectName(project?.displayName ?? '') }, [project])
+  const orgForm = useForm<OrgFormData>({
+    resolver: zodResolver(orgSchema),
+    defaultValues: {
+      displayName: org?.displayName ?? '',
+    },
+  })
 
-  const orgDirty = orgName.trim() !== '' && orgName !== (org?.displayName ?? '')
-  const projectDirty = projectName.trim() !== '' && projectName !== (project?.displayName ?? '')
+  const projectForm = useForm<ProjectFormData>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      displayName: project?.displayName ?? '',
+    },
+  })
 
-  const handleRenameOrg = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!org || !orgDirty) return
+  const fcmForm = useForm<FcmFormData>({
+    resolver: zodResolver(fcmSchema),
+    defaultValues: {
+      fcmJSON: '',
+    },
+  })
+
+  useEffect(() => {
+    if (org?.displayName !== undefined) {
+      orgForm.reset({ displayName: org.displayName })
+    }
+  }, [org, orgForm])
+
+  useEffect(() => {
+    if (project?.displayName !== undefined) {
+      projectForm.reset({ displayName: project.displayName })
+    }
+  }, [project, projectForm])
+
+  const handleRenameOrg = async (data: OrgFormData) => {
+    if (!org) return
     setSavingOrg(true)
     try {
-      await orgsRPC.updateDisplayName({ orgId: org.id, displayName: orgName })
-      setOrg({ ...org, displayName: orgName })
+      await orgsRPC.updateDisplayName({ orgId: org.id, displayName: data.displayName })
+      setOrg({ ...org, displayName: data.displayName })
       setSavedOrg(true)
       clearTimeout(savedOrgTimer.current)
       savedOrgTimer.current = setTimeout(() => setSavedOrg(false), 2000)
@@ -67,13 +120,12 @@ const Settings = () => {
     }
   }
 
-  const handleRenameProject = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!projectHeaders || !projectDirty) return
+  const handleRenameProject = async (data: ProjectFormData) => {
+    if (!projectHeaders) return
     setSavingProject(true)
     try {
-      await projectsRPC.updateDisplayName({ displayName: projectName }, { headers: projectHeaders })
-      setProject({ ...project!, displayName: projectName })
+      await projectsRPC.updateDisplayName({ displayName: data.displayName }, { headers: projectHeaders })
+      setProject({ ...project!, displayName: data.displayName })
       setSavedProject(true)
       clearTimeout(savedProjectTimer.current)
       savedProjectTimer.current = setTimeout(() => setSavedProject(false), 2000)
@@ -84,13 +136,12 @@ const Settings = () => {
     }
   }
 
-  const handleFCMUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!projectHeaders || !fcmJSON.trim()) return
+  const handleFCMUpload = async (data: FcmFormData) => {
+    if (!projectHeaders) return
     setSavingFcm(true)
     try {
-      await projectsRPC.updateFCMServiceJSON({ fcmServiceJson: fcmJSON }, { headers: projectHeaders })
-      setFcmJSON('')
+      await projectsRPC.updateFCMServiceJSON({ fcmServiceJson: data.fcmJSON }, { headers: projectHeaders })
+      fcmForm.reset({ fcmJSON: '' })
       setSavedFcm(true)
       clearTimeout(savedFcmTimer.current)
       savedFcmTimer.current = setTimeout(() => setSavedFcm(false), 2000)
@@ -115,17 +166,27 @@ const Settings = () => {
         {org && (
           <section>
             <SectionHeader title='Organization' description='Rename your organization' />
-            <div className='space-y-2'>
-              <form onSubmit={handleRenameOrg} className='flex gap-2 items-center'>
-                <Input value={orgName} onChange={e => setOrgName(e.target.value)} maxLength={150} />
-                <Button type='submit' variant='outline' size='sm' disabled={savingOrg || !orgDirty}>
+            <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className='space-y-3'>
+              <Controller
+                name='displayName'
+                control={orgForm.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor={field.name}>Organization Name</FieldLabel>
+                    <Input {...field} id={field.name} maxLength={150} aria-invalid={fieldState.invalid} />
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+              <div className='flex items-center gap-2'>
+                <Button type='submit' variant='outline' size='sm' disabled={savingOrg}>
                   {savingOrg ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
                   Save
                 </Button>
                 {savedOrg && <span className='text-xs text-green-600 animate-in fade-in'>Saved</span>}
-              </form>
-              <CopyId value={org.id} />
-            </div>
+              </div>
+            </form>
+            <CopyId value={org.id} />
           </section>
         )}
 
@@ -133,27 +194,53 @@ const Settings = () => {
           <>
             <section>
               <SectionHeader title='Project name' description='Rename this project' />
-              <form onSubmit={handleRenameProject} className='flex gap-2 items-center'>
-                <Input value={projectName} onChange={e => setProjectName(e.target.value)} maxLength={150} />
-                <Button type='submit' variant='outline' size='sm' disabled={savingProject || !projectDirty}>
-                  {savingProject ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
-                  Save
-                </Button>
-                {savedProject && <span className='text-xs text-green-600 animate-in fade-in'>Saved</span>}
+              <form onSubmit={projectForm.handleSubmit(handleRenameProject)} className='space-y-3'>
+                <Controller
+                  name='displayName'
+                  control={projectForm.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor={field.name}>Project Name</FieldLabel>
+                      <Input {...field} id={field.name} maxLength={150} aria-invalid={fieldState.invalid} />
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    </Field>
+                  )}
+                />
+                <div className='flex items-center gap-2'>
+                  <Button type='submit' variant='outline' size='sm' disabled={savingProject}>
+                    {savingProject ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+                    Save
+                  </Button>
+                  {savedProject && <span className='text-xs text-green-600 animate-in fade-in'>Saved</span>}
+                </div>
               </form>
             </section>
 
             <section>
-              <SectionHeader title='FCM Service Account' description='Paste your Firebase Cloud Messaging service account JSON' />
-              <form onSubmit={handleFCMUpload} className='space-y-3'>
-                <Textarea
-                  className='font-mono min-h-[120px]'
-                  placeholder={`{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "firebase-adminsdk-...@your-project.iam.gserviceaccount.com"\n}`}
-                  value={fcmJSON}
-                  onChange={e => setFcmJSON(e.target.value)}
+              <SectionHeader
+                title='FCM Service Account'
+                description='Paste your Firebase Cloud Messaging service account JSON'
+              />
+              <form onSubmit={fcmForm.handleSubmit(handleFCMUpload)} className='space-y-3'>
+                <Controller
+                  name='fcmJSON'
+                  control={fcmForm.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor={field.name}>Service Account JSON</FieldLabel>
+                      <Textarea
+                        {...field}
+                        id={field.name}
+                        className='font-mono min-h-30'
+                        placeholder={`{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "firebase-adminsdk-...@your-project.iam.gserviceaccount.com"\n}`}
+                        aria-invalid={fieldState.invalid}
+                      />
+                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                    </Field>
+                  )}
                 />
                 <div className='flex items-center gap-2'>
-                  <Button type='submit' size='sm' disabled={savingFcm || !fcmJSON.trim()}>
+                  <Button type='submit' size='sm' disabled={savingFcm}>
                     {savingFcm ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
                     Upload
                   </Button>
