@@ -14,6 +14,7 @@ const VALID_OPERATORS = new Set([
   FilterOperator.IS_SET, FilterOperator.IS_NOT_SET,
   FilterOperator.GT, FilterOperator.GTE,
   FilterOperator.LT, FilterOperator.LTE,
+  FilterOperator.BETWEEN, FilterOperator.NOT_BETWEEN,
 ])
 
 const EVENT_FILTERS_PARAM = 'ef'
@@ -24,8 +25,9 @@ const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
-const isInOperator = (operator: FilterOperator) =>
-  operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
+const isMultiValuesOperator = (operator: FilterOperator) =>
+  operator === FilterOperator.IN || operator === FilterOperator.NOT_IN ||
+  operator === FilterOperator.BETWEEN || operator === FilterOperator.NOT_BETWEEN
 
 type ParsedBaseFilter = {
   property: string
@@ -42,7 +44,7 @@ const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
 
 const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilter | null => {
   if (typeof rawValue !== 'string') return null
-  if (isInOperator(base.operator)) {
+  if (isMultiValuesOperator(base.operator)) {
     const next = rawValue.trim()
     return { ...base, kind: 'multi', values: next ? [next] : [] }
   }
@@ -51,7 +53,7 @@ const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilte
 
 const normalizeMulti = (base: ParsedBaseFilter, rawValues: unknown): ActiveFilter | null => {
   if (!isStringArray(rawValues)) return null
-  if (isInOperator(base.operator)) {
+  if (isMultiValuesOperator(base.operator)) {
     return { ...base, kind: 'multi', values: rawValues }
   }
   return { ...base, kind: 'single', value: rawValues[0] ?? '' }

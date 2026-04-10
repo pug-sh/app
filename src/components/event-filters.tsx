@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { EventFilterEntry, EventFiltersHandle } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
@@ -28,7 +28,7 @@ const OPERATORS: readonly {
   label: string
   symbol?: string
   noValue?: boolean
-  multiValue?: boolean
+  multiValue?: true | 'two'
 }[] = [
   { value: FilterOperator.EQUALS, label: 'equals', symbol: '=' },
   { value: FilterOperator.NOT_EQUALS, label: 'not equals', symbol: '≠' },
@@ -42,6 +42,8 @@ const OPERATORS: readonly {
   { value: FilterOperator.GTE, label: 'greater or equal', symbol: '≥' },
   { value: FilterOperator.LT, label: 'less than', symbol: '<' },
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
+  { value: FilterOperator.BETWEEN, label: 'between', symbol: '↔', multiValue: 'two' },
+  { value: FilterOperator.NOT_BETWEEN, label: 'not between', symbol: '↮', multiValue: 'two' },
 ]
 
 const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
@@ -151,6 +153,16 @@ const useScopedSchema = (kindFilter?: string) => {
 
 // ── Shared sub-components ────────────────────────────────────────────────────
 
+const filterInputCls = 'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+
+const ApplyFooter = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
+  <div className='border-t border-border px-3 py-2 flex justify-end'>
+    <Button size='sm' className='h-6 text-xs px-3' onClick={onClick} disabled={disabled}>
+      Apply
+    </Button>
+  </div>
+)
+
 const MultiValueEditor = ({
   values,
   onAdd,
@@ -198,7 +210,7 @@ const MultiValueEditor = ({
               setMultiInput('')
             }
           }}
-          className='flex-1 min-w-0 h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
           autoFocus
         />
         <Button
@@ -253,7 +265,7 @@ const SingleValueEditor = ({
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') onCommit() }}
-        className='w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+        className={cn(filterInputCls, 'w-full')}
         autoFocus
       />
     </div>
@@ -278,6 +290,48 @@ const SingleValueEditor = ({
     {footer}
   </div>
 )
+
+function BetweenValueEditor({
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+  onCommit,
+  footer,
+}: {
+  min: string
+  max: string
+  onMinChange: (v: string) => void
+  onMaxChange: (v: string) => void
+  onCommit: () => void
+  footer?: React.ReactNode
+}) {
+  const maxRef = useRef<HTMLInputElement>(null)
+  return (
+    <div>
+      <div className='p-2 border-b border-border/60 flex items-center gap-2'>
+        <input
+          placeholder='Min'
+          value={min}
+          onChange={e => onMinChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') maxRef.current?.focus() }}
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
+          autoFocus
+        />
+        <span className='text-[11px] text-muted-foreground shrink-0'>–</span>
+        <input
+          ref={maxRef}
+          placeholder='Max'
+          value={max}
+          onChange={e => onMaxChange(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') onCommit() }}
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
+        />
+      </div>
+      {footer}
+    </div>
+  )
+}
 
 // ── Event Picker ────────────────────────────────────────────────────────────
 
@@ -448,7 +502,11 @@ export const FilterBuilder = ({
   }
 
   const commitFilter = () => {
-    if (opMeta?.multiValue) {
+    if (opMeta?.multiValue === 'two') {
+      const [min, max] = vals
+      if (!min?.trim() || !max?.trim()) return
+      onAdd(createFilter(prop, op, [min.trim(), max.trim()]))
+    } else if (opMeta?.multiValue) {
       if (vals.length === 0) return
       onAdd(createFilter(prop, op, vals))
     } else {
@@ -568,7 +626,18 @@ export const FilterBuilder = ({
           </Command>
         )}
 
-        {step === 'value' && opMeta?.multiValue && (
+        {step === 'value' && opMeta?.multiValue === 'two' && (
+          <BetweenValueEditor
+            min={vals[0] ?? ''}
+            max={vals[1] ?? ''}
+            onMinChange={v => setVals(prev => [v, prev[1] ?? ''])}
+            onMaxChange={v => setVals(prev => [prev[0] ?? '', v])}
+            onCommit={commitFilter}
+            footer={<ApplyFooter onClick={commitFilter} disabled={!vals[0]?.trim() || !vals[1]?.trim()} />}
+          />
+        )}
+
+        {step === 'value' && opMeta?.multiValue === true && (
           <MultiValueEditor
             values={vals}
             onAdd={addMultiValues}
@@ -577,13 +646,7 @@ export const FilterBuilder = ({
             suggestions={suggestions}
             loaded={loaded}
             error={error}
-            footer={
-              <div className='border-t border-border px-3 py-2 flex justify-end'>
-                <Button size='sm' className='h-6 text-xs px-3' onClick={commitFilter} disabled={vals.length === 0}>
-                  Apply
-                </Button>
-              </div>
-            }
+            footer={<ApplyFooter onClick={commitFilter} disabled={vals.length === 0} />}
           />
         )}
 
@@ -595,13 +658,7 @@ export const FilterBuilder = ({
             suggestions={suggestions}
             loaded={loaded}
             error={error}
-            footer={
-              <div className='border-t border-border px-3 py-2 flex justify-end'>
-                <Button size='sm' className='h-6 text-xs px-3' onClick={commitFilter} disabled={!val.trim()}>
-                  Apply
-                </Button>
-              </div>
-            }
+            footer={<ApplyFooter onClick={commitFilter} disabled={!val.trim()} />}
           />
         )}
       </PopoverContent>
@@ -627,6 +684,7 @@ export const FilterChip = ({
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
   const [editInput, setEditInput] = useState('')
+  const [editInput2, setEditInput2] = useState('')
 
   let propSource = PropertySource.UNSPECIFIED
   if (schema) {
@@ -638,9 +696,16 @@ export const FilterChip = ({
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   const commitEdit = () => {
-    const next = editInput.trim()
-    if (!next) return
-    onUpdate(createFilter(filter.property, filter.operator, next))
+    if (op?.multiValue === 'two') {
+      const min = editInput.trim()
+      const max = editInput2.trim()
+      if (!min || !max) return
+      onUpdate(createFilter(filter.property, filter.operator, [min, max]))
+    } else {
+      const next = editInput.trim()
+      if (!next) return
+      onUpdate(createFilter(filter.property, filter.operator, next))
+    }
     setEditOpen(false)
   }
 
@@ -655,14 +720,19 @@ export const FilterChip = ({
     setEditOpen(next)
     if (!next) {
       setEditInput('')
+      setEditInput2('')
       return
     }
     if (filter.kind === 'single') setEditInput(filter.value)
+    if (filter.kind === 'multi' && op?.multiValue === 'two') {
+      setEditInput(filter.values[0] ?? '')
+      setEditInput2(filter.values[1] ?? '')
+    }
   }
 
   let valueLabel: string | null = null
   if (filter.kind === 'multi') {
-    valueLabel = filter.values.join(', ')
+    valueLabel = op?.multiValue === 'two' ? filter.values.join(' – ') : filter.values.join(', ')
   } else if (filter.kind === 'single') {
     valueLabel = filter.value
   }
@@ -681,7 +751,16 @@ export const FilterChip = ({
             <span className='max-w-56 truncate' title={valueLabel || '...'}>{valueLabel || '...'}</span>
           </PopoverTrigger>
           <PopoverContent align='start' className='w-52 p-0'>
-            {filter.kind === 'multi' ? (
+            {filter.kind === 'multi' && op?.multiValue === 'two' ? (
+              <BetweenValueEditor
+                min={editInput}
+                max={editInput2}
+                onMinChange={setEditInput}
+                onMaxChange={setEditInput2}
+                onCommit={commitEdit}
+                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim() || !editInput2.trim()} />}
+              />
+            ) : filter.kind === 'multi' ? (
               <MultiValueEditor
                 values={filter.values}
                 onAdd={addMultiValues}
@@ -703,18 +782,7 @@ export const FilterChip = ({
                 suggestions={suggestions}
                 loaded={loaded}
                 error={error}
-                footer={
-                  <div className='border-t border-border px-3 py-2 flex justify-end'>
-                    <Button
-                      size='sm'
-                      className='h-6 text-xs px-3'
-                      onClick={commitEdit}
-                      disabled={!editInput.trim()}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                }
+                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim()} />}
               />
             )}
           </PopoverContent>
