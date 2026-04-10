@@ -11,9 +11,9 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { useAtom, useAtomValue } from 'jotai'
 import { Check, Copy, Lock, Loader2, Save } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod/v4'
+import { z } from 'zod'
 
 const orgSchema = z.object({
   displayName: z.string().min(1, 'Organization name is required').max(150, 'Name must be at most 150 characters'),
@@ -73,23 +73,17 @@ const Settings = () => {
 
   const orgForm = useForm<OrgFormData>({
     resolver: zodResolver(orgSchema),
-    defaultValues: {
-      displayName: org?.displayName ?? '',
-    },
+    defaultValues: { displayName: org?.displayName ?? '' },
   })
 
   const projectForm = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
-    defaultValues: {
-      displayName: project?.displayName ?? '',
-    },
+    defaultValues: { displayName: project?.displayName ?? '' },
   })
 
   const fcmForm = useForm<FcmFormData>({
     resolver: zodResolver(fcmSchema),
-    defaultValues: {
-      fcmJSON: '',
-    },
+    defaultValues: { fcmJSON: '' },
   })
 
   useEffect(() => {
@@ -167,19 +161,20 @@ const Settings = () => {
           <section>
             <SectionHeader title='Organization' description='Rename your organization' />
             <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className='space-y-3'>
-              <Controller
-                name='displayName'
-                control={orgForm.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor={field.name}>Organization Name</FieldLabel>
-                    <Input {...field} id={field.name} maxLength={150} aria-invalid={fieldState.invalid} />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                  </Field>
+              <Field data-invalid={!!orgForm.formState.errors.displayName}>
+                <FieldLabel htmlFor='org-name'>Organization Name</FieldLabel>
+                <Input
+                  {...orgForm.register('displayName')}
+                  id='org-name'
+                  maxLength={150}
+                  aria-invalid={!!orgForm.formState.errors.displayName}
+                />
+                {orgForm.formState.errors.displayName && (
+                  <FieldError errors={[orgForm.formState.errors.displayName]} />
                 )}
-              />
+              </Field>
               <div className='flex items-center gap-2'>
-                <Button type='submit' variant='outline' size='sm' disabled={savingOrg}>
+                <Button type='submit' variant='outline' size='sm' disabled={savingOrg || !orgForm.formState.isDirty}>
                   {savingOrg ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
                   Save
                 </Button>
@@ -195,19 +190,20 @@ const Settings = () => {
             <section>
               <SectionHeader title='Project name' description='Rename this project' />
               <form onSubmit={projectForm.handleSubmit(handleRenameProject)} className='space-y-3'>
-                <Controller
-                  name='displayName'
-                  control={projectForm.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor={field.name}>Project Name</FieldLabel>
-                      <Input {...field} id={field.name} maxLength={150} aria-invalid={fieldState.invalid} />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                    </Field>
+                <Field data-invalid={!!projectForm.formState.errors.displayName}>
+                  <FieldLabel htmlFor='project-name'>Project Name</FieldLabel>
+                  <Input
+                    {...projectForm.register('displayName')}
+                    id='project-name'
+                    maxLength={150}
+                    aria-invalid={!!projectForm.formState.errors.displayName}
+                  />
+                  {projectForm.formState.errors.displayName && (
+                    <FieldError errors={[projectForm.formState.errors.displayName]} />
                   )}
-                />
+                </Field>
                 <div className='flex items-center gap-2'>
-                  <Button type='submit' variant='outline' size='sm' disabled={savingProject}>
+                  <Button type='submit' variant='outline' size='sm' disabled={savingProject || !projectForm.formState.isDirty}>
                     {savingProject ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
                     Save
                   </Button>
@@ -222,23 +218,19 @@ const Settings = () => {
                 description='Paste your Firebase Cloud Messaging service account JSON'
               />
               <form onSubmit={fcmForm.handleSubmit(handleFCMUpload)} className='space-y-3'>
-                <Controller
-                  name='fcmJSON'
-                  control={fcmForm.control}
-                  render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                      <FieldLabel htmlFor={field.name}>Service Account JSON</FieldLabel>
-                      <Textarea
-                        {...field}
-                        id={field.name}
-                        className='font-mono min-h-30'
-                        placeholder={`{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "firebase-adminsdk-...@your-project.iam.gserviceaccount.com"\n}`}
-                        aria-invalid={fieldState.invalid}
-                      />
-                      {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                    </Field>
+                <Field data-invalid={!!fcmForm.formState.errors.fcmJSON}>
+                  <FieldLabel htmlFor='fcm-json'>Service Account JSON</FieldLabel>
+                  <Textarea
+                    {...fcmForm.register('fcmJSON')}
+                    id='fcm-json'
+                    className='font-mono min-h-30'
+                    placeholder={`{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "firebase-adminsdk-...@your-project.iam.gserviceaccount.com"\n}`}
+                    aria-invalid={!!fcmForm.formState.errors.fcmJSON}
+                  />
+                  {fcmForm.formState.errors.fcmJSON && (
+                    <FieldError errors={[fcmForm.formState.errors.fcmJSON]} />
                   )}
-                />
+                </Field>
                 <div className='flex items-center gap-2'>
                   <Button type='submit' size='sm' disabled={savingFcm}>
                     {savingFcm ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
