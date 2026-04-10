@@ -6,7 +6,7 @@ export const toProtoFilters = (filters: ActiveFilter[]) =>
   filters.map(f => {
     switch (f.kind) {
       case 'multi':
-        return { property: f.property, operator: f.operator, value: '', values: f.values }
+        return { property: f.property, operator: f.operator, value: f.values[0] ?? '', values: f.values }
       case 'presence':
         return { property: f.property, operator: f.operator, value: '', values: [] }
       case 'single':
