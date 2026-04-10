@@ -42,8 +42,12 @@ const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
   return { property: v.property, operator: v.operator as FilterOperator }
 }
 
+const isTwoValueOperator = (operator: FilterOperator) =>
+  operator === FilterOperator.BETWEEN || operator === FilterOperator.NOT_BETWEEN
+
 const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilter | null => {
   if (typeof rawValue !== 'string') return null
+  if (isTwoValueOperator(base.operator)) return null  // single string can't form a valid range
   if (isMultiValuesOperator(base.operator)) {
     const next = rawValue.trim()
     return { ...base, kind: 'multi', values: next ? [next] : [] }
@@ -53,6 +57,10 @@ const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilte
 
 const normalizeMulti = (base: ParsedBaseFilter, rawValues: unknown): ActiveFilter | null => {
   if (!isStringArray(rawValues)) return null
+  if (isTwoValueOperator(base.operator)) {
+    if (rawValues.length < 2) return null  // discard incomplete range filters
+    return { ...base, kind: 'multi', values: rawValues }
+  }
   if (isMultiValuesOperator(base.operator)) {
     return { ...base, kind: 'multi', values: rawValues }
   }

@@ -291,7 +291,7 @@ const SingleValueEditor = ({
   </div>
 )
 
-function BetweenValueEditor({
+const BetweenValueEditor = ({
   min,
   max,
   onMinChange,
@@ -305,7 +305,7 @@ function BetweenValueEditor({
   onMaxChange: (v: string) => void
   onCommit: () => void
   footer?: React.ReactNode
-}) {
+}) => {
   const maxRef = useRef<HTMLInputElement>(null)
   return (
     <div>
