@@ -17,7 +17,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { GRANULARITIES, useGranularity } from '@/hooks/use-granularity'
+import { GRANULARITIES, GRANULARITY_VALUES, useGranularity } from '@/hooks/use-granularity'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -31,8 +31,6 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
-
-const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
 
 const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
@@ -104,7 +102,7 @@ const OptionChip = <T extends string | number>({
                 'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
                 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
                 opt.value === value && 'bg-muted text-foreground font-medium',
-                opt.disabled && 'text-muted-foreground/40 cursor-default',
+                opt.disabled && 'text-muted-foreground/40 cursor-default pointer-events-none',
               )}
             >
               {opt.label}

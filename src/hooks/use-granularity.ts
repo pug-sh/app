@@ -9,6 +9,8 @@ export const GRANULARITIES = [
   { label: 'Month', value: Granularity.MONTH },
 ] as const
 
+export const GRANULARITY_VALUES = GRANULARITIES.map(g => g.value) as Granularity[]
+
 const MAX_DAYS: Record<Granularity, number> = {
   [Granularity.UNSPECIFIED]: 0,
   [Granularity.HOUR]: 7,
@@ -29,7 +31,7 @@ export const useGranularity = (timeRange: TimeRange | undefined, initial = Granu
   const days = timeRange ? rangeDays(timeRange) : 0
   const resolvedGranularity = fitsRange(granularity, days)
     ? granularity
-    : GRANULARITIES.find(g => fitsRange(g.value, days))?.value ?? Granularity.MONTH
+    : GRANULARITIES.find(g => fitsRange(g.value, days))!.value
 
   const options = GRANULARITIES.map(g => ({
     ...g,
