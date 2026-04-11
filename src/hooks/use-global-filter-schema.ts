@@ -17,12 +17,8 @@ export const clearSchemaCache = () => {
   failureCache.clear()
 }
 
-const cacheKey = (kind: string, headers: HeadersInit | undefined) => {
-  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
-    ? (headers as Record<string, string>)['x-project-id'] ?? ''
-    : ''
-  return `${projectId}\0${kind}`
-}
+const cacheKey = (kind: string, headers: Record<string, string> | undefined) =>
+  `${headers?.['x-project-id'] ?? ''}\0${kind}`
 
 export const fetchSchemaForKind = (
   kind: string,
@@ -32,7 +28,7 @@ export const fetchSchemaForKind = (
       options?: { headers?: HeadersInit }
     ) => Promise<GetFilterSchemaResponse>
   },
-  headers: HeadersInit | undefined,
+  headers: Record<string, string> | undefined,
   opts?: { force?: boolean }
 ) => {
   const key = cacheKey(kind, headers)
@@ -115,9 +111,7 @@ export const useGlobalFilterSchema = ({
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
 
-  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
-    ? (headers as Record<string, string>)['x-project-id'] ?? ''
-    : ''
+  const projectId = headers?.['x-project-id'] ?? ''
 
   useEffect(() => {
     clearSchemaCache()

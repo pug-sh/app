@@ -49,7 +49,10 @@ const createFilter = (property: string, operator: FilterOperator, payload?: stri
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
   if (meta.noValue) return { property, operator, kind: 'presence' }
   if (meta.multiValue) {
-    const values = Array.isArray(payload) ? payload : payload ? [payload] : []
+    let values: string[]
+    if (Array.isArray(payload)) values = payload
+    else if (payload) values = [payload]
+    else values = []
     return { property, operator, kind: 'multi', values }
   }
   const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
@@ -77,6 +80,12 @@ const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
   if (!loaded) return 'Loading...'
   if (error) return 'Failed to load values'
   return 'No values'
+}
+
+const getSchemaEmptyMessage = (schema: GetFilterSchemaResponse | null, schemaError: string | null): string => {
+  if (schemaError) return 'Failed to load'
+  if (schema) return 'No properties'
+  return 'Loading...'
 }
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
@@ -279,6 +288,69 @@ const SingleValueEditor = ({
   </div>
 )
 
+// ── Property Picker List (shared) ───────────────────────────────────────────
+
+const PropertyPickerList = ({
+  schema,
+  schemaError,
+  placeholder,
+  selected,
+  onSelect,
+}: {
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  placeholder: string
+  selected?: Set<string>
+  onSelect: (name: string, source: PropertySource) => void
+}) => {
+  const hasSystem = schema && schema.autoPropertyKeys.length > 0
+  const hasCustom = schema && schema.customPropertyKeys.length > 0
+  const hasProfile = schema && schema.profilePropertyKeys.length > 0
+
+  return (
+    <Command>
+      <CommandInput placeholder={placeholder} className='text-xs' />
+      <CommandList>
+        <CommandEmpty className='py-4 text-xs'>
+          {getSchemaEmptyMessage(schema, schemaError)}
+        </CommandEmpty>
+        {hasSystem && (
+          <CommandGroup heading='System'>
+            {[...schema.autoPropertyKeys].sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0)).map(pk => (
+              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
+                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
+                <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
+                <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {hasCustom && (
+          <CommandGroup heading='Custom'>
+            {[...schema.customPropertyKeys].sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0)).map(pk => (
+              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
+                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
+                <span className='truncate'>{pk.name}</span>
+                <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {hasProfile && (
+          <CommandGroup heading='Profile'>
+            {schema.profilePropertyKeys.map(key => (
+              <CommandItem key={key} value={key} onSelect={() => onSelect(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
+                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(key) ? 'opacity-100' : 'opacity-0')} />}
+                {key}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+      </CommandList>
+    </Command>
+  )
+}
+
 // ── Event Picker ────────────────────────────────────────────────────────────
 
 const EventPopoverList = ({
@@ -470,10 +542,6 @@ export const FilterBuilder = ({
     if (!next) reset()
   }
 
-  const hasSystem = schema && schema.autoPropertyKeys.length > 0
-  const hasCustom = schema && schema.customPropertyKeys.length > 0
-  const hasProfile = schema && schema.profilePropertyKeys.length > 0
-
   const breadcrumb = (
     <div className='flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground'>
       {step !== 'property' && (
@@ -512,43 +580,12 @@ export const FilterBuilder = ({
         {step !== 'property' && breadcrumb}
 
         {step === 'property' && (
-          <Command>
-            <CommandInput placeholder='Filter by property...' className='text-xs' />
-            <CommandList>
-              <CommandEmpty className='py-4 text-xs'>
-                {schemaError ? 'Failed to load' : schema ? 'No properties' : 'Loading...'}
-              </CommandEmpty>
-              {hasSystem && (
-                <CommandGroup heading='System'>
-                  {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
-                      <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
-                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {hasCustom && (
-                <CommandGroup heading='Custom'>
-                  {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
-                      <span className='truncate'>{pk.name}</span>
-                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {hasProfile && (
-                <CommandGroup heading='Profile'>
-                  {schema.profilePropertyKeys.map(key => (
-                    <CommandItem key={key} value={key} onSelect={() => pickProperty(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                      {key}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
+          <PropertyPickerList
+            schema={schema}
+            schemaError={schemaError}
+            placeholder='Filter by property...'
+            onSelect={(name, source) => pickProperty(name, source)}
+          />
         )}
 
         {step === 'operator' && (
@@ -728,6 +765,61 @@ export const FilterChip = ({
         <X className='w-3 h-3' />
       </button>
     </span>
+  )
+}
+
+// ── Breakdown UI ─────────────────────────────────────────────────────────────
+
+export const BreakdownChip = ({ property, onRemove }: { property: string; onRemove: () => void }) => (
+  <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
+    <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>break by</span>
+    <span className='px-2 h-full flex items-center font-mono'>{property}</span>
+    <button
+      type='button'
+      onClick={onRemove}
+      className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+    >
+      <X className='w-3 h-3' />
+    </button>
+  </span>
+)
+
+export const BreakdownBuilder = ({
+  schema,
+  schemaError,
+  breakdowns,
+  onAdd,
+}: {
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  breakdowns: string[]
+  onAdd: (prop: string) => void
+}) => {
+  const [open, setOpen] = useState(false)
+  const existing = new Set(breakdowns)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+          'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
+          open && 'border-foreground/20 text-foreground'
+        )}
+      >
+        <Plus className='w-3 h-3' />
+        Breakdown
+      </PopoverTrigger>
+      <PopoverContent align='start' className='w-64 p-0'>
+        <PropertyPickerList
+          schema={schema}
+          schemaError={schemaError}
+          placeholder='Break down by...'
+          selected={existing}
+          onSelect={(name) => { if (!existing.has(name)) { onAdd(name); setOpen(false) } }}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 

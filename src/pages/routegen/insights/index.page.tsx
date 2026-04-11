@@ -2,11 +2,12 @@ import {
   AggregationType,
   Granularity,
   InsightType,
+  type FunnelSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -27,7 +28,23 @@ import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, Trending
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelBreakdownTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
+
+// ── Module-level helpers ─────────────────────────────────────────────────────
+
+const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[]) =>
+  [...steps]
+    .sort((a, b) => {
+      const ai = kindOrder.indexOf(a.eventKind)
+      const bi = kindOrder.indexOf(b.eventKind)
+      const orderA = ai === -1 ? kindOrder.length : ai
+      const orderB = bi === -1 ? kindOrder.length : bi
+      return orderA - orderB
+    })
+    .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: s.total }))
+
+const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
+  Object.values(breakdown).join(' / ') || fallback
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -146,6 +163,12 @@ const Insights = () => {
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const [breakdowns, setBreakdowns] = useState<string[]>(() => initialFilterState.breakdowns)
+  const addBreakdown = (prop: string) => setBreakdowns(prev => {
+    if (prev.includes(prop) || prev.length >= 5) return prev
+    return [...prev, prop]
+  })
+  const removeBreakdown = (i: number) => setBreakdowns(prev => prev.filter((_, idx) => idx !== i))
 
   const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
 
@@ -169,8 +192,8 @@ const Insights = () => {
   }, [project, fetchSchema])
 
   useEffect(() => {
-    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange })
-  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange])
+    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange, breakdowns })
+  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
 
   const validEntries = eventFilters.validEntries
 
@@ -180,6 +203,7 @@ const Insights = () => {
     insightType,
     granularity,
     propFilters,
+    breakdowns,
   })
 
   const { data: queryResult, loading, error, retry } = useDebouncedQuery(
@@ -204,6 +228,8 @@ const Insights = () => {
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
+          breakdowns: breakdowns.map(property => ({ property })),
+          breakdownLimit: breakdowns.length > 0 ? 25 : 0,
         },
         { headers }
       )
@@ -228,23 +254,37 @@ const Insights = () => {
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
   }, [result, eventFilters.validEntries])
-  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : EMPTY_ARRAY
-  const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel') return []
-    const kindEntries = eventFilters.validEntries
-    return [...result.value.steps]
-      .sort((a, b) => {
-        const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
-        const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
-        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-      })
-      .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
-  }, [result, eventFilters.validEntries])
+  const retentionSeriesList = result.case === 'retention' ? result.value.series : EMPTY_ARRAY
+  const retentionCohorts = retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY
+
+  const kindOrder = useMemo(
+    () => eventFilters.validEntries.map(e => e.kind),
+    [eventFilters.validEntries]
+  )
+
+  const funnelSeriesList = useMemo(
+    () => result.case === 'funnel' ? result.value.series : [],
+    [result]
+  )
+  const funnelSteps = useMemo(
+    () => funnelSeriesList.length > 0 ? sortFunnelSteps(funnelSeriesList[0].steps, kindOrder) : [],
+    [funnelSeriesList, kindOrder]
+  )
+  const funnelSeriesData = useMemo(
+    () => funnelSeriesList.map((series, si) => {
+      const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
+      return { label, steps: sortFunnelSteps(series.steps, kindOrder), color: getSeriesColor(label, si).dot }
+    }),
+    [funnelSeriesList, kindOrder]
+  )
 
   const seriesNames = useMemo(
     () => result.case === 'retention'
       ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
-      : trendSeries.map((s, i) => s.eventKind || `series ${i + 1}`),
+      : trendSeries.map((s, i) => {
+          const bd = breakdownLabel(s.breakdown, '')
+          return bd ? `${s.eventKind} · ${bd}` : (s.eventKind || `Series ${i + 1}`)
+        }),
     [result.case, trendSeries, retentionCohorts]
   )
   const seriesColors = useMemo(
@@ -272,7 +312,7 @@ const Insights = () => {
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTimeSeriesInsight = isTrends || isRetention
-  const hasFunnelData = funnelSteps.some(step => step.count > 0)
+  const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
@@ -309,17 +349,48 @@ const Insights = () => {
   }
 
   const renderFunnelContent = () => {
-    if (funnelSteps.length === 0) return renderLoadingEmptyState()
+    if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
 
-    if (hasFunnelData) {
-      return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
+    if (!hasFunnelData) {
+      return (
+        <div className='flex items-center justify-center h-48 text-muted-foreground'>
+          <p className='text-sm'>No events recorded in this period</p>
+        </div>
+      )
     }
 
-    return (
-      <div className='flex items-center justify-center h-48 text-muted-foreground'>
-        <p className='text-sm'>No events recorded in this period</p>
-      </div>
-    )
+    if (breakdowns.length > 0) {
+      return <FunnelBreakdownTable series={funnelSeriesData} />
+    }
+
+    return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
+  }
+
+  const renderRetentionContent = () => {
+    if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
+
+    if (breakdowns.length > 0) {
+      return (
+        <div className='space-y-6 mt-2'>
+          {retentionSeriesList.map((series, si) => {
+            const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
+            const cohortColors = series.cohorts.map((c, ci) => getSeriesColor(c.cohort || `Cohort ${ci + 1}`, ci))
+            return (
+              <div key={si}>
+                <div className='flex items-center gap-2 mb-2'>
+                  <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>{label}</span>
+                  <div className='flex-1 h-px bg-border' />
+                </div>
+                <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
+              </div>
+            )
+          })}
+        </div>
+      )
+    }
+
+    if (retentionCohorts.length === 0) return renderLoadingEmptyState()
+    return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
   }
 
   const renderMainContent = () => {
@@ -344,11 +415,10 @@ const Insights = () => {
       )
     }
 
-    if (isRetention && retentionCohorts.length > 0) {
-      return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
-    }
+    if (isRetention) return renderRetentionContent()
+    if (!isTrends) return renderFunnelContent()
 
-    if (isTrends && chartData.length > 0) {
+    if (chartData.length > 0) {
       return (
         <div>
           <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
@@ -356,8 +426,6 @@ const Insights = () => {
         </div>
       )
     }
-
-    if (!isTrends) return renderFunnelContent()
 
     return renderLoadingEmptyState()
   }
@@ -416,7 +484,7 @@ const Insights = () => {
           )}
         </div>
 
-        {/* Global filters */}
+        {/* Global filters + breakdown */}
         <div className='flex flex-wrap items-center gap-2'>
           {propFilters.map((f, i) => (
             <FilterChip
@@ -428,6 +496,13 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+          {(propFilters.length > 0 || breakdowns.length > 0) && <span className='h-4 w-px bg-border mx-0.5' />}
+          {breakdowns.map((prop, i) => (
+            <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(i)} />
+          ))}
+          {breakdowns.length < 5 && (
+            <BreakdownBuilder schema={globalSchema} schemaError={globalSchemaError} breakdowns={breakdowns} onAdd={addBreakdown} />
+          )}
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>
       </div>

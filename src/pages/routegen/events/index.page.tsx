@@ -190,7 +190,8 @@ const EventExplorer = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Event explorer failed:', err)
-        setError(err instanceof Error ? err.message : (pageToken ? 'Failed to load more events' : 'Failed to load events'))
+        if (err instanceof Error) setError(err.message)
+        else setError(pageToken ? 'Failed to load more events' : 'Failed to load events')
       } finally {
         setLoading(false)
       }

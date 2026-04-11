@@ -4,6 +4,70 @@ import { useMemo } from 'react'
 import { Bar, BarChart as ReBarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
 import type { SeriesColor } from '@/lib/event-colors'
 
+export interface FunnelSeriesData {
+  label: string
+  steps: Array<{ name: string; count: number }>
+  color: string
+}
+
+export const FunnelBreakdownTable = ({ series }: { series: FunnelSeriesData[] }) => {
+  if (series.length === 0) return null
+  const stepNames = series[0].steps.map(s => s.name)
+
+  return (
+    <div className='mt-4 border border-border rounded-lg overflow-auto'>
+      <table className='w-full'>
+        <thead>
+          <tr className='border-b border-border bg-muted/20'>
+            <th className='py-2 px-3 text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+              Breakdown
+            </th>
+            {stepNames.map(name => (
+              <th key={name} className='py-2 px-3 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+                {name}
+              </th>
+            ))}
+            <th className='py-2 px-3 text-right text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
+              Conversion
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {series.map(row => {
+            const first = row.steps[0]?.count ?? 0
+            const last = row.steps[row.steps.length - 1]?.count ?? 0
+            const overall = first > 0 ? (last / first) * 100 : 0
+            return (
+              <tr key={row.label} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
+                <td className='py-2 px-3 text-xs'>
+                  <div className='flex items-center gap-1.5'>
+                    <span className='w-2 h-2 rounded-full shrink-0' style={{ background: row.color }} />
+                    {row.label}
+                  </div>
+                </td>
+                {row.steps.map((step, si) => {
+                  const rate = first > 0 ? (step.count / first) * 100 : 0
+                  return (
+                    <td key={step.name} className='py-2 px-3 text-right text-xs tabular-nums'>
+                      <span>{compactNumber(step.count)}</span>
+                      {si > 0 && (
+                        <span className='text-muted-foreground ml-1'>{rate.toFixed(0)}%</span>
+                      )}
+                    </td>
+                  )
+                })}
+                <td className='py-2 px-3 text-right text-xs tabular-nums font-medium'>
+                  {overall.toFixed(1)}%
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export interface FunnelStep {
   name: string
   count: number
