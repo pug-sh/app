@@ -9,7 +9,6 @@ export const GRANULARITIES = [
   { label: 'Month', value: Granularity.MONTH },
 ] as const
 
-
 const MAX_DAYS: Record<Granularity, number> = {
   [Granularity.UNSPECIFIED]: -1,
   [Granularity.HOUR]: 7,
