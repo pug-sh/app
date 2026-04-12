@@ -9,10 +9,9 @@ export const GRANULARITIES = [
   { label: 'Month', value: Granularity.MONTH },
 ] as const
 
-export const GRANULARITY_VALUES = GRANULARITIES.map(g => g.value) as Granularity[]
 
 const MAX_DAYS: Record<Granularity, number> = {
-  [Granularity.UNSPECIFIED]: 0,
+  [Granularity.UNSPECIFIED]: -1,
   [Granularity.HOUR]: 7,
   [Granularity.DAY]: 90,
   [Granularity.WEEK]: 365,
@@ -21,22 +20,24 @@ const MAX_DAYS: Record<Granularity, number> = {
 
 const MS_PER_DAY = 86_400_000
 
-const rangeDays = (tr: TimeRange) => Math.ceil((tr.to.getTime() - tr.from.getTime()) / MS_PER_DAY)
+const rangeDays = (tr: TimeRange) => Math.max(0, Math.ceil((tr.to.getTime() - tr.from.getTime()) / MS_PER_DAY))
 
 const fitsRange = (g: Granularity, days: number) => MAX_DAYS[g] >= days
 
 export const useGranularity = (timeRange: TimeRange | undefined, initial = Granularity.DAY) => {
-  const [granularity, setGranularity] = useState(initial)
-
+  const [selected, setSelected] = useState(initial)
   const days = timeRange ? rangeDays(timeRange) : 0
-  const resolvedGranularity = fitsRange(granularity, days)
-    ? granularity
-    : GRANULARITIES.find(g => fitsRange(g.value, days))!.value
 
-  const options = GRANULARITIES.map(g => ({
-    ...g,
-    disabled: !fitsRange(g.value, days),
-  }))
+  // Derive the effective granularity — `selected` preserves user intent,
+  // so their original choice is restored when the range fits again.
+  const granularity = fitsRange(selected, days)
+    ? selected
+    : GRANULARITIES.find(g => fitsRange(g.value, days))?.value ?? Granularity.MONTH
 
-  return { granularity: resolvedGranularity, setGranularity, options }
+  const options = GRANULARITIES.map(g => {
+    const disabled = !fitsRange(g.value, days)
+    return { ...g, disabled, title: disabled ? 'Not available for this time range' : undefined }
+  })
+
+  return { granularity, setGranularity: setSelected, options }
 }

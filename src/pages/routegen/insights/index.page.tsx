@@ -17,7 +17,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { GRANULARITIES, GRANULARITY_VALUES, useGranularity } from '@/hooks/use-granularity'
+import { useGranularity } from '@/hooks/use-granularity'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -75,7 +75,7 @@ const OptionChip = <T extends string | number>({
 }: {
   label: string
   icon?: LucideIcon
-  options: readonly { label: string; value: T; disabled?: boolean }[]
+  options: readonly { label: string; value: T; disabled?: boolean; title?: string }[]
   value: T
   onChange: (v: T) => void
 }) => {
@@ -97,12 +97,14 @@ const OptionChip = <T extends string | number>({
               key={String(opt.value)}
               type='button'
               disabled={opt.disabled}
+              title={opt.title}
               onClick={() => { onChange(opt.value); setOpen(false) }}
               className={cn(
-                'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
-                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                opt.value === value && 'bg-muted text-foreground font-medium',
-                opt.disabled && 'text-muted-foreground/40 cursor-default pointer-events-none',
+                'px-3 py-1.5 text-xs text-left rounded-md transition-colors',
+                opt.disabled
+                  ? 'text-muted-foreground/40'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer',
+                opt.value === value && !opt.disabled && 'bg-muted text-foreground font-medium',
               )}
             >
               {opt.label}
@@ -135,9 +137,7 @@ const Insights = () => {
   )
   const { granularity, setGranularity, options: granularityOptions } = useGranularity(
     timeRange,
-    GRANULARITY_VALUES.includes(initialFilterState.granularity as Granularity)
-      ? initialFilterState.granularity as Granularity
-      : Granularity.DAY
+    initialFilterState.granularity ?? Granularity.DAY
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
@@ -235,6 +235,7 @@ const Insights = () => {
       })
       .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
   }, [result, eventFilters.validEntries])
+
   const seriesNames = useMemo(
     () => result.case === 'retention'
       ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
