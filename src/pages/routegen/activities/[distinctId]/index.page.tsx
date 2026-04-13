@@ -381,7 +381,34 @@ const UserActivity = () => {
     <div className='flex flex-1 overflow-hidden' style={{ height: 'calc(100svh - 3rem)' }}>
 
       {/* ── Timeline ─────────────────────────────────────────────────── */}
-      <div className='flex-1 min-w-0 overflow-y-auto p-8'>
+      <div className='flex flex-col flex-1 min-w-0 overflow-hidden'>
+
+        {/* Filter bar — outside the scroll container so it never overlaps */}
+        <div className='px-8 pt-6 pb-3 space-y-2 border-b border-border/50 shrink-0'>
+          <div className='flex flex-wrap items-center gap-2'>
+            <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+          </div>
+          <EventFilterBar
+            filters={eventFilters}
+            events={schema?.events ?? []}
+            schema={schema}
+            schemaError={schemaError}
+          />
+          <div className='flex flex-wrap items-center gap-2'>
+            {propFilters.map((f, i) => (
+              <FilterChip
+                key={i}
+                filter={f}
+                schema={globalSchema}
+                onRemove={() => removeFilter(i)}
+                onUpdate={next => updateFilter(i, next)}
+              />
+            ))}
+            <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+          </div>
+        </div>
+
+        <div className='flex-1 overflow-y-auto px-8 pb-8'>
         {loading && events.length === 0 ? (
           <LoadingSpinner />
         ) : error && events.length === 0 ? (
@@ -394,30 +421,6 @@ const UserActivity = () => {
           </div>
         ) : events.length > 0 ? (
           <>
-            <div className='sticky top-0 z-10 bg-background -mx-8 px-8 pb-3 space-y-2 border-b border-border/50'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
-              </div>
-              <EventFilterBar
-                filters={eventFilters}
-                events={schema?.events ?? []}
-                schema={schema}
-                schemaError={schemaError}
-              />
-              <div className='flex flex-wrap items-center gap-2'>
-                {propFilters.map((f, i) => (
-                  <FilterChip
-                    key={i}
-                    filter={f}
-                    schema={globalSchema}
-                    onRemove={() => removeFilter(i)}
-                    onUpdate={next => updateFilter(i, next)}
-                  />
-                ))}
-                <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-              </div>
-            </div>
-
             <div className='pt-4'>
             {groupedEvents.map(group => {
               const lanes = computeSessionLanes(group.events)
@@ -541,6 +544,7 @@ const UserActivity = () => {
             <p className='text-xs'>No activity for this user</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* ── Profile Sidebar ───────────────────────────────────────────── */}
