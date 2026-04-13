@@ -540,9 +540,10 @@ export const FilterBuilder = ({
               )}
               {hasProfile && (
                 <CommandGroup heading='Profile'>
-                  {schema.profilePropertyKeys.map(key => (
-                    <CommandItem key={key} value={key} onSelect={() => pickProperty(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                      {key}
+                  {[...schema.profilePropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)} className='text-xs py-1.5'>
+                      <span className='truncate'>{pk.name}</span>
+                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -749,6 +750,7 @@ export const EventQueryRow = ({
   color,
   children,
   getEventColor,
+  hideFilters,
 }: {
   entry: EventFilterEntry
   events: EventNameMeta[]
@@ -763,6 +765,7 @@ export const EventQueryRow = ({
   color?: string
   children?: React.ReactNode
   getEventColor?: (eventName: string) => string
+  hideFilters?: boolean
 }) => {
   const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
   const resolvedSchema = entry.kind ? scopedSchema : schema
@@ -787,7 +790,7 @@ export const EventQueryRow = ({
         />
         {entry.kind && (
           <>
-            {entry.filters.map((f, fi) => (
+            {!hideFilters && entry.filters.map((f, fi) => (
               <FilterChip
                 key={fi}
                 filter={f}
@@ -797,8 +800,8 @@ export const EventQueryRow = ({
                 onUpdate={next => onUpdateFilter(fi, next)}
               />
             ))}
-            <FilterBuilder schema={resolvedSchema} schemaError={resolvedSchemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
-            {scopedSchemaError && (
+            {!hideFilters && <FilterBuilder schema={resolvedSchema} schemaError={resolvedSchemaError} onAdd={onAddFilter} kindFilter={entry.kind} />}
+            {!hideFilters && scopedSchemaError && (
               <button
                 type='button'
                 onClick={retryScopedSchema}
@@ -834,6 +837,7 @@ export const EventFilterBar = ({
   renderRowExtra,
   maxEvents,
   getEventColor,
+  hideFilters,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -844,6 +848,7 @@ export const EventFilterBar = ({
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
+  hideFilters?: boolean
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -861,6 +866,7 @@ export const EventFilterBar = ({
         letter={showLetters ? SERIES_LETTERS[i] : undefined}
         color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
         getEventColor={getEventColor}
+        hideFilters={hideFilters}
       >
         {renderRowExtra?.(i)}
       </EventQueryRow>

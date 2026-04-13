@@ -1,14 +1,14 @@
 import type { ActivityEvent, HeatmapDay, ProfileStats } from '@/api/genproto/shared/activity/v1/activity_pb'
+import type { JsonObject } from '@bufbuild/protobuf'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { EventFilterBar } from '@/components/event-filters'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
-import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
-import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { toProtoEventFilters } from '@/hooks/use-filter-state'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import NoProject from '@/components/no-project'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -17,7 +17,7 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
-import { structGet } from '@/lib/struct'
+import { structToEntries, structGet } from '@/lib/struct'
 import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -160,10 +160,11 @@ const UserProfileSidebar = ({ distinctId }: { distinctId: string }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const [stats, setStats] = useState<ProfileStats | undefined>(undefined)
   const [heatmap, setHeatmap] = useState<HeatmapDay[]>([])
+  const [properties, setProperties] = useState<JsonObject | undefined>(undefined)
 
   useEffect(() => {
     activityRPC.getProfileStats({ distinctId }, { headers })
-      .then(resp => { setStats(resp.stats); setHeatmap(resp.heatmap) })
+      .then(resp => { setStats(resp.stats); setHeatmap(resp.heatmap); setProperties(resp.properties) })
       .catch(() => {})
   }, [distinctId, activityRPC, headers])
 
@@ -175,8 +176,9 @@ const UserProfileSidebar = ({ distinctId }: { distinctId: string }) => {
   const city = stats?.city ?? ''
 
   return (
-    <aside className='w-80 shrink-0 border-l border-border overflow-y-auto'>
-      <div className='p-5 space-y-5'>
+    <aside className='w-80 shrink-0 border-l border-border flex flex-col overflow-hidden'>
+      {/* Scrollable content */}
+      <div className='flex-1 overflow-y-auto px-5 pt-5 pb-2 space-y-5'>
 
         {/* Identity */}
         <div>
@@ -194,18 +196,14 @@ const UserProfileSidebar = ({ distinctId }: { distinctId: string }) => {
                 {[os, browser].filter(Boolean).join(', ')}
               </span>
             )}
+            {stats && (
+              <span className='flex items-center gap-1'>
+                <Activity className='w-3 h-3 shrink-0' />
+                {stats.totalEvents.toString()} events
+              </span>
+            )}
           </div>
         </div>
-
-        {/* Stats */}
-        {stats && (
-          <div className='flex gap-5'>
-            <div>
-              <p className='text-xl font-semibold tabular-nums'>{stats.totalEvents.toString()}</p>
-              <p className='text-[10px] text-muted-foreground'>Events</p>
-            </div>
-          </div>
-        )}
 
         {/* First / last seen */}
         {(firstSeen || lastSeen) && (
@@ -239,15 +237,33 @@ const UserProfileSidebar = ({ distinctId }: { distinctId: string }) => {
           </div>
         )}
 
-        {/* Activity heatmap */}
-        <div>
-          <div className='flex items-center gap-2 mb-3'>
-            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Activity</span>
-            <div className='flex-1 h-px bg-border' />
+        {/* Properties */}
+        {properties && Object.keys(properties).length > 0 && (
+          <div>
+            <div className='flex items-center gap-2 mb-3'>
+              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Properties</span>
+              <div className='flex-1 h-px bg-border' />
+            </div>
+            <div className='space-y-2'>
+              {structToEntries(properties).map(([key, value]) => (
+                <div key={key} className='flex items-start justify-between gap-3 text-xs'>
+                  <span className='text-muted-foreground font-mono shrink-0'>{key}</span>
+                  <span className='text-foreground text-right break-words min-w-0'>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <ActivityHeatmap days={heatmap} />
-        </div>
+        )}
 
+      </div>
+
+      {/* Sticky heatmap footer */}
+      <div className='shrink-0 px-5 pt-4 pb-5 bg-background'>
+        <div className='flex items-center gap-2 mb-3'>
+          <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Activity</span>
+          <div className='flex-1 h-px bg-border' />
+        </div>
+        <ActivityHeatmap days={heatmap} />
       </div>
     </aside>
   )
@@ -303,12 +319,6 @@ const UserActivity = () => {
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
-  const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
-  const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
-    baseSchema: schema,
-    baseSchemaError: schemaError,
-    selectedEventKinds: eventFilters.entries.map(e => e.kind),
-  })
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
@@ -319,8 +329,8 @@ const UserActivity = () => {
   }, [project, fetchSchema])
 
   useEffect(() => {
-    writeFilterQueryParams(eventFilters.entries, propFilters)
-  }, [eventFilters.entries, propFilters])
+    writeFilterQueryParams(eventFilters.entries, [])
+  }, [eventFilters.entries])
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
@@ -333,7 +343,6 @@ const UserActivity = () => {
           {
             distinctId,
             timeRange: toProtoTimeRange(timeRange),
-            propertyFilters: toProtoFilters(propFilters),
             events: protoEvents,
             pageSize: 200,
             pageToken,
@@ -353,17 +362,23 @@ const UserActivity = () => {
         setLoading(false)
       }
     },
-    [distinctId, eventFilters.entries, timeRange, propFilters, headers, activityRPC]
+    [distinctId, eventFilters.entries, timeRange, headers, activityRPC]
   )
 
   useEffect(() => {
     if (project && distinctId) fetchEvents()
   }, [project, distinctId, fetchEvents])
 
+  const visibleEvents = useMemo(() => {
+    const kinds = new Set(eventFilters.entries.map(e => e.kind).filter(Boolean))
+    if (kinds.size === 0) return events
+    return events.filter(e => kinds.has(e.kind))
+  }, [events, eventFilters.entries])
+
   const groupedEvents = useMemo(() => {
     const groups: { label: string; events: ActivityEvent[] }[] = []
     let currentLabel = ''
-    for (const event of events) {
+    for (const event of visibleEvents) {
       const d = tsToDate(event.occurTime)
       const label = d ? formatDateHeader(d) : 'Unknown'
       if (label !== currentLabel) {
@@ -373,7 +388,7 @@ const UserActivity = () => {
       groups[groups.length - 1].events.push(event)
     }
     return groups
-  }, [events])
+  }, [visibleEvents])
 
   if (!project) return <NoProject title='Activities' icon={Activity} />
 
@@ -393,25 +408,14 @@ const UserActivity = () => {
             events={schema?.events ?? []}
             schema={schema}
             schemaError={schemaError}
+            hideFilters
           />
-          <div className='flex flex-wrap items-center gap-2'>
-            {propFilters.map((f, i) => (
-              <FilterChip
-                key={i}
-                filter={f}
-                schema={globalSchema}
-                onRemove={() => removeFilter(i)}
-                onUpdate={next => updateFilter(i, next)}
-              />
-            ))}
-            <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          </div>
         </div>
 
         <div className='flex-1 overflow-y-auto px-8 pb-8'>
-        {loading && events.length === 0 ? (
+        {loading && visibleEvents.length === 0 ? (
           <LoadingSpinner />
-        ) : error && events.length === 0 ? (
+        ) : error && visibleEvents.length === 0 ? (
           <div className='flex flex-col items-center justify-center py-16'>
             <Activity className='w-10 h-10 mb-4 opacity-15' />
             <p className='text-sm font-medium mb-1'>{error}</p>
