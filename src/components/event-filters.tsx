@@ -338,10 +338,10 @@ const PropertyPickerList = ({
         )}
         {hasProfile && (
           <CommandGroup heading='Profile'>
-            {schema.profilePropertyKeys.map(key => (
-              <CommandItem key={key} value={key} onSelect={() => onSelect(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(key) ? 'opacity-100' : 'opacity-0')} />}
-                {key}
+            {schema.profilePropertyKeys.map(pk => (
+              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.PROFILE)} className='text-xs py-1.5'>
+                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
+                {pk.name}
               </CommandItem>
             ))}
           </CommandGroup>
