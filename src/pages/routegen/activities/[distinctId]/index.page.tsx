@@ -1,4 +1,4 @@
-import type { ActivityEvent, HeatmapDay } from '@/api/genproto/shared/activity/v1/activity_pb'
+import type { ActivityEvent, HeatmapDay, ProfileStats } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -17,7 +17,7 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
-import { structGet, structToEntries } from '@/lib/struct'
+import { structGet } from '@/lib/struct'
 import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -52,7 +52,7 @@ const formatDateHeader = (d: Date) => {
 const CELL = 10 // px
 const GAP = 2   // px
 
-function buildHeatmapGrid(counts: Map<string, number>) {
+function buildHeatmapGrid(counts: Map<string, bigint>) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -69,7 +69,7 @@ function buildHeatmapGrid(counts: Map<string, number>) {
     for (let d = 0; d < 7; d++) {
       const date = new Date(cur)
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-      week.push({ date, count: date > today ? -1 : (counts.get(key) ?? 0) })
+      week.push({ date, count: date > today ? -1 : Number(counts.get(key) ?? 0) })
       cur.setDate(cur.getDate() + 1)
     }
     weeks.push(week)
@@ -87,15 +87,7 @@ const cellClass = (count: number) => {
   return 'bg-primary'
 }
 
-const ActivityHeatmap = ({ distinctId }: { distinctId: string }) => {
-  const activityRPC = useAtomValue(activityRPCAtom)
-  const headers = useAtomValue(projectHeaderAtom)
-  const [days, setDays] = useState<HeatmapDay[]>([])
-
-  useEffect(() => {
-    activityRPC.getActivityHeatmap({ distinctId }, { headers }).then(resp => setDays(resp.days)).catch(() => {})
-  }, [distinctId, activityRPC, headers])
-
+const ActivityHeatmap = ({ days }: { days: HeatmapDay[] }) => {
   const counts = useMemo(() => new Map(days.map(d => [d.date, d.count])), [days])
   const weeks = useMemo(() => buildHeatmapGrid(counts), [counts])
 
@@ -121,7 +113,7 @@ const ActivityHeatmap = ({ distinctId }: { distinctId: string }) => {
         className='mb-1'
         style={{ display: 'grid', gridTemplateColumns: `repeat(${numWeeks}, 1fr)`, gap: GAP }}
       >
-        {weeks.map((week, wi) => {
+        {weeks.map((_week, wi) => {
           const label = monthLabels.find(l => l.col === wi)
           return (
             <div key={wi} className='text-[8px] text-muted-foreground truncate'>
@@ -163,40 +155,24 @@ const ActivityHeatmap = ({ distinctId }: { distinctId: string }) => {
 
 // ── User Profile Sidebar ─────────────────────────────────────────────────────
 
-const PROPS_LIMIT = 5
+const UserProfileSidebar = ({ distinctId }: { distinctId: string }) => {
+  const activityRPC = useAtomValue(activityRPCAtom)
+  const headers = useAtomValue(projectHeaderAtom)
+  const [stats, setStats] = useState<ProfileStats | undefined>(undefined)
+  const [heatmap, setHeatmap] = useState<HeatmapDay[]>([])
 
-const UserProfileSidebar = ({ distinctId, events }: { distinctId: string; events: ActivityEvent[] }) => {
-  const [showAllProps, setShowAllProps] = useState(false)
+  useEffect(() => {
+    activityRPC.getProfileStats({ distinctId }, { headers })
+      .then(resp => { setStats(resp.stats); setHeatmap(resp.heatmap) })
+      .catch(() => {})
+  }, [distinctId, activityRPC, headers])
 
-  const latestAuto = events[0]?.autoProperties
-  const browser = structGet(latestAuto, '$browser')
-  const os = structGet(latestAuto, '$os')
-  const country = structGet(latestAuto, '$country')
-  const city = structGet(latestAuto, '$city')
-
-  // Aggregate custom props across all events — process newest-first so latest value wins
-  const customProps = useMemo(() => {
-    const map = new Map<string, string>()
-    for (let i = events.length - 1; i >= 0; i--) {
-      for (const [k, v] of structToEntries(events[i].customProperties)) {
-        map.set(k, v)
-      }
-    }
-    return Array.from(map.entries())
-  }, [events])
-
-  const displayName = useMemo(() => {
-    const m = new Map(customProps)
-    return m.get('name') ?? m.get('full_name') ?? m.get('displayName') ?? m.get('display_name') ?? null
-  }, [customProps])
-
-  const firstSeen = events.length > 0 ? tsToDate(events[events.length - 1].occurTime) : null
-  const lastSeen = events.length > 0 ? tsToDate(events[0].occurTime) : null
-
-  const eventKinds = useMemo(() => [...new Set(events.map(e => e.kind))].filter(Boolean), [events])
-  const uniqueSessions = useMemo(() => new Set(events.filter(e => e.sessionId).map(e => e.sessionId)).size, [events])
-
-  const visibleProps = showAllProps ? customProps : customProps.slice(0, PROPS_LIMIT)
+  const firstSeen = stats?.firstSeen ? tsToDate(stats.firstSeen) : null
+  const lastSeen = stats?.lastSeen ? tsToDate(stats.lastSeen) : null
+  const browser = stats?.browser ?? ''
+  const os = stats?.os ?? ''
+  const country = stats?.country ?? ''
+  const city = stats?.city ?? ''
 
   return (
     <aside className='w-80 shrink-0 border-l border-border overflow-y-auto'>
@@ -204,10 +180,7 @@ const UserProfileSidebar = ({ distinctId, events }: { distinctId: string; events
 
         {/* Identity */}
         <div>
-          {displayName && <p className='text-base font-semibold leading-tight'>{displayName}</p>}
-          <p className={cn('font-mono text-xs truncate text-muted-foreground', !displayName && 'text-sm font-medium text-foreground mt-0')}>
-            {distinctId}
-          </p>
+          <p className='font-mono text-xs truncate text-muted-foreground'>{distinctId}</p>
           <div className='flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground'>
             {(country || city) && (
               <span className='flex items-center gap-1'>
@@ -225,50 +198,11 @@ const UserProfileSidebar = ({ distinctId, events }: { distinctId: string; events
         </div>
 
         {/* Stats */}
-        {events.length > 0 && (
+        {stats && (
           <div className='flex gap-5'>
             <div>
-              <p className='text-xl font-semibold tabular-nums'>{events.length}</p>
+              <p className='text-xl font-semibold tabular-nums'>{stats.totalEvents.toString()}</p>
               <p className='text-[10px] text-muted-foreground'>Events</p>
-            </div>
-            <div>
-              <p className='text-xl font-semibold tabular-nums'>{eventKinds.length}</p>
-              <p className='text-[10px] text-muted-foreground'>Types</p>
-            </div>
-            <div>
-              <p className='text-xl font-semibold tabular-nums'>{uniqueSessions}</p>
-              <p className='text-[10px] text-muted-foreground'>Sessions</p>
-            </div>
-          </div>
-        )}
-
-        {/* Custom properties */}
-        <div className='rounded-md bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-800 px-3 py-2 text-[11px] text-yellow-800 dark:text-yellow-300 leading-snug'>
-          Properties should be read from Postgres profile store — revisit later.
-        </div>
-
-        {customProps.length > 0 && (
-          <div>
-            <div className='flex items-center gap-2 mb-2'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Properties</span>
-              <div className='flex-1 h-px bg-border' />
-              <span className='text-[10px] text-muted-foreground'>{customProps.length}</span>
-            </div>
-            <div className='space-y-1.5'>
-              {visibleProps.map(([key, value]) => (
-                <div key={key} className='flex items-baseline justify-between gap-3 text-xs'>
-                  <span className='text-muted-foreground shrink-0'>{key}</span>
-                  <span className='font-mono text-right truncate max-w-[140px]' title={value}>{value}</span>
-                </div>
-              ))}
-              {customProps.length > PROPS_LIMIT && (
-                <button
-                  onClick={() => setShowAllProps(p => !p)}
-                  className='text-[10px] text-primary hover:underline underline-offset-4 cursor-pointer'
-                >
-                  {showAllProps ? 'Show less' : `+${customProps.length - PROPS_LIMIT} more`}
-                </button>
-              )}
             </div>
           </div>
         )}
@@ -305,31 +239,13 @@ const UserProfileSidebar = ({ distinctId, events }: { distinctId: string; events
           </div>
         )}
 
-        {/* Event kinds */}
-        {eventKinds.length > 0 && (
-          <div>
-            <div className='flex items-center gap-2 mb-2'>
-              <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Events</span>
-              <div className='flex-1 h-px bg-border' />
-              <span className='text-[10px] text-muted-foreground'>{eventKinds.length}</span>
-            </div>
-            <div className='flex flex-wrap gap-1.5'>
-              {eventKinds.map(kind => (
-                <span key={kind} className='text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded'>
-                  {kind}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Activity heatmap */}
         <div>
           <div className='flex items-center gap-2 mb-3'>
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Activity</span>
             <div className='flex-1 h-px bg-border' />
           </div>
-          <ActivityHeatmap distinctId={distinctId} />
+          <ActivityHeatmap days={heatmap} />
         </div>
 
       </div>
@@ -628,7 +544,7 @@ const UserActivity = () => {
       </div>
 
       {/* ── Profile Sidebar ───────────────────────────────────────────── */}
-      <UserProfileSidebar distinctId={distinctId ?? ''} events={events} />
+      <UserProfileSidebar distinctId={distinctId ?? ''} />
 
     </div>
   )
