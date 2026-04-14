@@ -61,7 +61,10 @@ const createFilter = (property: string, operator: FilterOperator, payload?: stri
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 const mergeUniqueValues = (existing: string[], input: string): string[] => {
-  const incoming = input.split(',').map(v => v.trim()).filter(Boolean)
+  const incoming = input
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean)
   if (incoming.length === 0) return existing
   const seen = new Set(existing)
   const next = [...existing]
@@ -73,7 +76,6 @@ const mergeUniqueValues = (existing: string[], input: string): string[] => {
   }
   return next
 }
-
 
 const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
   if (!loaded) return 'Loading...'
@@ -99,7 +101,10 @@ const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?:
     let cancelled = false
     const loadSuggestions = async () => {
       try {
-        const resp = await insightsRPC.getPropertyValues({ propertyKey, source, eventKind: eventKind ?? '' }, { headers })
+        const resp = await insightsRPC.getPropertyValues(
+          { propertyKey, source, eventKind: eventKind ?? '' },
+          { headers }
+        )
         if (!cancelled) {
           setResult({ key: requestKey, suggestions: resp.values, error: false })
         }
@@ -111,7 +116,9 @@ const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?:
       }
     }
     void loadSuggestions()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [propertyKey, source, eventKind, insightsRPC, headers, requestKey])
 
   const loaded = !requestKey || result.key === requestKey
@@ -136,13 +143,21 @@ const useScopedSchema = (kindFilter?: string) => {
 
     let cancelled = false
     fetchSchemaForKind(kind, insightsRPC, headers, retryCount > 0 ? { force: true } : undefined)
-      .then(resp => { if (!cancelled) setResult({ key: kind, schema: resp, error: null }) })
+      .then(resp => {
+        if (!cancelled) setResult({ key: kind, schema: resp, error: null })
+      })
       .catch(err => {
         if (cancelled) return
         console.error(`getFilterSchema("${kind}") failed:`, err)
-        setResult({ key: kind, schema: null, error: err instanceof Error ? err.message : 'Failed to load filter schema' })
+        setResult({
+          key: kind,
+          schema: null,
+          error: err instanceof Error ? err.message : 'Failed to load filter schema',
+        })
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [kind, insightsRPC, headers, retryCount])
 
   const isCurrent = result.key === kind
@@ -189,8 +204,13 @@ const MultiValueEditor = ({
       {values.length > 0 && (
         <div className='flex flex-wrap gap-1 px-3 pt-2'>
           {values.map(v => (
-            <span key={v} className='inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded max-w-full'>
-              <span className='truncate' title={v}>{v}</span>
+            <span
+              key={v}
+              className='inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded max-w-full'
+            >
+              <span className='truncate' title={v}>
+                {v}
+              </span>
               <button type='button' onClick={() => onRemove(v)} className='text-muted-foreground hover:text-foreground'>
                 <X className='w-2.5 h-2.5' />
               </button>
@@ -217,7 +237,10 @@ const MultiValueEditor = ({
           size='sm'
           variant='outline'
           className='h-7 text-xs px-2 shrink-0'
-          onClick={() => { onAdd(multiInput); setMultiInput('') }}
+          onClick={() => {
+            onAdd(multiInput)
+            setMultiInput('')
+          }}
         >
           Add
         </Button>
@@ -275,12 +298,7 @@ const SingleValueEditor = ({
         <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
         <CommandGroup>
           {suggestions.map(s => (
-            <CommandItem
-              key={s}
-              value={s}
-              onSelect={() => onChange(s)}
-              className='text-xs py-1.5 font-mono'
-            >
+            <CommandItem key={s} value={s} onSelect={() => onChange(s)} className='text-xs py-1.5 font-mono'>
               {s}
             </CommandItem>
           ))}
@@ -360,25 +378,30 @@ const EventPopoverList = ({
       <CommandList>
         <CommandEmpty className='py-4 text-xs'>{getEmptyMessage()}</CommandEmpty>
         <CommandGroup>
-          {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
-            const colors = getSeriesColor(ev.name)
-            const customColor = getEventColor?.(ev.name)
-            return (
-              <CommandItem
-                key={ev.name}
-                value={ev.name}
-                onSelect={() => onSelect(ev.name)}
-                data-checked={value === ev.name}
-                className='text-xs gap-1.5 py-1.5'
-              >
-                <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: customColor ?? colors.dot }} />
-                <span className='flex-1 truncate'>{ev.name}</span>
-                <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
-                  {compactNumber(ev.count)}
-                </span>
-              </CommandItem>
-            )
-          })}
+          {[...events]
+            .sort((a, b) => Number(b.count - a.count))
+            .map(ev => {
+              const colors = getSeriesColor(ev.name)
+              const customColor = getEventColor?.(ev.name)
+              return (
+                <CommandItem
+                  key={ev.name}
+                  value={ev.name}
+                  onSelect={() => onSelect(ev.name)}
+                  data-checked={value === ev.name}
+                  className='text-xs gap-1.5 py-1.5'
+                >
+                  <span
+                    className='w-1 h-1 rounded-full shrink-0'
+                    style={{ backgroundColor: customColor ?? colors.dot }}
+                  />
+                  <span className='flex-1 truncate'>{ev.name}</span>
+                  <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                    {compactNumber(ev.count)}
+                  </span>
+                </CommandItem>
+              )
+            })}
         </CommandGroup>
       </CommandList>
     </Command>
@@ -417,7 +440,16 @@ export const EventChip = ({
           Event
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { onChange(name); setOpen(false) }} />
+          <EventPopoverList
+            events={events}
+            value={value}
+            schemaError={schemaError}
+            getEventColor={getEventColor}
+            onSelect={name => {
+              onChange(name)
+              setOpen(false)
+            }}
+          />
         </PopoverContent>
       </Popover>
     )
@@ -432,7 +464,16 @@ export const EventChip = ({
           {value}
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { onChange(name); setOpen(false) }} />
+          <EventPopoverList
+            events={events}
+            value={value}
+            schemaError={schemaError}
+            getEventColor={getEventColor}
+            onSelect={name => {
+              onChange(name)
+              setOpen(false)
+            }}
+          />
         </PopoverContent>
       </Popover>
       <button
@@ -518,7 +559,7 @@ export const FilterBuilder = ({
   }
 
   const toggleVal = (v: string) => {
-    setVals(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])
+    setVals(prev => (prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]))
   }
 
   const addMultiValues = (input: string) => setVals(prev => mergeUniqueValues(prev, input))
@@ -536,7 +577,15 @@ export const FilterBuilder = ({
     <div className='flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground'>
       {step !== 'property' && (
         <>
-          <button type='button' onClick={() => { setStep('property'); setProp(''); setOp(FilterOperator.EQUALS) }} className='hover:text-foreground cursor-pointer'>
+          <button
+            type='button'
+            onClick={() => {
+              setStep('property')
+              setProp('')
+              setOp(FilterOperator.EQUALS)
+            }}
+            className='hover:text-foreground cursor-pointer'
+          >
             Property
           </button>
           <ChevronRight className='w-2.5 h-2.5' />
@@ -578,31 +627,59 @@ export const FilterBuilder = ({
               </CommandEmpty>
               {hasSystem && (
                 <CommandGroup heading='System'>
-                  {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
-                      <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
-                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-                    </CommandItem>
-                  ))}
+                  {[...schema.autoPropertyKeys]
+                    .sort((a, b) => Number(b.count - a.count))
+                    .map(pk => (
+                      <CommandItem
+                        key={pk.name}
+                        value={pk.name}
+                        onSelect={() => pickProperty(pk.name, PropertySource.AUTO)}
+                        className='text-xs py-1.5'
+                      >
+                        <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
+                        <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                          {compactNumber(pk.count)}
+                        </span>
+                      </CommandItem>
+                    ))}
                 </CommandGroup>
               )}
               {hasCustom && (
                 <CommandGroup heading='Custom'>
-                  {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
-                    <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
-                      <span className='truncate'>{pk.name}</span>
-                      <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-                    </CommandItem>
-                  ))}
+                  {[...schema.customPropertyKeys]
+                    .sort((a, b) => Number(b.count - a.count))
+                    .map(pk => (
+                      <CommandItem
+                        key={pk.name}
+                        value={pk.name}
+                        onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)}
+                        className='text-xs py-1.5'
+                      >
+                        <span className='truncate'>{pk.name}</span>
+                        <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                          {compactNumber(pk.count)}
+                        </span>
+                      </CommandItem>
+                    ))}
                 </CommandGroup>
               )}
               {hasProfile && (
                 <CommandGroup heading='Profile'>
-                  {schema.profilePropertyKeys.map(key => (
-                    <CommandItem key={key} value={key} onSelect={() => pickProperty(key, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                      {key}
-                    </CommandItem>
-                  ))}
+                  {[...schema.profilePropertyKeys]
+                    .sort((a, b) => Number(b.count - a.count))
+                    .map(pk => (
+                      <CommandItem
+                        key={pk.name}
+                        value={pk.name}
+                        onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)}
+                        className='text-xs py-1.5'
+                      >
+                        <span className='truncate'>{pk.name}</span>
+                        <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                          {compactNumber(pk.count)}
+                        </span>
+                      </CommandItem>
+                    ))}
                 </CommandGroup>
               )}
             </CommandList>
@@ -614,7 +691,12 @@ export const FilterBuilder = ({
             <CommandList>
               <CommandGroup>
                 {OPERATORS.map(o => (
-                  <CommandItem key={o.value} value={o.label} onSelect={() => pickOperator(o.value)} className='text-xs py-1.5 gap-2'>
+                  <CommandItem
+                    key={o.value}
+                    value={o.label}
+                    onSelect={() => pickOperator(o.value)}
+                    className='text-xs py-1.5 gap-2'
+                  >
                     <span className='w-5 h-4 text-center text-muted-foreground font-mono text-[11px] inline-flex items-center justify-center shrink-0'>
                       {o.symbol}
                     </span>
@@ -742,13 +824,13 @@ export const FilterChip = ({
       <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]'>
         {filter.property}
       </span>
-      <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>
-        {op?.symbol}
-      </span>
+      <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>{op?.symbol}</span>
       {valueLabel !== null && (
         <Popover open={editOpen} onOpenChange={handleEditOpenChange}>
           <PopoverTrigger className='px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer'>
-            <span className='max-w-56 truncate' title={valueLabel || '...'}>{valueLabel || '...'}</span>
+            <span className='max-w-56 truncate' title={valueLabel || '...'}>
+              {valueLabel || '...'}
+            </span>
           </PopoverTrigger>
           <PopoverContent align='start' className='w-52 p-0'>
             {filter.kind === 'multi' && op?.multiValue === 'two' ? (
@@ -764,7 +846,15 @@ export const FilterChip = ({
               <MultiValueEditor
                 values={filter.values}
                 onAdd={addMultiValues}
-                onRemove={v => onUpdate(createFilter(filter.property, filter.operator, filter.values.filter(x => x !== v)))}
+                onRemove={v =>
+                  onUpdate(
+                    createFilter(
+                      filter.property,
+                      filter.operator,
+                      filter.values.filter(x => x !== v)
+                    )
+                  )
+                }
                 onToggle={s => {
                   const isSelected = filter.values.includes(s)
                   const next = isSelected ? filter.values.filter(x => x !== s) : [...filter.values, s]
@@ -817,6 +907,7 @@ export const EventQueryRow = ({
   color,
   children,
   getEventColor,
+  hideFilters,
 }: {
   entry: EventFilterEntry
   events: EventNameMeta[]
@@ -831,10 +922,16 @@ export const EventQueryRow = ({
   color?: string
   children?: React.ReactNode
   getEventColor?: (eventName: string) => string
+  hideFilters?: boolean
 }) => {
-  const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
-  const resolvedSchema = entry.kind ? scopedSchema : schema
-  const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
+  const {
+    schema: scopedSchema,
+    schemaError: scopedSchemaError,
+    retry: retryScopedSchema,
+  } = useScopedSchema(hideFilters ? '' : entry.kind)
+  const usedScoped = !hideFilters && !!entry.kind
+  const resolvedSchema = usedScoped ? scopedSchema : schema
+  const resolvedSchemaError = usedScoped ? scopedSchemaError : schemaError
 
   return (
     <div className='flex items-center gap-2'>
@@ -855,25 +952,34 @@ export const EventQueryRow = ({
         />
         {entry.kind && (
           <>
-            {entry.filters.map((f, fi) => (
-              <FilterChip
-                key={fi}
-                filter={f}
-                schema={resolvedSchema}
-                kindFilter={entry.kind}
-                onRemove={() => onRemoveFilter(fi)}
-                onUpdate={next => onUpdateFilter(fi, next)}
-              />
-            ))}
-            <FilterBuilder schema={resolvedSchema} schemaError={resolvedSchemaError} onAdd={onAddFilter} kindFilter={entry.kind} />
-            {scopedSchemaError && (
-              <button
-                type='button'
-                onClick={retryScopedSchema}
-                className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
-              >
-                retry schema
-              </button>
+            {!hideFilters && (
+              <>
+                {entry.filters.map((f, fi) => (
+                  <FilterChip
+                    key={fi}
+                    filter={f}
+                    schema={resolvedSchema}
+                    kindFilter={entry.kind}
+                    onRemove={() => onRemoveFilter(fi)}
+                    onUpdate={next => onUpdateFilter(fi, next)}
+                  />
+                ))}
+                <FilterBuilder
+                  schema={resolvedSchema}
+                  schemaError={resolvedSchemaError}
+                  onAdd={onAddFilter}
+                  kindFilter={entry.kind}
+                />
+                {scopedSchemaError && (
+                  <button
+                    type='button'
+                    onClick={retryScopedSchema}
+                    className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+                  >
+                    retry schema
+                  </button>
+                )}
+              </>
             )}
             {children}
           </>
@@ -902,6 +1008,7 @@ export const EventFilterBar = ({
   renderRowExtra,
   maxEvents,
   getEventColor,
+  hideFilters,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -912,6 +1019,7 @@ export const EventFilterBar = ({
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
+  hideFilters?: boolean
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -929,6 +1037,7 @@ export const EventFilterBar = ({
         letter={showLetters ? SERIES_LETTERS[i] : undefined}
         color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
         getEventColor={getEventColor}
+        hideFilters={hideFilters}
       >
         {renderRowExtra?.(i)}
       </EventQueryRow>
@@ -938,7 +1047,9 @@ export const EventFilterBar = ({
         {showLetters && filters.entries.length > 0 && <span className='w-7' />}
         <EventChip
           value=''
-          onChange={kind => { if (kind) filters.addEvent(kind) }}
+          onChange={kind => {
+            if (kind) filters.addEvent(kind)
+          }}
           events={events}
           schemaError={schemaError}
           getEventColor={getEventColor}

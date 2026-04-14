@@ -26,12 +26,12 @@ const TimelineEventItem = ({
 
   return (
     <div
-      className={cn('group relative pl-8 border-b border-border/50', hasMore && 'cursor-pointer')}
+      className={cn('group relative pl-6 border-b border-border/50', hasMore && 'cursor-pointer')}
       onClick={() => hasMore && setExpanded(!expanded)}
     >
-      <div className='absolute left-2.75 top-0 bottom-0 w-px bg-border' />
+      <div className='absolute left-1.5 top-0 bottom-0 w-px bg-border' />
       <div
-        className='absolute left-1.5 top-3.5 w-3 h-3 rounded-full border-2 border-background'
+        className='absolute left-0 top-3.5 w-3 h-3 rounded-full border-2 border-background'
         style={{ backgroundColor: colors.dot }}
       />
 
