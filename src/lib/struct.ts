@@ -5,7 +5,7 @@ const jsonValueToString = (v: JsonValue) => {
   if (typeof v === 'string') return v
   if (typeof v === 'number') return String(v)
   if (typeof v === 'boolean') return String(v)
-  return undefined
+  return JSON.stringify(v)
 }
 
 export const structToEntries = (s: JsonObject | undefined) => {

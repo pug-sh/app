@@ -5,12 +5,6 @@ import { useMemo } from 'react'
 import { Cell, Legend, Pie, PieChart as RePieChart } from 'recharts'
 import { type ChartPoint } from './types'
 
-type PieDatum = {
-  name: string
-  value: number
-  fill: string
-}
-
 export const PieChart = ({
   data,
   seriesNames,
@@ -20,7 +14,7 @@ export const PieChart = ({
   seriesNames: string[]
   seriesColors: SeriesColor[]
 }) => {
-  const chartData = useMemo<PieDatum[]>(
+  const chartData = useMemo(
     () =>
       seriesNames
         .map((name, si) => ({
@@ -32,11 +26,18 @@ export const PieChart = ({
     [data, seriesNames, seriesColors]
   )
 
+  const total = useMemo(() => chartData.reduce((sum, row) => sum + row.value, 0), [chartData])
+
+  const chartConfig = useMemo(
+    () => Object.fromEntries(chartData.map((item, i) => [`series${i}`, { label: item.name, color: item.fill }])),
+    [chartData]
+  )
+
   if (chartData.length === 0) return null
 
   return (
     <ChartContainer
-      config={Object.fromEntries(chartData.map((item, i) => [`series${i}`, { label: item.name, color: item.fill }]))}
+      config={chartConfig}
       className='h-70 w-full'
     >
       <RePieChart margin={{ top: 12, right: 8, left: 8, bottom: 8 }}>
@@ -45,13 +46,11 @@ export const PieChart = ({
             <ChartTooltipContent
               hideLabel
               formatter={(value, name) => {
-                const total = chartData.reduce((sum, row) => sum + row.value, 0)
                 const current = Number(value) || 0
                 const ratio = total > 0 ? (current / total) * 100 : 0
-                const label = typeof name === 'string' ? name : String(name ?? '')
                 return (
                   <>
-                    <span className='text-muted-foreground'>{label}</span>
+                    <span className='text-muted-foreground'>{name ?? ''}</span>
                     <span className='ml-auto font-mono tabular-nums text-foreground'>
                       {compactNumber(current)} ({ratio.toFixed(1)}%)
                     </span>

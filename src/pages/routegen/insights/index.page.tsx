@@ -326,11 +326,19 @@ const Insights = () => {
         </div>
       )
     }
-    if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-    if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-    if (viewMode === 'pie') return <PieChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} />
-    if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-    return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
+    switch (viewMode) {
+      case 'line':
+        return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      case 'area':
+        return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      case 'pie':
+        return <PieChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} />
+      case 'table':
+        return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      case 'bar-grouped':
+      case 'bar-stacked':
+        return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
+    }
   }
 
   const renderLoadingEmptyState = () => {
