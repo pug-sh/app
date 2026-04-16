@@ -17,7 +17,6 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { useGranularity } from '@/hooks/use-granularity'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -28,9 +27,17 @@ import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, Trending
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, PieChart, RetentionCohort, SummaryStats } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Constants ───────────────────────────────────────────────────────────────
+
+const GRANULARITIES = [
+  { label: 'Hour', value: Granularity.HOUR },
+  { label: 'Day', value: Granularity.DAY },
+  { label: 'Week', value: Granularity.WEEK },
+  { label: 'Month', value: Granularity.MONTH },
+] as const
+const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
 
 const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
@@ -45,14 +52,13 @@ const INSIGHT_TYPES = [
 ] as const
 const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
-type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
+type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
 
 const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
   { label: 'Area', value: 'area' },
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
-  { label: 'Pie (donut)', value: 'pie' },
   { label: 'Table', value: 'table' },
 ]
 
@@ -76,7 +82,7 @@ const OptionChip = <T extends string | number>({
 }: {
   label: string
   icon?: LucideIcon
-  options: readonly { label: string; value: T; disabled?: boolean; title?: string }[]
+  options: readonly { label: string; value: T }[]
   value: T
   onChange: (v: T) => void
 }) => {
@@ -97,15 +103,12 @@ const OptionChip = <T extends string | number>({
             <button
               key={String(opt.value)}
               type='button'
-              disabled={opt.disabled}
-              title={opt.title}
               onClick={() => { onChange(opt.value); setOpen(false) }}
               className={cn(
-                'px-3 py-1.5 text-xs text-left rounded-md transition-colors',
-                opt.disabled
-                  ? 'text-muted-foreground/40'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer',
-                opt.value === value && !opt.disabled && 'bg-muted text-foreground font-medium',
+                'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
+                opt.value === value
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               )}
             >
               {opt.label}
@@ -136,9 +139,10 @@ const Insights = () => {
       ? initialFilterState.insightType
       : InsightType.TRENDS
   )
-  const { granularity, setGranularity, options: granularityOptions } = useGranularity(
-    timeRange,
-    initialFilterState.granularity ?? Granularity.DAY
+  const [granularity, setGranularity] = useState(() =>
+    initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
+      ? initialFilterState.granularity
+      : Granularity.DAY
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
@@ -224,11 +228,19 @@ const Insights = () => {
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
   }, [result, eventFilters.validEntries])
-  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : EMPTY_ARRAY
+  const emptySeriesResult = (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
+  useEffect(() => {
+    if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
+  }, [emptySeriesResult])
+
+  const retentionCohorts = useMemo(() => {
+    if (result.case !== 'retention' || result.value.series.length === 0) return EMPTY_ARRAY
+    return result.value.series[0].cohorts
+  }, [result])
   const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel') return []
+    if (result.case !== 'funnel' || result.value.series.length === 0) return []
     const kindEntries = eventFilters.validEntries
-    return [...result.value.steps]
+    return [...result.value.series[0].steps]
       .sort((a, b) => {
         const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
         const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
@@ -286,19 +298,10 @@ const Insights = () => {
         </div>
       )
     }
-    switch (viewMode) {
-      case 'line':
-        return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'area':
-        return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'pie':
-        return <PieChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} />
-      case 'table':
-        return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'bar-grouped':
-      case 'bar-stacked':
-        return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
-    }
+    if (viewMode === 'line') return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+    if (viewMode === 'area') return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+    if (viewMode === 'table') return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+    return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
   }
 
   const renderLoadingEmptyState = () => {
@@ -349,6 +352,16 @@ const Insights = () => {
       )
     }
 
+    if ((result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0) {
+      return (
+        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm'>No results — try adjusting your query</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>Retry</Button>
+        </div>
+      )
+    }
+
     if (isRetention && retentionCohorts.length > 0) {
       return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
     }
@@ -384,7 +397,7 @@ const Insights = () => {
           <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTimeSeriesInsight && (
             <>
-              <OptionChip label='granularity' icon={Clock} options={granularityOptions} value={granularity} onChange={setGranularity} />
+              <OptionChip label='granularity' icon={Clock} options={GRANULARITIES} value={granularity} onChange={setGranularity} />
               {isTrends && (
                 <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
               )}

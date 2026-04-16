@@ -168,7 +168,8 @@ const useScopedSchema = (kindFilter?: string) => {
 
 // ── Shared sub-components ────────────────────────────────────────────────────
 
-const filterInputCls = 'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+const filterInputCls =
+  'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
 
 const ApplyFooter = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
   <div className='border-t border-border px-3 py-2 flex justify-end'>
@@ -287,7 +288,9 @@ const SingleValueEditor = ({
         placeholder='Type a value...'
         value={value}
         onChange={e => onChange(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') onCommit() }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') onCommit()
+        }}
         className={cn(filterInputCls, 'w-full')}
         autoFocus
       />
@@ -332,7 +335,9 @@ const BetweenValueEditor = ({
           placeholder='Min'
           value={min}
           onChange={e => onMinChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') maxRef.current?.focus() }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') maxRef.current?.focus()
+          }}
           className={cn(filterInputCls, 'flex-1 min-w-0')}
           autoFocus
         />
@@ -342,7 +347,9 @@ const BetweenValueEditor = ({
           placeholder='Max'
           value={max}
           onChange={e => onMaxChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') onCommit() }}
+          onKeyDown={e => {
+            if (e.key === 'Enter') onCommit()
+          }}
           className={cn(filterInputCls, 'flex-1 min-w-0')}
         />
       </div>
@@ -907,7 +914,6 @@ export const EventQueryRow = ({
   color,
   children,
   getEventColor,
-  hideFilters,
 }: {
   entry: EventFilterEntry
   events: EventNameMeta[]
@@ -922,16 +928,10 @@ export const EventQueryRow = ({
   color?: string
   children?: React.ReactNode
   getEventColor?: (eventName: string) => string
-  hideFilters?: boolean
 }) => {
-  const {
-    schema: scopedSchema,
-    schemaError: scopedSchemaError,
-    retry: retryScopedSchema,
-  } = useScopedSchema(hideFilters ? '' : entry.kind)
-  const usedScoped = !hideFilters && !!entry.kind
-  const resolvedSchema = usedScoped ? scopedSchema : schema
-  const resolvedSchemaError = usedScoped ? scopedSchemaError : schemaError
+  const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
+  const resolvedSchema = entry.kind ? scopedSchema : schema
+  const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
 
   return (
     <div className='flex items-center gap-2'>
@@ -952,34 +952,30 @@ export const EventQueryRow = ({
         />
         {entry.kind && (
           <>
-            {!hideFilters && (
-              <>
-                {entry.filters.map((f, fi) => (
-                  <FilterChip
-                    key={fi}
-                    filter={f}
-                    schema={resolvedSchema}
-                    kindFilter={entry.kind}
-                    onRemove={() => onRemoveFilter(fi)}
-                    onUpdate={next => onUpdateFilter(fi, next)}
-                  />
-                ))}
-                <FilterBuilder
-                  schema={resolvedSchema}
-                  schemaError={resolvedSchemaError}
-                  onAdd={onAddFilter}
-                  kindFilter={entry.kind}
-                />
-                {scopedSchemaError && (
-                  <button
-                    type='button'
-                    onClick={retryScopedSchema}
-                    className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
-                  >
-                    retry schema
-                  </button>
-                )}
-              </>
+            {entry.filters.map((f, fi) => (
+              <FilterChip
+                key={fi}
+                filter={f}
+                schema={resolvedSchema}
+                kindFilter={entry.kind}
+                onRemove={() => onRemoveFilter(fi)}
+                onUpdate={next => onUpdateFilter(fi, next)}
+              />
+            ))}
+            <FilterBuilder
+              schema={resolvedSchema}
+              schemaError={resolvedSchemaError}
+              onAdd={onAddFilter}
+              kindFilter={entry.kind}
+            />
+            {scopedSchemaError && (
+              <button
+                type='button'
+                onClick={retryScopedSchema}
+                className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+              >
+                retry schema
+              </button>
             )}
             {children}
           </>
@@ -1008,7 +1004,6 @@ export const EventFilterBar = ({
   renderRowExtra,
   maxEvents,
   getEventColor,
-  hideFilters,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -1019,7 +1014,6 @@ export const EventFilterBar = ({
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
-  hideFilters?: boolean
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -1037,7 +1031,6 @@ export const EventFilterBar = ({
         letter={showLetters ? SERIES_LETTERS[i] : undefined}
         color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
         getEventColor={getEventColor}
-        hideFilters={hideFilters}
       >
         {renderRowExtra?.(i)}
       </EventQueryRow>
