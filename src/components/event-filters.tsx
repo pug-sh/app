@@ -331,36 +331,63 @@ const PropertyPickerList = ({
     <Command>
       <CommandInput placeholder={placeholder} className='text-xs' />
       <CommandList>
-        <CommandEmpty className='py-4 text-xs'>
-          {getSchemaEmptyMessage(schema, schemaError)}
-        </CommandEmpty>
+        <CommandEmpty className='py-4 text-xs'>{getSchemaEmptyMessage(schema, schemaError)}</CommandEmpty>
         {hasSystem && (
           <CommandGroup heading='System'>
-            {[...schema.autoPropertyKeys].sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0)).map(pk => (
-              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
-                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
-                <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
-                <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-              </CommandItem>
-            ))}
+            {[...schema.autoPropertyKeys]
+              .sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0))
+              .map(pk => (
+                <CommandItem
+                  key={pk.name}
+                  value={pk.name}
+                  onSelect={() => onSelect(pk.name, PropertySource.AUTO)}
+                  className='text-xs py-1.5'
+                >
+                  {selected && (
+                    <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                  )}
+                  <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
+                  <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                    {compactNumber(pk.count)}
+                  </span>
+                </CommandItem>
+              ))}
           </CommandGroup>
         )}
         {hasCustom && (
           <CommandGroup heading='Custom'>
-            {[...schema.customPropertyKeys].sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0)).map(pk => (
-              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
-                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
-                <span className='truncate'>{pk.name}</span>
-                <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
-              </CommandItem>
-            ))}
+            {[...schema.customPropertyKeys]
+              .sort((a, b) => (b.count > a.count ? 1 : b.count < a.count ? -1 : 0))
+              .map(pk => (
+                <CommandItem
+                  key={pk.name}
+                  value={pk.name}
+                  onSelect={() => onSelect(pk.name, PropertySource.CUSTOM)}
+                  className='text-xs py-1.5'
+                >
+                  {selected && (
+                    <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                  )}
+                  <span className='truncate'>{pk.name}</span>
+                  <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                    {compactNumber(pk.count)}
+                  </span>
+                </CommandItem>
+              ))}
           </CommandGroup>
         )}
         {hasProfile && (
           <CommandGroup heading='Profile'>
             {schema.profilePropertyKeys.map(pk => (
-              <CommandItem key={pk.name} value={pk.name} onSelect={() => onSelect(pk.name, PropertySource.PROFILE)} className='text-xs py-1.5'>
-                {selected && <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />}
+              <CommandItem
+                key={pk.name}
+                value={pk.name}
+                onSelect={() => onSelect(pk.name, PropertySource.PROFILE)}
+                className='text-xs py-1.5'
+              >
+                {selected && (
+                  <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                )}
                 {pk.name}
               </CommandItem>
             ))}
@@ -875,7 +902,12 @@ export const BreakdownBuilder = ({
           schemaError={schemaError}
           placeholder='Break down by...'
           selected={existing}
-          onSelect={(name) => { if (!existing.has(name)) { onAdd(name); setOpen(false) } }}
+          onSelect={name => {
+            if (!existing.has(name)) {
+              onAdd(name)
+              setOpen(false)
+            }
+          }}
         />
       </PopoverContent>
     </Popover>
@@ -900,7 +932,6 @@ export const EventQueryRow = ({
   color,
   children,
   getEventColor,
-  hideFilters,
 }: {
   entry: EventFilterEntry
   events: EventNameMeta[]
@@ -915,16 +946,10 @@ export const EventQueryRow = ({
   color?: string
   children?: React.ReactNode
   getEventColor?: (eventName: string) => string
-  hideFilters?: boolean
 }) => {
-  const {
-    schema: scopedSchema,
-    schemaError: scopedSchemaError,
-    retry: retryScopedSchema,
-  } = useScopedSchema(hideFilters ? '' : entry.kind)
-  const usedScoped = !hideFilters && !!entry.kind
-  const resolvedSchema = usedScoped ? scopedSchema : schema
-  const resolvedSchemaError = usedScoped ? scopedSchemaError : schemaError
+  const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
+  const resolvedSchema = entry.kind ? scopedSchema : schema
+  const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
 
   return (
     <div className='flex items-center gap-2'>
@@ -945,34 +970,30 @@ export const EventQueryRow = ({
         />
         {entry.kind && (
           <>
-            {!hideFilters && (
-              <>
-                {entry.filters.map((f, fi) => (
-                  <FilterChip
-                    key={fi}
-                    filter={f}
-                    schema={resolvedSchema}
-                    kindFilter={entry.kind}
-                    onRemove={() => onRemoveFilter(fi)}
-                    onUpdate={next => onUpdateFilter(fi, next)}
-                  />
-                ))}
-                <FilterBuilder
-                  schema={resolvedSchema}
-                  schemaError={resolvedSchemaError}
-                  onAdd={onAddFilter}
-                  kindFilter={entry.kind}
-                />
-                {scopedSchemaError && (
-                  <button
-                    type='button'
-                    onClick={retryScopedSchema}
-                    className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
-                  >
-                    retry schema
-                  </button>
-                )}
-              </>
+            {entry.filters.map((f, fi) => (
+              <FilterChip
+                key={fi}
+                filter={f}
+                schema={resolvedSchema}
+                kindFilter={entry.kind}
+                onRemove={() => onRemoveFilter(fi)}
+                onUpdate={next => onUpdateFilter(fi, next)}
+              />
+            ))}
+            <FilterBuilder
+              schema={resolvedSchema}
+              schemaError={resolvedSchemaError}
+              onAdd={onAddFilter}
+              kindFilter={entry.kind}
+            />
+            {scopedSchemaError && (
+              <button
+                type='button'
+                onClick={retryScopedSchema}
+                className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+              >
+                retry schema
+              </button>
             )}
             {children}
           </>
@@ -1001,7 +1022,6 @@ export const EventFilterBar = ({
   renderRowExtra,
   maxEvents,
   getEventColor,
-  hideFilters,
 }: {
   filters: EventFiltersHandle
   events: EventNameMeta[]
@@ -1012,7 +1032,6 @@ export const EventFilterBar = ({
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
-  hideFilters?: boolean
 }) => (
   <div className='flex flex-col gap-1.5'>
     {filters.entries.map((entry, i) => (
@@ -1030,7 +1049,6 @@ export const EventFilterBar = ({
         letter={showLetters ? SERIES_LETTERS[i] : undefined}
         color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
         getEventColor={getEventColor}
-        hideFilters={hideFilters}
       >
         {renderRowExtra?.(i)}
       </EventQueryRow>

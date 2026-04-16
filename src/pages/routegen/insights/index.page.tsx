@@ -18,7 +18,6 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { useGranularity } from '@/hooks/use-granularity'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -29,7 +28,17 @@ import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, Trending
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelBreakdownView, FunnelChart, LineChart, PieChart, RetentionCohort, SummaryStats } from './charts'
+import {
+  AreaChart,
+  BarChart,
+  type ChartPoint,
+  DataTable,
+  FunnelBreakdownView,
+  FunnelChart,
+  LineChart,
+  RetentionCohort,
+  SummaryStats,
+} from './charts'
 
 // ── Module-level helpers ─────────────────────────────────────────────────────
 
@@ -49,6 +58,14 @@ const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
+const GRANULARITIES = [
+  { label: 'Hour', value: Granularity.HOUR },
+  { label: 'Day', value: Granularity.DAY },
+  { label: 'Week', value: Granularity.WEEK },
+  { label: 'Month', value: Granularity.MONTH },
+] as const
+const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
+
 const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
   { label: 'Unique users', value: AggregationType.UNIQUE_USERS },
@@ -62,13 +79,12 @@ const INSIGHT_TYPES = [
 ] as const
 const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
-type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
+type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
 const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
   { label: 'Area', value: 'area' },
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
-  { label: 'Pie (donut)', value: 'pie' },
   { label: 'Table', value: 'table' },
 ]
 
@@ -92,7 +108,7 @@ const OptionChip = <T extends string | number>({
 }: {
   label: string
   icon?: LucideIcon
-  options: readonly { label: string; value: T; disabled?: boolean; title?: string }[]
+  options: readonly { label: string; value: T }[]
   value: T
   onChange: (v: T) => void
 }) => {
@@ -113,15 +129,15 @@ const OptionChip = <T extends string | number>({
             <button
               key={String(opt.value)}
               type='button'
-              disabled={opt.disabled}
-              title={opt.title}
-              onClick={() => { onChange(opt.value); setOpen(false) }}
+              onClick={() => {
+                onChange(opt.value)
+                setOpen(false)
+              }}
               className={cn(
-                'px-3 py-1.5 text-xs text-left rounded-md transition-colors',
-                opt.disabled
-                  ? 'text-muted-foreground/40'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 cursor-pointer',
-                opt.value === value && !opt.disabled && 'bg-muted text-foreground font-medium',
+                'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
+                opt.value === value
+                  ? 'bg-muted text-foreground font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               )}
             >
               {opt.label}
@@ -143,26 +159,32 @@ const Insights = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
-  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
+  useEffect(() => {
+    if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
-  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve())
+  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
+    () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve()
+  )
   const [insightType, setInsightType] = useState(() =>
     initialFilterState.insightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialFilterState.insightType)
       ? initialFilterState.insightType
       : InsightType.TRENDS
   )
-  const { granularity, setGranularity, options: granularityOptions } = useGranularity(
-    timeRange,
-    initialFilterState.granularity ?? Granularity.DAY
+  const [granularity, setGranularity] = useState(() =>
+    initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
+      ? initialFilterState.granularity
+      : Granularity.DAY
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState<string[]>(() => initialFilterState.breakdowns)
-  const addBreakdown = (prop: string) => setBreakdowns(prev => {
-    if (prev.includes(prop) || prev.length >= 5) return prev
-    return [...prev, prop]
-  })
+  const addBreakdown = (prop: string) =>
+    setBreakdowns(prev => {
+      if (prev.includes(prop) || prev.length >= 5) return prev
+      return [...prev, prop]
+    })
   const removeBreakdown = (i: number) => setBreakdowns(prev => prev.filter((_, idx) => idx !== i))
 
   const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
@@ -201,14 +223,16 @@ const Insights = () => {
     breakdowns,
   })
 
-  const { data: queryResult, loading, error, retry } = useDebouncedQuery(
+  const {
+    data: queryResult,
+    loading,
+    error,
+    retry,
+  } = useDebouncedQuery(
     queryKey,
     async () => {
       const globalFilters = toProtoFilters(propFilters)
-      const filterGroups =
-        globalFilters.length > 0
-          ? [{ filters: globalFilters, operator: LogicalOperator.AND }]
-          : []
+      const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
       const resp = await insightsRPC.query(
         {
           insightType,
@@ -235,7 +259,8 @@ const Insights = () => {
 
   const result = queryResult ?? EMPTY_RESULT
 
-  const unknownResultCase = result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
+  const unknownResultCase =
+    result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
   useEffect(() => {
     if (unknownResultCase) console.warn('Unrecognized insight result case:', result.case)
   }, [unknownResultCase, result.case])
@@ -252,36 +277,29 @@ const Insights = () => {
   const retentionSeriesList = result.case === 'retention' ? result.value.series : EMPTY_ARRAY
   const retentionCohorts = retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY
 
-  const kindOrder = useMemo(
-    () => eventFilters.validEntries.map(e => e.kind),
-    [eventFilters.validEntries]
-  )
+  const kindOrder = useMemo(() => eventFilters.validEntries.map(e => e.kind), [eventFilters.validEntries])
 
-  const funnelSeriesList = useMemo(
-    () => result.case === 'funnel' ? result.value.series : [],
-    [result]
-  )
+  const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const funnelSeriesData = useMemo(
-    () => funnelSeriesList.map((series, si) => {
-      const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
-      return { label, steps: sortFunnelSteps(series.steps, kindOrder), color: getSeriesColor(label, si).dot }
-    }),
+    () =>
+      funnelSeriesList.map((series, si) => {
+        const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
+        return { label, steps: sortFunnelSteps(series.steps, kindOrder), color: getSeriesColor(label, si).dot }
+      }),
     [funnelSeriesList, kindOrder]
   )
 
   const seriesNames = useMemo(
-    () => result.case === 'retention'
-      ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
-      : trendSeries.map((s, i) => {
-          const bd = breakdownLabel(s.breakdown, '')
-          return bd ? `${s.eventKind} · ${bd}` : (s.eventKind || `Series ${i + 1}`)
-        }),
+    () =>
+      result.case === 'retention'
+        ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
+        : trendSeries.map((s, i) => {
+            const bd = breakdownLabel(s.breakdown, '')
+            return bd ? `${s.eventKind} · ${bd}` : s.eventKind || `Series ${i + 1}`
+          }),
     [result.case, trendSeries, retentionCohorts]
   )
-  const seriesColors = useMemo(
-    () => seriesNames.map((name, i) => getSeriesColor(name, i)),
-    [seriesNames]
-  )
+  const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
@@ -289,15 +307,15 @@ const Insights = () => {
   const chartData: ChartPoint[] =
     trendSeries.length > 0
       ? trendSeries[0].points
-        .map((p, i) => {
-          const date = tsToDate(p.time)
-          if (!date) return null
-          return {
-            date,
-            values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-          }
-        })
-        .filter((d): d is ChartPoint => d !== null)
+          .map((p, i) => {
+            const date = tsToDate(p.time)
+            if (!date) return null
+            return {
+              date,
+              values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
+            }
+          })
+          .filter((d): d is ChartPoint => d !== null)
       : []
 
   const isTrends = insightType === InsightType.TRENDS
@@ -309,8 +327,14 @@ const Insights = () => {
   const maxEvents = isRetention ? 2 : undefined
   const renderRowExtra = isTrends
     ? (i: number) => (
-      <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => eventFilters.setAggregation(i, v)} />
-    )
+        <OptionChip
+          label='measure'
+          icon={Ruler}
+          options={AGGREGATIONS}
+          value={getAggregation(i)}
+          onChange={v => eventFilters.setAggregation(i, v)}
+        />
+      )
     : undefined
 
   const renderChart = () => {
@@ -321,19 +345,27 @@ const Insights = () => {
         </div>
       )
     }
-    switch (viewMode) {
-      case 'line':
-        return <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'area':
-        return <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'pie':
-        return <PieChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} />
-      case 'table':
-        return <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      case 'bar-grouped':
-      case 'bar-stacked':
-        return <BarChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} stacked={viewMode === 'bar-stacked'} />
-    }
+    if (viewMode === 'line')
+      return (
+        <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      )
+    if (viewMode === 'area')
+      return (
+        <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      )
+    if (viewMode === 'table')
+      return (
+        <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+      )
+    return (
+      <BarChart
+        data={chartData}
+        seriesNames={seriesNames}
+        seriesColors={seriesColors}
+        granularity={granularity}
+        stacked={viewMode === 'bar-stacked'}
+      />
+    )
   }
 
   const renderLoadingEmptyState = () => {
@@ -433,23 +465,34 @@ const Insights = () => {
   if (!project) return <NoProject title='Insights' icon={TrendingUp} />
 
   return (
-    <Page
-      title='Insights'
-      description={getPageDescription(insightType)}
-    >
+    <Page title='Insights' description={getPageDescription(insightType)}>
       {/* Query config — sticky */}
-      <div className={cn(
-        '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
-        stickyClassName
-      )}>
+      <div
+        className={cn(
+          '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
+          stickyClassName
+        )}
+      >
         <div className='flex flex-wrap items-center gap-2'>
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
           <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTimeSeriesInsight && (
             <>
-              <OptionChip label='granularity' icon={Clock} options={granularityOptions} value={granularity} onChange={setGranularity} />
+              <OptionChip
+                label='granularity'
+                icon={Clock}
+                options={GRANULARITIES}
+                value={granularity}
+                onChange={setGranularity}
+              />
               {isTrends && (
-                <OptionChip label='view' icon={BarChart3} options={VIEW_MODES} value={viewMode} onChange={setViewMode} />
+                <OptionChip
+                  label='view'
+                  icon={BarChart3}
+                  options={VIEW_MODES}
+                  value={viewMode}
+                  onChange={setViewMode}
+                />
               )}
             </>
           )}
@@ -475,8 +518,8 @@ const Insights = () => {
                   <CircleHelp className='w-3.5 h-3.5' />
                 </TooltipTrigger>
                 <TooltipContent side='bottom' align='start' className='max-w-xs text-xs'>
-                  Use up to two events: A defines the cohort entry event, B defines the return event.
-                  If B is omitted, A is used for both cohort and return.
+                  Use up to two events: A defines the cohort entry event, B defines the return event. If B is omitted, A
+                  is used for both cohort and return.
                 </TooltipContent>
               </Tooltip>
               <span>Retention supports up to 2 events (A = cohort, B = return).</span>
@@ -501,7 +544,12 @@ const Insights = () => {
             <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(i)} />
           ))}
           {breakdowns.length < 5 && (
-            <BreakdownBuilder schema={globalSchema} schemaError={globalSchemaError} breakdowns={breakdowns} onAdd={addBreakdown} />
+            <BreakdownBuilder
+              schema={globalSchema}
+              schemaError={globalSchemaError}
+              breakdowns={breakdowns}
+              onAdd={addBreakdown}
+            />
           )}
           {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
         </div>

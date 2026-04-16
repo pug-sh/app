@@ -24,25 +24,27 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
   const isMultiSeries = series.length > 1
   const stepNames = useMemo(() => series[0]?.steps.map(s => s.name) ?? [], [series])
 
-  const chartData = useMemo<ChartRow[]>(() =>
-    stepNames.map((stepName, stepIdx) => {
-      const row: ChartRow = { step: stepName }
-      series.forEach(s => {
-        const firstCount = Math.max(s.steps[0]?.count ?? 0, 0)
-        const stepCount = Math.max(s.steps[stepIdx]?.count ?? 0, 0)
-        const prevCount = Math.max(s.steps[stepIdx - 1]?.count ?? stepCount, 0)
-        row[s.label] = firstCount > 0 ? Number(((stepCount / firstCount) * 100).toFixed(2)) : 0
-        row[`${s.label}__count`] = stepCount
-        row[`${s.label}__fromPrev`] = stepIdx > 0 && prevCount > 0 ? Number(((stepCount / prevCount) * 100).toFixed(2)) : 100
-        row[`${s.label}__dropOff`] = Math.max(prevCount - stepCount, 0)
-      })
-      return row
-    }),
+  const chartData = useMemo<ChartRow[]>(
+    () =>
+      stepNames.map((stepName, stepIdx) => {
+        const row: ChartRow = { step: stepName }
+        series.forEach(s => {
+          const firstCount = Math.max(s.steps[0]?.count ?? 0, 0)
+          const stepCount = Math.max(s.steps[stepIdx]?.count ?? 0, 0)
+          const prevCount = Math.max(s.steps[stepIdx - 1]?.count ?? stepCount, 0)
+          row[s.label] = firstCount > 0 ? Number(((stepCount / firstCount) * 100).toFixed(2)) : 0
+          row[`${s.label}__count`] = stepCount
+          row[`${s.label}__fromPrev`] =
+            stepIdx > 0 && prevCount > 0 ? Number(((stepCount / prevCount) * 100).toFixed(2)) : 100
+          row[`${s.label}__dropOff`] = Math.max(prevCount - stepCount, 0)
+        })
+        return row
+      }),
     [series, stepNames]
   )
 
-  const chartConfig = useMemo<ChartConfig>(() =>
-    Object.fromEntries(series.map(s => [s.label, { label: s.label, color: s.color }])),
+  const chartConfig = useMemo<ChartConfig>(
+    () => Object.fromEntries(series.map(s => [s.label, { label: s.label, color: s.color }])),
     [series]
   )
 
@@ -70,11 +72,11 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
               return (
                 <div className='rounded-lg border border-border bg-popover p-2.5 shadow-sm text-xs min-w-[160px]'>
                   <p className='font-medium text-foreground mb-1.5'>{step}</p>
-                  {series.map((s, si) => {
-                    const count = row[`${s.label}__count`] as number ?? 0
-                    const conv = row[s.label] as number ?? 0
-                    const fromPrev = row[`${s.label}__fromPrev`] as number ?? 100
-                    const dropOff = row[`${s.label}__dropOff`] as number ?? 0
+                  {series.map(s => {
+                    const count = (row[`${s.label}__count`] as number) ?? 0
+                    const conv = (row[s.label] as number) ?? 0
+                    const fromPrev = (row[`${s.label}__fromPrev`] as number) ?? 100
+                    const dropOff = (row[`${s.label}__dropOff`] as number) ?? 0
                     return (
                       <div key={s.label} className='py-1 border-t border-border/50 first:border-0 first:pt-0'>
                         {isMultiSeries && (
@@ -112,11 +114,10 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
               )
             }}
           />
-          {series.map((s, si) => (
+          {series.map(s => (
             <Bar key={s.label} dataKey={s.label} fill={s.color} radius={[4, 4, 0, 0]}>
-              {!isMultiSeries && s.steps.map((step, i) => (
-                <Cell key={`cell-${i}`} fill={getSeriesColor(step.name, i).line} />
-              ))}
+              {!isMultiSeries &&
+                s.steps.map((step, i) => <Cell key={`cell-${i}`} fill={getSeriesColor(step.name, i).line} />)}
             </Bar>
           ))}
         </ReBarChart>
@@ -143,22 +144,20 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
     setVisibleLabels(new Set(series.slice(0, DEFAULT_VISIBLE).map(s => s.label)))
   }, [labelsKey, series])
 
-  const visibleSeries = useMemo(
-    () => series.filter(s => visibleLabels.has(s.label)),
-    [series, visibleLabels]
-  )
+  const visibleSeries = useMemo(() => series.filter(s => visibleLabels.has(s.label)), [series, visibleLabels])
 
-  const seriesStats = useMemo(() =>
-    series.map(s => {
-      const first = Math.max(s.steps[0]?.count ?? 0, 0)
-      const last = Math.max(s.steps[s.steps.length - 1]?.count ?? 0, 0)
-      return { ...s, rate: first > 0 ? (last / first) * 100 : 0, completed: last }
-    }),
+  const seriesStats = useMemo(
+    () =>
+      series.map(s => {
+        const first = Math.max(s.steps[0]?.count ?? 0, 0)
+        const last = Math.max(s.steps[s.steps.length - 1]?.count ?? 0, 0)
+        return { ...s, rate: first > 0 ? (last / first) * 100 : 0, completed: last }
+      }),
     [series]
   )
 
-  const highestConv = seriesStats.reduce((best, s) => s.rate > best.rate ? s : best, seriesStats[0])
-  const mostCompleted = seriesStats.reduce((best, s) => s.completed > best.completed ? s : best, seriesStats[0])
+  const highestConv = seriesStats.reduce((best, s) => (s.rate > best.rate ? s : best), seriesStats[0])
+  const mostCompleted = seriesStats.reduce((best, s) => (s.completed > best.completed ? s : best), seriesStats[0])
 
   const toggleSeries = (label: string) =>
     setVisibleLabels(prev => {
