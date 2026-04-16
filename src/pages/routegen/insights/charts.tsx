@@ -1,7 +1,7 @@
 export { AreaChart } from './charts/area-chart'
 export { BarChart } from './charts/bar-chart'
 export { DataTable } from './charts/data-table'
-export { FunnelChart, FunnelBreakdownTable } from './charts/funnel-chart'
+export { FunnelChart, FunnelBreakdownView } from './charts/funnel-chart'
 export type { FunnelSeriesData } from './charts/funnel-chart'
 export { LineChart } from './charts/line-chart'
 export { PieChart } from './charts/pie-chart'

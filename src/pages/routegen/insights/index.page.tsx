@@ -29,7 +29,7 @@ import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, Trending
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
-import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelBreakdownTable, FunnelChart, LineChart, PieChart, RetentionCohort, SummaryStats } from './charts'
+import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelBreakdownView, FunnelChart, LineChart, PieChart, RetentionCohort, SummaryStats } from './charts'
 
 // ── Module-level helpers ─────────────────────────────────────────────────────
 
@@ -63,7 +63,6 @@ const INSIGHT_TYPES = [
 const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
 type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
-
 const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
   { label: 'Area', value: 'area' },
@@ -262,10 +261,6 @@ const Insights = () => {
     () => result.case === 'funnel' ? result.value.series : [],
     [result]
   )
-  const funnelSteps = useMemo(
-    () => funnelSeriesList.length > 0 ? sortFunnelSteps(funnelSeriesList[0].steps, kindOrder) : [],
-    [funnelSeriesList, kindOrder]
-  )
   const funnelSeriesData = useMemo(
     () => funnelSeriesList.map((series, si) => {
       const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
@@ -365,10 +360,10 @@ const Insights = () => {
     }
 
     if (breakdowns.length > 0) {
-      return <FunnelBreakdownTable series={funnelSeriesData} />
+      return <FunnelBreakdownView series={funnelSeriesData} />
     }
 
-    return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
+    return <FunnelChart series={funnelSeriesData} />
   }
 
   const renderRetentionContent = () => {
