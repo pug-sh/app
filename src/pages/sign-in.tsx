@@ -32,10 +32,15 @@ const SignIn = () => {
   const onSubmit = async (data: AuthFormData) => {
     setError('')
     setLoading(true)
-    const action = mode === 'signin' ? signIn : signUp
-    const result = await action(data)
-    setLoading(false)
-    if (!result.ok) setError(result.error)
+    try {
+      const action = mode === 'signin' ? signIn : signUp
+      const result = await action(data)
+      if (!result.ok) setError(result.error)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
