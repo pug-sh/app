@@ -22,9 +22,10 @@ import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import type { PrimitiveAtom } from 'jotai'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
@@ -119,6 +120,20 @@ const OptionChip = <T extends string | number>({
     </Popover>
   )
 }
+
+// ── Row Aggregation Picker ───────────────────────────────────────────────────
+
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
+
+const RowAggregationPicker = memo(({ index, filtersAtom, setAggregation }: {
+  index: number
+  filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+  setAggregation: (idx: number, agg: AggregationType) => void
+}) => {
+  const entries = useAtomValue(filtersAtom)
+  const value = entries[index]?.aggregation ?? AggregationType.TOTAL
+  return <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={value} onChange={v => setAggregation(index, v)} />
+})
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -281,8 +296,9 @@ const Insights = () => {
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTimeSeriesInsight = isTrends || isRetention
-  const hasFunnelData = funnelSteps.some(step => step.count > 0)
-  const allZero = chartData.every(d => d.values.every(v => v === 0))
+  const hasFunnelData = useMemo(() => funnelSteps.some(step => step.count > 0), [funnelSteps])
+  const allZero = useMemo(() => chartData.every(d => d.values.every(v => v === 0)), [chartData])
+  const funnelSeriesColors = useMemo(() => funnelSteps.map((s, i) => getSeriesColor(s.name, i)), [funnelSteps])
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
@@ -290,11 +306,10 @@ const Insights = () => {
   const renderRowExtra = useMemo(
     () => isTrends
       ? (i: number) => (
-        <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => eventFilters.setAggregation(i, v)} />
+        <RowAggregationPicker index={i} filtersAtom={eventFilters.filtersAtom} setAggregation={eventFilters.setAggregation} />
       )
       : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isTrends, eventFilters.entries, eventFilters.setAggregation]
+    [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation]
   )
 
   const renderChart = () => {
@@ -327,7 +342,7 @@ const Insights = () => {
     if (funnelSteps.length === 0) return renderLoadingEmptyState()
 
     if (hasFunnelData) {
-      return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
+      return <FunnelChart steps={funnelSteps} seriesColors={funnelSeriesColors} />
     }
 
     return (

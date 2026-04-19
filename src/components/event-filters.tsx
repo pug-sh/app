@@ -10,10 +10,10 @@ import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { PrimitiveAtom } from 'jotai'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { memo, startTransition, useEffect, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useState } from 'react'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
@@ -738,37 +738,57 @@ export const FilterChip = ({
 const SERIES_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export const EventQueryRow = memo(({
+  filtersAtom,
+  index,
   entry,
   events,
   schema,
   schemaError,
-  onUpdateKind,
-  onRemove,
-  onAddFilter,
-  onRemoveFilter,
-  onUpdateFilter,
   letter,
   color,
-  children,
+  renderExtra,
   getEventColor,
 }: {
+  filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+  index: number
   entry: EventFilterEntry
   events: EventNameMeta[]
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
-  onUpdateKind: (kind: string) => void
-  onRemove: () => void
-  onAddFilter: (filter: ActiveFilter) => void
-  onRemoveFilter: (filterIdx: number) => void
-  onUpdateFilter: (filterIdx: number, filter: ActiveFilter) => void
   letter?: string
   color?: string
-  children?: React.ReactNode
+  renderExtra?: (index: number) => React.ReactNode
   getEventColor?: (eventName: string) => string
 }) => {
+  const setEntries = useSetAtom(filtersAtom)
   const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
   const resolvedSchema = entry.kind ? scopedSchema : schema
   const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
+
+  const onUpdateKind = useCallback((kind: string) => {
+    const trimmed = kind.trim()
+    if (!trimmed) {
+      setEntries(prev => prev.filter((_, i) => i !== index))
+    } else {
+      setEntries(prev => prev.map((e, i) => i === index ? { ...e, kind: trimmed, filters: [] } : e))
+    }
+  }, [index, setEntries])
+
+  const onRemove = useCallback(() => {
+    setEntries(prev => prev.filter((_, i) => i !== index))
+  }, [index, setEntries])
+
+  const onAddFilter = useCallback((filter: ActiveFilter) => {
+    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: [...e.filters, filter] } : e))
+  }, [index, setEntries])
+
+  const onRemoveFilter = useCallback((filterIdx: number) => {
+    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
+  }, [index, setEntries])
+
+  const onUpdateFilter = useCallback((filterIdx: number, filter: ActiveFilter) => {
+    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
+  }, [index, setEntries])
 
   return (
     <div className='flex items-center gap-2'>
@@ -809,7 +829,7 @@ export const EventQueryRow = memo(({
                 retry schema
               </button>
             )}
-            {children}
+            {renderExtra?.(index)}
           </>
         )}
       </div>
@@ -854,39 +874,23 @@ export const EventFilterBar = ({
     if (!trimmed) return
     setEntries(prev => [...prev, { kind: trimmed, filters: [] }])
   }
-  const removeEvent = (idx: number) => setEntries(prev => prev.filter((_, i) => i !== idx))
-  const updateEventKind = (idx: number, kind: string) => {
-    const trimmed = kind.trim()
-    if (!trimmed) { removeEvent(idx); return }
-    setEntries(prev => prev.map((e, i) => i === idx ? { ...e, kind: trimmed, filters: [] } : e))
-  }
-  const addEventFilter = (eventIdx: number, filter: ActiveFilter) =>
-    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: [...e.filters, filter] } : e))
-  const removeEventFilter = (eventIdx: number, filterIdx: number) =>
-    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
-  const updateEventFilter = (eventIdx: number, filterIdx: number, filter: ActiveFilter) =>
-    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
 
   return (
     <div className='flex flex-col gap-1.5'>
       {entries.map((entry, i) => (
         <EventQueryRow
           key={i}
+          filtersAtom={filtersAtom}
+          index={i}
           entry={entry}
           events={events}
           schema={schema}
           schemaError={schemaError}
-          onUpdateKind={kind => updateEventKind(i, kind)}
-          onRemove={() => removeEvent(i)}
-          onAddFilter={filter => addEventFilter(i, filter)}
-          onRemoveFilter={fi => removeEventFilter(i, fi)}
-          onUpdateFilter={(fi, filter) => updateEventFilter(i, fi, filter)}
           letter={showLetters ? SERIES_LETTERS[i] : undefined}
           color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
+          renderExtra={renderRowExtra}
           getEventColor={getEventColor}
-        >
-          {renderRowExtra?.(i)}
-        </EventQueryRow>
+        />
       ))}
       {(maxEvents === undefined || entries.length < maxEvents) && (
         <div className='flex items-center gap-2'>
