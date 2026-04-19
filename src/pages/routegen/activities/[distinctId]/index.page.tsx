@@ -329,7 +329,7 @@ const UserActivity = () => {
                                 {belongs ? (
                                   <div
                                     className={cn(
-                                      'absolute w-0.75 bg-muted-foreground/40',
+                                      'absolute w-[3px] bg-muted-foreground/40',
                                       isFirst && isLast && 'top-1.5 bottom-1.5 rounded-full',
                                       isFirst && !isLast && 'top-1.5 bottom-0 rounded-t-full',
                                       !isFirst && isLast && 'top-0 bottom-1.5 rounded-b-full',

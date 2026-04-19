@@ -14,6 +14,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
 import { memo, startTransition, useCallback, useEffect, useState } from 'react'
+import { generateEntryId } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
@@ -739,7 +740,6 @@ const SERIES_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 export const EventQueryRow = memo(({
   filtersAtom,
-  index,
   entry,
   events,
   schema,
@@ -750,45 +750,45 @@ export const EventQueryRow = memo(({
   getEventColor,
 }: {
   filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-  index: number
   entry: EventFilterEntry
   events: EventNameMeta[]
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   letter?: string
   color?: string
-  renderExtra?: (index: number) => React.ReactNode
+  renderExtra?: (entryId: string) => React.ReactNode
   getEventColor?: (eventName: string) => string
 }) => {
   const setEntries = useSetAtom(filtersAtom)
   const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
   const resolvedSchema = entry.kind ? scopedSchema : schema
   const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
+  const { id: entryId } = entry
 
   const onUpdateKind = useCallback((kind: string) => {
     const trimmed = kind.trim()
     if (!trimmed) {
-      setEntries(prev => prev.filter((_, i) => i !== index))
+      setEntries(prev => prev.filter(e => e.id !== entryId))
     } else {
-      setEntries(prev => prev.map((e, i) => i === index ? { ...e, kind: trimmed, filters: [] } : e))
+      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, kind: trimmed, filters: [] } : e))
     }
-  }, [index, setEntries])
+  }, [entryId, setEntries])
 
   const onRemove = useCallback(() => {
-    setEntries(prev => prev.filter((_, i) => i !== index))
-  }, [index, setEntries])
+    setEntries(prev => prev.filter(e => e.id !== entryId))
+  }, [entryId, setEntries])
 
   const onAddFilter = useCallback((filter: ActiveFilter) => {
-    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: [...e.filters, filter] } : e))
-  }, [index, setEntries])
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: [...e.filters, filter] } : e))
+  }, [entryId, setEntries])
 
   const onRemoveFilter = useCallback((filterIdx: number) => {
-    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
-  }, [index, setEntries])
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
+  }, [entryId, setEntries])
 
   const onUpdateFilter = useCallback((filterIdx: number, filter: ActiveFilter) => {
-    setEntries(prev => prev.map((e, i) => i === index ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
-  }, [index, setEntries])
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
+  }, [entryId, setEntries])
 
   return (
     <div className='flex items-center gap-2'>
@@ -829,7 +829,7 @@ export const EventQueryRow = memo(({
                 retry schema
               </button>
             )}
-            {renderExtra?.(index)}
+            {renderExtra?.(entry.id)}
           </>
         )}
       </div>
@@ -863,25 +863,24 @@ export const EventFilterBar = ({
   schemaError: string | null
   showLetters?: boolean
   seriesColors?: { dot: string }[]
-  renderRowExtra?: (index: number) => React.ReactNode
+  renderRowExtra?: (entryId: string) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
 }) => {
   const [entries, setEntries] = useAtom(filtersAtom)
 
-  const addEvent = (kind: string) => {
+  const addEvent = useCallback((kind: string) => {
     const trimmed = kind.trim()
     if (!trimmed) return
-    setEntries(prev => [...prev, { kind: trimmed, filters: [] }])
-  }
+    setEntries(prev => [...prev, { id: generateEntryId(), kind: trimmed, filters: [] }])
+  }, [setEntries])
 
   return (
     <div className='flex flex-col gap-1.5'>
       {entries.map((entry, i) => (
         <EventQueryRow
-          key={i}
+          key={entry.id}
           filtersAtom={filtersAtom}
-          index={i}
           entry={entry}
           events={events}
           schema={schema}

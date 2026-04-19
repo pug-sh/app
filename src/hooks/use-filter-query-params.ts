@@ -1,4 +1,5 @@
 import type { ActiveFilter } from '@/components/event-filters'
+import { generateEntryId } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -78,7 +79,7 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
     ? (v.aggregation as AggregationType)
     : undefined
-  return { kind, filters, ...(aggregation !== undefined && { aggregation }) }
+  return { id: generateEntryId(), kind, filters, ...(aggregation !== undefined && { aggregation }) }
 }
 
 const parseJSONParam = (raw: string | null): unknown => {
@@ -152,7 +153,7 @@ export const writeFilterQueryParams = (
     setOrDelete(key, value.length > 0 ? JSON.stringify(value) : undefined)
   }
 
-  setJSONParam(EVENT_FILTERS_PARAM, eventFilters)
+  setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(e => ({ kind: e.kind, filters: e.filters, ...(e.aggregation !== undefined && { aggregation: e.aggregation }) })))
   setJSONParam(PROP_FILTERS_PARAM, propFilters)
 
   setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)

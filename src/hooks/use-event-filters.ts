@@ -3,7 +3,11 @@ import { atom, useAtom } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 
+let idCounter = 0
+export const generateEntryId = () => String(++idCounter)
+
 export type EventFilterEntry = {
+  id: string
   kind: string
   filters: ActiveFilter[]
   aggregation?: AggregationType
@@ -15,8 +19,8 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
 
   const validEntries = useMemo(() => entries.filter(e => e.kind), [entries])
 
-  const setAggregation = useCallback((idx: number, aggregation: AggregationType) => {
-    setEntries(prev => prev.map((e, i) => i === idx ? { ...e, aggregation } : e))
+  const setAggregation = useCallback((id: string, aggregation: AggregationType) => {
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, aggregation } : e))
   }, [setEntries])
 
   const reset = useCallback((nextEntries: EventFilterEntry[] = []) => {

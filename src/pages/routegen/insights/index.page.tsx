@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
@@ -123,16 +124,14 @@ const OptionChip = <T extends string | number>({
 
 // ── Row Aggregation Picker ───────────────────────────────────────────────────
 
-import type { EventFilterEntry } from '@/hooks/use-event-filters'
-
-const RowAggregationPicker = memo(({ index, filtersAtom, setAggregation }: {
-  index: number
+const RowAggregationPicker = memo(({ entryId, filtersAtom, setAggregation }: {
+  entryId: string
   filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-  setAggregation: (idx: number, agg: AggregationType) => void
+  setAggregation: (id: string, agg: AggregationType) => void
 }) => {
   const entries = useAtomValue(filtersAtom)
-  const value = entries[index]?.aggregation ?? AggregationType.TOTAL
-  return <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={value} onChange={v => setAggregation(index, v)} />
+  const value = entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL
+  return <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={value} onChange={v => setAggregation(entryId, v)} />
 })
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -161,8 +160,6 @@ const Insights = () => {
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
-
-  const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
 
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
@@ -210,12 +207,12 @@ const Insights = () => {
           insightType,
           granularity,
           timeRange: toProtoTimeRange(timeRange),
-          events: validEntries.map((entry, i) => ({
+          events: validEntries.map(entry => ({
             event: {
               kind: entry.kind,
               filters: toProtoFilters(entry.filters),
             },
-            aggregation: insightType === InsightType.TRENDS ? getAggregation(i) : AggregationType.TOTAL,
+            aggregation: insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
@@ -305,8 +302,8 @@ const Insights = () => {
 
   const renderRowExtra = useMemo(
     () => isTrends
-      ? (i: number) => (
-        <RowAggregationPicker index={i} filtersAtom={eventFilters.filtersAtom} setAggregation={eventFilters.setAggregation} />
+      ? (entryId: string) => (
+        <RowAggregationPicker entryId={entryId} filtersAtom={eventFilters.filtersAtom} setAggregation={eventFilters.setAggregation} />
       )
       : undefined,
     [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation]
