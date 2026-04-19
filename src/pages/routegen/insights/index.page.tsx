@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import type { PrimitiveAtom } from 'jotai'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
@@ -164,14 +164,14 @@ const Insights = () => {
 
   const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
 
-  // Cap entries at 2 when switching to retention mode
-  const eventFiltersRef = useRef(eventFilters)
-   
-  eventFiltersRef.current = eventFilters
+  const store = useStore()
+  const { filtersAtom, reset: resetFilters } = eventFilters
   useEffect(() => {
-    if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
-    eventFiltersRef.current.reset(eventFiltersRef.current.entries.slice(0, 2))
-  }, [insightType])
+    if (insightType !== InsightType.RETENTION) return
+    const entries = store.get(filtersAtom)
+    if (entries.length <= 2) return
+    resetFilters(entries.slice(0, 2))
+  }, [insightType, store, filtersAtom, resetFilters])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
