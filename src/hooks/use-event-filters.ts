@@ -1,5 +1,6 @@
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { useMemo, useState } from 'react'
+import { atom, useAtom } from 'jotai'
+import { useCallback, useMemo, useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 
 export type EventFilterEntry = {
@@ -9,56 +10,18 @@ export type EventFilterEntry = {
 }
 
 export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
-  const [entries, setEntries] = useState<EventFilterEntry[]>(initialEntries)
-
-  const addEvent = (kind: string) => {
-    const trimmed = kind.trim()
-    if (!trimmed) return
-    setEntries(prev => [...prev, { kind: trimmed, filters: [] }])
-  }
-
-  const removeEvent = (idx: number) => {
-    setEntries(prev => prev.filter((_, i) => i !== idx))
-  }
-
-  const updateEventKind = (idx: number, kind: string) => {
-    const trimmed = kind.trim()
-    if (!trimmed) {
-      removeEvent(idx)
-      return
-    }
-    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, kind: trimmed, filters: [] } : e)))
-  }
-
-  const addEventFilter = (eventIdx: number, filter: ActiveFilter) => {
-    setEntries(prev =>
-      prev.map((e, i) => (i === eventIdx ? { ...e, filters: [...e.filters, filter] } : e))
-    )
-  }
-
-  const removeEventFilter = (eventIdx: number, filterIdx: number) => {
-    setEntries(prev =>
-      prev.map((e, i) => (i === eventIdx ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
-    )
-  }
-
-  const updateEventFilter = (eventIdx: number, filterIdx: number, filter: ActiveFilter) => {
-    setEntries(prev =>
-      prev.map((e, i) =>
-        i === eventIdx ? { ...e, filters: e.filters.map((f, fi) => (fi === filterIdx ? filter : f)) } : e
-      )
-    )
-  }
-
-  const setAggregation = (idx: number, aggregation: AggregationType) => {
-    setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, aggregation } : e)))
-  }
-
-  const reset = (nextEntries: EventFilterEntry[] = []) => setEntries(nextEntries)
+  const [filtersAtom] = useState(() => atom<EventFilterEntry[]>(initialEntries))
+  const [entries, setEntries] = useAtom(filtersAtom)
 
   const validEntries = useMemo(() => entries.filter(e => e.kind), [entries])
 
-  return { entries, validEntries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
-}
+  const setAggregation = useCallback((idx: number, aggregation: AggregationType) => {
+    setEntries(prev => prev.map((e, i) => i === idx ? { ...e, aggregation } : e))
+  }, [setEntries])
 
-export type EventFiltersHandle = ReturnType<typeof useEventFilters>
+  const reset = useCallback((nextEntries: EventFilterEntry[] = []) => {
+    setEntries(nextEntries)
+  }, [setEntries])
+
+  return { entries, validEntries, filtersAtom, setAggregation, reset } as const
+}

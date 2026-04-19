@@ -212,7 +212,7 @@ const EventExplorer = () => {
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
         <EventFilterBar
-          filters={eventFilters}
+          filtersAtom={eventFilters.filtersAtom}
           events={schema?.events ?? []}
           schema={schema}
           schemaError={schemaError}

@@ -9,11 +9,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { useAtomValue } from 'jotai'
+import type { PrimitiveAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { useEffect, useState } from 'react'
-import type { EventFilterEntry, EventFiltersHandle } from '@/hooks/use-event-filters'
+import { memo, startTransition, useEffect, useState } from 'react'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -306,7 +307,7 @@ const EventPopoverList = ({
       <CommandList>
         <CommandEmpty className='py-4 text-xs'>{getEmptyMessage()}</CommandEmpty>
         <CommandGroup>
-          {[...events].sort((a, b) => Number(b.count - a.count)).map(ev => {
+          {events.map(ev => {
             const colors = getSeriesColor(ev.name)
             const customColor = getEventColor?.(ev.name)
             return (
@@ -363,7 +364,7 @@ export const EventChip = ({
           Event
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { onChange(name); setOpen(false) }} />
+          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { setOpen(false); startTransition(() => onChange(name)) }} />
         </PopoverContent>
       </Popover>
     )
@@ -378,7 +379,7 @@ export const EventChip = ({
           {value}
         </PopoverTrigger>
         <PopoverContent align='start' className='w-64 p-0'>
-          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { onChange(name); setOpen(false) }} />
+          <EventPopoverList events={events} value={value} schemaError={schemaError} getEventColor={getEventColor} onSelect={name => { setOpen(false); startTransition(() => onChange(name)) }} />
         </PopoverContent>
       </Popover>
       <button
@@ -520,7 +521,7 @@ export const FilterBuilder = ({
               </CommandEmpty>
               {hasSystem && (
                 <CommandGroup heading='System'>
-                  {[...schema.autoPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                  {schema.autoPropertyKeys.map(pk => (
                     <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.AUTO)} className='text-xs py-1.5'>
                       <span className='font-mono text-muted-foreground truncate'>{pk.name}</span>
                       <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
@@ -530,7 +531,7 @@ export const FilterBuilder = ({
               )}
               {hasCustom && (
                 <CommandGroup heading='Custom'>
-                  {[...schema.customPropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                  {schema.customPropertyKeys.map(pk => (
                     <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)} className='text-xs py-1.5'>
                       <span className='truncate'>{pk.name}</span>
                       <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
@@ -540,7 +541,7 @@ export const FilterBuilder = ({
               )}
               {hasProfile && (
                 <CommandGroup heading='Profile'>
-                  {[...schema.profilePropertyKeys].sort((a, b) => Number(b.count - a.count)).map(pk => (
+                  {schema.profilePropertyKeys.map(pk => (
                     <CommandItem key={pk.name} value={pk.name} onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)} className='text-xs py-1.5'>
                       <span className='truncate'>{pk.name}</span>
                       <span className='ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>{compactNumber(pk.count)}</span>
@@ -736,7 +737,7 @@ export const FilterChip = ({
 
 const SERIES_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-export const EventQueryRow = ({
+export const EventQueryRow = memo(({
   entry,
   events,
   schema,
@@ -821,12 +822,12 @@ export const EventQueryRow = ({
       </button>
     </div>
   )
-}
+})
 
 // ── Event Filter Bar ─────────────────────────────────────────────────────────
 
 export const EventFilterBar = ({
-  filters,
+  filtersAtom,
   events,
   schema,
   schemaError,
@@ -836,7 +837,7 @@ export const EventFilterBar = ({
   maxEvents,
   getEventColor,
 }: {
-  filters: EventFiltersHandle
+  filtersAtom: PrimitiveAtom<EventFilterEntry[]>
   events: EventNameMeta[]
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
@@ -845,38 +846,60 @@ export const EventFilterBar = ({
   renderRowExtra?: (index: number) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
-}) => (
-  <div className='flex flex-col gap-1.5'>
-    {filters.entries.map((entry, i) => (
-      <EventQueryRow
-        key={i}
-        entry={entry}
-        events={events}
-        schema={schema}
-        schemaError={schemaError}
-        onUpdateKind={kind => filters.updateEventKind(i, kind)}
-        onRemove={() => filters.removeEvent(i)}
-        onAddFilter={filter => filters.addEventFilter(i, filter)}
-        onRemoveFilter={fi => filters.removeEventFilter(i, fi)}
-        onUpdateFilter={(fi, filter) => filters.updateEventFilter(i, fi, filter)}
-        letter={showLetters ? SERIES_LETTERS[i] : undefined}
-        color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
-        getEventColor={getEventColor}
-      >
-        {renderRowExtra?.(i)}
-      </EventQueryRow>
-    ))}
-    {(maxEvents === undefined || filters.entries.length < maxEvents) && (
-      <div className='flex items-center gap-2'>
-        {showLetters && filters.entries.length > 0 && <span className='w-7' />}
-        <EventChip
-          value=''
-          onChange={kind => { if (kind) filters.addEvent(kind) }}
+}) => {
+  const [entries, setEntries] = useAtom(filtersAtom)
+
+  const addEvent = (kind: string) => {
+    const trimmed = kind.trim()
+    if (!trimmed) return
+    setEntries(prev => [...prev, { kind: trimmed, filters: [] }])
+  }
+  const removeEvent = (idx: number) => setEntries(prev => prev.filter((_, i) => i !== idx))
+  const updateEventKind = (idx: number, kind: string) => {
+    const trimmed = kind.trim()
+    if (!trimmed) { removeEvent(idx); return }
+    setEntries(prev => prev.map((e, i) => i === idx ? { ...e, kind: trimmed, filters: [] } : e))
+  }
+  const addEventFilter = (eventIdx: number, filter: ActiveFilter) =>
+    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: [...e.filters, filter] } : e))
+  const removeEventFilter = (eventIdx: number, filterIdx: number) =>
+    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
+  const updateEventFilter = (eventIdx: number, filterIdx: number, filter: ActiveFilter) =>
+    setEntries(prev => prev.map((e, i) => i === eventIdx ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
+
+  return (
+    <div className='flex flex-col gap-1.5'>
+      {entries.map((entry, i) => (
+        <EventQueryRow
+          key={i}
+          entry={entry}
           events={events}
+          schema={schema}
           schemaError={schemaError}
+          onUpdateKind={kind => updateEventKind(i, kind)}
+          onRemove={() => removeEvent(i)}
+          onAddFilter={filter => addEventFilter(i, filter)}
+          onRemoveFilter={fi => removeEventFilter(i, fi)}
+          onUpdateFilter={(fi, filter) => updateEventFilter(i, fi, filter)}
+          letter={showLetters ? SERIES_LETTERS[i] : undefined}
+          color={showLetters && seriesColors ? seriesColors[i % seriesColors.length]?.dot : undefined}
           getEventColor={getEventColor}
-        />
-      </div>
-    )}
-  </div>
-)
+        >
+          {renderRowExtra?.(i)}
+        </EventQueryRow>
+      ))}
+      {(maxEvents === undefined || entries.length < maxEvents) && (
+        <div className='flex items-center gap-2'>
+          {showLetters && entries.length > 0 && <span className='w-7' />}
+          <EventChip
+            value=''
+            onChange={kind => { if (kind) addEvent(kind) }}
+            events={events}
+            schemaError={schemaError}
+            getEventColor={getEventColor}
+          />
+        </div>
+      )}
+    </div>
+  )
+}

@@ -24,7 +24,7 @@ import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { AreaChart, BarChart, type ChartPoint, DataTable, FunnelChart, LineChart, RetentionCohort, SummaryStats } from './charts'
@@ -151,7 +151,7 @@ const Insights = () => {
 
   // Cap entries at 2 when switching to retention mode
   const eventFiltersRef = useRef(eventFilters)
-  // eslint-disable-next-line react-hooks/refs -- intentional: sync ref in render so effect reads latest entries without re-triggering
+   
   eventFiltersRef.current = eventFilters
   useEffect(() => {
     if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
@@ -263,7 +263,7 @@ const Insights = () => {
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
   )
-  const chartData: ChartPoint[] =
+  const chartData = useMemo<ChartPoint[]>(() =>
     trendSeries.length > 0
       ? trendSeries[0].points
         .map((p, i) => {
@@ -275,7 +275,8 @@ const Insights = () => {
           }
         })
         .filter((d): d is ChartPoint => d !== null)
-      : []
+      : [],
+  [trendSeries])
 
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
@@ -284,11 +285,17 @@ const Insights = () => {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
-  const renderRowExtra = isTrends
-    ? (i: number) => (
-      <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => eventFilters.setAggregation(i, v)} />
-    )
-    : undefined
+  const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
+
+  const renderRowExtra = useMemo(
+    () => isTrends
+      ? (i: number) => (
+        <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={getAggregation(i)} onChange={v => eventFilters.setAggregation(i, v)} />
+      )
+      : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isTrends, eventFilters.entries, eventFilters.setAggregation]
+  )
 
   const renderChart = () => {
     if (allZero) {
@@ -408,13 +415,13 @@ const Insights = () => {
         {/* Events + per-event filters + per-event aggregation */}
         <div className='space-y-1'>
           <EventFilterBar
-            filters={eventFilters}
+            filtersAtom={eventFilters.filtersAtom}
             events={schema?.events ?? []}
             schema={schema}
             schemaError={schemaError}
             showLetters
             seriesColors={eventFilterColors}
-            getEventColor={eventName => getSeriesColor(eventName).dot}
+            getEventColor={getEventColorDot}
             renderRowExtra={renderRowExtra}
             maxEvents={maxEvents}
           />
