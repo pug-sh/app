@@ -233,7 +233,7 @@ const Settings = () => {
                   {fcmForm.formState.errors.fcmJSON && <FieldError errors={[fcmForm.formState.errors.fcmJSON]} />}
                 </Field>
                 <div className="flex items-center gap-2">
-                  <Button type="submit" size="sm" disabled={savingFcm}>
+                  <Button type="submit" size="sm" disabled={savingFcm || !fcmForm.formState.isDirty}>
                     {savingFcm ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
                     Upload
                   </Button>

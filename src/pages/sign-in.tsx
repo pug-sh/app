@@ -24,11 +24,7 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AuthFormData>({
+  const authForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
     defaultValues: { email: '', password: '' },
   })
@@ -94,30 +90,30 @@ const SignIn = () => {
             {mode === 'signin' ? 'Sign in to your account to continue' : 'Get started with Cotton'}
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Field data-invalid={!!errors.email}>
+          <form onSubmit={authForm.handleSubmit(onSubmit)} className="space-y-4">
+            <Field data-invalid={!!authForm.formState.errors.email}>
               <FieldLabel htmlFor="email">Email</FieldLabel>
               <Input
-                {...register('email')}
+                {...authForm.register('email')}
                 id="email"
                 type="email"
                 placeholder="you@company.com"
-                aria-invalid={!!errors.email}
+                aria-invalid={!!authForm.formState.errors.email}
                 autoComplete="email"
               />
-              {errors.email && <FieldError errors={[errors.email]} />}
+              {authForm.formState.errors.email && <FieldError errors={[authForm.formState.errors.email]} />}
             </Field>
 
-            <Field data-invalid={!!errors.password}>
+            <Field data-invalid={!!authForm.formState.errors.password}>
               <FieldLabel htmlFor="password">Password</FieldLabel>
               <div className="relative">
                 <Input
-                  {...register('password')}
+                  {...authForm.register('password')}
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   className="pr-9"
-                  aria-invalid={!!errors.password}
+                  aria-invalid={!!authForm.formState.errors.password}
                   autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 />
                 <button
@@ -129,7 +125,7 @@ const SignIn = () => {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && <FieldError errors={[errors.password]} />}
+              {authForm.formState.errors.password && <FieldError errors={[authForm.formState.errors.password]} />}
             </Field>
 
             {error && <p className="text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
