@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "preview": "vite preview",
     "generate": "rm -rf src/api/genproto && pnpm buf generate --template buf.gen.yaml --include-imports proto"
   },
@@ -59,7 +61,6 @@
   },
   "prettier": {
     "arrowParens": "avoid",
-    "jsxSingleQuote": true,
     "printWidth": 120,
     "semi": false,
     "singleQuote": true,

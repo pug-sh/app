@@ -30,12 +30,12 @@ export const lazyWithRetry = (loader: () => Promise<{ default: ComponentType }>,
       sessionStorage.removeItem(storageKey)
       return {
         default: () => (
-          <div className='min-h-screen flex items-center justify-center'>
-            <div className='text-center'>
-              <p className='text-sm font-medium mb-1'>Failed to load page. Please refresh.</p>
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-sm font-medium mb-1">Failed to load page. Please refresh.</p>
               <button
                 onClick={() => window.location.reload()}
-                className='mt-3 px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted transition-colors'
+                className="mt-3 px-3 py-1.5 text-xs font-medium rounded-md border border-border bg-background hover:bg-muted transition-colors"
               >
                 Refresh
               </button>

@@ -95,66 +95,69 @@ const Members = () => {
 
   if (!org) {
     return (
-      <Page title='Members'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <Users className='w-8 h-8 mb-3 opacity-20' />
-          <p className='text-sm'>Select an organization first</p>
+      <Page title="Members">
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <Users className="w-8 h-8 mb-3 opacity-20" />
+          <p className="text-sm">Select an organization first</p>
         </div>
       </Page>
     )
   }
 
   return (
-    <Page title='Members' description={`Manage members of ${org.displayName}`}>
+    <Page title="Members" description={`Manage members of ${org.displayName}`}>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <Users className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchData()}>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Users className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchData()}>
             Retry
           </Button>
         </div>
       ) : (
-        <div className='space-y-8'>
+        <div className="space-y-8">
           {/* Members */}
           <section>
-            <SectionHeader title='Members' count={members.length} />
+            <SectionHeader title="Members" count={members.length} />
 
             {members.length > 0 && (
-              <div className='space-y-0.5'>
+              <div className="space-y-0.5">
                 {members.map(m => {
                   const name = m.displayName || m.email.split('@')[0]
                   return (
                     <div
                       key={m.customerId}
-                      className='group flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40'
+                      className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
                       onMouseLeave={() => setConfirmingRemove(null)}
                     >
-                      <div className='w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0'>
-                        <span className='text-[10px] font-medium text-muted-foreground'>{initials(name)}</span>
+                      <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-medium text-muted-foreground">{initials(name)}</span>
                       </div>
-                      <div className='flex-1 min-w-0'>
-                        <p className='text-sm font-medium truncate'>{name}</p>
-                        <p className='text-xs text-muted-foreground font-mono truncate'>{m.email}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{name}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
-                      <Badge variant={m.role === ORG_ROLE_ADMIN ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
+                      <Badge
+                        variant={m.role === ORG_ROLE_ADMIN ? 'default' : 'secondary'}
+                        className="text-[10px] shrink-0"
+                      >
                         {m.role === ORG_ROLE_ADMIN ? 'Admin' : 'Member'}
                       </Badge>
                       {confirmingRemove === m.customerId ? (
                         <button
                           onClick={() => handleRemove(m.customerId)}
-                          className='text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer'
+                          className="text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer"
                         >
                           Remove?
                         </button>
                       ) : (
                         <button
                           onClick={() => setConfirmingRemove(m.customerId)}
-                          className='p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer'
+                          className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer"
                         >
-                          <Trash2 className='w-3.5 h-3.5' />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -165,14 +168,14 @@ const Members = () => {
 
             {/* Inline invite */}
             {showInvite ? (
-              <div className='flex items-center gap-2 mt-1 pl-2'>
-                <div className='w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0'>
-                  <Plus className='w-3 h-3 text-muted-foreground' />
+              <div className="flex items-center gap-2 mt-1 pl-2">
+                <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+                  <Plus className="w-3 h-3 text-muted-foreground" />
                 </div>
                 <Input
                   ref={inputRef}
-                  type='email'
-                  placeholder='colleague@company.com'
+                  type="email"
+                  placeholder="colleague@company.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   onKeyDown={e => {
@@ -182,28 +185,24 @@ const Members = () => {
                       setEmail('')
                     }
                   }}
-                  className='flex-1'
+                  className="flex-1"
                   disabled={inviting}
                 />
                 <button
                   onClick={handleInvite}
                   disabled={inviting || !email.trim()}
-                  className='p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer'
+                  className="p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer"
                 >
-                  {inviting ? (
-                    <Loader2 className='w-3.5 h-3.5 animate-spin' />
-                  ) : (
-                    <Check className='w-3.5 h-3.5' />
-                  )}
+                  {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 </button>
                 <button
                   onClick={() => {
                     setShowInvite(false)
                     setEmail('')
                   }}
-                  className='p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer'
+                  className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
                 >
-                  <X className='w-3.5 h-3.5' />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
@@ -212,10 +211,10 @@ const Members = () => {
                   setShowInvite(true)
                   setTimeout(() => inputRef.current?.focus(), 0)
                 }}
-                className='flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+                className="flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
               >
-                <div className='w-7 h-7 rounded-full border border-dashed border-border flex items-center justify-center shrink-0'>
-                  <Plus className='w-3 h-3' />
+                <div className="w-7 h-7 rounded-full border border-dashed border-border flex items-center justify-center shrink-0">
+                  <Plus className="w-3 h-3" />
                 </div>
                 Invite member
               </button>
@@ -225,20 +224,21 @@ const Members = () => {
           {/* Pending invitations */}
           {invitations.length > 0 && (
             <section>
-              <SectionHeader title='Pending invitations' count={invitations.length} />
-              <div className='space-y-0.5'>
+              <SectionHeader title="Pending invitations" count={invitations.length} />
+              <div className="space-y-0.5">
                 {invitations.map(inv => (
                   <div
                     key={inv.id}
-                    className='flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40'
+                    className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
                   >
-                    <div className='w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0'>
-                      <span className='text-[10px] font-medium text-muted-foreground'>
-                        {initials(inv.email)}
-                      </span>
+                    <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+                      <span className="text-[10px] font-medium text-muted-foreground">{initials(inv.email)}</span>
                     </div>
-                    <p className='flex-1 text-sm font-mono text-muted-foreground truncate'>{inv.email}</p>
-                    <Badge variant={inv.status === INVITE_STATUS_ACCEPTED ? 'default' : 'secondary'} className='text-[10px] shrink-0'>
+                    <p className="flex-1 text-sm font-mono text-muted-foreground truncate">{inv.email}</p>
+                    <Badge
+                      variant={inv.status === INVITE_STATUS_ACCEPTED ? 'default' : 'secondary'}
+                      className="text-[10px] shrink-0"
+                    >
                       {inv.status === INVITE_STATUS_ACCEPTED ? 'Accepted' : 'Pending'}
                     </Badge>
                   </div>

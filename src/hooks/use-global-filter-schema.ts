@@ -18,9 +18,10 @@ export const clearSchemaCache = () => {
 }
 
 const cacheKey = (kind: string, headers: HeadersInit | undefined) => {
-  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
-    ? (headers as Record<string, string>)['x-project-id'] ?? ''
-    : ''
+  const projectId =
+    headers && typeof headers === 'object' && !Array.isArray(headers)
+      ? ((headers as Record<string, string>)['x-project-id'] ?? '')
+      : ''
   return `${projectId}\0${kind}`
 }
 
@@ -115,9 +116,10 @@ export const useGlobalFilterSchema = ({
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
 
-  const projectId = headers && typeof headers === 'object' && !Array.isArray(headers)
-    ? (headers as Record<string, string>)['x-project-id'] ?? ''
-    : ''
+  const projectId =
+    headers && typeof headers === 'object' && !Array.isArray(headers)
+      ? ((headers as Record<string, string>)['x-project-id'] ?? '')
+      : ''
 
   useEffect(() => {
     clearSchemaCache()
@@ -169,7 +171,9 @@ export const useGlobalFilterSchema = ({
       })
     }
     void loadSchemas()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [kindsKey, insightsRPC, headers])
 
   const hasKinds = kindsKey !== '[]'

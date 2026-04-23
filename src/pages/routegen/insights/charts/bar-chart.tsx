@@ -23,7 +23,7 @@ export const BarChart = ({
   if (data.length === 0) return null
 
   return (
-    <ChartContainer config={chartConfig} className='h-70 w-full'>
+    <ChartContainer config={chartConfig} className="h-70 w-full">
       <ReBarChart
         key={stacked ? 'stacked' : 'grouped'}
         data={chartData}
@@ -31,7 +31,7 @@ export const BarChart = ({
         barGap={stacked ? 0 : 6}
         barCategoryGap={stacked ? '24%' : '18%'}
       >
-        <CartesianGrid vertical={false} strokeDasharray='3 3' />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />
         <YAxis {...sharedYAxis(yMax)} />
         <ChartTooltip

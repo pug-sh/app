@@ -21,9 +21,9 @@ export const LineChart = ({
   if (data.length === 0) return null
 
   return (
-    <ChartContainer config={chartConfig} className='h-70 w-full'>
+    <ChartContainer config={chartConfig} className="h-70 w-full">
       <ReLineChart data={chartData} margin={SHARED_MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray='3 3' />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />
         <YAxis {...sharedYAxis(yMax)} />
         <ChartTooltip
@@ -33,7 +33,7 @@ export const LineChart = ({
         {seriesNames.map((_, si) => (
           <Line
             key={si}
-            type='monotone'
+            type="monotone"
             dataKey={`series${si}`}
             stroke={seriesColors[si]?.line}
             strokeWidth={2}

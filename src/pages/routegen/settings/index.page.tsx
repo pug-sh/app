@@ -46,10 +46,10 @@ const CopyId = ({ value }: { value: string }) => {
   return (
     <button
       onClick={() => copy(value)}
-      className='inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer'
+      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
     >
       {value}
-      {copied ? <Check className='w-3 h-3 text-green-600' /> : <Copy className='w-3 h-3' />}
+      {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
     </button>
   )
 }
@@ -147,38 +147,36 @@ const Settings = () => {
   }
 
   return (
-    <Page title='Settings' description='Manage project settings'>
-      <div className='space-y-8 max-w-2xl'>
+    <Page title="Settings" description="Manage project settings">
+      <div className="space-y-8 max-w-2xl">
         <section>
-          <SectionHeader title='API Endpoint' description='Configured via VITE_API_BASE_URL environment variable' />
-          <div className='flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/50 px-2.5 py-2 rounded-md font-mono'>
-            <Lock className='w-3 h-3 shrink-0' />
-            <span className='break-all'>{import.meta.env.VITE_API_BASE_URL}</span>
+          <SectionHeader title="API Endpoint" description="Configured via VITE_API_BASE_URL environment variable" />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/50 px-2.5 py-2 rounded-md font-mono">
+            <Lock className="w-3 h-3 shrink-0" />
+            <span className="break-all">{import.meta.env.VITE_API_BASE_URL}</span>
           </div>
         </section>
 
         {org && (
           <section>
-            <SectionHeader title='Organization' description='Rename your organization' />
-            <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className='space-y-3'>
+            <SectionHeader title="Organization" description="Rename your organization" />
+            <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className="space-y-3">
               <Field data-invalid={!!orgForm.formState.errors.displayName}>
-                <FieldLabel htmlFor='org-name'>Organization Name</FieldLabel>
+                <FieldLabel htmlFor="org-name">Organization Name</FieldLabel>
                 <Input
                   {...orgForm.register('displayName')}
-                  id='org-name'
+                  id="org-name"
                   maxLength={150}
                   aria-invalid={!!orgForm.formState.errors.displayName}
                 />
-                {orgForm.formState.errors.displayName && (
-                  <FieldError errors={[orgForm.formState.errors.displayName]} />
-                )}
+                {orgForm.formState.errors.displayName && <FieldError errors={[orgForm.formState.errors.displayName]} />}
               </Field>
-              <div className='flex items-center gap-2'>
-                <Button type='submit' variant='outline' size='sm' disabled={savingOrg || !orgForm.formState.isDirty}>
-                  {savingOrg ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+              <div className="flex items-center gap-2">
+                <Button type="submit" variant="outline" size="sm" disabled={savingOrg || !orgForm.formState.isDirty}>
+                  {savingOrg ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
                   Save
                 </Button>
-                {savedOrg && <span className='text-xs text-green-600 animate-in fade-in'>Saved</span>}
+                {savedOrg && <span className="text-xs text-green-600 animate-in fade-in">Saved</span>}
               </div>
             </form>
             <CopyId value={org.id} />
@@ -188,13 +186,13 @@ const Settings = () => {
         {project && projectHeaders && (
           <>
             <section>
-              <SectionHeader title='Project name' description='Rename this project' />
-              <form onSubmit={projectForm.handleSubmit(handleRenameProject)} className='space-y-3'>
+              <SectionHeader title="Project name" description="Rename this project" />
+              <form onSubmit={projectForm.handleSubmit(handleRenameProject)} className="space-y-3">
                 <Field data-invalid={!!projectForm.formState.errors.displayName}>
-                  <FieldLabel htmlFor='project-name'>Project Name</FieldLabel>
+                  <FieldLabel htmlFor="project-name">Project Name</FieldLabel>
                   <Input
                     {...projectForm.register('displayName')}
-                    id='project-name'
+                    id="project-name"
                     maxLength={150}
                     aria-invalid={!!projectForm.formState.errors.displayName}
                   />
@@ -202,41 +200,44 @@ const Settings = () => {
                     <FieldError errors={[projectForm.formState.errors.displayName]} />
                   )}
                 </Field>
-                <div className='flex items-center gap-2'>
-                  <Button type='submit' variant='outline' size='sm' disabled={savingProject || !projectForm.formState.isDirty}>
-                    {savingProject ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    disabled={savingProject || !projectForm.formState.isDirty}
+                  >
+                    {savingProject ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
                     Save
                   </Button>
-                  {savedProject && <span className='text-xs text-green-600 animate-in fade-in'>Saved</span>}
+                  {savedProject && <span className="text-xs text-green-600 animate-in fade-in">Saved</span>}
                 </div>
               </form>
             </section>
 
             <section>
               <SectionHeader
-                title='FCM Service Account'
-                description='Paste your Firebase Cloud Messaging service account JSON'
+                title="FCM Service Account"
+                description="Paste your Firebase Cloud Messaging service account JSON"
               />
-              <form onSubmit={fcmForm.handleSubmit(handleFCMUpload)} className='space-y-3'>
+              <form onSubmit={fcmForm.handleSubmit(handleFCMUpload)} className="space-y-3">
                 <Field data-invalid={!!fcmForm.formState.errors.fcmJSON}>
-                  <FieldLabel htmlFor='fcm-json'>Service Account JSON</FieldLabel>
+                  <FieldLabel htmlFor="fcm-json">Service Account JSON</FieldLabel>
                   <Textarea
                     {...fcmForm.register('fcmJSON')}
-                    id='fcm-json'
-                    className='font-mono min-h-30'
+                    id="fcm-json"
+                    className="font-mono min-h-30"
                     placeholder={`{\n  "type": "service_account",\n  "project_id": "your-project-id",\n  "private_key_id": "...",\n  "private_key": "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n",\n  "client_email": "firebase-adminsdk-...@your-project.iam.gserviceaccount.com"\n}`}
                     aria-invalid={!!fcmForm.formState.errors.fcmJSON}
                   />
-                  {fcmForm.formState.errors.fcmJSON && (
-                    <FieldError errors={[fcmForm.formState.errors.fcmJSON]} />
-                  )}
+                  {fcmForm.formState.errors.fcmJSON && <FieldError errors={[fcmForm.formState.errors.fcmJSON]} />}
                 </Field>
-                <div className='flex items-center gap-2'>
-                  <Button type='submit' size='sm' disabled={savingFcm}>
-                    {savingFcm ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+                <div className="flex items-center gap-2">
+                  <Button type="submit" size="sm" disabled={savingFcm}>
+                    {savingFcm ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
                     Upload
                   </Button>
-                  {savedFcm && <span className='text-xs text-green-600 animate-in fade-in'>Uploaded</span>}
+                  {savedFcm && <span className="text-xs text-green-600 animate-in fade-in">Uploaded</span>}
                 </div>
               </form>
             </section>
