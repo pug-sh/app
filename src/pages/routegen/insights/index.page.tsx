@@ -243,11 +243,19 @@ const Insights = () => {
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
   }, [result, eventFilters.validEntries])
-  const retentionCohorts = result.case === 'retention' ? result.value.cohorts : EMPTY_ARRAY
+  const emptySeriesResult = (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
+  useEffect(() => {
+    if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
+  }, [emptySeriesResult])
+
+  const retentionCohorts = useMemo(() => {
+    if (result.case !== 'retention' || result.value.series.length === 0) return EMPTY_ARRAY
+    return result.value.series[0].cohorts
+  }, [result])
   const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel') return []
+    if (result.case !== 'funnel' || result.value.series.length === 0) return []
     const kindEntries = eventFilters.validEntries
-    return [...result.value.steps]
+    return [...result.value.series[0].steps]
       .sort((a, b) => {
         const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
         const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
@@ -376,6 +384,16 @@ const Insights = () => {
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
           <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
           <p className="text-sm">Unsupported result type</p>
+        </div>
+      )
+    }
+
+    if ((result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0) {
+      return (
+        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
+          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
+          <p className='text-sm'>No results — try adjusting your query</p>
+          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>Retry</Button>
         </div>
       )
     }

@@ -609,14 +609,19 @@ export const FilterBuilder = ({
               )}
               {hasProfile && (
                 <CommandGroup heading="Profile">
-                  {schema.profilePropertyKeys.map(key => (
+                  {[...schema.profilePropertyKeys]
+                    .sort((a, b) => Number(b.count - a.count))
+                    .map(pk => (
                     <CommandItem
-                      key={key}
-                      value={key}
-                      onSelect={() => pickProperty(key, PropertySource.PROFILE)}
+                      key={pk.name}
+                      value={pk.name}
+                      onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)}
                       className="text-xs py-1.5"
                     >
-                      {key}
+                      <span className="truncate">{pk.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                        {compactNumber(pk.count)}
+                      </span>
                     </CommandItem>
                   ))}
                 </CommandGroup>
