@@ -36,7 +36,8 @@ const SignIn = () => {
       const action = mode === 'signin' ? signIn : signUp
       const result = await action(data)
       if (!result.ok) setError(result.error)
-    } catch {
+    } catch (err) {
+      console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)

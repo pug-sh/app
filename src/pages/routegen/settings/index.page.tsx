@@ -99,7 +99,10 @@ const Settings = () => {
   }, [project, projectForm])
 
   const handleRenameOrg = async (data: OrgFormData) => {
-    if (!org) return
+    if (!org) {
+      console.warn('handleRenameOrg called without active org')
+      return
+    }
     setSavingOrg(true)
     try {
       await orgsRPC.updateDisplayName({ orgId: org.id, displayName: data.displayName })
@@ -115,7 +118,10 @@ const Settings = () => {
   }
 
   const handleRenameProject = async (data: ProjectFormData) => {
-    if (!projectHeaders) return
+    if (!projectHeaders) {
+      console.warn('handleRenameProject called without project headers')
+      return
+    }
     setSavingProject(true)
     try {
       await projectsRPC.updateDisplayName({ displayName: data.displayName }, { headers: projectHeaders })
@@ -131,7 +137,10 @@ const Settings = () => {
   }
 
   const handleFCMUpload = async (data: FcmFormData) => {
-    if (!projectHeaders) return
+    if (!projectHeaders) {
+      console.warn('handleFCMUpload called without project headers')
+      return
+    }
     setSavingFcm(true)
     try {
       await projectsRPC.updateFCMServiceJSON({ fcmServiceJson: data.fcmJSON }, { headers: projectHeaders })
