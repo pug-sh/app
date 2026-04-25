@@ -32,7 +32,9 @@ const Segments = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
-  useEffect(() => { if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning) }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
+  useEffect(() => {
+    if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
@@ -59,10 +61,7 @@ const Segments = () => {
     queryKey,
     async () => {
       const globalFilters = toProtoFilters(propFilters)
-      const filterGroups =
-        globalFilters.length > 0
-          ? [{ filters: globalFilters, operator: LogicalOperator.AND }]
-          : []
+      const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
       const resp = await insightsRPC.segmentUsers(
         {
           timeRange: toProtoTimeRange(timeRange),
@@ -86,12 +85,12 @@ const Segments = () => {
 
   const segmentIds = data ?? []
 
-  if (!project) return <NoProject title='Segments' icon={Users} />
+  if (!project) return <NoProject title="Segments" icon={Users} />
 
   return (
-    <Page title='Segments' description='Find users matching event criteria'>
-      <div className='space-y-2 mb-5'>
-        <div className='flex flex-wrap items-center gap-2'>
+    <Page title="Segments" description="Find users matching event criteria">
+      <div className="space-y-2 mb-5">
+        <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
         </div>
         <EventFilterBar
@@ -100,7 +99,7 @@ const Segments = () => {
           schema={schema}
           schemaError={schemaError}
         />
-        <div className='flex flex-wrap items-center gap-2'>
+        <div className="flex flex-wrap items-center gap-2">
           {propFilters.map((f, i) => (
             <FilterChip
               key={`f-${i}`}
@@ -111,36 +110,36 @@ const Segments = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
+          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
       </div>
 
       {error ? (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <Users className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Users className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
             Retry
           </Button>
         </div>
       ) : segmentIds.length > 0 ? (
         <div>
-          <SectionHeader title='Users found' count={segmentIds.length} />
-          <table className='w-full'>
+          <SectionHeader title="Users found" count={segmentIds.length} />
+          <table className="w-full">
             <thead>
-              <tr className='border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider'>
-                <th className='py-2 pr-2 text-left font-medium w-16'>#</th>
-                <th className='py-2 pr-2 text-left font-medium'>Distinct ID</th>
+              <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="py-2 pr-2 text-left font-medium w-16">#</th>
+                <th className="py-2 pr-2 text-left font-medium">Distinct ID</th>
               </tr>
             </thead>
             <tbody>
               {segmentIds.map((id, i) => (
-                <tr key={id} className='border-b border-border/50 transition-colors hover:bg-muted/40'>
-                  <td className='py-2 pr-2 text-muted-foreground tabular-nums text-xs'>{i + 1}</td>
-                  <td className='py-2 pr-2 text-sm'>
+                <tr key={id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
+                  <td className="py-2 pr-2 text-muted-foreground tabular-nums text-xs">{i + 1}</td>
+                  <td className="py-2 pr-2 text-sm">
                     <ProjectLink
                       href={`/activities/${encodeURIComponent(id)}`}
-                      className='font-mono text-primary hover:underline underline-offset-4'
+                      className="font-mono text-primary hover:underline underline-offset-4"
                     >
                       {id}
                     </ProjectLink>
@@ -152,10 +151,10 @@ const Segments = () => {
         </div>
       ) : (
         !loading && (
-          <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-            <Users className='w-10 h-10 mb-4 opacity-15' />
-            <p className='text-sm font-medium mb-1'>Find your users</p>
-            <p className='text-xs'>Pick events and filters to find matching users</p>
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Users className="w-10 h-10 mb-4 opacity-15" />
+            <p className="text-sm font-medium mb-1">Find your users</p>
+            <p className="text-xs">Pick events and filters to find matching users</p>
           </div>
         )
       )}

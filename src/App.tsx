@@ -35,10 +35,10 @@ const AuthenticatedApp = () => {
         <AppSidebar />
       </Suspense>
       <SidebarInset>
-        <header className='flex h-12 shrink-0 items-center gap-2 border-b px-4'>
-          <SidebarTrigger className='-ml-1' />
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
         </header>
-        <main className='flex-1 min-w-0'>
+        <main className="flex-1 min-w-0">
           <Suspense fallback={<LoadingSpinner />}>
             <Router />
           </Suspense>
@@ -49,12 +49,12 @@ const AuthenticatedApp = () => {
 }
 
 const WorkspaceError = ({ message }: { message: string }) => (
-  <div className='min-h-screen flex items-center justify-center'>
-    <div className='text-center'>
-      <AlertCircle className='w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30' />
-      <p className='text-sm font-medium mb-1'>Unable to load workspace</p>
-      <p className='text-xs text-muted-foreground mb-4 max-w-xs'>{message}</p>
-      <Button variant='outline' size='sm' onClick={() => window.location.reload()}>
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
+      <p className="text-sm font-medium mb-1">Unable to load workspace</p>
+      <p className="text-xs text-muted-foreground mb-4 max-w-xs">{message}</p>
+      <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
         Retry
       </Button>
     </div>
@@ -76,7 +76,7 @@ const App = () => {
       ) : (
         <AuthenticatedApp />
       )}
-      <Toaster position='bottom-right' />
+      <Toaster position="bottom-right" />
     </>
   )
 }

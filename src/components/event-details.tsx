@@ -14,12 +14,12 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
   const { schemaProps, extraProps } = partitionEventProps(event.kind, event.customProperties)
 
   return (
-    <div className='space-y-2' onClick={e => e.stopPropagation()}>
-      <Toggle size='sm' pressed={jsonMode} onPressedChange={setJsonMode}>
-        <Braces className='w-3.5 h-3.5' />
+    <div className="space-y-2" onClick={e => e.stopPropagation()}>
+      <Toggle size="sm" pressed={jsonMode} onPressedChange={setJsonMode}>
+        <Braces className="w-3.5 h-3.5" />
       </Toggle>
       {jsonMode ? (
-        <pre className='text-xs font-mono bg-muted/50 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-all'>
+        <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-all">
           {JSON.stringify(
             {
               event_id: event.eventId,
@@ -38,29 +38,35 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
         <>
           {autoProps.length > 0 && (
             <div>
-              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>System</p>
-              <div className='flex flex-wrap gap-1'>
-                {autoProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">System</p>
+              <div className="flex flex-wrap gap-1">
+                {autoProps.map(([k, v]) => (
+                  <PropChip key={k} label={k} value={v} />
+                ))}
               </div>
             </div>
           )}
           {schemaProps.length > 0 && (
             <div>
-              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>Properties</p>
-              <div className='flex flex-wrap gap-1'>
-                {schemaProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Properties</p>
+              <div className="flex flex-wrap gap-1">
+                {schemaProps.map(([k, v]) => (
+                  <PropChip key={k} label={k} value={v} />
+                ))}
               </div>
             </div>
           )}
           {extraProps.length > 0 && (
             <div>
-              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1'>Custom</p>
-              <div className='flex flex-wrap gap-1'>
-                {extraProps.map(([k, v]) => <PropChip key={k} label={k} value={v} />)}
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Custom</p>
+              <div className="flex flex-wrap gap-1">
+                {extraProps.map(([k, v]) => (
+                  <PropChip key={k} label={k} value={v} />
+                ))}
               </div>
             </div>
           )}
-          <p className='text-[10px] text-muted-foreground/40 font-mono'>{event.eventId}</p>
+          <p className="text-[10px] text-muted-foreground/40 font-mono">{event.eventId}</p>
         </>
       )}
     </div>

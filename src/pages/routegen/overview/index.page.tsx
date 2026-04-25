@@ -19,20 +19,20 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
   const display = revealed ? value : value.slice(0, 8) + '••••••••••••'
 
   return (
-    <tr className='border-b border-border/50'>
-      <td className='py-2.5 pr-4 text-xs text-muted-foreground whitespace-nowrap align-middle'>{label}</td>
-      <td className='py-2.5 pr-2 align-middle'>
-        <code className='text-xs font-mono break-all'>{display}</code>
+    <tr className="border-b border-border/50">
+      <td className="py-2.5 pr-4 text-xs text-muted-foreground whitespace-nowrap align-middle">{label}</td>
+      <td className="py-2.5 pr-2 align-middle">
+        <code className="text-xs font-mono break-all">{display}</code>
       </td>
-      <td className='py-2.5 whitespace-nowrap align-middle'>
-        <span className='inline-flex gap-0.5'>
+      <td className="py-2.5 whitespace-nowrap align-middle">
+        <span className="inline-flex gap-0.5">
           {masked && (
-            <Button variant='ghost' size='icon-xs' onClick={() => setRevealed(!revealed)}>
-              {revealed ? <EyeOff className='w-3 h-3' /> : <Eye className='w-3 h-3' />}
+            <Button variant="ghost" size="icon-xs" onClick={() => setRevealed(!revealed)}>
+              {revealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
             </Button>
           )}
-          <Button variant='ghost' size='icon-xs' onClick={() => copy(value)}>
-            {copied ? <Check className='w-3 h-3 text-green-600' /> : <Copy className='w-3 h-3' />}
+          <Button variant="ghost" size="icon-xs" onClick={() => copy(value)}>
+            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
           </Button>
         </span>
       </td>
@@ -66,7 +66,7 @@ const Overview = () => {
     if (project) fetchData()
   }, [project, fetchData])
 
-  if (!project) return <NoProject title='Overview' icon={Bell} />
+  if (!project) return <NoProject title="Overview" icon={Bell} />
 
   const scheduled = campaigns.filter(c => c.status === 'SCHEDULED').length
   const completed = campaigns.filter(c => c.status === 'COMPLETED').length
@@ -80,41 +80,41 @@ const Overview = () => {
   ]
 
   return (
-    <Page title='Overview' description={`Project: ${project.displayName}`}>
+    <Page title="Overview" description={`Project: ${project.displayName}`}>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <Bell className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchData()}>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Bell className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchData()}>
             Retry
           </Button>
         </div>
       ) : (
-        <div className='space-y-8'>
+        <div className="space-y-8">
           {/* Stats */}
           <section>
-            <SectionHeader title='Campaigns' count={`${campaigns.length} total`} />
+            <SectionHeader title="Campaigns" count={`${campaigns.length} total`} />
             {campaigns.length === 0 ? (
-              <div className='py-8 flex flex-col items-center text-center'>
-                <Megaphone className='w-8 h-8 mb-3 opacity-15' />
-                <p className='text-sm text-muted-foreground'>No campaigns yet</p>
+              <div className="py-8 flex flex-col items-center text-center">
+                <Megaphone className="w-8 h-8 mb-3 opacity-15" />
+                <p className="text-sm text-muted-foreground">No campaigns yet</p>
                 <Link
                   href={`/p/${project.id}/campaigns`}
-                  className='text-sm text-primary hover:underline underline-offset-4 mt-1'
+                  className="text-sm text-primary hover:underline underline-offset-4 mt-1"
                 >
                   Create your first campaign
                 </Link>
               </div>
             ) : (
-              <div className='grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4'>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
                 {stats.map(stat => (
-                  <div key={stat.label} className='flex items-center gap-3'>
-                    <stat.icon className='w-4 h-4 text-muted-foreground shrink-0' />
+                  <div key={stat.label} className="flex items-center gap-3">
+                    <stat.icon className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className='text-2xl font-semibold tabular-nums'>{stat.value}</p>
-                      <p className='text-[10px] text-muted-foreground'>{stat.label}</p>
+                      <p className="text-2xl font-semibold tabular-nums">{stat.value}</p>
+                      <p className="text-[10px] text-muted-foreground">{stat.label}</p>
                     </div>
                   </div>
                 ))}
@@ -124,19 +124,19 @@ const Overview = () => {
 
           {/* API Keys */}
           <section>
-            <SectionHeader title='API Keys' />
-            <table className='w-full max-w-xl'>
+            <SectionHeader title="API Keys" />
+            <table className="w-full max-w-xl">
               <tbody>
-                <CopyableCode label='Public Key' value={project.publicApiKey} />
-                <CopyableCode label='Private Key' value={project.privateApiKey} masked />
+                <CopyableCode label="Public Key" value={project.publicApiKey} />
+                <CopyableCode label="Private Key" value={project.privateApiKey} masked />
               </tbody>
             </table>
           </section>
 
           {/* Quick Start */}
           <section>
-            <SectionHeader title='Quick Start' />
-            <ol className='text-sm text-muted-foreground space-y-2 list-decimal list-inside'>
+            <SectionHeader title="Quick Start" />
+            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
               <li>Add your FCM service account JSON in Settings</li>
               <li>Integrate the Cotton SDK in your app</li>
               <li>Register devices using the public API key</li>

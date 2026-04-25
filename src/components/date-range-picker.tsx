@@ -67,19 +67,17 @@ export function DateRangePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors'
-      >
-        <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1'>
-          <CalendarDays className='w-3 h-3' />
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
+          <CalendarDays className="w-3 h-3" />
           time
         </span>
-        <span className='px-2 h-full flex items-center'>{label}</span>
+        <span className="px-2 h-full flex items-center">{label}</span>
       </PopoverTrigger>
-      <PopoverContent align='start' className='w-auto p-0'>
-        <div className='flex items-center gap-1 px-3 py-2 border-b border-border/50'>
+      <PopoverContent align="start" className="w-auto p-0">
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-border/50">
           <button
-            type='button'
+            type="button"
             onClick={() => setEditing('from')}
             className={cn(
               'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
@@ -90,9 +88,9 @@ export function DateRangePicker({
           >
             {fmtDate(draftFrom)}
           </button>
-          <span className='text-xs text-muted-foreground/50'>–</span>
+          <span className="text-xs text-muted-foreground/50">–</span>
           <button
-            type='button'
+            type="button"
             onClick={() => setEditing('to')}
             className={cn(
               'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
@@ -104,22 +102,22 @@ export function DateRangePicker({
             {fmtDate(draftTo)}
           </button>
         </div>
-        <div className='flex'>
-          <div className='border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5'>
-            {presets.map((preset) => {
+        <div className="flex">
+          <div className="border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5">
+            {presets.map(preset => {
               const display = preset.resolve()
               return (
                 <button
                   key={preset.label}
-                  type='button'
+                  type="button"
                   onClick={() => {
                     onChange(preset.resolve())
                     setOpen(false)
                   }}
-                  className='px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
+                  className="px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                 >
                   {preset.label}
-                  <span className='block text-[10px] text-muted-foreground/50'>
+                  <span className="block text-[10px] text-muted-foreground/50">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>
@@ -127,19 +125,19 @@ export function DateRangePicker({
             })}
             {allowUnset && (
               <button
-                type='button'
+                type="button"
                 onClick={() => {
                   onChange(undefined)
                   setOpen(false)
                 }}
-                className='px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
+                className="px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
               >
                 All time
               </button>
             )}
           </div>
           <Calendar
-            mode='range'
+            mode="range"
             selected={{ from: draftFrom, to: draftTo }}
             onSelect={(_range, triggerDate) => handleDayClick(triggerDate)}
             disabled={{ after: new Date() }}

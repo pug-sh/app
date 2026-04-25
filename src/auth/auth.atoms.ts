@@ -10,6 +10,7 @@ export const signInAtom = atom(null, async (get, set, { email, password }: { ema
     set(jwtAtom, resp.token)
     return { ok: true as const }
   } catch (error) {
+    if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
     const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
     return { ok: false as const, error: msg }
   }
@@ -22,6 +23,7 @@ export const signUpAtom = atom(null, async (get, set, { email, password }: { ema
     set(jwtAtom, resp.token)
     return { ok: true as const }
   } catch (error) {
+    if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
     const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
     return { ok: false as const, error: msg }
   }

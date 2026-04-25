@@ -20,7 +20,8 @@ const checkBrowserStorage = () => {
 if (!checkBrowserStorage()) {
   const root = document.getElementById('root')!
   const container = document.createElement('div')
-  container.style.cssText = 'min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif'
+  container.style.cssText =
+    'min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif'
   const inner = document.createElement('div')
   inner.style.cssText = 'text-align:center;max-width:24rem'
   const title = document.createElement('p')
@@ -28,7 +29,8 @@ if (!checkBrowserStorage()) {
   title.textContent = 'Unsupported browser environment'
   const desc = document.createElement('p')
   desc.style.cssText = 'font-size:12px;color:#888'
-  desc.textContent = 'This app requires localStorage and sessionStorage. Please disable private browsing restrictions or try a different browser.'
+  desc.textContent =
+    'This app requires localStorage and sessionStorage. Please disable private browsing restrictions or try a different browser.'
   inner.append(title, desc)
   container.append(inner)
   root.append(container)

@@ -10,9 +10,13 @@ export interface FunnelStep {
 }
 
 export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seriesColors: SeriesColor[] }) => {
-  const chartConfig = useMemo(() => ({
-    conversion: { label: 'Conversion %', color: 'hsl(var(--chart-1))' },
-  } satisfies ChartConfig), [])
+  const chartConfig = useMemo(
+    () =>
+      ({
+        conversion: { label: 'Conversion %', color: 'hsl(var(--chart-1))' },
+      }) satisfies ChartConfig,
+    []
+  )
 
   const firstStepCount = Math.max(steps[0]?.count ?? 0, 0)
   const chartData = steps.map((step, index) => {
@@ -38,11 +42,11 @@ export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seri
   if (steps.length === 0) return null
 
   return (
-    <div className='mt-4 rounded-lg border border-border/60 p-4'>
-      <ChartContainer config={chartConfig} className='h-72 w-full'>
+    <div className="mt-4 rounded-lg border border-border/60 p-4">
+      <ChartContainer config={chartConfig} className="h-72 w-full">
         <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }}>
-          <CartesianGrid vertical={false} strokeDasharray='3 3' />
-          <XAxis dataKey='event' tickLine={false} axisLine={false} interval={0} />
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="event" tickLine={false} axisLine={false} interval={0} />
           <YAxis
             tickLine={false}
             axisLine={false}
@@ -52,7 +56,7 @@ export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seri
           />
           <ChartTooltip
             cursor={{ fill: 'transparent' }}
-            content={(
+            content={
               <ChartTooltipContent
                 labelFormatter={label => String(label ?? '')}
                 formatter={(_, __, item) => {
@@ -63,30 +67,30 @@ export const FunnelChart = ({ steps, seriesColors }: { steps: FunnelStep[]; seri
                     dropOff?: number
                   }
                   return (
-                    <div className='w-full space-y-0.5'>
-                      <div className='flex items-center justify-between gap-3'>
-                        <span className='text-muted-foreground'>Completed</span>
-                        <span className='font-mono tabular-nums'>{compactNumber(row.count ?? 0)}</span>
+                    <div className="w-full space-y-0.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Completed</span>
+                        <span className="font-mono tabular-nums">{compactNumber(row.count ?? 0)}</span>
                       </div>
-                      <div className='flex items-center justify-between gap-3'>
-                        <span className='text-muted-foreground'>From start</span>
-                        <span className='font-mono tabular-nums'>{(row.conversion ?? 0).toFixed(1)}%</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">From start</span>
+                        <span className="font-mono tabular-nums">{(row.conversion ?? 0).toFixed(1)}%</span>
                       </div>
-                      <div className='flex items-center justify-between gap-3'>
-                        <span className='text-muted-foreground'>From previous</span>
-                        <span className='font-mono tabular-nums'>{(row.fromPrev ?? 0).toFixed(1)}%</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">From previous</span>
+                        <span className="font-mono tabular-nums">{(row.fromPrev ?? 0).toFixed(1)}%</span>
                       </div>
-                      <div className='flex items-center justify-between gap-3'>
-                        <span className='text-muted-foreground'>Drop-off</span>
-                        <span className='font-mono tabular-nums'>{compactNumber(row.dropOff ?? 0)}</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Drop-off</span>
+                        <span className="font-mono tabular-nums">{compactNumber(row.dropOff ?? 0)}</span>
                       </div>
                     </div>
                   )
                 }}
               />
-            )}
+            }
           />
-          <Bar dataKey='conversion' fill='var(--color-conversion)' radius={[6, 6, 0, 0]}>
+          <Bar dataKey="conversion" fill="var(--color-conversion)" radius={[6, 6, 0, 0]}>
             {chartData.map((_, index) => (
               <Cell key={`cell-${index}`} fill={seriesColors[index]?.line} />
             ))}

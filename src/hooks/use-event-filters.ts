@@ -31,9 +31,7 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
   }
 
   const addEventFilter = (eventIdx: number, filter: ActiveFilter) => {
-    setEntries(prev =>
-      prev.map((e, i) => (i === eventIdx ? { ...e, filters: [...e.filters, filter] } : e))
-    )
+    setEntries(prev => prev.map((e, i) => (i === eventIdx ? { ...e, filters: [...e.filters, filter] } : e)))
   }
 
   const removeEventFilter = (eventIdx: number, filterIdx: number) => {
@@ -58,7 +56,18 @@ export const useEventFilters = (initialEntries: EventFilterEntry[] = []) => {
 
   const validEntries = useMemo(() => entries.filter(e => e.kind), [entries])
 
-  return { entries, validEntries, addEvent, removeEvent, updateEventKind, addEventFilter, removeEventFilter, updateEventFilter, setAggregation, reset } as const
+  return {
+    entries,
+    validEntries,
+    addEvent,
+    removeEvent,
+    updateEventKind,
+    addEventFilter,
+    removeEventFilter,
+    updateEventFilter,
+    setAggregation,
+    reset,
+  } as const
 }
 
 export type EventFiltersHandle = ReturnType<typeof useEventFilters>

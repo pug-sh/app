@@ -60,83 +60,83 @@ const SessionSummary = ({
   const exitEvent = events.length > 0 ? events[0].kind : null
 
   return (
-    <div className='mb-5 pb-4 border-b border-border space-y-4'>
+    <div className="mb-5 pb-4 border-b border-border space-y-4">
       {/* Header row */}
-      <div className='flex items-start gap-4'>
-          <div className='w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0'>
-            <Timer className='w-5 h-5 text-violet-500' />
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
+          <Timer className="w-5 h-5 text-violet-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">Session</p>
+            <Badge variant="secondary" className="font-mono text-[10px]">
+              {sessionId.slice(0, 16)}
+            </Badge>
           </div>
-          <div className='flex-1 min-w-0'>
-            <div className='flex items-center gap-2'>
-              <p className='text-sm font-medium'>Session</p>
-              <Badge variant='secondary' className='font-mono text-[10px]'>
-                {sessionId.slice(0, 16)}
-              </Badge>
-            </div>
-            <div className='flex items-center gap-1.5 mt-1'>
-              <ProjectLink
-                href={`/activities/${encodeURIComponent(distinctId)}`}
-                className='text-xs text-primary font-mono hover:underline underline-offset-4'
-              >
-                {distinctId}
-              </ProjectLink>
-            </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <ProjectLink
+              href={`/activities/${encodeURIComponent(distinctId)}`}
+              className="text-xs text-primary font-mono hover:underline underline-offset-4"
+            >
+              {distinctId}
+            </ProjectLink>
           </div>
         </div>
+      </div>
 
-        {/* Stats grid */}
-        <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t'>
-          <div>
-            <p className='text-[10px] text-muted-foreground mb-0.5'>Duration</p>
-            <p className='text-sm font-semibold tabular-nums'>{duration > 0 ? formatDuration(duration) : '—'}</p>
-          </div>
-          <div>
-            <p className='text-[10px] text-muted-foreground mb-0.5'>Events</p>
-            <p className='text-sm font-semibold tabular-nums'>{events.length}</p>
-          </div>
-          <div>
-            <p className='text-[10px] text-muted-foreground mb-0.5'>Entry</p>
-            <p className='text-sm font-medium truncate'>{entryEvent ?? '—'}</p>
-          </div>
-          <div>
-            <p className='text-[10px] text-muted-foreground mb-0.5'>Exit</p>
-            <p className='text-sm font-medium truncate'>{exitEvent ?? '—'}</p>
-          </div>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Duration</p>
+          <p className="text-sm font-semibold tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
         </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Events</p>
+          <p className="text-sm font-semibold tabular-nums">{events.length}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Entry</p>
+          <p className="text-sm font-medium truncate">{entryEvent ?? '—'}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-muted-foreground mb-0.5">Exit</p>
+          <p className="text-sm font-medium truncate">{exitEvent ?? '—'}</p>
+        </div>
+      </div>
 
-        {/* Time + device row */}
-        <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground'>
-          {startTime && (
-            <span className='flex items-center gap-1'>
-              <Calendar className='w-3 h-3' />
-              {formatDateTime(startTime)}
-              {endTime && ` — ${formatClock(endTime)}`}
-            </span>
-          )}
-          {(browser || os) && (
-            <span className='flex items-center gap-1'>
-              {isMobileOS(os) ? <Smartphone className='w-3 h-3' /> : <Monitor className='w-3 h-3' />}
-              {[
-                browser && browserVersion ? `${browser} ${browserVersion}` : browser,
-                os && osVersion ? `${os} ${osVersion}` : os,
-                device,
-              ]
-                .filter(Boolean)
-                .join(' / ')}
-            </span>
-          )}
-          {(country || city) && (
-            <span className='flex items-center gap-1'>
-              <Globe className='w-3 h-3' />
-              {[city, country].filter(Boolean).join(', ')}
-              {ip && <span className='opacity-50'>({ip})</span>}
-            </span>
-          )}
-          <span className='flex items-center gap-1'>
-            <Clock className='w-3 h-3' />
-            {uniqueKinds} event types
+      {/* Time + device row */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {startTime && (
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3 h-3" />
+            {formatDateTime(startTime)}
+            {endTime && ` — ${formatClock(endTime)}`}
           </span>
-        </div>
+        )}
+        {(browser || os) && (
+          <span className="flex items-center gap-1">
+            {isMobileOS(os) ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+            {[
+              browser && browserVersion ? `${browser} ${browserVersion}` : browser,
+              os && osVersion ? `${os} ${osVersion}` : os,
+              device,
+            ]
+              .filter(Boolean)
+              .join(' / ')}
+          </span>
+        )}
+        {(country || city) && (
+          <span className="flex items-center gap-1">
+            <Globe className="w-3 h-3" />
+            {[city, country].filter(Boolean).join(', ')}
+            {ip && <span className="opacity-50">({ip})</span>}
+          </span>
+        )}
+        <span className="flex items-center gap-1">
+          <Clock className="w-3 h-3" />
+          {uniqueKinds} event types
+        </span>
+      </div>
     </div>
   )
 }
@@ -208,17 +208,17 @@ const SessionView = () => {
     return kinds
   }, [events])
 
-  if (!project) return <NoProject title='Session' icon={Timer} />
+  if (!project) return <NoProject title="Session" icon={Timer} />
 
   return (
-    <Page title='Session' description={sessionId}>
+    <Page title="Session" description={sessionId}>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <Timer className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={() => fetchEvents()}>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Timer className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents()}>
             Retry
           </Button>
         </div>
@@ -227,10 +227,10 @@ const SessionView = () => {
           <SessionSummary sessionId={sessionId ?? ''} distinctId={distinctId ?? ''} events={events} />
 
           {/* Kind legend — sticky */}
-          <div className='sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5'>
+          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5">
             {uniqueKinds.map(kind => (
-              <span key={kind} className='inline-flex items-center gap-1.5 text-xs text-muted-foreground'>
-                <span className='w-2 h-2 rounded-full' style={{ backgroundColor: getSeriesColor(kind).dot }} />
+              <span key={kind} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getSeriesColor(kind).dot }} />
                 {kind}
               </span>
             ))}
@@ -249,10 +249,10 @@ const SessionView = () => {
           })}
         </>
       ) : (
-        <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-          <Timer className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>No events found</p>
-          <p className='text-xs'>This session has no recorded events</p>
+        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+          <Timer className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">No events found</p>
+          <p className="text-xs">This session has no recorded events</p>
         </div>
       )}
     </Page>

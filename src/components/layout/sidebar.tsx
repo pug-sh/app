@@ -112,18 +112,18 @@ const AppSidebar = () => {
   }
 
   return (
-    <Sidebar collapsible='icon'>
+    <Sidebar collapsible="icon">
       {/* Logo */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size='lg' render={<Link href={`${prefix}/overview`} />}>
-              <div className='flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground'>
-                <Bell className='size-4' />
+            <SidebarMenuButton size="lg" render={<Link href={`${prefix}/overview`} />}>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Bell className="size-4" />
               </div>
-              <div className='grid flex-1 text-left text-sm leading-tight'>
-                <span className='truncate font-semibold'>Cotton</span>
-                <span className='truncate text-xs text-muted-foreground'>{activeOrg?.displayName}</span>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Cotton</span>
+                <span className="truncate text-xs text-muted-foreground">{activeOrg?.displayName}</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -140,7 +140,7 @@ const AppSidebar = () => {
                 onClick={() => setProjectsExpanded(!projectsExpanded)}
                 tooltip={activeProject?.displayName ?? 'Select project'}
               >
-                <FolderOpen className='size-4' />
+                <FolderOpen className="size-4" />
                 <span>{activeProject?.displayName ?? 'Select project'}</span>
                 <ChevronDown
                   className={cn(
@@ -162,7 +162,7 @@ const AppSidebar = () => {
                           navigate(`/p/${proj.id}/${pagePath}`)
                           setProjectsExpanded(false)
                         }}
-                        className='pl-8'
+                        className="pl-8"
                         tooltip={proj.displayName}
                       >
                         <span>{proj.displayName}</span>
@@ -171,8 +171,8 @@ const AppSidebar = () => {
                   ))}
                 {creatingProject ? (
                   <SidebarMenuItem>
-                    <div className='pl-8 pr-2 py-1'>
-                      <div className='flex items-center gap-1'>
+                    <div className="pl-8 pr-2 py-1">
+                      <div className="flex items-center gap-1">
                         <input
                           ref={inputRef}
                           value={newProjectName}
@@ -184,16 +184,16 @@ const AppSidebar = () => {
                               setNewProjectName('')
                             }
                           }}
-                          placeholder='Project name'
-                          className='flex-1 min-w-0 text-sm px-2 py-1 rounded-md border border-input bg-transparent outline-none focus:border-ring focus:ring-1 focus:ring-ring/50'
+                          placeholder="Project name"
+                          className="flex-1 min-w-0 text-sm px-2 py-1 rounded-md border border-input bg-transparent outline-none focus:border-ring focus:ring-1 focus:ring-ring/50"
                           disabled={saving}
                         />
                         <button
                           onClick={handleCreateProject}
                           disabled={saving || !newProjectName.trim()}
-                          className='p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer'
+                          className="p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer"
                         >
-                          {saving ? <Loader2 className='size-3.5 animate-spin' /> : <Check className='size-3.5' />}
+                          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
                         </button>
                       </div>
                     </div>
@@ -201,8 +201,12 @@ const AppSidebar = () => {
                 ) : (
                   activeOrg && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton onClick={() => setCreatingProject(true)} className='pl-8' tooltip='New project'>
-                        <Plus className='size-4' />
+                      <SidebarMenuButton
+                        onClick={() => setCreatingProject(true)}
+                        className="pl-8"
+                        tooltip="New project"
+                      >
+                        <Plus className="size-4" />
                         <span>New project</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -248,14 +252,14 @@ const AppSidebar = () => {
               {theme === 'light' && <Sun />}
               {theme === 'dark' && <Moon />}
               {theme === 'system' && <Monitor />}
-              <span className='capitalize'>{theme}</span>
+              <span className="capitalize">{theme}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
         <SidebarSeparator />
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => signOut()} tooltip='Sign out'>
+            <SidebarMenuButton onClick={() => signOut()} tooltip="Sign out">
               <LogOut />
               <span>Sign out</span>
             </SidebarMenuButton>
