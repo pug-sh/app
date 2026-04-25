@@ -24,7 +24,12 @@ export const buildChartData = (
   let warned = false
   return data.map(point => {
     if (!warned && point.values.length !== seriesNames.length) {
-      console.error('Chart data misalignment: expected', seriesNames.length, 'values per point, got', point.values.length)
+      console.error(
+        'Chart data misalignment: expected',
+        seriesNames.length,
+        'values per point, got',
+        point.values.length
+      )
       warned = true
     }
 

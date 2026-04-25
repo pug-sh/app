@@ -39,8 +39,6 @@ export const niceMax = (v: number): number => {
 }
 
 export const computeYMax = (data: ChartPoint[], stacked = false) => {
-  const allVals = stacked
-    ? data.map(d => d.values.reduce((a, b) => a + b, 0))
-    : data.flatMap(d => d.values)
+  const allVals = stacked ? data.map(d => d.values.reduce((a, b) => a + b, 0)) : data.flatMap(d => d.values)
   return niceMax(Math.max(...allVals, 0))
 }

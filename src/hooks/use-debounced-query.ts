@@ -1,7 +1,7 @@
 import { ConnectError } from '@connectrpc/connect'
 import { useEffect, useRef, useState } from 'react'
 
-export const useDebouncedQuery = <T,>(
+export const useDebouncedQuery = <T>(
   queryKey: string,
   queryFn: () => Promise<T>,
   opts: { enabled?: boolean; debounceMs?: number } = {}
@@ -35,16 +35,22 @@ export const useDebouncedQuery = <T,>(
         console.error(`Query failed [${queryKey.slice(0, 80)}]:`, err)
         if (!cancelled) {
           setData(undefined)
-          const message = err instanceof ConnectError
-            ? err.message
-            : err instanceof Error ? `Unexpected error: ${err.message}` : 'Query failed'
+          const message =
+            err instanceof ConnectError
+              ? err.message
+              : err instanceof Error
+                ? `Unexpected error: ${err.message}`
+                : 'Query failed'
           setError(message)
         }
       } finally {
         if (!cancelled) setLoading(false)
       }
     }, debounceMs)
-    return () => { cancelled = true; clearTimeout(debounceRef.current) }
+    return () => {
+      cancelled = true
+      clearTimeout(debounceRef.current)
+    }
   }, [queryKey, enabled, retryCount, debounceMs])
 
   return { data, loading, error, retry: () => setRetryCount(c => c + 1) }

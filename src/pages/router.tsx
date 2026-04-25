@@ -21,15 +21,10 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   render() {
     if (this.state.hasError) {
       return (
-        <div className='flex flex-col items-center justify-center py-24'>
-          <AlertCircle className='w-10 h-10 mb-4 text-muted-foreground opacity-30' />
-          <p className='text-sm font-medium mb-1'>Something went wrong on this page</p>
-          <Button
-            variant='outline'
-            size='sm'
-            className='mt-2'
-            onClick={() => this.setState({ hasError: false })}
-          >
+        <div className="flex flex-col items-center justify-center py-24">
+          <AlertCircle className="w-10 h-10 mb-4 text-muted-foreground opacity-30" />
+          <p className="text-sm font-medium mb-1">Something went wrong on this page</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => this.setState({ hasError: false })}>
             Try again
           </Button>
         </div>
@@ -53,19 +48,16 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
     if (match) setActiveProject(match)
   }, [projectId, projects, activeProject, setActiveProject])
 
-  const notFound =
-    !!projectId &&
-    projects.length > 0 &&
-    !projects.some(p => p.id === projectId)
+  const notFound = !!projectId && projects.length > 0 && !projects.some(p => p.id === projectId)
 
   if (notFound) {
     return (
-      <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-        <p className='text-sm font-medium mb-1'>Project not found</p>
-        <p className='text-xs mb-3'>This project may have been removed or you don't have access.</p>
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+        <p className="text-sm font-medium mb-1">Project not found</p>
+        <p className="text-xs mb-3">This project may have been removed or you don't have access.</p>
         <button
           onClick={() => navigate('/', { replace: true })}
-          className='text-xs text-primary hover:underline underline-offset-4 cursor-pointer'
+          className="text-xs text-primary hover:underline underline-offset-4 cursor-pointer"
         >
           Go to overview
         </button>

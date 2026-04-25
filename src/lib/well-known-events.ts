@@ -6,26 +6,31 @@ type Formatter = (props: JsonObject | undefined) => string | null
 
 // ── Formatting helpers ───────────────────────────────────────────────────────
 
-const fmtField = (key: string): Formatter => (p) => structGet(p, key) || null
+const fmtField =
+  (key: string): Formatter =>
+  p =>
+    structGet(p, key) || null
 
-const fmtAmount: Formatter = (p) => {
+const fmtAmount: Formatter = p => {
   const v = structGet(p, 'amount')
   if (!v) return null
   const c = structGet(p, 'currency')
   return c ? `${c} ${v}` : v
 }
 
-const fmtVideo: Formatter = (p) => {
+const fmtVideo: Formatter = p => {
   const vid = structGet(p, 'video_id')
   if (!vid) return null
   const pos = structGet(p, 'position_s')
   if (!pos) return vid
   const n = Number(pos)
   if (isNaN(n)) return `${vid} @ ${pos}`
-  return `${vid} @ ${Math.floor(n / 60)}:${Math.floor(n % 60).toString().padStart(2, '0')}`
+  return `${vid} @ ${Math.floor(n / 60)}:${Math.floor(n % 60)
+    .toString()
+    .padStart(2, '0')}`
 }
 
-const fmtCampaign: Formatter = (p) => {
+const fmtCampaign: Formatter = p => {
   const cid = structGet(p, 'campaign_id')
   const type = structGet(p, 'notification_type')
   if (!cid && !type) return null
@@ -47,7 +52,7 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
   rage_click: {
     schema: wk.RageClickPropertiesSchema,
     headlines: ['element', 'click_count'],
-    format: (p) => {
+    format: p => {
       const el = structGet(p, 'element')
       if (!el) return null
       const count = structGet(p, 'click_count')
@@ -58,7 +63,7 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
   scroll: {
     schema: wk.ScrollPropertiesSchema,
     headlines: ['percent'],
-    format: (p) => {
+    format: p => {
       const v = structGet(p, 'percent')
       return v ? `${v}%` : null
     },
@@ -67,33 +72,53 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
   add_to_cart: {
     schema: wk.AddToCartPropertiesSchema,
     headlines: ['product_id', 'amount'],
-    format: (p) => {
+    format: p => {
       const pid = structGet(p, 'product_id')
       const a = fmtAmount(p)
       if (!pid && !a) return null
       return [pid, a].filter(Boolean).join(' · ')
     },
   },
-  checkout_started: { schema: wk.CheckoutStartedPropertiesSchema, headlines: ['amount', 'currency'], format: fmtAmount },
-  checkout_completed: { schema: wk.CheckoutCompletedPropertiesSchema, headlines: ['amount', 'currency'], format: fmtAmount },
+  checkout_started: {
+    schema: wk.CheckoutStartedPropertiesSchema,
+    headlines: ['amount', 'currency'],
+    format: fmtAmount,
+  },
+  checkout_completed: {
+    schema: wk.CheckoutCompletedPropertiesSchema,
+    headlines: ['amount', 'currency'],
+    format: fmtAmount,
+  },
   purchase: { schema: wk.PurchasePropertiesSchema, headlines: ['amount', 'currency'], format: fmtAmount },
   form_start: { schema: wk.FormStartPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
   form_submit: { schema: wk.FormSubmitPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
   notification_received: {
     schema: wk.NotificationReceivedPropertiesSchema,
     headlines: ['notification_type', 'campaign_id'],
-    format: (p) => {
+    format: p => {
       const type = structGet(p, 'notification_type')
       const cid = structGet(p, 'campaign_id')
       if (!type && !cid) return null
       return [type, cid].filter(Boolean).join(' · ')
     },
   },
-  notification_clicked: { schema: wk.NotificationClickedPropertiesSchema, headlines: ['campaign_id', 'notification_type'], format: fmtCampaign },
-  notification_dismissed: { schema: wk.NotificationDismissedPropertiesSchema, headlines: ['campaign_id', 'notification_type'], format: fmtCampaign },
+  notification_clicked: {
+    schema: wk.NotificationClickedPropertiesSchema,
+    headlines: ['campaign_id', 'notification_type'],
+    format: fmtCampaign,
+  },
+  notification_dismissed: {
+    schema: wk.NotificationDismissedPropertiesSchema,
+    headlines: ['campaign_id', 'notification_type'],
+    format: fmtCampaign,
+  },
   video_play: { schema: wk.VideoPlayPropertiesSchema, headlines: ['video_id', 'position_s'], format: fmtVideo },
   video_pause: { schema: wk.VideoPausePropertiesSchema, headlines: ['video_id', 'position_s'], format: fmtVideo },
-  error_occurred: { schema: wk.ErrorOccurredPropertiesSchema, headlines: ['error_code'], format: fmtField('error_code') },
+  error_occurred: {
+    schema: wk.ErrorOccurredPropertiesSchema,
+    headlines: ['error_code'],
+    format: fmtField('error_code'),
+  },
 }
 
 // Pre-compute field names and lookup sets per kind — schemas are static
@@ -143,7 +168,10 @@ export const resolveInlineProps = (kind: string, customProperties: JsonObject | 
 
   let remaining: [string, string][]
   if (cached) {
-    const wellKnown = pickEntries(customProperties, cached.fields.filter(k => !cached.headlineSet.has(k)))
+    const wellKnown = pickEntries(
+      customProperties,
+      cached.fields.filter(k => !cached.headlineSet.has(k))
+    )
     const extras = customEntries.filter(([k]) => !cached.fieldSet.has(k))
     remaining = [...wellKnown, ...extras]
   } else {
