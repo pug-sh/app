@@ -11,7 +11,9 @@ import { toast } from 'sonner'
 // Register the app's file descriptors so the validator can compile rules defined
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references
 // common.v1.FilterOperator).
-const validator = createValidator({ registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights) })
+const validator = createValidator({
+  registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights),
+})
 
 const protovalidate: Interceptor = next => async req => {
   if (!req.stream) {

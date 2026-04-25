@@ -78,9 +78,9 @@ const CampaignDetail = () => {
 
   if (loading) {
     return (
-      <Page title='Campaign'>
-        <div className='flex items-center justify-center py-24'>
-          <Loader2 className='w-5 h-5 animate-spin text-muted-foreground' />
+      <Page title="Campaign">
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         </div>
       </Page>
     )
@@ -88,11 +88,11 @@ const CampaignDetail = () => {
 
   if (!campaign) {
     return (
-      <Page title='Campaign'>
-        <div className='flex flex-col items-center justify-center py-24 text-muted-foreground'>
-          <p className='text-sm'>{fetchError ? 'Failed to load campaign' : 'Campaign not found'}</p>
+      <Page title="Campaign">
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <p className="text-sm">{fetchError ? 'Failed to load campaign' : 'Campaign not found'}</p>
           {fetchError && (
-            <Button variant='outline' size='sm' className='mt-3' onClick={() => window.location.reload()}>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => window.location.reload()}>
               Retry
             </Button>
           )}
@@ -105,83 +105,83 @@ const CampaignDetail = () => {
 
   return (
     <Page title={campaign.name} description={`Campaign ${campaign.id}`}>
-      <form onSubmit={handleSave} className='space-y-6 max-w-2xl'>
-        <div className='flex items-center gap-3'>
+      <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
+        <div className="flex items-center gap-3">
           <Badge variant={statusVariant(campaign.status)}>{campaign.status || 'DRAFT'}</Badge>
           {campaign.createTime && (
-            <span className='text-xs text-muted-foreground'>Created {formatTime(campaign.createTime)}</span>
+            <span className="text-xs text-muted-foreground">Created {formatTime(campaign.createTime)}</span>
           )}
         </div>
 
         {notifParseError && (
-          <p className='text-xs text-destructive'>
+          <p className="text-xs text-destructive">
             Notification data could not be parsed. Editing is disabled to prevent data loss.
           </p>
         )}
 
         <div>
-          <div className='flex items-center gap-2 mb-3'>
-            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Details</span>
-            <div className='flex-1 h-px bg-border' />
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
-          <div className='space-y-4'>
-            <div className='space-y-1.5'>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
               <Label>Name</Label>
               <Input value={name} onChange={e => setName(e.target.value)} disabled={readOnly} />
             </div>
-            <div className='space-y-1.5'>
+            <div className="space-y-1.5">
               <Label>Scheduled time</Label>
               <Input
-                type='datetime-local'
+                type="datetime-local"
                 value={scheduledAt}
                 onChange={e => setScheduledAt(e.target.value)}
                 disabled={readOnly}
               />
-              <p className='text-xs text-muted-foreground'>Leave empty to save as draft</p>
+              <p className="text-xs text-muted-foreground">Leave empty to save as draft</p>
             </div>
           </div>
         </div>
 
         <div>
-          <div className='flex items-center gap-2 mb-3'>
-            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Notification</span>
-            <div className='flex-1 h-px bg-border' />
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Notification</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
-          <p className='text-xs text-muted-foreground mb-3'>The push notification content sent to devices</p>
-          <div className='space-y-4'>
-            <div className='space-y-1.5'>
+          <p className="text-xs text-muted-foreground mb-3">The push notification content sent to devices</p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
               <Label>Title</Label>
               <Input
-                placeholder='e.g. Welcome!'
+                placeholder="e.g. Welcome!"
                 value={notif.title}
                 onChange={e => setNotif({ ...notif, title: e.target.value })}
                 disabled={readOnly}
               />
             </div>
-            <div className='space-y-1.5'>
+            <div className="space-y-1.5">
               <Label>Body</Label>
               <Textarea
-                className='min-h-[80px]'
-                placeholder='Notification body text...'
+                className="min-h-[80px]"
+                placeholder="Notification body text..."
                 value={notif.body}
                 onChange={e => setNotif({ ...notif, body: e.target.value })}
                 disabled={readOnly}
               />
             </div>
-            <div className='space-y-1.5'>
+            <div className="space-y-1.5">
               <Label>Image URL</Label>
               <Input
-                type='url'
-                placeholder='https://...'
+                type="url"
+                placeholder="https://..."
                 value={notif.image_url}
                 onChange={e => setNotif({ ...notif, image_url: e.target.value })}
                 disabled={readOnly}
               />
             </div>
-            <div className='space-y-1.5'>
+            <div className="space-y-1.5">
               <Label>Deep link</Label>
               <Input
-                placeholder='myapp://screen/123'
+                placeholder="myapp://screen/123"
                 value={notif.deep_link}
                 onChange={e => setNotif({ ...notif, deep_link: e.target.value })}
                 disabled={readOnly}
@@ -191,12 +191,12 @@ const CampaignDetail = () => {
         </div>
 
         {!readOnly && (
-          <div className='flex gap-2'>
-            <Button type='submit' disabled={saving || !name.trim()}>
-              {saving ? <Loader2 className='animate-spin' /> : <Save className='w-4 h-4' />}
+          <div className="flex gap-2">
+            <Button type="submit" disabled={saving || !name.trim()}>
+              {saving ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
               Save campaign
             </Button>
-            <Button type='button' variant='outline' onClick={() => navigate('/campaigns')}>
+            <Button type="button" variant="outline" onClick={() => navigate('/campaigns')}>
               Cancel
             </Button>
           </div>

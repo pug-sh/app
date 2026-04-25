@@ -107,7 +107,7 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
 
 ### Form Validation
 
-Lightweight inline validation only — disable buttons when required fields are empty, basic format checks. The protovalidate interceptor does the heavy lifting: it validates every outgoing message against buf.validate constraints (required, string patterns, ranges, CEL expressions) before the request leaves the browser. Don't duplicate proto constraints in the UI.
+Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for client-side validation. Define constraints in the Zod schema — required fields, string lengths, formats — so errors surface immediately in the UI before any RPC call. The protovalidate interceptor still runs as a safety net but is not the primary validation layer for forms.
 
 ### Backend Auth Model
 

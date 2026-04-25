@@ -8,12 +8,18 @@ const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [AggregationType.TOTAL, AggregationType.UNIQUE_USERS, AggregationType.PER_USER_AVG]
 const VALID_OPERATORS = new Set([
-  FilterOperator.EQUALS, FilterOperator.NOT_EQUALS,
-  FilterOperator.CONTAINS, FilterOperator.NOT_CONTAINS,
-  FilterOperator.IN, FilterOperator.NOT_IN,
-  FilterOperator.IS_SET, FilterOperator.IS_NOT_SET,
-  FilterOperator.GT, FilterOperator.GTE,
-  FilterOperator.LT, FilterOperator.LTE,
+  FilterOperator.EQUALS,
+  FilterOperator.NOT_EQUALS,
+  FilterOperator.CONTAINS,
+  FilterOperator.NOT_CONTAINS,
+  FilterOperator.IN,
+  FilterOperator.NOT_IN,
+  FilterOperator.IS_SET,
+  FilterOperator.IS_NOT_SET,
+  FilterOperator.GT,
+  FilterOperator.GTE,
+  FilterOperator.LT,
+  FilterOperator.LTE,
 ])
 
 const EVENT_FILTERS_PARAM = 'ef'
@@ -24,8 +30,7 @@ const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
-const isInOperator = (operator: FilterOperator) =>
-  operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
+const isInOperator = (operator: FilterOperator) => operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
 
 type ParsedBaseFilter = {
   property: string
@@ -75,9 +80,10 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   const kind = v.kind.trim()
   if (!kind) return null
   const filters = v.filters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
-  const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
-    ? (v.aggregation as AggregationType)
-    : undefined
+  const aggregation =
+    typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
+      ? (v.aggregation as AggregationType)
+      : undefined
   return { kind, filters, ...(aggregation !== undefined && { aggregation }) }
 }
 
@@ -108,10 +114,10 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const hasPf = params.has(PROP_FILTERS_PARAM)
 
   const eventFilters = Array.isArray(rawEventFilters)
-    ? rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[]
+    ? (rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[])
     : []
   const propFilters = Array.isArray(rawPropFilters)
-    ? rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
+    ? (rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[])
     : []
 
   const warnings: string[] = []

@@ -18,48 +18,48 @@ const color = (hex: string): SeriesColor => ({
 
 const EVENT_COLORS: Record<string, SeriesColor> = {
   // navigation — blue
-  page_view:            color('#2563eb'),
-  scroll:               color('#3b82f6'),
+  page_view: color('#2563eb'),
+  scroll: color('#3b82f6'),
 
   // interactions — cyan (click) + red (degraded: dead/rage)
-  click:                color('#0891b2'),
-  dead_click:           color('#f87171'),
-  rage_click:           color('#dc2626'),
+  click: color('#0891b2'),
+  dead_click: color('#f87171'),
+  rage_click: color('#dc2626'),
 
   // app lifecycle — indigo
-  app_open:             color('#4f46e5'),
-  app_close:            color('#818cf8'),
+  app_open: color('#4f46e5'),
+  app_close: color('#818cf8'),
 
   // commerce — emerald
-  add_to_cart:          color('#10b981'),
-  checkout_started:     color('#059669'),
-  checkout_completed:   color('#34d399'),
+  add_to_cart: color('#10b981'),
+  checkout_started: color('#059669'),
+  checkout_completed: color('#34d399'),
 
   // search — violet
-  search:               color('#7c3aed'),
+  search: color('#7c3aed'),
 
   // auth — slate
-  login:                color('#475569'),
-  logout:               color('#64748b'),
-  signup:               color('#334155'),
+  login: color('#475569'),
+  logout: color('#64748b'),
+  signup: color('#334155'),
 
   // forms — teal
-  form_start:           color('#0d9488'),
-  form_submit:          color('#0f766e'),
+  form_start: color('#0d9488'),
+  form_submit: color('#0f766e'),
 
   // video — amber
-  video_play:           color('#d97706'),
-  video_pause:          color('#f59e0b'),
+  video_play: color('#d97706'),
+  video_pause: color('#f59e0b'),
 
   // notifications — pink
   notification_received: color('#db2777'),
-  notification_clicked:  color('#ec4899'),
+  notification_clicked: color('#ec4899'),
 
   // errors — dark red (same hue family as rage/dead click but darker)
-  error_occurred:       color('#b91c1c'),
+  error_occurred: color('#b91c1c'),
 
   // sharing — orange
-  share:                color('#ea580c'),
+  share: color('#ea580c'),
 }
 
 // Fallback palette for unmapped events — broad hue range for variety.
@@ -93,7 +93,5 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
 
   // Unmapped event — neutral gray in single-event contexts (no index),
   // indexed fallback in multi-series charts so custom events are distinguishable
-  return fallbackIndex > 0
-    ? FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
-    : color('#94a3b8')
+  return fallbackIndex > 0 ? FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length] : color('#94a3b8')
 }

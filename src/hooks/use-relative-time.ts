@@ -15,7 +15,7 @@ export function useRelativeTime(date: Date | null) {
 
   useEffect(() => {
     if (!date) return
-    const id = setInterval(() => setTick((t) => t + 1), 30_000)
+    const id = setInterval(() => setTick(t => t + 1), 30_000)
     return () => clearInterval(id)
   }, [date])
 
