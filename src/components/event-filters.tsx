@@ -199,25 +199,25 @@ const MultiValueEditor = ({
   return (
     <div>
       {values.length > 0 && (
-        <div className='flex flex-wrap gap-1 px-3 pt-2'>
+        <div className="flex flex-wrap gap-1 px-3 pt-2">
           {values.map(v => (
             <span
               key={v}
-              className='inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded max-w-full'
+              className="inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded max-w-full"
             >
-              <span className='truncate' title={v}>
+              <span className="truncate" title={v}>
                 {v}
               </span>
-              <button type='button' onClick={() => onRemove(v)} className='text-muted-foreground hover:text-foreground'>
-                <X className='w-2.5 h-2.5' />
+              <button type="button" onClick={() => onRemove(v)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-2.5 h-2.5" />
               </button>
             </span>
           ))}
         </div>
       )}
-      <div className='p-2 border-b border-border/60 flex items-center gap-1.5 min-w-0'>
+      <div className="p-2 border-b border-border/60 flex items-center gap-1.5 min-w-0">
         <input
-          placeholder='Type value, Enter/comma to add'
+          placeholder="Type value, Enter/comma to add"
           value={multiInput}
           onChange={e => setMultiInput(e.target.value)}
           onKeyDown={e => {
@@ -227,13 +227,13 @@ const MultiValueEditor = ({
               setMultiInput('')
             }
           }}
-          className='flex-1 min-w-0 h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+          className="flex-1 min-w-0 h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono"
           autoFocus
         />
         <Button
-          size='sm'
-          variant='outline'
-          className='h-7 text-xs px-2 shrink-0'
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs px-2 shrink-0"
           onClick={() => {
             onAdd(multiInput)
             setMultiInput('')
@@ -243,12 +243,12 @@ const MultiValueEditor = ({
         </Button>
       </div>
       <Command>
-        <CommandInput placeholder='Search values...' className='text-xs' />
+        <CommandInput placeholder="Search values..." className="text-xs" />
         <CommandList>
-          <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
+          <CommandEmpty className="py-3 text-xs">{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
           <CommandGroup>
             {suggestions.map(s => (
-              <CommandItem key={s} value={s} onSelect={() => onToggle(s)} className='text-xs py-1.5 font-mono gap-1.5'>
+              <CommandItem key={s} value={s} onSelect={() => onToggle(s)} className="text-xs py-1.5 font-mono gap-1.5">
                 <Check className={cn('w-3 h-3 shrink-0', values.includes(s) ? 'opacity-100' : 'opacity-0')} />
                 {s}
               </CommandItem>
@@ -279,25 +279,25 @@ const SingleValueEditor = ({
   footer?: React.ReactNode
 }) => (
   <div>
-    <div className='p-2 border-b border-border/60'>
+    <div className="p-2 border-b border-border/60">
       <input
-        placeholder='Type a value...'
+        placeholder="Type a value..."
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => {
           if (e.key === 'Enter') onCommit()
         }}
-        className='w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+        className="w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono"
         autoFocus
       />
     </div>
     <Command>
-      <CommandInput placeholder='Search values...' className='text-xs' />
+      <CommandInput placeholder="Search values..." className="text-xs" />
       <CommandList>
-        <CommandEmpty className='py-3 text-xs'>{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
+        <CommandEmpty className="py-3 text-xs">{getValuesEmptyMessage(loaded, error)}</CommandEmpty>
         <CommandGroup>
           {suggestions.map(s => (
-            <CommandItem key={s} value={s} onSelect={() => onChange(s)} className='text-xs py-1.5 font-mono'>
+            <CommandItem key={s} value={s} onSelect={() => onChange(s)} className="text-xs py-1.5 font-mono">
               {s}
             </CommandItem>
           ))}
@@ -421,9 +421,9 @@ const EventPopoverList = ({
 
   return (
     <Command>
-      <CommandInput placeholder='Search events...' className='text-xs' />
+      <CommandInput placeholder="Search events..." className="text-xs" />
       <CommandList>
-        <CommandEmpty className='py-4 text-xs'>{getEmptyMessage()}</CommandEmpty>
+        <CommandEmpty className="py-4 text-xs">{getEmptyMessage()}</CommandEmpty>
         <CommandGroup>
           {[...events]
             .sort((a, b) => Number(b.count - a.count))
@@ -436,14 +436,14 @@ const EventPopoverList = ({
                   value={ev.name}
                   onSelect={() => onSelect(ev.name)}
                   data-checked={value === ev.name}
-                  className='text-xs gap-1.5 py-1.5'
+                  className="text-xs gap-1.5 py-1.5"
                 >
                   <span
-                    className='w-1 h-1 rounded-full shrink-0'
+                    className="w-1 h-1 rounded-full shrink-0"
                     style={{ backgroundColor: customColor ?? colors.dot }}
                   />
-                  <span className='flex-1 truncate'>{ev.name}</span>
-                  <span className='text-[10px] text-muted-foreground/50 tabular-nums shrink-0'>
+                  <span className="flex-1 truncate">{ev.name}</span>
+                  <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
                     {compactNumber(ev.count)}
                   </span>
                 </CommandItem>
@@ -483,10 +483,10 @@ export const EventChip = ({
             open && 'border-foreground/20 text-foreground'
           )}
         >
-          <Plus className='w-3 h-3' />
+          <Plus className="w-3 h-3" />
           Event
         </PopoverTrigger>
-        <PopoverContent align='start' className='w-64 p-0'>
+        <PopoverContent align="start" className="w-64 p-0">
           <EventPopoverList
             events={events}
             value={value}
@@ -503,14 +503,14 @@ export const EventChip = ({
   }
 
   return (
-    <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
-      <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]'>event</span>
+    <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">event</span>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className='px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer'>
-          <span className='w-1 h-1 rounded-full shrink-0' style={{ backgroundColor: color ?? colors?.dot }} />
+        <PopoverTrigger className="px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer">
+          <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color ?? colors?.dot }} />
           {value}
         </PopoverTrigger>
-        <PopoverContent align='start' className='w-64 p-0'>
+        <PopoverContent align="start" className="w-64 p-0">
           <EventPopoverList
             events={events}
             value={value}
@@ -524,11 +524,11 @@ export const EventChip = ({
         </PopoverContent>
       </Popover>
       <button
-        type='button'
+        type="button"
         onClick={() => onChange('')}
-        className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+        className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
       >
-        <X className='w-3 h-3' />
+        <X className="w-3 h-3" />
       </button>
     </span>
   )
@@ -613,28 +613,28 @@ export const FilterBuilder = ({
   }
 
   const breadcrumb = (
-    <div className='flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground'>
+    <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground">
       {step !== 'property' && (
         <>
           <button
-            type='button'
+            type="button"
             onClick={() => {
               setStep('property')
               setProp('')
               setOp(FilterOperator.EQUALS)
             }}
-            className='hover:text-foreground cursor-pointer'
+            className="hover:text-foreground cursor-pointer"
           >
             Property
           </button>
-          <ChevronRight className='w-2.5 h-2.5' />
-          <span className='font-mono text-foreground'>{prop}</span>
+          <ChevronRight className="w-2.5 h-2.5" />
+          <span className="font-mono text-foreground">{prop}</span>
         </>
       )}
       {step === 'value' && (
         <>
-          <ChevronRight className='w-2.5 h-2.5' />
-          <button type='button' onClick={() => setStep('operator')} className='hover:text-foreground cursor-pointer'>
+          <ChevronRight className="w-2.5 h-2.5" />
+          <button type="button" onClick={() => setStep('operator')} className="hover:text-foreground cursor-pointer">
             {opMeta?.label}
           </button>
         </>
@@ -651,17 +651,17 @@ export const FilterBuilder = ({
           open && 'border-foreground/20 text-foreground'
         )}
       >
-        <Plus className='w-3 h-3' />
+        <Plus className="w-3 h-3" />
         Filter
       </PopoverTrigger>
-      <PopoverContent align='start' className='w-64 p-0'>
+      <PopoverContent align="start" className="w-64 p-0">
         {step !== 'property' && breadcrumb}
 
         {step === 'property' && (
           <PropertyPickerList
             schema={schema}
             schemaError={schemaError}
-            placeholder='Filter by property...'
+            placeholder="Filter by property..."
             onSelect={(name, source) => pickProperty(name, source)}
           />
         )}
@@ -675,9 +675,9 @@ export const FilterBuilder = ({
                     key={o.value}
                     value={o.label}
                     onSelect={() => pickOperator(o.value)}
-                    className='text-xs py-1.5 gap-2'
+                    className="text-xs py-1.5 gap-2"
                   >
-                    <span className='w-5 h-4 text-center text-muted-foreground font-mono text-[11px] inline-flex items-center justify-center shrink-0'>
+                    <span className="w-5 h-4 text-center text-muted-foreground font-mono text-[11px] inline-flex items-center justify-center shrink-0">
                       {o.symbol}
                     </span>
                     {o.label}
@@ -698,8 +698,8 @@ export const FilterBuilder = ({
             loaded={loaded}
             error={error}
             footer={
-              <div className='border-t border-border px-3 py-2 flex justify-end'>
-                <Button size='sm' className='h-6 text-xs px-3' onClick={commitFilter} disabled={vals.length === 0}>
+              <div className="border-t border-border px-3 py-2 flex justify-end">
+                <Button size="sm" className="h-6 text-xs px-3" onClick={commitFilter} disabled={vals.length === 0}>
                   Apply
                 </Button>
               </div>
@@ -716,8 +716,8 @@ export const FilterBuilder = ({
             loaded={loaded}
             error={error}
             footer={
-              <div className='border-t border-border px-3 py-2 flex justify-end'>
-                <Button size='sm' className='h-6 text-xs px-3' onClick={commitFilter} disabled={!val.trim()}>
+              <div className="border-t border-border px-3 py-2 flex justify-end">
+                <Button size="sm" className="h-6 text-xs px-3" onClick={commitFilter} disabled={!val.trim()}>
                   Apply
                 </Button>
               </div>
@@ -788,19 +788,19 @@ export const FilterChip = ({
   }
 
   return (
-    <span className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7'>
-      <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]'>
+    <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]">
         {filter.property}
       </span>
-      <span className='px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]'>{op?.symbol}</span>
+      <span className="px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]">{op?.symbol}</span>
       {valueLabel !== null && (
         <Popover open={editOpen} onOpenChange={handleEditOpenChange}>
-          <PopoverTrigger className='px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer'>
-            <span className='max-w-56 truncate' title={valueLabel || '...'}>
+          <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer">
+            <span className="max-w-56 truncate" title={valueLabel || '...'}>
               {valueLabel || '...'}
             </span>
           </PopoverTrigger>
-          <PopoverContent align='start' className='w-52 p-0'>
+          <PopoverContent align="start" className="w-52 p-0">
             {filter.kind === 'multi' ? (
               <MultiValueEditor
                 values={filter.values}
@@ -832,8 +832,8 @@ export const FilterChip = ({
                 loaded={loaded}
                 error={error}
                 footer={
-                  <div className='border-t border-border px-3 py-2 flex justify-end'>
-                    <Button size='sm' className='h-6 text-xs px-3' onClick={commitEdit} disabled={!editInput.trim()}>
+                  <div className="border-t border-border px-3 py-2 flex justify-end">
+                    <Button size="sm" className="h-6 text-xs px-3" onClick={commitEdit} disabled={!editInput.trim()}>
                       Apply
                     </Button>
                   </div>
@@ -844,11 +844,11 @@ export const FilterChip = ({
         </Popover>
       )}
       <button
-        type='button'
+        type="button"
         onClick={onRemove}
-        className='px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer'
+        className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
       >
-        <X className='w-3 h-3' />
+        <X className="w-3 h-3" />
       </button>
     </span>
   )
@@ -952,12 +952,12 @@ export const EventQueryRow = ({
   const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
 
   return (
-    <div className='flex items-center gap-2'>
-      <div className='inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1'>
+    <div className="flex items-center gap-2">
+      <div className="inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1">
         {letter && (
-          <span className='flex items-center gap-1.5'>
-            {color && <span className='w-2 h-2 rounded-full shrink-0' style={{ background: color }} />}
-            <span className='text-[10px] font-semibold text-muted-foreground w-3'>{letter}</span>
+          <span className="flex items-center gap-1.5">
+            {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
+            <span className="text-[10px] font-semibold text-muted-foreground w-3">{letter}</span>
           </span>
         )}
         <EventChip
@@ -988,9 +988,9 @@ export const EventQueryRow = ({
             />
             {scopedSchemaError && (
               <button
-                type='button'
+                type="button"
                 onClick={retryScopedSchema}
-                className='text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer'
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
                 retry schema
               </button>
@@ -1000,11 +1000,11 @@ export const EventQueryRow = ({
         )}
       </div>
       <button
-        type='button'
+        type="button"
         onClick={onRemove}
-        className='self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer'
+        className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
       >
-        <X className='w-3 h-3' />
+        <X className="w-3 h-3" />
       </button>
     </div>
   )
@@ -1033,7 +1033,7 @@ export const EventFilterBar = ({
   maxEvents?: number
   getEventColor?: (eventName: string) => string
 }) => (
-  <div className='flex flex-col gap-1.5'>
+  <div className="flex flex-col gap-1.5">
     {filters.entries.map((entry, i) => (
       <EventQueryRow
         key={i}
@@ -1054,10 +1054,10 @@ export const EventFilterBar = ({
       </EventQueryRow>
     ))}
     {(maxEvents === undefined || filters.entries.length < maxEvents) && (
-      <div className='flex items-center gap-2'>
-        {showLetters && filters.entries.length > 0 && <span className='w-7' />}
+      <div className="flex items-center gap-2">
+        {showLetters && filters.entries.length > 0 && <span className="w-7" />}
         <EventChip
-          value=''
+          value=""
           onChange={kind => {
             if (kind) filters.addEvent(kind)
           }}

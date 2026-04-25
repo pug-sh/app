@@ -116,19 +116,19 @@ const OptionChip = <T extends string | number>({
   const current = options.find(o => o.value === value)
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className='inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors'>
-        <span className='px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1'>
-          {Icon && <Icon className='w-3 h-3' />}
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
+          {Icon && <Icon className="w-3 h-3" />}
           {label}
         </span>
-        <span className='px-2 h-full flex items-center'>{current?.label}</span>
+        <span className="px-2 h-full flex items-center">{current?.label}</span>
       </PopoverTrigger>
-      <PopoverContent align='start' className='w-auto p-1'>
-        <div className='flex flex-col gap-0.5'>
+      <PopoverContent align="start" className="w-auto p-1">
+        <div className="flex flex-col gap-0.5">
           {options.map(opt => (
             <button
               key={String(opt.value)}
-              type='button'
+              type="button"
               onClick={() => {
                 onChange(opt.value)
                 setOpen(false)
@@ -328,7 +328,7 @@ const Insights = () => {
   const renderRowExtra = isTrends
     ? (i: number) => (
         <OptionChip
-          label='measure'
+          label="measure"
           icon={Ruler}
           options={AGGREGATIONS}
           value={getAggregation(i)}
@@ -340,8 +340,8 @@ const Insights = () => {
   const renderChart = () => {
     if (allZero) {
       return (
-        <div className='flex items-center justify-center h-48 text-muted-foreground'>
-          <p className='text-sm'>No events recorded in this period</p>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          <p className="text-sm">No events recorded in this period</p>
         </div>
       )
     }
@@ -372,10 +372,10 @@ const Insights = () => {
     if (loading) return null
 
     return (
-      <div className='flex flex-col items-center justify-center py-20 text-muted-foreground'>
-        <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-        <p className='text-sm font-medium mb-1'>No data yet</p>
-        <p className='text-xs'>Pick an event above to start</p>
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+        <p className="text-sm font-medium mb-1">No data yet</p>
+        <p className="text-xs">Pick an event above to start</p>
       </div>
     )
   }
@@ -385,8 +385,8 @@ const Insights = () => {
 
     if (!hasFunnelData) {
       return (
-        <div className='flex items-center justify-center h-48 text-muted-foreground'>
-          <p className='text-sm'>No events recorded in this period</p>
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          <p className="text-sm">No events recorded in this period</p>
         </div>
       )
     }
@@ -403,15 +403,15 @@ const Insights = () => {
 
     if (breakdowns.length > 0) {
       return (
-        <div className='space-y-6 mt-2'>
+        <div className="space-y-6 mt-2">
           {retentionSeriesList.map((series, si) => {
             const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
             const cohortColors = series.cohorts.map((c, ci) => getSeriesColor(c.cohort || `Cohort ${ci + 1}`, ci))
             return (
               <div key={si}>
-                <div className='flex items-center gap-2 mb-2'>
-                  <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>{label}</span>
-                  <div className='flex-1 h-px bg-border' />
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+                  <div className="flex-1 h-px bg-border" />
                 </div>
                 <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
               </div>
@@ -428,10 +428,10 @@ const Insights = () => {
   const renderMainContent = () => {
     if (error) {
       return (
-        <div className='flex flex-col items-center justify-center py-16'>
-          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm font-medium mb-1'>{error}</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>
+        <div className="flex flex-col items-center justify-center py-16">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm font-medium mb-1">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
             Retry
           </Button>
         </div>
@@ -440,9 +440,9 @@ const Insights = () => {
 
     if (unknownResultCase) {
       return (
-        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
-          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm'>Unsupported result type</p>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">Unsupported result type</p>
         </div>
       )
     }
@@ -462,10 +462,10 @@ const Insights = () => {
     return renderLoadingEmptyState()
   }
 
-  if (!project) return <NoProject title='Insights' icon={TrendingUp} />
+  if (!project) return <NoProject title="Insights" icon={TrendingUp} />
 
   return (
-    <Page title='Insights' description={getPageDescription(insightType)}>
+    <Page title="Insights" description={getPageDescription(insightType)}>
       {/* Query config — sticky */}
       <div
         className={cn(
@@ -473,13 +473,13 @@ const Insights = () => {
           stickyClassName
         )}
       >
-        <div className='flex flex-wrap items-center gap-2'>
+        <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
-          <OptionChip label='insight' options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
+          <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTimeSeriesInsight && (
             <>
               <OptionChip
-                label='granularity'
+                label="granularity"
                 icon={Clock}
                 options={GRANULARITIES}
                 value={granularity}
@@ -487,7 +487,7 @@ const Insights = () => {
               />
               {isTrends && (
                 <OptionChip
-                  label='view'
+                  label="view"
                   icon={BarChart3}
                   options={VIEW_MODES}
                   value={viewMode}
@@ -499,7 +499,7 @@ const Insights = () => {
         </div>
 
         {/* Events + per-event filters + per-event aggregation */}
-        <div className='space-y-1'>
+        <div className="space-y-1">
           <EventFilterBar
             filters={eventFilters}
             events={schema?.events ?? []}
@@ -512,12 +512,12 @@ const Insights = () => {
             maxEvents={maxEvents}
           />
           {isRetention && (
-            <div className='flex items-center gap-1.5 text-[11px] text-muted-foreground'>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Tooltip>
-                <TooltipTrigger className='inline-flex items-center cursor-help'>
-                  <CircleHelp className='w-3.5 h-3.5' />
+                <TooltipTrigger className="inline-flex items-center cursor-help">
+                  <CircleHelp className="w-3.5 h-3.5" />
                 </TooltipTrigger>
-                <TooltipContent side='bottom' align='start' className='max-w-xs text-xs'>
+                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
                   Use up to two events: A defines the cohort entry event, B defines the return event. If B is omitted, A
                   is used for both cohort and return.
                 </TooltipContent>
@@ -528,7 +528,7 @@ const Insights = () => {
         </div>
 
         {/* Global filters + breakdown */}
-        <div className='flex flex-wrap items-center gap-2'>
+        <div className="flex flex-wrap items-center gap-2">
           {propFilters.map((f, i) => (
             <FilterChip
               key={`f-${i}`}
@@ -539,7 +539,7 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {(propFilters.length > 0 || breakdowns.length > 0) && <span className='h-4 w-px bg-border mx-0.5' />}
+          {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
           {breakdowns.map((prop, i) => (
             <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(i)} />
           ))}
@@ -551,7 +551,7 @@ const Insights = () => {
               onAdd={addBreakdown}
             />
           )}
-          {loading && <Loader2 className='w-3.5 h-3.5 animate-spin text-muted-foreground ml-1' />}
+          {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
       </div>
 

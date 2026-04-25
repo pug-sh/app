@@ -1,7 +1,7 @@
 import { compactNumber } from '@/lib/format'
 import { getSeriesColor } from '@/lib/event-colors'
 import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Bar, BarChart as ReBarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
 import { Check } from 'lucide-react'
 
@@ -51,17 +51,22 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
   if (series.length === 0 || stepNames.length === 0) return null
 
   return (
-    <div className='rounded-lg border border-border/60 p-4'>
-      <ChartContainer config={chartConfig} className='h-64 w-full'>
-        <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap='20%' barGap={2}>
-          <CartesianGrid vertical={false} strokeDasharray='3 3' />
-          <XAxis dataKey='step' tickLine={false} axisLine={false} interval={0} />
+    <div className="mt-4 rounded-lg border border-border/60 p-4">
+      <ChartContainer config={chartConfig} className="h-64 w-full">
+        <ReBarChart
+          data={chartData}
+          margin={{ top: 12, right: 8, left: 0, bottom: 8 }}
+          barCategoryGap="20%"
+          barGap={2}
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis dataKey="step" tickLine={false} axisLine={false} interval={0} />
           <YAxis
             tickLine={false}
             axisLine={false}
             width={44}
             domain={[0, 100]}
-            tickFormatter={(v: number) => `${v}%`}
+            tickFormatter={(value: number) => `${value}%`}
           />
           <ChartTooltip
             cursor={{ fill: 'transparent' }}
@@ -70,39 +75,39 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
               const row = payload[0]?.payload as ChartRow
               const step = row.step as string
               return (
-                <div className='rounded-lg border border-border bg-popover p-2.5 shadow-sm text-xs min-w-[160px]'>
-                  <p className='font-medium text-foreground mb-1.5'>{step}</p>
+                <div className="rounded-lg border border-border bg-popover p-2.5 shadow-sm text-xs min-w-[160px]">
+                  <p className="font-medium text-foreground mb-1.5">{step}</p>
                   {series.map(s => {
                     const count = (row[`${s.label}__count`] as number) ?? 0
                     const conv = (row[s.label] as number) ?? 0
                     const fromPrev = (row[`${s.label}__fromPrev`] as number) ?? 100
                     const dropOff = (row[`${s.label}__dropOff`] as number) ?? 0
                     return (
-                      <div key={s.label} className='py-1 border-t border-border/50 first:border-0 first:pt-0'>
+                      <div key={s.label} className="py-1 border-t border-border/50 first:border-0 first:pt-0">
                         {isMultiSeries && (
-                          <div className='flex items-center gap-1.5 mb-1'>
-                            <span className='w-2 h-2 rounded-full shrink-0' style={{ background: s.color }} />
-                            <span className='font-medium text-foreground'>{s.label}</span>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+                            <span className="font-medium text-foreground">{s.label}</span>
                           </div>
                         )}
-                        <div className='space-y-0.5 pl-3.5'>
-                          <div className='flex items-center justify-between gap-4'>
-                            <span className='text-muted-foreground'>Completed</span>
-                            <span className='font-mono tabular-nums'>{compactNumber(count)}</span>
+                        <div className="space-y-0.5 pl-3.5">
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">Completed</span>
+                            <span className="font-mono tabular-nums">{compactNumber(count)}</span>
                           </div>
-                          <div className='flex items-center justify-between gap-4'>
-                            <span className='text-muted-foreground'>From start</span>
-                            <span className='font-mono tabular-nums'>{conv.toFixed(1)}%</span>
+                          <div className="flex items-center justify-between gap-4">
+                            <span className="text-muted-foreground">From start</span>
+                            <span className="font-mono tabular-nums">{conv.toFixed(1)}%</span>
                           </div>
                           {!isMultiSeries && (
                             <>
-                              <div className='flex items-center justify-between gap-4'>
-                                <span className='text-muted-foreground'>From previous</span>
-                                <span className='font-mono tabular-nums'>{fromPrev.toFixed(1)}%</span>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">From previous</span>
+                                <span className="font-mono tabular-nums">{fromPrev.toFixed(1)}%</span>
                               </div>
-                              <div className='flex items-center justify-between gap-4'>
-                                <span className='text-muted-foreground'>Drop-off</span>
-                                <span className='font-mono tabular-nums'>{compactNumber(dropOff)}</span>
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">Drop-off</span>
+                                <span className="font-mono tabular-nums">{compactNumber(dropOff)}</span>
                               </div>
                             </>
                           )}
@@ -131,18 +136,12 @@ export const FunnelChart = ({ series }: { series: FunnelSeriesData[] }) => {
 const DEFAULT_VISIBLE = 10
 
 export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) => {
-  const [visibleLabels, setVisibleLabels] = useState<Set<string>>(
-    () => new Set(series.slice(0, DEFAULT_VISIBLE).map(s => s.label))
-  )
-
-  // Reset visible selection when the series labels change (new query result / different breakdown)
-  const prevLabelsRef = useRef<string>('')
   const labelsKey = series.map(s => s.label).join('\0')
-  useEffect(() => {
-    if (prevLabelsRef.current === labelsKey) return
-    prevLabelsRef.current = labelsKey
-    setVisibleLabels(new Set(series.slice(0, DEFAULT_VISIBLE).map(s => s.label)))
-  }, [labelsKey, series])
+  const [visibleByKey, setVisibleByKey] = useState<Record<string, string[]>>({})
+  const visibleLabels = useMemo(
+    () => new Set(visibleByKey[labelsKey] ?? series.slice(0, DEFAULT_VISIBLE).map(s => s.label)),
+    [labelsKey, series, visibleByKey]
+  )
 
   const visibleSeries = useMemo(() => series.filter(s => visibleLabels.has(s.label)), [series, visibleLabels])
 
@@ -160,11 +159,14 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
   const mostCompleted = seriesStats.reduce((best, s) => (s.completed > best.completed ? s : best), seriesStats[0])
 
   const toggleSeries = (label: string) =>
-    setVisibleLabels(prev => {
-      const next = new Set(prev)
+    setVisibleByKey(prev => {
+      const next = new Set(prev[labelsKey] ?? series.slice(0, DEFAULT_VISIBLE).map(s => s.label))
       if (next.has(label)) next.delete(label)
       else next.add(label)
-      return next
+      return {
+        ...prev,
+        [labelsKey]: [...next],
+      }
     })
 
   if (!seriesStats.length) return null

@@ -1,4 +1,7 @@
-import { Granularity, type RetentionCohort as RetentionCohortProto } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  Granularity,
+  type RetentionCohort as RetentionCohortProto,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
 import type { SeriesColor } from '@/lib/event-colors'
 import { formatTooltipDate } from './helpers'
@@ -55,28 +58,31 @@ export const RetentionCohort = ({
   }))
 
   return (
-    <div className='mt-4 border border-border rounded-lg overflow-auto'>
-      <div className='px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3'>
-        <p className='text-xs text-muted-foreground'>Retention by cohort</p>
-        <div className='flex items-center gap-1.5 text-[11px] text-muted-foreground'>
+    <div className="mt-4 border border-border rounded-lg overflow-auto">
+      <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Retention by cohort</p>
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span>Low</span>
           {['#dcfce7', '#86efac', '#4ade80', '#16a34a', '#166534'].map((c, i) => (
-            <span key={i} className='w-4 h-2 rounded-xs' style={{ backgroundColor: c }} />
+            <span key={i} className="w-4 h-2 rounded-xs" style={{ backgroundColor: c }} />
           ))}
           <span>High</span>
         </div>
       </div>
-      <table className='w-full min-w-170'>
+      <table className="w-full min-w-170">
         <thead>
-          <tr className='border-b border-border bg-muted/20'>
-            <th className='sticky left-0 z-20 bg-background py-2 px-3 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-55'>
+          <tr className="border-b border-border bg-muted/20">
+            <th className="sticky left-0 z-20 bg-background py-2 px-3 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-55">
               Cohort
             </th>
-            <th className='sticky left-55 z-20 bg-background py-2 px-2 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60'>
+            <th className="sticky left-55 z-20 bg-background py-2 px-2 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60">
               Total profiles
             </th>
             {Array.from({ length: columnCount }).map((_, col) => (
-              <th key={col} className='py-2 px-3 text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium'>
+              <th
+                key={col}
+                className="py-2 px-3 text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium"
+              >
                 {col === 0 ? 'Start' : `+${col}`}
               </th>
             ))}
@@ -84,17 +90,14 @@ export const RetentionCohort = ({
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className='border-b last:border-b-0 border-border/50'>
-              <td className='sticky left-0 z-10 bg-background py-2 px-3 text-xs text-foreground whitespace-nowrap min-w-55'>
-                <div className='inline-flex items-center gap-1.5'>
-                  <span
-                    className='w-2 h-2 rounded-full shrink-0'
-                    style={{ backgroundColor: seriesColors[ri]?.dot }}
-                  />
+            <tr key={ri} className="border-b last:border-b-0 border-border/50">
+              <td className="sticky left-0 z-10 bg-background py-2 px-3 text-xs text-foreground whitespace-nowrap min-w-55">
+                <div className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seriesColors[ri]?.dot }} />
                   <span>{formatCohortLabel(row.label)}</span>
                 </div>
               </td>
-              <td className='sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60'>
+              <td className="sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60">
                 {row.size.toLocaleString()}
               </td>
               {Array.from({ length: columnCount }).map((_, ci) => {
@@ -107,9 +110,9 @@ export const RetentionCohort = ({
                   ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%`
                   : `${row.label} · N/A`
                 return (
-                  <td key={ci} className='py-1.5 px-1.5'>
+                  <td key={ci} className="py-1.5 px-1.5">
                     <div
-                      className='h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2'
+                      className="h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2"
                       style={{
                         backgroundColor: hasValue ? retentionColor(value) : 'hsl(var(--muted) / 0.35)',
                         color: hasValue && value >= 35 ? '#f8fafc' : 'hsl(var(--foreground))',
