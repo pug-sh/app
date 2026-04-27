@@ -1,4 +1,5 @@
 import type { ActiveFilter } from '@/components/event-filters'
+import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -8,13 +9,20 @@ const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [AggregationType.TOTAL, AggregationType.UNIQUE_USERS, AggregationType.PER_USER_AVG]
 const VALID_OPERATORS = new Set([
-  FilterOperator.EQUALS, FilterOperator.NOT_EQUALS,
-  FilterOperator.CONTAINS, FilterOperator.NOT_CONTAINS,
-  FilterOperator.IN, FilterOperator.NOT_IN,
-  FilterOperator.IS_SET, FilterOperator.IS_NOT_SET,
-  FilterOperator.GT, FilterOperator.GTE,
-  FilterOperator.LT, FilterOperator.LTE,
-  FilterOperator.BETWEEN, FilterOperator.NOT_BETWEEN,
+  FilterOperator.EQUALS,
+  FilterOperator.NOT_EQUALS,
+  FilterOperator.CONTAINS,
+  FilterOperator.NOT_CONTAINS,
+  FilterOperator.IN,
+  FilterOperator.NOT_IN,
+  FilterOperator.IS_SET,
+  FilterOperator.IS_NOT_SET,
+  FilterOperator.GT,
+  FilterOperator.GTE,
+  FilterOperator.LT,
+  FilterOperator.LTE,
+  FilterOperator.BETWEEN,
+  FilterOperator.NOT_BETWEEN,
 ])
 
 const EVENT_FILTERS_PARAM = 'ef'
@@ -26,8 +34,10 @@ const TIME_TO_PARAM = 'tt'
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
 const isMultiValuesOperator = (operator: FilterOperator) =>
-  operator === FilterOperator.IN || operator === FilterOperator.NOT_IN ||
-  operator === FilterOperator.BETWEEN || operator === FilterOperator.NOT_BETWEEN
+  operator === FilterOperator.IN ||
+  operator === FilterOperator.NOT_IN ||
+  operator === FilterOperator.BETWEEN ||
+  operator === FilterOperator.NOT_BETWEEN
 
 type ParsedBaseFilter = {
   property: string
@@ -47,7 +57,7 @@ const isTwoValueOperator = (operator: FilterOperator) =>
 
 const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilter | null => {
   if (typeof rawValue !== 'string') return null
-  if (isTwoValueOperator(base.operator)) return null  // single string can't form a valid range
+  if (isTwoValueOperator(base.operator)) return null // single string can't form a valid range
   if (isMultiValuesOperator(base.operator)) {
     const next = rawValue.trim()
     return { ...base, kind: 'multi', values: next ? [next] : [] }
@@ -58,7 +68,7 @@ const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilte
 const normalizeMulti = (base: ParsedBaseFilter, rawValues: unknown): ActiveFilter | null => {
   if (!isStringArray(rawValues)) return null
   if (isTwoValueOperator(base.operator)) {
-    if (rawValues.length < 2) return null  // discard incomplete range filters
+    if (rawValues.length < 2) return null // discard incomplete range filters
     return { ...base, kind: 'multi', values: rawValues }
   }
   if (isMultiValuesOperator(base.operator)) {
@@ -85,10 +95,11 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   const kind = v.kind.trim()
   if (!kind) return null
   const filters = v.filters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
-  const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
-    ? (v.aggregation as AggregationType)
-    : undefined
-  return { kind, filters, ...(aggregation !== undefined && { aggregation }) }
+  const aggregation =
+    typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
+      ? (v.aggregation as AggregationType)
+      : undefined
+  return createEntry(kind, { filters, aggregation })
 }
 
 const parseJSONParam = (raw: string | null): unknown => {
@@ -118,15 +129,26 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const hasPf = params.has(PROP_FILTERS_PARAM)
 
   const eventFilters = Array.isArray(rawEventFilters)
-    ? rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[]
+    ? (rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[])
     : []
   const propFilters = Array.isArray(rawPropFilters)
-    ? rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
+    ? (rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[])
     : []
 
+  const droppedEvents = Array.isArray(rawEventFilters) ? rawEventFilters.length - eventFilters.length : 0
+  const droppedProps = Array.isArray(rawPropFilters) ? rawPropFilters.length - propFilters.length : 0
+
   const warnings: string[] = []
-  if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) warnings.push('event filters')
-  if (hasPf && params.get(PROP_FILTERS_PARAM) && propFilters.length === 0) warnings.push('property filters')
+  if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) {
+    warnings.push('event filters')
+  } else if (droppedEvents > 0) {
+    warnings.push(`${droppedEvents} event filter${droppedEvents === 1 ? '' : 's'}`)
+  }
+  if (hasPf && params.get(PROP_FILTERS_PARAM) && propFilters.length === 0) {
+    warnings.push('property filters')
+  } else if (droppedProps > 0) {
+    warnings.push(`${droppedProps} property filter${droppedProps === 1 ? '' : 's'}`)
+  }
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
@@ -162,7 +184,7 @@ export const writeFilterQueryParams = (
     setOrDelete(key, value.length > 0 ? JSON.stringify(value) : undefined)
   }
 
-  setJSONParam(EVENT_FILTERS_PARAM, eventFilters)
+  setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(serializeEntry))
   setJSONParam(PROP_FILTERS_PARAM, propFilters)
 
   setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)

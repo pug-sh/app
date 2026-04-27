@@ -3,7 +3,7 @@ import type { ActiveFilter } from '@/components/event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 
-export const toProtoFilters = (filters: ActiveFilter[]) =>
+export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
   filters.map(f => {
     switch (f.kind) {
       case 'multi': {

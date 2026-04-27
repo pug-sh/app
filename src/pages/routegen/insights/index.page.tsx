@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
+import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
@@ -18,9 +19,11 @@ import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
-import { useAtomValue, useSetAtom } from 'jotai'
+import type { PrimitiveAtom } from 'jotai'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
+import { selectAtom } from 'jotai/utils'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import {
@@ -128,6 +131,37 @@ const OptionChip = <T extends string | number>({
   )
 }
 
+// ── Row Aggregation Picker ───────────────────────────────────────────────────
+
+const RowAggregationPicker = memo(
+  ({
+    entryId,
+    filtersAtom,
+    setAggregation,
+  }: {
+    entryId: EntryId
+    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+    setAggregation: (id: EntryId, agg: AggregationType) => void
+  }) => {
+    // Subscribe only to this entry's aggregation; sibling row mutations don't re-render this picker.
+    const aggregationAtom = useMemo(
+      () =>
+        selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL),
+      [filtersAtom, entryId]
+    )
+    const value = useAtomValue(aggregationAtom)
+    return (
+      <OptionChip
+        label="measure"
+        icon={Ruler}
+        options={AGGREGATIONS}
+        value={value}
+        onChange={v => setAggregation(entryId, v)}
+      />
+    )
+  }
+)
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const Insights = () => {
@@ -139,8 +173,10 @@ const Insights = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
   useEffect(() => {
-    if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
+    if (initialFilterState.parseWarning) {
+      toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
@@ -159,16 +195,14 @@ const Insights = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
 
-  const getAggregation = (idx: number) => eventFilters.entries[idx]?.aggregation ?? AggregationType.TOTAL
-
-  // Cap entries at 2 when switching to retention mode
-  const eventFiltersRef = useRef(eventFilters)
-  // eslint-disable-next-line react-hooks/refs -- intentional: sync ref in render so effect reads latest entries without re-triggering
-  eventFiltersRef.current = eventFilters
+  const store = useStore()
+  const { filtersAtom, reset: resetFilters } = eventFilters
   useEffect(() => {
-    if (insightType !== InsightType.RETENTION || eventFiltersRef.current.entries.length <= 2) return
-    eventFiltersRef.current.reset(eventFiltersRef.current.entries.slice(0, 2))
-  }, [insightType])
+    if (insightType !== InsightType.RETENTION) return
+    const entries = store.get(filtersAtom)
+    if (entries.length <= 2) return
+    resetFilters(entries.slice(0, 2))
+  }, [insightType, store, filtersAtom, resetFilters])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
@@ -209,12 +243,13 @@ const Insights = () => {
           insightType,
           granularity,
           timeRange: toProtoTimeRange(timeRange),
-          events: validEntries.map((entry, i) => ({
+          events: validEntries.map(entry => ({
             event: {
               kind: entry.kind,
               filters: toProtoFilters(entry.filters),
             },
-            aggregation: insightType === InsightType.TRENDS ? getAggregation(i) : AggregationType.TOTAL,
+            aggregation:
+              insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
@@ -243,7 +278,8 @@ const Insights = () => {
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
   }, [result, eventFilters.validEntries])
-  const emptySeriesResult = (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
+  const emptySeriesResult =
+    (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
   useEffect(() => {
     if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
   }, [emptySeriesResult])
@@ -253,7 +289,7 @@ const Insights = () => {
     return result.value.series[0].cohorts
   }, [result])
   const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel' || result.value.series.length === 0) return []
+    if (result.case !== 'funnel' || result.value.series.length === 0) return EMPTY_ARRAY
     const kindEntries = eventFilters.validEntries
     return [...result.value.series[0].steps]
       .sort((a, b) => {
@@ -276,38 +312,46 @@ const Insights = () => {
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
   )
-  const chartData: ChartPoint[] =
-    trendSeries.length > 0
-      ? trendSeries[0].points
-          .map((p, i) => {
-            const date = tsToDate(p.time)
-            if (!date) return null
-            return {
-              date,
-              values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-            }
-          })
-          .filter((d): d is ChartPoint => d !== null)
-      : []
+  const chartData = useMemo<ChartPoint[]>(
+    () =>
+      trendSeries.length > 0
+        ? trendSeries[0].points
+            .map((p, i) => {
+              const date = tsToDate(p.time)
+              if (!date) return null
+              return {
+                date,
+                values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
+              }
+            })
+            .filter((d): d is ChartPoint => d !== null)
+        : [],
+    [trendSeries]
+  )
 
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTimeSeriesInsight = isTrends || isRetention
-  const hasFunnelData = funnelSteps.some(step => step.count > 0)
-  const allZero = chartData.every(d => d.values.every(v => v === 0))
+  const hasFunnelData = useMemo(() => funnelSteps.some(step => step.count > 0), [funnelSteps])
+  const allZero = useMemo(() => chartData.every(d => d.values.every(v => v === 0)), [chartData])
+  const funnelSeriesColors = useMemo(() => funnelSteps.map((s, i) => getSeriesColor(s.name, i)), [funnelSteps])
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
-  const renderRowExtra = isTrends
-    ? (i: number) => (
-        <OptionChip
-          label="measure"
-          icon={Ruler}
-          options={AGGREGATIONS}
-          value={getAggregation(i)}
-          onChange={v => eventFilters.setAggregation(i, v)}
-        />
-      )
-    : undefined
+  const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
+
+  const renderRowExtra = useMemo(
+    () =>
+      isTrends
+        ? (entryId: EntryId) => (
+            <RowAggregationPicker
+              entryId={entryId}
+              filtersAtom={eventFilters.filtersAtom}
+              setAggregation={eventFilters.setAggregation}
+            />
+          )
+        : undefined,
+    [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation]
+  )
 
   const renderChart = () => {
     if (allZero) {
@@ -356,7 +400,7 @@ const Insights = () => {
     if (funnelSteps.length === 0) return renderLoadingEmptyState()
 
     if (hasFunnelData) {
-      return <FunnelChart steps={funnelSteps} seriesColors={funnelSteps.map((s, i) => getSeriesColor(s.name, i))} />
+      return <FunnelChart steps={funnelSteps} seriesColors={funnelSeriesColors} />
     }
 
     return (
@@ -390,10 +434,12 @@ const Insights = () => {
 
     if ((result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0) {
       return (
-        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
-          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm'>No results — try adjusting your query</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>Retry</Button>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">No results — try adjusting your query</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
+            Retry
+          </Button>
         </div>
       )
     }
@@ -455,13 +501,13 @@ const Insights = () => {
         {/* Events + per-event filters + per-event aggregation */}
         <div className="space-y-1">
           <EventFilterBar
-            filters={eventFilters}
-            events={schema?.events ?? []}
+            filtersAtom={eventFilters.filtersAtom}
+            events={schema?.events}
             schema={schema}
             schemaError={schemaError}
             showLetters
             seriesColors={eventFilterColors}
-            getEventColor={eventName => getSeriesColor(eventName).dot}
+            getEventColor={getEventColorDot}
             renderRowExtra={renderRowExtra}
             maxEvents={maxEvents}
           />
