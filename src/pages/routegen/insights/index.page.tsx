@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
-import type { EventFilterEntry } from '@/hooks/use-event-filters'
+import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
@@ -21,6 +21,7 @@ import { toast } from 'sonner'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import type { PrimitiveAtom } from 'jotai'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
+import { selectAtom } from 'jotai/utils'
 import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
@@ -132,15 +133,34 @@ const OptionChip = <T extends string | number>({
 
 // ── Row Aggregation Picker ───────────────────────────────────────────────────
 
-const RowAggregationPicker = memo(({ entryId, filtersAtom, setAggregation }: {
-  entryId: string
-  filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-  setAggregation: (id: string, agg: AggregationType) => void
-}) => {
-  const entries = useAtomValue(filtersAtom)
-  const value = entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL
-  return <OptionChip label='measure' icon={Ruler} options={AGGREGATIONS} value={value} onChange={v => setAggregation(entryId, v)} />
-})
+const RowAggregationPicker = memo(
+  ({
+    entryId,
+    filtersAtom,
+    setAggregation,
+  }: {
+    entryId: EntryId
+    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+    setAggregation: (id: EntryId, agg: AggregationType) => void
+  }) => {
+    // Subscribe only to this entry's aggregation; sibling row mutations don't re-render this picker.
+    const aggregationAtom = useMemo(
+      () =>
+        selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL),
+      [filtersAtom, entryId]
+    )
+    const value = useAtomValue(aggregationAtom)
+    return (
+      <OptionChip
+        label="measure"
+        icon={Ruler}
+        options={AGGREGATIONS}
+        value={value}
+        onChange={v => setAggregation(entryId, v)}
+      />
+    )
+  }
+)
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -153,8 +173,10 @@ const Insights = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
   useEffect(() => {
-    if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
+    if (initialFilterState.parseWarning) {
+      toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
@@ -226,7 +248,8 @@ const Insights = () => {
               kind: entry.kind,
               filters: toProtoFilters(entry.filters),
             },
-            aggregation: insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
+            aggregation:
+              insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
@@ -255,7 +278,8 @@ const Insights = () => {
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
   }, [result, eventFilters.validEntries])
-  const emptySeriesResult = (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
+  const emptySeriesResult =
+    (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
   useEffect(() => {
     if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
   }, [emptySeriesResult])
@@ -265,7 +289,7 @@ const Insights = () => {
     return result.value.series[0].cohorts
   }, [result])
   const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel' || result.value.series.length === 0) return []
+    if (result.case !== 'funnel' || result.value.series.length === 0) return EMPTY_ARRAY
     const kindEntries = eventFilters.validEntries
     return [...result.value.series[0].steps]
       .sort((a, b) => {
@@ -288,20 +312,22 @@ const Insights = () => {
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
   )
-  const chartData = useMemo<ChartPoint[]>(() =>
-    trendSeries.length > 0
-      ? trendSeries[0].points
-        .map((p, i) => {
-          const date = tsToDate(p.time)
-          if (!date) return null
-          return {
-            date,
-            values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-          }
-        })
-        .filter((d): d is ChartPoint => d !== null)
-      : [],
-  [trendSeries])
+  const chartData = useMemo<ChartPoint[]>(
+    () =>
+      trendSeries.length > 0
+        ? trendSeries[0].points
+            .map((p, i) => {
+              const date = tsToDate(p.time)
+              if (!date) return null
+              return {
+                date,
+                values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
+              }
+            })
+            .filter((d): d is ChartPoint => d !== null)
+        : [],
+    [trendSeries]
+  )
 
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
@@ -314,11 +340,16 @@ const Insights = () => {
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
 
   const renderRowExtra = useMemo(
-    () => isTrends
-      ? (entryId: string) => (
-        <RowAggregationPicker entryId={entryId} filtersAtom={eventFilters.filtersAtom} setAggregation={eventFilters.setAggregation} />
-      )
-      : undefined,
+    () =>
+      isTrends
+        ? (entryId: EntryId) => (
+            <RowAggregationPicker
+              entryId={entryId}
+              filtersAtom={eventFilters.filtersAtom}
+              setAggregation={eventFilters.setAggregation}
+            />
+          )
+        : undefined,
     [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation]
   )
 
@@ -403,10 +434,12 @@ const Insights = () => {
 
     if ((result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0) {
       return (
-        <div className='flex flex-col items-center justify-center py-16 text-muted-foreground'>
-          <TrendingUp className='w-10 h-10 mb-4 opacity-15' />
-          <p className='text-sm'>No results — try adjusting your query</p>
-          <Button variant='outline' size='sm' className='mt-2' onClick={retry}>Retry</Button>
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">No results — try adjusting your query</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
+            Retry
+          </Button>
         </div>
       )
     }
@@ -469,7 +502,7 @@ const Insights = () => {
         <div className="space-y-1">
           <EventFilterBar
             filtersAtom={eventFilters.filtersAtom}
-            events={schema?.events ?? []}
+            events={schema?.events}
             schema={schema}
             schemaError={schemaError}
             showLetters

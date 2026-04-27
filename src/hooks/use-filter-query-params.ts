@@ -1,5 +1,5 @@
 import type { ActiveFilter } from '@/components/event-filters'
-import { generateEntryId } from '@/hooks/use-event-filters'
+import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -81,10 +81,11 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
   const kind = v.kind.trim()
   if (!kind) return null
   const filters = v.filters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
-  const aggregation = typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
-    ? (v.aggregation as AggregationType)
-    : undefined
-  return { id: generateEntryId(), kind, filters, ...(aggregation !== undefined && { aggregation }) }
+  const aggregation =
+    typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
+      ? (v.aggregation as AggregationType)
+      : undefined
+  return createEntry(kind, { filters, aggregation })
 }
 
 const parseJSONParam = (raw: string | null): unknown => {
@@ -120,9 +121,20 @@ export const readFilterQueryParams = (search = window.location.search) => {
     ? (rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[])
     : []
 
+  const droppedEvents = Array.isArray(rawEventFilters) ? rawEventFilters.length - eventFilters.length : 0
+  const droppedProps = Array.isArray(rawPropFilters) ? rawPropFilters.length - propFilters.length : 0
+
   const warnings: string[] = []
-  if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) warnings.push('event filters')
-  if (hasPf && params.get(PROP_FILTERS_PARAM) && propFilters.length === 0) warnings.push('property filters')
+  if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) {
+    warnings.push('event filters')
+  } else if (droppedEvents > 0) {
+    warnings.push(`${droppedEvents} event filter${droppedEvents === 1 ? '' : 's'}`)
+  }
+  if (hasPf && params.get(PROP_FILTERS_PARAM) && propFilters.length === 0) {
+    warnings.push('property filters')
+  } else if (droppedProps > 0) {
+    warnings.push(`${droppedProps} property filter${droppedProps === 1 ? '' : 's'}`)
+  }
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
@@ -158,7 +170,7 @@ export const writeFilterQueryParams = (
     setOrDelete(key, value.length > 0 ? JSON.stringify(value) : undefined)
   }
 
-  setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(e => ({ kind: e.kind, filters: e.filters, ...(e.aggregation !== undefined && { aggregation: e.aggregation }) })))
+  setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(serializeEntry))
   setJSONParam(PROP_FILTERS_PARAM, propFilters)
 
   setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)

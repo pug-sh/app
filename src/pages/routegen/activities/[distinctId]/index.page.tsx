@@ -154,8 +154,10 @@ const UserActivity = () => {
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
   useEffect(() => {
-    if (initialFilterState.parseWarning) toast.warning(initialFilterState.parseWarning)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire once on mount
+    if (initialFilterState.parseWarning) {
+      toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
@@ -255,7 +257,7 @@ const UserActivity = () => {
             </div>
             <EventFilterBar
               filtersAtom={eventFilters.filtersAtom}
-              events={schema?.events ?? []}
+              events={schema?.events}
               schema={schema}
               schemaError={schemaError}
             />

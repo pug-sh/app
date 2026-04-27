@@ -13,10 +13,14 @@ import type { PrimitiveAtom } from 'jotai'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { memo, useCallback, useEffect, useState } from 'react'
-import { generateEntryId } from '@/hooks/use-event-filters'
-import type { EventFilterEntry } from '@/hooks/use-event-filters'
+import { memo, startTransition, useCallback, useEffect, useState } from 'react'
+import { createEntry } from '@/hooks/use-event-filters'
+import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
+
+// Stable empty array; passed to memoized children when events haven't loaded so
+// their props identity stays constant across renders.
+const EMPTY_EVENTS: EventNameMeta[] = []
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -328,30 +332,29 @@ const EventPopoverList = ({
       <CommandList>
         <CommandEmpty className="py-4 text-xs">{getEmptyMessage()}</CommandEmpty>
         <CommandGroup>
-          {[...events]
-            .sort((a, b) => Number(b.count - a.count))
-            .map(ev => {
-              const colors = getSeriesColor(ev.name)
-              const customColor = getEventColor?.(ev.name)
-              return (
-                <CommandItem
-                  key={ev.name}
-                  value={ev.name}
-                  onSelect={() => onSelect(ev.name)}
-                  data-checked={value === ev.name}
-                  className="text-xs gap-1.5 py-1.5"
-                >
-                  <span
-                    className="w-1 h-1 rounded-full shrink-0"
-                    style={{ backgroundColor: customColor ?? colors.dot }}
-                  />
-                  <span className="flex-1 truncate">{ev.name}</span>
-                  <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                    {compactNumber(ev.count)}
-                  </span>
-                </CommandItem>
-              )
-            })}
+          {/* Backend orders by count DESC; do not re-sort client-side. */}
+          {events.map(ev => {
+            const colors = getSeriesColor(ev.name)
+            const customColor = getEventColor?.(ev.name)
+            return (
+              <CommandItem
+                key={ev.name}
+                value={ev.name}
+                onSelect={() => onSelect(ev.name)}
+                data-checked={value === ev.name}
+                className="text-xs gap-1.5 py-1.5"
+              >
+                <span
+                  className="w-1 h-1 rounded-full shrink-0"
+                  style={{ backgroundColor: customColor ?? colors.dot }}
+                />
+                <span className="flex-1 truncate">{ev.name}</span>
+                <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                  {compactNumber(ev.count)}
+                </span>
+              </CommandItem>
+            )
+          })}
         </CommandGroup>
       </CommandList>
     </Command>
@@ -396,8 +399,8 @@ export const EventChip = ({
             schemaError={schemaError}
             getEventColor={getEventColor}
             onSelect={name => {
-              onChange(name)
               setOpen(false)
+              startTransition(() => onChange(name))
             }}
           />
         </PopoverContent>
@@ -420,8 +423,8 @@ export const EventChip = ({
             schemaError={schemaError}
             getEventColor={getEventColor}
             onSelect={name => {
-              onChange(name)
               setOpen(false)
+              startTransition(() => onChange(name))
             }}
           />
         </PopoverContent>
@@ -571,61 +574,56 @@ export const FilterBuilder = ({
               <CommandEmpty className="py-4 text-xs">
                 {schemaError ? 'Failed to load' : schema ? 'No properties' : 'Loading...'}
               </CommandEmpty>
+              {/* Backend orders property keys by count DESC; do not re-sort client-side. */}
               {hasSystem && (
                 <CommandGroup heading="System">
-                  {[...schema.autoPropertyKeys]
-                    .sort((a, b) => Number(b.count - a.count))
-                    .map(pk => (
-                      <CommandItem
-                        key={pk.name}
-                        value={pk.name}
-                        onSelect={() => pickProperty(pk.name, PropertySource.AUTO)}
-                        className="text-xs py-1.5"
-                      >
-                        <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                        <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                          {compactNumber(pk.count)}
-                        </span>
-                      </CommandItem>
-                    ))}
+                  {schema.autoPropertyKeys.map(pk => (
+                    <CommandItem
+                      key={pk.name}
+                      value={pk.name}
+                      onSelect={() => pickProperty(pk.name, PropertySource.AUTO)}
+                      className="text-xs py-1.5"
+                    >
+                      <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                        {compactNumber(pk.count)}
+                      </span>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               )}
               {hasCustom && (
                 <CommandGroup heading="Custom">
-                  {[...schema.customPropertyKeys]
-                    .sort((a, b) => Number(b.count - a.count))
-                    .map(pk => (
-                      <CommandItem
-                        key={pk.name}
-                        value={pk.name}
-                        onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)}
-                        className="text-xs py-1.5"
-                      >
-                        <span className="truncate">{pk.name}</span>
-                        <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                          {compactNumber(pk.count)}
-                        </span>
-                      </CommandItem>
-                    ))}
+                  {schema.customPropertyKeys.map(pk => (
+                    <CommandItem
+                      key={pk.name}
+                      value={pk.name}
+                      onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)}
+                      className="text-xs py-1.5"
+                    >
+                      <span className="truncate">{pk.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                        {compactNumber(pk.count)}
+                      </span>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               )}
               {hasProfile && (
                 <CommandGroup heading="Profile">
-                  {[...schema.profilePropertyKeys]
-                    .sort((a, b) => Number(b.count - a.count))
-                    .map(pk => (
-                      <CommandItem
-                        key={pk.name}
-                        value={pk.name}
-                        onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)}
-                        className="text-xs py-1.5"
-                      >
-                        <span className="truncate">{pk.name}</span>
-                        <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                          {compactNumber(pk.count)}
-                        </span>
-                      </CommandItem>
-                    ))}
+                  {schema.profilePropertyKeys.map(pk => (
+                    <CommandItem
+                      key={pk.name}
+                      value={pk.name}
+                      onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)}
+                      className="text-xs py-1.5"
+                    >
+                      <span className="truncate">{pk.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                        {compactNumber(pk.count)}
+                      </span>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               )}
             </CommandList>
@@ -824,116 +822,141 @@ export const FilterChip = ({
 
 const SERIES_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
-export const EventQueryRow = memo(({
-  filtersAtom,
-  entry,
-  events,
-  schema,
-  schemaError,
-  letter,
-  color,
-  renderExtra,
-  getEventColor,
-}: {
-  filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-  entry: EventFilterEntry
-  events: EventNameMeta[]
-  schema: GetFilterSchemaResponse | null
-  schemaError: string | null
-  letter?: string
-  color?: string
-  renderExtra?: (entryId: string) => React.ReactNode
-  getEventColor?: (eventName: string) => string
-}) => {
-  const setEntries = useSetAtom(filtersAtom)
-  const { schema: scopedSchema, schemaError: scopedSchemaError, retry: retryScopedSchema } = useScopedSchema(entry.kind)
-  const resolvedSchema = entry.kind ? scopedSchema : schema
-  const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
-  const { id: entryId } = entry
+export const EventQueryRow = memo(
+  ({
+    filtersAtom,
+    entry,
+    events,
+    schema,
+    schemaError,
+    letter,
+    color,
+    renderExtra,
+    getEventColor,
+  }: {
+    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+    entry: EventFilterEntry
+    events: EventNameMeta[]
+    schema: GetFilterSchemaResponse | null
+    schemaError: string | null
+    letter?: string
+    color?: string
+    renderExtra?: (entryId: EntryId) => React.ReactNode
+    getEventColor?: (eventName: string) => string
+  }) => {
+    const setEntries = useSetAtom(filtersAtom)
+    const {
+      schema: scopedSchema,
+      schemaError: scopedSchemaError,
+      retry: retryScopedSchema,
+    } = useScopedSchema(entry.kind)
+    const resolvedSchema = entry.kind ? scopedSchema : schema
+    const resolvedSchemaError = entry.kind ? scopedSchemaError : schemaError
+    const { id: entryId } = entry
 
-  const onUpdateKind = useCallback((kind: string) => {
-    const trimmed = kind.trim()
-    if (!trimmed) {
+    const onUpdateKind = useCallback(
+      (kind: string) => {
+        const trimmed = kind.trim()
+        if (!trimmed) {
+          setEntries(prev => prev.filter(e => e.id !== entryId))
+        } else {
+          setEntries(prev => prev.map(e => (e.id === entryId ? { ...e, kind: trimmed, filters: [] } : e)))
+        }
+      },
+      [entryId, setEntries]
+    )
+
+    const onRemove = useCallback(() => {
       setEntries(prev => prev.filter(e => e.id !== entryId))
-    } else {
-      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, kind: trimmed, filters: [] } : e))
-    }
-  }, [entryId, setEntries])
+    }, [entryId, setEntries])
 
-  const onRemove = useCallback(() => {
-    setEntries(prev => prev.filter(e => e.id !== entryId))
-  }, [entryId, setEntries])
+    const onAddFilter = useCallback(
+      (filter: ActiveFilter) => {
+        setEntries(prev => prev.map(e => (e.id === entryId ? { ...e, filters: [...e.filters, filter] } : e)))
+      },
+      [entryId, setEntries]
+    )
 
-  const onAddFilter = useCallback((filter: ActiveFilter) => {
-    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: [...e.filters, filter] } : e))
-  }, [entryId, setEntries])
+    const onRemoveFilter = useCallback(
+      (filterIdx: number) => {
+        setEntries(prev =>
+          prev.map(e => (e.id === entryId ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
+        )
+      },
+      [entryId, setEntries]
+    )
 
-  const onRemoveFilter = useCallback((filterIdx: number) => {
-    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
-  }, [entryId, setEntries])
+    const onUpdateFilter = useCallback(
+      (filterIdx: number, filter: ActiveFilter) => {
+        setEntries(prev =>
+          prev.map(e =>
+            e.id === entryId ? { ...e, filters: e.filters.map((f, fi) => (fi === filterIdx ? filter : f)) } : e
+          )
+        )
+      },
+      [entryId, setEntries]
+    )
 
-  const onUpdateFilter = useCallback((filterIdx: number, filter: ActiveFilter) => {
-    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, filters: e.filters.map((f, fi) => fi === filterIdx ? filter : f) } : e))
-  }, [entryId, setEntries])
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1">
-        {letter && (
-          <span className="flex items-center gap-1.5">
-            {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
-            <span className="text-[10px] font-semibold text-muted-foreground w-3">{letter}</span>
-          </span>
-        )}
-        <EventChip
-          value={entry.kind}
-          onChange={onUpdateKind}
-          events={events}
-          schemaError={resolvedSchemaError}
-          color={color}
-          getEventColor={getEventColor}
-        />
-        {entry.kind && (
-          <>
-            {entry.filters.map((f, fi) => (
-              <FilterChip
-                key={fi}
-                filter={f}
+    return (
+      <div className="flex items-center gap-2">
+        <div className="inline-flex min-w-0 items-center gap-2 flex-wrap rounded-md border border-border/60 bg-muted/20 px-2 py-1">
+          {letter && (
+            <span className="flex items-center gap-1.5">
+              {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
+              <span className="text-[10px] font-semibold text-muted-foreground w-3">{letter}</span>
+            </span>
+          )}
+          <EventChip
+            value={entry.kind}
+            onChange={onUpdateKind}
+            events={events}
+            schemaError={resolvedSchemaError}
+            color={color}
+            getEventColor={getEventColor}
+          />
+          {entry.kind && (
+            <>
+              {entry.filters.map((f, fi) => (
+                <FilterChip
+                  key={fi}
+                  filter={f}
+                  schema={resolvedSchema}
+                  kindFilter={entry.kind}
+                  onRemove={() => onRemoveFilter(fi)}
+                  onUpdate={next => onUpdateFilter(fi, next)}
+                />
+              ))}
+              <FilterBuilder
                 schema={resolvedSchema}
+                schemaError={resolvedSchemaError}
+                onAdd={onAddFilter}
                 kindFilter={entry.kind}
-                onRemove={() => onRemoveFilter(fi)}
-                onUpdate={next => onUpdateFilter(fi, next)}
               />
-            ))}
-            <FilterBuilder
-              schema={resolvedSchema}
-              schemaError={resolvedSchemaError}
-              onAdd={onAddFilter}
-              kindFilter={entry.kind}
-            />
-            {scopedSchemaError && (
-              <button
-                type="button"
-                onClick={retryScopedSchema}
-                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                retry schema
-              </button>
-            )}
-            {renderExtra?.(entry.id)}
-          </>
-        )}
+              {scopedSchemaError && (
+                <button
+                  type="button"
+                  onClick={retryScopedSchema}
+                  title={scopedSchemaError}
+                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  retry schema
+                </button>
+              )}
+              {renderExtra?.(entry.id)}
+            </>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+        >
+          <X className="w-3 h-3" />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
-      >
-        <X className="w-3 h-3" />
-      </button>
-    </div>
-  )
-})
+    )
+  }
+)
 
 // ── Event Filter Bar ─────────────────────────────────────────────────────────
 
@@ -949,22 +972,27 @@ export const EventFilterBar = ({
   getEventColor,
 }: {
   filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-  events: EventNameMeta[]
+  events?: EventNameMeta[]
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   showLetters?: boolean
   seriesColors?: { dot: string }[]
-  renderRowExtra?: (entryId: string) => React.ReactNode
+  renderRowExtra?: (entryId: EntryId) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
 }) => {
   const [entries, setEntries] = useAtom(filtersAtom)
+  // Stable identity when events haven't loaded; keeps memoized children from churning.
+  const safeEvents = events ?? EMPTY_EVENTS
 
-  const addEvent = useCallback((kind: string) => {
-    const trimmed = kind.trim()
-    if (!trimmed) return
-    setEntries(prev => [...prev, { id: generateEntryId(), kind: trimmed, filters: [] }])
-  }, [setEntries])
+  const addEvent = useCallback(
+    (kind: string) => {
+      const trimmed = kind.trim()
+      if (!trimmed) return
+      setEntries(prev => [...prev, createEntry(trimmed)])
+    },
+    [setEntries]
+  )
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -973,7 +1001,7 @@ export const EventFilterBar = ({
           key={entry.id}
           filtersAtom={filtersAtom}
           entry={entry}
-          events={events}
+          events={safeEvents}
           schema={schema}
           schemaError={schemaError}
           letter={showLetters ? SERIES_LETTERS[i] : undefined}
@@ -990,7 +1018,7 @@ export const EventFilterBar = ({
             onChange={kind => {
               if (kind) addEvent(kind)
             }}
-            events={events}
+            events={safeEvents}
             schemaError={schemaError}
             getEventColor={getEventColor}
           />
