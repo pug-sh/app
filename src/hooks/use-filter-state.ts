@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 
-export const toProtoFilters = (filters: ActiveFilter[]) =>
+export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
   filters.map(f => {
     switch (f.kind) {
       case 'multi':
