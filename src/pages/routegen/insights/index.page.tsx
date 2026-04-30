@@ -1,8 +1,13 @@
-import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  Granularity,
+  InsightType,
+  type FunnelSeries,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -13,7 +18,12 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import {
+  BREAKDOWN_MAX,
+  BREAKDOWN_RESPONSE_LIMIT,
+  readFilterQueryParams,
+  writeFilterQueryParams,
+} from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -31,11 +41,35 @@ import {
   BarChart,
   type ChartPoint,
   DataTable,
+  FunnelBreakdownView,
   FunnelChart,
   LineChart,
   RetentionCohort,
   SummaryStats,
 } from './charts'
+
+// ── Module-level helpers ─────────────────────────────────────────────────────
+
+// Pads steps to the kindOrder skeleton so all breakdown series align by index;
+// missing kinds → count=0.
+const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[]) => {
+  const byKind = new Map(steps.map(s => [s.eventKind, Number(s.total) || 0]))
+  return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
+}
+
+const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
+  Object.values(breakdown).join(' / ') || fallback
+
+// Disambiguates colliding labels by suffixing (2), (3)… so distinct breakdown
+// series don't share a label or, downstream, a getSeriesColor() output.
+const disambiguateLabels = (labels: string[]) => {
+  const seen = new Map<string, number>()
+  return labels.map(label => {
+    const count = (seen.get(label) ?? 0) + 1
+    seen.set(label, count)
+    return count > 1 ? `${label} (${count})` : label
+  })
+}
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,7 +95,6 @@ const INSIGHT_TYPES = [
 const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
 type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
-
 const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
   { label: 'Area', value: 'area' },
@@ -194,6 +227,13 @@ const Insights = () => {
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
+  const addBreakdown = (prop: string) =>
+    setBreakdowns(prev => {
+      if (prev.includes(prop) || prev.length >= BREAKDOWN_MAX) return prev
+      return [...prev, prop]
+    })
+  const removeBreakdown = (prop: string) => setBreakdowns(prev => prev.filter(p => p !== prop))
 
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
@@ -215,8 +255,8 @@ const Insights = () => {
   }, [project, fetchSchema])
 
   useEffect(() => {
-    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange })
-  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange])
+    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange, breakdowns })
+  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
 
   const validEntries = eventFilters.validEntries
 
@@ -226,6 +266,7 @@ const Insights = () => {
     insightType,
     granularity,
     propFilters,
+    breakdowns,
   })
 
   const {
@@ -253,6 +294,8 @@ const Insights = () => {
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
+          breakdowns: breakdowns.map(property => ({ property })),
+          breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
         },
         { headers }
       )
@@ -284,27 +327,31 @@ const Insights = () => {
     if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
   }, [emptySeriesResult])
 
-  const retentionCohorts = useMemo(() => {
-    if (result.case !== 'retention' || result.value.series.length === 0) return EMPTY_ARRAY
-    return result.value.series[0].cohorts
-  }, [result])
-  const funnelSteps = useMemo(() => {
-    if (result.case !== 'funnel' || result.value.series.length === 0) return EMPTY_ARRAY
-    const kindEntries = eventFilters.validEntries
-    return [...result.value.series[0].steps]
-      .sort((a, b) => {
-        const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
-        const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
-        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
-      })
-      .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
-  }, [result, eventFilters.validEntries])
+  const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : EMPTY_ARRAY), [result])
+  const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY, [retentionSeriesList])
+  const kindOrder = useMemo(() => eventFilters.validEntries.map(e => e.kind), [eventFilters.validEntries])
+  const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
+  const funnelSeriesData = useMemo(() => {
+    const labels = disambiguateLabels(funnelSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`)))
+    return funnelSeriesList.map((series, si) => ({
+      label: labels[si],
+      steps: sortFunnelSteps(series.steps, kindOrder),
+      color: getSeriesColor(labels[si], si).dot,
+    }))
+  }, [funnelSeriesList, kindOrder])
+  const retentionLabels = useMemo(
+    () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
+    [retentionSeriesList]
+  )
 
   const seriesNames = useMemo(
     () =>
       result.case === 'retention'
         ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
-        : trendSeries.map((s, i) => s.eventKind || `series ${i + 1}`),
+        : trendSeries.map((s, i) => {
+            const bd = breakdownLabel(s.breakdown, '')
+            return bd ? `${s.eventKind} · ${bd}` : s.eventKind || `Series ${i + 1}`
+          }),
     [result.case, trendSeries, retentionCohorts]
   )
   const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
@@ -332,9 +379,11 @@ const Insights = () => {
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTimeSeriesInsight = isTrends || isRetention
-  const hasFunnelData = useMemo(() => funnelSteps.some(step => step.count > 0), [funnelSteps])
+  const hasFunnelData = useMemo(
+    () => funnelSeriesData.some(s => s.steps.some(step => step.count > 0)),
+    [funnelSeriesData]
+  )
   const allZero = useMemo(() => chartData.every(d => d.values.every(v => v === 0)), [chartData])
-  const funnelSeriesColors = useMemo(() => funnelSteps.map((s, i) => getSeriesColor(s.name, i)), [funnelSteps])
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
@@ -396,18 +445,65 @@ const Insights = () => {
     )
   }
 
-  const renderFunnelContent = () => {
-    if (funnelSteps.length === 0) return renderLoadingEmptyState()
+  const renderTruncationNotice = (count: number) => {
+    if (breakdowns.length === 0 || count < BREAKDOWN_RESPONSE_LIMIT) return null
+    return (
+      <p className="text-[11px] text-muted-foreground mt-2">
+        Showing top {BREAKDOWN_RESPONSE_LIMIT} — additional breakdown values may be hidden.
+      </p>
+    )
+  }
 
-    if (hasFunnelData) {
-      return <FunnelChart steps={funnelSteps} seriesColors={funnelSeriesColors} />
+  const renderFunnelContent = () => {
+    if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
+
+    if (!hasFunnelData) {
+      return (
+        <div className="flex items-center justify-center h-48 text-muted-foreground">
+          <p className="text-sm">No events recorded in this period</p>
+        </div>
+      )
     }
 
-    return (
-      <div className="flex items-center justify-center h-48 text-muted-foreground">
-        <p className="text-sm">No events recorded in this period</p>
-      </div>
-    )
+    if (breakdowns.length > 0) {
+      return (
+        <>
+          <FunnelBreakdownView series={funnelSeriesData} />
+          {renderTruncationNotice(funnelSeriesData.length)}
+        </>
+      )
+    }
+
+    return <FunnelChart series={funnelSeriesData} />
+  }
+
+  const renderRetentionContent = () => {
+    if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
+
+    if (breakdowns.length > 0) {
+      return (
+        <div className="space-y-6 mt-2">
+          {retentionSeriesList.map((series, si) => {
+            const cohortColors = series.cohorts.map((c, ci) => getSeriesColor(c.cohort || `Cohort ${ci + 1}`, ci))
+            return (
+              <div key={retentionLabels[si] ?? si}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {retentionLabels[si]}
+                  </span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
+              </div>
+            )
+          })}
+          {renderTruncationNotice(retentionSeriesList.length)}
+        </div>
+      )
+    }
+
+    if (retentionCohorts.length === 0) return renderLoadingEmptyState()
+    return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
   }
 
   const renderMainContent = () => {
@@ -444,11 +540,10 @@ const Insights = () => {
       )
     }
 
-    if (isRetention && retentionCohorts.length > 0) {
-      return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
-    }
+    if (isRetention) return renderRetentionContent()
+    if (!isTrends) return renderFunnelContent()
 
-    if (isTrends && chartData.length > 0) {
+    if (chartData.length > 0) {
       return (
         <div>
           <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
@@ -456,8 +551,6 @@ const Insights = () => {
         </div>
       )
     }
-
-    if (!isTrends) return renderFunnelContent()
 
     return renderLoadingEmptyState()
   }
@@ -527,7 +620,6 @@ const Insights = () => {
           )}
         </div>
 
-        {/* Global filters */}
         <div className="flex flex-wrap items-center gap-2">
           {propFilters.map((f, i) => (
             <FilterChip
@@ -539,6 +631,18 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+          {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
+          {breakdowns.map(prop => (
+            <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />
+          ))}
+          <BreakdownBuilder
+            schema={globalSchema}
+            schemaError={globalSchemaError}
+            breakdowns={breakdowns}
+            onAdd={addBreakdown}
+            onRemove={removeBreakdown}
+            disabled={breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined}
+          />
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
       </div>

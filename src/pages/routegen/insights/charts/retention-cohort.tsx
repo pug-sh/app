@@ -102,12 +102,11 @@ export const RetentionCohort = ({
               </td>
               {Array.from({ length: columnCount }).map((_, ci) => {
                 const value = row.values[ci]
-                const hasValue = typeof value === 'number'
+                const hasValue = value !== undefined
                 const cellDate = cohorts[ri]?.points[ci]?.time
                 const cellDateParsed = cellDate ? tsToDate(cellDate) : null
-                const title = hasValue
-                  ? `${row.label} · ${cellDateParsed ? formatTooltipDate(cellDateParsed, granularity) : '\u2014'} · ${value.toFixed(1)}%`
-                  : `${row.label} · N/A`
+                const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity) : '\u2014'
+                const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
                 return (
                   <td key={ci} className="py-1.5 px-1.5">
                     <div
