@@ -18,7 +18,12 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import {
+  BREAKDOWN_MAX,
+  BREAKDOWN_RESPONSE_LIMIT,
+  readFilterQueryParams,
+  writeFilterQueryParams,
+} from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -45,19 +50,26 @@ import {
 
 // ── Module-level helpers ─────────────────────────────────────────────────────
 
-const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[]) =>
-  [...steps]
-    .sort((a, b) => {
-      const ai = kindOrder.indexOf(a.eventKind)
-      const bi = kindOrder.indexOf(b.eventKind)
-      const orderA = ai === -1 ? kindOrder.length : ai
-      const orderB = bi === -1 ? kindOrder.length : bi
-      return orderA - orderB
-    })
-    .map((s, i) => ({ name: s.eventKind || `Step ${i + 1}`, count: Number(s.total) || 0 }))
+// Pads steps to the kindOrder skeleton so all breakdown series align by index;
+// missing kinds → count=0.
+const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[]) => {
+  const byKind = new Map(steps.map(s => [s.eventKind, Number(s.total) || 0]))
+  return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
+}
 
 const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
   Object.values(breakdown).join(' / ') || fallback
+
+// Disambiguates colliding labels by suffixing (2), (3)… so distinct breakdown
+// series don't share a label or, downstream, a getSeriesColor() output.
+const disambiguateLabels = (labels: string[]) => {
+  const seen = new Map<string, number>()
+  return labels.map(label => {
+    const count = (seen.get(label) ?? 0) + 1
+    seen.set(label, count)
+    return count > 1 ? `${label} (${count})` : label
+  })
+}
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -215,13 +227,13 @@ const Insights = () => {
   )
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
-  const [breakdowns, setBreakdowns] = useState<string[]>(() => initialFilterState.breakdowns)
+  const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const addBreakdown = (prop: string) =>
     setBreakdowns(prev => {
-      if (prev.includes(prop) || prev.length >= 5) return prev
+      if (prev.includes(prop) || prev.length >= BREAKDOWN_MAX) return prev
       return [...prev, prop]
     })
-  const removeBreakdown = (i: number) => setBreakdowns(prev => prev.filter((_, idx) => idx !== i))
+  const removeBreakdown = (prop: string) => setBreakdowns(prev => prev.filter(p => p !== prop))
 
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
@@ -283,7 +295,7 @@ const Insights = () => {
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
           breakdowns: breakdowns.map(property => ({ property })),
-          breakdownLimit: breakdowns.length > 0 ? 25 : 0,
+          breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
         },
         { headers }
       )
@@ -319,13 +331,17 @@ const Insights = () => {
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY, [retentionSeriesList])
   const kindOrder = useMemo(() => eventFilters.validEntries.map(e => e.kind), [eventFilters.validEntries])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
-  const funnelSeriesData = useMemo(
-    () =>
-      funnelSeriesList.map((series, si) => {
-        const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
-        return { label, steps: sortFunnelSteps(series.steps, kindOrder), color: getSeriesColor(label, si).dot }
-      }),
-    [funnelSeriesList, kindOrder]
+  const funnelSeriesData = useMemo(() => {
+    const labels = disambiguateLabels(funnelSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`)))
+    return funnelSeriesList.map((series, si) => ({
+      label: labels[si],
+      steps: sortFunnelSteps(series.steps, kindOrder),
+      color: getSeriesColor(labels[si], si).dot,
+    }))
+  }, [funnelSeriesList, kindOrder])
+  const retentionLabels = useMemo(
+    () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
+    [retentionSeriesList]
   )
 
   const seriesNames = useMemo(
@@ -429,6 +445,15 @@ const Insights = () => {
     )
   }
 
+  const renderTruncationNotice = (count: number) => {
+    if (breakdowns.length === 0 || count < BREAKDOWN_RESPONSE_LIMIT) return null
+    return (
+      <p className="text-[11px] text-muted-foreground mt-2">
+        Showing top {BREAKDOWN_RESPONSE_LIMIT} — additional breakdown values may be hidden.
+      </p>
+    )
+  }
+
   const renderFunnelContent = () => {
     if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
 
@@ -441,7 +466,12 @@ const Insights = () => {
     }
 
     if (breakdowns.length > 0) {
-      return <FunnelBreakdownView series={funnelSeriesData} />
+      return (
+        <>
+          <FunnelBreakdownView series={funnelSeriesData} />
+          {renderTruncationNotice(funnelSeriesData.length)}
+        </>
+      )
     }
 
     return <FunnelChart series={funnelSeriesData} />
@@ -454,18 +484,20 @@ const Insights = () => {
       return (
         <div className="space-y-6 mt-2">
           {retentionSeriesList.map((series, si) => {
-            const label = breakdownLabel(series.breakdown, `Series ${si + 1}`)
             const cohortColors = series.cohorts.map((c, ci) => getSeriesColor(c.cohort || `Cohort ${ci + 1}`, ci))
             return (
-              <div key={si}>
+              <div key={retentionLabels[si] ?? si}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{label}</span>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {retentionLabels[si]}
+                  </span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
                 <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
               </div>
             )
           })}
+          {renderTruncationNotice(retentionSeriesList.length)}
         </div>
       )
     }
@@ -588,7 +620,6 @@ const Insights = () => {
           )}
         </div>
 
-        {/* Global filters + breakdown */}
         <div className="flex flex-wrap items-center gap-2">
           {propFilters.map((f, i) => (
             <FilterChip
@@ -601,17 +632,17 @@ const Insights = () => {
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
-          {breakdowns.map((prop, i) => (
-            <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(i)} />
+          {breakdowns.map(prop => (
+            <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />
           ))}
-          {breakdowns.length < 5 && (
-            <BreakdownBuilder
-              schema={globalSchema}
-              schemaError={globalSchemaError}
-              breakdowns={breakdowns}
-              onAdd={addBreakdown}
-            />
-          )}
+          <BreakdownBuilder
+            schema={globalSchema}
+            schemaError={globalSchemaError}
+            breakdowns={breakdowns}
+            onAdd={addBreakdown}
+            onRemove={removeBreakdown}
+            disabled={breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined}
+          />
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
       </div>

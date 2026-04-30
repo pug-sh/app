@@ -13,7 +13,7 @@ import type { PrimitiveAtom } from 'jotai'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { memo, startTransition, useCallback, useEffect, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { createEntry } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
@@ -316,19 +316,25 @@ const SingleValueEditor = ({
 
 // ── Property Picker List (shared) ───────────────────────────────────────────
 
+// Discriminated union: `selected` exists iff mode is 'multi-select', so the type
+// forbids the "passed selected in pick mode" / "forgot selected in multi-select"
+// invalid states the previous optional `selected?` allowed.
+type PropertyPickerMode = { kind: 'pick' } | { kind: 'multi-select'; selected: ReadonlySet<string> }
+
 const PropertyPickerList = ({
   schema,
   schemaError,
   placeholder,
-  selected,
+  mode,
   onSelect,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   placeholder: string
-  selected?: Set<string>
+  mode: PropertyPickerMode
   onSelect: (name: string, source: PropertySource) => void
 }) => {
+  const selected = mode.kind === 'multi-select' ? mode.selected : null
   const hasSystem = schema && schema.autoPropertyKeys.length > 0
   const hasCustom = schema && schema.customPropertyKeys.length > 0
   const hasProfile = schema && schema.profilePropertyKeys.length > 0
@@ -338,6 +344,7 @@ const PropertyPickerList = ({
       <CommandInput placeholder={placeholder} className="text-xs" />
       <CommandList>
         <CommandEmpty className="py-4 text-xs">{getSchemaEmptyMessage(schema, schemaError)}</CommandEmpty>
+        {/* Backend orders property keys by count DESC; do not re-sort client-side. */}
         {hasSystem && (
           <CommandGroup heading="System">
             {schema.autoPropertyKeys.map(pk => (
@@ -663,6 +670,7 @@ export const FilterBuilder = ({
             schema={schema}
             schemaError={schemaError}
             placeholder="Filter by property..."
+            mode={{ kind: 'pick' }}
             onSelect={(name, source) => pickProperty(name, source)}
           />
         )}
@@ -876,14 +884,33 @@ export const BreakdownBuilder = ({
   schemaError,
   breakdowns,
   onAdd,
+  onRemove,
+  disabled,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
-  breakdowns: string[]
+  breakdowns: ReadonlyArray<string>
   onAdd: (prop: string) => void
+  onRemove: (prop: string) => void
+  disabled?: { reason: string }
 }) => {
   const [open, setOpen] = useState(false)
-  const existing = new Set(breakdowns)
+  const existing = useMemo(() => new Set(breakdowns), [breakdowns])
+
+  if (disabled) {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
+          'text-muted-foreground/50 cursor-not-allowed'
+        )}
+        title={disabled.reason}
+      >
+        <Plus className="w-3 h-3" />
+        Breakdown
+      </span>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -902,9 +929,11 @@ export const BreakdownBuilder = ({
           schema={schema}
           schemaError={schemaError}
           placeholder="Break down by..."
-          selected={existing}
+          mode={{ kind: 'multi-select', selected: existing }}
           onSelect={name => {
-            if (!existing.has(name)) {
+            if (existing.has(name)) {
+              onRemove(name)
+            } else {
               onAdd(name)
               setOpen(false)
             }

@@ -106,9 +106,7 @@ export const RetentionCohort = ({
                 const cellDate = cohorts[ri]?.points[ci]?.time
                 const cellDateParsed = cellDate ? tsToDate(cellDate) : null
                 const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity) : '\u2014'
-                const title = hasValue
-                  ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%`
-                  : `${row.label} · N/A`
+                const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
                 return (
                   <td key={ci} className="py-1.5 px-1.5">
                     <div

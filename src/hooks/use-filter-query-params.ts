@@ -31,6 +31,9 @@ const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
 
+export const BREAKDOWN_MAX = 5
+export const BREAKDOWN_RESPONSE_LIMIT = 25
+
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
 const isInOperator = (operator: FilterOperator) => operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
 
@@ -114,6 +117,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
 
   const hasEf = params.has(EVENT_FILTERS_PARAM)
   const hasPf = params.has(PROP_FILTERS_PARAM)
+  const hasBd = params.has(BREAKDOWNS_PARAM)
 
   const rawBreakdowns = parseJSONParam(params.get(BREAKDOWNS_PARAM))
   const eventFilters = Array.isArray(rawEventFilters)
@@ -122,12 +126,14 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const propFilters = Array.isArray(rawPropFilters)
     ? (rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[])
     : []
-  const breakdowns = Array.isArray(rawBreakdowns)
+  const validBreakdowns = Array.isArray(rawBreakdowns)
     ? rawBreakdowns.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
     : []
+  const breakdowns = Array.from(new Set(validBreakdowns)).slice(0, BREAKDOWN_MAX)
 
   const droppedEvents = Array.isArray(rawEventFilters) ? rawEventFilters.length - eventFilters.length : 0
   const droppedProps = Array.isArray(rawPropFilters) ? rawPropFilters.length - propFilters.length : 0
+  const droppedBreakdowns = Array.isArray(rawBreakdowns) ? rawBreakdowns.length - breakdowns.length : 0
 
   const warnings: string[] = []
   if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) {
@@ -139,6 +145,13 @@ export const readFilterQueryParams = (search = window.location.search) => {
     warnings.push('property filters')
   } else if (droppedProps > 0) {
     warnings.push(`${droppedProps} property filter${droppedProps === 1 ? '' : 's'}`)
+  }
+  if (hasBd && params.get(BREAKDOWNS_PARAM) && breakdowns.length === 0 && validBreakdowns.length === 0) {
+    warnings.push('breakdowns')
+  } else if (droppedBreakdowns > 0) {
+    const capHit = new Set(validBreakdowns).size > BREAKDOWN_MAX
+    const suffix = capHit ? ` (max ${BREAKDOWN_MAX})` : ''
+    warnings.push(`${droppedBreakdowns} breakdown${droppedBreakdowns === 1 ? '' : 's'}${suffix}`)
   }
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
