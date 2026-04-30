@@ -28,43 +28,52 @@ export type ActiveFilter =
   | { property: string; operator: FilterOperator; kind: 'single'; value: string }
   | { property: string; operator: FilterOperator; kind: 'multi'; values: string[] }
   | { property: string; operator: FilterOperator; kind: 'presence' }
+  | { property: string; operator: FilterOperator; kind: 'range'; min: string; max: string }
 
 const OPERATORS: readonly {
   value: FilterOperator
   label: string
   symbol?: string
-  noValue?: boolean
-  multiValue?: true | 'two'
+  arity?: 'none' | 'list' | 'range'
 }[] = [
   { value: FilterOperator.EQUALS, label: 'equals', symbol: '=' },
   { value: FilterOperator.NOT_EQUALS, label: 'not equals', symbol: '≠' },
-  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', multiValue: true },
-  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', multiValue: true },
-  { value: FilterOperator.IN, label: 'in', symbol: '∈', multiValue: true },
-  { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', multiValue: true },
-  { value: FilterOperator.IS_SET, label: 'is set', symbol: '✓', noValue: true },
-  { value: FilterOperator.IS_NOT_SET, label: 'is not set', symbol: '✗', noValue: true },
+  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', arity: 'list' },
+  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', arity: 'list' },
+  { value: FilterOperator.IN, label: 'in', symbol: '∈', arity: 'list' },
+  { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', arity: 'list' },
+  { value: FilterOperator.IS_SET, label: 'is set', symbol: '✓', arity: 'none' },
+  { value: FilterOperator.IS_NOT_SET, label: 'is not set', symbol: '✗', arity: 'none' },
   { value: FilterOperator.GT, label: 'greater than', symbol: '>' },
   { value: FilterOperator.GTE, label: 'greater or equal', symbol: '≥' },
   { value: FilterOperator.LT, label: 'less than', symbol: '<' },
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
-  { value: FilterOperator.BETWEEN, label: 'between', symbol: '↔', multiValue: 'two' },
-  { value: FilterOperator.NOT_BETWEEN, label: 'not between', symbol: '↮', multiValue: 'two' },
+  { value: FilterOperator.BETWEEN, label: 'between', symbol: '↔', arity: 'range' },
+  { value: FilterOperator.NOT_BETWEEN, label: 'not between', symbol: '↮', arity: 'range' },
 ]
 
 const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
   const meta = OPERATORS.find(o => o.value === operator)
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
-  if (meta.noValue) return { property, operator, kind: 'presence' }
-  if (meta.multiValue) {
-    let values: string[]
-    if (Array.isArray(payload)) values = payload
-    else if (payload) values = [payload]
-    else values = []
-    return { property, operator, kind: 'multi', values }
+  switch (meta.arity) {
+    case 'none':
+      return { property, operator, kind: 'presence' }
+    case 'list': {
+      let values: string[]
+      if (Array.isArray(payload)) values = payload
+      else if (payload) values = [payload]
+      else values = []
+      return { property, operator, kind: 'multi', values }
+    }
+    case 'range': {
+      const [min = '', max = ''] = Array.isArray(payload) ? payload : []
+      return { property, operator, kind: 'range', min, max }
+    }
+    default: {
+      const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
+      return { property, operator, kind: 'single', value }
+    }
   }
-  const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
-  return { property, operator, kind: 'single', value }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -645,7 +654,7 @@ export const FilterBuilder = ({
   const pickOperator = (operator: FilterOperator) => {
     setOp(operator)
     const meta = OPERATORS.find(o => o.value === operator)
-    if (meta?.noValue) {
+    if (meta?.arity === 'none') {
       onAdd(createFilter(prop, operator))
       setOpen(false)
       reset()
@@ -657,11 +666,11 @@ export const FilterBuilder = ({
   }
 
   const commitFilter = () => {
-    if (opMeta?.multiValue === 'two') {
+    if (opMeta?.arity === 'range') {
       const [min, max] = vals
       if (!min?.trim() || !max?.trim()) return
       onAdd(createFilter(prop, op, [min.trim(), max.trim()]))
-    } else if (opMeta?.multiValue) {
+    } else if (opMeta?.arity === 'list') {
       if (vals.length === 0) return
       onAdd(createFilter(prop, op, vals))
     } else {
@@ -760,7 +769,7 @@ export const FilterBuilder = ({
           </Command>
         )}
 
-        {step === 'value' && opMeta?.multiValue === 'two' && (
+        {step === 'value' && opMeta?.arity === 'range' && (
           <BetweenValueEditor
             min={vals[0] ?? ''}
             max={vals[1] ?? ''}
@@ -771,7 +780,7 @@ export const FilterBuilder = ({
           />
         )}
 
-        {step === 'value' && opMeta?.multiValue === true && (
+        {step === 'value' && opMeta?.arity === 'list' && (
           <MultiValueEditor
             values={vals}
             onAdd={addMultiValues}
@@ -784,7 +793,7 @@ export const FilterBuilder = ({
           />
         )}
 
-        {step === 'value' && !opMeta?.multiValue && (
+        {step === 'value' && opMeta?.arity === undefined && (
           <SingleValueEditor
             value={val}
             onChange={setVal}
@@ -830,7 +839,7 @@ export const FilterChip = ({
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   const commitEdit = () => {
-    if (op?.multiValue === 'two') {
+    if (op?.arity === 'range') {
       const min = editInput.trim()
       const max = editInput2.trim()
       if (!min || !max) return
@@ -858,15 +867,17 @@ export const FilterChip = ({
       return
     }
     if (filter.kind === 'single') setEditInput(filter.value)
-    if (filter.kind === 'multi' && op?.multiValue === 'two') {
-      setEditInput(filter.values[0] ?? '')
-      setEditInput2(filter.values[1] ?? '')
+    if (filter.kind === 'range') {
+      setEditInput(filter.min)
+      setEditInput2(filter.max)
     }
   }
 
   let valueLabel: string | null = null
   if (filter.kind === 'multi') {
-    valueLabel = op?.multiValue === 'two' ? filter.values.join(' – ') : filter.values.join(', ')
+    valueLabel = filter.values.join(', ')
+  } else if (filter.kind === 'range') {
+    valueLabel = `${filter.min} – ${filter.max}`
   } else if (filter.kind === 'single') {
     valueLabel = filter.value
   }
@@ -885,7 +896,7 @@ export const FilterChip = ({
             </span>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-52 p-0">
-            {filter.kind === 'multi' && op?.multiValue === 'two' ? (
+            {filter.kind === 'range' ? (
               <BetweenValueEditor
                 min={editInput}
                 max={editInput2}

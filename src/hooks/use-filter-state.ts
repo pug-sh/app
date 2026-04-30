@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import type { ActiveFilter } from '@/components/event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 
 export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
   filters.map(f => {
     switch (f.kind) {
-      case 'multi': {
-        const isBetween = f.operator === FilterOperator.BETWEEN || f.operator === FilterOperator.NOT_BETWEEN
-        return { property: f.property, operator: f.operator, value: isBetween ? f.values[0] ?? '' : '', values: f.values }
-      }
+      case 'multi':
+        return { property: f.property, operator: f.operator, value: '', values: f.values }
+      case 'range':
+        return { property: f.property, operator: f.operator, value: '', values: [f.min, f.max] }
       case 'presence':
         return { property: f.property, operator: f.operator, value: '', values: [] }
       case 'single':
