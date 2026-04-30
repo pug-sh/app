@@ -31,6 +31,10 @@ const INSIGHT_TYPE_PARAM = 'it'
 const GRANULARITY_PARAM = 'gr'
 const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
+const BREAKDOWNS_PARAM = 'bd'
+
+export const BREAKDOWN_MAX = 5
+export const BREAKDOWN_RESPONSE_LIMIT = 25
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
 const isMultiValuesOperator = (operator: FilterOperator) =>
@@ -127,16 +131,23 @@ export const readFilterQueryParams = (search = window.location.search) => {
 
   const hasEf = params.has(EVENT_FILTERS_PARAM)
   const hasPf = params.has(PROP_FILTERS_PARAM)
+  const hasBd = params.has(BREAKDOWNS_PARAM)
 
+  const rawBreakdowns = parseJSONParam(params.get(BREAKDOWNS_PARAM))
   const eventFilters = Array.isArray(rawEventFilters)
     ? (rawEventFilters.map(parseEventFilterEntry).filter(Boolean) as EventFilterEntry[])
     : []
   const propFilters = Array.isArray(rawPropFilters)
     ? (rawPropFilters.map(parseActiveFilter).filter(Boolean) as ActiveFilter[])
     : []
+  const validBreakdowns = Array.isArray(rawBreakdowns)
+    ? rawBreakdowns.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : []
+  const breakdowns = Array.from(new Set(validBreakdowns)).slice(0, BREAKDOWN_MAX)
 
   const droppedEvents = Array.isArray(rawEventFilters) ? rawEventFilters.length - eventFilters.length : 0
   const droppedProps = Array.isArray(rawPropFilters) ? rawPropFilters.length - propFilters.length : 0
+  const droppedBreakdowns = Array.isArray(rawBreakdowns) ? rawBreakdowns.length - breakdowns.length : 0
 
   const warnings: string[] = []
   if (hasEf && params.get(EVENT_FILTERS_PARAM) && eventFilters.length === 0) {
@@ -149,6 +160,13 @@ export const readFilterQueryParams = (search = window.location.search) => {
   } else if (droppedProps > 0) {
     warnings.push(`${droppedProps} property filter${droppedProps === 1 ? '' : 's'}`)
   }
+  if (hasBd && params.get(BREAKDOWNS_PARAM) && breakdowns.length === 0 && validBreakdowns.length === 0) {
+    warnings.push('breakdowns')
+  } else if (droppedBreakdowns > 0) {
+    const capHit = new Set(validBreakdowns).size > BREAKDOWN_MAX
+    const suffix = capHit ? ` (max ${BREAKDOWN_MAX})` : ''
+    warnings.push(`${droppedBreakdowns} breakdown${droppedBreakdowns === 1 ? '' : 's'}${suffix}`)
+  }
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
@@ -158,7 +176,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
       ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }
       : undefined
 
-  return { eventFilters, propFilters, insightType, granularity, timeRange, parseWarning }
+  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, parseWarning }
 }
 
 export const writeFilterQueryParams = (
@@ -168,6 +186,7 @@ export const writeFilterQueryParams = (
     insightType?: InsightType
     granularity?: Granularity
     timeRange?: TimeRange
+    breakdowns?: string[]
   }
 ) => {
   const url = new URL(window.location.href)
@@ -186,6 +205,7 @@ export const writeFilterQueryParams = (
 
   setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(serializeEntry))
   setJSONParam(PROP_FILTERS_PARAM, propFilters)
+  setJSONParam(BREAKDOWNS_PARAM, opts?.breakdowns ?? [])
 
   setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
   setOrDelete(GRANULARITY_PARAM, opts?.granularity !== undefined ? String(opts.granularity) : undefined)

@@ -13,7 +13,7 @@ import type { PrimitiveAtom } from 'jotai'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { memo, startTransition, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEntry } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
@@ -57,7 +57,10 @@ const createFilter = (property: string, operator: FilterOperator, payload?: stri
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
   if (meta.noValue) return { property, operator, kind: 'presence' }
   if (meta.multiValue) {
-    const values = Array.isArray(payload) ? payload : payload ? [payload] : []
+    let values: string[]
+    if (Array.isArray(payload)) values = payload
+    else if (payload) values = [payload]
+    else values = []
     return { property, operator, kind: 'multi', values }
   }
   const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
@@ -87,6 +90,12 @@ const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
   if (!loaded) return 'Loading...'
   if (error) return 'Failed to load values'
   return 'No values'
+}
+
+const getSchemaEmptyMessage = (schema: GetFilterSchemaResponse | null, schemaError: string | null): string => {
+  if (schemaError) return 'Failed to load'
+  if (schema) return 'No properties'
+  return 'Loading...'
 }
 
 // ── Suggestions hook ────────────────────────────────────────────────────────
@@ -364,6 +373,99 @@ const BetweenValueEditor = ({
   )
 }
 
+// ── Property Picker List (shared) ───────────────────────────────────────────
+
+// Discriminated union: `selected` exists iff mode is 'multi-select', so the type
+// forbids the "passed selected in pick mode" / "forgot selected in multi-select"
+// invalid states the previous optional `selected?` allowed.
+type PropertyPickerMode = { kind: 'pick' } | { kind: 'multi-select'; selected: ReadonlySet<string> }
+
+const PropertyPickerList = ({
+  schema,
+  schemaError,
+  placeholder,
+  mode,
+  onSelect,
+}: {
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  placeholder: string
+  mode: PropertyPickerMode
+  onSelect: (name: string, source: PropertySource) => void
+}) => {
+  const selected = mode.kind === 'multi-select' ? mode.selected : null
+  const hasSystem = schema && schema.autoPropertyKeys.length > 0
+  const hasCustom = schema && schema.customPropertyKeys.length > 0
+  const hasProfile = schema && schema.profilePropertyKeys.length > 0
+
+  return (
+    <Command>
+      <CommandInput placeholder={placeholder} className="text-xs" />
+      <CommandList>
+        <CommandEmpty className="py-4 text-xs">{getSchemaEmptyMessage(schema, schemaError)}</CommandEmpty>
+        {/* Backend orders property keys by count DESC; do not re-sort client-side. */}
+        {hasSystem && (
+          <CommandGroup heading="System">
+            {schema.autoPropertyKeys.map(pk => (
+              <CommandItem
+                key={pk.name}
+                value={pk.name}
+                onSelect={() => onSelect(pk.name, PropertySource.AUTO)}
+                className="text-xs py-1.5"
+              >
+                {selected && (
+                  <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                )}
+                <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                  {compactNumber(pk.count)}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {hasCustom && (
+          <CommandGroup heading="Custom">
+            {schema.customPropertyKeys.map(pk => (
+              <CommandItem
+                key={pk.name}
+                value={pk.name}
+                onSelect={() => onSelect(pk.name, PropertySource.CUSTOM)}
+                className="text-xs py-1.5"
+              >
+                {selected && (
+                  <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                )}
+                <span className="truncate">{pk.name}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                  {compactNumber(pk.count)}
+                </span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+        {hasProfile && (
+          <CommandGroup heading="Profile">
+            {schema.profilePropertyKeys.map(pk => (
+              <CommandItem
+                key={pk.name}
+                value={pk.name}
+                onSelect={() => onSelect(pk.name, PropertySource.PROFILE)}
+                className="text-xs py-1.5"
+              >
+                {selected && (
+                  <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
+                )}
+                {pk.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+      </CommandList>
+    </Command>
+  )
+}
+
 // ── Event Picker ────────────────────────────────────────────────────────────
 
 const EventPopoverList = ({
@@ -581,10 +683,6 @@ export const FilterBuilder = ({
     if (!next) reset()
   }
 
-  const hasSystem = schema && schema.autoPropertyKeys.length > 0
-  const hasCustom = schema && schema.customPropertyKeys.length > 0
-  const hasProfile = schema && schema.profilePropertyKeys.length > 0
-
   const breadcrumb = (
     <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground">
       {step !== 'property' && (
@@ -631,66 +729,13 @@ export const FilterBuilder = ({
         {step !== 'property' && breadcrumb}
 
         {step === 'property' && (
-          <Command>
-            <CommandInput placeholder="Filter by property..." className="text-xs" />
-            <CommandList>
-              <CommandEmpty className="py-4 text-xs">
-                {schemaError ? 'Failed to load' : schema ? 'No properties' : 'Loading...'}
-              </CommandEmpty>
-              {/* Backend orders property keys by count DESC; do not re-sort client-side. */}
-              {hasSystem && (
-                <CommandGroup heading="System">
-                  {schema.autoPropertyKeys.map(pk => (
-                    <CommandItem
-                      key={pk.name}
-                      value={pk.name}
-                      onSelect={() => pickProperty(pk.name, PropertySource.AUTO)}
-                      className="text-xs py-1.5"
-                    >
-                      <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                        {compactNumber(pk.count)}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {hasCustom && (
-                <CommandGroup heading="Custom">
-                  {schema.customPropertyKeys.map(pk => (
-                    <CommandItem
-                      key={pk.name}
-                      value={pk.name}
-                      onSelect={() => pickProperty(pk.name, PropertySource.CUSTOM)}
-                      className="text-xs py-1.5"
-                    >
-                      <span className="truncate">{pk.name}</span>
-                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                        {compactNumber(pk.count)}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-              {hasProfile && (
-                <CommandGroup heading="Profile">
-                  {schema.profilePropertyKeys.map(pk => (
-                    <CommandItem
-                      key={pk.name}
-                      value={pk.name}
-                      onSelect={() => pickProperty(pk.name, PropertySource.PROFILE)}
-                      className="text-xs py-1.5"
-                    >
-                      <span className="truncate">{pk.name}</span>
-                      <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                        {compactNumber(pk.count)}
-                      </span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              )}
-            </CommandList>
-          </Command>
+          <PropertyPickerList
+            schema={schema}
+            schemaError={schemaError}
+            placeholder="Filter by property..."
+            mode={{ kind: 'pick' }}
+            onSelect={(name, source) => pickProperty(name, source)}
+          />
         )}
 
         {step === 'operator' && (
@@ -893,6 +938,87 @@ export const FilterChip = ({
         <X className="w-3 h-3" />
       </button>
     </span>
+  )
+}
+
+// ── Breakdown UI ─────────────────────────────────────────────────────────────
+
+export const BreakdownChip = ({ property, onRemove }: { property: string; onRemove: () => void }) => (
+  <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
+    <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">break by</span>
+    <span className="px-2 h-full flex items-center font-mono">{property}</span>
+    <button
+      type="button"
+      onClick={onRemove}
+      className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+    >
+      <X className="w-3 h-3" />
+    </button>
+  </span>
+)
+
+export const BreakdownBuilder = ({
+  schema,
+  schemaError,
+  breakdowns,
+  onAdd,
+  onRemove,
+  disabled,
+}: {
+  schema: GetFilterSchemaResponse | null
+  schemaError: string | null
+  breakdowns: ReadonlyArray<string>
+  onAdd: (prop: string) => void
+  onRemove: (prop: string) => void
+  disabled?: { reason: string }
+}) => {
+  const [open, setOpen] = useState(false)
+  const existing = useMemo(() => new Set(breakdowns), [breakdowns])
+
+  if (disabled) {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
+          'text-muted-foreground/50 cursor-not-allowed'
+        )}
+        title={disabled.reason}
+      >
+        <Plus className="w-3 h-3" />
+        Breakdown
+      </span>
+    )
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className={cn(
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+          'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
+          open && 'border-foreground/20 text-foreground'
+        )}
+      >
+        <Plus className="w-3 h-3" />
+        Breakdown
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-0">
+        <PropertyPickerList
+          schema={schema}
+          schemaError={schemaError}
+          placeholder="Break down by..."
+          mode={{ kind: 'multi-select', selected: existing }}
+          onSelect={name => {
+            if (existing.has(name)) {
+              onRemove(name)
+            } else {
+              onAdd(name)
+              setOpen(false)
+            }
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 
