@@ -7,6 +7,8 @@ export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
     switch (f.kind) {
       case 'multi':
         return { property: f.property, operator: f.operator, value: '', values: f.values }
+      case 'range':
+        return { property: f.property, operator: f.operator, value: '', values: [f.min, f.max] }
       case 'presence':
         return { property: f.property, operator: f.operator, value: '', values: [] }
       case 'single':

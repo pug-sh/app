@@ -6,3 +6,4 @@
 - [ ] Replace modals with something light and clean (match app design aesthetics)
 - [ ] Improve user profile page
 - [ ] Polish insights breakdowns UI/UX (clearer truncation cue, friendlier all-zero stat states, surface when backend ignored a breakdown property, dedicated loading state when breakdown changes)
+- [ ] Polish between/not-between filter UI/UX (inline numeric min ≤ max hint with Apply disabled when violated, friendlier protovalidate error surfacing for non-numeric values, consider type-aware input mode for known numeric properties)

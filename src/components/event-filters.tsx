@@ -13,7 +13,7 @@ import type { PrimitiveAtom } from 'jotai'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Check, ChevronRight, Plus, X } from 'lucide-react'
 import { getSeriesColor } from '@/lib/event-colors'
-import { memo, startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEntry } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
@@ -28,41 +28,52 @@ export type ActiveFilter =
   | { property: string; operator: FilterOperator; kind: 'single'; value: string }
   | { property: string; operator: FilterOperator; kind: 'multi'; values: string[] }
   | { property: string; operator: FilterOperator; kind: 'presence' }
+  | { property: string; operator: FilterOperator; kind: 'range'; min: string; max: string }
 
 const OPERATORS: readonly {
   value: FilterOperator
   label: string
   symbol?: string
-  noValue?: boolean
-  multiValue?: boolean
+  arity?: 'none' | 'list' | 'range'
 }[] = [
   { value: FilterOperator.EQUALS, label: 'equals', symbol: '=' },
   { value: FilterOperator.NOT_EQUALS, label: 'not equals', symbol: '≠' },
-  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', multiValue: true },
-  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', multiValue: true },
-  { value: FilterOperator.IN, label: 'in', symbol: '∈', multiValue: true },
-  { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', multiValue: true },
-  { value: FilterOperator.IS_SET, label: 'is set', symbol: '✓', noValue: true },
-  { value: FilterOperator.IS_NOT_SET, label: 'is not set', symbol: '✗', noValue: true },
+  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', arity: 'list' },
+  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', arity: 'list' },
+  { value: FilterOperator.IN, label: 'in', symbol: '∈', arity: 'list' },
+  { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', arity: 'list' },
+  { value: FilterOperator.IS_SET, label: 'is set', symbol: '✓', arity: 'none' },
+  { value: FilterOperator.IS_NOT_SET, label: 'is not set', symbol: '✗', arity: 'none' },
   { value: FilterOperator.GT, label: 'greater than', symbol: '>' },
   { value: FilterOperator.GTE, label: 'greater or equal', symbol: '≥' },
   { value: FilterOperator.LT, label: 'less than', symbol: '<' },
   { value: FilterOperator.LTE, label: 'less or equal', symbol: '≤' },
+  { value: FilterOperator.BETWEEN, label: 'between', symbol: '↔', arity: 'range' },
+  { value: FilterOperator.NOT_BETWEEN, label: 'not between', symbol: '↮', arity: 'range' },
 ]
 
 const createFilter = (property: string, operator: FilterOperator, payload?: string | string[]): ActiveFilter => {
   const meta = OPERATORS.find(o => o.value === operator)
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)
-  if (meta.noValue) return { property, operator, kind: 'presence' }
-  if (meta.multiValue) {
-    let values: string[]
-    if (Array.isArray(payload)) values = payload
-    else if (payload) values = [payload]
-    else values = []
-    return { property, operator, kind: 'multi', values }
+  switch (meta.arity) {
+    case 'none':
+      return { property, operator, kind: 'presence' }
+    case 'list': {
+      let values: string[]
+      if (Array.isArray(payload)) values = payload
+      else if (payload) values = [payload]
+      else values = []
+      return { property, operator, kind: 'multi', values }
+    }
+    case 'range': {
+      const [min = '', max = ''] = Array.isArray(payload) ? payload : []
+      return { property, operator, kind: 'range', min, max }
+    }
+    default: {
+      const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
+      return { property, operator, kind: 'single', value }
+    }
   }
-  const value = Array.isArray(payload) ? (payload[0] ?? '') : (payload ?? '')
-  return { property, operator, kind: 'single', value }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -181,6 +192,17 @@ const useScopedSchema = (kindFilter?: string) => {
 
 // ── Shared sub-components ────────────────────────────────────────────────────
 
+const filterInputCls =
+  'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+
+const ApplyFooter = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
+  <div className="border-t border-border px-3 py-2 flex justify-end">
+    <Button size="sm" className="h-6 text-xs px-3" onClick={onClick} disabled={disabled}>
+      Apply
+    </Button>
+  </div>
+)
+
 const MultiValueEditor = ({
   values,
   onAdd,
@@ -233,7 +255,7 @@ const MultiValueEditor = ({
               setMultiInput('')
             }
           }}
-          className="flex-1 min-w-0 h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono"
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
           autoFocus
         />
         <Button
@@ -293,7 +315,7 @@ const SingleValueEditor = ({
         onKeyDown={e => {
           if (e.key === 'Enter') onCommit()
         }}
-        className="w-full h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono"
+        className={cn(filterInputCls, 'w-full')}
         autoFocus
       />
     </div>
@@ -313,6 +335,52 @@ const SingleValueEditor = ({
     {footer}
   </div>
 )
+
+const BetweenValueEditor = ({
+  min,
+  max,
+  onMinChange,
+  onMaxChange,
+  onCommit,
+  footer,
+}: {
+  min: string
+  max: string
+  onMinChange: (v: string) => void
+  onMaxChange: (v: string) => void
+  onCommit: () => void
+  footer?: React.ReactNode
+}) => {
+  const maxRef = useRef<HTMLInputElement>(null)
+  return (
+    <div>
+      <div className="p-2 border-b border-border/60 flex items-center gap-2">
+        <input
+          placeholder="Min"
+          value={min}
+          onChange={e => onMinChange(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') maxRef.current?.focus()
+          }}
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
+          autoFocus
+        />
+        <span className="text-[11px] text-muted-foreground shrink-0">–</span>
+        <input
+          ref={maxRef}
+          placeholder="Max"
+          value={max}
+          onChange={e => onMaxChange(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') onCommit()
+          }}
+          className={cn(filterInputCls, 'flex-1 min-w-0')}
+        />
+      </div>
+      {footer}
+    </div>
+  )
+}
 
 // ── Property Picker List (shared) ───────────────────────────────────────────
 
@@ -586,7 +654,7 @@ export const FilterBuilder = ({
   const pickOperator = (operator: FilterOperator) => {
     setOp(operator)
     const meta = OPERATORS.find(o => o.value === operator)
-    if (meta?.noValue) {
+    if (meta?.arity === 'none') {
       onAdd(createFilter(prop, operator))
       setOpen(false)
       reset()
@@ -598,7 +666,11 @@ export const FilterBuilder = ({
   }
 
   const commitFilter = () => {
-    if (opMeta?.multiValue) {
+    if (opMeta?.arity === 'range') {
+      const [min, max] = vals
+      if (!min?.trim() || !max?.trim()) return
+      onAdd(createFilter(prop, op, [min.trim(), max.trim()]))
+    } else if (opMeta?.arity === 'list') {
       if (vals.length === 0) return
       onAdd(createFilter(prop, op, vals))
     } else {
@@ -697,7 +769,18 @@ export const FilterBuilder = ({
           </Command>
         )}
 
-        {step === 'value' && opMeta?.multiValue && (
+        {step === 'value' && opMeta?.arity === 'range' && (
+          <BetweenValueEditor
+            min={vals[0] ?? ''}
+            max={vals[1] ?? ''}
+            onMinChange={v => setVals(prev => [v, prev[1] ?? ''])}
+            onMaxChange={v => setVals(prev => [prev[0] ?? '', v])}
+            onCommit={commitFilter}
+            footer={<ApplyFooter onClick={commitFilter} disabled={!vals[0]?.trim() || !vals[1]?.trim()} />}
+          />
+        )}
+
+        {step === 'value' && opMeta?.arity === 'list' && (
           <MultiValueEditor
             values={vals}
             onAdd={addMultiValues}
@@ -706,17 +789,11 @@ export const FilterBuilder = ({
             suggestions={suggestions}
             loaded={loaded}
             error={error}
-            footer={
-              <div className="border-t border-border px-3 py-2 flex justify-end">
-                <Button size="sm" className="h-6 text-xs px-3" onClick={commitFilter} disabled={vals.length === 0}>
-                  Apply
-                </Button>
-              </div>
-            }
+            footer={<ApplyFooter onClick={commitFilter} disabled={vals.length === 0} />}
           />
         )}
 
-        {step === 'value' && !opMeta?.multiValue && (
+        {step === 'value' && opMeta?.arity === undefined && (
           <SingleValueEditor
             value={val}
             onChange={setVal}
@@ -724,13 +801,7 @@ export const FilterBuilder = ({
             suggestions={suggestions}
             loaded={loaded}
             error={error}
-            footer={
-              <div className="border-t border-border px-3 py-2 flex justify-end">
-                <Button size="sm" className="h-6 text-xs px-3" onClick={commitFilter} disabled={!val.trim()}>
-                  Apply
-                </Button>
-              </div>
-            }
+            footer={<ApplyFooter onClick={commitFilter} disabled={!val.trim()} />}
           />
         )}
       </PopoverContent>
@@ -756,6 +827,7 @@ export const FilterChip = ({
   const op = OPERATORS.find(o => o.value === filter.operator)
   const [editOpen, setEditOpen] = useState(false)
   const [editInput, setEditInput] = useState('')
+  const [editInput2, setEditInput2] = useState('')
 
   let propSource = PropertySource.UNSPECIFIED
   if (schema) {
@@ -767,9 +839,16 @@ export const FilterChip = ({
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', propSource, kindFilter)
 
   const commitEdit = () => {
-    const next = editInput.trim()
-    if (!next) return
-    onUpdate(createFilter(filter.property, filter.operator, next))
+    if (op?.arity === 'range') {
+      const min = editInput.trim()
+      const max = editInput2.trim()
+      if (!min || !max) return
+      onUpdate(createFilter(filter.property, filter.operator, [min, max]))
+    } else {
+      const next = editInput.trim()
+      if (!next) return
+      onUpdate(createFilter(filter.property, filter.operator, next))
+    }
     setEditOpen(false)
   }
 
@@ -784,14 +863,21 @@ export const FilterChip = ({
     setEditOpen(next)
     if (!next) {
       setEditInput('')
+      setEditInput2('')
       return
     }
     if (filter.kind === 'single') setEditInput(filter.value)
+    if (filter.kind === 'range') {
+      setEditInput(filter.min)
+      setEditInput2(filter.max)
+    }
   }
 
   let valueLabel: string | null = null
   if (filter.kind === 'multi') {
     valueLabel = filter.values.join(', ')
+  } else if (filter.kind === 'range') {
+    valueLabel = `${filter.min} – ${filter.max}`
   } else if (filter.kind === 'single') {
     valueLabel = filter.value
   }
@@ -810,7 +896,16 @@ export const FilterChip = ({
             </span>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-52 p-0">
-            {filter.kind === 'multi' ? (
+            {filter.kind === 'range' ? (
+              <BetweenValueEditor
+                min={editInput}
+                max={editInput2}
+                onMinChange={setEditInput}
+                onMaxChange={setEditInput2}
+                onCommit={commitEdit}
+                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim() || !editInput2.trim()} />}
+              />
+            ) : filter.kind === 'multi' ? (
               <MultiValueEditor
                 values={filter.values}
                 onAdd={addMultiValues}
@@ -840,13 +935,7 @@ export const FilterChip = ({
                 suggestions={suggestions}
                 loaded={loaded}
                 error={error}
-                footer={
-                  <div className="border-t border-border px-3 py-2 flex justify-end">
-                    <Button size="sm" className="h-6 text-xs px-3" onClick={commitEdit} disabled={!editInput.trim()}>
-                      Apply
-                    </Button>
-                  </div>
-                }
+                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim()} />}
               />
             )}
           </PopoverContent>

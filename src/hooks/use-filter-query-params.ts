@@ -21,6 +21,8 @@ const VALID_OPERATORS = new Set([
   FilterOperator.GTE,
   FilterOperator.LT,
   FilterOperator.LTE,
+  FilterOperator.BETWEEN,
+  FilterOperator.NOT_BETWEEN,
 ])
 
 const EVENT_FILTERS_PARAM = 'ef'
@@ -35,7 +37,10 @@ export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(x => typeof x === 'string')
-const isInOperator = (operator: FilterOperator) => operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
+const isListOperator = (operator: FilterOperator) =>
+  operator === FilterOperator.IN || operator === FilterOperator.NOT_IN
+const isRangeOperator = (operator: FilterOperator) =>
+  operator === FilterOperator.BETWEEN || operator === FilterOperator.NOT_BETWEEN
 
 type ParsedBaseFilter = {
   property: string
@@ -52,7 +57,8 @@ const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
 
 const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilter | null => {
   if (typeof rawValue !== 'string') return null
-  if (isInOperator(base.operator)) {
+  if (isRangeOperator(base.operator)) return null
+  if (isListOperator(base.operator)) {
     const next = rawValue.trim()
     return { ...base, kind: 'multi', values: next ? [next] : [] }
   }
@@ -61,20 +67,26 @@ const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilte
 
 const normalizeMulti = (base: ParsedBaseFilter, rawValues: unknown): ActiveFilter | null => {
   if (!isStringArray(rawValues)) return null
-  if (isInOperator(base.operator)) {
-    return { ...base, kind: 'multi', values: rawValues }
-  }
-  return { ...base, kind: 'single', value: rawValues[0] ?? '' }
+  if (isListOperator(base.operator)) return { ...base, kind: 'multi', values: rawValues }
+  return null
+}
+
+const normalizeRange = (base: ParsedBaseFilter, rawMin: unknown, rawMax: unknown): ActiveFilter | null => {
+  if (!isRangeOperator(base.operator)) return null
+  if (typeof rawMin !== 'string' || typeof rawMax !== 'string') return null
+  if (!rawMin.trim() || !rawMax.trim()) return null
+  return { ...base, kind: 'range', min: rawMin, max: rawMax }
 }
 
 const parseActiveFilter = (value: unknown): ActiveFilter | null => {
   const base = parseBaseFilter(value)
   if (!base) return null
 
-  const kind = (value as Record<string, unknown>).kind
-  if (kind === 'presence') return { ...base, kind: 'presence' }
-  if (kind === 'single') return normalizeSingle(base, (value as Record<string, unknown>).value)
-  if (kind === 'multi') return normalizeMulti(base, (value as Record<string, unknown>).values)
+  const v = value as Record<string, unknown>
+  if (v.kind === 'presence') return { ...base, kind: 'presence' }
+  if (v.kind === 'single') return normalizeSingle(base, v.value)
+  if (v.kind === 'multi') return normalizeMulti(base, v.values)
+  if (v.kind === 'range') return normalizeRange(base, v.min, v.max)
   return null
 }
 
