@@ -2,7 +2,7 @@ import { atom, getDefaultStore } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
 // Shared with transport.ts — both read the same localStorage key
-export const JWT_KEY = 'cotton:jwt'
+export const JWT_KEY = 'pug:jwt'
 
 // Read synchronously so the first render already knows the auth state (no sign-in flash)
 const storedJwt = (() => {

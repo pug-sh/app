@@ -138,7 +138,7 @@ const Overview = () => {
             <SectionHeader title="Quick Start" />
             <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
               <li>Add your FCM service account JSON in Settings</li>
-              <li>Integrate the Cotton SDK in your app</li>
+              <li>Integrate the Pug SDK in your app</li>
               <li>Register devices using the public API key</li>
               <li>Create and schedule your first campaign</li>
             </ol>

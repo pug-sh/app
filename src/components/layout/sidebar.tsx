@@ -122,7 +122,7 @@ const AppSidebar = () => {
                 <Bell className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Cotton</span>
+                <span className="truncate font-semibold">Pug</span>
                 <span className="truncate text-xs text-muted-foreground">{activeOrg?.displayName}</span>
               </div>
             </SidebarMenuButton>

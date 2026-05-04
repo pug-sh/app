@@ -1,16 +1,16 @@
 ---
 name: design-ui
-description: Design and build UI components following Cotton's light, minimal aesthetic
+description: Design and build UI components following Pug's light, minimal aesthetic
 user_invocable: true
 ---
 
 # Design UI
 
-You are designing UI for Cotton's dashboard. Read CLAUDE.md first — the Design Aesthetic section is the authority.
+You are designing UI for Pug's dashboard. Read CLAUDE.md first — the Design Aesthetic section is the authority.
 
 ## Core philosophy
 
-Cotton's UI should feel like a well-made tool, not a marketing site. Every element earns its place. When in doubt, leave it out.
+Pug's UI should feel like a well-made tool, not a marketing site. Every element earns its place. When in doubt, leave it out.
 
 ## Before writing any component
 

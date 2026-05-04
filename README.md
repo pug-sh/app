@@ -1,6 +1,6 @@
-# Cotton UI
+# Pug UI
 
-Dashboard frontend for **Cotton** — an analytics + communication platform. Built for growth managers.
+Dashboard frontend for **Pug** — an analytics + communication platform. Built for growth managers.
 
 ## Stack
 

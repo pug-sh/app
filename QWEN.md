@@ -1,6 +1,6 @@
-# Cotton Web Frontend
+# Pug Web Frontend
 
-Dashboard frontend for **Cotton** — an analytics + communication platform (similar to CleverTap). Built for growth managers to manage campaigns, analyze insights, and track user events.
+Dashboard frontend for **Pug** — an analytics + communication platform (similar to CleverTap). Built for growth managers to manage campaigns, analyze insights, and track user events.
 
 ## Tech Stack
 
@@ -72,7 +72,7 @@ export const fetchCampaignsAtom = atom(null, async (get, set) => {
 })
 
 // Persistent state with atomWithStorage
-export const jwtAtom = atomWithStorage('cotton:jwt', '')
+export const jwtAtom = atomWithStorage('pug:jwt', '')
 ```
 
 ### ConnectRPC Transport
@@ -116,7 +116,7 @@ Lightweight inline validation only. Heavy validation handled by `protovalidate` 
 
 ## Proto Code Generation
 
-Proto definitions live in `proto/` (symlink to cotton backend). Generated TypeScript goes to `src/api/genproto/` (gitignored).
+Proto definitions live in `proto/` (symlink to pug backend). Generated TypeScript goes to `src/api/genproto/` (gitignored).
 
 **After backend proto changes:**
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Dashboard frontend for Cotton — an analytics + communication platform (similar to CleverTap). Built for growth managers. React + Vite + TypeScript. Talks to the backend via ConnectRPC (binary protobuf).
+Dashboard frontend for Pug — an analytics + communication platform (similar to CleverTap). Built for growth managers. React + Vite + TypeScript. Talks to the backend via ConnectRPC (binary protobuf).
 
 ## Commands
 
@@ -17,7 +17,7 @@ pnpm lint         # ESLint
 
 ## Proto Code Generation
 
-Proto definitions live in `proto/` (symlink to the cotton backend at `/Users/holu/workspace/go/src/github.com/fivebitsio/cotton/proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `pnpm generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
+Proto definitions live in `proto/` (symlink to the pug backend at `/Users/holu/workspace/go/src/github.com/fivebitsio/pug/proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `pnpm generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
 
 ## Architecture
 

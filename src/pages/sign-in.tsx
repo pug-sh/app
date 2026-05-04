@@ -58,7 +58,7 @@ const SignIn = () => {
             <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
               <Bell className="w-5 h-5" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">Cotton</span>
+            <span className="text-xl font-semibold tracking-tight">Pug</span>
           </div>
           <div className="max-w-sm">
             <p className="text-3xl font-semibold leading-tight tracking-tight">
@@ -70,7 +70,7 @@ const SignIn = () => {
               Manage campaigns, track delivery, and understand your users — all from one dashboard.
             </p>
           </div>
-          <p className="text-xs opacity-40">Cotton — by Fivebits</p>
+          <p className="text-xs opacity-40">Pug — by Fivebits</p>
         </div>
       </div>
 
@@ -81,14 +81,14 @@ const SignIn = () => {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Bell className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Cotton</span>
+            <span className="text-lg font-semibold tracking-tight">Pug</span>
           </div>
 
           <h1 className="text-2xl font-semibold tracking-tight">
             {mode === 'signin' ? 'Welcome back' : 'Create account'}
           </h1>
           <p className="text-sm text-muted-foreground mt-1.5 mb-8">
-            {mode === 'signin' ? 'Sign in to your account to continue' : 'Get started with Cotton'}
+            {mode === 'signin' ? 'Sign in to your account to continue' : 'Get started with Pug'}
           </p>
 
           <form onSubmit={authForm.handleSubmit(onSubmit)} className="space-y-4">

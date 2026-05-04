@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-# Proto symlink (points to cotton backend)
+# Proto symlink (points to pug backend)
 proto
 
 # Generated proto code (regenerate with: pnpm generate)

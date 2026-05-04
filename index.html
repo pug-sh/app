@@ -10,12 +10,12 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <title>Cotton</title>
+    <title>Pug</title>
     <script>
       // Apply dark mode before first paint to prevent flash.
-      // Must match atomWithStorage key ("cotton:theme") and JSON format.
+      // Must match atomWithStorage key ("pug:theme") and JSON format.
       try {
-        const t = JSON.parse(localStorage.getItem('cotton:theme') || '"system"')
+        const t = JSON.parse(localStorage.getItem('pug:theme') || '"system"')
         const dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
         if (dark) document.documentElement.classList.add('dark')
       } catch {}
