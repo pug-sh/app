@@ -4,9 +4,18 @@ import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 import { applyTheme, themeAtom } from '@/data/theme.atoms'
-import { workspaceErrorAtom } from '@/data/workspace.atoms'
+import {
+  activeOrgAtom,
+  activeProjectAtom,
+  fetchOrgsAtom,
+  fetchProjectsAtom,
+  orgsAtom,
+  projectsAtom,
+  resetWorkspaceAtom,
+  workspaceErrorAtom,
+} from '@/data/workspace.atoms'
 import { lazyWithRetry } from '@/lib/lazy'
-import { useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 
@@ -28,9 +37,57 @@ const ThemeSync = () => {
   return null
 }
 
+const WorkspaceBootstrap = () => {
+  const authenticated = useAtomValue(isAuthenticatedAtom)
+  const orgs = useAtomValue(orgsAtom)
+  const projects = useAtomValue(projectsAtom)
+  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
+  const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
+  const fetchOrgs = useSetAtom(fetchOrgsAtom)
+  const fetchProjects = useSetAtom(fetchProjectsAtom)
+  const resetWorkspace = useSetAtom(resetWorkspaceAtom)
+
+  useEffect(() => {
+    if (!authenticated) {
+      resetWorkspace()
+      return
+    }
+    fetchOrgs()
+  }, [authenticated, fetchOrgs, resetWorkspace])
+
+  useEffect(() => {
+    if (orgs.length === 0) {
+      if (activeOrg) setActiveOrg(null)
+      return
+    }
+    if (!activeOrg || !orgs.some(org => org.id === activeOrg.id)) {
+      setActiveOrg(orgs[0])
+    }
+  }, [orgs, activeOrg, setActiveOrg])
+
+  useEffect(() => {
+    if (!activeOrg) return
+    setActiveProject(null)
+    fetchProjects()
+  }, [activeOrg, fetchProjects, setActiveProject])
+
+  useEffect(() => {
+    if (projects.length === 0) {
+      if (activeProject) setActiveProject(null)
+      return
+    }
+    if (!activeProject || !projects.some(project => project.id === activeProject.id)) {
+      setActiveProject(projects[0])
+    }
+  }, [projects, activeProject, setActiveProject])
+
+  return null
+}
+
 const AuthenticatedApp = () => {
   return (
     <SidebarProvider>
+      <WorkspaceBootstrap />
       <Suspense fallback={null}>
         <AppSidebar />
       </Suspense>

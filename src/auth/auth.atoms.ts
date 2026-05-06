@@ -1,5 +1,6 @@
 import { ConnectError } from '@connectrpc/connect'
 import { authRPCAtom } from '@/api/rpc'
+import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { atom } from 'jotai'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
 
@@ -29,8 +30,22 @@ export const signUpAtom = atom(null, async (get, set, { email, password }: { ema
   }
 })
 
+const authClockAtom = atom(Date.now())
+authClockAtom.onMount = setAtom => {
+  const tick = () => setAtom(Date.now())
+  tick()
+  const interval = window.setInterval(tick, 30_000)
+  return () => window.clearInterval(interval)
+}
+
 export const isAuthenticatedAtom = atom(get => {
+  get(authClockAtom)
   const data = get(jwtDataAtom)
   if (!data) return false
   return data.exp > Date.now() / 1000
+})
+
+export const signOutAtom = atom(null, (_, set) => {
+  set(jwtAtom, '')
+  set(resetWorkspaceAtom)
 })

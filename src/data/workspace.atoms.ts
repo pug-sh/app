@@ -16,6 +16,10 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
     return resp.orgs
   } catch (err) {
     console.error('fetchOrgs failed:', err)
+    set(orgsAtom, [])
+    set(activeOrgAtom, null)
+    set(projectsAtom, [])
+    set(activeProjectAtom, null)
     set(workspaceErrorAtom, 'Failed to load your workspace. Please check your connection and try again.')
     return []
   }
@@ -28,7 +32,11 @@ export const projectsAtom = atom<Project[]>([])
 
 export const fetchProjectsAtom = atom(null, async (get, set) => {
   const org = get(activeOrgAtom)
-  if (!org) return []
+  if (!org) {
+    set(projectsAtom, [])
+    set(activeProjectAtom, null)
+    return []
+  }
   const projectsRPC = get(projectsRPCAtom)
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
@@ -37,6 +45,8 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
     return resp.projects
   } catch (err) {
     console.error('fetchProjects failed:', err)
+    set(projectsAtom, [])
+    set(activeProjectAtom, null)
     set(workspaceErrorAtom, 'Failed to load projects. Please check your connection and try again.')
     return []
   }
@@ -65,4 +75,12 @@ export const projectHeaderAtom = atom(get => {
   const project = get(activeProjectAtom)
   if (!project) return undefined
   return { 'x-project-id': project.id }
+})
+
+export const resetWorkspaceAtom = atom(null, (_, set) => {
+  set(orgsAtom, [])
+  set(activeOrgAtom, null)
+  set(projectsAtom, [])
+  set(activeProjectAtom, null)
+  set(workspaceErrorAtom, null)
 })

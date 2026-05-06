@@ -45,8 +45,6 @@ export const jwtDataAtom = atom(get => {
   }
 })
 
-export const signOutAtom = atom(null, (_, set) => set(jwtAtom, ''))
-
 // Clear JWT from outside React (e.g. interceptors). Uses the default Jotai store
 // so all subscribers re-render and atomWithStorage syncs localStorage automatically.
 export const clearJwt = () => getDefaultStore().set(jwtAtom, '')

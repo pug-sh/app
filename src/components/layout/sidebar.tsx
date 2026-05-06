@@ -1,12 +1,10 @@
-import { signOutAtom } from '@/auth/jwt.atoms'
+import { signOutAtom } from '@/auth/auth.atoms'
+import { Input } from '@/components/ui/input'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
   createProjectAtom,
-  fetchOrgsAtom,
-  fetchProjectsAtom,
-  orgsAtom,
   projectsAtom,
 } from '@/data/workspace.atoms'
 import {
@@ -57,7 +55,7 @@ import {
   Users,
   UsersRound,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 
@@ -73,12 +71,9 @@ const navItems = [
 
 const AppSidebar = () => {
   const [location, navigate] = useLocation()
-  const orgs = useAtomValue(orgsAtom)
   const projects = useAtomValue(projectsAtom)
-  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
+  const activeOrg = useAtomValue(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
-  const fetchOrgs = useSetAtom(fetchOrgsAtom)
-  const fetchProjects = useSetAtom(fetchProjectsAtom)
   const createProject = useSetAtom(createProjectAtom)
   const signOut = useSetAtom(signOutAtom)
   const [theme, setTheme] = useAtom(themeAtom)
@@ -86,25 +81,12 @@ const AppSidebar = () => {
   const routeProjectId = location.match(/^\/p\/([^/]+)/)?.[1] ?? null
   const currentProjectId = routeProjectId ?? activeProject?.id ?? null
   const prefix = currentProjectId ? `/p/${currentProjectId}` : ''
-  // Extract the page path from current location (strip /p/:projectId prefix)
-  const pagePath = useMemo(() => {
-    const match = location.match(/^\/p\/[^/]+\/(.*)$/)
-    return match ? match[1] : 'overview'
-  }, [location])
+  const pagePath = location.match(/^\/p\/[^/]+\/(.*)$/)?.[1] ?? 'overview'
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    fetchOrgs()
-  }, [fetchOrgs])
-  useEffect(() => {
-    if (orgs.length > 0 && !activeOrg) setActiveOrg(orgs[0])
-  }, [orgs, activeOrg, setActiveOrg])
-  useEffect(() => {
-    if (activeOrg) fetchProjects()
-  }, [activeOrg, fetchProjects])
   useEffect(() => {
     if (projects.length === 0 || activeProject || routeProjectId) return
     setActiveProject(projects[0])
@@ -146,7 +128,7 @@ const AppSidebar = () => {
             <DialogDescription>Create a project in {activeOrg?.displayName ?? 'your workspace'}.</DialogDescription>
           </DialogHeader>
           <div className="px-0.5">
-            <input
+            <Input
               ref={inputRef}
               value={newProjectName}
               onChange={e => setNewProjectName(e.target.value)}
@@ -154,7 +136,6 @@ const AppSidebar = () => {
                 if (e.key === 'Enter') handleCreateProject()
               }}
               placeholder="Project name"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/50"
               disabled={saving}
             />
           </div>
