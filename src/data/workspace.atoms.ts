@@ -46,7 +46,7 @@ export const activeProjectAtom = atom<Project | null>(null)
 
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)
-  if (!org) return
+  if (!org) return null
   const projectsRPC = get(projectsRPCAtom)
   const resp = await projectsRPC.create({ displayName, orgId: org.id })
   // Refresh the project list — if this fails, the project was still created server-side
@@ -57,6 +57,7 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
     console.error('Project created but list refresh failed:', err)
   }
   if (resp.project) set(activeProjectAtom, resp.project)
+  return resp.project ?? null
 })
 
 // Project-scoped header (auth is handled by interceptor)

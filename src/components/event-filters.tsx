@@ -1,5 +1,5 @@
-import type { GetFilterSchemaResponse } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
+import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
@@ -480,19 +480,22 @@ const PropertyPickerList = ({
 const EventPopoverList = ({
   events,
   value,
+  loaded,
   schemaError,
   getEventColor,
   onSelect,
 }: {
   events: EventNameMeta[]
   value: string
+  loaded: boolean
   schemaError: string | null
   getEventColor?: (eventName: string) => string
   onSelect: (name: string) => void
 }) => {
   const getEmptyMessage = () => {
     if (schemaError) return 'Failed to load events'
-    if (events.length === 0) return 'Loading event names...'
+    if (!loaded) return 'Loading event names...'
+    if (events.length === 0) return 'No event names'
     return 'No events found'
   }
 
@@ -535,6 +538,7 @@ export const EventChip = ({
   value,
   onChange,
   events,
+  eventsLoaded,
   schemaError,
   color,
   getEventColor,
@@ -542,6 +546,7 @@ export const EventChip = ({
   value: string
   onChange: (v: string) => void
   events: EventNameMeta[]
+  eventsLoaded: boolean
   schemaError: string | null
   color?: string
   getEventColor?: (eventName: string) => string
@@ -566,6 +571,7 @@ export const EventChip = ({
           <EventPopoverList
             events={events}
             value={value}
+            loaded={eventsLoaded}
             schemaError={schemaError}
             getEventColor={getEventColor}
             onSelect={name => {
@@ -590,6 +596,7 @@ export const EventChip = ({
           <EventPopoverList
             events={events}
             value={value}
+            loaded={eventsLoaded}
             schemaError={schemaError}
             getEventColor={getEventColor}
             onSelect={name => {
@@ -1042,6 +1049,7 @@ export const EventQueryRow = memo(
     filtersAtom,
     entry,
     events,
+    eventsLoaded,
     schema,
     schemaError,
     letter,
@@ -1052,6 +1060,7 @@ export const EventQueryRow = memo(
     filtersAtom: PrimitiveAtom<EventFilterEntry[]>
     entry: EventFilterEntry
     events: EventNameMeta[]
+    eventsLoaded: boolean
     schema: GetFilterSchemaResponse | null
     schemaError: string | null
     letter?: string
@@ -1125,6 +1134,7 @@ export const EventQueryRow = memo(
             value={entry.kind}
             onChange={onUpdateKind}
             events={events}
+            eventsLoaded={eventsLoaded}
             schemaError={resolvedSchemaError}
             color={color}
             getEventColor={getEventColor}
@@ -1199,6 +1209,7 @@ export const EventFilterBar = ({
   const [entries, setEntries] = useAtom(filtersAtom)
   // Stable identity when events haven't loaded; keeps memoized children from churning.
   const safeEvents = events ?? EMPTY_EVENTS
+  const eventsLoaded = events !== undefined
 
   const addEvent = useCallback(
     (kind: string) => {
@@ -1217,6 +1228,7 @@ export const EventFilterBar = ({
           filtersAtom={filtersAtom}
           entry={entry}
           events={safeEvents}
+          eventsLoaded={eventsLoaded}
           schema={schema}
           schemaError={schemaError}
           letter={showLetters ? SERIES_LETTERS[i] : undefined}
@@ -1234,6 +1246,7 @@ export const EventFilterBar = ({
               if (kind) addEvent(kind)
             }}
             events={safeEvents}
+            eventsLoaded={eventsLoaded}
             schemaError={schemaError}
             getEventColor={getEventColor}
           />

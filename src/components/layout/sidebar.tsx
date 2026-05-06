@@ -9,13 +9,28 @@ import {
   orgsAtom,
   projectsAtom,
 } from '@/data/workspace.atoms'
-import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -23,13 +38,12 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import {
-  Bell,
   BookOpen,
   Check,
-  ChevronDown,
-  FolderOpen,
+  ChevronsUpDown,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -69,14 +83,15 @@ const AppSidebar = () => {
   const signOut = useSetAtom(signOutAtom)
   const [theme, setTheme] = useAtom(themeAtom)
 
-  const prefix = activeProject ? `/p/${activeProject.id}` : ''
+  const routeProjectId = location.match(/^\/p\/([^/]+)/)?.[1] ?? null
+  const currentProjectId = routeProjectId ?? activeProject?.id ?? null
+  const prefix = currentProjectId ? `/p/${currentProjectId}` : ''
   // Extract the page path from current location (strip /p/:projectId prefix)
   const pagePath = useMemo(() => {
     const match = location.match(/^\/p\/[^/]+\/(.*)$/)
     return match ? match[1] : 'overview'
   }, [location])
-  const [projectsExpanded, setProjectsExpanded] = useState(false)
-  const [creatingProject, setCreatingProject] = useState(false)
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,19 +106,21 @@ const AppSidebar = () => {
     if (activeOrg) fetchProjects()
   }, [activeOrg, fetchProjects])
   useEffect(() => {
-    if (projects.length > 0 && !activeProject) setActiveProject(projects[0])
-  }, [projects, activeProject, setActiveProject])
+    if (projects.length === 0 || activeProject || routeProjectId) return
+    setActiveProject(projects[0])
+  }, [projects, activeProject, routeProjectId, setActiveProject])
   useEffect(() => {
-    if (creatingProject) inputRef.current?.focus()
-  }, [creatingProject])
+    if (createProjectOpen) inputRef.current?.focus()
+  }, [createProjectOpen])
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return
     setSaving(true)
     try {
-      await createProject(newProjectName.trim())
+      const project = await createProject(newProjectName.trim())
       setNewProjectName('')
-      setCreatingProject(false)
+      setCreateProjectOpen(false)
+      if (project) navigate(`/p/${project.id}/overview`)
     } catch {
       toast.error('Failed to create project')
     } finally {
@@ -113,115 +130,97 @@ const AppSidebar = () => {
 
   return (
     <Sidebar collapsible="icon">
-      {/* Logo */}
+      <Dialog
+        open={createProjectOpen}
+        onOpenChange={open => {
+          setCreateProjectOpen(open)
+          if (!open) {
+            setNewProjectName('')
+            setSaving(false)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New project</DialogTitle>
+            <DialogDescription>Create a project in {activeOrg?.displayName ?? 'your workspace'}.</DialogDescription>
+          </DialogHeader>
+          <div className="px-0.5">
+            <input
+              ref={inputRef}
+              value={newProjectName}
+              onChange={e => setNewProjectName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleCreateProject()
+              }}
+              placeholder="Project name"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring/50"
+              disabled={saving}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateProjectOpen(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateProject} disabled={saving || !newProjectName.trim()}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+              Create project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href={`${prefix}/overview`} />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Bell className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Pug</span>
-                <span className="truncate text-xs text-muted-foreground">{activeOrg?.displayName}</span>
-              </div>
-            </SidebarMenuButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
+                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                  <span className="truncate text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {activeOrg?.displayName ?? 'Workspace'}
+                  </span>
+                  <span className="truncate font-semibold">{activeProject?.displayName ?? 'Select project'}</span>
+                </div>
+                <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={8}>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>{activeOrg?.displayName ?? 'Workspace'}</DropdownMenuLabel>
+                  {projects.map(proj => {
+                    const selected = proj.id === currentProjectId
+                    return (
+                      <DropdownMenuItem
+                        key={proj.id}
+                        onClick={() => {
+                          setActiveProject(proj)
+                          navigate(`/p/${proj.id}/${pagePath}`)
+                        }}
+                        className="gap-2"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{proj.displayName}</div>
+                        </div>
+                        {selected ? <Check className="ml-auto size-4 text-sidebar-primary" /> : null}
+                      </DropdownMenuItem>
+                    )
+                  })}
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setCreateProjectOpen(true)}
+                  disabled={!activeOrg}
+                  className="min-h-9 gap-2 text-sidebar-primary"
+                >
+                  <Plus className="size-4" />
+                  New project
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Project switcher */}
         <SidebarGroup>
-          <SidebarGroupLabel>Project</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => setProjectsExpanded(!projectsExpanded)}
-                tooltip={activeProject?.displayName ?? 'Select project'}
-              >
-                <FolderOpen className="size-4" />
-                <span>{activeProject?.displayName ?? 'Select project'}</span>
-                <ChevronDown
-                  className={cn(
-                    'ml-auto size-4 text-muted-foreground transition-transform duration-200',
-                    projectsExpanded && 'rotate-180'
-                  )}
-                />
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            {projectsExpanded && (
-              <>
-                {projects
-                  .filter(p => p.id !== activeProject?.id)
-                  .map(proj => (
-                    <SidebarMenuItem key={proj.id}>
-                      <SidebarMenuButton
-                        onClick={() => {
-                          setActiveProject(proj)
-                          navigate(`/p/${proj.id}/${pagePath}`)
-                          setProjectsExpanded(false)
-                        }}
-                        className="pl-8"
-                        tooltip={proj.displayName}
-                      >
-                        <span>{proj.displayName}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                {creatingProject ? (
-                  <SidebarMenuItem>
-                    <div className="pl-8 pr-2 py-1">
-                      <div className="flex items-center gap-1">
-                        <input
-                          ref={inputRef}
-                          value={newProjectName}
-                          onChange={e => setNewProjectName(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleCreateProject()
-                            if (e.key === 'Escape') {
-                              setCreatingProject(false)
-                              setNewProjectName('')
-                            }
-                          }}
-                          placeholder="Project name"
-                          className="flex-1 min-w-0 text-sm px-2 py-1 rounded-md border border-input bg-transparent outline-none focus:border-ring focus:ring-1 focus:ring-ring/50"
-                          disabled={saving}
-                        />
-                        <button
-                          onClick={handleCreateProject}
-                          disabled={saving || !newProjectName.trim()}
-                          className="p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer"
-                        >
-                          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
-                        </button>
-                      </div>
-                    </div>
-                  </SidebarMenuItem>
-                ) : (
-                  activeOrg && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        onClick={() => setCreatingProject(true)}
-                        className="pl-8"
-                        tooltip="New project"
-                      >
-                        <Plus className="size-4" />
-                        <span>New project</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                )}
-              </>
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        {/* Navigation */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map(item => {
               const href = `${prefix}/${item.path}`

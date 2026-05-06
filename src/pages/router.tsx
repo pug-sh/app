@@ -39,16 +39,16 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const projects = useAtomValue(projectsAtom)
   const [, navigate] = useLocation()
+  const matchedProject = projectId ? projects.find(p => p.id === projectId) : null
 
   useEffect(() => {
-    if (!projectId || projects.length === 0) return
+    if (!projectId || projects.length === 0 || !matchedProject) return
     if (activeProject?.id === projectId) return
 
-    const match = projects.find(p => p.id === projectId)
-    if (match) setActiveProject(match)
-  }, [projectId, projects, activeProject, setActiveProject])
+    setActiveProject(matchedProject)
+  }, [projectId, projects.length, matchedProject, activeProject, setActiveProject])
 
-  const notFound = !!projectId && projects.length > 0 && !projects.some(p => p.id === projectId)
+  const notFound = !!projectId && projects.length > 0 && !matchedProject
 
   if (notFound) {
     return (
@@ -65,20 +65,26 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
     )
   }
 
+  if (projectId && matchedProject && activeProject?.id !== projectId) {
+    return <LoadingSpinner />
+  }
+
   return <>{children}</>
 }
 
 const ProjectRedirect = () => {
   const [, navigate] = useLocation()
   const activeProject = useAtomValue(activeProjectAtom)
+  const projects = useAtomValue(projectsAtom)
+  const project = activeProject ?? projects[0]
 
   useEffect(() => {
-    if (activeProject) {
-      navigate(`/p/${activeProject.id}/overview`, { replace: true })
+    if (project) {
+      navigate(`/p/${project.id}/overview`, { replace: true })
     }
-  }, [activeProject, navigate])
+  }, [project, navigate])
 
-  if (!activeProject) return <LoadingSpinner />
+  if (!project) return <LoadingSpinner />
   return null
 }
 
