@@ -202,7 +202,7 @@ const AppSidebar = () => {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarMenu>
+          <SidebarMenu className="gap-1">
             {navItems.map(item => {
               const href = `${prefix}/${item.path}`
               const isActive = pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path))
