@@ -140,7 +140,7 @@ const Segments = () => {
                   <td className="py-2 pr-2 text-muted-foreground tabular-nums text-xs">{i + 1}</td>
                   <td className="py-2 pr-2 text-sm">
                     <ProjectLink
-                      href={`/activities/${encodeURIComponent(id)}`}
+                      href={`/profiles/${encodeURIComponent(id)}/events`}
                       className="font-mono text-primary hover:underline underline-offset-4"
                     >
                       {id}

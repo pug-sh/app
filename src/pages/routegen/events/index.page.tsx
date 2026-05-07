@@ -78,7 +78,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         </td>
         <td className="py-2.5 pr-2 text-right whitespace-nowrap align-middle">
           <ProjectLink
-            href={`/activities/${encodeURIComponent(event.distinctId)}`}
+            href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
             onClick={e => e.stopPropagation()}
             className="text-xs font-mono text-primary hover:underline underline-offset-4"
           >
@@ -88,7 +88,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             <>
               <span className="text-muted-foreground/40"> / </span>
               <ProjectLink
-                href={`/activities/${encodeURIComponent(event.distinctId)}/${encodeURIComponent(event.sessionId)}`}
+                href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
                 onClick={e => e.stopPropagation()}
                 className="text-xs font-mono text-primary hover:underline underline-offset-4"
               >

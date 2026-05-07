@@ -49,6 +49,7 @@ import {
   Monitor,
   Moon,
   Plus,
+  ContactRound,
   Settings,
   Sun,
   TrendingUp,
@@ -62,6 +63,7 @@ import { Link, useLocation } from 'wouter'
 const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },
   { path: 'campaigns', label: 'Campaigns', icon: Megaphone },
+  { path: 'profiles', label: 'Profiles', icon: ContactRound },
   { path: 'insights', label: 'Insights', icon: TrendingUp },
   { path: 'segments', label: 'Segments', icon: UsersRound },
   { path: 'events', label: 'Events', icon: BookOpen },

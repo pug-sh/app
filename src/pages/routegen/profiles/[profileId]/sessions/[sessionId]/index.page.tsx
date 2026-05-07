@@ -75,7 +75,7 @@ const SessionSummary = ({
           </div>
           <div className="flex items-center gap-1.5 mt-1">
             <ProjectLink
-              href={`/activities/${encodeURIComponent(distinctId)}`}
+              href={`/profiles/${encodeURIComponent(distinctId)}/events`}
               className="text-xs text-primary font-mono hover:underline underline-offset-4"
             >
               {distinctId}
@@ -144,7 +144,7 @@ const SessionSummary = ({
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const SessionView = () => {
-  const { distinctId, sessionId } = useParams<{ distinctId: string; sessionId: string }>()
+  const { profileId, sessionId } = useParams<{ profileId: string; sessionId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
@@ -154,13 +154,13 @@ const SessionView = () => {
   const [error, setError] = useState<string | null>(null)
 
   const fetchEvents = useCallback(async () => {
-    if (!distinctId || !sessionId) return
+    if (!profileId || !sessionId) return
     setLoading(true)
     setError(null)
     try {
       const resp = await activityRPC.getActivityFeed(
         {
-          distinctId,
+          distinctId: profileId,
           sessionId,
           pageSize: 1000,
         },
@@ -173,11 +173,11 @@ const SessionView = () => {
     } finally {
       setLoading(false)
     }
-  }, [distinctId, sessionId, headers, activityRPC])
+  }, [profileId, sessionId, headers, activityRPC])
 
   useEffect(() => {
-    if (project && distinctId && sessionId) fetchEvents()
-  }, [project, distinctId, sessionId, fetchEvents])
+    if (project && profileId && sessionId) fetchEvents()
+  }, [project, profileId, sessionId, fetchEvents])
 
   // Compute elapsed time from session start for each event.
   // Events are sorted newest-first from the API, so the last element is the oldest (session start).
@@ -224,7 +224,7 @@ const SessionView = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <SessionSummary sessionId={sessionId ?? ''} distinctId={distinctId ?? ''} events={events} />
+          <SessionSummary sessionId={sessionId ?? ''} distinctId={profileId ?? ''} events={events} />
 
           {/* Kind legend — sticky */}
           <div className="sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5">

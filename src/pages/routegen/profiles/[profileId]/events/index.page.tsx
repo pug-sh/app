@@ -14,7 +14,7 @@ import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
@@ -145,7 +145,7 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const UserActivity = () => {
-  const { distinctId } = useParams<{ distinctId: string }>()
+  const { profileId } = useParams<{ profileId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
@@ -182,14 +182,14 @@ const UserActivity = () => {
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
-      if (!distinctId) return
+      if (!profileId) return
       setLoading(true)
       setError(null)
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
         const resp = await activityRPC.getActivityFeed(
           {
-            distinctId,
+            distinctId: profileId,
             timeRange: toProtoTimeRange(timeRange),
             propertyFilters: toProtoFilters(propFilters),
             events: protoEvents,
@@ -211,12 +211,12 @@ const UserActivity = () => {
         setLoading(false)
       }
     },
-    [distinctId, eventFilters.entries, timeRange, propFilters, headers, activityRPC]
+    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC]
   )
 
   useEffect(() => {
-    if (project && distinctId) fetchEvents()
-  }, [project, distinctId, fetchEvents])
+    if (project && profileId) fetchEvents()
+  }, [project, profileId, fetchEvents])
 
   const groupedEvents = useMemo(() => {
     const groups: { label: string; events: ActivityEvent[] }[] = []
@@ -233,10 +233,10 @@ const UserActivity = () => {
     return groups
   }, [events])
 
-  if (!project) return <NoProject title="Activities" icon={Activity} />
+  if (!project) return <NoProject title="User Activity" icon={Activity} />
 
   return (
-    <Page title="User Activity" description={distinctId}>
+    <Page title="Profile Activity" description={profileId}>
       {loading && events.length === 0 ? (
         <LoadingSpinner />
       ) : error && events.length === 0 ? (
@@ -249,7 +249,7 @@ const UserActivity = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <ProfileSummary distinctId={distinctId ?? ''} events={events} />
+          <ProfileSummary distinctId={profileId ?? ''} events={events} />
 
           <div className="sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50">
             <div className="flex flex-wrap items-center gap-2">
@@ -341,7 +341,7 @@ const UserActivity = () => {
                                     style={{ left: x + 10 }}
                                   >
                                     <ProjectLink
-                                      href={`/activities/${encodeURIComponent(distinctId!)}/${encodeURIComponent(lane.sessionId)}`}
+                                      href={`/profiles/${encodeURIComponent(profileId!)}/sessions/${encodeURIComponent(lane.sessionId)}`}
                                       className="text-[10px] font-mono text-primary hover:underline underline-offset-4 whitespace-nowrap"
                                     >
                                       {lane.sessionId.slice(0, 8)}
