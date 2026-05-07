@@ -30,10 +30,10 @@ import {
   NUMERIC_AGGREGATIONS,
   VIEW_MODES,
   type ViewMode,
-} from '@/lib/insights/constants'
-import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '@/lib/insights/helpers'
+} from './constants'
+import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { toProtoFilters } from '@/lib/filters/filter-proto'
+import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -75,6 +75,7 @@ const getAggregationProperty = ({
 }
 
 const Insights = () => {
+  // Project and RPC context.
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -89,6 +90,7 @@ const Insights = () => {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Local query state.
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
     () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve()
@@ -110,6 +112,7 @@ const Insights = () => {
     setBreakdowns(prev => prev.filter(p => p !== prop))
   }, [])
 
+  // Schema loading and URL sync.
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
 
@@ -134,6 +137,7 @@ const Insights = () => {
     writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange, breakdowns })
   }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
 
+  // Derived query config.
   const validEntries = eventFilters.validEntries
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
@@ -161,6 +165,7 @@ const Insights = () => {
     breakdowns,
   })
 
+  // Remote query execution.
   const {
     data: queryResult,
     loading,
@@ -201,6 +206,7 @@ const Insights = () => {
     { enabled: !!project && validEntries.length > 0 && !!timeRange && !hasIncompleteNumericAggregation }
   )
 
+  // Result normalization.
   const result = queryResult ?? EMPTY_RESULT
   const unknownResultCase =
     result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
@@ -229,12 +235,15 @@ const Insights = () => {
     if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
   }, [emptySeriesResult])
 
+  // Chart and table data shaping.
   const retentionSeriesList = useMemo(() => {
     if (result.case !== 'retention') return EMPTY_ARRAY
     return result.value.series
   }, [result])
+
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY, [retentionSeriesList])
   const kindOrder = useMemo(() => validEntries.map(e => e.kind), [validEntries])
+
   const funnelSeriesList = useMemo(() => {
     if (result.case !== 'funnel') return EMPTY_ARRAY
     return result.value.series
@@ -267,6 +276,7 @@ const Insights = () => {
   }, [result.case, retentionCohorts, trendSeries])
 
   const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
+
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []
 
@@ -281,6 +291,7 @@ const Insights = () => {
   )
   const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
 
+  // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
 
   const renderRowExtra = useMemo(() => {
@@ -298,6 +309,7 @@ const Insights = () => {
     )
   }, [eventFilters.filtersAtom, eventFilters.setAggregation, eventFilters.setAggregationProperty, isTrends])
 
+  // Page render.
   if (!project) return <NoProject title="Insights" icon={TrendingUp} />
 
   return (

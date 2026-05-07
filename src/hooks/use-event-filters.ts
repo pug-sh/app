@@ -1,7 +1,7 @@
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { atom, useAtom } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
-import type { ActiveFilter } from '@/lib/filters/filter-model'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 
 declare const entryIdBrand: unique symbol
 export type EntryId = string & { [entryIdBrand]: true }

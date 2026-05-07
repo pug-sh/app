@@ -9,7 +9,7 @@ import { X } from 'lucide-react'
 import { useScopedSchema } from './hooks'
 import { FilterBuilder } from './filter-builder'
 import { FilterChip } from './filter-chip'
-import type { ActiveFilter } from '@/lib/filters/filter-model'
+import type { ActiveFilter } from './filter-model'
 
 export const EventQueryRow = memo(
   ({

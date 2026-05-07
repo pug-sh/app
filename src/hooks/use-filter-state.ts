@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ActiveFilter } from '@/lib/filters/filter-model'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 
 export const useFilterState = (initialPropFilters: ActiveFilter[] = []) => {
   const [propFilters, setPropFilters] = useState<ActiveFilter[]>(initialPropFilters)

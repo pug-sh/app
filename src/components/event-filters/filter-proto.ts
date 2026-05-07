@@ -1,5 +1,5 @@
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import type { ActiveFilter } from '@/lib/filters/filter-model'
+import type { ActiveFilter } from './filter-model'
 
 export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
   filters.map(f => {

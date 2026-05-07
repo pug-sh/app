@@ -1,7 +1,7 @@
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { createFilter, FILTER_OPERATORS, type ActiveFilter } from '@/lib/filters/filter-model'
+import { createFilter, FILTER_OPERATORS, type ActiveFilter } from './filter-model'
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { useSuggestions } from './hooks'

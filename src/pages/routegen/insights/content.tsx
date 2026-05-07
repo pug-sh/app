@@ -1,7 +1,7 @@
 import { AggregationType, Granularity, type RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
-import type { ViewMode } from '@/lib/insights/constants'
+import type { ViewMode } from './constants'
 import { TrendingUp } from 'lucide-react'
 import {
   AreaChart,
