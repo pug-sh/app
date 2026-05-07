@@ -13,7 +13,10 @@ pnpm dev          # Start dev server (Vite)
 pnpm build        # Type-check + production build (tsc -b && vite build)
 pnpm generate     # Regenerate TypeScript proto types from backend protos
 pnpm lint         # ESLint
+pnpm format       # Prettier over src/**/*.{ts,tsx}
 ```
+
+There is no `pnpm test` or `pnpm lint:fix` script today.
 
 ## Proto Code Generation
 
@@ -45,6 +48,14 @@ Pages live in `src/pages/routegen/<name>/index.page.tsx`. Vite's `import.meta.gl
 - `routegen/campaigns/index.page.tsx` → `/campaigns`
 - `routegen/campaigns/[id]/index.page.tsx` → `/campaigns/:id` (dynamic segments)
 - Co-located files (atoms, helpers) next to `index.page.tsx` are not routed
+
+Feature-local modules should stay with the owning feature:
+
+- `src/pages/routegen/<feature>/` for page-specific helpers/constants/components
+- `src/components/event-filters/` for event-filter-specific logic and models
+- `src/lib/` only for code genuinely shared across multiple features
+
+Do not move feature-specific helpers into `src/lib/` just because they are "pure TS".
 
 Sign-in page is outside `routegen/` since it's unauthenticated.
 
@@ -105,6 +116,27 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
   - Heatmap cell colors stay value-intensity based
   - Cohort label markers should still use the shared series/family color mapping
 
+### Insights Aggregations
+
+Trends event rows support per-event aggregation selection:
+
+- `Total events`
+- `Unique users`
+- `Avg per user`
+- `Sum`
+- `Average`
+- `Min`
+- `Max`
+
+Rules:
+
+- Aggregation is event-row scoped, not global.
+- `Sum` / `Average` / `Min` / `Max` require an `aggregationProperty`.
+- The aggregation-property picker must only show numeric properties (`INTEGER` / `FLOAT` from schema `valueType`).
+- For non-numeric aggregations, clear/ignore `aggregationProperty`.
+- Funnel and retention ignore per-event aggregation and should continue using total counts.
+- Summary stats should adapt to aggregation type instead of always presenting totals.
+
 ### Form Validation
 
 Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for client-side validation. Define constraints in the Zod schema — required fields, string lengths, formats — so errors surface immediately in the UI before any RPC call. The protovalidate interceptor still runs as a safety net but is not the primary validation layer for forms.
@@ -141,6 +173,8 @@ Prefer implicit types — don't annotate what TypeScript can infer:
 - **No explicit variable types** when the RHS makes it obvious (`const x = 'hello'` not `const x: string = 'hello'`)
 - **No redundant generics** on `useState`/`useRef` when the initial value already has the right type (`useState(false)` not `useState<boolean>(false)`)
 - **Keep generics** when removal would change the type: `useState<T[]>([])` (infers `never[]` without it), `useState<T | null>(null)` (infers `null`), `atom<T[]>([])`, `useRef<HTMLElement>(null)`
+- Prefer `if`/`else` or small helpers over ternary operators that span multiple lines
+- When a file still needs to coordinate several concerns, separate major sections with blank lines and short section comments instead of letting logic blur together
 
 ### Prettier
 
