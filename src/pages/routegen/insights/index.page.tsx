@@ -1,29 +1,16 @@
-import {
-  AggregationType,
-  Granularity,
-  InsightType,
-  type FunnelSeries,
-} from '@/api/genproto/shared/insights/v1/insights_pb'
-import { PropertyValueType, type GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
+import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import {
-  BreakdownBuilder,
-  BreakdownChip,
-  EventFilterBar,
-  FilterBuilder,
-  FilterChip,
-  PropertyPickerList,
-} from '@/components/event-filters'
+import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
-import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useEventFilters } from '@/hooks/use-event-filters'
-import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import {
@@ -32,248 +19,60 @@ import {
   readFilterQueryParams,
   writeFilterQueryParams,
 } from '@/hooks/use-filter-query-params'
+import {
+  EMPTY_ARRAY,
+  EMPTY_RESULT,
+  getPageDescription,
+  GRANULARITIES,
+  GRANULARITY_VALUES,
+  INSIGHT_TYPES,
+  INSIGHT_TYPE_VALUES,
+  NUMERIC_AGGREGATIONS,
+  VIEW_MODES,
+  type ViewMode,
+} from '@/lib/insights/constants'
+import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '@/lib/insights/helpers'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { toProtoFilters } from '@/lib/filters/filter-proto'
-import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { useDebouncedQuery } from '@/hooks/use-debounced-query'
-import type { PrimitiveAtom } from 'jotai'
-import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { selectAtom } from 'jotai/utils'
-import { BarChart3, CircleHelp, Clock, Loader2, type LucideIcon, Ruler, TrendingUp } from 'lucide-react'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
-import {
-  AreaChart,
-  BarChart,
-  type ChartPoint,
-  DataTable,
-  FunnelBreakdownView,
-  FunnelChart,
-  LineChart,
-  RetentionCohort,
-  SummaryStats,
-} from './charts'
+import { toProtoTimeRange } from '@/lib/timestamp'
+import { cn } from '@/lib/utils'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
+import { CircleHelp, Clock, Loader2, TrendingUp, BarChart3 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
+import { type ChartPoint } from './charts'
+import { InsightsContent } from './content'
+import { InsightsRowAggregationControls, OptionChip } from './controls'
 
-// ── Module-level helpers ─────────────────────────────────────────────────────
-
-// Pads steps to the kindOrder skeleton so all breakdown series align by index;
-// missing kinds → count=0.
-const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[]) => {
-  const byKind = new Map(steps.map(s => [s.eventKind, Number(s.total) || 0]))
-  return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
+const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
+  if (initialInsightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialInsightType)) {
+    return initialInsightType
+  }
+  return InsightType.TRENDS
 }
 
-const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
-  Object.values(breakdown).join(' / ') || fallback
-
-// Disambiguates colliding labels by suffixing (2), (3)… so distinct breakdown
-// series don't share a label or, downstream, a getSeriesColor() output.
-const disambiguateLabels = (labels: string[]) => {
-  const seen = new Map<string, number>()
-  return labels.map(label => {
-    const count = (seen.get(label) ?? 0) + 1
-    seen.set(label, count)
-    return count > 1 ? `${label} (${count})` : label
-  })
+const getInitialGranularity = (initialGranularity: Granularity | undefined) => {
+  if (initialGranularity !== undefined && GRANULARITY_VALUES.includes(initialGranularity)) {
+    return initialGranularity
+  }
+  return Granularity.DAY
 }
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
-const GRANULARITIES = [
-  { label: 'Hour', value: Granularity.HOUR },
-  { label: 'Day', value: Granularity.DAY },
-  { label: 'Week', value: Granularity.WEEK },
-  { label: 'Month', value: Granularity.MONTH },
-] as const
-const GRANULARITY_VALUES = GRANULARITIES.map(x => x.value) as Granularity[]
-
-const AGGREGATIONS = [
-  { label: 'Total events', value: AggregationType.TOTAL },
-  { label: 'Unique users', value: AggregationType.UNIQUE_USERS },
-  { label: 'Avg per user', value: AggregationType.PER_USER_AVG },
-  { label: 'Sum', value: AggregationType.SUM },
-  { label: 'Average', value: AggregationType.AVG },
-  { label: 'Min', value: AggregationType.MIN },
-  { label: 'Max', value: AggregationType.MAX },
-] as const
-
-const NUMERIC_AGGREGATIONS = new Set([
-  AggregationType.SUM,
-  AggregationType.AVG,
-  AggregationType.MIN,
-  AggregationType.MAX,
-])
-const NUMERIC_VALUE_TYPES = new Set([PropertyValueType.INTEGER, PropertyValueType.FLOAT])
-
-const INSIGHT_TYPES = [
-  { label: 'Trends', value: InsightType.TRENDS },
-  { label: 'Funnel', value: InsightType.FUNNEL },
-  { label: 'Retention', value: InsightType.RETENTION },
-] as const
-const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
-
-type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
-const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
-  { label: 'Line', value: 'line' },
-  { label: 'Area', value: 'area' },
-  { label: 'Bar (grouped)', value: 'bar-grouped' },
-  { label: 'Bar (stacked)', value: 'bar-stacked' },
-  { label: 'Table', value: 'table' },
-]
-
-const EMPTY_RESULT = { case: undefined, value: undefined } as const
-const EMPTY_ARRAY: never[] = []
-
-const getPageDescription = (insightType: InsightType) => {
-  if (insightType === InsightType.TRENDS) return 'Analyze event trends'
-  if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
-  return 'Analyze step-by-step conversion'
-}
-
-// ── Option Chip ─────────────────────────────────────────────────────────────
-
-const OptionChip = <T extends string | number>({
-  label,
-  icon: Icon,
-  options,
-  value,
-  onChange,
+const getAggregationProperty = ({
+  insightType,
+  aggregation,
+  aggregationProperty,
 }: {
-  label: string
-  icon?: LucideIcon
-  options: readonly { label: string; value: T }[]
-  value: T
-  onChange: (v: T) => void
+  insightType: InsightType
+  aggregation: AggregationType | undefined
+  aggregationProperty: string | undefined
 }) => {
-  const [open, setOpen] = useState(false)
-  const current = options.find(o => o.value === value)
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
-          {Icon && <Icon className="w-3 h-3" />}
-          {label}
-        </span>
-        <span className="px-2 h-full flex items-center">{current?.label}</span>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-1">
-        <div className="flex flex-col gap-0.5">
-          {options.map(opt => (
-            <button
-              key={String(opt.value)}
-              type="button"
-              onClick={() => {
-                onChange(opt.value)
-                setOpen(false)
-              }}
-              className={cn(
-                'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
-                opt.value === value
-                  ? 'bg-muted text-foreground font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
+  if (insightType !== InsightType.TRENDS) return ''
+  if (!NUMERIC_AGGREGATIONS.has(aggregation ?? AggregationType.TOTAL)) return ''
+  return aggregationProperty ?? ''
 }
-
-// ── Row Aggregation Picker ───────────────────────────────────────────────────
-
-const RowAggregationPicker = memo(
-  ({
-    entryId,
-    filtersAtom,
-    setAggregation,
-  }: {
-    entryId: EntryId
-    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-    setAggregation: (id: EntryId, agg: AggregationType) => void
-  }) => {
-    // Subscribe only to this entry's aggregation; sibling row mutations don't re-render this picker.
-    const aggregationAtom = useMemo(
-      () =>
-        selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL),
-      [filtersAtom, entryId]
-    )
-    const value = useAtomValue(aggregationAtom)
-    return (
-      <OptionChip
-        label="measure"
-        icon={Ruler}
-        options={AGGREGATIONS}
-        value={value}
-        onChange={v => setAggregation(entryId, v)}
-      />
-    )
-  }
-)
-
-const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
-  if (!schema) return null
-  return {
-    ...schema,
-    autoPropertyKeys: schema.autoPropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
-    customPropertyKeys: schema.customPropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
-    profilePropertyKeys: schema.profilePropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
-  }
-}
-
-const RowAggregationPropertyPicker = memo(
-  ({
-    entryId,
-    filtersAtom,
-    schema,
-    schemaError,
-    setAggregationProperty,
-  }: {
-    entryId: EntryId
-    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
-    schema: GetFilterSchemaResponse | null
-    schemaError: string | null
-    setAggregationProperty: (id: EntryId, property: string) => void
-  }) => {
-    const [open, setOpen] = useState(false)
-    const propertyAtom = useMemo(
-      () => selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregationProperty ?? ''),
-      [filtersAtom, entryId]
-    )
-    const value = useAtomValue(propertyAtom)
-    const numericSchema = useMemo(() => filterNumericSchema(schema), [schema])
-
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
-          <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">property</span>
-          <span className={cn('px-2 h-full flex items-center', !value && 'text-muted-foreground')}>
-            {value || 'Select numeric property'}
-          </span>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-64 p-0">
-          <PropertyPickerList
-            schema={numericSchema}
-            schemaError={schemaError}
-            placeholder="Aggregate property..."
-            mode={{ kind: 'pick' }}
-            onSelect={name => {
-              setAggregationProperty(entryId, name)
-              setOpen(false)
-            }}
-          />
-        </PopoverContent>
-      </Popover>
-    )
-  }
-)
-
-// ── Main Component ──────────────────────────────────────────────────────────
 
 const Insights = () => {
   const project = useAtomValue(activeProjectAtom)
@@ -283,38 +82,37 @@ const Insights = () => {
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
+
   useEffect(() => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
     () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve()
   )
-  const [insightType, setInsightType] = useState(() =>
-    initialFilterState.insightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialFilterState.insightType)
-      ? initialFilterState.insightType
-      : InsightType.TRENDS
-  )
-  const [granularity, setGranularity] = useState(() =>
-    initialFilterState.granularity !== undefined && GRANULARITY_VALUES.includes(initialFilterState.granularity)
-      ? initialFilterState.granularity
-      : Granularity.DAY
-  )
+  const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
+  const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
   const [viewMode, setViewMode] = useState<ViewMode>('line')
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
-  const addBreakdown = (prop: string) =>
+
+  const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
       if (prev.includes(prop) || prev.length >= BREAKDOWN_MAX) return prev
       return [...prev, prop]
     })
-  const removeBreakdown = (prop: string) => setBreakdowns(prev => prev.filter(p => p !== prop))
+  }, [])
+
+  const removeBreakdown = useCallback((prop: string) => {
+    setBreakdowns(prev => prev.filter(p => p !== prop))
+  }, [])
 
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
+
   useEffect(() => {
     if (insightType !== InsightType.RETENTION) return
     const entries = store.get(filtersAtom)
@@ -337,6 +135,12 @@ const Insights = () => {
   }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
 
   const validEntries = eventFilters.validEntries
+  const isTrends = insightType === InsightType.TRENDS
+  const isRetention = insightType === InsightType.RETENTION
+  const isTimeSeriesInsight = isTrends || isRetention
+  const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
+  const maxEvents = isRetention ? 2 : undefined
+
   const hasIncompleteNumericAggregation = useMemo(
     () =>
       insightType === InsightType.TRENDS &&
@@ -379,10 +183,11 @@ const Insights = () => {
             },
             aggregation:
               insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
-            aggregationProperty:
-              insightType === InsightType.TRENDS && NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL)
-                ? (entry.aggregationProperty ?? '')
-                : '',
+            aggregationProperty: getAggregationProperty({
+              insightType,
+              aggregation: entry.aggregation,
+              aggregationProperty: entry.aggregationProperty,
+            }),
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
@@ -397,32 +202,44 @@ const Insights = () => {
   )
 
   const result = queryResult ?? EMPTY_RESULT
-
   const unknownResultCase =
     result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
+  let resultSeriesCount = 0
+  if (result.case === 'trends' || result.case === 'funnel' || result.case === 'retention') {
+    resultSeriesCount = result.value.series.length
+  }
+
   useEffect(() => {
     if (unknownResultCase) console.warn('Unrecognized insight result case:', result.case)
   }, [unknownResultCase, result.case])
 
   const trendSeries = useMemo(() => {
     if (result.case !== 'trends') return EMPTY_ARRAY
-    const kindEntries = eventFilters.validEntries
     return [...result.value.series].sort((a, b) => {
-      const ai = kindEntries.findIndex(e => e.kind === a.eventKind)
-      const bi = kindEntries.findIndex(e => e.kind === b.eventKind)
+      const ai = validEntries.findIndex(e => e.kind === a.eventKind)
+      const bi = validEntries.findIndex(e => e.kind === b.eventKind)
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
     })
-  }, [result, eventFilters.validEntries])
+  }, [result, validEntries])
+
   const emptySeriesResult =
     (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
+
   useEffect(() => {
     if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
   }, [emptySeriesResult])
 
-  const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : EMPTY_ARRAY), [result])
+  const retentionSeriesList = useMemo(() => {
+    if (result.case !== 'retention') return EMPTY_ARRAY
+    return result.value.series
+  }, [result])
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? EMPTY_ARRAY, [retentionSeriesList])
-  const kindOrder = useMemo(() => eventFilters.validEntries.map(e => e.kind), [eventFilters.validEntries])
-  const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
+  const kindOrder = useMemo(() => validEntries.map(e => e.kind), [validEntries])
+  const funnelSeriesList = useMemo(() => {
+    if (result.case !== 'funnel') return EMPTY_ARRAY
+    return result.value.series
+  }, [result])
+
   const funnelSeriesData = useMemo(() => {
     const labels = disambiguateLabels(funnelSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`)))
     return funnelSeriesList.map((series, si) => ({
@@ -431,261 +248,60 @@ const Insights = () => {
       color: getSeriesColor(labels[si], si).dot,
     }))
   }, [funnelSeriesList, kindOrder])
+
   const retentionLabels = useMemo(
     () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
     [retentionSeriesList]
   )
 
-  const seriesNames = useMemo(
-    () =>
-      result.case === 'retention'
-        ? retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
-        : trendSeries.map((s, i) => {
-            const bd = breakdownLabel(s.breakdown, '')
-            return bd ? `${s.eventKind} · ${bd}` : s.eventKind || `Series ${i + 1}`
-          }),
-    [result.case, trendSeries, retentionCohorts]
-  )
+  const seriesNames = useMemo(() => {
+    if (result.case === 'retention') {
+      return retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
+    }
+
+    return trendSeries.map((s, i) => {
+      const bd = breakdownLabel(s.breakdown, '')
+      if (bd) return `${s.eventKind} · ${bd}`
+      return s.eventKind || `Series ${i + 1}`
+    })
+  }, [result.case, retentionCohorts, trendSeries])
+
   const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
-  const seriesAggregations = useMemo(
-    () =>
-      result.case === 'trends'
-        ? trendSeries.map(series => {
-            const entry = eventFilters.validEntries.find(candidate => candidate.kind === series.eventKind)
-            return entry?.aggregation ?? AggregationType.TOTAL
-          })
-        : [],
-    [result.case, trendSeries, eventFilters.validEntries]
-  )
+  const seriesAggregations = useMemo(() => {
+    if (result.case !== 'trends') return []
+
+    return trendSeries.map(series => {
+      const entry = validEntries.find(candidate => candidate.kind === series.eventKind)
+      return entry?.aggregation ?? AggregationType.TOTAL
+    })
+  }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
   )
-  const chartData = useMemo<ChartPoint[]>(
-    () =>
-      trendSeries.length > 0
-        ? trendSeries[0].points
-            .map((p, i) => {
-              const date = tsToDate(p.time)
-              if (!date) return null
-              return {
-                date,
-                values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-              }
-            })
-            .filter((d): d is ChartPoint => d !== null)
-        : [],
-    [trendSeries]
-  )
+  const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
 
-  const isTrends = insightType === InsightType.TRENDS
-  const isRetention = insightType === InsightType.RETENTION
-  const isTimeSeriesInsight = isTrends || isRetention
-  const hasFunnelData = useMemo(
-    () => funnelSeriesData.some(s => s.steps.some(step => step.count > 0)),
-    [funnelSeriesData]
-  )
-  const allZero = useMemo(() => chartData.every(d => d.values.every(v => v === 0)), [chartData])
-  const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
-  const maxEvents = isRetention ? 2 : undefined
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
 
-  const renderRowExtra = useMemo(
-    () =>
-      isTrends
-        ? (entry: EventFilterEntry, rowSchema: GetFilterSchemaResponse | null, rowSchemaError: string | null) => (
-            <>
-              <RowAggregationPicker
-                entryId={entry.id}
-                filtersAtom={eventFilters.filtersAtom}
-                setAggregation={eventFilters.setAggregation}
-              />
-              {NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) && (
-                <RowAggregationPropertyPicker
-                  entryId={entry.id}
-                  filtersAtom={eventFilters.filtersAtom}
-                  schema={rowSchema}
-                  schemaError={rowSchemaError}
-                  setAggregationProperty={eventFilters.setAggregationProperty}
-                />
-              )}
-            </>
-          )
-        : undefined,
-    [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation, eventFilters.setAggregationProperty]
-  )
+  const renderRowExtra = useMemo(() => {
+    if (!isTrends) return undefined
 
-  const renderChart = () => {
-    if (allZero) {
-      return (
-        <div className="flex items-center justify-center h-48 text-muted-foreground">
-          <p className="text-sm">No events recorded in this period</p>
-        </div>
-      )
-    }
-    if (viewMode === 'line')
-      return (
-        <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      )
-    if (viewMode === 'area')
-      return (
-        <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      )
-    if (viewMode === 'table')
-      return (
-        <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
-      )
-    return (
-      <BarChart
-        data={chartData}
-        seriesNames={seriesNames}
-        seriesColors={seriesColors}
-        granularity={granularity}
-        stacked={viewMode === 'bar-stacked'}
+    return (entry: EventFilterEntry, rowSchema: GetFilterSchemaResponse | null, rowSchemaError: string | null) => (
+      <InsightsRowAggregationControls
+        entry={entry}
+        rowSchema={rowSchema}
+        rowSchemaError={rowSchemaError}
+        filtersAtom={eventFilters.filtersAtom}
+        setAggregation={eventFilters.setAggregation}
+        setAggregationProperty={eventFilters.setAggregationProperty}
       />
     )
-  }
-
-  const renderLoadingEmptyState = () => {
-    if (loading) return null
-
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-        <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-        <p className="text-sm font-medium mb-1">No data yet</p>
-        <p className="text-xs">Pick an event above to start</p>
-      </div>
-    )
-  }
-
-  const renderTruncationNotice = (count: number) => {
-    if (breakdowns.length === 0 || count < BREAKDOWN_RESPONSE_LIMIT) return null
-    return (
-      <p className="text-[11px] text-muted-foreground mt-2">
-        Showing top {BREAKDOWN_RESPONSE_LIMIT} — additional breakdown values may be hidden.
-      </p>
-    )
-  }
-
-  const renderFunnelContent = () => {
-    if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
-
-    if (!hasFunnelData) {
-      return (
-        <div className="flex items-center justify-center h-48 text-muted-foreground">
-          <p className="text-sm">No events recorded in this period</p>
-        </div>
-      )
-    }
-
-    if (breakdowns.length > 0) {
-      return (
-        <>
-          <FunnelBreakdownView series={funnelSeriesData} />
-          {renderTruncationNotice(funnelSeriesData.length)}
-        </>
-      )
-    }
-
-    return <FunnelChart series={funnelSeriesData} />
-  }
-
-  const renderRetentionContent = () => {
-    if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
-
-    if (breakdowns.length > 0) {
-      return (
-        <div className="space-y-6 mt-2">
-          {retentionSeriesList.map((series, si) => {
-            const cohortColors = series.cohorts.map((c, ci) => getSeriesColor(c.cohort || `Cohort ${ci + 1}`, ci))
-            return (
-              <div key={retentionLabels[si] ?? si}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {retentionLabels[si]}
-                  </span>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
-              </div>
-            )
-          })}
-          {renderTruncationNotice(retentionSeriesList.length)}
-        </div>
-      )
-    }
-
-    if (retentionCohorts.length === 0) return renderLoadingEmptyState()
-    return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
-  }
-
-  const renderMainContent = () => {
-    if (error) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16">
-          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
-            Retry
-          </Button>
-        </div>
-      )
-    }
-
-    if (unknownResultCase) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm">Unsupported result type</p>
-        </div>
-      )
-    }
-
-    if ((result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm">No results — try adjusting your query</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
-            Retry
-          </Button>
-        </div>
-      )
-    }
-
-    if (isRetention) return renderRetentionContent()
-    if (!isTrends) return renderFunnelContent()
-    if (hasIncompleteNumericAggregation) {
-      return (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm">Select a numeric property to run this aggregation</p>
-        </div>
-      )
-    }
-
-    if (chartData.length > 0) {
-      return (
-        <div>
-          <SummaryStats
-            series={seriesNames}
-            data={chartData}
-            seriesColors={seriesColors}
-            aggregations={seriesAggregations}
-          />
-          {renderChart()}
-        </div>
-      )
-    }
-
-    return renderLoadingEmptyState()
-  }
+  }, [eventFilters.filtersAtom, eventFilters.setAggregation, eventFilters.setAggregationProperty, isTrends])
 
   if (!project) return <NoProject title="Insights" icon={TrendingUp} />
 
   return (
     <Page title="Insights" description={getPageDescription(insightType)}>
-      {/* Query config — sticky */}
       <div
         className={cn(
           '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
@@ -717,7 +333,6 @@ const Insights = () => {
           )}
         </div>
 
-        {/* Events + per-event filters + per-event aggregation */}
         <div className="space-y-1">
           <EventFilterBar
             filtersAtom={eventFilters.filtersAtom}
@@ -772,7 +387,28 @@ const Insights = () => {
         </div>
       </div>
 
-      {renderMainContent()}
+      <InsightsContent
+        error={error}
+        retry={retry}
+        unknownResultCase={unknownResultCase}
+        resultCase={result.case}
+        resultSeriesCount={resultSeriesCount}
+        isRetention={isRetention}
+        isTrends={isTrends}
+        hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
+        chartData={chartData}
+        seriesNames={seriesNames}
+        seriesColors={seriesColors}
+        seriesAggregations={seriesAggregations}
+        viewMode={viewMode}
+        granularity={granularity}
+        breakdowns={breakdowns}
+        breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
+        retentionSeriesList={retentionSeriesList}
+        retentionLabels={retentionLabels}
+        retentionCohorts={retentionCohorts}
+        funnelSeriesData={funnelSeriesData}
+      />
     </Page>
   )
 }
