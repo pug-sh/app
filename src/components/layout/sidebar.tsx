@@ -163,9 +163,11 @@ const AppSidebar = () => {
                 </div>
                 <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={8}>
+              <DropdownMenuContent align="start" sideOffset={8} className="p-1.5">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel>{activeOrg?.displayName ?? 'Workspace'}</DropdownMenuLabel>
+                  <DropdownMenuLabel className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                    {activeOrg?.displayName ?? 'Workspace'}
+                  </DropdownMenuLabel>
                   {projects.map(proj => {
                     const selected = proj.id === currentProjectId
                     return (
@@ -175,7 +177,7 @@ const AppSidebar = () => {
                           setActiveProject(proj)
                           navigate(`/p/${proj.id}/${pagePath}`)
                         }}
-                        className="gap-2"
+                        className="min-h-9 gap-2 rounded-lg px-2"
                       >
                         <div className="min-w-0 flex-1">
                           <div className="truncate font-medium">{proj.displayName}</div>
@@ -185,11 +187,11 @@ const AppSidebar = () => {
                     )
                   })}
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
+                <DropdownMenuSeparator className="mx-1.5 my-1.5" />
                 <DropdownMenuItem
                   onClick={() => setCreateProjectOpen(true)}
                   disabled={!activeOrg}
-                  className="min-h-9 gap-2 text-sidebar-primary"
+                  className="min-h-9 gap-2 rounded-lg px-2 font-medium text-primary"
                 >
                   <Plus className="size-4" />
                   New project
