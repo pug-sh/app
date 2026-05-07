@@ -19,7 +19,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { toProtoEventFilters, toProtoFilters } from '@/lib/filters/filter-proto'
+import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
 import ProjectLink from '@/components/project-link'
 import { InlineEventProps } from '@/components/inline-event-props'
 import { structGet, structToEntries } from '@/lib/struct'
@@ -280,12 +280,7 @@ const EventExplorer = () => {
             />
           )}
           {propFilters.map((f, i) => (
-            <FilterChip
-              key={i}
-              filter={f}
-              onRemove={() => removeFilter(i)}
-              onUpdate={next => updateFilter(i, next)}
-            />
+            <FilterChip key={i} filter={f} onRemove={() => removeFilter(i)} onUpdate={next => updateFilter(i, next)} />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {events.length > 0 && (

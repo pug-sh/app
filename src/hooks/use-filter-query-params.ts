@@ -1,14 +1,22 @@
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import type { ActiveFilter } from '@/lib/filters/filter-model'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 
 const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
-const VALID_AGGREGATIONS = [AggregationType.TOTAL, AggregationType.UNIQUE_USERS, AggregationType.PER_USER_AVG]
+const VALID_AGGREGATIONS = [
+  AggregationType.TOTAL,
+  AggregationType.UNIQUE_USERS,
+  AggregationType.PER_USER_AVG,
+  AggregationType.SUM,
+  AggregationType.AVG,
+  AggregationType.MIN,
+  AggregationType.MAX,
+]
 const VALID_OPERATORS = new Set([
   FilterOperator.EQUALS,
   FilterOperator.NOT_EQUALS,
@@ -109,7 +117,12 @@ const parseEventFilterEntry = (value: unknown): EventFilterEntry | null => {
     typeof v.aggregation === 'number' && VALID_AGGREGATIONS.includes(v.aggregation as AggregationType)
       ? (v.aggregation as AggregationType)
       : undefined
-  return createEntry(kind, { filters, aggregation })
+  const aggregationProperty = typeof v.aggregationProperty === 'string' ? v.aggregationProperty.trim() : ''
+  return createEntry(kind, {
+    filters,
+    aggregation,
+    ...(aggregationProperty ? { aggregationProperty } : {}),
+  })
 }
 
 const parseJSONParam = (raw: string | null): unknown => {

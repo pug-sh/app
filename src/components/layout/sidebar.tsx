@@ -1,12 +1,7 @@
 import { signOutAtom } from '@/auth/auth.atoms'
 import { Input } from '@/components/ui/input'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
-import {
-  activeOrgAtom,
-  activeProjectAtom,
-  createProjectAtom,
-  projectsAtom,
-} from '@/data/workspace.atoms'
+import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } from '@/data/workspace.atoms'
 import {
   Dialog,
   DialogContent,
