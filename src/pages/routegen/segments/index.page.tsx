@@ -10,10 +10,11 @@ import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { defaultRange } from '@/lib/date-presets'
-import { useFilterState, toProtoFilters } from '@/hooks/use-filter-state'
+import { useFilterState } from '@/hooks/use-filter-state'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { toProtoFilters } from '@/lib/filters/filter-proto'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
@@ -106,7 +107,6 @@ const Segments = () => {
             <FilterChip
               key={`f-${i}`}
               filter={f}
-              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />

@@ -1,6 +1,7 @@
-import type { ActiveFilter } from '@/components/event-filters'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
+import type { ActiveFilter } from '@/lib/filters/filter-model'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
@@ -42,8 +43,11 @@ const isListOperator = (operator: FilterOperator) =>
 const isRangeOperator = (operator: FilterOperator) =>
   operator === FilterOperator.BETWEEN || operator === FilterOperator.NOT_BETWEEN
 
+const VALID_SOURCES = new Set([PropertySource.AUTO, PropertySource.CUSTOM, PropertySource.PROFILE])
+
 type ParsedBaseFilter = {
   property: string
+  source: PropertySource
   operator: FilterOperator
 }
 
@@ -52,7 +56,11 @@ const parseBaseFilter = (value: unknown): ParsedBaseFilter | null => {
   const v = value as Record<string, unknown>
   if (typeof v.property !== 'string' || !v.property || typeof v.operator !== 'number') return null
   if (!VALID_OPERATORS.has(v.operator as FilterOperator)) return null
-  return { property: v.property, operator: v.operator as FilterOperator }
+  const source =
+    typeof v.source === 'number' && VALID_SOURCES.has(v.source as PropertySource)
+      ? (v.source as PropertySource)
+      : PropertySource.UNSPECIFIED
+  return { property: v.property, source, operator: v.operator as FilterOperator }
 }
 
 const normalizeSingle = (base: ParsedBaseFilter, rawValue: unknown): ActiveFilter | null => {

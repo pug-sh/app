@@ -7,7 +7,7 @@ import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
-import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import Page from '@/components/layout/page'
@@ -15,6 +15,7 @@ import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
+import { toProtoEventFilters, toProtoFilters } from '@/lib/filters/filter-proto'
 import ProjectLink from '@/components/project-link'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
@@ -266,7 +267,6 @@ const UserActivity = () => {
                 <FilterChip
                   key={i}
                   filter={f}
-                  schema={globalSchema}
                   onRemove={() => removeFilter(i)}
                   onUpdate={next => updateFilter(i, next)}
                 />

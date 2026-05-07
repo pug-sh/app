@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
-import { toProtoFilters, useFilterState } from '@/hooks/use-filter-state'
+import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import {
   BREAKDOWN_MAX,
@@ -25,6 +25,7 @@ import {
   writeFilterQueryParams,
 } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { toProtoFilters } from '@/lib/filters/filter-proto'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -625,7 +626,6 @@ const Insights = () => {
             <FilterChip
               key={`f-${i}`}
               filter={f}
-              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />

@@ -16,9 +16,10 @@ import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
-import { useFilterState, toProtoFilters, toProtoEventFilters } from '@/hooks/use-filter-state'
+import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { toProtoEventFilters, toProtoFilters } from '@/lib/filters/filter-proto'
 import ProjectLink from '@/components/project-link'
 import { InlineEventProps } from '@/components/inline-event-props'
 import { structGet, structToEntries } from '@/lib/struct'
@@ -282,7 +283,6 @@ const EventExplorer = () => {
             <FilterChip
               key={i}
               filter={f}
-              schema={globalSchema}
               onRemove={() => removeFilter(i)}
               onUpdate={next => updateFilter(i, next)}
             />
