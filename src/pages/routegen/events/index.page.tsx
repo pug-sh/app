@@ -280,12 +280,7 @@ const EventExplorer = () => {
             />
           )}
           {propFilters.map((f, i) => (
-            <FilterChip
-              key={i}
-              filter={f}
-              onRemove={() => removeFilter(i)}
-              onUpdate={next => updateFilter(i, next)}
-            />
+            <FilterChip key={i} filter={f} onRemove={() => removeFilter(i)} onUpdate={next => updateFilter(i, next)} />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
           {events.length > 0 && (
