@@ -1,7 +1,7 @@
 import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { EventChip } from './pickers'
-import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import type { PrimitiveAtom } from 'jotai'
 import { useSetAtom } from 'jotai'
 import { memo, useCallback } from 'react'
@@ -32,7 +32,11 @@ export const EventQueryRow = memo(
     schemaError: string | null
     letter?: string
     color?: string
-    renderExtra?: (entryId: EntryId) => React.ReactNode
+    renderExtra?: (
+      entry: EventFilterEntry,
+      schema: GetFilterSchemaResponse | null,
+      schemaError: string | null
+    ) => React.ReactNode
     getEventColor?: (eventName: string) => string
   }) => {
     const setEntries = useSetAtom(filtersAtom)
@@ -51,7 +55,9 @@ export const EventQueryRow = memo(
         if (!trimmed) {
           setEntries(prev => prev.filter(e => e.id !== entryId))
         } else {
-          setEntries(prev => prev.map(e => (e.id === entryId ? { ...e, kind: trimmed, filters: [] } : e)))
+          setEntries(prev =>
+            prev.map(e => (e.id === entryId ? { ...e, kind: trimmed, filters: [], aggregationProperty: '' } : e))
+          )
         }
       },
       [entryId, setEntries]
@@ -133,7 +139,7 @@ export const EventQueryRow = memo(
                   retry schema
                 </button>
               )}
-              {renderExtra?.(entry.id)}
+              {renderExtra?.(entry, resolvedSchema, resolvedSchemaError)}
             </>
           )}
         </div>

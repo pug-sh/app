@@ -4,10 +4,18 @@ import {
   InsightType,
   type FunnelSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { PropertyValueType, type GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import {
+  BreakdownBuilder,
+  BreakdownChip,
+  EventFilterBar,
+  FilterBuilder,
+  FilterChip,
+  PropertyPickerList,
+} from '@/components/event-filters'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -86,7 +94,19 @@ const AGGREGATIONS = [
   { label: 'Total events', value: AggregationType.TOTAL },
   { label: 'Unique users', value: AggregationType.UNIQUE_USERS },
   { label: 'Avg per user', value: AggregationType.PER_USER_AVG },
+  { label: 'Sum', value: AggregationType.SUM },
+  { label: 'Average', value: AggregationType.AVG },
+  { label: 'Min', value: AggregationType.MIN },
+  { label: 'Max', value: AggregationType.MAX },
 ] as const
+
+const NUMERIC_AGGREGATIONS = new Set([
+  AggregationType.SUM,
+  AggregationType.AVG,
+  AggregationType.MIN,
+  AggregationType.MAX,
+])
+const NUMERIC_VALUE_TYPES = new Set([PropertyValueType.INTEGER, PropertyValueType.FLOAT])
 
 const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
@@ -196,6 +216,63 @@ const RowAggregationPicker = memo(
   }
 )
 
+const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
+  if (!schema) return null
+  return {
+    ...schema,
+    autoPropertyKeys: schema.autoPropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
+    customPropertyKeys: schema.customPropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
+    profilePropertyKeys: schema.profilePropertyKeys.filter(pk => NUMERIC_VALUE_TYPES.has(pk.valueType)),
+  }
+}
+
+const RowAggregationPropertyPicker = memo(
+  ({
+    entryId,
+    filtersAtom,
+    schema,
+    schemaError,
+    setAggregationProperty,
+  }: {
+    entryId: EntryId
+    filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+    schema: GetFilterSchemaResponse | null
+    schemaError: string | null
+    setAggregationProperty: (id: EntryId, property: string) => void
+  }) => {
+    const [open, setOpen] = useState(false)
+    const propertyAtom = useMemo(
+      () => selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregationProperty ?? ''),
+      [filtersAtom, entryId]
+    )
+    const value = useAtomValue(propertyAtom)
+    const numericSchema = useMemo(() => filterNumericSchema(schema), [schema])
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+          <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">property</span>
+          <span className={cn('px-2 h-full flex items-center', !value && 'text-muted-foreground')}>
+            {value || 'Select numeric property'}
+          </span>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-64 p-0">
+          <PropertyPickerList
+            schema={numericSchema}
+            schemaError={schemaError}
+            placeholder="Aggregate property..."
+            mode={{ kind: 'pick' }}
+            onSelect={name => {
+              setAggregationProperty(entryId, name)
+              setOpen(false)
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    )
+  }
+)
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const Insights = () => {
@@ -260,6 +337,16 @@ const Insights = () => {
   }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
 
   const validEntries = eventFilters.validEntries
+  const hasIncompleteNumericAggregation = useMemo(
+    () =>
+      insightType === InsightType.TRENDS &&
+      validEntries.some(
+        entry =>
+          NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
+          !(entry.aggregationProperty ?? '').trim()
+      ),
+    [insightType, validEntries]
+  )
 
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
@@ -292,6 +379,10 @@ const Insights = () => {
             },
             aggregation:
               insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
+            aggregationProperty:
+              insightType === InsightType.TRENDS && NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL)
+                ? (entry.aggregationProperty ?? '')
+                : '',
           })),
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
@@ -302,7 +393,7 @@ const Insights = () => {
       )
       return resp.result
     },
-    { enabled: !!project && validEntries.length > 0 && !!timeRange }
+    { enabled: !!project && validEntries.length > 0 && !!timeRange && !hasIncompleteNumericAggregation }
   )
 
   const result = queryResult ?? EMPTY_RESULT
@@ -356,6 +447,16 @@ const Insights = () => {
     [result.case, trendSeries, retentionCohorts]
   )
   const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
+  const seriesAggregations = useMemo(
+    () =>
+      result.case === 'trends'
+        ? trendSeries.map(series => {
+            const entry = eventFilters.validEntries.find(candidate => candidate.kind === series.eventKind)
+            return entry?.aggregation ?? AggregationType.TOTAL
+          })
+        : [],
+    [result.case, trendSeries, eventFilters.validEntries]
+  )
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries]
@@ -392,15 +493,26 @@ const Insights = () => {
   const renderRowExtra = useMemo(
     () =>
       isTrends
-        ? (entryId: EntryId) => (
-            <RowAggregationPicker
-              entryId={entryId}
-              filtersAtom={eventFilters.filtersAtom}
-              setAggregation={eventFilters.setAggregation}
-            />
+        ? (entry: EventFilterEntry, rowSchema: GetFilterSchemaResponse | null, rowSchemaError: string | null) => (
+            <>
+              <RowAggregationPicker
+                entryId={entry.id}
+                filtersAtom={eventFilters.filtersAtom}
+                setAggregation={eventFilters.setAggregation}
+              />
+              {NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) && (
+                <RowAggregationPropertyPicker
+                  entryId={entry.id}
+                  filtersAtom={eventFilters.filtersAtom}
+                  schema={rowSchema}
+                  schemaError={rowSchemaError}
+                  setAggregationProperty={eventFilters.setAggregationProperty}
+                />
+              )}
+            </>
           )
         : undefined,
-    [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation]
+    [isTrends, eventFilters.filtersAtom, eventFilters.setAggregation, eventFilters.setAggregationProperty]
   )
 
   const renderChart = () => {
@@ -543,11 +655,24 @@ const Insights = () => {
 
     if (isRetention) return renderRetentionContent()
     if (!isTrends) return renderFunnelContent()
+    if (hasIncompleteNumericAggregation) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">Select a numeric property to run this aggregation</p>
+        </div>
+      )
+    }
 
     if (chartData.length > 0) {
       return (
         <div>
-          <SummaryStats series={seriesNames} data={chartData} seriesColors={seriesColors} />
+          <SummaryStats
+            series={seriesNames}
+            data={chartData}
+            seriesColors={seriesColors}
+            aggregations={seriesAggregations}
+          />
           {renderChart()}
         </div>
       )

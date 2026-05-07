@@ -2,7 +2,7 @@ import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { EventChip } from './pickers'
 import { createEntry } from '@/hooks/use-event-filters'
-import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import type { PrimitiveAtom } from 'jotai'
 import { useAtom } from 'jotai'
 import { useCallback } from 'react'
@@ -28,7 +28,11 @@ export const EventFilterBar = ({
   schemaError: string | null
   showLetters?: boolean
   seriesColors?: { dot: string }[]
-  renderRowExtra?: (entryId: EntryId) => React.ReactNode
+  renderRowExtra?: (
+    entry: EventFilterEntry,
+    schema: GetFilterSchemaResponse | null,
+    schemaError: string | null
+  ) => React.ReactNode
   maxEvents?: number
   getEventColor?: (eventName: string) => string
 }) => {
