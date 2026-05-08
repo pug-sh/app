@@ -55,7 +55,7 @@ const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: Ac
   const city = structGet(lastAuto, '$city')
 
   return (
-    <div className="mb-5 pb-4 border-b border-border">
+    <div className="mb-4">
       <div className="flex items-start gap-4">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
           <Activity className="w-5 h-5 text-primary" />
@@ -252,7 +252,7 @@ const UserActivity = () => {
         <>
           <ProfileSummary distinctId={profileId ?? ''} events={events} />
 
-          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50">
+          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
             <div className="flex flex-wrap items-center gap-2">
               <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
             </div>
