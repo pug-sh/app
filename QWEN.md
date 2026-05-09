@@ -9,7 +9,7 @@ Dashboard frontend for **Pug** — an analytics + communication platform (simila
 - **Jotai** for state management (atoms only, no Context/Redux)
 - **ConnectRPC** with protobuf for backend communication
 - **Wouter** for file-based routing
-- **ESLint** + **Prettier** for code quality
+- **Biome** for formatting, linting, and import organization
 
 ## Commands
 
@@ -17,7 +17,9 @@ Dashboard frontend for **Pug** — an analytics + communication platform (simila
 pnpm dev          # Start dev server (Vite) at http://localhost:5173
 pnpm build        # Type-check + production build
 pnpm generate     # Regenerate TypeScript proto types from backend protos
-pnpm lint         # ESLint check
+pnpm format       # Biome formatter
+pnpm lint         # Biome lint with safe fixes
+pnpm check        # Biome format + lint + import organization
 pnpm preview      # Preview production build
 ```
 
@@ -156,9 +158,9 @@ VITE_API_BASE_URL=http://localhost:3000
 VITE_API_BASE_URL=<production-api-url>
 ```
 
-## Code Style (Prettier)
+## Code Style (Biome)
 
-Configured in `package.json`:
+Configured in `biome.json`:
 
 - No semicolons
 - Single quotes

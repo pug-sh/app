@@ -1,12 +1,12 @@
+import { createRegistry } from '@bufbuild/protobuf'
+import { createValidator } from '@bufbuild/protovalidate'
 import { Code, ConnectError, type Interceptor } from '@connectrpc/connect'
 import { createConnectTransport } from '@connectrpc/connect-web'
-import { createValidator } from '@bufbuild/protovalidate'
-import { createRegistry } from '@bufbuild/protobuf'
-import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
-import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { clearJwt, jwtAtom, JWT_KEY } from '@/auth/jwt.atoms'
 import { atom, getDefaultStore } from 'jotai'
 import { toast } from 'sonner'
+import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
+import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { clearJwt, JWT_KEY, jwtAtom } from '@/auth/jwt.atoms'
 
 // Register the app's file descriptors so the validator can compile rules defined
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references

@@ -1,7 +1,7 @@
+import { atom } from 'jotai'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { atom } from 'jotai'
 
 export const filterSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
 export const filterSchemaErrorAtom = atom<string | null>(null)

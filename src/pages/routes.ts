@@ -1,5 +1,5 @@
+import type { ComponentType, LazyExoticComponent } from 'react'
 import { lazyWithRetry } from '@/lib/lazy'
-import { type ComponentType, type LazyExoticComponent } from 'react'
 
 type PageModule = { default: ComponentType }
 

@@ -1,3 +1,8 @@
+import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { useAtomValue } from 'jotai'
+import { Loader2, Save } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useParams } from 'wouter'
 import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
 import { campaignsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
@@ -8,12 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useProjectNavigate } from '@/lib/project-path'
-import { timestampFromDate } from '@bufbuild/protobuf/wkt'
-import { useAtomValue } from 'jotai'
 import { toastRPCError } from '@/lib/rpc-error'
-import { Loader2, Save } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { useParams } from 'wouter'
 import { encodeNotificationData, formatTime, parseNotificationData, statusVariant } from '../campaigns.atoms'
 
 const CampaignDetail = () => {
@@ -66,7 +66,7 @@ const CampaignDetail = () => {
           notificationData: encodeNotificationData(notif),
           scheduledTime: scheduledAt ? timestampFromDate(new Date(scheduledAt)) : undefined,
         },
-        { headers }
+        { headers },
       )
       navigate('/campaigns')
     } catch (err) {

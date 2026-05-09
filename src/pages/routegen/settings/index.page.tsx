@@ -1,3 +1,9 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useAtom, useAtomValue } from 'jotai'
+import { Check, Copy, Loader2, Lock, Save } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import SectionHeader from '@/components/section-header'
@@ -8,12 +14,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { activeOrgAtom, activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
-import { useAtom, useAtomValue } from 'jotai'
-import { Check, Copy, Lock, Loader2, Save } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 
 const orgSchema = z.object({
   displayName: z.string().min(1, 'Organization name is required').max(150, 'Name must be at most 150 characters'),

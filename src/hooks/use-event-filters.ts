@@ -1,6 +1,6 @@
-import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { atom, useAtom } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 
 declare const entryIdBrand: unique symbol
@@ -25,7 +25,7 @@ const newEntryId = () =>
 
 export const createEntry = (
   kind: string,
-  opts?: { filters?: readonly ActiveFilter[]; aggregation?: AggregationType; aggregationProperty?: string }
+  opts?: { filters?: readonly ActiveFilter[]; aggregation?: AggregationType; aggregationProperty?: string },
 ): EventFilterEntry => ({
   id: newEntryId(),
   kind,
@@ -58,24 +58,24 @@ export const useEventFilters = (defaultEntries: EventFilterEntry[] = []) => {
           }
 
           return { ...e, aggregation }
-        })
+        }),
       )
     },
-    [setEntries]
+    [setEntries],
   )
 
   const setAggregationProperty = useCallback(
     (id: EntryId, aggregationProperty: string) => {
       setEntries(prev => prev.map(e => (e.id === id ? { ...e, aggregationProperty } : e)))
     },
-    [setEntries]
+    [setEntries],
   )
 
   const reset = useCallback(
     (nextEntries: EventFilterEntry[] = []) => {
       setEntries(nextEntries)
     },
-    [setEntries]
+    [setEntries],
   )
 
   return { entries, validEntries, filtersAtom, setAggregation, setAggregationProperty, reset } as const

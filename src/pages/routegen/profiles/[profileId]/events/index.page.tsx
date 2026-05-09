@@ -1,31 +1,31 @@
-import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import { activityRPCAtom } from '@/api/rpc'
-import HoverSwap from '@/components/hover-swap'
-import LoadingSpinner from '@/components/loading-spinner'
-import TimelineEventItem from '@/components/timeline-event-item'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
-import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
-import { useEventFilters } from '@/hooks/use-event-filters'
-import { useFilterState } from '@/hooks/use-filter-state'
-import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import Page from '@/components/layout/page'
-import NoProject from '@/components/no-project'
-import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
-import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
-import ProjectLink from '@/components/project-link'
-import { isMobileOS } from '@/lib/format'
-import { structGet } from '@/lib/struct'
-import { tsToDate, formatClock, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Activity, AlertCircle, Calendar, Clock, Globe, Loader2, Monitor, Smartphone } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { useParams } from 'wouter'
+import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { activityRPCAtom } from '@/api/rpc'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
+import HoverSwap from '@/components/hover-swap'
+import Page from '@/components/layout/page'
+import LoadingSpinner from '@/components/loading-spinner'
+import NoProject from '@/components/no-project'
+import ProjectLink from '@/components/project-link'
+import TimelineEventItem from '@/components/timeline-event-item'
+import { Button } from '@/components/ui/button'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useEventFilters } from '@/hooks/use-event-filters'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { useFilterState } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { isMobileOS } from '@/lib/format'
+import { structGet } from '@/lib/struct'
+import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { cn } from '@/lib/utils'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -158,7 +158,7 @@ const UserActivity = () => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
+  }, []) // Fire on mount; explicit toast id dedupes the StrictMode double-call in dev.
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
@@ -197,7 +197,7 @@ const UserActivity = () => {
             pageSize: 200,
             pageToken,
           },
-          { headers }
+          { headers },
         )
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
@@ -212,7 +212,7 @@ const UserActivity = () => {
         setLoading(false)
       }
     },
-    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC]
+    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC],
   )
 
   useEffect(() => {
@@ -325,7 +325,7 @@ const UserActivity = () => {
                                       isFirst && isLast && 'top-1.5 bottom-1.5 rounded-full',
                                       isFirst && !isLast && 'top-1.5 bottom-0 rounded-t-full',
                                       !isFirst && isLast && 'top-0 bottom-1.5 rounded-b-full',
-                                      !isFirst && !isLast && 'top-0 bottom-0'
+                                      !isFirst && !isLast && 'top-0 bottom-0',
                                     )}
                                     style={{ left: x }}
                                   />

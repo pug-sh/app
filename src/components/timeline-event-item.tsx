@@ -1,14 +1,14 @@
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { EventDetails } from '@/components/event-details'
 import HoverSwap from '@/components/hover-swap'
-import { getSeriesColor } from '@/lib/event-colors'
-import { Badge } from '@/components/ui/badge'
 import { InlineEventProps } from '@/components/inline-event-props'
+import { Badge } from '@/components/ui/badge'
+import { getSeriesColor } from '@/lib/event-colors'
 import { structToEntries } from '@/lib/struct'
-import { resolveInlineProps } from '@/lib/well-known-events'
 import { cn } from '@/lib/utils'
-import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { resolveInlineProps } from '@/lib/well-known-events'
 
 const TimelineEventItem = ({
   event,

@@ -38,7 +38,7 @@ const BOOLEAN_OPERATORS = new Set([
 export const getPropertyMeta = (
   schema: GetFilterSchemaResponse | null,
   property: string,
-  source: PropertySource
+  source: PropertySource,
 ): PropertyKeyMeta | null => {
   if (!schema) return null
 

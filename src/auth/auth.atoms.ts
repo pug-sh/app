@@ -1,7 +1,7 @@
 import { ConnectError } from '@connectrpc/connect'
+import { atom } from 'jotai'
 import { authRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
-import { atom } from 'jotai'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
 
 export const signInAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {

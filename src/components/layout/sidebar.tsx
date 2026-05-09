@@ -1,7 +1,27 @@
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import {
+  BookOpen,
+  Check,
+  ChevronsUpDown,
+  ContactRound,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  Megaphone,
+  Monitor,
+  Moon,
+  Plus,
+  Settings,
+  Sun,
+  TrendingUp,
+  Users,
+  UsersRound,
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
-import { Input } from '@/components/ui/input'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
-import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +39,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import {
   Sidebar,
   SidebarContent,
@@ -31,29 +52,8 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
-import { Button } from '@/components/ui/button'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import {
-  BookOpen,
-  Check,
-  ChevronsUpDown,
-  LayoutDashboard,
-  Loader2,
-  LogOut,
-  Megaphone,
-  Monitor,
-  Moon,
-  Plus,
-  ContactRound,
-  Settings,
-  Sun,
-  TrendingUp,
-  Users,
-  UsersRound,
-} from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { Link, useLocation } from 'wouter'
+import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } from '@/data/workspace.atoms'
 
 const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },

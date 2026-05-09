@@ -1,50 +1,50 @@
-import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
+import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
+import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
-import { useEventFilters } from '@/hooks/use-event-filters'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import { useFilterState } from '@/hooks/use-filter-state'
-import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { useEventFilters } from '@/hooks/use-event-filters'
 import {
   BREAKDOWN_MAX,
   BREAKDOWN_RESPONSE_LIMIT,
   readFilterQueryParams,
   writeFilterQueryParams,
 } from '@/hooks/use-filter-query-params'
+import { useFilterState } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { getSeriesColor } from '@/lib/event-colors'
+import { toProtoTimeRange } from '@/lib/timestamp'
+import { cn } from '@/lib/utils'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
+import type { ChartPoint } from './charts'
 import {
   EMPTY_ARRAY,
   EMPTY_RESULT,
-  getPageDescription,
   GRANULARITIES,
   GRANULARITY_VALUES,
-  INSIGHT_TYPES,
+  getPageDescription,
   INSIGHT_TYPE_VALUES,
+  INSIGHT_TYPES,
   NUMERIC_AGGREGATIONS,
   VIEW_MODES,
   type ViewMode,
 } from './constants'
-import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { toProtoFilters } from '@/components/event-filters/filter-proto'
-import { getSeriesColor } from '@/lib/event-colors'
-import { toProtoTimeRange } from '@/lib/timestamp'
-import { cn } from '@/lib/utils'
-import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { CircleHelp, Clock, Loader2, TrendingUp, BarChart3 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { toast } from 'sonner'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { type ChartPoint } from './charts'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
+import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
   if (initialInsightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialInsightType)) {
@@ -88,12 +88,12 @@ const Insights = () => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Local query state.
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
-    () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve()
+    () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve(),
   )
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
@@ -151,9 +151,9 @@ const Insights = () => {
       validEntries.some(
         entry =>
           NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
-          !(entry.aggregationProperty ?? '').trim()
+          !(entry.aggregationProperty ?? '').trim(),
       ),
-    [insightType, validEntries]
+    [insightType, validEntries],
   )
 
   const queryKey = JSON.stringify({
@@ -199,11 +199,11 @@ const Insights = () => {
           breakdowns: breakdowns.map(property => ({ property })),
           breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
         },
-        { headers }
+        { headers },
       )
       return resp.result
     },
-    { enabled: !!project && validEntries.length > 0 && !!timeRange && !hasIncompleteNumericAggregation }
+    { enabled: !!project && validEntries.length > 0 && !!timeRange && !hasIncompleteNumericAggregation },
   )
 
   // Result normalization.
@@ -260,7 +260,7 @@ const Insights = () => {
 
   const retentionLabels = useMemo(
     () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
-    [retentionSeriesList]
+    [retentionSeriesList],
   )
 
   const seriesNames = useMemo(() => {
@@ -287,7 +287,7 @@ const Insights = () => {
   }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
-    [eventFilters.entries]
+    [eventFilters.entries],
   )
   const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
 
@@ -317,7 +317,7 @@ const Insights = () => {
       <div
         className={cn(
           '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
-          stickyClassName
+          stickyClassName,
         )}
       >
         <div className="flex flex-wrap items-center gap-2">

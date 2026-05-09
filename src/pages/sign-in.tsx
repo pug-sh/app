@@ -1,13 +1,13 @@
-import { signInAtom, signUpAtom } from '@/auth/auth.atoms'
-import { Button } from '@/components/ui/button'
-import { Field, FieldError, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useSetAtom } from 'jotai'
 import { Bell, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { signInAtom, signUpAtom } from '@/auth/auth.atoms'
+import { Button } from '@/components/ui/button'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 
 const authSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),

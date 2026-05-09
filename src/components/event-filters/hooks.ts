@@ -1,9 +1,8 @@
-import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
-import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
-import { insightsRPCAtom } from '@/api/rpc'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { useEffect, useState } from 'react'
+import type { GetFilterSchemaResponse, PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import { insightsRPCAtom } from '@/api/rpc'
+import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { fetchSchemaForKind } from '@/hooks/use-global-filter-schema'
 
 export const useSuggestions = (propertyKey: string, source: PropertySource, eventKind?: string) => {
@@ -24,7 +23,7 @@ export const useSuggestions = (propertyKey: string, source: PropertySource, even
       try {
         const resp = await insightsRPC.getPropertyValues(
           { propertyKey, source, eventKind: eventKind ?? '' },
-          { headers }
+          { headers },
         )
         if (!cancelled) {
           setResult({ key: requestKey, suggestions: resp.values, error: false })

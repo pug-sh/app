@@ -1,9 +1,9 @@
-import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
+import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import type { SeriesColor } from '@/lib/event-colors'
-import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
-import { useChartPrep, formatTooltipLabel, SHARED_MARGIN, SHARED_X_AXIS, sharedYAxis } from './common'
-import { type ChartPoint } from './types'
+import { formatTooltipLabel, SHARED_MARGIN, SHARED_X_AXIS, sharedYAxis, useChartPrep } from './common'
+import type { ChartPoint } from './types'
 
 export const AreaChart = ({
   data,

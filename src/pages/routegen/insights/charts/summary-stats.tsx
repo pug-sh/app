@@ -1,7 +1,7 @@
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { compactNumber } from '@/lib/format'
 import type { SeriesColor } from '@/lib/event-colors'
-import { type ChartPoint } from './types'
+import { compactNumber } from '@/lib/format'
+import type { ChartPoint } from './types'
 
 export const SummaryStats = ({
   series,

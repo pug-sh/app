@@ -12,11 +12,12 @@ Dashboard frontend for Pug — an analytics + communication platform (similar to
 pnpm dev          # Start dev server (Vite)
 pnpm build        # Type-check + production build (tsc -b && vite build)
 pnpm generate     # Regenerate TypeScript proto types from backend protos
-pnpm lint         # ESLint
-pnpm format       # Prettier over src/**/*.{ts,tsx}
+pnpm format       # Biome formatter
+pnpm lint         # Biome lint with safe fixes
+pnpm check        # Biome format + lint + import organization
 ```
 
-There is no `pnpm test` or `pnpm lint:fix` script today.
+There is no `pnpm test` script today.
 
 ## Proto Code Generation
 
@@ -176,6 +177,6 @@ Prefer implicit types — don't annotate what TypeScript can infer:
 - Prefer `if`/`else` or small helpers over ternary operators that span multiple lines
 - When a file still needs to coordinate several concerns, separate major sections with blank lines and short section comments instead of letting logic blur together
 
-### Prettier
+### Biome
 
-Config in package.json: no semis, single quotes, 120 char width, trailing commas ES5.
+Config in `biome.json`: 2-space indent, no semis, single quotes, 120 char width, trailing commas, and import organization enabled.

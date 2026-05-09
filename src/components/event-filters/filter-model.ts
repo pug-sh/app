@@ -1,4 +1,4 @@
-import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import type { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 
 export type ActiveFilter =
@@ -33,7 +33,7 @@ export const createFilter = (
   property: string,
   source: PropertySource,
   operator: FilterOperator,
-  payload?: string | string[]
+  payload?: string | string[],
 ): ActiveFilter => {
   const meta = FILTER_OPERATORS.find(o => o.value === operator)
   if (!meta) throw new Error(`createFilter: unknown filter operator ${operator}`)

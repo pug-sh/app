@@ -1,8 +1,8 @@
+import { Check, X } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
-import { Check, X } from 'lucide-react'
-import { useRef, useState } from 'react'
 
 const filterInputCls =
   'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'

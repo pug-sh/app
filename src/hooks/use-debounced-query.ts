@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 export const useDebouncedQuery = <T>(
   queryKey: string,
   queryFn: () => Promise<T>,
-  opts: { enabled?: boolean; debounceMs?: number } = {}
+  opts: { enabled?: boolean; debounceMs?: number } = {},
 ) => {
   const { enabled = true, debounceMs = 300 } = opts
   const [data, setData] = useState<T | undefined>(undefined)

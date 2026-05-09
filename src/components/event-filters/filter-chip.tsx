@@ -1,11 +1,11 @@
-import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
-import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { createFilter, FILTER_OPERATORS, type ActiveFilter } from './filter-model'
-import { useState } from 'react'
 import { X } from 'lucide-react'
+import { useState } from 'react'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { type ActiveFilter, createFilter, FILTER_OPERATORS } from './filter-model'
 import { useSuggestions } from './hooks'
 import { mergeUniqueValues } from './utils'
+import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
 
 export const FilterChip = ({
   filter,
@@ -104,8 +104,8 @@ export const FilterChip = ({
                       filter.property,
                       filter.source,
                       filter.operator,
-                      filter.values.filter(x => x !== v)
-                    )
+                      filter.values.filter(x => x !== v),
+                    ),
                   )
                 }
                 onToggle={s => {

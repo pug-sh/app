@@ -1,9 +1,9 @@
+import { CalendarDays } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ACTIVITY_PRESETS, fmtDate } from '@/lib/date-presets'
 import { cn } from '@/lib/utils'
-import { CalendarDays } from 'lucide-react'
-import { useEffect, useState } from 'react'
 
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 
@@ -40,7 +40,7 @@ export function DateRangePicker({
       setDraftTo(value?.to ?? fallback.to)
       setEditing('from')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset draft state only when popover opens/closes, not when value or fallback change
+    // Reset draft state only when the popover opens/closes, not when value or fallback change.
   }, [open])
 
   const applyAndClose = (from: Date, to: Date) => {
@@ -83,7 +83,7 @@ export function DateRangePicker({
               'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
               editing === 'from'
                 ? 'bg-primary/10 text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {fmtDate(draftFrom)}
@@ -96,7 +96,7 @@ export function DateRangePicker({
               'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
               editing === 'to'
                 ? 'bg-primary/10 text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {fmtDate(draftTo)}

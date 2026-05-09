@@ -30,7 +30,7 @@ export const formatTooltipDate = (d: Date, granularity: Granularity): string => 
 /** Round v up to the next "nice" number ({1, 2, 5, 10} scaled by powers of 10) for clean Y-axis ticks. */
 export const niceMax = (v: number): number => {
   if (v <= 0) return 10
-  const mag = Math.pow(10, Math.floor(Math.log10(v)))
+  const mag = 10 ** Math.floor(Math.log10(v))
   const norm = v / mag
   if (norm <= 1) return mag
   if (norm <= 2) return 2 * mag

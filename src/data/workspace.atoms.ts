@@ -1,7 +1,7 @@
+import { atom } from 'jotai'
 import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
-import { atom } from 'jotai'
 
 // Orgs
 export const orgsAtom = atom<Org[]>([])

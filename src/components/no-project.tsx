@@ -1,5 +1,5 @@
-import Page from '@/components/layout/page'
 import type { LucideIcon } from 'lucide-react'
+import Page from '@/components/layout/page'
 
 const NoProject = ({ title, icon: Icon }: { title: string; icon: LucideIcon }) => (
   <Page title={title}>

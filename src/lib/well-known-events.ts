@@ -1,5 +1,5 @@
-import * as wk from '@/api/genproto/common/v1/well_known_events_pb'
 import type { DescMessage, JsonObject } from '@bufbuild/protobuf'
+import * as wk from '@/api/genproto/common/v1/well_known_events_pb'
 import { structGet, structToEntries } from '@/lib/struct'
 
 type Formatter = (props: JsonObject | undefined) => string | null
@@ -126,7 +126,7 @@ const fieldCache = new Map(
   Object.entries(WELL_KNOWN).map(([kind, { schema, headlines }]) => {
     const fields = schema.fields.map(f => f.name)
     return [kind, { fields, fieldSet: new Set(fields), headlineSet: new Set(headlines) }] as const
-  })
+  }),
 )
 
 if (import.meta.env.DEV) {
@@ -170,7 +170,7 @@ export const resolveInlineProps = (kind: string, customProperties: JsonObject | 
   if (cached) {
     const wellKnown = pickEntries(
       customProperties,
-      cached.fields.filter(k => !cached.headlineSet.has(k))
+      cached.fields.filter(k => !cached.headlineSet.has(k)),
     )
     const extras = customEntries.filter(([k]) => !cached.fieldSet.has(k))
     remaining = [...wellKnown, ...extras]

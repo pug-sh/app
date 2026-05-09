@@ -1,13 +1,12 @@
-import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
-import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
+import { Check, Plus, X } from 'lucide-react'
+import { startTransition, useMemo, useState } from 'react'
+import type { EventNameMeta, GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { Check, Plus, X } from 'lucide-react'
-import { startTransition, useMemo, useState } from 'react'
-import { getSeriesColor } from '@/lib/event-colors'
 
 const getSchemaEmptyMessage = (schema: GetFilterSchemaResponse | null, schemaError: string | null): string => {
   if (schemaError) return 'Failed to load'
@@ -185,7 +184,7 @@ export const EventChip = ({
           className={cn(
             'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
             'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
-            open && 'border-foreground/20 text-foreground'
+            open && 'border-foreground/20 text-foreground',
           )}
         >
           <Plus className="w-3 h-3" />
@@ -278,7 +277,7 @@ export const BreakdownBuilder = ({
       <span
         className={cn(
           'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
-          'text-muted-foreground/50 cursor-not-allowed'
+          'text-muted-foreground/50 cursor-not-allowed',
         )}
         title={disabled.reason}
       >
@@ -294,7 +293,7 @@ export const BreakdownBuilder = ({
         className={cn(
           'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
           'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
-          open && 'border-foreground/20 text-foreground'
+          open && 'border-foreground/20 text-foreground',
         )}
       >
         <Plus className="w-3 h-3" />

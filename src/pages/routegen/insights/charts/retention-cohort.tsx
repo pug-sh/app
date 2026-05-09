@@ -1,9 +1,9 @@
-import {
+import type {
   Granularity,
-  type RetentionCohort as RetentionCohortProto,
+  RetentionCohort as RetentionCohortProto,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { tsToDate } from '@/lib/timestamp'
 import type { SeriesColor } from '@/lib/event-colors'
+import { tsToDate } from '@/lib/timestamp'
 import { formatTooltipDate } from './helpers'
 
 type CohortRow = {

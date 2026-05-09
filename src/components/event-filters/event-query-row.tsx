@@ -1,15 +1,14 @@
-import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
-import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
-import { EventChip } from './pickers'
-import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import type { PrimitiveAtom } from 'jotai'
 import { useSetAtom } from 'jotai'
-import { memo, useCallback } from 'react'
 import { X } from 'lucide-react'
-import { useScopedSchema } from './hooks'
+import { memo, useCallback } from 'react'
+import type { EventNameMeta, GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { FilterBuilder } from './filter-builder'
 import { FilterChip } from './filter-chip'
 import type { ActiveFilter } from './filter-model'
+import { useScopedSchema } from './hooks'
+import { EventChip } from './pickers'
 
 export const EventQueryRow = memo(
   ({
@@ -35,7 +34,7 @@ export const EventQueryRow = memo(
     renderExtra?: (
       entry: EventFilterEntry,
       schema: GetFilterSchemaResponse | null,
-      schemaError: string | null
+      schemaError: string | null,
     ) => React.ReactNode
     getEventColor?: (eventName: string) => string
   }) => {
@@ -56,11 +55,11 @@ export const EventQueryRow = memo(
           setEntries(prev => prev.filter(e => e.id !== entryId))
         } else {
           setEntries(prev =>
-            prev.map(e => (e.id === entryId ? { ...e, kind: trimmed, filters: [], aggregationProperty: '' } : e))
+            prev.map(e => (e.id === entryId ? { ...e, kind: trimmed, filters: [], aggregationProperty: '' } : e)),
           )
         }
       },
-      [entryId, setEntries]
+      [entryId, setEntries],
     )
 
     const onRemove = useCallback(() => {
@@ -71,27 +70,27 @@ export const EventQueryRow = memo(
       (filter: ActiveFilter) => {
         setEntries(prev => prev.map(e => (e.id === entryId ? { ...e, filters: [...e.filters, filter] } : e)))
       },
-      [entryId, setEntries]
+      [entryId, setEntries],
     )
 
     const onRemoveFilter = useCallback(
       (filterIdx: number) => {
         setEntries(prev =>
-          prev.map(e => (e.id === entryId ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e))
+          prev.map(e => (e.id === entryId ? { ...e, filters: e.filters.filter((_, fi) => fi !== filterIdx) } : e)),
         )
       },
-      [entryId, setEntries]
+      [entryId, setEntries],
     )
 
     const onUpdateFilter = useCallback(
       (filterIdx: number, filter: ActiveFilter) => {
         setEntries(prev =>
           prev.map(e =>
-            e.id === entryId ? { ...e, filters: e.filters.map((f, fi) => (fi === filterIdx ? filter : f)) } : e
-          )
+            e.id === entryId ? { ...e, filters: e.filters.map((f, fi) => (fi === filterIdx ? filter : f)) } : e,
+          ),
         )
       },
-      [entryId, setEntries]
+      [entryId, setEntries],
     )
 
     return (
@@ -152,5 +151,5 @@ export const EventQueryRow = memo(
         </button>
       </div>
     )
-  }
+  },
 )

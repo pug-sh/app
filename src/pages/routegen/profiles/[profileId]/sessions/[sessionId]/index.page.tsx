@@ -1,21 +1,21 @@
-import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import { activityRPCAtom } from '@/api/rpc'
-import LoadingSpinner from '@/components/loading-spinner'
-import TimelineEventItem from '@/components/timeline-event-item'
-import { getSeriesColor } from '@/lib/event-colors'
-import Page from '@/components/layout/page'
-import NoProject from '@/components/no-project'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import ProjectLink from '@/components/project-link'
-import { isMobileOS } from '@/lib/format'
-import { structGet } from '@/lib/struct'
-import { tsToDate, formatClock, formatDateTime } from '@/lib/timestamp'
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
+import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { activityRPCAtom } from '@/api/rpc'
+import Page from '@/components/layout/page'
+import LoadingSpinner from '@/components/loading-spinner'
+import NoProject from '@/components/no-project'
+import ProjectLink from '@/components/project-link'
+import TimelineEventItem from '@/components/timeline-event-item'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { getSeriesColor } from '@/lib/event-colors'
+import { isMobileOS } from '@/lib/format'
+import { structGet } from '@/lib/struct'
+import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ const SessionView = () => {
           sessionId,
           pageSize: 1000,
         },
-        { headers }
+        { headers },
       )
       setEvents(resp.events)
     } catch (err) {

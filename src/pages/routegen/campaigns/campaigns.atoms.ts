@@ -1,5 +1,5 @@
-import { tsToDate } from '@/lib/timestamp'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { tsToDate } from '@/lib/timestamp'
 
 export const statusVariant = (status: string) => {
   switch (status) {

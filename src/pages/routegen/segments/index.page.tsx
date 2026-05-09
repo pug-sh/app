@@ -1,27 +1,27 @@
-import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
-import { insightsRPCAtom } from '@/api/rpc'
-import Page from '@/components/layout/page'
-import NoProject from '@/components/no-project'
-import SectionHeader from '@/components/section-header'
-import { Button } from '@/components/ui/button'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { defaultRange } from '@/lib/date-presets'
-import { useFilterState } from '@/hooks/use-filter-state'
-import { useEventFilters } from '@/hooks/use-event-filters'
-import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { toProtoFilters } from '@/components/event-filters/filter-proto'
-import { toProtoTimeRange } from '@/lib/timestamp'
-import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import ProjectLink from '@/components/project-link'
 import { toast } from 'sonner'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { insightsRPCAtom } from '@/api/rpc'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import Page from '@/components/layout/page'
+import NoProject from '@/components/no-project'
+import ProjectLink from '@/components/project-link'
+import SectionHeader from '@/components/section-header'
+import { Button } from '@/components/ui/button'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { useEventFilters } from '@/hooks/use-event-filters'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { useFilterState } from '@/hooks/use-filter-state'
+import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { defaultRange } from '@/lib/date-presets'
+import { toProtoTimeRange } from '@/lib/timestamp'
+import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ const Segments = () => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
+  }, []) // Fire on mount; explicit toast id dedupes the StrictMode double-call in dev.
 
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
@@ -79,11 +79,11 @@ const Segments = () => {
           filterGroupsOperator: LogicalOperator.AND,
           pageSize: 100,
         },
-        { headers }
+        { headers },
       )
       return resp.distinctIds
     },
-    { enabled: !!project && validEntries.length > 0 }
+    { enabled: !!project && validEntries.length > 0 },
   )
 
   const segmentIds = data ?? []

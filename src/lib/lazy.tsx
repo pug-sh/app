@@ -1,4 +1,4 @@
-import { lazy, type ComponentType } from 'react'
+import { type ComponentType, lazy } from 'react'
 
 const MAX_RETRIES = 2
 

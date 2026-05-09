@@ -1,35 +1,35 @@
+import { useAtomValue, useSetAtom } from 'jotai'
+import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventDetails } from '@/components/event-details'
+import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
+import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
+import HoverSwap from '@/components/hover-swap'
+import { InlineEventProps } from '@/components/inline-event-props'
 import Page from '@/components/layout/page'
+import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
-import { defaultRange } from '@/lib/date-presets'
-import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
-import { getSeriesColor } from '@/lib/event-colors'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import HoverSwap from '@/components/hover-swap'
-import LoadingSpinner from '@/components/loading-spinner'
-import { formatRelative } from '@/hooks/use-relative-time'
 import { useEventFilters } from '@/hooks/use-event-filters'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
-import ProjectLink from '@/components/project-link'
-import { InlineEventProps } from '@/components/inline-event-props'
+import { formatRelative } from '@/hooks/use-relative-time'
+import { defaultRange } from '@/lib/date-presets'
+import { getSeriesColor } from '@/lib/event-colors'
 import { structGet, structToEntries } from '@/lib/struct'
-import { resolveInlineProps } from '@/lib/well-known-events'
-import { tsToDate, formatDateTime, toProtoTimeRange } from '@/lib/timestamp'
+import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
-import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { resolveInlineProps } from '@/lib/well-known-events'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Event Row ───────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
       <tr
         className={cn(
           'group border-b border-border/50 transition-colors',
-          hasMore && 'cursor-pointer hover:bg-muted/40'
+          hasMore && 'cursor-pointer hover:bg-muted/40',
         )}
         onClick={() => hasMore && setExpanded(!expanded)}
       >
@@ -132,7 +132,7 @@ const EventExplorer = () => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
+  }, []) // Fire on mount; explicit toast id dedupes the StrictMode double-call in dev.
 
   // Applied filter state (drives API calls)
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
@@ -189,7 +189,7 @@ const EventExplorer = () => {
             pageSize: 100,
             pageToken,
           },
-          { headers }
+          { headers },
         )
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
@@ -200,13 +200,13 @@ const EventExplorer = () => {
       } catch (err) {
         console.error('Event explorer failed:', err)
         setError(
-          err instanceof Error ? err.message : pageToken ? 'Failed to load more events' : 'Failed to load events'
+          err instanceof Error ? err.message : pageToken ? 'Failed to load more events' : 'Failed to load events',
         )
       } finally {
         setLoading(false)
       }
     },
-    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters]
+    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters],
   )
 
   useEffect(() => {

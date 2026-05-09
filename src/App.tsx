@@ -1,3 +1,6 @@
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { AlertCircle } from 'lucide-react'
+import { Suspense, useEffect } from 'react'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -15,9 +18,6 @@ import {
   workspaceErrorAtom,
 } from '@/data/workspace.atoms'
 import { lazyWithRetry } from '@/lib/lazy'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle } from 'lucide-react'
-import { Suspense, useEffect } from 'react'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')

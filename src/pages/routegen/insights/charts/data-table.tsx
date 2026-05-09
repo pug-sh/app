@@ -1,7 +1,7 @@
-import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { formatTooltipDate } from './helpers'
-import { type ChartPoint } from './types'
+import type { ChartPoint } from './types'
 
 export const DataTable = ({
   data,

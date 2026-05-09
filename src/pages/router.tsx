@@ -1,10 +1,10 @@
+import { useAtom, useAtomValue } from 'jotai'
+import { AlertCircle } from 'lucide-react'
+import { Component, type ReactNode, Suspense, useEffect } from 'react'
+import { Route, Switch, useLocation, useParams } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom } from '@/data/workspace.atoms'
-import { useAtom, useAtomValue } from 'jotai'
-import { AlertCircle } from 'lucide-react'
-import { Component, Suspense, useEffect, type ReactNode } from 'react'
-import { Route, Switch, useLocation, useParams } from 'wouter'
 import { routes } from './routes'
 
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {

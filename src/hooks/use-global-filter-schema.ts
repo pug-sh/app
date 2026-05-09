@@ -1,9 +1,9 @@
+import { useAtomValue } from 'jotai'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
-import { useAtomValue } from 'jotai'
-import { toast } from 'sonner'
-import { useEffect, useMemo, useState } from 'react'
 
 const CACHE_TTL = 300_000 // 5 minutes
 const FAILURE_TTL = 30_000 // 30 seconds
@@ -25,11 +25,11 @@ export const fetchSchemaForKind = (
   rpc: {
     getFilterSchema: (
       req: { eventKind: string },
-      options?: { headers?: HeadersInit }
+      options?: { headers?: HeadersInit },
     ) => Promise<GetFilterSchemaResponse>
   },
   headers: Record<string, string> | undefined,
-  opts?: { force?: boolean }
+  opts?: { force?: boolean },
 ) => {
   const key = cacheKey(kind, headers)
   const cached = schemaCache.get(key)
@@ -87,7 +87,7 @@ const intersectByName = <T extends { name: string }>(lists: T[][]): T[] => {
 
 const buildCommonSchema = (
   baseSchema: GetFilterSchemaResponse | null,
-  scoped: GetFilterSchemaResponse[]
+  scoped: GetFilterSchemaResponse[],
 ): GetFilterSchemaResponse | null => {
   if (scoped.length === 0) return baseSchema
   const first = scoped[0]
@@ -174,7 +174,7 @@ export const useGlobalFilterSchema = ({
   const scopedError = hasKinds && isCurrent ? result.error : null
   const schema = useMemo(
     () => (scopedSchemas ? buildCommonSchema(baseSchema, scopedSchemas) : baseSchema),
-    [baseSchema, scopedSchemas]
+    [baseSchema, scopedSchemas],
   )
 
   const schemaError = scopedError ?? baseSchemaError

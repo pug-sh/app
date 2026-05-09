@@ -1,15 +1,15 @@
-import { PropertyValueType, type GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
-import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { PropertyPickerList } from '@/components/event-filters'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
-import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
-import { cn } from '@/lib/utils'
 import type { PrimitiveAtom } from 'jotai'
 import { useAtomValue } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 import { type LucideIcon, Ruler } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
+import { type GetFilterSchemaResponse, PropertyValueType } from '@/api/genproto/common/v1/filter_schema_pb'
+import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { PropertyPickerList } from '@/components/event-filters'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
+import { cn } from '@/lib/utils'
+import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
 
 const NUMERIC_VALUE_TYPES = new Set([PropertyValueType.INTEGER, PropertyValueType.FLOAT])
 
@@ -55,7 +55,7 @@ export const OptionChip = <T extends string | number>({
                 }}
                 className={cn(
                   'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
-                  optionClassName
+                  optionClassName,
                 )}
               >
                 {opt.label}
@@ -81,7 +81,7 @@ const RowAggregationPicker = memo(
     const aggregationAtom = useMemo(
       () =>
         selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregation ?? AggregationType.TOTAL),
-      [filtersAtom, entryId]
+      [filtersAtom, entryId],
     )
     const value = useAtomValue(aggregationAtom)
     return (
@@ -93,7 +93,7 @@ const RowAggregationPicker = memo(
         onChange={v => setAggregation(entryId, v)}
       />
     )
-  }
+  },
 )
 
 const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
@@ -123,7 +123,7 @@ const RowAggregationPropertyPicker = memo(
     const [open, setOpen] = useState(false)
     const propertyAtom = useMemo(
       () => selectAtom(filtersAtom, entries => entries.find(e => e.id === entryId)?.aggregationProperty ?? ''),
-      [filtersAtom, entryId]
+      [filtersAtom, entryId],
     )
     const value = useAtomValue(propertyAtom)
     const numericSchema = useMemo(() => filterNumericSchema(schema), [schema])
@@ -150,7 +150,7 @@ const RowAggregationPropertyPicker = memo(
         </PopoverContent>
       </Popover>
     )
-  }
+  },
 )
 
 export const InsightsRowAggregationControls = ({

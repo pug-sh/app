@@ -1,26 +1,26 @@
+import { useAtomValue } from 'jotai'
+import { ContactRound, Laptop, Loader2, Monitor, Smartphone } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { Profile } from '@/api/genproto/shared/profiles/v1/profiles_pb'
 import { insightsRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
+import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
-import LoadingSpinner from '@/components/loading-spinner'
 import Page from '@/components/layout/page'
+import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { isMobileOS, compactNumber } from '@/lib/format'
+import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
+import { useFilterState } from '@/hooks/use-filter-state'
+import { formatRelative } from '@/hooks/use-relative-time'
+import { compactNumber, isMobileOS } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
-import { useAtomValue } from 'jotai'
-import { ContactRound, Laptop, Loader2, Monitor, Smartphone } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
-import { toProtoFilters } from '@/components/event-filters/filter-proto'
-import { useFilterState } from '@/hooks/use-filter-state'
-import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
-import { formatRelative } from '@/hooks/use-relative-time'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
 
@@ -121,7 +121,7 @@ const Profiles = () => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'profiles-filter-parse-warning' })
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- fire on mount; explicit toast id dedupes the StrictMode double-call in dev
+  }, []) // Fire on mount; explicit toast id dedupes the StrictMode double-call in dev.
 
   useEffect(() => {
     writeFilterQueryParams([], propFilters)
@@ -187,7 +187,7 @@ const Profiles = () => {
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
           },
-          { headers }
+          { headers },
         )) {
           response = resp
           break
@@ -222,7 +222,7 @@ const Profiles = () => {
         }
       }
     },
-    [headers, profilesRPC, propFilters]
+    [headers, profilesRPC, propFilters],
   )
 
   useEffect(() => {

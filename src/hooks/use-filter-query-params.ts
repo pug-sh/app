@@ -1,10 +1,10 @@
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
-import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
-import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
+import type { EventFilterEntry } from '@/hooks/use-event-filters'
+import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 
 const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
@@ -206,7 +206,7 @@ export const writeFilterQueryParams = (
     granularity?: Granularity
     timeRange?: TimeRange
     breakdowns?: string[]
-  }
+  },
 ) => {
   const url = new URL(window.location.href)
 

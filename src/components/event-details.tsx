@@ -1,11 +1,11 @@
-import { Toggle } from '@/components/ui/toggle'
-import { PropChip } from '@/components/ui/prop-chip'
-import { structToEntries } from '@/lib/struct'
-import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import { tsToDate } from '@/lib/timestamp'
-import { partitionEventProps } from '@/lib/well-known-events'
 import { Braces } from 'lucide-react'
 import { useState } from 'react'
+import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { PropChip } from '@/components/ui/prop-chip'
+import { Toggle } from '@/components/ui/toggle'
+import { structToEntries } from '@/lib/struct'
+import { tsToDate } from '@/lib/timestamp'
+import { partitionEventProps } from '@/lib/well-known-events'
 
 export const EventDetails = ({ event }: { event: ActivityEvent }) => {
   const [jsonMode, setJsonMode] = useState(false)
@@ -31,7 +31,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
               custom_properties: event.customProperties,
             },
             null,
-            2
+            2,
           )}
         </pre>
       ) : (

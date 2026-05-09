@@ -1,5 +1,5 @@
-import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
 
 export const tsToDate = (ts: Timestamp | undefined) => {
   if (!ts) return null

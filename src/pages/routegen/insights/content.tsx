@@ -1,8 +1,7 @@
-import { AggregationType, Granularity, type RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { TrendingUp } from 'lucide-react'
+import type { AggregationType, Granularity, RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
-import type { ViewMode } from './constants'
-import { TrendingUp } from 'lucide-react'
 import {
   AreaChart,
   BarChart,
@@ -15,6 +14,7 @@ import {
   RetentionCohort,
   SummaryStats,
 } from './charts'
+import type { ViewMode } from './constants'
 
 export const InsightsContent = ({
   error,

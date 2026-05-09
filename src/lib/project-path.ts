@@ -1,6 +1,6 @@
-import { activeProjectAtom } from '@/data/workspace.atoms'
 import { useAtomValue } from 'jotai'
 import { useLocation } from 'wouter'
+import { activeProjectAtom } from '@/data/workspace.atoms'
 
 export const useProjectPrefix = () => {
   const project = useAtomValue(activeProjectAtom)

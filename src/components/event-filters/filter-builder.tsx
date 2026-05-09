@@ -1,16 +1,16 @@
+import { ChevronRight, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
-import { PropertyPickerList } from './pickers'
-import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { createFilter, FILTER_OPERATORS, type ActiveFilter } from './filter-model'
-import { getAllowedOperators, getPropertyMeta } from './filter-operators'
 import { cn } from '@/lib/utils'
-import { ChevronRight, Plus } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { type ActiveFilter, createFilter, FILTER_OPERATORS } from './filter-model'
+import { getAllowedOperators, getPropertyMeta } from './filter-operators'
 import { useSuggestions } from './hooks'
+import { PropertyPickerList } from './pickers'
 import { mergeUniqueValues } from './utils'
+import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
 
 type BuilderStep = 'property' | 'operator' | 'value'
 
@@ -38,7 +38,7 @@ export const FilterBuilder = ({
   const allowedOperators = useMemo(() => getAllowedOperators(propertyMeta?.valueType), [propertyMeta?.valueType])
   const operatorOptions = useMemo(
     () => (allowedOperators ? FILTER_OPERATORS.filter(o => allowedOperators.has(o.value)) : FILTER_OPERATORS),
-    [allowedOperators]
+    [allowedOperators],
   )
   const { suggestions, loaded, error } = useSuggestions(step === 'value' ? prop : '', propSource, kindFilter)
 
@@ -134,7 +134,7 @@ export const FilterBuilder = ({
         className={cn(
           'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
           'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
-          open && 'border-foreground/20 text-foreground'
+          open && 'border-foreground/20 text-foreground',
         )}
       >
         <Plus className="w-3 h-3" />

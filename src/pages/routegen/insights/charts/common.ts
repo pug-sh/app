@@ -1,11 +1,10 @@
-import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { type ChartConfig } from '@/components/ui/chart'
-import { compactNumber } from '@/lib/format'
-import type { SeriesColor } from '@/lib/event-colors'
 import { useMemo } from 'react'
-import { computeYMax } from './helpers'
-import { formatAxisDate, formatTooltipDate } from './helpers'
-import { type ChartPoint, type InsightsDatum } from './types'
+import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { ChartConfig } from '@/components/ui/chart'
+import type { SeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
+import { computeYMax, formatAxisDate, formatTooltipDate } from './helpers'
+import type { ChartPoint, InsightsDatum } from './types'
 
 export const buildChartConfig = (seriesNames: string[], seriesColors: SeriesColor[]): ChartConfig =>
   seriesNames.reduce<ChartConfig>((acc, name, si) => {
@@ -19,7 +18,7 @@ export const buildChartConfig = (seriesNames: string[], seriesColors: SeriesColo
 export const buildChartData = (
   data: ChartPoint[],
   seriesNames: string[],
-  granularity: Granularity
+  granularity: Granularity,
 ): InsightsDatum[] => {
   let warned = false
   return data.map(point => {
@@ -28,7 +27,7 @@ export const buildChartData = (
         'Chart data misalignment: expected',
         seriesNames.length,
         'values per point, got',
-        point.values.length
+        point.values.length,
       )
       warned = true
     }
@@ -56,7 +55,7 @@ export const useChartPrep = (
   seriesNames: string[],
   seriesColors: SeriesColor[],
   granularity: Granularity,
-  stacked?: boolean
+  stacked?: boolean,
 ) => ({
   chartConfig: useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors]),
   chartData: useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity]),

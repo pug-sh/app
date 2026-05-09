@@ -1,9 +1,9 @@
-import { compactNumber } from '@/lib/format'
-import { getSeriesColor } from '@/lib/event-colors'
-import { ChartContainer, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
-import { useMemo, useState } from 'react'
-import { Bar, BarChart as ReBarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
 import { Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Bar, CartesianGrid, Cell, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
+import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
+import { getSeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
 
 // All series in a single chart must share the same step skeleton (same names,
 // same order). The chart aligns by index across series and assumes that contract.
@@ -33,11 +33,11 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
   const stepNames = useMemo(() => {
     const names = series[0]?.steps.map(s => s.name) ?? []
     const misaligned = series.some(
-      s => s.steps.length !== names.length || s.steps.some((step, i) => step.name !== names[i])
+      s => s.steps.length !== names.length || s.steps.some((step, i) => step.name !== names[i]),
     )
     if (misaligned) {
       console.error(
-        'FunnelChart: series have mismatched step shapes; rendering aligns by index of series[0] and will silently zero-fill divergent series.'
+        'FunnelChart: series have mismatched step shapes; rendering aligns by index of series[0] and will silently zero-fill divergent series.',
       )
     }
     return names
@@ -67,12 +67,12 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
         })
         return row
       }),
-    [series, stepNames]
+    [series, stepNames],
   )
 
   const chartConfig = useMemo<ChartConfig>(
     () => Object.fromEntries(series.map((s, si) => [valueKey(si), { label: s.label, color: s.color }])),
-    [series]
+    [series],
   )
 
   if (series.length === 0 || stepNames.length === 0) return null
@@ -177,7 +177,7 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
         const last = s.steps[s.steps.length - 1]?.count ?? 0
         return { ...s, rate: first > 0 ? (last / first) * 100 : 0, completed: last }
       }),
-    [series]
+    [series],
   )
 
   const highestConv = seriesStats.reduce((best, s) => (s.rate > best.rate ? s : best), seriesStats[0])
