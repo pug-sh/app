@@ -98,12 +98,12 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             </>
           )}
         </td>
-        <td className="py-2.5 w-5 align-middle">
+        <td className="py-2.5 w-5 align-middle text-right">
           {hasMore &&
             (expanded ? (
-              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+              <ChevronDown className="inline w-3.5 h-3.5 text-muted-foreground" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ChevronRight className="inline w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             ))}
         </td>
       </tr>
