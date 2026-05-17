@@ -66,6 +66,12 @@ const navItems = [
   { path: 'settings', label: 'Settings', icon: Settings },
 ]
 
+const getProjectInitial = (projectName?: string | null) => {
+  const normalizedName = projectName?.trim()
+  if (!normalizedName) return 'P'
+  return normalizedName.charAt(0).toUpperCase()
+}
+
 const AppSidebar = () => {
   const [location, navigate] = useLocation()
   const projects = useAtomValue(projectsAtom)
@@ -79,6 +85,7 @@ const AppSidebar = () => {
   const currentProjectId = routeProjectId ?? activeProject?.id ?? null
   const prefix = currentProjectId ? `/p/${currentProjectId}` : ''
   const pagePath = location.match(/^\/p\/[^/]+\/(.*)$/)?.[1] ?? 'overview'
+  const projectInitial = getProjectInitial(activeProject?.displayName)
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
@@ -152,13 +159,16 @@ const AppSidebar = () => {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
-                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground">
+                  <span>{projectInitial}</span>
+                </div>
+                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                     {activeOrg?.displayName ?? 'Workspace'}
                   </span>
                   <span className="truncate font-semibold">{activeProject?.displayName ?? 'Select project'}</span>
                 </div>
-                <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+                <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={8} className="p-1.5">
                 <DropdownMenuGroup>
