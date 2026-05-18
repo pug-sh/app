@@ -1,5 +1,36 @@
 import type { DescMessage, JsonObject } from '@bufbuild/protobuf'
-import * as wk from '@/api/genproto/common/v1/well_known_events_pb'
+import {
+  PaymentFailedPropertiesSchema,
+  PaymentSucceededPropertiesSchema,
+  SubscriptionStartedPropertiesSchema,
+} from '@/api/genproto/common/events/v1/billing_events_pb'
+import {
+  AddToCartPropertiesSchema,
+  CheckoutStartedPropertiesSchema,
+  CheckoutStepCompletedPropertiesSchema,
+  ProductViewedPropertiesSchema,
+  PurchasePropertiesSchema,
+} from '@/api/genproto/common/events/v1/commerce_events_pb'
+import { SearchPropertiesSchema } from '@/api/genproto/common/events/v1/discovery_events_pb'
+import { ErrorOccurredPropertiesSchema } from '@/api/genproto/common/events/v1/error_events_pb'
+import { FormStartPropertiesSchema, FormSubmitPropertiesSchema } from '@/api/genproto/common/events/v1/form_events_pb'
+import {
+  AudioPausePropertiesSchema,
+  AudioPlayPropertiesSchema,
+  VideoPausePropertiesSchema,
+  VideoPlayPropertiesSchema,
+} from '@/api/genproto/common/events/v1/media_events_pb'
+import {
+  ClickPropertiesSchema,
+  DeadClickPropertiesSchema,
+  RageClickPropertiesSchema,
+  ScrollPropertiesSchema,
+} from '@/api/genproto/common/events/v1/navigation_events_pb'
+import {
+  NotificationClickedPropertiesSchema,
+  NotificationDismissedPropertiesSchema,
+  NotificationReceivedPropertiesSchema,
+} from '@/api/genproto/common/events/v1/notification_events_pb'
 import { structGet, structToEntries } from '@/lib/struct'
 
 type Formatter = (props: JsonObject | undefined) => string | null
@@ -18,17 +49,20 @@ const fmtAmount: Formatter = p => {
   return c ? `${c} ${v}` : v
 }
 
-const fmtVideo: Formatter = p => {
-  const vid = structGet(p, 'video_id')
-  if (!vid) return null
-  const pos = structGet(p, 'position_s')
-  if (!pos) return vid
-  const n = Number(pos)
-  if (isNaN(n)) return `${vid} @ ${pos}`
-  return `${vid} @ ${Math.floor(n / 60)}:${Math.floor(n % 60)
-    .toString()
-    .padStart(2, '0')}`
-}
+const fmtMedia =
+  (idKey: string): Formatter =>
+  p => {
+    const id = structGet(p, idKey)
+    if (!id) return null
+    // position is a google.protobuf.Duration → wire encoding "1.5s" (per options.proto contract)
+    const pos = structGet(p, 'position')
+    if (!pos) return id
+    const n = Number(pos.replace(/s$/, ''))
+    if (isNaN(n)) return `${id} @ ${pos}`
+    return `${id} @ ${Math.floor(n / 60)}:${Math.floor(n % 60)
+      .toString()
+      .padStart(2, '0')}`
+  }
 
 const fmtCampaign: Formatter = p => {
   const cid = structGet(p, 'campaign_id')
@@ -45,12 +79,15 @@ const pickEntries = (props: JsonObject | undefined, keys: string[]): [string, st
 
 // ── Well-known event registry ────────────────────────────────────────────────
 
-// Only includes event kinds whose proto schema defines at least one field.
-// Kinds with zero-field messages are omitted and fall through to custom properties.
+// Only includes event kinds whose proto schema defines at least one field AND
+// has at least one field worth surfacing inline. Kinds with zero-field
+// messages, or whose fields are all opaque IDs without semantic punch, are
+// omitted and fall through to generic custom-property rendering.
 const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; format?: Formatter }> = {
-  click: { schema: wk.ClickPropertiesSchema, headlines: ['text'], format: fmtField('text') },
+  // navigation / interactions
+  click: { schema: ClickPropertiesSchema, headlines: ['text'], format: fmtField('text') },
   rage_click: {
-    schema: wk.RageClickPropertiesSchema,
+    schema: RageClickPropertiesSchema,
     headlines: ['element', 'click_count'],
     format: p => {
       const el = structGet(p, 'element')
@@ -59,41 +96,83 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
       return count ? `${el} ×${count}` : el
     },
   },
-  dead_click: { schema: wk.DeadClickPropertiesSchema, headlines: ['element'], format: fmtField('element') },
+  dead_click: { schema: DeadClickPropertiesSchema, headlines: ['element'], format: fmtField('element') },
   scroll: {
-    schema: wk.ScrollPropertiesSchema,
+    schema: ScrollPropertiesSchema,
     headlines: ['percent'],
     format: p => {
       const v = structGet(p, 'percent')
       return v ? `${v}%` : null
     },
   },
-  search: { schema: wk.SearchPropertiesSchema, headlines: ['query'], format: fmtField('query') },
+
+  // discovery
+  search: { schema: SearchPropertiesSchema, headlines: ['query'], format: fmtField('query') },
+
+  // commerce
+  product_viewed: {
+    schema: ProductViewedPropertiesSchema,
+    headlines: ['product_name', 'product_id'],
+    format: p => structGet(p, 'product_name') || structGet(p, 'product_id') || null,
+  },
   add_to_cart: {
-    schema: wk.AddToCartPropertiesSchema,
-    headlines: ['product_id', 'amount'],
+    schema: AddToCartPropertiesSchema,
+    headlines: ['product_id', 'price'],
     format: p => {
       const pid = structGet(p, 'product_id')
-      const a = fmtAmount(p)
-      if (!pid && !a) return null
-      return [pid, a].filter(Boolean).join(' · ')
+      const price = structGet(p, 'price')
+      const currency = structGet(p, 'currency')
+      const money = price ? (currency ? `${currency} ${price}` : price) : null
+      if (!pid && !money) return null
+      return [pid, money].filter(Boolean).join(' · ')
     },
   },
   checkout_started: {
-    schema: wk.CheckoutStartedPropertiesSchema,
+    schema: CheckoutStartedPropertiesSchema,
     headlines: ['amount', 'currency'],
     format: fmtAmount,
   },
-  checkout_completed: {
-    schema: wk.CheckoutCompletedPropertiesSchema,
+  checkout_step_completed: {
+    schema: CheckoutStepCompletedPropertiesSchema,
+    headlines: ['step'],
+    format: fmtField('step'),
+  },
+  purchase: { schema: PurchasePropertiesSchema, headlines: ['amount', 'currency'], format: fmtAmount },
+
+  // billing
+  subscription_started: {
+    schema: SubscriptionStartedPropertiesSchema,
+    headlines: ['plan_id', 'amount'],
+    format: p => {
+      const plan = structGet(p, 'plan_id')
+      const amt = fmtAmount(p)
+      if (!plan && !amt) return null
+      return [plan, amt].filter(Boolean).join(' · ')
+    },
+  },
+  payment_succeeded: {
+    schema: PaymentSucceededPropertiesSchema,
     headlines: ['amount', 'currency'],
     format: fmtAmount,
   },
-  purchase: { schema: wk.PurchasePropertiesSchema, headlines: ['amount', 'currency'], format: fmtAmount },
-  form_start: { schema: wk.FormStartPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
-  form_submit: { schema: wk.FormSubmitPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
+  payment_failed: {
+    schema: PaymentFailedPropertiesSchema,
+    headlines: ['amount', 'reason'],
+    format: p => {
+      const amt = fmtAmount(p)
+      const reason = structGet(p, 'reason')
+      if (!amt && !reason) return null
+      return [amt, reason].filter(Boolean).join(' — ')
+    },
+  },
+
+  // forms
+  form_start: { schema: FormStartPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
+  form_submit: { schema: FormSubmitPropertiesSchema, headlines: ['form_name'], format: fmtField('form_name') },
+
+  // notifications
   notification_received: {
-    schema: wk.NotificationReceivedPropertiesSchema,
+    schema: NotificationReceivedPropertiesSchema,
     headlines: ['notification_type', 'campaign_id'],
     format: p => {
       const type = structGet(p, 'notification_type')
@@ -103,19 +182,33 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
     },
   },
   notification_clicked: {
-    schema: wk.NotificationClickedPropertiesSchema,
+    schema: NotificationClickedPropertiesSchema,
     headlines: ['campaign_id', 'notification_type'],
     format: fmtCampaign,
   },
   notification_dismissed: {
-    schema: wk.NotificationDismissedPropertiesSchema,
+    schema: NotificationDismissedPropertiesSchema,
     headlines: ['campaign_id', 'notification_type'],
     format: fmtCampaign,
   },
-  video_play: { schema: wk.VideoPlayPropertiesSchema, headlines: ['video_id', 'position_s'], format: fmtVideo },
-  video_pause: { schema: wk.VideoPausePropertiesSchema, headlines: ['video_id', 'position_s'], format: fmtVideo },
+
+  // media
+  video_play: { schema: VideoPlayPropertiesSchema, headlines: ['video_id', 'position'], format: fmtMedia('video_id') },
+  video_pause: {
+    schema: VideoPausePropertiesSchema,
+    headlines: ['video_id', 'position'],
+    format: fmtMedia('video_id'),
+  },
+  audio_play: { schema: AudioPlayPropertiesSchema, headlines: ['audio_id', 'position'], format: fmtMedia('audio_id') },
+  audio_pause: {
+    schema: AudioPausePropertiesSchema,
+    headlines: ['audio_id', 'position'],
+    format: fmtMedia('audio_id'),
+  },
+
+  // errors
   error_occurred: {
-    schema: wk.ErrorOccurredPropertiesSchema,
+    schema: ErrorOccurredPropertiesSchema,
     headlines: ['error_code'],
     format: fmtField('error_code'),
   },
