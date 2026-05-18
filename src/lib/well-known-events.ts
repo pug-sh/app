@@ -59,7 +59,10 @@ const fmtMedia =
     const pos = structGet(p, 'position')
     if (!pos) return id
     const n = Number(pos.replace(/s$/, ''))
-    if (isNaN(n)) return `${id} @ ${pos}`
+    if (isNaN(n)) {
+      if (import.meta.env.DEV) console.warn(`fmtMedia: Duration "${pos}" does not match canonical "<n>s" format`)
+      return `${id} @ ${pos}`
+    }
     return `${id} @ ${Math.floor(n / 60)}:${Math.floor(n % 60)
       .toString()
       .padStart(2, '0')}`
@@ -80,10 +83,9 @@ const pickEntries = (props: JsonObject | undefined, keys: string[]): [string, st
 
 // ── Well-known event registry ────────────────────────────────────────────────
 
-// Only includes event kinds whose proto schema defines at least one field AND
-// has at least one field worth surfacing inline. Kinds with zero-field
-// messages, or whose fields are all opaque IDs without semantic punch, are
-// omitted and fall through to generic custom-property rendering.
+// Curated subset of event kinds with custom inline headlines. Other kinds
+// fall through to generic custom-property rendering — expand this map as
+// new headlines are designed.
 const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; format?: Formatter }> = {
   // navigation / interactions
   click: { schema: ClickPropertiesSchema, headlines: ['text'], format: fmtField('text') },
@@ -225,9 +227,13 @@ const fieldCache = new Map(
 
 if (import.meta.env.DEV) {
   for (const [kind, { schema, headlines }] of Object.entries(WELL_KNOWN)) {
-    const fieldNames = new Set(schema.fields.map(f => f.name))
-    for (const h of headlines) {
-      if (!fieldNames.has(h)) console.error(`well-known-events: "${kind}" headline "${h}" not in schema`)
+    try {
+      const fieldNames = new Set(schema.fields.map(f => f.name))
+      for (const h of headlines) {
+        if (!fieldNames.has(h)) console.error(`well-known-events: "${kind}" headline "${h}" not in schema`)
+      }
+    } catch (e) {
+      console.error(`well-known-events: failed to validate "${kind}":`, e)
     }
   }
 }

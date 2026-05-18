@@ -4,7 +4,7 @@
 // and headlines) so legacy data still gets the right color AND right schema.
 
 // ── Cosmetic normalization ─────────────────────────────────────────────────
-// `Sign-In`, `signIn`, `SIGN IN`, `sign_in` → `sign_in`
+// `Page-View`, `pageView`, `PAGE VIEW`, `page_view` → `page_view`
 
 const normalize = (name: string): string =>
   name
@@ -70,7 +70,9 @@ const EVENT_ALIASES: Record<string, string> = {
   audio_start: 'audio_started',
   audio_complete: 'audio_completed',
 
-  // notifications
+  // notifications — push channel and in-app notifications share one kind set;
+  // backend treats them uniformly. If push ever gets its own proto schema,
+  // remove the push_* aliases and add separate WELL_KNOWN entries.
   notification_open: 'notification_clicked',
   notification_opened: 'notification_clicked',
   notification_dismiss: 'notification_dismissed',
@@ -90,4 +92,10 @@ const EVENT_ALIASES: Record<string, string> = {
 export const resolveKind = (name: string): string => {
   const normalized = normalize(name)
   return EVENT_ALIASES[normalized] ?? normalized
+}
+
+if (import.meta.env.DEV) {
+  for (const k of Object.keys(EVENT_ALIASES)) {
+    if (normalize(k) !== k) console.error(`event-aliases: key "${k}" is not normalized — will never match`)
+  }
 }

@@ -16,7 +16,7 @@ const color = (hex: string): SeriesColor => ({
 // ── Semantic color map ──────────────────────────────────────────────────────
 // Source of truth for the kind set: proto/common/events/v1/*.proto.
 // Events in the same semantic group share a hue. Some sub-events cross hue
-// (e.g., failed/refunded actions use red, verified/paid use green) when
+// (e.g., failed/refunded actions use red, paid/converted use green) when
 // outcome semantics outweigh family identity.
 
 const EVENT_COLORS: Record<string, SeriesColor> = {
@@ -100,16 +100,16 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
   chat_archived: color('#bae6fd'),
   chat_unarchived: color('#38bdf8'),
   chat_member_added: color('#0369a1'),
-  chat_member_removed: color('#7dd3fc'),
+  chat_member_removed: color('#67e8f9'),
   chat_member_role_changed: color('#075985'),
   chat_message_sent: color('#0ea5e9'),
   chat_message_received: color('#0369a1'),
   chat_message_failed: color('#b91c1c'),
   chat_message_read: color('#38bdf8'),
-  chat_message_deleted: color('#7c2d12'),
+  chat_message_deleted: color('#ef4444'),
   chat_message_edited: color('#0c4a6e'),
   chat_message_pinned: color('#075985'),
-  chat_message_unpinned: color('#7dd3fc'),
+  chat_message_unpinned: color('#a5f3fc'),
   chat_typing_started: color('#bae6fd'),
   chat_typing_stopped: color('#e0f2fe'),
   chat_attachment_uploaded: color('#0284c7'),
@@ -119,7 +119,7 @@ const EVENT_COLORS: Record<string, SeriesColor> = {
   chat_call_left: color('#0369a1'),
   chat_call_screen_shared: color('#0284c7'),
   chat_call_recording_started: color('#0ea5e9'),
-  chat_member_muted: color('#7dd3fc'),
+  chat_member_muted: color('#22d3ee'),
   chat_user_blocked: color('#991b1b'),
   chat_reaction_added: color('#38bdf8'),
   chat_reaction_removed: color('#bae6fd'),
@@ -210,7 +210,12 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
     return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
   }
 
-  const mapped = EVENT_COLORS[resolveKind(seriesName)]
+  const canonical = resolveKind(seriesName)
+  if (!canonical) {
+    return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
+  }
+
+  const mapped = EVENT_COLORS[canonical]
   if (mapped) return mapped
 
   // Unmapped event — neutral gray in single-event contexts (no index),
