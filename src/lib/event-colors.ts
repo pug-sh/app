@@ -1,3 +1,5 @@
+import { resolveKind } from '@/lib/event-aliases'
+
 export type SeriesColor = {
   line: string
   fill: string
@@ -208,7 +210,7 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
     return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
   }
 
-  const mapped = EVENT_COLORS[seriesName]
+  const mapped = EVENT_COLORS[resolveKind(seriesName)]
   if (mapped) return mapped
 
   // Unmapped event — neutral gray in single-event contexts (no index),

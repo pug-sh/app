@@ -31,6 +31,7 @@ import {
   NotificationDismissedPropertiesSchema,
   NotificationReceivedPropertiesSchema,
 } from '@/api/genproto/common/events/v1/notification_events_pb'
+import { resolveKind } from '@/lib/event-aliases'
 import { structGet, structToEntries } from '@/lib/struct'
 
 type Formatter = (props: JsonObject | undefined) => string | null
@@ -233,7 +234,7 @@ if (import.meta.env.DEV) {
 
 /** Split custom properties into well-known schema fields vs extra custom fields. */
 export const partitionEventProps = (kind: string, customProperties: JsonObject | undefined) => {
-  const cached = fieldCache.get(kind)
+  const cached = fieldCache.get(resolveKind(kind))
   if (!cached) {
     return { schemaProps: [] as [string, string][], extraProps: structToEntries(customProperties) }
   }
@@ -248,8 +249,9 @@ export const partitionEventProps = (kind: string, customProperties: JsonObject |
  * and remaining non-headline properties capped for inline display.
  */
 export const resolveInlineProps = (kind: string, customProperties: JsonObject | undefined) => {
-  const entry = WELL_KNOWN[kind]
-  const cached = fieldCache.get(kind)
+  const canonical = resolveKind(kind)
+  const entry = WELL_KNOWN[canonical]
+  const cached = fieldCache.get(canonical)
   const headlineFields = entry?.headlines ?? []
 
   // Always resolve raw headline pairs (used for tooltips); formatted headline takes display priority
