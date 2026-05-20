@@ -9,7 +9,7 @@ import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import SettingsLayout from '../settings-layout'
 
@@ -29,7 +29,6 @@ const fcmSchema = z.object({
 type FcmFormData = z.infer<typeof fcmSchema>
 
 const Messaging = () => {
-  const project = useAtomValue(activeProjectAtom)
   const projectHeaders = useAtomValue(projectHeaderAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
 
@@ -64,7 +63,7 @@ const Messaging = () => {
   return (
     <SettingsLayout>
       <div className="space-y-8 max-w-2xl">
-        {project && projectHeaders && (
+        {projectHeaders && (
           <section>
             <SectionHeader
               title="FCM Service Account"

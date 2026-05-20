@@ -36,6 +36,7 @@ const CopyId = ({ value }: { value: string }) => {
   const { copied, copy } = useCopyToClipboard()
   return (
     <button
+      type="button"
       onClick={() => copy(value)}
       className="inline-flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
     >
@@ -146,7 +147,7 @@ const Organization = () => {
   return (
     <SettingsLayout>
       <div className="space-y-8 max-w-2xl">
-        {org ? (
+        {org && (
           <section>
             <SectionHeader title="Organization" description="Switch, create, leave, or rename your organization" />
             <div className="space-y-3 mb-4">
@@ -271,7 +272,7 @@ const Organization = () => {
             </form>
             <CopyId value={org.id} />
           </section>
-        ) : null}
+        )}
       </div>
     </SettingsLayout>
   )
