@@ -39,3 +39,4 @@ docs/superpowers/
 pr-*review.md
 pr-review.md
 /*.png
+.env.*
