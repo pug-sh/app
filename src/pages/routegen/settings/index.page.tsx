@@ -1,16 +1,16 @@
 import { useEffect } from 'react'
-import { useLocation } from 'wouter'
-import { useProjectPrefix } from '@/lib/project-path'
+import { useLocation, useParams } from 'wouter'
+import LoadingSpinner from '@/components/loading-spinner'
 
 const SettingsIndex = () => {
+  const { projectId } = useParams<{ projectId: string }>()
   const [, navigate] = useLocation()
-  const prefix = useProjectPrefix()
 
   useEffect(() => {
-    if (prefix) navigate(`${prefix}/settings/general`, { replace: true })
-  }, [prefix, navigate])
+    if (projectId) navigate(`/p/${projectId}/settings/general`, { replace: true })
+  }, [projectId, navigate])
 
-  return null
+  return <LoadingSpinner />
 }
 
 export default SettingsIndex
