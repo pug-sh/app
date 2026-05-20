@@ -5,6 +5,7 @@ import {
   ChevronsUpDown,
   ContactRound,
   LayoutDashboard,
+  LayoutGrid,
   Loader2,
   LogOut,
   Megaphone,
@@ -57,6 +58,7 @@ import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } fro
 
 const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { path: 'dashboards', label: 'Dashboards', icon: LayoutGrid },
   { path: 'campaigns', label: 'Campaigns', icon: Megaphone },
   { path: 'profiles', label: 'Profiles', icon: ContactRound },
   { path: 'insights', label: 'Insights', icon: TrendingUp },
@@ -182,7 +184,7 @@ const AppSidebar = () => {
                         key={proj.id}
                         onClick={() => {
                           setActiveProject(proj)
-                          navigate(`/p/${proj.id}/${pagePath}`)
+                          navigate(`/p/${proj.id}/${pagePath.startsWith('dashboards/') ? 'dashboards' : pagePath}`)
                         }}
                         className="min-h-9 gap-2 rounded-lg px-2"
                       >

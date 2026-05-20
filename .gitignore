@@ -42,3 +42,4 @@ pr-review.md
 # Local env files (.env.example is committed as the template)
 .env.development
 .env.production
+.env
