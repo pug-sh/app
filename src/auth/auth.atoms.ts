@@ -17,18 +17,23 @@ export const signInAtom = atom(null, async (get, set, { email, password }: { ema
   }
 })
 
-export const signUpAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
-  const authRPC = get(authRPCAtom)
-  try {
-    const resp = await authRPC.signUpWithEmail({ email, password })
-    set(jwtAtom, resp.token)
-    return { ok: true as const }
-  } catch (error) {
-    if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
-    const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
-    return { ok: false as const, error: msg }
-  }
-})
+export const signUpAtom = atom(
+  null,
+  async (get, set, { email, password, inviteToken }: { email: string; password: string; inviteToken?: string }) => {
+    const authRPC = get(authRPCAtom)
+    try {
+      // inviteToken (when set) makes the backend join the invited org and skip
+      // default-org creation; empty/undefined falls back to a normal signup.
+      const resp = await authRPC.signUpWithEmail({ email, password, inviteToken })
+      set(jwtAtom, resp.token)
+      return { ok: true as const }
+    } catch (error) {
+      if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
+      const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
+      return { ok: false as const, error: msg }
+    }
+  },
+)
 
 const authClockAtom = atom(Date.now())
 authClockAtom.onMount = setAtom => {

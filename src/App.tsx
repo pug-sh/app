@@ -2,6 +2,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
+import { useLocation } from 'wouter'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 's
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
+const AcceptInvite = lazyWithRetry(() => import('@/pages/accept-invite'), 'accept-invite')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -152,6 +154,7 @@ const WorkspaceError = ({ message }: { message: string }) => (
 )
 
 const App = () => {
+  const [location] = useLocation()
   const authenticated = useAtomValue(isAuthenticatedAtom)
   const status = useAtomValue(bootstrapStatusAtom)
   const workspaceError = useAtomValue(workspaceErrorAtom)
@@ -159,7 +162,11 @@ const App = () => {
     <>
       <ThemeSync />
       <WorkspaceBootstrap />
-      {!authenticated ? (
+      {location === '/accept-invite' ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <AcceptInvite />
+        </Suspense>
+      ) : !authenticated ? (
         <Suspense fallback={<LoadingSpinner />}>
           <SignIn />
         </Suspense>
