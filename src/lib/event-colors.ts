@@ -201,6 +201,56 @@ const FALLBACK_COLORS: SeriesColor[] = [
   color('#84cc16'),
 ]
 
+// ── Family inference for custom events ───────────────────────────────────────
+// Non-well-known kinds borrow their domain family's hue by name prefix. Each
+// palette holds only that family's on-hue shades — outcome crossovers (failure
+// red, success green) are intentionally excluded so a benign custom event never
+// inherits "failure red". Prefixes are matched against the resolveKind() form.
+
+const FAMILIES: { prefixes: string[]; palette: string[] }[] = [
+  { prefixes: ['chat_'], palette: ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#0369a1', '#075985'] }, // sky
+  {
+    prefixes: ['subscription_', 'invoice_', 'payment_', 'trial_', 'refund_', 'billing_'],
+    palette: ['#ca8a04', '#eab308', '#a16207', '#facc15', '#d97706', '#fde047'],
+  }, // yellow
+  {
+    prefixes: ['product_', 'cart_', 'wishlist_', 'coupon_', 'checkout_', 'order_', 'commerce_'],
+    palette: ['#34d399', '#10b981', '#059669', '#047857', '#6ee7b7', '#5eead4'],
+  }, // emerald
+  {
+    prefixes: ['search_', 'recommendation_', 'filter_', 'sort_', 'discovery_'],
+    palette: ['#7c3aed', '#8b5cf6', '#a78bfa', '#6d28d9', '#5b21b6', '#c4b5fd'],
+  }, // violet
+  {
+    prefixes: ['video_', 'audio_', 'media_'],
+    palette: ['#fbbf24', '#d97706', '#f59e0b', '#eab308', '#b45309', '#fcd34d'],
+  }, // amber
+  { prefixes: ['notification_', 'push_'], palette: ['#db2777', '#ec4899', '#f9a8d4'] }, // pink
+  { prefixes: ['app_'], palette: ['#4338ca', '#4f46e5', '#3730a3', '#6366f1', '#818cf8', '#a5b4fc'] }, // indigo
+  { prefixes: ['workspace_', 'org_', 'team_'], palette: ['#44403b', '#57534e', '#78716c', '#a8a29e'] }, // stone
+  {
+    prefixes: ['support_', 'survey_', 'feedback_', 'nps_', 'help_'],
+    palette: ['#e11d48', '#be123c', '#f43f5e', '#fb7185', '#9f1239', '#fda4af'],
+  }, // rose
+  { prefixes: ['form_'], palette: ['#0d9488', '#0f766e', '#14b8a6', '#2dd4bf'] }, // teal
+  { prefixes: ['file_', 'export_', 'upload_', 'download_'], palette: ['#52525b', '#71717a', '#3f3f46', '#27272a'] }, // zinc
+  { prefixes: ['integration_', 'webhook_'], palette: ['#c026d3', '#a21caf', '#d946ef', '#e879f9'] }, // fuchsia
+  { prefixes: ['api_'], palette: ['#9333ea', '#7e22ce', '#a855f7', '#6b21a8'] }, // purple
+  { prefixes: ['invite_', 'invitation_'], palette: ['#84cc16', '#65a30d', '#4d7c0f', '#a3e635'] }, // lime
+  { prefixes: ['page_', 'screen_', 'nav_'], palette: ['#2563eb', '#3b82f6', '#60a5fa', '#0891b2'] }, // blue
+  { prefixes: ['auth_', 'password_', 'mfa_'], palette: ['#334155', '#475569', '#64748b', '#1e293b'] }, // slate
+  { prefixes: ['error_', 'exception_'], palette: ['#b91c1c', '#dc2626', '#991b1b'] }, // red
+  { prefixes: ['share_'], palette: ['#ea580c', '#f97316', '#c2410c'] }, // orange
+]
+
+// Deterministic 32-bit string hash — depends only on the name, so the chosen
+// color is identical for every user, session, and view.
+const hashString = (s: string): number => {
+  let h = 0
+  for (const ch of s) h = (Math.imul(h, 31) + ch.charCodeAt(0)) | 0
+  return Math.abs(h)
+}
+
 // ── Lookup ──────────────────────────────────────────────────────────────────
 
 const GENERIC_LABEL_RE = /^(step|cohort|series)\s+\d+$/i
@@ -218,7 +268,10 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
   const mapped = EVENT_COLORS[canonical]
   if (mapped) return mapped
 
-  // Unmapped event — neutral gray in single-event contexts (no index),
-  // indexed fallback in multi-series charts so custom events are distinguishable
-  return fallbackIndex > 0 ? FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length] : color('#94a3b8')
+  // Unmapped (custom) event — deterministic by name, identical for every user
+  // and view. Borrow the matching family's hue; otherwise hash into the shared
+  // fallback palette. (fallbackIndex now only steers the generic labels above.)
+  const family = FAMILIES.find(f => f.prefixes.some(p => canonical.startsWith(p)))
+  if (family) return color(family.palette[hashString(canonical) % family.palette.length])
+  return FALLBACK_COLORS[hashString(canonical) % FALLBACK_COLORS.length]
 }
