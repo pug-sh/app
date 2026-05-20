@@ -83,23 +83,13 @@ const MetaCell = ({ icon, value, fallback = '—' }: { icon?: React.ReactNode; v
 
 const ALLOWED_PROFILE_AUTO_PROPERTIES = new Set([
   '$browser',
-  '$browser_version',
+  '$browserVersion',
   '$os',
-  '$os_version',
+  '$osVersion',
   '$device',
   '$country',
   '$region',
   '$city',
-  'browser',
-  'browserversion',
-  'browser_version',
-  'os',
-  'osversion',
-  'os_version',
-  'device',
-  'country',
-  'region',
-  'city',
 ])
 
 const Profiles = () => {
