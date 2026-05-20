@@ -39,11 +39,17 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
   const customProps = structToEntries(event.customProperties)
-  const inlineResult = resolveInlineProps(event.kind, event.customProperties)
+  const inlineResult = resolveInlineProps(event.kind, event.customProperties, event.autoProperties)
   const hasMore = autoProps.length > 0 || customProps.length > 3
   const colors = getSeriesColor(event.kind)
-  const platform = structGet(event.autoProperties, '$platform')
-  const osVersion = structGet(event.autoProperties, '$os_version')
+  const os = structGet(event.autoProperties, '$os')
+  const osVersion = structGet(event.autoProperties, '$osVersion')
+  const browser = structGet(event.autoProperties, '$browser')
+  const browserVersion = structGet(event.autoProperties, '$browserVersion')
+  const browserLabel = [browser, browserVersion].filter(Boolean).join(' ')
+  const osLabel = [os, osVersion].filter(Boolean).join(' ')
+  const platform = [browser, os].filter(Boolean).join(' · ')
+  const platformDetail = [browserLabel, osLabel].filter(Boolean).join(' · ')
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
 
@@ -71,8 +77,8 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
           {(city || country) && [city, country].filter(Boolean).join(', ')}
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-          {(platform || osVersion) && [platform, osVersion].filter(Boolean).join(' ')}
+        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={platformDetail || undefined}>
+          <div className="truncate">{platform}</div>
         </td>
         <td className="py-2.5 pr-2 align-middle">
           <InlineEventProps {...inlineResult} />
@@ -308,7 +314,7 @@ const EventExplorer = () => {
                 <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
                 <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
                 <th className="py-2 pr-2 text-left font-medium w-20">Location</th>
-                <th className="py-2 pr-2 text-left font-medium w-24">Platform</th>
+                <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
                 <th className="py-2 pr-2 text-left font-medium">Properties</th>
                 <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
                 <th className="w-5" />

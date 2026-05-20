@@ -20,7 +20,7 @@ const TimelineEventItem = ({
   const [expanded, setExpanded] = useState(false)
   const autoProps = structToEntries(event.autoProperties)
   const customProps = structToEntries(event.customProperties)
-  const inlineResult = resolveInlineProps(event.kind, event.customProperties)
+  const inlineResult = resolveInlineProps(event.kind, event.customProperties, event.autoProperties)
   const hasMore = autoProps.length > 0 || customProps.length > 3
   const colors = getSeriesColor(event.kind)
 
