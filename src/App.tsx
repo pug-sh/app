@@ -1,6 +1,7 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
+import { toast } from 'sonner'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -10,11 +11,14 @@ import { applyTheme, themeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
+  bootstrapStatusAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
-  orgsAtom,
+  lastOrgIdAtom,
+  loadOrgAtom,
   projectsAtom,
   resetWorkspaceAtom,
+  selectOrgAtom,
   workspaceErrorAtom,
 } from '@/data/workspace.atoms'
 import { lazyWithRetry } from '@/lib/lazy'
@@ -22,6 +26,7 @@ import { lazyWithRetry } from '@/lib/lazy'
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
+const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -39,37 +44,61 @@ const ThemeSync = () => {
 
 const WorkspaceBootstrap = () => {
   const authenticated = useAtomValue(isAuthenticatedAtom)
-  const orgs = useAtomValue(orgsAtom)
+  const [status, setStatus] = useAtom(bootstrapStatusAtom)
   const projects = useAtomValue(projectsAtom)
-  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
+  const activeOrg = useAtomValue(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
+  const lastOrgId = useAtomValue(lastOrgIdAtom)
+  const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
   const fetchProjects = useSetAtom(fetchProjectsAtom)
+  const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
 
   useEffect(() => {
     if (!authenticated) {
       resetWorkspace()
-      return
+    } else if (status === 'idle') {
+      setStatus('loading-org')
     }
-    fetchOrgs()
-  }, [authenticated, fetchOrgs, resetWorkspace])
+  }, [authenticated, status, setStatus, resetWorkspace])
 
   useEffect(() => {
-    if (orgs.length === 0) {
-      if (activeOrg) setActiveOrg(null)
-      return
+    if (status !== 'loading-org') return
+    let cancelled = false
+    ;(async () => {
+      if (lastOrgId) {
+        const org = await loadOrg(lastOrgId)
+        if (cancelled) return
+        if (org) {
+          setStatus('ready')
+          return
+        }
+        toast.message('Your previous organization is no longer available')
+      }
+      const list = await fetchOrgs()
+      if (cancelled) return
+      if (list.length === 0) {
+        setStatus('error')
+        return
+      }
+      if (list.length === 1) {
+        selectOrg(list[0])
+        setStatus('ready')
+        return
+      }
+      setStatus('needs-selection')
+    })()
+    return () => {
+      cancelled = true
     }
-    if (!activeOrg || !orgs.some(org => org.id === activeOrg.id)) {
-      setActiveOrg(orgs[0])
-    }
-  }, [orgs, activeOrg, setActiveOrg])
+  }, [status, lastOrgId, loadOrg, fetchOrgs, selectOrg, setStatus])
 
   useEffect(() => {
-    if (!activeOrg) return
+    if (status !== 'ready' || !activeOrg) return
     setActiveProject(null)
     fetchProjects()
-  }, [activeOrg, fetchProjects, setActiveProject])
+  }, [status, activeOrg, fetchProjects, setActiveProject])
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -81,13 +110,17 @@ const WorkspaceBootstrap = () => {
     }
   }, [projects, activeProject, setActiveProject])
 
+  useEffect(() => {
+    if (status !== 'needs-selection' || !activeOrg) return
+    setStatus('ready')
+  }, [activeOrg, status, setStatus])
+
   return null
 }
 
 const AuthenticatedApp = () => {
   return (
     <SidebarProvider>
-      <WorkspaceBootstrap />
       <Suspense fallback={null}>
         <AppSidebar />
       </Suspense>
@@ -120,18 +153,26 @@ const WorkspaceError = ({ message }: { message: string }) => (
 
 const App = () => {
   const authenticated = useAtomValue(isAuthenticatedAtom)
+  const status = useAtomValue(bootstrapStatusAtom)
   const workspaceError = useAtomValue(workspaceErrorAtom)
   return (
     <>
       <ThemeSync />
+      <WorkspaceBootstrap />
       {!authenticated ? (
         <Suspense fallback={<LoadingSpinner />}>
           <SignIn />
         </Suspense>
-      ) : workspaceError ? (
-        <WorkspaceError message={workspaceError} />
-      ) : (
+      ) : workspaceError || status === 'error' ? (
+        <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
+      ) : status === 'needs-selection' ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <SelectOrg />
+        </Suspense>
+      ) : status === 'ready' ? (
         <AuthenticatedApp />
+      ) : (
+        <LoadingSpinner />
       )}
       <Toaster position="bottom-right" />
     </>
