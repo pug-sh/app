@@ -1,13 +1,13 @@
-import { ConnectError } from '@connectrpc/connect'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, Bell, Eye, EyeOff, Loader2 } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { orgsRPCAtom } from '@/api/rpc'
-import { isAuthenticatedAtom, signInAtom, signOutAtom, signUpAtom } from '@/auth/auth.atoms'
+import { fetchMeAtom, isAuthenticatedAtom, meAtom, signInAtom, signOutAtom, signUpAtom } from '@/auth/auth.atoms'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -35,16 +35,22 @@ const Shell = ({ children }: { children: ReactNode }) => (
 )
 
 // Signed in: confirm and accept. The backend matches the invite to the
-// signed-in account's email and rejects a mismatch (ErrInviteWrongEmail), so
-// the wrong-account case surfaces as the accept error here.
+// signed-in account's email and rejects a mismatch with CodePermissionDenied
+// (ErrInviteWrongEmail), so the wrong-account case is detected by code here.
 const AcceptView = ({ token }: { token: string }) => {
   const orgsRPC = useAtomValue(orgsRPCAtom)
+  const me = useAtomValue(meAtom)
+  const fetchMe = useSetAtom(fetchMeAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
   const signOut = useSetAtom(signOutAtom)
   const [, navigate] = useLocation()
   const [status, setStatus] = useState<'idle' | 'accepting' | 'error'>('idle')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchMe()
+  }, [fetchMe])
 
   const accept = async () => {
     setStatus('accepting')
@@ -55,7 +61,15 @@ const AcceptView = ({ token }: { token: string }) => {
       if (resp.org) selectOrg(resp.org)
       navigate('/overview')
     } catch (err) {
-      setError(err instanceof ConnectError ? err.message : 'Could not accept the invitation.')
+      if (err instanceof ConnectError && err.code === Code.PermissionDenied) {
+        setError(
+          me?.email
+            ? `This invitation isn't for ${me.email}. Sign out and use the invited address.`
+            : "This invitation isn't for this account. Sign out and use the invited address.",
+        )
+      } else {
+        setError(err instanceof ConnectError ? err.message : 'Could not accept the invitation.')
+      }
       setStatus('error')
     }
   }
@@ -63,7 +77,14 @@ const AcceptView = ({ token }: { token: string }) => {
   return (
     <>
       <h1 className="text-2xl font-semibold tracking-tight">Accept invitation</h1>
-      <p className="text-sm text-muted-foreground mt-1.5 mb-8">You've been invited to join an organization on Pug.</p>
+      <div className="mb-8">
+        <p className="text-sm text-muted-foreground mt-1.5">You've been invited to join an organization on Pug.</p>
+        {me?.email && (
+          <p className="text-sm text-muted-foreground mt-1">
+            Signed in as <span className="font-medium text-foreground">{me.email}</span>
+          </p>
+        )}
+      </div>
       {error && (
         <div className="mb-4 text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2 flex items-start gap-2">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
