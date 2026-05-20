@@ -39,4 +39,6 @@ docs/superpowers/
 pr-*review.md
 pr-review.md
 /*.png
-.env.*
+# Local env files (.env.example is committed as the template)
+.env.development
+.env.production
