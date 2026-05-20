@@ -1,4 +1,4 @@
-import { ConnectError } from '@connectrpc/connect'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
@@ -29,6 +29,29 @@ export const signUpAtom = atom(
       return { ok: true as const }
     } catch (error) {
       if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
+      const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
+      return { ok: false as const, error: msg }
+    }
+  },
+)
+
+// Invite signup: the backend derives the customer's email from the invite token,
+// so we send no email. signUpAtom keeps its required-email contract for the
+// normal signup on sign-in.tsx. A bad/expired/consumed token comes back as
+// CodeFailedPrecondition ("invitation is no longer valid").
+export const acceptInviteSignUpAtom = atom(
+  null,
+  async (get, set, { password, inviteToken }: { password: string; inviteToken: string }) => {
+    const authRPC = get(authRPCAtom)
+    try {
+      const resp = await authRPC.signUpWithEmail({ password, inviteToken })
+      set(jwtAtom, resp.token)
+      return { ok: true as const }
+    } catch (error) {
+      if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
+        return { ok: false as const, error: 'This invitation is no longer valid — ask for a fresh one.' }
+      }
+      if (!(error instanceof ConnectError)) console.error('acceptInviteSignUp unexpected error', error)
       const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
       return { ok: false as const, error: msg }
     }
