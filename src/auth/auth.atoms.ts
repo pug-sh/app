@@ -1,6 +1,6 @@
 import { ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
-import { authRPCAtom } from '@/api/rpc'
+import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
 
@@ -35,6 +35,29 @@ export const signUpAtom = atom(
   },
 )
 
+export interface Me {
+  customerId: string
+  email: string
+  emailVerified: boolean
+}
+
+// Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
+export const meAtom = atom<Me | null>(null)
+
+export const fetchMeAtom = atom(null, async (get, set) => {
+  const customersRPC = get(customersRPCAtom)
+  try {
+    const resp = await customersRPC.getMe({})
+    const me = { customerId: resp.customerId, email: resp.email, emailVerified: resp.emailVerified }
+    set(meAtom, me)
+    return me
+  } catch (err) {
+    if (!(err instanceof ConnectError)) console.error('fetchMe unexpected error', err)
+    set(meAtom, null)
+    return null
+  }
+})
+
 const authClockAtom = atom(Date.now())
 authClockAtom.onMount = setAtom => {
   const tick = () => setAtom(Date.now())
@@ -52,5 +75,6 @@ export const isAuthenticatedAtom = atom(get => {
 
 export const signOutAtom = atom(null, (_, set) => {
   set(jwtAtom, '')
+  set(meAtom, null)
   set(resetWorkspaceAtom)
 })
