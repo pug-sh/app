@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Check, Copy, Loader2, Plus, Save } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Check, Copy, Loader2, Plus, RefreshCw, Save } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { orgsRPCAtom } from '@/api/rpc'
@@ -81,15 +81,19 @@ const Organization = () => {
     }
   }, [org, orgForm])
 
-  const handleOpenOrgPicker = async (open: boolean) => {
-    if (!open || orgs.length > 0) return
+  const reloadOrgs = useCallback(async () => {
     setOrgsLoading(true)
     try {
       await fetchOrgs()
     } finally {
       setOrgsLoading(false)
     }
-  }
+  }, [fetchOrgs])
+
+  // Preload the org list on every visit so the switcher is populated without opening it.
+  useEffect(() => {
+    reloadOrgs()
+  }, [reloadOrgs])
 
   const handleSwitchOrg = () => {
     const target = orgs.find(o => o.id === pendingOrgId)
@@ -154,11 +158,7 @@ const Organization = () => {
               <Field>
                 <FieldLabel>Current organization</FieldLabel>
                 <div className="flex gap-2">
-                  <Select
-                    value={pendingOrgId}
-                    onValueChange={v => setPendingOrgId(v ?? '')}
-                    onOpenChange={handleOpenOrgPicker}
-                  >
+                  <Select value={pendingOrgId} onValueChange={v => setPendingOrgId(v ?? '')}>
                     <SelectTrigger className="flex-1">
                       <SelectValue placeholder={org.displayName} />
                     </SelectTrigger>
@@ -170,12 +170,21 @@ const Organization = () => {
                       ) : (
                         orgs.map(o => (
                           <SelectItem key={o.id} value={o.id}>
-                            {o.displayName}
+                            {o.displayName} <span className="text-muted-foreground font-mono text-xs">({o.id})</span>
                           </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={reloadOrgs}
+                    disabled={orgsLoading}
+                    aria-label="Reload organizations"
+                  >
+                    {orgsLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
