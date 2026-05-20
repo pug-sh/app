@@ -7,18 +7,31 @@ import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { orgsRPCAtom } from '@/api/rpc'
-import { fetchMeAtom, isAuthenticatedAtom, meAtom, signInAtom, signOutAtom, signUpAtom } from '@/auth/auth.atoms'
+import {
+  acceptInviteSignUpAtom,
+  fetchMeAtom,
+  isAuthenticatedAtom,
+  meAtom,
+  signInAtom,
+  signOutAtom,
+} from '@/auth/auth.atoms'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { fetchOrgsAtom, selectOrgAtom } from '@/data/workspace.atoms'
 
-const authSchema = z.object({
+const signinSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
   password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
 })
 
-type AuthFormData = z.infer<typeof authSchema>
+const signupSchema = z.object({
+  email: z.string(),
+  password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
+})
+
+// Both schemas share this {email, password} shape; signinSchema is the superset (email is always '' in signup mode).
+type AuthFormData = z.infer<typeof signinSchema>
 
 const Shell = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen flex items-center justify-center p-8">
@@ -111,11 +124,12 @@ const AcceptView = ({ token }: { token: string }) => {
   )
 }
 
-// Signed out: create an account (the invite token joins the org and skips
-// default-org creation) or sign in to an existing account and then accept.
+// Signed out: create an account (the invite token joins the org and the backend
+// derives the email from the invite, so signup asks only for a password) or sign
+// in to an existing account and then accept.
 const AuthView = ({ token }: { token: string }) => {
   const signIn = useSetAtom(signInAtom)
-  const signUp = useSetAtom(signUpAtom)
+  const acceptInviteSignUp = useSetAtom(acceptInviteSignUpAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
   const [, navigate] = useLocation()
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
@@ -124,7 +138,7 @@ const AuthView = ({ token }: { token: string }) => {
   const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<AuthFormData>({
-    resolver: zodResolver(authSchema),
+    resolver: zodResolver(mode === 'signup' ? signupSchema : signinSchema),
     defaultValues: { email: '', password: '' },
   })
 
@@ -133,13 +147,13 @@ const AuthView = ({ token }: { token: string }) => {
     setLoading(true)
     try {
       if (mode === 'signup') {
-        const res = await signUp({ ...data, inviteToken: token })
+        const res = await acceptInviteSignUp({ password: data.password, inviteToken: token })
         if (!res.ok) {
           setError(res.error)
           return
         }
       } else {
-        const res = await signIn(data)
+        const res = await signIn({ email: data.email, password: data.password })
         if (!res.ok) {
           setError(res.error)
           return
@@ -165,24 +179,20 @@ const AuthView = ({ token }: { token: string }) => {
       </p>
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <Field data-invalid={!!form.formState.errors.email}>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input
-            {...form.register('email')}
-            id="email"
-            type="email"
-            placeholder="you@company.com"
-            aria-invalid={!!form.formState.errors.email}
-            autoComplete="email"
-          />
-          {form.formState.errors.email ? (
-            <FieldError errors={[form.formState.errors.email]} />
-          ) : (
-            mode === 'signup' && (
-              <p className="text-xs text-muted-foreground">Use the email this invitation was sent to.</p>
-            )
-          )}
-        </Field>
+        {mode === 'signin' && (
+          <Field data-invalid={!!form.formState.errors.email}>
+            <FieldLabel htmlFor="email">Email</FieldLabel>
+            <Input
+              {...form.register('email')}
+              id="email"
+              type="email"
+              placeholder="you@company.com"
+              aria-invalid={!!form.formState.errors.email}
+              autoComplete="email"
+            />
+            {form.formState.errors.email && <FieldError errors={[form.formState.errors.email]} />}
+          </Field>
+        )}
 
         <Field data-invalid={!!form.formState.errors.password}>
           <FieldLabel htmlFor="password">Password</FieldLabel>
@@ -222,6 +232,7 @@ const AuthView = ({ token }: { token: string }) => {
           type="button"
           className="text-primary font-medium hover:underline underline-offset-4 cursor-pointer"
           onClick={() => {
+            form.clearErrors()
             setMode(mode === 'signup' ? 'signin' : 'signup')
             setError('')
           }}
