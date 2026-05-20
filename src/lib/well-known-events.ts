@@ -249,20 +249,48 @@ export const partitionEventProps = (kind: string, customProperties: JsonObject |
   return { schemaProps, extraProps }
 }
 
+// ── Auto-property headlines ──────────────────────────────────────────────────
+// Kinds whose inline summary lives in an auto-property ($-prefixed) rather than
+// custom props (e.g. page_view's meaning is its $url). Keyed by canonical kind.
+const AUTO_HEADLINE: Record<string, string> = { page_view: '$url' }
+
+const fmtUrl = (raw: string) => {
+  try {
+    const u = new URL(raw)
+    return u.pathname + u.search
+  } catch {
+    return raw
+  }
+}
+
 /**
  * Resolve inline display props for an event row.
  * Returns a formatted headline (or null), raw headline pairs (for tooltips),
  * and remaining non-headline properties capped for inline display.
  */
-export const resolveInlineProps = (kind: string, customProperties: JsonObject | undefined) => {
+export const resolveInlineProps = (
+  kind: string,
+  customProperties: JsonObject | undefined,
+  autoProperties?: JsonObject | undefined,
+) => {
   const canonical = resolveKind(kind)
   const entry = WELL_KNOWN[canonical]
   const cached = fieldCache.get(canonical)
   const headlineFields = entry?.headlines ?? []
 
   // Always resolve raw headline pairs (used for tooltips); formatted headline takes display priority
-  const headlinePairs = pickEntries(customProperties, headlineFields)
-  const headline = entry?.format?.(customProperties) ?? null
+  let headlinePairs = pickEntries(customProperties, headlineFields)
+  let headline = entry?.format?.(customProperties) ?? null
+
+  // Fallback: kinds whose summary lives in an auto-property (e.g. page_view → $url)
+  if (!headline && headlinePairs.length === 0) {
+    const autoKey = AUTO_HEADLINE[canonical]
+    const autoVal = autoKey ? structGet(autoProperties, autoKey) : undefined
+    if (autoKey && autoVal) {
+      headline = fmtUrl(autoVal)
+      headlinePairs = [[autoKey, autoVal] as [string, string]]
+    }
+  }
 
   const customEntries = structToEntries(customProperties)
   const hasHeadline = headline || headlinePairs.length > 0
