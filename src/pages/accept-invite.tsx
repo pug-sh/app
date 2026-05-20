@@ -20,17 +20,20 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { fetchOrgsAtom, selectOrgAtom } from '@/data/workspace.atoms'
 
+const passwordField = z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters')
+
 const signinSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
+  password: passwordField,
 })
 
 const signupSchema = z.object({
   email: z.string(),
-  password: z.string().min(1, 'Password is required').min(8, 'Password must be at least 8 characters'),
+  password: passwordField,
 })
 
-// Both schemas share this {email, password} shape; signinSchema is the superset (email is always '' in signup mode).
+// Both schemas have the same {email, password} shape; signinSchema has the stricter email rules, so its inferred type
+// is the one to use. In signup mode the email field is unused and stays '' — don't read data.email there.
 type AuthFormData = z.infer<typeof signinSchema>
 
 const Shell = ({ children }: { children: ReactNode }) => (
@@ -60,6 +63,7 @@ const AcceptView = ({ token }: { token: string }) => {
   const [, navigate] = useLocation()
   const [status, setStatus] = useState<'idle' | 'accepting' | 'error'>('idle')
   const [error, setError] = useState('')
+  const [wrongAccount, setWrongAccount] = useState(false)
 
   useEffect(() => {
     fetchMe()
@@ -68,19 +72,30 @@ const AcceptView = ({ token }: { token: string }) => {
   const accept = async () => {
     setStatus('accepting')
     setError('')
+    setWrongAccount(false)
     try {
       const resp = await orgsRPC.acceptInvite({ token })
       await fetchOrgs()
       if (resp.org) selectOrg(resp.org)
       navigate('/overview')
     } catch (err) {
+      if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
+        // Already a member — that's the goal state, not a failure. Go in.
+        await fetchOrgs()
+        navigate('/overview')
+        return
+      }
       if (err instanceof ConnectError && err.code === Code.PermissionDenied) {
+        setWrongAccount(true)
         setError(
           me?.email
             ? `This invitation isn't for ${me.email}. Sign out and use the invited address.`
             : "This invitation isn't for this account. Sign out and use the invited address.",
         )
+      } else if (err instanceof ConnectError && err.code === Code.FailedPrecondition) {
+        setError('This invitation has expired or is no longer valid — ask for a fresh one.')
       } else {
+        if (!(err instanceof ConnectError)) console.error('acceptInvite unexpected error', err)
         setError(err instanceof ConnectError ? err.message : 'Could not accept the invitation.')
       }
       setStatus('error')
@@ -108,7 +123,7 @@ const AcceptView = ({ token }: { token: string }) => {
         {status === 'accepting' && <Loader2 className="animate-spin" />}
         Accept invitation
       </Button>
-      {status === 'error' && (
+      {wrongAccount && (
         <p className="text-center text-sm text-muted-foreground mt-6">
           Wrong account?{' '}
           <button
@@ -130,7 +145,6 @@ const AcceptView = ({ token }: { token: string }) => {
 const AuthView = ({ token }: { token: string }) => {
   const signIn = useSetAtom(signInAtom)
   const acceptInviteSignUp = useSetAtom(acceptInviteSignUpAtom)
-  const orgsRPC = useAtomValue(orgsRPCAtom)
   const [, navigate] = useLocation()
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
   const [error, setError] = useState('')
@@ -152,16 +166,17 @@ const AuthView = ({ token }: { token: string }) => {
           setError(res.error)
           return
         }
+        navigate('/overview')
       } else {
         const res = await signIn({ email: data.email, password: data.password })
         if (!res.ok) {
           setError(res.error)
           return
         }
-        // Signed in to an existing account — now accept the invite for it.
-        await orgsRPC.acceptInvite({ token })
+        // Signed in. The parent now renders <AcceptView>, which owns the accept
+        // (with wrong-account / already-member / expired handling). We don't accept
+        // inline — this view unmounts the instant auth state flips, losing any error.
       }
-      navigate('/overview')
     } catch (err) {
       setError(err instanceof ConnectError ? err.message : 'Something went wrong. Please try again.')
     } finally {

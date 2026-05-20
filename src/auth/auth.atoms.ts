@@ -1,5 +1,6 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
+import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
@@ -17,23 +18,18 @@ export const signInAtom = atom(null, async (get, set, { email, password }: { ema
   }
 })
 
-export const signUpAtom = atom(
-  null,
-  async (get, set, { email, password, inviteToken }: { email: string; password: string; inviteToken?: string }) => {
-    const authRPC = get(authRPCAtom)
-    try {
-      // inviteToken (when set) makes the backend join the invited org and skip
-      // default-org creation; empty/undefined falls back to a normal signup.
-      const resp = await authRPC.signUpWithEmail({ email, password, inviteToken })
-      set(jwtAtom, resp.token)
-      return { ok: true as const }
-    } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
-      const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
-      return { ok: false as const, error: msg }
-    }
-  },
-)
+export const signUpAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
+  const authRPC = get(authRPCAtom)
+  try {
+    const resp = await authRPC.signUpWithEmail({ email, password })
+    set(jwtAtom, resp.token)
+    return { ok: true as const }
+  } catch (error) {
+    if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
+    const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
+    return { ok: false as const, error: msg }
+  }
+})
 
 // Invite signup: the backend derives the customer's email from the invite token,
 // so we send no email. signUpAtom keeps its required-email contract for the
@@ -58,11 +54,7 @@ export const acceptInviteSignUpAtom = atom(
   },
 )
 
-export interface Me {
-  customerId: string
-  email: string
-  emailVerified: boolean
-}
+export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
