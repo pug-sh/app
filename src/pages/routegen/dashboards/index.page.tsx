@@ -1,6 +1,6 @@
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { ArrowRight, LayoutGrid, Loader2, Plus, Search } from 'lucide-react'
+import { ArrowRight, Loader2, PanelsTopLeft, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -74,7 +74,7 @@ const Dashboards = () => {
     }
   }
 
-  if (!project) return <NoProject title="Dashboards" icon={LayoutGrid} />
+  if (!project) return <NoProject title="Dashboards" icon={PanelsTopLeft} />
 
   return (
     <Page
@@ -104,7 +104,7 @@ const Dashboards = () => {
           <LoadingSpinner />
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <LayoutGrid className="mb-4 size-10 opacity-15" />
+            <PanelsTopLeft className="mb-4 size-10 opacity-15" />
             <p className="mb-1 text-sm font-medium">{error}</p>
             <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchDashboards()}>
               Retry
@@ -112,7 +112,7 @@ const Dashboards = () => {
           </div>
         ) : dashboards.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <LayoutGrid className="mb-4 size-10 opacity-15" />
+            <PanelsTopLeft className="mb-4 size-10 opacity-15" />
             <p className="mb-4 text-sm font-medium">No dashboards yet</p>
             <Button size="sm" onClick={handleCreateDashboard} disabled={creating}>
               {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
@@ -134,7 +134,7 @@ const Dashboards = () => {
               >
                 <div className="flex min-w-0 items-start gap-3">
                   <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors group-hover:bg-muted">
-                    <LayoutGrid className="size-4" />
+                    <PanelsTopLeft className="size-4" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">

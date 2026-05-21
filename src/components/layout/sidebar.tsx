@@ -5,12 +5,12 @@ import {
   ChevronsUpDown,
   ContactRound,
   LayoutDashboard,
-  LayoutGrid,
   Loader2,
   LogOut,
   Megaphone,
   Monitor,
   Moon,
+  PanelsTopLeft,
   Plus,
   Settings,
   Sun,
@@ -58,7 +58,7 @@ import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } fro
 
 const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { path: 'dashboards', label: 'Dashboards', icon: LayoutGrid },
+  { path: 'dashboards', label: 'Dashboards', icon: PanelsTopLeft },
   { path: 'campaigns', label: 'Campaigns', icon: Megaphone },
   { path: 'profiles', label: 'Profiles', icon: ContactRound },
   { path: 'insights', label: 'Insights', icon: TrendingUp },
