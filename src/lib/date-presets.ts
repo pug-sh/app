@@ -1,7 +1,15 @@
+import { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import type { DatePreset, TimeRange } from '@/components/date-range-picker'
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
+
+const lastNHours = (n: number): TimeRange => {
+  const now = new Date()
+  const from = new Date(now)
+  from.setHours(from.getHours() - n)
+  return { from, to: now }
+}
 
 const lastNDays = (n: number): TimeRange => {
   const now = new Date()
@@ -16,15 +24,36 @@ const lastNMonths = (n: number): TimeRange => {
   return { from: startOfDay(from), to: now }
 }
 
+const yesterday = (): TimeRange => {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return { from: startOfDay(d), to: endOfDay(d) }
+}
+
+const lastWeek = (): TimeRange => {
+  const now = new Date()
+  const day = now.getDay()
+  const thisMonday = new Date(now)
+  thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+  const lastMonday = new Date(thisMonday)
+  lastMonday.setDate(thisMonday.getDate() - 7)
+  const lastSunday = new Date(thisMonday)
+  lastSunday.setDate(thisMonday.getDate() - 1)
+  return { from: startOfDay(lastMonday), to: endOfDay(lastSunday) }
+}
+
+const lastMonth = (): TimeRange => {
+  const now = new Date()
+  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const to = new Date(now.getFullYear(), now.getMonth(), 0)
+  return { from: startOfDay(from), to: endOfDay(to) }
+}
+
 export const ACTIVITY_PRESETS: DatePreset[] = [
   { label: 'Today', resolve: () => ({ from: startOfDay(new Date()), to: new Date() }) },
   {
     label: 'Yesterday',
-    resolve: () => {
-      const d = new Date()
-      d.setDate(d.getDate() - 1)
-      return { from: startOfDay(d), to: endOfDay(d) }
-    },
+    resolve: yesterday,
   },
   {
     label: 'This week',
@@ -38,17 +67,7 @@ export const ACTIVITY_PRESETS: DatePreset[] = [
   },
   {
     label: 'Last week',
-    resolve: () => {
-      const now = new Date()
-      const day = now.getDay()
-      const thisMonday = new Date(now)
-      thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
-      const lastMonday = new Date(thisMonday)
-      lastMonday.setDate(thisMonday.getDate() - 7)
-      const lastSunday = new Date(thisMonday)
-      lastSunday.setDate(thisMonday.getDate() - 1)
-      return { from: startOfDay(lastMonday), to: endOfDay(lastSunday) }
-    },
+    resolve: lastWeek,
   },
   {
     label: 'This month',
@@ -68,6 +87,37 @@ export const INSIGHTS_PRESETS: DatePreset[] = [
   { label: 'Last 6 months', resolve: () => lastNMonths(6) },
   { label: 'Last 12 months', resolve: () => lastNMonths(12) },
 ]
+
+export const DEFAULT_DASHBOARD_TIME_RANGE_PRESET = TimeRangePreset.LAST_7_DAYS
+
+export const DASHBOARD_TIME_RANGE_PRESETS = [
+  { label: 'Last 1 hour', value: TimeRangePreset.LAST_1_HOUR, resolve: () => lastNHours(1) },
+  { label: 'Last 6 hours', value: TimeRangePreset.LAST_6_HOURS, resolve: () => lastNHours(6) },
+  { label: 'Last 24 hours', value: TimeRangePreset.LAST_24_HOURS, resolve: () => lastNHours(24) },
+  { label: 'Yesterday', value: TimeRangePreset.YESTERDAY, resolve: yesterday },
+  { label: 'Last 7 days', value: TimeRangePreset.LAST_7_DAYS, resolve: () => lastNDays(7) },
+  { label: 'Last 14 days', value: TimeRangePreset.LAST_14_DAYS, resolve: () => lastNDays(14) },
+  { label: 'Last week', value: TimeRangePreset.LAST_WEEK, resolve: lastWeek },
+  { label: 'Last month', value: TimeRangePreset.LAST_MONTH, resolve: lastMonth },
+  { label: 'Last 3 months', value: TimeRangePreset.LAST_3_MONTHS, resolve: () => lastNMonths(3) },
+  { label: 'Last 6 months', value: TimeRangePreset.LAST_6_MONTHS, resolve: () => lastNMonths(6) },
+  { label: 'Last year', value: TimeRangePreset.LAST_YEAR, resolve: () => lastNMonths(12) },
+] as const
+
+export const isDashboardTimeRangePreset = (
+  preset: TimeRangePreset | undefined,
+): preset is (typeof DASHBOARD_TIME_RANGE_PRESETS)[number]['value'] =>
+  preset !== undefined && DASHBOARD_TIME_RANGE_PRESETS.some(option => option.value === preset)
+
+export const resolveDashboardTimeRangePreset = (
+  preset: TimeRangePreset | undefined,
+  fallback?: TimeRange,
+): TimeRange => {
+  const option = DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === preset)
+  if (option) return option.resolve()
+  if (fallback) return fallback
+  return DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === DEFAULT_DASHBOARD_TIME_RANGE_PRESET)!.resolve()
+}
 
 export const fmtDate = (d: Date) => {
   const sameYear = d.getFullYear() === new Date().getFullYear()

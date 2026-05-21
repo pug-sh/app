@@ -1,30 +1,27 @@
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { Check, CircleHelp, Loader2, X } from 'lucide-react'
+import { BarChart3, CalendarDays, Check, CircleHelp, Clock, Loader2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import {
-  AggregationType,
-  type Granularity,
-  InsightType,
-  type QueryRequest,
-} from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { TimeRange } from '@/components/date-range-picker'
+import { AggregationType, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { DASHBOARD_TIME_RANGE_PRESETS, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { GRANULARITIES, INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsRowAggregationControls, OptionChip } from '../insights/controls'
 import { InlineEditableText } from './editor-shared'
 import { DashboardInsightPreview } from './insight-tile-content'
 import { buildInsightQuery, getInsightEditorDefaults } from './query'
+import { DASHBOARD_TILE_VIEW_MODES, getInitialDashboardTileViewMode } from './tile-settings'
+import type { InsightTileInput } from './types'
 
 const tileSchema = z.object({
   displayName: z.string().trim().optional(),
@@ -33,23 +30,22 @@ const tileSchema = z.object({
 
 export const InsightTileEditor = ({
   tile,
-  dashboardTimeRange,
-  dashboardGranularity,
   saving,
   onCancel,
   onSubmit,
 }: {
   tile?: DashboardTile
-  dashboardTimeRange?: TimeRange
-  dashboardGranularity: Granularity
   saving: boolean
   onCancel: () => void
-  onSubmit: (input: { displayName: string; description: string; query: QueryRequest }) => Promise<void>
+  onSubmit: (input: InsightTileInput) => Promise<void>
 }) => {
   const defaults = useMemo(() => getInsightEditorDefaults(tile), [tile])
   const [displayName, setDisplayName] = useState(defaults.displayName)
   const [description, setDescription] = useState(defaults.description)
+  const [defaultTimeRange, setDefaultTimeRange] = useState(defaults.defaultTimeRange)
   const [insightType, setInsightType] = useState(defaults.insightType)
+  const [granularity, setGranularity] = useState(defaults.granularity)
+  const [viewMode, setViewMode] = useState(() => getInitialDashboardTileViewMode(tile?.viewMode))
   const eventFilters = useEventFilters(defaults.eventEntries)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(defaults.propFilters)
   const [breakdowns, setBreakdowns] = useState(defaults.breakdowns)
@@ -70,8 +66,11 @@ export const InsightTileEditor = ({
   const validEntries = eventFilters.validEntries
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
-  const queryTimeRange = dashboardTimeRange ?? defaults.timeRange
-  const queryGranularity = dashboardGranularity
+  const queryTimeRange = useMemo(
+    () => resolveDashboardTimeRangePreset(defaultTimeRange, defaults.timeRange),
+    [defaultTimeRange, defaults.timeRange],
+  )
+  const queryGranularity = granularity
 
   useEffect(() => {
     if (insightType !== InsightType.RETENTION) return
@@ -157,6 +156,8 @@ export const InsightTileEditor = ({
     await onSubmit({
       displayName: parsed.data.displayName || 'Untitled chart',
       description: parsed.data.description ?? '',
+      defaultTimeRange,
+      viewMode,
       query: buildInsightQuery({
         insightType,
         granularity: queryGranularity,
@@ -205,6 +206,29 @@ export const InsightTileEditor = ({
 
       <div className="flex flex-wrap items-center gap-2">
         <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
+        <OptionChip
+          label="time"
+          icon={CalendarDays}
+          options={DASHBOARD_TIME_RANGE_PRESETS}
+          value={defaultTimeRange}
+          onChange={setDefaultTimeRange}
+        />
+        <OptionChip
+          label="granularity"
+          icon={Clock}
+          options={GRANULARITIES}
+          value={granularity}
+          onChange={setGranularity}
+        />
+        {isTrends ? (
+          <OptionChip
+            label="view"
+            icon={BarChart3}
+            options={DASHBOARD_TILE_VIEW_MODES}
+            value={viewMode}
+            onChange={setViewMode}
+          />
+        ) : null}
       </div>
 
       <div className="space-y-1">
@@ -261,7 +285,7 @@ export const InsightTileEditor = ({
       </div>
 
       {previewQuery ? (
-        <DashboardInsightPreview query={previewQuery} timeRange={dashboardTimeRange} granularity={queryGranularity} />
+        <DashboardInsightPreview query={previewQuery} defaultTimeRange={defaultTimeRange} viewMode={viewMode} />
       ) : null}
     </div>
   )

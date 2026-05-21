@@ -4,14 +4,15 @@ import {
   type DashboardsServiceCreateTileRequest,
   DashboardsServiceCreateTileRequestSchema,
   type DashboardTile,
+  DashboardTileViewMode,
   InsightTileContentSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET } from '@/lib/date-presets'
 import { toastRPCError } from '@/lib/rpc-error'
 import { appendDashboardTile } from './dashboard.atoms'
 import { buildCreatedTileLayouts } from './grid'
-import type { EditorState } from './types'
+import type { EditorState, InsightTileInput, MarkdownTileInput } from './types'
 
 type TileCreator = (request: DashboardsServiceCreateTileRequest) => Promise<DashboardTile | null>
 
@@ -28,7 +29,7 @@ export const createInsightTile = async ({
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
   setEditor: React.Dispatch<React.SetStateAction<EditorState | null>>
   setSavingTile: React.Dispatch<React.SetStateAction<boolean>>
-  input: { displayName: string; description: string; query: QueryRequest }
+  input: InsightTileInput
 }) => {
   setSavingTile(true)
   try {
@@ -42,6 +43,8 @@ export const createInsightTile = async ({
           value: create(InsightTileContentSchema, { query: input.query }),
         },
         layouts: buildCreatedTileLayouts(dashboard.tiles, 'insight'),
+        viewMode: input.viewMode,
+        defaultTimeRange: input.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -68,7 +71,7 @@ export const createMarkdownTile = async ({
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
   setEditor: React.Dispatch<React.SetStateAction<EditorState | null>>
   setSavingTile: React.Dispatch<React.SetStateAction<boolean>>
-  input: { displayName: string; description: string; body: string }
+  input: MarkdownTileInput
 }) => {
   setSavingTile(true)
   try {
@@ -82,6 +85,8 @@ export const createMarkdownTile = async ({
           value: create(MarkdownTileContentSchema, { body: input.body }),
         },
         layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
+        viewMode: DashboardTileViewMode.UNSPECIFIED,
+        defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
       }),
     )
     if (tile) {

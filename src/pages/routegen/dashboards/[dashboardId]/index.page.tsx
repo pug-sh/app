@@ -7,9 +7,10 @@ import { useParams } from 'wouter'
 import {
   type Dashboard,
   DashboardsServiceCreateTileRequestSchema,
+  DashboardTileViewMode,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { Granularity, type QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -17,7 +18,7 @@ import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { activeProjectAtom } from '@/data/workspace.atoms'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
@@ -39,8 +40,13 @@ import { InlineEditableText } from '../editor-shared'
 import { buildCreatedTileLayouts, DashboardGrid } from '../grid'
 import { DashboardTileEditor } from '../tile-editor'
 import { DashboardEmptyState } from '../tiles'
-import type { EditorState } from '../types'
+import type { EditorState, InsightTileInput, MarkdownTileInput } from '../types'
 import { persistTileLayouts, updateInsightTile, updateMarkdownTile } from '../update-tile-actions'
+
+const GLOBAL_DASHBOARD_GRANULARITIES = [
+  { label: 'Select granularity', value: Granularity.UNSPECIFIED },
+  ...GRANULARITIES,
+] as const
 
 const DashboardDetail = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>()
@@ -62,9 +68,11 @@ const DashboardDetail = () => {
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
   const [savingDashboard, setSavingDashboard] = useState(false)
   const [savingTile, setSavingTile] = useState(false)
-  const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
-  const [granularity, setGranularity] = useState(Granularity.DAY)
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(undefined)
+  const [globalGranularity, setGlobalGranularity] = useState(Granularity.UNSPECIFIED)
   dashboardRef.current = dashboard
+
+  const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
 
   const loadDashboard = useCallback(async () => {
     if (!dashboardId) return
@@ -123,12 +131,12 @@ const DashboardDetail = () => {
     }
   }, [dashboard, descriptionDraft, displayNameDraft, updateDashboard])
 
-  const handleCreateInsight = async (input: { displayName: string; description: string; query: QueryRequest }) => {
+  const handleCreateInsight = async (input: InsightTileInput) => {
     if (!dashboard) return
     await createInsightTile({ dashboard, createTile, setDashboard, setEditor, setSavingTile, input })
   }
 
-  const handleCreateMarkdown = async (input: { displayName: string; description: string; body: string }) => {
+  const handleCreateMarkdown = async (input: MarkdownTileInput) => {
     if (!dashboard) return
     await createMarkdownTile({ dashboard, createTile, setDashboard, setEditor, setSavingTile, input })
   }
@@ -148,6 +156,8 @@ const DashboardDetail = () => {
             value: create(MarkdownTileContentSchema, { body: 'Write a note' }),
           },
           layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
+          viewMode: DashboardTileViewMode.UNSPECIFIED,
+          defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
         }),
       )
       if (tile) {
@@ -161,12 +171,12 @@ const DashboardDetail = () => {
     }
   }
 
-  const handleUpdateInsight = async (input: { displayName: string; description: string; query: QueryRequest }) => {
+  const handleUpdateInsight = async (input: InsightTileInput) => {
     if (!dashboard || editor?.kind !== 'edit') return
     await updateInsightTile({ dashboard, editor, updateTile, setDashboard, setEditor, setSavingTile, input })
   }
 
-  const handleUpdateMarkdown = async (input: { displayName: string; description: string; body: string }) => {
+  const handleUpdateMarkdown = async (input: MarkdownTileInput) => {
     if (!dashboard || editor?.kind !== 'edit') return
     await updateMarkdownTile({ dashboard, editor, updateTile, setDashboard, setEditor, setSavingTile, input })
   }
@@ -221,14 +231,20 @@ const DashboardDetail = () => {
   const pageActions = useMemo(
     () =>
       dashboard ? (
-        <div className="flex items-center gap-2">
-          <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <DateRangePicker
+            value={globalTimeRange}
+            onChange={setGlobalTimeRange}
+            presets={INSIGHTS_PRESETS}
+            allowUnset
+            unsetLabel="Select time"
+          />
           <OptionChip
             label="granularity"
             icon={Clock}
-            options={GRANULARITIES}
-            value={granularity}
-            onChange={setGranularity}
+            options={GLOBAL_DASHBOARD_GRANULARITIES}
+            value={globalGranularity}
+            onChange={setGlobalGranularity}
           />
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
@@ -259,7 +275,15 @@ const DashboardDetail = () => {
           </DropdownMenu>
         </div>
       ) : null,
-    [dashboard, granularity, handleAddTextNote, requestDeleteDashboard, savingDashboard, savingTile, timeRange],
+    [
+      dashboard,
+      globalGranularity,
+      globalTimeRange,
+      handleAddTextNote,
+      requestDeleteDashboard,
+      savingDashboard,
+      savingTile,
+    ],
   )
 
   const pageHeader = useMemo(
@@ -339,8 +363,6 @@ const DashboardDetail = () => {
             key={editor.kind === 'edit' ? editor.tile.id : `create-${editor.type}`}
             tile={editor.kind === 'edit' ? editor.tile : undefined}
             type={editor.kind === 'create' ? editor.type : undefined}
-            dashboardTimeRange={timeRange}
-            dashboardGranularity={granularity}
             saving={savingTile}
             onCancel={() => setEditor(null)}
             onCreateInsight={editor.kind === 'edit' ? handleUpdateInsight : handleCreateInsight}
@@ -355,9 +377,9 @@ const DashboardDetail = () => {
         ) : (
           <DashboardGrid
             tiles={dashboard.tiles}
-            timeRange={timeRange}
-            granularity={granularity}
             editable
+            globalTimeRange={globalTimeRange}
+            globalGranularity={tileGranularityOverride}
             onEditTile={tile =>
               setEditor({
                 kind: 'edit',

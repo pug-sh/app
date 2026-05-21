@@ -1,7 +1,9 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
+import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
+import type { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   AggregationType,
   type Granularity,
@@ -13,41 +15,58 @@ import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { NUMERIC_AGGREGATIONS, VIEW_MODES, type ViewMode } from '../insights/constants'
+import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
+import { getInitialGranularity, getProtoRange } from './query'
+import { dashboardTileViewModeToViewMode } from './tile-settings'
 
 const stringifyQueryKey = (value: unknown) =>
   JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
 
 export const DashboardInsightContent = ({
   query,
-  timeRange,
-  granularity,
+  defaultTimeRange,
+  timeRangeOverride,
+  granularityOverride,
+  viewMode,
   queryKeyPrefix,
   compact = false,
 }: {
   query: QueryRequest | undefined
-  timeRange: TimeRange | undefined
-  granularity: Granularity
+  defaultTimeRange: TimeRangePreset | undefined
+  timeRangeOverride?: TimeRange
+  granularityOverride?: Granularity
+  viewMode: DashboardTileViewMode | undefined
   queryKeyPrefix: string
   compact?: boolean
 }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
+  const effectiveTimeRange = useMemo(
+    () =>
+      timeRangeOverride ??
+      resolveDashboardTimeRangePreset(defaultTimeRange, query ? getProtoRange(query.timeRange) : undefined),
+    [defaultTimeRange, query, timeRangeOverride],
+  )
+  const effectiveGranularity = useMemo(
+    () => granularityOverride ?? getInitialGranularity(query),
+    [granularityOverride, query],
+  )
+  const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(viewMode), [viewMode])
 
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
-    const baseQuery = { ...query, granularity }
-    if (!timeRange) return create(QueryRequestSchema, baseQuery)
     return create(QueryRequestSchema, {
-      ...baseQuery,
-      timeRange: create(TimeRangeSchema, toProtoTimeRange(timeRange)),
+      ...query,
+      granularity: effectiveGranularity,
+      timeRange: create(TimeRangeSchema, toProtoTimeRange(effectiveTimeRange)),
     })
-  }, [granularity, query, timeRange])
+  }, [effectiveGranularity, effectiveTimeRange, query])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
@@ -139,8 +158,8 @@ export const DashboardInsightContent = ({
         seriesNames={seriesNames}
         seriesColors={seriesColors}
         seriesAggregations={seriesAggregations}
-        viewMode={VIEW_MODES[0]?.value ?? ('line' as ViewMode)}
-        granularity={effectiveQuery?.granularity ?? granularity}
+        viewMode={effectiveViewMode}
+        granularity={effectiveQuery?.granularity ?? effectiveGranularity}
         breakdowns={(effectiveQuery?.breakdowns ?? []).map(item => item.property)}
         breakdownResponseLimit={effectiveQuery?.breakdownLimit ?? BREAKDOWN_RESPONSE_LIMIT}
         retentionSeriesList={retentionSeriesList}
@@ -155,18 +174,18 @@ export const DashboardInsightContent = ({
 
 export const DashboardInsightPreview = ({
   query,
-  timeRange,
-  granularity,
+  defaultTimeRange,
+  viewMode,
 }: {
   query: QueryRequest | undefined
-  timeRange: TimeRange | undefined
-  granularity: Granularity
+  defaultTimeRange: TimeRangePreset | undefined
+  viewMode: DashboardTileViewMode | undefined
 }) => (
-  <div className="min-h-0 rounded-lg border border-border/60 bg-background/60 p-3">
+  <div className="h-80 min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background/60 p-3">
     <DashboardInsightContent
       query={query}
-      timeRange={timeRange}
-      granularity={granularity}
+      defaultTimeRange={defaultTimeRange}
+      viewMode={viewMode}
       queryKeyPrefix="editor-preview"
       compact
     />

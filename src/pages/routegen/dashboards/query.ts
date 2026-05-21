@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import type { PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
 import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
+import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { type TimeRange as ProtoTimeRange, TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -15,13 +16,14 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS, isDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
   displayName: string
   description: string
+  defaultTimeRange: TimeRangePreset
   timeRange: TimeRange | undefined
   insightType: InsightType
   granularity: Granularity
@@ -109,6 +111,9 @@ export const getInitialGranularity = (query?: QueryRequest) => {
   return Granularity.DAY
 }
 
+export const getInitialDefaultTimeRange = (tile?: DashboardTile) =>
+  isDashboardTimeRangePreset(tile?.defaultTimeRange) ? tile.defaultTimeRange : DEFAULT_DASHBOARD_TIME_RANGE_PRESET
+
 export const getInitialInsightType = (query?: QueryRequest) => {
   if (
     query?.insightType === InsightType.TRENDS ||
@@ -125,6 +130,7 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
   return {
     displayName: tile?.displayName ?? '',
     description: tile?.description ?? '',
+    defaultTimeRange: getInitialDefaultTimeRange(tile),
     timeRange: getProtoRange(query?.timeRange) ?? getDefaultTimeRange(),
     insightType: getInitialInsightType(query),
     granularity: getInitialGranularity(query),

@@ -7,11 +7,10 @@ import {
   InsightTileContentSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { toastRPCError } from '@/lib/rpc-error'
 import { replaceDashboardTile } from './dashboard.atoms'
 import { withUpdatedLayouts } from './grid'
-import type { EditorState } from './types'
+import type { EditorState, InsightTileInput, MarkdownTileInput } from './types'
 
 type TileUpdater = (request: DashboardsServiceUpdateTileRequest) => Promise<DashboardTile | null>
 
@@ -30,7 +29,7 @@ export const updateInsightTile = async ({
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
   setEditor: React.Dispatch<React.SetStateAction<EditorState | null>>
   setSavingTile: React.Dispatch<React.SetStateAction<boolean>>
-  input: { displayName: string; description: string; query: QueryRequest }
+  input: InsightTileInput
 }) => {
   setSavingTile(true)
   try {
@@ -45,6 +44,8 @@ export const updateInsightTile = async ({
           value: create(InsightTileContentSchema, { query: input.query }),
         },
         layouts: editor.tile.layouts,
+        viewMode: input.viewMode,
+        defaultTimeRange: input.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -73,7 +74,7 @@ export const updateMarkdownTile = async ({
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
   setEditor: React.Dispatch<React.SetStateAction<EditorState | null>>
   setSavingTile: React.Dispatch<React.SetStateAction<boolean>>
-  input: { displayName: string; description: string; body: string }
+  input: MarkdownTileInput
 }) => {
   setSavingTile(true)
   try {
@@ -88,6 +89,8 @@ export const updateMarkdownTile = async ({
           value: create(MarkdownTileContentSchema, { body: input.body }),
         },
         layouts: editor.tile.layouts,
+        viewMode: editor.tile.viewMode,
+        defaultTimeRange: editor.tile.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -136,6 +139,8 @@ export const persistTileLayouts = async ({
           description: tile.description,
           content: tile.content,
           layouts: tile.layouts,
+          viewMode: tile.viewMode,
+          defaultTimeRange: tile.defaultTimeRange,
         }),
       )
       if (nextTile) {
@@ -145,7 +150,13 @@ export const persistTileLayouts = async ({
                 ...current,
                 tiles: current.tiles.map(existingTile =>
                   existingTile.id === nextTile.id
-                    ? { ...existingTile, layouts: nextTile.layouts, updateTime: nextTile.updateTime }
+                    ? {
+                        ...existingTile,
+                        layouts: nextTile.layouts,
+                        viewMode: nextTile.viewMode,
+                        defaultTimeRange: nextTile.defaultTimeRange,
+                        updateTime: nextTile.updateTime,
+                      }
                     : existingTile,
                 ),
               }

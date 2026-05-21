@@ -40,12 +40,12 @@ const DashboardMarkdownTile = ({ tile }: { tile: DashboardTile }) => {
 
 const DashboardInsightTile = ({
   tile,
-  timeRange,
-  granularity,
+  globalTimeRange,
+  globalGranularity,
 }: {
   tile: DashboardTile
-  timeRange: TimeRange | undefined
-  granularity: Granularity
+  globalTimeRange?: TimeRange
+  globalGranularity?: Granularity
 }) => {
   const query = tile.content.case === 'insight' ? tile.content.value.query : undefined
 
@@ -53,8 +53,10 @@ const DashboardInsightTile = ({
     <TileShell tile={tile}>
       <DashboardInsightContent
         query={query}
-        timeRange={timeRange}
-        granularity={granularity}
+        defaultTimeRange={tile.defaultTimeRange}
+        timeRangeOverride={globalTimeRange}
+        granularityOverride={globalGranularity}
+        viewMode={tile.viewMode}
         queryKeyPrefix={tile.id}
         compact
       />
@@ -64,23 +66,23 @@ const DashboardInsightTile = ({
 
 export const DashboardTileBody = ({
   tile,
-  timeRange,
-  granularity,
   onEdit,
   onDelete,
+  globalTimeRange,
+  globalGranularity,
 }: {
   tile: DashboardTile
-  timeRange: TimeRange | undefined
-  granularity: Granularity
   onEdit?: (tile: DashboardTile) => void
   onDelete?: (tile: DashboardTile) => void
+  globalTimeRange?: TimeRange
+  globalGranularity?: Granularity
 }) => (
   <div className="group relative h-full min-h-0">
     <div className="h-full min-h-0">
       {tile.content.case === 'markdown' ? (
         <DashboardMarkdownTile tile={tile} />
       ) : (
-        <DashboardInsightTile tile={tile} timeRange={timeRange} granularity={granularity} />
+        <DashboardInsightTile tile={tile} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
       )}
     </div>
     {onEdit || onDelete ? (

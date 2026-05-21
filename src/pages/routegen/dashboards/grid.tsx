@@ -148,20 +148,20 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: ResponsiveLayou
 
 export const DashboardGrid = ({
   tiles,
-  timeRange,
-  granularity,
   editable,
   onEditTile,
   onDeleteTile,
   onLayoutsChange,
+  globalTimeRange,
+  globalGranularity,
 }: {
   tiles: DashboardTile[]
-  timeRange: TimeRange | undefined
-  granularity: Granularity
   editable?: boolean
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
   onLayoutsChange?: (layouts: ResponsiveLayouts<keyof typeof BREAKPOINTS>) => void
+  globalTimeRange?: TimeRange
+  globalGranularity?: Granularity
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
 
@@ -184,8 +184,8 @@ export const DashboardGrid = ({
           <div className="min-h-0 flex-1">
             <DashboardTileBody
               tile={tile}
-              timeRange={timeRange}
-              granularity={granularity}
+              globalTimeRange={globalTimeRange}
+              globalGranularity={globalGranularity}
               onEdit={editable ? onEditTile : undefined}
               onDelete={editable ? onDeleteTile : undefined}
             />
