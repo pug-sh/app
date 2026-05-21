@@ -64,7 +64,6 @@ export const updateMarkdownTile = async ({
   editor,
   updateTile,
   setDashboard,
-  setEditor,
   setSavingTile,
   input,
 }: {
@@ -72,7 +71,6 @@ export const updateMarkdownTile = async ({
   editor: Extract<EditorState, { kind: 'edit' }>
   updateTile: TileUpdater
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
-  setEditor: React.Dispatch<React.SetStateAction<EditorState | null>>
   setSavingTile: React.Dispatch<React.SetStateAction<boolean>>
   input: MarkdownTileInput
 }) => {
@@ -95,10 +93,10 @@ export const updateMarkdownTile = async ({
     )
     if (tile) {
       setDashboard(current => (current ? replaceDashboardTile(current, tile) : current))
-      setEditor(null)
     }
   } catch (err) {
     toastRPCError(err, 'Failed to update tile')
+    throw err
   } finally {
     setSavingTile(false)
   }

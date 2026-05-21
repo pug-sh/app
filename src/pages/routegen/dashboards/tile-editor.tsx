@@ -23,7 +23,7 @@ export const DashboardTileEditor = ({
   const tileType = tile ? getTileType(tile) : type
 
   return tileType === 'markdown' ? (
-    <MarkdownTileEditor tile={tile} saving={saving} onCancel={onCancel} onSubmit={onCreateMarkdown} />
+    <MarkdownTileEditor tile={tile} saving={saving} onDone={onCancel} onSubmit={onCreateMarkdown} />
   ) : (
     <InsightTileEditor tile={tile} saving={saving} onCancel={onCancel} onSubmit={onCreateInsight} />
   )

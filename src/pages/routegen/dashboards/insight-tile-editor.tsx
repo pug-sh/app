@@ -212,6 +212,7 @@ export const InsightTileEditor = ({
           options={DASHBOARD_TIME_RANGE_PRESETS}
           value={defaultTimeRange}
           onChange={setDefaultTimeRange}
+          stableWidth
         />
         <OptionChip
           label="granularity"

@@ -48,6 +48,18 @@ const GLOBAL_DASHBOARD_GRANULARITIES = [
   ...GRANULARITIES,
 ] as const
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
+  if (!range) return Granularity.UNSPECIFIED
+
+  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
+  if (durationMs <= DAY_MS) return Granularity.HOUR
+  if (durationMs <= 90 * DAY_MS) return Granularity.DAY
+  if (durationMs <= 365 * DAY_MS) return Granularity.WEEK
+  return Granularity.MONTH
+}
+
 const DashboardDetail = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
@@ -178,7 +190,7 @@ const DashboardDetail = () => {
 
   const handleUpdateMarkdown = async (input: MarkdownTileInput) => {
     if (!dashboard || editor?.kind !== 'edit') return
-    await updateMarkdownTile({ dashboard, editor, updateTile, setDashboard, setEditor, setSavingTile, input })
+    await updateMarkdownTile({ dashboard, editor, updateTile, setDashboard, setSavingTile, input })
   }
 
   const handleLayoutsChange = async (layouts: ResponsiveLayouts<string>) => {
@@ -186,6 +198,11 @@ const DashboardDetail = () => {
     if (!currentDashboard) return
     await persistTileLayouts({ dashboard: currentDashboard, layouts, updateTile, setDashboard })
   }
+
+  const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
+    setGlobalTimeRange(range)
+    setGlobalGranularity(getAutoGlobalGranularity(range))
+  }, [])
 
   const requestDeleteDashboard = useCallback(() => {
     if (!dashboard) return
@@ -234,7 +251,7 @@ const DashboardDetail = () => {
         <div className="flex flex-wrap items-center justify-end gap-2">
           <DateRangePicker
             value={globalTimeRange}
-            onChange={setGlobalTimeRange}
+            onChange={handleGlobalTimeRangeChange}
             presets={INSIGHTS_PRESETS}
             allowUnset
             unsetLabel="Select time"
@@ -280,6 +297,7 @@ const DashboardDetail = () => {
       globalGranularity,
       globalTimeRange,
       handleAddTextNote,
+      handleGlobalTimeRangeChange,
       requestDeleteDashboard,
       savingDashboard,
       savingTile,

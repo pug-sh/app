@@ -19,15 +19,20 @@ export const OptionChip = <T extends string | number>({
   options,
   value,
   onChange,
+  stableWidth = false,
 }: {
   label: string
   icon?: LucideIcon
   options: readonly { label: string; value: T }[]
   value: T
   onChange: (v: T) => void
+  stableWidth?: boolean
 }) => {
   const [open, setOpen] = useState(false)
   const current = options.find(o => o.value === value)
+  const valueMinWidth = stableWidth
+    ? `${Math.max(...options.map(option => option.label.length), current?.label.length ?? 0)}ch`
+    : undefined
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -36,9 +41,11 @@ export const OptionChip = <T extends string | number>({
           {Icon && <Icon className="w-3 h-3" />}
           {label}
         </span>
-        <span className="px-2 h-full flex items-center">{current?.label}</span>
+        <span className="px-2 h-full flex items-center" style={{ minWidth: valueMinWidth }}>
+          {current?.label}
+        </span>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-1">
+      <PopoverContent align="start" className={cn(stableWidth ? 'w-(--anchor-width)' : 'w-auto', 'p-1')}>
         <div className="flex flex-col gap-0.5">
           {options.map(opt => {
             let optionClassName = 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -55,6 +62,7 @@ export const OptionChip = <T extends string | number>({
                 }}
                 className={cn(
                   'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
+                  stableWidth && 'w-full whitespace-nowrap',
                   optionClassName,
                 )}
               >

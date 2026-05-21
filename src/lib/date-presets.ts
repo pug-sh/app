@@ -42,13 +42,6 @@ const lastWeek = (): TimeRange => {
   return { from: startOfDay(lastMonday), to: endOfDay(lastSunday) }
 }
 
-const lastMonth = (): TimeRange => {
-  const now = new Date()
-  const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const to = new Date(now.getFullYear(), now.getMonth(), 0)
-  return { from: startOfDay(from), to: endOfDay(to) }
-}
-
 export const ACTIVITY_PRESETS: DatePreset[] = [
   { label: 'Today', resolve: () => ({ from: startOfDay(new Date()), to: new Date() }) },
   {
@@ -91,23 +84,25 @@ export const INSIGHTS_PRESETS: DatePreset[] = [
 export const DEFAULT_DASHBOARD_TIME_RANGE_PRESET = TimeRangePreset.LAST_7_DAYS
 
 export const DASHBOARD_TIME_RANGE_PRESETS = [
-  { label: 'Last 1 hour', value: TimeRangePreset.LAST_1_HOUR, resolve: () => lastNHours(1) },
-  { label: 'Last 6 hours', value: TimeRangePreset.LAST_6_HOURS, resolve: () => lastNHours(6) },
-  { label: 'Last 24 hours', value: TimeRangePreset.LAST_24_HOURS, resolve: () => lastNHours(24) },
-  { label: 'Yesterday', value: TimeRangePreset.YESTERDAY, resolve: yesterday },
-  { label: 'Last 7 days', value: TimeRangePreset.LAST_7_DAYS, resolve: () => lastNDays(7) },
-  { label: 'Last 14 days', value: TimeRangePreset.LAST_14_DAYS, resolve: () => lastNDays(14) },
-  { label: 'Last week', value: TimeRangePreset.LAST_WEEK, resolve: lastWeek },
-  { label: 'Last month', value: TimeRangePreset.LAST_MONTH, resolve: lastMonth },
-  { label: 'Last 3 months', value: TimeRangePreset.LAST_3_MONTHS, resolve: () => lastNMonths(3) },
-  { label: 'Last 6 months', value: TimeRangePreset.LAST_6_MONTHS, resolve: () => lastNMonths(6) },
-  { label: 'Last year', value: TimeRangePreset.LAST_YEAR, resolve: () => lastNMonths(12) },
+  { label: '1 hour', value: TimeRangePreset.LAST_1_HOUR, resolve: () => lastNHours(1) },
+  { label: '6 hours', value: TimeRangePreset.LAST_6_HOURS, resolve: () => lastNHours(6) },
+  { label: '1 day', value: TimeRangePreset.LAST_24_HOURS, resolve: () => lastNHours(24) },
+  { label: '1 week', value: TimeRangePreset.LAST_7_DAYS, resolve: () => lastNDays(7) },
+  { label: '2 weeks', value: TimeRangePreset.LAST_14_DAYS, resolve: () => lastNDays(14) },
+  { label: '1 month', value: TimeRangePreset.LAST_30_DAYS, resolve: () => lastNDays(30) },
+  { label: '3 months', value: TimeRangePreset.LAST_90_DAYS, resolve: () => lastNDays(90) },
+  { label: '6 months', value: TimeRangePreset.LAST_180_DAYS, resolve: () => lastNDays(180) },
+  { label: '1 year', value: TimeRangePreset.LAST_365_DAYS, resolve: () => lastNDays(365) },
 ] as const
 
 export const isDashboardTimeRangePreset = (
   preset: TimeRangePreset | undefined,
 ): preset is (typeof DASHBOARD_TIME_RANGE_PRESETS)[number]['value'] =>
   preset !== undefined && DASHBOARD_TIME_RANGE_PRESETS.some(option => option.value === preset)
+
+export const getDashboardTimeRangePresetLabel = (preset: TimeRangePreset | undefined) =>
+  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === preset)?.label ??
+  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === DEFAULT_DASHBOARD_TIME_RANGE_PRESET)!.label
 
 export const resolveDashboardTimeRangePreset = (
   preset: TimeRangePreset | undefined,

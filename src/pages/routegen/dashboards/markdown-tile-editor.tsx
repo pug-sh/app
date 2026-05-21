@@ -1,46 +1,98 @@
 import { Check, Loader2, X } from 'lucide-react'
-import { useState } from 'react'
-import { z } from 'zod'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { toastRPCError } from '@/lib/rpc-error'
 import { InlineEditableText } from './editor-shared'
+import type { MarkdownTileInput } from './types'
 
-const markdownSchema = z.object({
-  displayName: z.string().trim().optional(),
-  description: z.string().trim().optional(),
-  body: z.string().trim().min(1, 'Markdown body is required'),
+const AUTOSAVE_DELAY_MS = 700
+
+const getMarkdownInput = ({
+  displayName,
+  description,
+  body,
+}: {
+  displayName: string
+  description: string
+  body: string
+}): MarkdownTileInput => ({
+  displayName: displayName.trim() || 'Text note',
+  description: description.trim(),
+  body,
 })
+
+const serializeMarkdownInput = (input: MarkdownTileInput) =>
+  JSON.stringify({
+    displayName: input.displayName,
+    description: input.description,
+    body: input.body,
+  })
 
 export const MarkdownTileEditor = ({
   tile,
   saving,
-  onCancel,
+  onDone,
   onSubmit,
 }: {
   tile?: DashboardTile
   saving: boolean
-  onCancel: () => void
-  onSubmit: (input: { displayName: string; description: string; body: string }) => Promise<void>
+  onDone: () => void
+  onSubmit: (input: MarkdownTileInput) => Promise<void>
 }) => {
   const [displayName, setDisplayName] = useState(tile?.displayName ?? '')
   const [description, setDescription] = useState(tile?.description ?? '')
   const [body, setBody] = useState(tile?.content.case === 'markdown' ? tile.content.value.body : '')
+  const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved')
+  const currentInput = useMemo(
+    () => getMarkdownInput({ displayName, description, body }),
+    [body, description, displayName],
+  )
+  const currentKey = useMemo(() => serializeMarkdownInput(currentInput), [currentInput])
+  const lastSavedKeyRef = useRef(currentKey)
 
-  const handleSubmit = async () => {
-    const parsed = markdownSchema.safeParse({ displayName, description, body })
-    if (!parsed.success) {
-      toastRPCError(new Error(parsed.error.issues[0]?.message ?? 'Invalid tile'), 'Invalid tile')
-      return
+  const saveCurrent = useCallback(async () => {
+    if (currentKey === lastSavedKeyRef.current) {
+      setSaveState('saved')
+      return true
     }
 
-    await onSubmit({
-      displayName: parsed.data.displayName || 'Text note',
-      description: parsed.data.description ?? '',
-      body: parsed.data.body,
-    })
+    setSaveState('saving')
+    try {
+      await onSubmit(currentInput)
+      lastSavedKeyRef.current = currentKey
+      setSaveState('saved')
+      return true
+    } catch {
+      setSaveState('error')
+      return false
+    }
+  }, [currentInput, currentKey, onSubmit])
+
+  useEffect(() => {
+    if (currentKey === lastSavedKeyRef.current) return
+    setSaveState('dirty')
+    if (saving) return
+
+    const timeout = window.setTimeout(() => {
+      void saveCurrent()
+    }, AUTOSAVE_DELAY_MS)
+
+    return () => window.clearTimeout(timeout)
+  }, [currentKey, saveCurrent, saving])
+
+  const handleDone = async () => {
+    if (await saveCurrent()) onDone()
   }
+
+  const statusLabel =
+    saveState === 'saving' || saving
+      ? 'Saving...'
+      : saveState === 'error'
+        ? 'Save failed'
+        : saveState === 'dirty'
+          ? 'Unsaved changes'
+          : 'Saved'
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 p-4">
@@ -50,40 +102,42 @@ export const MarkdownTileEditor = ({
             value={displayName}
             onChange={setDisplayName}
             placeholder="Untitled note"
-            disabled={saving}
             className="min-h-8 text-lg font-semibold outline-hidden"
           />
           <InlineEditableText
             value={description}
             onChange={setDescription}
             placeholder="Add a description"
-            disabled={saving}
             multiline
             className="min-h-5 text-sm text-muted-foreground outline-hidden"
           />
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button
-            size="icon-sm"
-            onClick={handleSubmit}
-            disabled={saving}
-            aria-label={tile ? 'Save text note' : 'Add text note'}
-          >
-            {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+          <Button size="icon-sm" onClick={handleDone} aria-label="Done editing note">
+            {saveState === 'saving' || saving ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={onCancel} disabled={saving} aria-label="Close note editor">
+          <Button variant="ghost" size="icon-sm" onClick={handleDone} aria-label="Close note editor">
             <X className="size-4" />
           </Button>
         </div>
       </div>
 
-      <Textarea
-        value={body}
-        onChange={e => setBody(e.target.value)}
-        placeholder="Write markdown content..."
-        disabled={saving}
-        className="min-h-48"
-      />
+      <div className="space-y-2">
+        <Textarea
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          placeholder="Write markdown content..."
+          className="min-h-48"
+        />
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {saveState === 'saving' || saving ? <Loader2 className="size-3 animate-spin" /> : null}
+          <span>Markdown supported · {statusLabel}</span>
+        </div>
+      </div>
     </div>
   )
 }
