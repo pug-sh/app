@@ -2,7 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { OrgInvitation, OrgMember } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -10,10 +10,10 @@ import SectionHeader from '@/components/section-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 
-const ORG_ROLE_ADMIN = 1
 const INVITE_STATUS_ACCEPTED = 2
 
 const initials = (name: string) =>
@@ -32,6 +32,7 @@ const Members = () => {
   const [error, setError] = useState<string | null>(null)
   const [showInvite, setShowInvite] = useState(false)
   const [email, setEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<OrgRole>(OrgRole.MEMBER)
   const [inviting, setInviting] = useState(false)
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -68,13 +69,18 @@ const Members = () => {
     fetchData()
   }, [fetchData])
 
+  const closeInvite = () => {
+    setShowInvite(false)
+    setEmail('')
+    setInviteRole(OrgRole.MEMBER)
+  }
+
   const handleInvite = async () => {
     if (!org || !email.trim()) return
     setInviting(true)
     try {
-      await orgsRPC.inviteMember({ orgId: org.id, email })
-      setEmail('')
-      setShowInvite(false)
+      await orgsRPC.inviteMember({ orgId: org.id, email, role: inviteRole })
+      closeInvite()
       fetchData()
     } catch (err) {
       toastRPCError(err, 'Failed to send invitation')
@@ -140,10 +146,10 @@ const Members = () => {
                         <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
                       <Badge
-                        variant={m.role === ORG_ROLE_ADMIN ? 'default' : 'secondary'}
+                        variant={m.role === OrgRole.ADMIN ? 'default' : 'secondary'}
                         className="text-[10px] shrink-0"
                       >
-                        {m.role === ORG_ROLE_ADMIN ? 'Admin' : 'Member'}
+                        {m.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
                       </Badge>
                       {confirmingRemove === m.customerId ? (
                         <button
@@ -180,14 +186,20 @@ const Members = () => {
                   onChange={e => setEmail(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter') handleInvite()
-                    if (e.key === 'Escape') {
-                      setShowInvite(false)
-                      setEmail('')
-                    }
+                    if (e.key === 'Escape') closeInvite()
                   }}
                   className="flex-1"
                   disabled={inviting}
                 />
+                <Select value={inviteRole} onValueChange={v => setInviteRole(v ?? OrgRole.MEMBER)} disabled={inviting}>
+                  <SelectTrigger className="shrink-0">
+                    <SelectValue>{v => (v === OrgRole.ADMIN ? 'Admin' : 'Member')}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
+                    <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
+                  </SelectContent>
+                </Select>
                 <button
                   onClick={handleInvite}
                   disabled={inviting || !email.trim()}
@@ -196,10 +208,7 @@ const Members = () => {
                   {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 </button>
                 <button
-                  onClick={() => {
-                    setShowInvite(false)
-                    setEmail('')
-                  }}
+                  onClick={closeInvite}
                   className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -235,6 +244,12 @@ const Members = () => {
                       <span className="text-[10px] font-medium text-muted-foreground">{initials(inv.email)}</span>
                     </div>
                     <p className="flex-1 text-sm font-mono text-muted-foreground truncate">{inv.email}</p>
+                    <Badge
+                      variant={inv.role === OrgRole.ADMIN ? 'default' : 'secondary'}
+                      className="text-[10px] shrink-0"
+                    >
+                      {inv.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
+                    </Badge>
                     <Badge
                       variant={inv.status === INVITE_STATUS_ACCEPTED ? 'default' : 'secondary'}
                       className="text-[10px] shrink-0"
