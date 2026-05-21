@@ -12,9 +12,8 @@ Dashboard frontend for Pug — an analytics + communication platform (similar to
 pnpm dev          # Start dev server (Vite)
 pnpm build        # Type-check + production build (tsc -b && vite build)
 pnpm generate     # Regenerate TypeScript proto types from backend protos
-pnpm format       # Biome formatter
-pnpm lint         # Biome lint with safe fixes
-pnpm check        # Biome format + lint + import organization
+pnpm format       # Biome formatter (format only)
+pnpm lint         # Biome check — format + lint + import organization (safe fixes)
 ```
 
 There is no `pnpm test` script today.

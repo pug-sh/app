@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 
 const SETTINGS_TABS = [
   { path: 'general', label: 'General' },
+  { path: 'account', label: 'Account' },
   { path: 'organization', label: 'Organization' },
   { path: 'messaging', label: 'Messaging' },
 ] as const
