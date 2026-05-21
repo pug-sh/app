@@ -31,29 +31,6 @@ export const signUpAtom = atom(null, async (get, set, { email, password }: { ema
   }
 })
 
-// Invite signup: the backend derives the customer's email from the invite token,
-// so we send no email. signUpAtom keeps its required-email contract for the
-// normal signup on sign-in.tsx. A bad/expired/consumed token comes back as
-// CodeFailedPrecondition ("invitation is no longer valid").
-export const acceptInviteSignUpAtom = atom(
-  null,
-  async (get, set, { password, inviteToken }: { password: string; inviteToken: string }) => {
-    const authRPC = get(authRPCAtom)
-    try {
-      const resp = await authRPC.signUpWithEmail({ password, inviteToken })
-      set(jwtAtom, resp.token)
-      return { ok: true as const }
-    } catch (error) {
-      if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
-        return { ok: false as const, error: 'This invitation is no longer valid — ask for a fresh one.' }
-      }
-      if (!(error instanceof ConnectError)) console.error('acceptInviteSignUp unexpected error', error)
-      const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
-      return { ok: false as const, error: msg }
-    }
-  },
-)
-
 export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
@@ -70,6 +47,42 @@ export const fetchMeAtom = atom(null, async (get, set) => {
     if (!(err instanceof ConnectError)) console.error('fetchMe unexpected error', err)
     set(meAtom, null)
     return null
+  }
+})
+
+export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { email: string }) => {
+  const authRPC = get(authRPCAtom)
+  try {
+    await authRPC.requestMagicLink({ email })
+    return { ok: true as const }
+  } catch (error) {
+    if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
+    const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
+    return { ok: false as const, error: msg }
+  }
+})
+
+// Completing a magic link returns a session JWT. The token alone decides identity
+// (the server ignores any caller session), so capture the prior identity before
+// overwriting the JWT: if the link is for a different account, drop the previous
+// session's remembered org so it can't leak across the switch. Always clear meAtom
+// — email isn't in the JWT and must be refetched for the new identity.
+export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }) => {
+  const authRPC = get(authRPCAtom)
+  const prior = get(jwtDataAtom)?.customerId
+  try {
+    const resp = await authRPC.completeMagicLink({ token })
+    set(jwtAtom, resp.token)
+    const next = get(jwtDataAtom)?.customerId
+    if (prior && next && prior !== next) set(resetWorkspaceAtom)
+    set(meAtom, null)
+    return { ok: true as const }
+  } catch (error) {
+    if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
+      return { ok: false as const, error: 'This link is invalid or has expired. Request a new one.' }
+    }
+    if (!(error instanceof ConnectError)) console.error('completeMagicLink unexpected error', error)
+    return { ok: false as const, error: error instanceof ConnectError ? error.message : 'Could not sign you in.' }
   }
 })
 

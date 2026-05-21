@@ -29,7 +29,7 @@ const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 's
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
-const AcceptInvite = lazyWithRetry(() => import('@/pages/accept-invite'), 'accept-invite')
+const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -172,9 +172,9 @@ const App = () => {
     <>
       <ThemeSync />
       <WorkspaceBootstrap />
-      {location === '/accept-invite' ? (
+      {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
-          <AcceptInvite />
+          <MagicLink />
         </Suspense>
       ) : !authenticated ? (
         <Suspense fallback={<LoadingSpinner />}>
