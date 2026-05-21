@@ -144,6 +144,7 @@ export function DateRangePicker({
             onSelect={(_range, triggerDate) => handleDayClick(triggerDate)}
             disabled={{ after: new Date() }}
             numberOfMonths={2}
+            className="font-[inherit]"
           />
         </div>
       </PopoverContent>
