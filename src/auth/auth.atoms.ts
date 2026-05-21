@@ -18,19 +18,6 @@ export const signInAtom = atom(null, async (get, set, { email, password }: { ema
   }
 })
 
-export const signUpAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
-  const authRPC = get(authRPCAtom)
-  try {
-    const resp = await authRPC.signUpWithEmail({ email, password })
-    set(jwtAtom, resp.token)
-    return { ok: true as const }
-  } catch (error) {
-    if (!(error instanceof ConnectError)) console.error('signUp unexpected error', error)
-    const msg = error instanceof ConnectError ? error.message : 'Sign up failed'
-    return { ok: false as const, error: msg }
-  }
-})
-
 export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
