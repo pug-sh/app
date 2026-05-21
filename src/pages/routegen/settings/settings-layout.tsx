@@ -8,6 +8,7 @@ const SETTINGS_TABS = [
   { path: 'general', label: 'General' },
   { path: 'organization', label: 'Organization' },
   { path: 'messaging', label: 'Messaging' },
+  { path: 'email', label: 'Email' },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
