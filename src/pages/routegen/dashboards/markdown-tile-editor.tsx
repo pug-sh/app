@@ -1,12 +1,18 @@
 import { Check, Loader2, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
+import { z } from 'zod'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { toastRPCError } from '@/lib/rpc-error'
 import { InlineEditableText } from './editor-shared'
 import type { MarkdownTileInput } from './types'
 
-const AUTOSAVE_DELAY_MS = 700
+const markdownSchema = z.object({
+  displayName: z.string().trim().optional(),
+  description: z.string().trim().optional(),
+  body: z.string().trim().min(1, 'Markdown body is required'),
+})
 
 const getMarkdownInput = ({
   displayName,
@@ -22,13 +28,6 @@ const getMarkdownInput = ({
   body,
 })
 
-const serializeMarkdownInput = (input: MarkdownTileInput) =>
-  JSON.stringify({
-    displayName: input.displayName,
-    description: input.description,
-    body: input.body,
-  })
-
 export const MarkdownTileEditor = ({
   tile,
   saving,
@@ -43,56 +42,26 @@ export const MarkdownTileEditor = ({
   const [displayName, setDisplayName] = useState(tile?.displayName ?? '')
   const [description, setDescription] = useState(tile?.description ?? '')
   const [body, setBody] = useState(tile?.content.case === 'markdown' ? tile.content.value.body : '')
-  const [saveState, setSaveState] = useState<'saved' | 'dirty' | 'saving' | 'error'>('saved')
-  const currentInput = useMemo(
-    () => getMarkdownInput({ displayName, description, body }),
-    [body, description, displayName],
-  )
-  const currentKey = useMemo(() => serializeMarkdownInput(currentInput), [currentInput])
-  const lastSavedKeyRef = useRef(currentKey)
-
-  const saveCurrent = useCallback(async () => {
-    if (currentKey === lastSavedKeyRef.current) {
-      setSaveState('saved')
-      return true
+  const handleSave = async () => {
+    const parsed = markdownSchema.safeParse({ displayName, description, body })
+    if (!parsed.success) {
+      toastRPCError(new Error(parsed.error.issues[0]?.message ?? 'Invalid tile'), 'Invalid tile')
+      return
     }
 
-    setSaveState('saving')
     try {
-      await onSubmit(currentInput)
-      lastSavedKeyRef.current = currentKey
-      setSaveState('saved')
-      return true
+      await onSubmit(
+        getMarkdownInput({
+          displayName: parsed.data.displayName ?? '',
+          description: parsed.data.description ?? '',
+          body: parsed.data.body,
+        }),
+      )
+      onDone()
     } catch {
-      setSaveState('error')
-      return false
+      // onSubmit already reports the failure.
     }
-  }, [currentInput, currentKey, onSubmit])
-
-  useEffect(() => {
-    if (currentKey === lastSavedKeyRef.current) return
-    setSaveState('dirty')
-    if (saving) return
-
-    const timeout = window.setTimeout(() => {
-      void saveCurrent()
-    }, AUTOSAVE_DELAY_MS)
-
-    return () => window.clearTimeout(timeout)
-  }, [currentKey, saveCurrent, saving])
-
-  const handleDone = async () => {
-    if (await saveCurrent()) onDone()
   }
-
-  const statusLabel =
-    saveState === 'saving' || saving
-      ? 'Saving...'
-      : saveState === 'error'
-        ? 'Save failed'
-        : saveState === 'dirty'
-          ? 'Unsaved changes'
-          : 'Saved'
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 p-4">
@@ -113,14 +82,10 @@ export const MarkdownTileEditor = ({
           />
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <Button size="icon-sm" onClick={handleDone} aria-label="Done editing note">
-            {saveState === 'saving' || saving ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
+          <Button size="icon-sm" onClick={handleSave} disabled={saving} aria-label="Save text note">
+            {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
           </Button>
-          <Button variant="ghost" size="icon-sm" onClick={handleDone} aria-label="Close note editor">
+          <Button variant="ghost" size="icon-sm" onClick={onDone} disabled={saving} aria-label="Close note editor">
             <X className="size-4" />
           </Button>
         </div>
@@ -134,8 +99,7 @@ export const MarkdownTileEditor = ({
           className="min-h-48"
         />
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {saveState === 'saving' || saving ? <Loader2 className="size-3 animate-spin" /> : null}
-          <span>Markdown supported · {statusLabel}</span>
+          <span>Markdown supported</span>
         </div>
       </div>
     </div>

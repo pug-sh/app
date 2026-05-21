@@ -1,15 +1,9 @@
-import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, Clock, FileText, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ResponsiveLayouts } from 'react-grid-layout/legacy'
 import { useParams } from 'wouter'
-import {
-  type Dashboard,
-  DashboardsServiceCreateTileRequestSchema,
-  DashboardTileViewMode,
-  MarkdownTileContentSchema,
-} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
@@ -19,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
-import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
@@ -27,7 +21,6 @@ import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { createInsightTile, createMarkdownTile } from '../create-tile-actions'
 import {
-  appendDashboardTile,
   createDashboardTileAtom,
   deleteDashboardAtom,
   deleteDashboardTileAtom,
@@ -38,7 +31,7 @@ import {
 } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { InlineEditableText } from '../editor-shared'
-import { buildCreatedTileLayouts, DashboardGrid } from '../grid'
+import { DashboardGrid } from '../grid'
 import { DashboardTileEditor } from '../tile-editor'
 import { DashboardEmptyState } from '../tiles'
 import type { EditorState, InsightTileInput, MarkdownTileInput } from '../types'
@@ -165,31 +158,7 @@ const DashboardDetail = () => {
   const handleAddTextNote = async () => {
     if (!dashboard) return
 
-    setSavingTile(true)
-    try {
-      const tile = await createTile(
-        create(DashboardsServiceCreateTileRequestSchema, {
-          dashboardId: dashboard.id,
-          displayName: 'Text note',
-          description: '',
-          content: {
-            case: 'markdown',
-            value: create(MarkdownTileContentSchema, { body: 'Write a note' }),
-          },
-          layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
-          viewMode: DashboardTileViewMode.UNSPECIFIED,
-          defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
-        }),
-      )
-      if (tile) {
-        setDashboard(current => (current ? appendDashboardTile(current, tile) : current))
-        setEditor({ kind: 'edit', tile })
-      }
-    } catch (err) {
-      toastRPCError(err, 'Failed to add text note')
-    } finally {
-      setSavingTile(false)
-    }
+    setEditor({ kind: 'create', type: 'markdown' })
   }
 
   const handleUpdateInsight = async (input: InsightTileInput) => {
