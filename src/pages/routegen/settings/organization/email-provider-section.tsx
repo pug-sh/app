@@ -38,8 +38,8 @@ const emailFormSchema = z
     replyTo: z.union([z.literal(''), z.email('Enter a valid email')]),
     host: z.string(),
     port: z.number(),
-    username: z.string(),
-    password: z.string(),
+    smtpUsername: z.string(),
+    smtpPassword: z.string(),
     useTls: z.boolean(),
     apiKey: z.string(),
   })
@@ -48,8 +48,8 @@ const emailFormSchema = z
       if (!val.host) ctx.addIssue({ code: 'custom', path: ['host'], message: 'Host is required' })
       if (!Number.isInteger(val.port) || val.port < 1 || val.port > 65535)
         ctx.addIssue({ code: 'custom', path: ['port'], message: 'Port must be between 1 and 65535' })
-      if (!val.username) ctx.addIssue({ code: 'custom', path: ['username'], message: 'Username is required' })
-      if (!val.password) ctx.addIssue({ code: 'custom', path: ['password'], message: 'Password is required' })
+      if (!val.smtpUsername) ctx.addIssue({ code: 'custom', path: ['smtpUsername'], message: 'Username is required' })
+      if (!val.smtpPassword) ctx.addIssue({ code: 'custom', path: ['smtpPassword'], message: 'Password is required' })
     }
     if (val.kind === 'resend' && !val.apiKey) {
       ctx.addIssue({ code: 'custom', path: ['apiKey'], message: 'API key is required' })
@@ -63,8 +63,8 @@ const EMPTY_FORM: EmailForm = {
   replyTo: '',
   host: '',
   port: 587,
-  username: '',
-  password: '',
+  smtpUsername: '',
+  smtpPassword: '',
   useTls: true,
   apiKey: '',
 }
@@ -169,8 +169,8 @@ const EmailProviderSection = () => {
           value: {
             host: data.host,
             port: data.port,
-            username: data.username,
-            password: data.password,
+            username: data.smtpUsername,
+            password: data.smtpPassword,
             useTls: data.useTls,
           },
         }
@@ -411,27 +411,27 @@ const EmailProviderSection = () => {
                 />
                 {form.formState.errors.port && <FieldError errors={[form.formState.errors.port]} />}
               </Field>
-              <Field data-invalid={!!form.formState.errors.username}>
+              <Field data-invalid={!!form.formState.errors.smtpUsername}>
                 <FieldLabel htmlFor="smtp-username">Username</FieldLabel>
                 <Input
-                  {...form.register('username')}
+                  {...form.register('smtpUsername')}
                   {...NO_AUTOFILL}
                   id="smtp-username"
                   className="max-w-sm"
-                  aria-invalid={!!form.formState.errors.username}
+                  aria-invalid={!!form.formState.errors.smtpUsername}
                 />
-                {form.formState.errors.username && <FieldError errors={[form.formState.errors.username]} />}
+                {form.formState.errors.smtpUsername && <FieldError errors={[form.formState.errors.smtpUsername]} />}
               </Field>
-              <Field data-invalid={!!form.formState.errors.password}>
+              <Field data-invalid={!!form.formState.errors.smtpPassword}>
                 <FieldLabel htmlFor="smtp-password">Password</FieldLabel>
                 <div className="relative max-w-sm">
                   <Input
-                    {...form.register('password')}
+                    {...form.register('smtpPassword')}
                     {...NO_AUTOFILL_SECRET}
                     id="smtp-password"
                     type={showSecret ? 'text' : 'password'}
                     className="pr-9"
-                    aria-invalid={!!form.formState.errors.password}
+                    aria-invalid={!!form.formState.errors.smtpPassword}
                   />
                   <button
                     type="button"
@@ -443,7 +443,7 @@ const EmailProviderSection = () => {
                     {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {form.formState.errors.password && <FieldError errors={[form.formState.errors.password]} />}
+                {form.formState.errors.smtpPassword && <FieldError errors={[form.formState.errors.smtpPassword]} />}
               </Field>
               <label htmlFor="smtp-tls" className="flex items-center gap-2 text-sm cursor-pointer">
                 <Switch id="smtp-tls" checked={useTls} onCheckedChange={c => form.setValue('useTls', c)} />
