@@ -75,6 +75,8 @@ const Members = () => {
     setInviteRole(OrgRole.MEMBER)
   }
 
+  const pendingInvitations = invitations.filter(inv => inv.status !== INVITE_STATUS_ACCEPTED)
+
   const handleInvite = async () => {
     if (!org || !email.trim()) return
     setInviting(true)
@@ -231,11 +233,11 @@ const Members = () => {
           </section>
 
           {/* Pending invitations */}
-          {invitations.length > 0 && (
+          {pendingInvitations.length > 0 && (
             <section>
-              <SectionHeader title="Pending invitations" count={invitations.length} />
+              <SectionHeader title="Pending invitations" count={pendingInvitations.length} />
               <div className="space-y-0.5">
-                {invitations.map(inv => (
+                {pendingInvitations.map(inv => (
                   <div
                     key={inv.id}
                     className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
@@ -250,11 +252,8 @@ const Members = () => {
                     >
                       {inv.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
                     </Badge>
-                    <Badge
-                      variant={inv.status === INVITE_STATUS_ACCEPTED ? 'default' : 'secondary'}
-                      className="text-[10px] shrink-0"
-                    >
-                      {inv.status === INVITE_STATUS_ACCEPTED ? 'Accepted' : 'Pending'}
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      Pending
                     </Badge>
                   </div>
                 ))}
