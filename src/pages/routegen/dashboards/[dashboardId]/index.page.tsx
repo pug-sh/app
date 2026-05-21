@@ -18,6 +18,7 @@ import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { activeProjectAtom } from '@/data/workspace.atoms'
+import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
 import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
@@ -80,8 +81,12 @@ const DashboardDetail = () => {
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
   const [savingDashboard, setSavingDashboard] = useState(false)
   const [savingTile, setSavingTile] = useState(false)
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(undefined)
-  const [globalGranularity, setGlobalGranularity] = useState(Granularity.UNSPECIFIED)
+  const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
+  const [globalGranularity, setGlobalGranularity] = useState(() => {
+    if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
+    return getAutoGlobalGranularity(initialGlobalOverrides.timeRange)
+  })
   dashboardRef.current = dashboard
 
   const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
@@ -112,6 +117,10 @@ const DashboardDetail = () => {
     setDisplayNameDraft(dashboard?.displayName ?? '')
     setDescriptionDraft(dashboard?.description ?? '')
   }, [dashboard?.description, dashboard?.displayName])
+
+  useEffect(() => {
+    writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
+  }, [globalGranularity, globalTimeRange])
 
   const persistDashboardMeta = useCallback(async () => {
     if (!dashboard) return
