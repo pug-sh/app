@@ -1,6 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { transportAtom } from '@/network/transport'
+import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { OrgEmailProvidersService } from './genproto/dashboard/orgemailproviders/v1/orgemailproviders_pb'
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectsService } from './genproto/dashboard/projects/v1/projects_pb'
@@ -14,6 +15,7 @@ import { ProfilesService } from './genproto/shared/profiles/v1/profiles_pb'
 export const authRPCAtom = atom(get => createClient(AuthService, get(transportAtom)))
 
 // Dashboard — org-scoped (JWT auth)
+export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))
 export const orgsRPCAtom = atom(get => createClient(OrgsService, get(transportAtom)))
 export const orgEmailProvidersRPCAtom = atom(get => createClient(OrgEmailProvidersService, get(transportAtom)))
 export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(transportAtom)))
