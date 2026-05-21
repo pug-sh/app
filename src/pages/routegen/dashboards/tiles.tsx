@@ -1,12 +1,15 @@
 import { Edit3, MoreHorizontal, Trash2, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
-import ReactMarkdown from 'react-markdown'
+import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { DashboardInsightContent } from './insight-tile-content'
+
+const escapeMarkdownHTML = (value: string) =>
+  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 
 const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNode }) => {
   return (
@@ -23,29 +26,14 @@ const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNod
 const DashboardMarkdownTile = ({ tile }: { tile: DashboardTile }) => {
   if (tile.content.case !== 'markdown') return null
 
+  const html = snarkdown(escapeMarkdownHTML(tile.content.value.body))
+
   return (
     <TileShell tile={tile}>
-      <div className="markdown-body h-full overflow-auto pr-1 text-sm leading-6 text-foreground">
-        <ReactMarkdown
-          components={{
-            h1: props => <h1 className="mb-2 text-lg font-semibold" {...props} />,
-            h2: props => <h2 className="mb-2 text-base font-semibold" {...props} />,
-            h3: props => <h3 className="mb-2 text-sm font-semibold" {...props} />,
-            p: props => <p className="mb-3 last:mb-0" {...props} />,
-            ul: props => <ul className="mb-3 list-disc pl-5 last:mb-0" {...props} />,
-            ol: props => <ol className="mb-3 list-decimal pl-5 last:mb-0" {...props} />,
-            li: props => <li className="mb-1" {...props} />,
-            code: props => <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...props} />,
-            pre: props => <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs" {...props} />,
-            a: props => <a className="text-primary hover:underline underline-offset-4" {...props} />,
-            blockquote: props => (
-              <blockquote className="border-l-2 border-border pl-3 text-muted-foreground" {...props} />
-            ),
-          }}
-        >
-          {tile.content.value.body}
-        </ReactMarkdown>
-      </div>
+      <div
+        className="markdown-body h-full overflow-auto pr-1 text-sm leading-6 text-foreground"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     </TileShell>
   )
 }

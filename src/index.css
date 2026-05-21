@@ -68,6 +68,67 @@
   }
 }
 
+@layer components {
+  /* Dashboard markdown tile typography and element spacing */
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3 {
+    @apply mb-2 font-semibold text-foreground;
+  }
+
+  .markdown-body h1 {
+    @apply text-lg;
+  }
+
+  .markdown-body h2 {
+    @apply text-base;
+  }
+
+  .markdown-body h3 {
+    @apply text-sm;
+  }
+
+  .markdown-body p,
+  .markdown-body ul,
+  .markdown-body ol,
+  .markdown-body pre,
+  .markdown-body blockquote {
+    @apply mb-3 last:mb-0;
+  }
+
+  .markdown-body ul {
+    @apply list-disc pl-5;
+  }
+
+  .markdown-body ol {
+    @apply list-decimal pl-5;
+  }
+
+  .markdown-body li {
+    @apply mb-1;
+  }
+
+  .markdown-body code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-xs;
+  }
+
+  .markdown-body pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-3 text-xs;
+  }
+
+  .markdown-body pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .markdown-body a {
+    @apply text-primary underline-offset-4 hover:underline;
+  }
+
+  .markdown-body blockquote {
+    @apply border-l-2 border-border pl-3 text-muted-foreground;
+  }
+}
+
 :root {
   --background: oklch(0.98 0.002 250);
   --foreground: oklch(0.15 0.02 260);
