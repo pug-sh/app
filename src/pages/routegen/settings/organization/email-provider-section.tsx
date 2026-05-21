@@ -58,7 +58,7 @@ const emailFormSchema = z
 type EmailForm = z.infer<typeof emailFormSchema>
 
 const EMPTY_FORM: EmailForm = {
-  kind: 'smtp',
+  kind: 'resend',
   fromAddress: '',
   replyTo: '',
   host: '',
