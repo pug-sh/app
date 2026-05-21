@@ -75,6 +75,21 @@ const kindLabel = (kind: OrgEmailProviderKind) => {
   return 'Unknown'
 }
 
+// Hint to browsers + password managers that these are provider-config fields, not the
+// dashboard's own login — so they don't autofill the user's account email/password and
+// don't offer to save the API key / SMTP password as the site login. `data-*-ignore`
+// covers the popular extensions, which ignore `autocomplete`.
+const NO_AUTOFILL = {
+  autoComplete: 'off',
+  'data-1p-ignore': 'true',
+  'data-lpignore': 'true',
+  'data-bwignore': 'true',
+} as const
+
+// `autocomplete="new-password"` is the reliable way to stop autofill on secret inputs —
+// Chrome ignores `off` on type=password fields, but won't fill a saved login here.
+const NO_AUTOFILL_SECRET = { ...NO_AUTOFILL, autoComplete: 'new-password' } as const
+
 const EmailProviderSection = () => {
   const org = useAtomValue(activeOrgAtom)
   const rpc = useAtomValue(orgEmailProvidersRPCAtom)
@@ -346,6 +361,7 @@ const EmailProviderSection = () => {
             <FieldLabel htmlFor="from-address">From address</FieldLabel>
             <Input
               {...form.register('fromAddress')}
+              {...NO_AUTOFILL}
               id="from-address"
               type="email"
               placeholder="notifications@acme.com"
@@ -361,6 +377,7 @@ const EmailProviderSection = () => {
             </FieldLabel>
             <Input
               {...form.register('replyTo')}
+              {...NO_AUTOFILL}
               id="reply-to"
               type="email"
               placeholder="support@acme.com"
@@ -398,9 +415,9 @@ const EmailProviderSection = () => {
                 <FieldLabel htmlFor="smtp-username">Username</FieldLabel>
                 <Input
                   {...form.register('username')}
+                  {...NO_AUTOFILL}
                   id="smtp-username"
                   className="max-w-sm"
-                  autoComplete="off"
                   aria-invalid={!!form.formState.errors.username}
                 />
                 {form.formState.errors.username && <FieldError errors={[form.formState.errors.username]} />}
@@ -410,10 +427,10 @@ const EmailProviderSection = () => {
                 <div className="relative max-w-sm">
                   <Input
                     {...form.register('password')}
+                    {...NO_AUTOFILL_SECRET}
                     id="smtp-password"
                     type={showSecret ? 'text' : 'password'}
                     className="pr-9"
-                    autoComplete="off"
                     aria-invalid={!!form.formState.errors.password}
                   />
                   <button
@@ -441,11 +458,11 @@ const EmailProviderSection = () => {
               <div className="relative max-w-sm">
                 <Input
                   {...form.register('apiKey')}
+                  {...NO_AUTOFILL_SECRET}
                   id="resend-key"
                   type={showSecret ? 'text' : 'password'}
                   placeholder="re_..."
                   className="pr-9 font-mono"
-                  autoComplete="off"
                   aria-invalid={!!form.formState.errors.apiKey}
                 />
                 <button
