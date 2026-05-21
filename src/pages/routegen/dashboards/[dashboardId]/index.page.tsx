@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { BarChart3, FileText, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { BarChart3, Clock, FileText, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ResponsiveLayouts } from 'react-grid-layout/legacy'
 import { useParams } from 'wouter'
@@ -9,7 +9,7 @@ import {
   DashboardsServiceCreateTileRequestSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Granularity, type QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -20,6 +20,8 @@ import { activeProjectAtom } from '@/data/workspace.atoms'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
+import { GRANULARITIES } from '../../insights/constants'
+import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { createInsightTile, createMarkdownTile } from '../create-tile-actions'
 import {
@@ -32,6 +34,7 @@ import {
   updateDashboardAtom,
   updateDashboardTileAtom,
 } from '../dashboard.atoms'
+import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { InlineEditableText } from '../editor-shared'
 import { buildCreatedTileLayouts, DashboardGrid } from '../grid'
 import { DashboardTileEditor } from '../tile-editor'
@@ -56,9 +59,11 @@ const DashboardDetail = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editor, setEditor] = useState<EditorState | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
   const [savingDashboard, setSavingDashboard] = useState(false)
   const [savingTile, setSavingTile] = useState(false)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(() => INSIGHTS_PRESETS[0].resolve())
+  const [granularity, setGranularity] = useState(Granularity.DAY)
   dashboardRef.current = dashboard
 
   const loadDashboard = useCallback(async () => {
@@ -142,7 +147,7 @@ const DashboardDetail = () => {
             case: 'markdown',
             value: create(MarkdownTileContentSchema, { body: 'Write a note' }),
           },
-          layouts: buildCreatedTileLayouts(dashboard.tiles),
+          layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
         }),
       )
       if (tile) {
@@ -172,44 +177,59 @@ const DashboardDetail = () => {
     await persistTileLayouts({ dashboard: currentDashboard, layouts, updateTile, setDashboard })
   }
 
-  const handleDeleteTile = async (tileId: string, displayName: string) => {
+  const requestDeleteDashboard = useCallback(() => {
     if (!dashboard) return
-    if (!window.confirm(`Delete "${displayName}"?`)) return
+    setDeleteTarget({
+      type: 'dashboard',
+      dashboardId: dashboard.id,
+      displayName: dashboard.displayName || UNTITLED_DASHBOARD_NAME,
+    })
+  }, [dashboard])
 
-    setSavingTile(true)
-    try {
-      await deleteTile({
-        id: tileId,
-        dashboardId: dashboard.id,
-      })
-      setDashboard(current => (current ? removeDashboardTile(current, tileId) : current))
-      setEditor(current => (current?.kind === 'edit' && current.tile.id === tileId ? null : current))
-    } catch (err) {
-      toastRPCError(err, 'Failed to delete tile')
-    } finally {
-      setSavingTile(false)
+  const handleConfirmDelete = useCallback(async () => {
+    if (!dashboard || !deleteTarget) return
+
+    if (deleteTarget.type === 'tile') {
+      setSavingTile(true)
+      try {
+        await deleteTile({
+          id: deleteTarget.tileId,
+          dashboardId: dashboard.id,
+        })
+        setDashboard(current => (current ? removeDashboardTile(current, deleteTarget.tileId) : current))
+        setEditor(current => (current?.kind === 'edit' && current.tile.id === deleteTarget.tileId ? null : current))
+        setDeleteTarget(null)
+      } catch (err) {
+        toastRPCError(err, 'Failed to delete tile')
+      } finally {
+        setSavingTile(false)
+      }
+      return
     }
-  }
-
-  const handleDeleteDashboard = useCallback(async () => {
-    if (!dashboard) return
-    if (!window.confirm(`Delete dashboard "${dashboard.displayName}"?`)) return
 
     setSavingDashboard(true)
     try {
-      await deleteDashboard(dashboard.id)
+      await deleteDashboard(deleteTarget.dashboardId)
+      setDeleteTarget(null)
       navigate('/dashboards', { replace: true })
     } catch (err) {
       toastRPCError(err, 'Failed to delete dashboard')
       setSavingDashboard(false)
     }
-  }, [dashboard, deleteDashboard, navigate])
+  }, [dashboard, deleteDashboard, deleteTarget, deleteTile, navigate])
 
   const pageActions = useMemo(
     () =>
       dashboard ? (
         <div className="flex items-center gap-2">
           <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
+          <OptionChip
+            label="granularity"
+            icon={Clock}
+            options={GRANULARITIES}
+            value={granularity}
+            onChange={setGranularity}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
               <Plus className="size-4" />
@@ -231,7 +251,7 @@ const DashboardDetail = () => {
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem variant="destructive" onClick={handleDeleteDashboard} disabled={savingDashboard}>
+              <DropdownMenuItem variant="destructive" onClick={requestDeleteDashboard} disabled={savingDashboard}>
                 <Trash2 className="size-4" />
                 Delete dashboard
               </DropdownMenuItem>
@@ -239,7 +259,7 @@ const DashboardDetail = () => {
           </DropdownMenu>
         </div>
       ) : null,
-    [dashboard, handleAddTextNote, handleDeleteDashboard, savingDashboard, savingTile, timeRange],
+    [dashboard, granularity, handleAddTextNote, requestDeleteDashboard, savingDashboard, savingTile, timeRange],
   )
 
   const pageHeader = useMemo(
@@ -305,12 +325,22 @@ const DashboardDetail = () => {
   return (
     <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
       <div className="space-y-6">
+        {deleteTarget ? (
+          <DashboardDeleteConfirmation
+            target={deleteTarget}
+            deleting={savingDashboard || savingTile}
+            onCancel={() => setDeleteTarget(null)}
+            onConfirm={handleConfirmDelete}
+          />
+        ) : null}
+
         {editor ? (
           <DashboardTileEditor
             key={editor.kind === 'edit' ? editor.tile.id : `create-${editor.type}`}
             tile={editor.kind === 'edit' ? editor.tile : undefined}
             type={editor.kind === 'create' ? editor.type : undefined}
             dashboardTimeRange={timeRange}
+            dashboardGranularity={granularity}
             saving={savingTile}
             onCancel={() => setEditor(null)}
             onCreateInsight={editor.kind === 'edit' ? handleUpdateInsight : handleCreateInsight}
@@ -326,6 +356,7 @@ const DashboardDetail = () => {
           <DashboardGrid
             tiles={dashboard.tiles}
             timeRange={timeRange}
+            granularity={granularity}
             editable
             onEditTile={tile =>
               setEditor({
@@ -333,7 +364,13 @@ const DashboardDetail = () => {
                 tile,
               })
             }
-            onDeleteTile={tile => handleDeleteTile(tile.id, tile.displayName)}
+            onDeleteTile={tile =>
+              setDeleteTarget({
+                type: 'tile',
+                tileId: tile.id,
+                displayName: tile.displayName || 'Untitled tile',
+              })
+            }
             onLayoutsChange={handleLayoutsChange}
           />
         )}

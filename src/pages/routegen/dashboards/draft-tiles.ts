@@ -35,7 +35,7 @@ export const createDraftInsightTile = ({
       case: 'insight',
       value: create(InsightTileContentSchema, { query }),
     },
-    layouts: layouts ?? buildCreatedTileLayouts(tiles),
+    layouts: layouts ?? buildCreatedTileLayouts(tiles, 'insight'),
   })
 
 export const createDraftMarkdownTile = ({
@@ -62,5 +62,5 @@ export const createDraftMarkdownTile = ({
       case: 'markdown',
       value: create(MarkdownTileContentSchema, { body }),
     },
-    layouts: layouts ?? buildCreatedTileLayouts(tiles),
+    layouts: layouts ?? buildCreatedTileLayouts(tiles, 'markdown'),
   })

@@ -1,5 +1,5 @@
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { Granularity, QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { InsightTileEditor } from './insight-tile-editor'
 import { MarkdownTileEditor } from './markdown-tile-editor'
@@ -11,6 +11,7 @@ export const DashboardTileEditor = ({
   tile,
   type = 'insight',
   dashboardTimeRange,
+  dashboardGranularity,
   saving,
   onCancel,
   onCreateInsight,
@@ -19,6 +20,7 @@ export const DashboardTileEditor = ({
   tile?: DashboardTile
   type?: TileType
   dashboardTimeRange?: TimeRange
+  dashboardGranularity: Granularity
   saving: boolean
   onCancel: () => void
   onCreateInsight: (input: { displayName: string; description: string; query: QueryRequest }) => Promise<void>
@@ -32,6 +34,7 @@ export const DashboardTileEditor = ({
     <InsightTileEditor
       tile={tile}
       dashboardTimeRange={dashboardTimeRange}
+      dashboardGranularity={dashboardGranularity}
       saving={saving}
       onCancel={onCancel}
       onSubmit={onCreateInsight}

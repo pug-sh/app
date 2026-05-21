@@ -1,6 +1,6 @@
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { LayoutGrid, Loader2, Plus, Search } from 'lucide-react'
+import { ArrowRight, LayoutGrid, Loader2, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -33,6 +33,8 @@ const formatDashboardTime = (ts: Timestamp | undefined) => {
     hour12: false,
   })
 }
+
+const formatTileCount = (count: number) => `${count} ${count === 1 ? 'tile' : 'tiles'}`
 
 const Dashboards = () => {
   const project = useAtomValue(activeProjectAtom)
@@ -123,40 +125,35 @@ const Dashboards = () => {
             <p className="text-sm font-medium">No dashboards found</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="py-2 pr-2 text-left font-medium">Name</th>
-                <th className="py-2 pr-2 text-left font-medium">Tiles</th>
-                <th className="py-2 pr-2 text-left font-medium">Updated</th>
-                <th className="py-2 pr-2 text-left font-medium">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDashboards.map(dashboard => (
-                <tr key={dashboard.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
-                  <td className="py-2.5 pr-2">
-                    <ProjectLink
-                      href={`/dashboards/${dashboard.id}`}
-                      className="text-sm font-medium text-primary hover:underline underline-offset-4"
-                    >
+          <div className="divide-y divide-border/60 border-y border-border/60">
+            {filteredDashboards.map(dashboard => (
+              <ProjectLink
+                key={dashboard.id}
+                href={`/dashboards/${dashboard.id}`}
+                className="group -mx-2 grid gap-3 rounded-lg px-2 py-4 transition-colors hover:bg-muted/40 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground transition-colors group-hover:bg-muted">
+                    <LayoutGrid className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
                       {dashboard.displayName || UNTITLED_DASHBOARD_NAME}
-                    </ProjectLink>
-                    {dashboard.description ? (
-                      <p className="mt-0.5 max-w-xl truncate text-xs text-muted-foreground">{dashboard.description}</p>
-                    ) : null}
-                  </td>
-                  <td className="py-2.5 pr-2 text-xs text-muted-foreground">{dashboard.tiles.length}</td>
-                  <td className="py-2.5 pr-2 text-xs text-muted-foreground">
-                    {formatDashboardTime(dashboard.updateTime)}
-                  </td>
-                  <td className="py-2.5 pr-2 text-xs text-muted-foreground">
-                    {formatDashboardTime(dashboard.createTime)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </p>
+                    <p className="mt-1 max-w-2xl truncate text-xs text-muted-foreground">
+                      {dashboard.description || 'No description yet'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground md:justify-end">
+                  <span className="font-mono tabular-nums">{formatTileCount(dashboard.tiles.length)}</span>
+                  <span>Updated {formatDashboardTime(dashboard.updateTime)}</span>
+                  <span className="hidden lg:inline">Created {formatDashboardTime(dashboard.createTime)}</span>
+                  <ArrowRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+              </ProjectLink>
+            ))}
+          </div>
         )}
       </div>
     </Page>

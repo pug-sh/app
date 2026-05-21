@@ -1,19 +1,40 @@
 import { create } from '@bufbuild/protobuf'
-import { LayoutGrid } from 'lucide-react'
 import { useMemo } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
 import { DashboardTileBody } from './tiles'
 
 import 'react-grid-layout/css/styles.css'
+import './grid.css'
 
 const ResponsiveGridLayoutView = WidthProvider(Responsive)
 
+type TileLayoutKind = 'insight' | 'markdown'
+
+const getTileLayoutKind = (tile: DashboardTile): TileLayoutKind =>
+  tile.content.case === 'markdown' ? 'markdown' : 'insight'
+
+const getKindDefaultHeight = (_kind: TileLayoutKind) => 8
+
+const getKindMinHeight = (kind: TileLayoutKind) => (kind === 'insight' ? 7 : TILE_MIN_H)
+
+const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileLayoutKind(tile))
+
+const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileLayoutKind(tile))
+
 const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
   const existing = tile.layouts.find(layout => layout.breakpoint === breakpoint)
-  if (existing) return existing
+  if (existing) {
+    const minHeight = getTileMinHeight(tile)
+    return {
+      ...existing,
+      h: Math.max(existing.h, minHeight),
+      minH: Math.max(existing.minH || TILE_MIN_H, minHeight),
+    }
+  }
 
   const width = Math.min(COLS[breakpoint], breakpoint === 'lg' ? 6 : breakpoint === 'md' ? 5 : 4)
   return {
@@ -21,10 +42,10 @@ const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS
     x: 0,
     y: fallbackY,
     w: width,
-    h: 8,
+    h: getTileDefaultHeight(tile),
     minW: TILE_MIN_W,
     maxW: 0,
-    minH: TILE_MIN_H,
+    minH: getTileMinHeight(tile),
     maxH: 0,
     static: false,
   }
@@ -72,29 +93,31 @@ const layoutItemToProto = (
     static: item.static ?? existing?.static ?? false,
   })
 
-const getDefaultNewTileLayouts = (tiles: DashboardTile[]) => {
+const getDefaultNewTileLayouts = (tiles: DashboardTile[], kind: TileLayoutKind = 'insight') => {
   const layouts = getLayoutsForTiles(tiles)
   return BREAKPOINT_KEYS.map(breakpoint => {
     const items = layouts[breakpoint] ?? []
     const nextY = items.reduce((max, item) => Math.max(max, item.y + item.h), 0)
     const width = Math.min(COLS[breakpoint], breakpoint === 'lg' ? 6 : breakpoint === 'md' ? 5 : 4)
+    const defaultHeight = getKindDefaultHeight(kind)
+    const minHeight = getKindMinHeight(kind)
     return {
       breakpoint,
       x: 0,
       y: nextY,
       w: width,
-      h: 8,
+      h: defaultHeight,
       minW: TILE_MIN_W,
       maxW: 0,
-      minH: TILE_MIN_H,
+      minH: minHeight,
       maxH: 0,
       static: false,
     }
   })
 }
 
-export const buildCreatedTileLayouts = (tiles: DashboardTile[]) =>
-  getDefaultNewTileLayouts(tiles).map(layout =>
+export const buildCreatedTileLayouts = (tiles: DashboardTile[], kind: TileLayoutKind = 'insight') =>
+  getDefaultNewTileLayouts(tiles, kind).map(layout =>
     create(ResponsiveGridLayoutSchema, {
       breakpoint: layout.breakpoint,
       x: layout.x,
@@ -126,6 +149,7 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: ResponsiveLayou
 export const DashboardGrid = ({
   tiles,
   timeRange,
+  granularity,
   editable,
   onEditTile,
   onDeleteTile,
@@ -133,6 +157,7 @@ export const DashboardGrid = ({
 }: {
   tiles: DashboardTile[]
   timeRange: TimeRange | undefined
+  granularity: Granularity
   editable?: boolean
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
@@ -142,7 +167,7 @@ export const DashboardGrid = ({
 
   return (
     <ResponsiveGridLayoutView
-      className="layout"
+      className="layout dashboard-grid"
       breakpoints={BREAKPOINTS}
       cols={COLS}
       layouts={layouts}
@@ -151,23 +176,20 @@ export const DashboardGrid = ({
       containerPadding={[0, 0]}
       isDraggable={!!editable}
       isResizable={!!editable}
-      draggableHandle=".tile-drag-handle"
+      draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
       onLayoutChange={(_layout, allLayouts) => onLayoutsChange?.(allLayouts)}
     >
       {tiles.map(tile => (
-        <div key={tile.id} className="group min-h-0">
-          <div className="tile-drag-handle mb-2 flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
-            <LayoutGrid className="size-3" />
-            <span>
-              {editable ? 'Drag to arrange' : tile.content.case === 'markdown' ? 'Markdown tile' : 'Insight tile'}
-            </span>
+        <div key={tile.id} className="group flex h-full min-h-0 cursor-grab flex-col active:cursor-grabbing">
+          <div className="min-h-0 flex-1">
+            <DashboardTileBody
+              tile={tile}
+              timeRange={timeRange}
+              granularity={granularity}
+              onEdit={editable ? onEditTile : undefined}
+              onDelete={editable ? onDeleteTile : undefined}
+            />
           </div>
-          <DashboardTileBody
-            tile={tile}
-            timeRange={timeRange}
-            onEdit={editable ? onEditTile : undefined}
-            onDelete={editable ? onDeleteTile : undefined}
-          />
         </div>
       ))}
     </ResponsiveGridLayoutView>

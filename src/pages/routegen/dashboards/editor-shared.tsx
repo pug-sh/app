@@ -28,6 +28,7 @@ export const InlineEditableText = ({
 
   useEffect(() => {
     if (!ref.current) return
+    if (document.activeElement === ref.current) return
     const nextValue = multiline ? value : value.replace(/\s+/g, ' ').trim()
     const currentValue = multiline ? (ref.current.innerText ?? '') : (ref.current.textContent ?? '')
     if (currentValue !== nextValue) {
@@ -54,7 +55,9 @@ export const InlineEditableText = ({
         }}
         onPaste={event => {
           event.preventDefault()
-          const text = event.clipboardData.getData('text/plain')
+          const text = multiline
+            ? event.clipboardData.getData('text/plain')
+            : event.clipboardData.getData('text/plain').replace(/\s+/g, ' ')
           document.execCommand('insertText', false, text)
         }}
         className={className}

@@ -41,7 +41,7 @@ export const createInsightTile = async ({
           case: 'insight',
           value: create(InsightTileContentSchema, { query: input.query }),
         },
-        layouts: buildCreatedTileLayouts(dashboard.tiles),
+        layouts: buildCreatedTileLayouts(dashboard.tiles, 'insight'),
       }),
     )
     if (tile) {
@@ -81,7 +81,7 @@ export const createMarkdownTile = async ({
           case: 'markdown',
           value: create(MarkdownTileContentSchema, { body: input.body }),
         },
-        layouts: buildCreatedTileLayouts(dashboard.tiles),
+        layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
       }),
     )
     if (tile) {

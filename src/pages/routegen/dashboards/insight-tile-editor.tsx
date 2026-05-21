@@ -1,10 +1,15 @@
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { Check, CircleHelp, Clock, Loader2, X } from 'lucide-react'
+import { Check, CircleHelp, Loader2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { AggregationType, InsightType, type QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  type Granularity,
+  InsightType,
+  type QueryRequest,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Button } from '@/components/ui/button'
@@ -15,9 +20,10 @@ import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { GRANULARITIES, INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsRowAggregationControls, OptionChip } from '../insights/controls'
 import { InlineEditableText } from './editor-shared'
+import { DashboardInsightPreview } from './insight-tile-content'
 import { buildInsightQuery, getInsightEditorDefaults } from './query'
 
 const tileSchema = z.object({
@@ -28,12 +34,14 @@ const tileSchema = z.object({
 export const InsightTileEditor = ({
   tile,
   dashboardTimeRange,
+  dashboardGranularity,
   saving,
   onCancel,
   onSubmit,
 }: {
   tile?: DashboardTile
   dashboardTimeRange?: TimeRange
+  dashboardGranularity: Granularity
   saving: boolean
   onCancel: () => void
   onSubmit: (input: { displayName: string; description: string; query: QueryRequest }) => Promise<void>
@@ -42,7 +50,6 @@ export const InsightTileEditor = ({
   const [displayName, setDisplayName] = useState(defaults.displayName)
   const [description, setDescription] = useState(defaults.description)
   const [insightType, setInsightType] = useState(defaults.insightType)
-  const [granularity, setGranularity] = useState(defaults.granularity)
   const eventFilters = useEventFilters(defaults.eventEntries)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(defaults.propFilters)
   const [breakdowns, setBreakdowns] = useState(defaults.breakdowns)
@@ -63,7 +70,8 @@ export const InsightTileEditor = ({
   const validEntries = eventFilters.validEntries
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
-  const queryTimeRange = tile ? (defaults.timeRange ?? dashboardTimeRange) : (dashboardTimeRange ?? defaults.timeRange)
+  const queryTimeRange = dashboardTimeRange ?? defaults.timeRange
+  const queryGranularity = dashboardGranularity
 
   useEffect(() => {
     if (insightType !== InsightType.RETENTION) return
@@ -82,6 +90,26 @@ export const InsightTileEditor = ({
       ),
     [insightType, validEntries],
   )
+
+  const previewQuery = useMemo(() => {
+    if (validEntries.length === 0 || hasIncompleteNumericAggregation) return undefined
+    return buildInsightQuery({
+      insightType,
+      granularity: queryGranularity,
+      timeRange: queryTimeRange,
+      validEntries,
+      propFilters,
+      breakdowns,
+    })
+  }, [
+    breakdowns,
+    hasIncompleteNumericAggregation,
+    insightType,
+    propFilters,
+    queryGranularity,
+    queryTimeRange,
+    validEntries,
+  ])
 
   const renderRowExtra = useMemo(() => {
     if (!isTrends) return undefined
@@ -131,7 +159,7 @@ export const InsightTileEditor = ({
       description: parsed.data.description ?? '',
       query: buildInsightQuery({
         insightType,
-        granularity,
+        granularity: queryGranularity,
         timeRange: queryTimeRange,
         validEntries,
         propFilters,
@@ -177,15 +205,6 @@ export const InsightTileEditor = ({
 
       <div className="flex flex-wrap items-center gap-2">
         <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
-        {(insightType === InsightType.TRENDS || insightType === InsightType.RETENTION) && (
-          <OptionChip
-            label="granularity"
-            icon={Clock}
-            options={GRANULARITIES}
-            value={granularity}
-            onChange={setGranularity}
-          />
-        )}
       </div>
 
       <div className="space-y-1">
@@ -240,6 +259,10 @@ export const InsightTileEditor = ({
           disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
         />
       </div>
+
+      {previewQuery ? (
+        <DashboardInsightPreview query={previewQuery} timeRange={dashboardTimeRange} granularity={queryGranularity} />
+      ) : null}
     </div>
   )
 }
