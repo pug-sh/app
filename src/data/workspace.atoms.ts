@@ -62,6 +62,9 @@ export const activeOrgAtom = atom<Org | null>(null)
 export const selectOrgAtom = atom(null, (_get, set, org: Org) => {
   set(activeOrgAtom, org)
   set(lastOrgIdAtom, org.id)
+  // Switching org invalidates the current project context (mirrors leaveOrgAtom).
+  set(activeProjectAtom, null)
+  set(projectsAtom, [])
 })
 
 // Task 5: bootstrapStatusAtom — tracks the org-bootstrap lifecycle
@@ -99,6 +102,9 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
 })
 
 export const activeProjectAtom = atom<Project | null>(null)
+
+// Last project visited per org (orgId → projectId), restored when switching orgs.
+export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {})
 
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)

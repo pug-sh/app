@@ -15,6 +15,7 @@ import {
   fetchOrgsAtom,
   fetchProjectsAtom,
   lastOrgIdAtom,
+  lastProjectByOrgAtom,
   loadOrgAtom,
   projectsAtom,
   resetWorkspaceAtom,
@@ -54,6 +55,7 @@ const WorkspaceBootstrap = () => {
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
+  const setLastProjectByOrg = useSetAtom(lastProjectByOrgAtom)
 
   useEffect(() => {
     if (!authenticated) {
@@ -114,6 +116,14 @@ const WorkspaceBootstrap = () => {
     if (status !== 'needs-selection' || !activeOrg) return
     setStatus('ready')
   }, [activeOrg, status, setStatus])
+
+  // Remember the last project visited per org, to restore when switching orgs.
+  useEffect(() => {
+    if (!activeOrg || !activeProject) return
+    setLastProjectByOrg(prev =>
+      prev[activeOrg.id] === activeProject.id ? prev : { ...prev, [activeOrg.id]: activeProject.id },
+    )
+  }, [activeOrg, activeProject, setLastProjectByOrg])
 
   return null
 }
