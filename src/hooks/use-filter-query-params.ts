@@ -135,18 +135,74 @@ const parseJSONParam = (raw: string | null): unknown => {
   }
 }
 
+const setOrDelete = (url: URL, key: string, value: string | undefined) => {
+  if (value === undefined) {
+    url.searchParams.delete(key)
+    return
+  }
+  url.searchParams.set(key, value)
+}
+
+const replaceUrlIfChanged = (url: URL) => {
+  const next = `${url.pathname}${url.search}${url.hash}`
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+  if (next !== current) {
+    window.history.replaceState(window.history.state, '', next)
+  }
+}
+
+const readTimeGranularityFromParams = (params: URLSearchParams) => {
+  const rawGranularityParam = params.get(GRANULARITY_PARAM)
+  const rawTimeFromParam = params.get(TIME_FROM_PARAM)
+  const rawTimeToParam = params.get(TIME_TO_PARAM)
+  const rawGranularity = rawGranularityParam === null ? NaN : Number(rawGranularityParam)
+  const rawTimeFrom = rawTimeFromParam === null ? NaN : Number(rawTimeFromParam)
+  const rawTimeTo = rawTimeToParam === null ? NaN : Number(rawTimeToParam)
+
+  const granularity = VALID_GRANULARITIES.includes(rawGranularity) ? (rawGranularity as Granularity) : undefined
+  const timeRange: TimeRange | undefined =
+    Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo) && rawTimeFrom <= rawTimeTo
+      ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }
+      : undefined
+
+  return { granularity, timeRange }
+}
+
+const setTimeGranularityParams = (
+  url: URL,
+  opts?: {
+    granularity?: Granularity
+    timeRange?: TimeRange
+  },
+) => {
+  setOrDelete(
+    url,
+    GRANULARITY_PARAM,
+    opts?.granularity !== undefined && opts.granularity !== Granularity.UNSPECIFIED
+      ? String(opts.granularity)
+      : undefined,
+  )
+
+  setOrDelete(url, TIME_FROM_PARAM, opts?.timeRange ? String(opts.timeRange.from.getTime()) : undefined)
+  setOrDelete(url, TIME_TO_PARAM, opts?.timeRange ? String(opts.timeRange.to.getTime()) : undefined)
+}
+
+export const readTimeGranularityQueryParams = (search = window.location.search) =>
+  readTimeGranularityFromParams(new URLSearchParams(search))
+
+export const writeTimeGranularityQueryParams = (opts?: { granularity?: Granularity; timeRange?: TimeRange }) => {
+  const url = new URL(window.location.href)
+  setTimeGranularityParams(url, opts)
+  replaceUrlIfChanged(url)
+}
+
 export const readFilterQueryParams = (search = window.location.search) => {
   const params = new URLSearchParams(search)
   const rawEventFilters = parseJSONParam(params.get(EVENT_FILTERS_PARAM))
   const rawPropFilters = parseJSONParam(params.get(PROP_FILTERS_PARAM))
   const rawInsightTypeParam = params.get(INSIGHT_TYPE_PARAM)
-  const rawGranularityParam = params.get(GRANULARITY_PARAM)
-  const rawTimeFromParam = params.get(TIME_FROM_PARAM)
-  const rawTimeToParam = params.get(TIME_TO_PARAM)
   const rawInsightType = rawInsightTypeParam === null ? NaN : Number(rawInsightTypeParam)
-  const rawGranularity = rawGranularityParam === null ? NaN : Number(rawGranularityParam)
-  const rawTimeFrom = rawTimeFromParam === null ? NaN : Number(rawTimeFromParam)
-  const rawTimeTo = rawTimeToParam === null ? NaN : Number(rawTimeToParam)
+  const { granularity, timeRange } = readTimeGranularityFromParams(params)
 
   const hasEf = params.has(EVENT_FILTERS_PARAM)
   const hasPf = params.has(PROP_FILTERS_PARAM)
@@ -189,11 +245,6 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
-  const granularity = VALID_GRANULARITIES.includes(rawGranularity) ? (rawGranularity as Granularity) : undefined
-  const timeRange: TimeRange | undefined =
-    Number.isFinite(rawTimeFrom) && Number.isFinite(rawTimeTo) && rawTimeFrom <= rawTimeTo
-      ? { from: new Date(rawTimeFrom), to: new Date(rawTimeTo) }
-      : undefined
 
   return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, parseWarning }
 }
@@ -210,33 +261,16 @@ export const writeFilterQueryParams = (
 ) => {
   const url = new URL(window.location.href)
 
-  const setOrDelete = (key: string, value: string | undefined) => {
-    if (value === undefined) {
-      url.searchParams.delete(key)
-      return
-    }
-    url.searchParams.set(key, value)
-  }
-
   const setJSONParam = (key: string, value: unknown[]) => {
-    setOrDelete(key, value.length > 0 ? JSON.stringify(value) : undefined)
+    setOrDelete(url, key, value.length > 0 ? JSON.stringify(value) : undefined)
   }
 
   setJSONParam(EVENT_FILTERS_PARAM, eventFilters.map(serializeEntry))
   setJSONParam(PROP_FILTERS_PARAM, propFilters)
   setJSONParam(BREAKDOWNS_PARAM, opts?.breakdowns ?? [])
 
-  setOrDelete(INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
-  setOrDelete(GRANULARITY_PARAM, opts?.granularity !== undefined ? String(opts.granularity) : undefined)
+  setOrDelete(url, INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
+  setTimeGranularityParams(url, opts)
 
-  const timeFrom = opts?.timeRange ? String(opts.timeRange.from.getTime()) : undefined
-  const timeTo = opts?.timeRange ? String(opts.timeRange.to.getTime()) : undefined
-  setOrDelete(TIME_FROM_PARAM, timeFrom)
-  setOrDelete(TIME_TO_PARAM, timeTo)
-
-  const next = `${url.pathname}${url.search}${url.hash}`
-  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
-  if (next !== current) {
-    window.history.replaceState(window.history.state, '', next)
-  }
+  replaceUrlIfChanged(url)
 }

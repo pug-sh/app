@@ -10,18 +10,20 @@ export const LineChart = ({
   seriesNames,
   seriesColors,
   granularity,
+  className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  className?: string
 }) => {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity)
 
   if (data.length === 0) return null
 
   return (
-    <ChartContainer config={chartConfig} className="h-70 w-full">
+    <ChartContainer config={chartConfig} className={className}>
       <ReLineChart data={chartData} margin={SHARED_MARGIN}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />

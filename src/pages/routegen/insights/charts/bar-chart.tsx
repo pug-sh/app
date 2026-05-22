@@ -11,19 +11,21 @@ export const BarChart = ({
   seriesColors,
   granularity,
   stacked,
+  className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
   stacked: boolean
+  className?: string
 }) => {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, stacked)
 
   if (data.length === 0) return null
 
   return (
-    <ChartContainer config={chartConfig} className="h-70 w-full">
+    <ChartContainer config={chartConfig} className={className}>
       <ReBarChart
         key={stacked ? 'stacked' : 'grouped'}
         data={chartData}

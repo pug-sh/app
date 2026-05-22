@@ -1,6 +1,7 @@
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { ChartPoint } from './types'
 
 export const SummaryStats = ({
@@ -8,14 +9,16 @@ export const SummaryStats = ({
   data,
   seriesColors,
   aggregations,
+  compact = false,
 }: {
   series: string[]
   data: ChartPoint[]
   seriesColors: SeriesColor[]
   aggregations: AggregationType[]
+  compact?: boolean
 }) => {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-1">
+    <div className={cn('grid grid-cols-2', compact ? 'mb-0 gap-x-5 gap-y-3' : 'mb-1 gap-3 sm:grid-cols-4')}>
       {series.map((name, si) => {
         const vals = data.map(d => d.values[si] ?? 0)
         const total = vals.reduce((a, b) => a + b, 0)
@@ -37,12 +40,14 @@ export const SummaryStats = ({
           detail = `avg ${compactNumber(Math.round(avg))} · floor ${compactNumber(min)}`
         }
         return (
-          <div key={si} className="flex items-start gap-2">
+          <div key={si} className="flex min-w-0 items-start gap-2.5">
             <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: seriesColors[si]?.dot }} />
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-0.5">
               <p className="text-xs text-muted-foreground truncate">{name}</p>
-              <p className="text-lg font-semibold tabular-nums tracking-tight">{compactNumber(headline)}</p>
-              <p className="text-[11px] text-muted-foreground">{detail}</p>
+              <p className={cn('font-semibold tabular-nums tracking-tight', compact ? 'text-base' : 'text-lg')}>
+                {compactNumber(headline)}
+              </p>
+              <p className={cn('text-[11px] text-muted-foreground', compact && 'truncate')}>{detail}</p>
             </div>
           </div>
         )

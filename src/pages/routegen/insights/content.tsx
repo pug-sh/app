@@ -37,6 +37,7 @@ export const InsightsContent = ({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  compact = false,
 }: {
   error: string | null
   retry: () => void
@@ -58,12 +59,20 @@ export const InsightsContent = ({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  compact?: boolean
 }) => {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
+  const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
 
   const renderLoadingEmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+    <div
+      className={
+        compact
+          ? 'flex flex-col items-center justify-center py-8 text-muted-foreground'
+          : 'flex flex-col items-center justify-center py-20 text-muted-foreground'
+      }
+    >
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
       <p className="text-xs">Pick an event above to start</p>
@@ -71,7 +80,13 @@ export const InsightsContent = ({
   )
 
   const renderNoEvents = () => (
-    <div className="flex items-center justify-center h-48 text-muted-foreground">
+    <div
+      className={
+        compact
+          ? 'flex h-full min-h-32 items-center justify-center text-muted-foreground'
+          : 'flex h-48 items-center justify-center text-muted-foreground'
+      }
+    >
       <p className="text-sm">No events recorded in this period</p>
     </div>
   )
@@ -89,11 +104,23 @@ export const InsightsContent = ({
     if (allZero) return renderNoEvents()
     if (viewMode === 'line')
       return (
-        <LineChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+        <LineChart
+          data={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          granularity={granularity}
+          className={chartClassName}
+        />
       )
     if (viewMode === 'area')
       return (
-        <AreaChart data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+        <AreaChart
+          data={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          granularity={granularity}
+          className={chartClassName}
+        />
       )
     if (viewMode === 'table')
       return (
@@ -106,6 +133,7 @@ export const InsightsContent = ({
         seriesColors={seriesColors}
         granularity={granularity}
         stacked={viewMode === 'bar-stacked'}
+        className={chartClassName}
       />
     )
   }
@@ -197,14 +225,15 @@ export const InsightsContent = ({
 
   if (chartData.length > 0) {
     return (
-      <div>
+      <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
         <SummaryStats
           series={seriesNames}
           data={chartData}
           seriesColors={seriesColors}
           aggregations={seriesAggregations}
+          compact={compact}
         />
-        {renderChart()}
+        <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
       </div>
     )
   }

@@ -22,11 +22,13 @@ export function DateRangePicker({
   onChange,
   allowUnset,
   presets = ACTIVITY_PRESETS,
+  unsetLabel = 'All time',
 }: {
   value: TimeRange | undefined
   onChange: (range: TimeRange | undefined) => void
   allowUnset?: boolean
   presets?: DatePreset[]
+  unsetLabel?: string
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<'from' | 'to'>('from')
@@ -63,7 +65,7 @@ export function DateRangePicker({
     }
   }
 
-  const label = value ? `${fmtDate(value.from)} – ${fmtDate(value.to)}` : 'All time'
+  const label = value ? `${fmtDate(value.from)} – ${fmtDate(value.to)}` : unsetLabel
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -132,7 +134,7 @@ export function DateRangePicker({
                 }}
                 className="px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
               >
-                All time
+                {unsetLabel}
               </button>
             )}
           </div>
@@ -142,6 +144,7 @@ export function DateRangePicker({
             onSelect={(_range, triggerDate) => handleDayClick(triggerDate)}
             disabled={{ after: new Date() }}
             numberOfMonths={2}
+            className="font-[inherit]"
           />
         </div>
       </PopoverContent>

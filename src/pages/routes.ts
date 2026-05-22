@@ -11,11 +11,31 @@ const pages = import.meta.glob<PageModule>('./routegen/**/index.page.tsx')
 
 export const routes: Record<string, RouteDef> = {}
 
-for (const [key, loader] of Object.entries(pages)) {
-  const segments = key
-    .split('/')
-    .slice(2, -1)
-    .map(s => (s.startsWith('[') && s.endsWith(']') ? ':' + s.slice(1, -1) : s))
-  const path = '/p/:projectId/' + segments.join('/')
+const isDynamicSegment = (segment: string) => segment.startsWith('[') && segment.endsWith(']')
+
+const compareRouteKeys = (a: string, b: string) => {
+  const aSegments = a.split('/').slice(2, -1)
+  const bSegments = b.split('/').slice(2, -1)
+  const sharedLength = Math.min(aSegments.length, bSegments.length)
+
+  for (let i = 0; i < sharedLength; i++) {
+    const aDynamic = isDynamicSegment(aSegments[i])
+    const bDynamic = isDynamicSegment(bSegments[i])
+    if (aDynamic !== bDynamic) return aDynamic ? 1 : -1
+  }
+
+  if (aSegments.length !== bSegments.length) return bSegments.length - aSegments.length
+  return a.localeCompare(b)
+}
+
+for (const [key, loader] of Object.entries(pages).sort(([a], [b]) => compareRouteKeys(a, b))) {
+  const path =
+    '/p/:projectId/' +
+    key
+      .split('/')
+      .slice(2, -1)
+      .map(s => (isDynamicSegment(s) ? ':' + s.slice(1, -1) : s))
+      .join('/')
+
   routes[path] = { component: lazyWithRetry(loader, path) }
 }

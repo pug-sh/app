@@ -1,6 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { transportAtom } from '@/network/transport'
+import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { OrgEmailProvidersService } from './genproto/dashboard/orgemailproviders/v1/orgemailproviders_pb'
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
@@ -22,6 +23,7 @@ export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(tra
 
 // Dashboard — project-scoped (JWT auth + x-project-id header from projectHeaderAtom)
 export const campaignsRPCAtom = atom(get => createClient(CampaignService, get(transportAtom)))
+export const dashboardsRPCAtom = atom(get => createClient(DashboardsService, get(transportAtom)))
 export const insightsRPCAtom = atom(get => createClient(InsightsService, get(transportAtom)))
 export const activityRPCAtom = atom(get => createClient(ActivityService, get(transportAtom)))
 export const profilesRPCAtom = atom(get => createClient(ProfilesService, get(transportAtom)))
