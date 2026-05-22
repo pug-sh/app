@@ -1,7 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { BarChart3, Clock, FileText, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ResponsiveLayouts } from 'react-grid-layout/legacy'
 import { useParams } from 'wouter'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -31,7 +30,7 @@ import {
 } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { InlineEditableText } from '../editor-shared'
-import { DashboardGrid } from '../grid'
+import { DashboardGrid, type DashboardLayouts } from '../grid'
 import { DashboardTileEditor } from '../tile-editor'
 import { DashboardEmptyState } from '../tiles'
 import type { EditorState, InsightTileInput, MarkdownTileInput } from '../types'
@@ -171,7 +170,7 @@ const DashboardDetail = () => {
     await updateMarkdownTile({ dashboard, editor, updateTile, setDashboard, setSavingTile, input })
   }
 
-  const handleLayoutsChange = async (layouts: ResponsiveLayouts<string>) => {
+  const handleLayoutsChange = async (layouts: DashboardLayouts) => {
     const currentDashboard = dashboardRef.current
     if (!currentDashboard) return
     await persistTileLayouts({ dashboard: currentDashboard, layouts, updateTile, setDashboard })

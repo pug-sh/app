@@ -58,6 +58,9 @@ export const createInsightTile = async ({
   }
 }
 
+// Rethrow so MarkdownTileEditor keeps the editor open (and the typed note) on failure,
+// matching updateMarkdownTile. createInsightTile must NOT rethrow: its editor has no
+// catch around onSubmit and stays open by only closing on success.
 export const createMarkdownTile = async ({
   dashboard,
   createTile,
@@ -95,6 +98,7 @@ export const createMarkdownTile = async ({
     }
   } catch (err) {
     toastRPCError(err, 'Failed to save tile')
+    throw err
   } finally {
     setSavingTile(false)
   }

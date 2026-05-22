@@ -12,6 +12,15 @@ import { DashboardInsightContent } from './insight-tile-content'
 const escapeMarkdownHTML = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 
+const DANGEROUS_URL_SCHEME = /^\s*(?:javascript|data|vbscript):/i
+
+// snarkdown does not sanitize link/image URLs, so neutralize dangerous schemes in the
+// generated markup before it is rendered.
+const sanitizeMarkdownHTML = (markup: string) =>
+  markup.replace(/(\b(?:href|src)=)(["'])(.*?)\2/gi, (match, attr, quote, url) =>
+    DANGEROUS_URL_SCHEME.test(url) ? `${attr}${quote}#${quote}` : match,
+  )
+
 const TileShell = ({
   tile,
   timeRangeLabel,
@@ -42,7 +51,7 @@ const TileShell = ({
 const DashboardMarkdownTile = ({ tile }: { tile: DashboardTile }) => {
   if (tile.content.case !== 'markdown') return null
 
-  const html = snarkdown(escapeMarkdownHTML(tile.content.value.body))
+  const html = sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(tile.content.value.body)))
 
   return (
     <TileShell tile={tile}>

@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import type { PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
-import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { type TimeRange as ProtoTimeRange, TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -12,12 +12,13 @@ import {
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
-import type { ActiveFilter } from '@/components/event-filters/filter-model'
+import { type ActiveFilter, FILTER_OPERATORS } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS, isDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
@@ -42,45 +43,22 @@ export const getProtoRange = (range?: ProtoTimeRange) => {
 }
 
 export const fromProtoFilter = (filter: PropertyFilter): ActiveFilter => {
+  const property = filter.property ?? ''
+  const source = filter.source
+  const operator = filter.operator
+  const arity = FILTER_OPERATORS.find(option => option.value === operator)?.arity
   const values = filter.values ?? []
 
-  if (values.length === 0 && !filter.value) {
-    return {
-      property: filter.property ?? '',
-      source: filter.source ?? 0,
-      operator: filter.operator as FilterOperator,
-      kind: 'presence',
-    }
+  if (arity === 'none') {
+    return { property, source, operator, kind: 'presence' }
   }
-
-  if (values.length === 2) {
-    return {
-      property: filter.property ?? '',
-      source: filter.source ?? 0,
-      operator: filter.operator as FilterOperator,
-      kind: 'range',
-      min: values[0] ?? '',
-      max: values[1] ?? '',
-    }
+  if (arity === 'range') {
+    return { property, source, operator, kind: 'range', min: values[0] ?? '', max: values[1] ?? '' }
   }
-
-  if (values.length > 0) {
-    return {
-      property: filter.property ?? '',
-      source: filter.source ?? 0,
-      operator: filter.operator as FilterOperator,
-      kind: 'multi',
-      values,
-    }
+  if (arity === 'list') {
+    return { property, source, operator, kind: 'multi', values }
   }
-
-  return {
-    property: filter.property ?? '',
-    source: filter.source ?? 0,
-    operator: filter.operator as FilterOperator,
-    kind: 'single',
-    value: filter.value ?? '',
-  }
+  return { property, source, operator, kind: 'single', value: filter.value ?? '' }
 }
 
 export const parseQueryEntries = (query?: QueryRequest) =>
@@ -111,8 +89,10 @@ export const getInitialGranularity = (query?: QueryRequest) => {
   return Granularity.DAY
 }
 
-export const getInitialDefaultTimeRange = (tile?: DashboardTile) =>
-  isDashboardTimeRangePreset(tile?.defaultTimeRange) ? tile.defaultTimeRange : DEFAULT_DASHBOARD_TIME_RANGE_PRESET
+export const getInitialDefaultTimeRange = (tile?: DashboardTile) => {
+  const preset = tile?.defaultTimeRange
+  return isDashboardTimeRangePreset(preset) ? preset : DEFAULT_DASHBOARD_TIME_RANGE_PRESET
+}
 
 export const getInitialInsightType = (query?: QueryRequest) => {
   if (
@@ -167,9 +147,9 @@ export const buildInsightQuery = ({
       aggregation:
         insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
       aggregationProperty:
-        insightType === InsightType.TRENDS && entry.aggregation !== undefined
+        insightType === InsightType.TRENDS && NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL)
           ? (entry.aggregationProperty ?? '')
-          : (entry.aggregationProperty ?? ''),
+          : '',
     })),
     breakdowns: breakdowns.map(property => ({ property })),
     breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,

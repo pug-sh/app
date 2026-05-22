@@ -1,29 +1,29 @@
 import { create } from '@bufbuild/protobuf'
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
 import { DashboardTileBody } from './tiles'
+import type { TileType } from './types'
 
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
 const ResponsiveGridLayoutView = WidthProvider(Responsive)
 
-type TileLayoutKind = 'insight' | 'markdown'
+export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
-const getTileLayoutKind = (tile: DashboardTile): TileLayoutKind =>
-  tile.content.case === 'markdown' ? 'markdown' : 'insight'
+const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'markdown' ? 'markdown' : 'insight')
 
-const getKindDefaultHeight = (_kind: TileLayoutKind) => 8
+const getKindDefaultHeight = (_kind: TileType) => 8
 
-const getKindMinHeight = (kind: TileLayoutKind) => (kind === 'insight' ? 7 : TILE_MIN_H)
+const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
 
-const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileLayoutKind(tile))
+const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileType(tile))
 
-const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileLayoutKind(tile))
+const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileType(tile))
 
 const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
   const existing = tile.layouts.find(layout => layout.breakpoint === breakpoint)
@@ -52,7 +52,7 @@ const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS
 }
 
 const getLayoutsForTiles = (tiles: DashboardTile[]) => {
-  const layouts: ResponsiveLayouts<keyof typeof BREAKPOINTS> = {}
+  const layouts: DashboardLayouts = {}
   for (const breakpoint of BREAKPOINT_KEYS) {
     let nextY = 0
     layouts[breakpoint] = tiles.map(tile => {
@@ -93,7 +93,7 @@ const layoutItemToProto = (
     static: item.static ?? existing?.static ?? false,
   })
 
-const getDefaultNewTileLayouts = (tiles: DashboardTile[], kind: TileLayoutKind = 'insight') => {
+const getDefaultNewTileLayouts = (tiles: DashboardTile[], kind: TileType = 'insight') => {
   const layouts = getLayoutsForTiles(tiles)
   return BREAKPOINT_KEYS.map(breakpoint => {
     const items = layouts[breakpoint] ?? []
@@ -116,7 +116,7 @@ const getDefaultNewTileLayouts = (tiles: DashboardTile[], kind: TileLayoutKind =
   })
 }
 
-export const buildCreatedTileLayouts = (tiles: DashboardTile[], kind: TileLayoutKind = 'insight') =>
+export const buildCreatedTileLayouts = (tiles: DashboardTile[], kind: TileType = 'insight') =>
   getDefaultNewTileLayouts(tiles, kind).map(layout =>
     create(ResponsiveGridLayoutSchema, {
       breakpoint: layout.breakpoint,
@@ -132,7 +132,7 @@ export const buildCreatedTileLayouts = (tiles: DashboardTile[], kind: TileLayout
     }),
   )
 
-export const withUpdatedLayouts = (tile: DashboardTile, layouts: ResponsiveLayouts<keyof typeof BREAKPOINTS>) => {
+export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayouts) => {
   const nextLayouts = BREAKPOINT_KEYS.flatMap(breakpoint => {
     const current = layouts[breakpoint]?.find(item => item.i === tile.id)
     if (!current) return []
@@ -159,11 +159,21 @@ export const DashboardGrid = ({
   editable?: boolean
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
-  onLayoutsChange?: (layouts: ResponsiveLayouts<keyof typeof BREAKPOINTS>) => void
+  onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
+  const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
+
+  // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
+  // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
+  // so loading a dashboard never triggers spurious updateTile writes.
+  const persistLatestLayouts = () => {
+    if (latestLayoutsRef.current) {
+      onLayoutsChange?.(latestLayoutsRef.current)
+    }
+  }
 
   return (
     <ResponsiveGridLayoutView
@@ -177,7 +187,11 @@ export const DashboardGrid = ({
       isDraggable={!!editable}
       isResizable={!!editable}
       draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
-      onLayoutChange={(_layout, allLayouts) => onLayoutsChange?.(allLayouts)}
+      onLayoutChange={(_layout, allLayouts) => {
+        latestLayoutsRef.current = allLayouts
+      }}
+      onDragStop={persistLatestLayouts}
+      onResizeStop={persistLatestLayouts}
     >
       {tiles.map(tile => (
         <div key={tile.id} className="group flex h-full min-h-0 cursor-grab flex-col active:cursor-grabbing">

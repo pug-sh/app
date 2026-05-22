@@ -9,7 +9,7 @@ import {
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { toastRPCError } from '@/lib/rpc-error'
 import { replaceDashboardTile } from './dashboard.atoms'
-import { withUpdatedLayouts } from './grid'
+import { type DashboardLayouts, withUpdatedLayouts } from './grid'
 import type { EditorState, InsightTileInput, MarkdownTileInput } from './types'
 
 type TileUpdater = (request: DashboardsServiceUpdateTileRequest) => Promise<DashboardTile | null>
@@ -109,7 +109,7 @@ export const persistTileLayouts = async ({
   setDashboard,
 }: {
   dashboard: Dashboard
-  layouts: any
+  layouts: DashboardLayouts
   updateTile: TileUpdater
   setDashboard: React.Dispatch<React.SetStateAction<Dashboard | null>>
 }) => {
@@ -117,6 +117,8 @@ export const persistTileLayouts = async ({
     .map(tile => withUpdatedLayouts(tile, layouts))
     .filter((tile, index) => JSON.stringify(tile.layouts) !== JSON.stringify(dashboard.tiles[index]?.layouts))
   if (changedTiles.length === 0) return
+
+  const previousTiles = dashboard.tiles
 
   setDashboard(current =>
     current
@@ -163,6 +165,10 @@ export const persistTileLayouts = async ({
       }
     } catch (err) {
       toastRPCError(err, `Failed to persist layout for ${tile.displayName}`)
+      // Roll back the optimistic update so the UI doesn't show unsaved positions as saved.
+      // Tiles persisted earlier in the loop were accepted server-side and reconcile on reload.
+      setDashboard(current => (current ? { ...current, tiles: previousTiles } : current))
+      return
     }
   }
 }
