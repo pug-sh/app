@@ -1,28 +1,26 @@
 import { create } from '@bufbuild/protobuf'
-import { useMemo, useRef } from 'react'
-import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
+import { type RefObject, useMemo, useRef } from 'react'
+import { type LayoutItem, Responsive, type ResponsiveLayouts } from 'react-grid-layout/legacy'
 import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
+import { withPageWidth } from './page-width-provider'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
-const ResponsiveGridLayoutView = WidthProvider(Responsive)
-
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
+
+export type DashboardMode = 'view' | 'edit'
 
 const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'markdown' ? 'markdown' : 'insight')
 
 const getKindDefaultHeight = (_kind: TileType) => 8
-
 const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
-
 const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileType(tile))
-
 const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileType(tile))
 
 const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
@@ -148,31 +146,47 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayout
 
 export const DashboardGrid = ({
   tiles,
-  editable,
+  pageRef,
+  mode = 'view',
   onEditTile,
   onDeleteTile,
+  onSelectTile,
   onLayoutsChange,
   globalTimeRange,
   globalGranularity,
 }: {
   tiles: DashboardTile[]
-  editable?: boolean
+  pageRef: RefObject<HTMLElement | null>
+  mode?: DashboardMode
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
+  onSelectTile?: (tileId: string) => void
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
+  const editable = mode === 'edit'
+
+  const ResponsiveGridLayoutView = useMemo(() => withPageWidth(Responsive, pageRef), [pageRef])
 
   // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
   // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
   // so loading a dashboard never triggers spurious updateTile writes.
   const persistLatestLayouts = () => {
+    if (!editable) return
     if (latestLayoutsRef.current) {
       onLayoutsChange?.(latestLayoutsRef.current)
     }
+  }
+
+  const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
+    if (!editable || !onSelectTile) return
+    const target = event.target as HTMLElement | null
+    // Don't steal clicks on the resize handle, tile-menu controls, or text input.
+    if (target?.closest('.react-resizable-handle, button, a, input, textarea, [data-no-drag="true"]')) return
+    onSelectTile(tile.id)
   }
 
   return (
@@ -184,8 +198,8 @@ export const DashboardGrid = ({
       rowHeight={24}
       margin={[16, 16]}
       containerPadding={[0, 0]}
-      isDraggable={!!editable}
-      isResizable={!!editable}
+      isDraggable={editable}
+      isResizable={editable}
       draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
       onLayoutChange={(_layout, allLayouts) => {
         latestLayoutsRef.current = allLayouts
@@ -194,7 +208,13 @@ export const DashboardGrid = ({
       onResizeStop={persistLatestLayouts}
     >
       {tiles.map(tile => (
-        <div key={tile.id} className="group flex h-full min-h-0 cursor-grab flex-col active:cursor-grabbing">
+        <div
+          key={tile.id}
+          className={['group flex h-full min-h-0 flex-col', editable ? 'cursor-grab active:cursor-grabbing' : ''].join(
+            ' ',
+          )}
+          onMouseDown={handleTileSelect(tile)}
+        >
           <div className="min-h-0 flex-1">
             <DashboardTileBody
               tile={tile}

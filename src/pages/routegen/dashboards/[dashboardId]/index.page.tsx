@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Clock, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -49,6 +49,7 @@ const DashboardDetail = () => {
   const updateDashboard = useSetAtom(updateDashboardAtom)
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const pageRef = useRef<HTMLDivElement | null>(null)
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [loading, setLoading] = useState(false)
@@ -270,7 +271,7 @@ const DashboardDetail = () => {
 
   return (
     <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
-      <div className="space-y-6">
+      <div ref={pageRef} className="space-y-6">
         {deleteTarget ? (
           <DashboardDeleteConfirmation
             target={deleteTarget}
@@ -287,6 +288,8 @@ const DashboardDetail = () => {
         ) : (
           <DashboardGrid
             tiles={dashboard.tiles}
+            pageRef={pageRef}
+            mode="view"
             globalTimeRange={globalTimeRange}
             globalGranularity={tileGranularityOverride}
             onLayoutsChange={handleLayoutsChange}
