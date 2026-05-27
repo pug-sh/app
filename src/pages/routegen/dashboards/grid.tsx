@@ -151,6 +151,7 @@ export const DashboardGrid = ({
   selectedTileId,
   onEditTile,
   onDeleteTile,
+  onDuplicateTile,
   onSelectTile,
   onLayoutsChange,
   globalTimeRange,
@@ -163,6 +164,7 @@ export const DashboardGrid = ({
   selectedTileId?: string | null
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
+  onDuplicateTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
@@ -227,6 +229,7 @@ export const DashboardGrid = ({
               globalGranularity={globalGranularity}
               onEdit={editable ? onEditTile : undefined}
               onDelete={editable ? onDeleteTile : undefined}
+              onDuplicate={editable ? onDuplicateTile : undefined}
             />
           </div>
         </div>

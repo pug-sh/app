@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { Edit3, MoreHorizontal, Trash2, TrendingUp } from 'lucide-react'
+import { Copy, Edit3, MoreHorizontal, Trash2, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -92,12 +92,14 @@ export const DashboardTileBody = ({
   tile,
   onEdit,
   onDelete,
+  onDuplicate,
   globalTimeRange,
   globalGranularity,
 }: {
   tile: DashboardTile
   onEdit?: (tile: DashboardTile) => void
   onDelete?: (tile: DashboardTile) => void
+  onDuplicate?: (tile: DashboardTile) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => (
@@ -109,7 +111,7 @@ export const DashboardTileBody = ({
         <DashboardInsightTile tile={tile} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
       )}
     </div>
-    {onEdit || onDelete ? (
+    {onEdit || onDelete || onDuplicate ? (
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -128,6 +130,12 @@ export const DashboardTileBody = ({
             <DropdownMenuItem onClick={() => onEdit(tile)}>
               <Edit3 className="size-4" />
               Edit
+            </DropdownMenuItem>
+          ) : null}
+          {onDuplicate ? (
+            <DropdownMenuItem onClick={() => onDuplicate(tile)}>
+              <Copy className="size-4" />
+              Duplicate
             </DropdownMenuItem>
           ) : null}
           {onDelete ? (

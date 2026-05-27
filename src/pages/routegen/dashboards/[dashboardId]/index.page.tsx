@@ -536,6 +536,15 @@ const DashboardDetail = () => {
                 globalGranularity={tileGranularityOverride}
                 onLayoutsChange={handleLayoutsChange}
                 onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+                onDuplicateTile={
+                  mode === 'edit'
+                    ? tile => {
+                        if (!storedDraft) return
+                        const input = buildDuplicateTileInput(tile)
+                        setStoredDraft({ ...storedDraft, draft: appendDraftTile(storedDraft.draft, input) })
+                      }
+                    : undefined
+                }
               />
             </div>
             {mode === 'edit' && selectedTile ? (
