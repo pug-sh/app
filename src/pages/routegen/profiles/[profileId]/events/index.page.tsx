@@ -20,7 +20,7 @@ import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { structGet } from '@/lib/struct'
-import { formatClock, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
 import ProfileShell from '../_shell'
@@ -226,10 +226,9 @@ const UserActivity = () => {
                           event={event}
                           timeLabel={
                             d
-                              ? {
-                                  primary: isToday ? formatRelative(d) : formatClock(d),
-                                  secondary: isToday ? formatClock(d) : formatRelative(d),
-                                }
+                              ? isToday
+                                ? { primary: formatClock(d), secondary: formatClock(d) }
+                                : { primary: formatDateTime(d), secondary: formatRelative(d) }
                               : null
                           }
                         />

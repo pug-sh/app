@@ -37,17 +37,15 @@ const TimelineEventItem = ({
 
       <div className={cn('py-2.5 pr-3 transition-colors', hasMore && 'hover:bg-muted/40')}>
         <div className="flex items-center gap-3">
-          <div className="w-32 shrink-0">
-            <Badge
-              variant="secondary"
-              className="text-[11px] font-medium px-2 py-0.5 max-w-full truncate"
-              style={{ backgroundColor: colors.fill, color: colors.dot }}
-            >
-              {event.kind}
-            </Badge>
-          </div>
+          <Badge
+            variant="secondary"
+            className="text-[11px] font-medium px-2 py-0.5 shrink-0"
+            style={{ backgroundColor: colors.fill, color: colors.dot }}
+          >
+            {event.kind}
+          </Badge>
           {timeLabel && (
-            <span className="w-20 shrink-0 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+            <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap shrink-0">
               <HoverSwap primary={timeLabel.primary} secondary={timeLabel.secondary} />
             </span>
           )}
@@ -55,7 +53,7 @@ const TimelineEventItem = ({
             <InlineEventProps {...inlineResult} />
           </div>
           {hasMore && (
-            <span className="ml-auto">
+            <span className="ml-auto shrink-0">
               {expanded ? (
                 <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
               ) : (
