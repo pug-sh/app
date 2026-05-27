@@ -4,30 +4,35 @@ import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { accentTextClass, toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
+export type KpiCompare = { series: TrendSeries[]; label: string } | { error: true; label: string }
+
 type KpiTileProps = {
   tile: DashboardTile
   currentSeries: TrendSeries[]
-  priorSeries: TrendSeries[] | undefined
-  comparisonLabel: string | undefined
+  compare?: KpiCompare
   formatValue: (value: number) => string
 }
 
 // Sum all points across all series. KPI tiles aren't designed for multi-series
 // queries, but if the underlying spec yields multiple series we collapse to a
-// single number rather than render nothing.
-const summarize = (series: TrendSeries[]): number =>
-  series.reduce((seriesAcc, s) => seriesAcc + s.points.reduce((pointAcc, p) => pointAcc + p.value, 0), 0)
+// single number rather than render nothing. Returns NaN when there are no
+// series at all so the renderer can distinguish "no data" from a true zero.
+const summarize = (series: TrendSeries[]): number => {
+  if (series.length === 0) return Number.NaN
+  return series.reduce((seriesAcc, s) => seriesAcc + s.points.reduce((pointAcc, p) => pointAcc + p.value, 0), 0)
+}
 
 const formatDelta = (current: number, prior: number): string | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
+  if (!Number.isFinite(current)) return null
   const pct = ((current - prior) / Math.abs(prior)) * 100
   const sign = pct >= 0 ? '+' : ''
   return `${sign}${pct.toFixed(1)}%`
 }
 
-export const KpiTile = ({ tile, currentSeries, priorSeries, comparisonLabel, formatValue }: KpiTileProps) => {
+export const KpiTile = ({ tile, currentSeries, compare, formatValue }: KpiTileProps) => {
   const current = useMemo(() => summarize(currentSeries), [currentSeries])
-  const prior = useMemo(() => (priorSeries ? summarize(priorSeries) : undefined), [priorSeries])
+  const prior = useMemo(() => (compare && 'series' in compare ? summarize(compare.series) : undefined), [compare])
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
 
   const numberColor = tone === null ? accentTextClass(tile.header?.accentColor ?? '') : toneTextClass(tone)
@@ -40,9 +45,11 @@ export const KpiTile = ({ tile, currentSeries, priorSeries, comparisonLabel, for
   return (
     <div className="flex h-full min-h-0 flex-col justify-center gap-1.5">
       <div className={`text-3xl font-semibold tracking-tight tabular-nums ${numberColor}`}>{formatValue(current)}</div>
-      {delta !== null && comparisonLabel ? (
+      {compare && 'error' in compare ? (
+        <div className="text-muted-foreground text-xs">Compare unavailable · {compare.label}</div>
+      ) : delta !== null && compare && 'series' in compare ? (
         <div className={`text-xs ${deltaClass}`}>
-          {delta} {comparisonLabel}
+          {delta} {compare.label}
         </div>
       ) : null}
       {sparkPoints.length >= 2 ? <Sparkline points={sparkPoints} /> : null}

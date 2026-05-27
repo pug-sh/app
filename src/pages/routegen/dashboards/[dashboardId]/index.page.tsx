@@ -231,10 +231,8 @@ const DashboardDetail = () => {
     exitEditMode()
   }, [exitEditMode])
 
-  // Detect whether a previously-saved draft applies to the current server state.
-  // If viewSnapshot matches the current dashboard, the user just left edit mode
-  // mid-session and can resume safely. If viewSnapshot differs, the dashboard
-  // has changed externally — surface a conflict prompt.
+  // viewSnapshot equal to current dashboard → safe resume; otherwise the
+  // dashboard changed externally and we surface a conflict prompt.
   const resumeBanner = useMemo<'none' | 'resume' | 'conflict'>(() => {
     if (mode !== 'view' || !dashboard || !storedDraft) return 'none'
     return equals(DashboardSchema, storedDraft.viewSnapshot, dashboard) ? 'resume' : 'conflict'
