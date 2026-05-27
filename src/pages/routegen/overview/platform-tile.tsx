@@ -8,6 +8,7 @@ import {
   BreakdownSchema,
   EventQuerySchema,
   type Granularity,
+  InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -37,14 +38,16 @@ const PlatformTile = ({ schema, primary, globalTimeRange, globalGranularity }: P
   if (!osKey) return null
 
   const query = create(QueryRequestSchema, {
-    insightType: InsightType.TRENDS,
-    events: [
-      create(EventQuerySchema, {
-        event: create(EventFilterSchema, { kind: primary }),
-        aggregation: AggregationType.TOTAL,
-      }),
-    ],
-    breakdowns: [create(BreakdownSchema, { property: osKey })],
+    spec: create(InsightQuerySpecSchema, {
+      insightType: InsightType.TRENDS,
+      events: [
+        create(EventQuerySchema, {
+          event: create(EventFilterSchema, { kind: primary }),
+          aggregation: AggregationType.TOTAL,
+        }),
+      ],
+      breakdowns: [create(BreakdownSchema, { property: osKey })],
+    }),
   })
 
   return (

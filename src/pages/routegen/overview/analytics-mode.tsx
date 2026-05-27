@@ -7,6 +7,7 @@ import {
   AggregationType,
   EventQuerySchema,
   type Granularity,
+  InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -28,22 +29,26 @@ type Props = {
 
 const buildTrendsQuery = (kind: string, aggregation: AggregationType) =>
   create(QueryRequestSchema, {
-    insightType: InsightType.TRENDS,
-    events: [
-      create(EventQuerySchema, {
-        event: create(EventFilterSchema, { kind }),
-        aggregation,
-      }),
-    ],
+    spec: create(InsightQuerySpecSchema, {
+      insightType: InsightType.TRENDS,
+      events: [
+        create(EventQuerySchema, {
+          event: create(EventFilterSchema, { kind }),
+          aggregation,
+        }),
+      ],
+    }),
   })
 
 const buildRetentionQuery = (kind: string) =>
   create(QueryRequestSchema, {
-    insightType: InsightType.RETENTION,
-    events: [
-      create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
-      create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
-    ],
+    spec: create(InsightQuerySpecSchema, {
+      insightType: InsightType.RETENTION,
+      events: [
+        create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
+        create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
+      ],
+    }),
   })
 
 const SectionDivider = ({ title, count }: { title: string; count?: string }) => (

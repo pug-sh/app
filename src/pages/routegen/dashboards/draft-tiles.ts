@@ -7,8 +7,7 @@ import {
   MarkdownTileContentSchema,
   type ResponsiveGridLayout,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET } from '@/lib/date-presets'
+import type { InsightQuerySpec } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { buildCreatedTileLayouts } from './grid'
 
 const newDraftTileId = () => `draft-${crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
@@ -17,14 +16,14 @@ export const createDraftInsightTile = ({
   tiles,
   displayName,
   description,
-  query,
+  spec,
   id,
   layouts,
 }: {
   tiles: DashboardTile[]
   displayName: string
   description: string
-  query: QueryRequest
+  spec: InsightQuerySpec
   id?: string
   layouts?: ResponsiveGridLayout[]
 }) =>
@@ -35,11 +34,10 @@ export const createDraftInsightTile = ({
     description,
     content: {
       case: 'insight',
-      value: create(InsightTileContentSchema, { query }),
+      value: create(InsightTileContentSchema, { spec }),
     },
     layouts: layouts ?? buildCreatedTileLayouts(tiles, 'insight'),
     viewMode: DashboardTileViewMode.LINE,
-    defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
   })
 
 export const createDraftMarkdownTile = ({
@@ -68,5 +66,4 @@ export const createDraftMarkdownTile = ({
     },
     layouts: layouts ?? buildCreatedTileLayouts(tiles, 'markdown'),
     viewMode: DashboardTileViewMode.UNSPECIFIED,
-    defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
   })

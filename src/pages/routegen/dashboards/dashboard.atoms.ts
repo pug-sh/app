@@ -9,7 +9,7 @@ import type {
 import {
   DashboardsServiceDeleteRequestSchema,
   DashboardsServiceDeleteTileRequestSchema,
-  DashboardsServiceUpdateDisplayNameRequestSchema,
+  DashboardsServiceUpdateRequestSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { dashboardsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -85,7 +85,7 @@ export const updateDashboardAtom = atom(
     if (!headers) return null
 
     const dashboardsRPC = get(dashboardsRPCAtom)
-    const resp = await dashboardsRPC.updateDisplayName(create(DashboardsServiceUpdateDisplayNameRequestSchema, input), {
+    const resp = await dashboardsRPC.update(create(DashboardsServiceUpdateRequestSchema, input), {
       headers,
     })
     await set(fetchDashboardsAtom)

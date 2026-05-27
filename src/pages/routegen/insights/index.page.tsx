@@ -178,26 +178,30 @@ const Insights = () => {
       const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
       const resp = await insightsRPC.query(
         {
-          insightType,
           granularity,
           timeRange: toProtoTimeRange(timeRange),
-          events: validEntries.map(entry => ({
-            event: {
-              kind: entry.kind,
-              filters: toProtoFilters(entry.filters),
-            },
-            aggregation:
-              insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
-            aggregationProperty: getAggregationProperty({
-              insightType,
-              aggregation: entry.aggregation,
-              aggregationProperty: entry.aggregationProperty,
-            }),
-          })),
-          filterGroups,
-          filterGroupsOperator: LogicalOperator.AND,
-          breakdowns: breakdowns.map(property => ({ property })),
-          breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
+          spec: {
+            insightType,
+            events: validEntries.map(entry => ({
+              event: {
+                kind: entry.kind,
+                filters: toProtoFilters(entry.filters),
+              },
+              aggregation:
+                insightType === InsightType.TRENDS
+                  ? (entry.aggregation ?? AggregationType.TOTAL)
+                  : AggregationType.TOTAL,
+              aggregationProperty: getAggregationProperty({
+                insightType,
+                aggregation: entry.aggregation,
+                aggregationProperty: entry.aggregationProperty,
+              }),
+            })),
+            filterGroups,
+            filterGroupsOperator: LogicalOperator.AND,
+            breakdowns: breakdowns.map(property => ({ property })),
+            breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
+          },
         },
         { headers },
       )

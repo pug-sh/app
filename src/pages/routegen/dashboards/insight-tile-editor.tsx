@@ -19,7 +19,7 @@ import { GRANULARITIES, INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/
 import { InsightsRowAggregationControls, OptionChip } from '../insights/controls'
 import { InlineEditableText } from './editor-shared'
 import { DashboardInsightPreview } from './insight-tile-content'
-import { buildInsightQuery, getInsightEditorDefaults } from './query'
+import { buildInsightQuery, buildInsightSpec, getInsightEditorDefaults } from './query'
 import { DASHBOARD_TILE_VIEW_MODES, getInitialDashboardTileViewMode } from './tile-settings'
 import type { InsightTileInput } from './types'
 
@@ -156,12 +156,9 @@ export const InsightTileEditor = ({
     await onSubmit({
       displayName: parsed.data.displayName || 'Untitled chart',
       description: parsed.data.description ?? '',
-      defaultTimeRange,
       viewMode,
-      query: buildInsightQuery({
+      spec: buildInsightSpec({
         insightType,
-        granularity: queryGranularity,
-        timeRange: queryTimeRange,
         validEntries,
         propFilters,
         breakdowns,

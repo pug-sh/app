@@ -5,6 +5,7 @@ import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/da
 import {
   EventQuerySchema,
   type Granularity,
+  InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -23,8 +24,10 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
   if (steps.length < 2) return null
 
   const query = create(QueryRequestSchema, {
-    insightType: InsightType.FUNNEL,
-    events: steps.map(kind => create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) })),
+    spec: create(InsightQuerySpecSchema, {
+      insightType: InsightType.FUNNEL,
+      events: steps.map(kind => create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) })),
+    }),
   })
 
   return (

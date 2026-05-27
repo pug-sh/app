@@ -1,12 +1,12 @@
+import { create } from '@bufbuild/protobuf'
 import { Edit3, MoreHorizontal, Trash2, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { getDashboardTimeRangePresetLabel } from '@/lib/date-presets'
 import { DashboardInsightContent } from './insight-tile-content'
 
 const escapeMarkdownHTML = (value: string) =>
@@ -72,14 +72,14 @@ const DashboardInsightTile = ({
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => {
-  const query = tile.content.case === 'insight' ? tile.content.value.query : undefined
-  const timeRangeLabel = globalTimeRange ? undefined : getDashboardTimeRangePresetLabel(tile.defaultTimeRange)
+  const spec = tile.content.case === 'insight' ? tile.content.value.spec : undefined
+  const query = spec ? create(QueryRequestSchema, { spec }) : undefined
 
   return (
-    <TileShell tile={tile} timeRangeLabel={timeRangeLabel}>
+    <TileShell tile={tile} timeRangeLabel={undefined}>
       <DashboardInsightContent
         query={query}
-        defaultTimeRange={tile.defaultTimeRange}
+        defaultTimeRange={undefined}
         timeRangeOverride={globalTimeRange}
         granularityOverride={globalGranularity}
         viewMode={tile.viewMode}
