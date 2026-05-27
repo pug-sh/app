@@ -38,6 +38,16 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // count surface (not a security-sensitive equality check).
 const tilesEqual = (a: DashboardTile, b: DashboardTile): boolean => JSON.stringify(a) === JSON.stringify(b)
 
+const formatRelative = (ts: number): string => {
+  const elapsed = Date.now() - ts
+  const minutes = Math.round(elapsed / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.round(hours / 24)}d ago`
+}
+
 const countChanges = (a: Dashboard, b: Dashboard): number => {
   let count = 0
   if (a.displayName !== b.displayName) count++
@@ -214,6 +224,21 @@ const DashboardDetail = () => {
     exitEditMode()
   }, [exitEditMode])
 
+  // Detect whether a previously-saved draft applies to the current server state.
+  // If viewSnapshot matches the current dashboard, the user just left edit mode
+  // mid-session and can resume safely. If viewSnapshot differs, the dashboard
+  // has changed externally — surface a conflict prompt.
+  const resumeBanner = useMemo<'none' | 'resume' | 'conflict'>(() => {
+    if (mode !== 'view' || !dashboard || !storedDraft) return 'none'
+    return JSON.stringify(storedDraft.viewSnapshot) === JSON.stringify(dashboard) ? 'resume' : 'conflict'
+  }, [dashboard, mode, storedDraft])
+
+  const resumeEditing = useCallback(() => {
+    if (!storedDraft) return
+    setMode('edit')
+    setSelectedTileId(storedDraft.draft.tiles[0]?.id ?? null)
+  }, [storedDraft])
+
   const requestDeleteDashboard = useCallback(() => {
     if (!dashboard) return
     setDeleteTarget({
@@ -385,6 +410,25 @@ const DashboardDetail = () => {
   return (
     <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
       <div ref={pageRef} className="space-y-6">
+        {resumeBanner !== 'none' && storedDraft ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
+            <div className="min-w-0">
+              <span className="font-medium text-amber-900">
+                {resumeBanner === 'resume' ? 'Resume editing' : 'Dashboard changed since you started'}
+              </span>
+              <span className="ml-2 text-amber-700">started {formatRelative(storedDraft.startedAt)}</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={handleDiscard}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={resumeEditing}>
+                {resumeBanner === 'resume' ? 'Resume' : 'Resume anyway'}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {deleteTarget ? (
           <DashboardDeleteConfirmation
             target={deleteTarget}
