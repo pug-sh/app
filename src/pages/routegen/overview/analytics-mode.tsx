@@ -15,6 +15,7 @@ import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import FunnelTile from './funnel-tile'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
+import PlatformTile from './platform-tile'
 
 type Props = {
   globalTimeRange: TimeRange | undefined
@@ -140,7 +141,12 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <SectionDivider title="Conversion" />
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
-          <div className="text-sm text-muted-foreground">Platform breakdown (Task 11).</div>
+          <PlatformTile
+            schema={schema}
+            primary={bindings.primary}
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+          />
         </div>
       </section>
 
