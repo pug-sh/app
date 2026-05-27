@@ -7,7 +7,7 @@ import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structToEntries } from '@/lib/struct'
@@ -58,6 +58,7 @@ const ProfileOverview = () => {
 const OverviewBody = ({ profileId }: { profileId: string }) => {
   const profile = useAtomValue(profileFamilyAtom(profileId))
   const stats = useAtomValue(profileStatsFamilyAtom(profileId))
+  const project = useAtomValue(activeProjectAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const [recent, setRecent] = useState<ActivityEvent[]>([])
@@ -123,7 +124,15 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
         {loadingRecent ? (
           <LoadingSpinner />
         ) : recent.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No events yet for this profile.</p>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">No events yet for this profile.</p>
+            {project && (
+              <p className="text-[11px] text-muted-foreground/70">
+                Project <span className="font-mono">{project.id}</span>
+                {project.displayName && <> · {project.displayName}</>}
+              </p>
+            )}
+          </div>
         ) : (
           <ul className="divide-y divide-border/50">
             {recent.map(e => {
