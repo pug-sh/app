@@ -63,7 +63,8 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
               : prevCount > 0
                 ? Number(((stepCount / prevCount) * 100).toFixed(2))
                 : 0
-          row[dropOffKey(si)] = prevMissing ? NaN : prevCount - stepCount
+          // Drop-off is undefined for step 0 (no previous) and for misaligned series; NaN sentinel hides the row.
+          row[dropOffKey(si)] = stepIdx === 0 || prevMissing ? NaN : prevCount - stepCount
         })
         return row
       }),
@@ -129,12 +130,12 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
                                   {Number.isFinite(fromPrev) ? `${fromPrev.toFixed(1)}%` : '—'}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="text-muted-foreground">Drop-off</span>
-                                <span className="font-mono tabular-nums">
-                                  {Number.isFinite(dropOff) ? compactNumber(dropOff) : '—'}
-                                </span>
-                              </div>
+                              {Number.isFinite(dropOff) && (
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className="text-muted-foreground">Drop-off</span>
+                                  <span className="font-mono tabular-nums">{compactNumber(dropOff)}</span>
+                                </div>
+                              )}
                             </>
                           )}
                         </div>
