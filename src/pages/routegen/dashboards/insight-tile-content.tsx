@@ -81,7 +81,7 @@ export const DashboardInsightContent = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.events.length ?? 0) > 0, debounceMs: 0 },
+    { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
   )
 
   const result = data ?? { case: undefined, value: undefined }
@@ -90,8 +90,8 @@ export const DashboardInsightContent = ({
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
   const chartData = useMemo(() => buildChartData(trendSeries), [trendSeries])
   const kindOrder = useMemo(
-    () => (effectiveQuery?.events ?? []).map(entry => entry.event?.kind ?? ''),
-    [effectiveQuery?.events],
+    () => (effectiveQuery?.spec?.events ?? []).map(entry => entry.event?.kind ?? ''),
+    [effectiveQuery?.spec?.events],
   )
   const funnelSeriesData = useMemo(() => {
     const labels = disambiguateLabels(
@@ -111,8 +111,8 @@ export const DashboardInsightContent = ({
     [retentionSeriesList],
   )
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? [], [retentionSeriesList])
-  const isTrends = effectiveQuery?.insightType === InsightType.TRENDS
-  const isRetention = effectiveQuery?.insightType === InsightType.RETENTION
+  const isTrends = effectiveQuery?.spec?.insightType === InsightType.TRENDS
+  const isRetention = effectiveQuery?.spec?.insightType === InsightType.RETENTION
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
@@ -126,17 +126,17 @@ export const DashboardInsightContent = ({
   }, [result.case, retentionCohorts, trendSeries])
   const seriesColors = useMemo(() => seriesNames.map((name, index) => getSeriesColor(name, index)), [seriesNames])
   const seriesAggregations = useMemo(
-    () => (effectiveQuery?.events ?? []).map(entry => entry.aggregation ?? AggregationType.TOTAL),
-    [effectiveQuery?.events],
+    () => (effectiveQuery?.spec?.events ?? []).map(entry => entry.aggregation ?? AggregationType.TOTAL),
+    [effectiveQuery?.spec?.events],
   )
   const hasIncompleteNumericAggregation = useMemo(
     () =>
-      (effectiveQuery?.events ?? []).some(
+      (effectiveQuery?.spec?.events ?? []).some(
         entry =>
           NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
           !(entry.aggregationProperty ?? '').trim(),
       ),
-    [effectiveQuery?.events],
+    [effectiveQuery?.spec?.events],
   )
 
   return (
@@ -160,8 +160,8 @@ export const DashboardInsightContent = ({
         seriesAggregations={seriesAggregations}
         viewMode={effectiveViewMode}
         granularity={effectiveQuery?.granularity ?? effectiveGranularity}
-        breakdowns={(effectiveQuery?.breakdowns ?? []).map(item => item.property)}
-        breakdownResponseLimit={effectiveQuery?.breakdownLimit ?? BREAKDOWN_RESPONSE_LIMIT}
+        breakdowns={(effectiveQuery?.spec?.breakdowns ?? []).map(item => item.property)}
+        breakdownResponseLimit={effectiveQuery?.spec?.breakdownLimit ?? BREAKDOWN_RESPONSE_LIMIT}
         retentionSeriesList={retentionSeriesList}
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}

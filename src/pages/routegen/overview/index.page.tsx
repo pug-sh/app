@@ -1,149 +1,109 @@
-import { useAtomValue } from 'jotai'
-import { Bell, Check, Clock, Copy, Eye, EyeOff, Megaphone, MousePointerClick, Send } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'wouter'
-import type { Campaign } from '@/api/genproto/shared/campaigns/v1/campaigns_pb'
-import { campaignsRPCAtom } from '@/api/rpc'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { Clock, LayoutDashboard } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
-import SectionHeader from '@/components/section-header'
+import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
+import { activeProjectAtom } from '@/data/workspace.atoms'
+import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { GRANULARITIES } from '../insights/constants'
+import { OptionChip } from '../insights/controls'
+import AnalyticsMode from './analytics-mode'
+import {
+  fetchOverviewSchemaAtom,
+  overviewSchemaAtom,
+  overviewSchemaErrorAtom,
+  overviewSchemaLoadingAtom,
+} from './overview.atoms'
+import SetupMode from './setup-mode'
 
-const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
-  const { copied, copy } = useCopyToClipboard()
-  const [revealed, setRevealed] = useState(!masked)
+const DAY_MS = 24 * 60 * 60 * 1000
 
-  const display = revealed ? value : value.slice(0, 8) + '••••••••••••'
+const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
 
-  return (
-    <tr className="border-b border-border/50">
-      <td className="py-2.5 pr-4 text-xs text-muted-foreground whitespace-nowrap align-middle">{label}</td>
-      <td className="py-2.5 pr-2 align-middle">
-        <code className="text-xs font-mono break-all">{display}</code>
-      </td>
-      <td className="py-2.5 whitespace-nowrap align-middle">
-        <span className="inline-flex gap-0.5">
-          {masked && (
-            <Button variant="ghost" size="icon-xs" onClick={() => setRevealed(!revealed)}>
-              {revealed ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            </Button>
-          )}
-          <Button variant="ghost" size="icon-xs" onClick={() => copy(value)}>
-            {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
-          </Button>
-        </span>
-      </td>
-    </tr>
-  )
+const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
+  if (!range) return Granularity.UNSPECIFIED
+  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
+  if (durationMs <= DAY_MS) return Granularity.HOUR
+  if (durationMs <= 90 * DAY_MS) return Granularity.DAY
+  if (durationMs <= 365 * DAY_MS) return Granularity.WEEK
+  return Granularity.MONTH
 }
 
 const Overview = () => {
   const project = useAtomValue(activeProjectAtom)
-  const headers = useAtomValue(projectHeaderAtom)
-  const campaignsRPC = useAtomValue(campaignsRPCAtom)
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const schema = useAtomValue(overviewSchemaAtom)
+  const loading = useAtomValue(overviewSchemaLoadingAtom)
+  const error = useAtomValue(overviewSchemaErrorAtom)
+  const fetchSchema = useSetAtom(fetchOverviewSchemaAtom)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const resp = await campaignsRPC.batchGet({}, { headers })
-      setCampaigns(resp.campaigns)
-    } catch (err) {
-      console.error('fetchOverview failed:', err)
-      setError('Failed to load overview')
-    } finally {
-      setLoading(false)
-    }
-  }, [headers, campaignsRPC])
+  const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialOverrides.timeRange)
+  // Stores only the user's explicit pick. UNSPECIFIED means "auto-derive from time range"
+  // and the derivation happens at the consumption point below, so it stays in sync as the
+  // user changes the time-range picker.
+  const [globalGranularity, setGlobalGranularity] = useState<Granularity>(
+    () => initialOverrides.granularity ?? Granularity.UNSPECIFIED,
+  )
 
   useEffect(() => {
-    if (project) fetchData()
-  }, [project, fetchData])
+    if (project) fetchSchema()
+  }, [fetchSchema, project])
 
-  if (!project) return <NoProject title="Overview" icon={Bell} />
+  useEffect(() => {
+    writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
+  }, [globalGranularity, globalTimeRange])
 
-  const scheduled = campaigns.filter(c => c.status === 'SCHEDULED').length
-  const completed = campaigns.filter(c => c.status === 'COMPLETED').length
-  const inProgress = campaigns.filter(c => c.status === 'IN_PROGRESS').length
+  if (!project) return <NoProject title="Overview" icon={LayoutDashboard} />
 
-  const stats = [
-    { label: 'Total campaigns', value: campaigns.length, icon: Bell },
-    { label: 'Scheduled', value: scheduled, icon: Clock },
-    { label: 'In progress', value: inProgress, icon: Send },
-    { label: 'Completed', value: completed, icon: MousePointerClick },
-  ]
+  const hasEvents = (schema?.events.length ?? 0) > 0
+  const effectiveGranularity =
+    globalGranularity === Granularity.UNSPECIFIED ? getAutoGlobalGranularity(globalTimeRange) : globalGranularity
+  const tileGranularityOverride = effectiveGranularity === Granularity.UNSPECIFIED ? undefined : effectiveGranularity
+
+  const pageActions = hasEvents ? (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <DateRangePicker
+        value={globalTimeRange}
+        onChange={setGlobalTimeRange}
+        presets={INSIGHTS_PRESETS}
+        allowUnset
+        unsetLabel="Select time"
+      />
+      <OptionChip
+        label="granularity"
+        icon={Clock}
+        options={GLOBAL_GRANULARITIES}
+        value={globalGranularity}
+        onChange={setGlobalGranularity}
+      />
+      <ProjectLink href="/dashboards" className="ml-1 text-xs text-primary hover:underline underline-offset-4">
+        Build your own →
+      </ProjectLink>
+    </div>
+  ) : null
 
   return (
-    <Page title="Overview" description={`Project: ${project.displayName}`}>
-      {loading ? (
+    <Page title="Overview" description="A starter view auto-built from your events" actions={pageActions}>
+      {loading && !schema ? (
         <LoadingSpinner />
       ) : error ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Bell className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchData()}>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <LayoutDashboard className="mb-4 size-10 opacity-15" />
+          <p className="mb-1 text-sm font-medium">{error}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchSchema()}>
             Retry
           </Button>
         </div>
+      ) : hasEvents ? (
+        <AnalyticsMode globalTimeRange={globalTimeRange} globalGranularity={tileGranularityOverride} />
       ) : (
-        <div className="space-y-8">
-          {/* Stats */}
-          <section>
-            <SectionHeader title="Campaigns" count={`${campaigns.length} total`} />
-            {campaigns.length === 0 ? (
-              <div className="py-8 flex flex-col items-center text-center">
-                <Megaphone className="w-8 h-8 mb-3 opacity-15" />
-                <p className="text-sm text-muted-foreground">No campaigns yet</p>
-                <Link
-                  href={`/p/${project.id}/campaigns`}
-                  className="text-sm text-primary hover:underline underline-offset-4 mt-1"
-                >
-                  Create your first campaign
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
-                {stats.map(stat => (
-                  <div key={stat.label} className="flex items-center gap-3">
-                    <stat.icon className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div>
-                      <p className="text-2xl font-semibold tabular-nums">{stat.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* API Keys */}
-          <section>
-            <SectionHeader title="API Keys" />
-            <table className="w-full max-w-xl">
-              <tbody>
-                <CopyableCode label="Public Key" value={project.publicApiKey} />
-                <CopyableCode label="Private Key" value={project.privateApiKey} masked />
-              </tbody>
-            </table>
-          </section>
-
-          {/* Quick Start */}
-          <section>
-            <SectionHeader title="Quick Start" />
-            <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-              <li>Add your FCM service account JSON in Settings</li>
-              <li>Integrate the Pug SDK in your app</li>
-              <li>Register devices using the public API key</li>
-              <li>Create and schedule your first campaign</li>
-            </ol>
-          </section>
-        </div>
+        <SetupMode project={project} />
       )}
     </Page>
   )

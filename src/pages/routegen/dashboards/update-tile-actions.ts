@@ -41,11 +41,10 @@ export const updateInsightTile = async ({
         description: input.description,
         content: {
           case: 'insight',
-          value: create(InsightTileContentSchema, { query: input.query }),
+          value: create(InsightTileContentSchema, { spec: input.spec }),
         },
         layouts: editor.tile.layouts,
         viewMode: input.viewMode,
-        defaultTimeRange: input.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -88,7 +87,6 @@ export const updateMarkdownTile = async ({
         },
         layouts: editor.tile.layouts,
         viewMode: editor.tile.viewMode,
-        defaultTimeRange: editor.tile.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -140,7 +138,6 @@ export const persistTileLayouts = async ({
           content: tile.content,
           layouts: tile.layouts,
           viewMode: tile.viewMode,
-          defaultTimeRange: tile.defaultTimeRange,
         }),
       )
       if (nextTile) {
@@ -154,7 +151,6 @@ export const persistTileLayouts = async ({
                         ...existingTile,
                         layouts: nextTile.layouts,
                         viewMode: nextTile.viewMode,
-                        defaultTimeRange: nextTile.defaultTimeRange,
                         updateTime: nextTile.updateTime,
                       }
                     : existingTile,

@@ -8,7 +8,6 @@ import {
   InsightTileContentSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET } from '@/lib/date-presets'
 import { toastRPCError } from '@/lib/rpc-error'
 import { appendDashboardTile } from './dashboard.atoms'
 import { buildCreatedTileLayouts } from './grid'
@@ -40,11 +39,10 @@ export const createInsightTile = async ({
         description: input.description,
         content: {
           case: 'insight',
-          value: create(InsightTileContentSchema, { query: input.query }),
+          value: create(InsightTileContentSchema, { spec: input.spec }),
         },
         layouts: buildCreatedTileLayouts(dashboard.tiles, 'insight'),
         viewMode: input.viewMode,
-        defaultTimeRange: input.defaultTimeRange,
       }),
     )
     if (tile) {
@@ -89,7 +87,6 @@ export const createMarkdownTile = async ({
         },
         layouts: buildCreatedTileLayouts(dashboard.tiles, 'markdown'),
         viewMode: DashboardTileViewMode.UNSPECIFIED,
-        defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
       }),
     )
     if (tile) {

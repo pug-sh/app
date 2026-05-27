@@ -1,25 +1,31 @@
+import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { BarChart3, CalendarDays, Check, CircleHelp, Clock, Loader2, X } from 'lucide-react'
+import { BarChart3, Check, CircleHelp, Loader2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { AggregationType, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  Granularity,
+  InsightType,
+  QueryRequestSchema,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { DASHBOARD_TIME_RANGE_PRESETS, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
-import { GRANULARITIES, INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { INSIGHT_TYPES, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsRowAggregationControls, OptionChip } from '../insights/controls'
 import { InlineEditableText } from './editor-shared'
 import { DashboardInsightPreview } from './insight-tile-content'
-import { buildInsightQuery, getInsightEditorDefaults } from './query'
+import { buildInsightSpec, getInsightEditorDefaults } from './query'
 import { DASHBOARD_TILE_VIEW_MODES, getInitialDashboardTileViewMode } from './tile-settings'
 import type { InsightTileInput } from './types'
 
@@ -42,9 +48,7 @@ export const InsightTileEditor = ({
   const defaults = useMemo(() => getInsightEditorDefaults(tile), [tile])
   const [displayName, setDisplayName] = useState(defaults.displayName)
   const [description, setDescription] = useState(defaults.description)
-  const [defaultTimeRange, setDefaultTimeRange] = useState(defaults.defaultTimeRange)
   const [insightType, setInsightType] = useState(defaults.insightType)
-  const [granularity, setGranularity] = useState(defaults.granularity)
   const [viewMode, setViewMode] = useState(() => getInitialDashboardTileViewMode(tile?.viewMode))
   const eventFilters = useEventFilters(defaults.eventEntries)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(defaults.propFilters)
@@ -66,11 +70,6 @@ export const InsightTileEditor = ({
   const validEntries = eventFilters.validEntries
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
-  const queryTimeRange = useMemo(
-    () => resolveDashboardTimeRangePreset(defaultTimeRange, defaults.timeRange),
-    [defaultTimeRange, defaults.timeRange],
-  )
-  const queryGranularity = granularity
 
   useEffect(() => {
     if (insightType !== InsightType.RETENTION) return
@@ -90,25 +89,15 @@ export const InsightTileEditor = ({
     [insightType, validEntries],
   )
 
+  // Preview uses fixed defaults — per-tile time range and granularity are no
+  // longer stored on the proto; the dashboard's defaults govern at view time.
   const previewQuery = useMemo(() => {
     if (validEntries.length === 0 || hasIncompleteNumericAggregation) return undefined
-    return buildInsightQuery({
-      insightType,
-      granularity: queryGranularity,
-      timeRange: queryTimeRange,
-      validEntries,
-      propFilters,
-      breakdowns,
+    return create(QueryRequestSchema, {
+      spec: buildInsightSpec({ insightType, validEntries, propFilters, breakdowns }),
+      granularity: Granularity.DAY,
     })
-  }, [
-    breakdowns,
-    hasIncompleteNumericAggregation,
-    insightType,
-    propFilters,
-    queryGranularity,
-    queryTimeRange,
-    validEntries,
-  ])
+  }, [breakdowns, hasIncompleteNumericAggregation, insightType, propFilters, validEntries])
 
   const renderRowExtra = useMemo(() => {
     if (!isTrends) return undefined
@@ -156,12 +145,9 @@ export const InsightTileEditor = ({
     await onSubmit({
       displayName: parsed.data.displayName || 'Untitled chart',
       description: parsed.data.description ?? '',
-      defaultTimeRange,
       viewMode,
-      query: buildInsightQuery({
+      spec: buildInsightSpec({
         insightType,
-        granularity: queryGranularity,
-        timeRange: queryTimeRange,
         validEntries,
         propFilters,
         breakdowns,
@@ -206,21 +192,6 @@ export const InsightTileEditor = ({
 
       <div className="flex flex-wrap items-center gap-2">
         <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
-        <OptionChip
-          label="time"
-          icon={CalendarDays}
-          options={DASHBOARD_TIME_RANGE_PRESETS}
-          value={defaultTimeRange}
-          onChange={setDefaultTimeRange}
-          stableWidth
-        />
-        <OptionChip
-          label="granularity"
-          icon={Clock}
-          options={GRANULARITIES}
-          value={granularity}
-          onChange={setGranularity}
-        />
         {isTrends ? (
           <OptionChip
             label="view"
@@ -286,7 +257,11 @@ export const InsightTileEditor = ({
       </div>
 
       {previewQuery ? (
-        <DashboardInsightPreview query={previewQuery} defaultTimeRange={defaultTimeRange} viewMode={viewMode} />
+        <DashboardInsightPreview
+          query={previewQuery}
+          defaultTimeRange={DEFAULT_DASHBOARD_TIME_RANGE_PRESET}
+          viewMode={viewMode}
+        />
       ) : null}
     </div>
   )
