@@ -6,6 +6,7 @@ import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
@@ -81,11 +82,14 @@ const Overview = () => {
         value={globalGranularity}
         onChange={setGlobalGranularity}
       />
+      <ProjectLink href="/dashboards" className="ml-1 text-xs text-primary hover:underline underline-offset-4">
+        Build your own →
+      </ProjectLink>
     </div>
   ) : null
 
   return (
-    <Page title="Overview" description={`Project: ${project.displayName}`} actions={pageActions}>
+    <Page title="Overview" description="A starter view auto-built from your events" actions={pageActions}>
       {loading && !schema ? (
         <LoadingSpinner />
       ) : error ? (

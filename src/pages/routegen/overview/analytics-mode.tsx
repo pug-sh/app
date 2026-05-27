@@ -10,6 +10,7 @@ import {
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import CampaignsBlock from './campaigns-block'
@@ -166,6 +167,15 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
         <TopEventsBlock events={schema.events} />
       </section>
+
+      <div className="border-t border-border/60 pt-6 text-center">
+        <p className="text-xs text-muted-foreground">
+          Want a view tailored to your team?{' '}
+          <ProjectLink href="/dashboards" className="text-primary hover:underline underline-offset-4">
+            Build your own →
+          </ProjectLink>
+        </p>
+      </div>
     </div>
   )
 }
