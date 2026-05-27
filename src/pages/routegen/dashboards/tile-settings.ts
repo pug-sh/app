@@ -4,6 +4,7 @@ import type { ViewMode } from '../insights/constants'
 export const DEFAULT_DASHBOARD_TILE_VIEW_MODE = DashboardTileViewMode.LINE
 
 export const DASHBOARD_TILE_VIEW_MODES = [
+  { label: 'KPI', value: DashboardTileViewMode.KPI },
   { label: 'Line', value: DashboardTileViewMode.LINE },
   { label: 'Area', value: DashboardTileViewMode.AREA },
   { label: 'Bar (grouped)', value: DashboardTileViewMode.BAR_GROUPED },

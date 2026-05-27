@@ -5,7 +5,7 @@ import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import {
   type DashboardTile,
-  type DashboardTileViewMode,
+  DashboardTileViewMode,
   VisualizationOptions_YAxisFormat,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -26,6 +26,7 @@ import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
+import { KpiTile } from './kpi-tile'
 import { getInitialGranularity, getProtoRange } from './query'
 import { dashboardTileViewModeToViewMode } from './tile-settings'
 
@@ -172,6 +173,22 @@ export const DashboardInsightContent = ({
       ),
     [effectiveQuery?.spec?.events],
   )
+
+  // KPI tiles short-circuit the chart pipeline. Compare-vs-prior is wired in
+  // Task 13; for now we render the current value only.
+  if (tile && resolvedViewMode === DashboardTileViewMode.KPI) {
+    return (
+      <div className="h-full min-h-0 overflow-hidden">
+        <KpiTile
+          tile={tile}
+          currentSeries={trendSeries}
+          priorSeries={undefined}
+          comparisonLabel={undefined}
+          formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="h-full min-h-0 overflow-hidden">
