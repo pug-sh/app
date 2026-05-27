@@ -11,18 +11,17 @@ import type { TileType } from './types'
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
-const ResponsiveGridLayoutView = WidthProvider(Responsive)
+const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
+
+export type DashboardMode = 'view' | 'edit'
 
 const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'markdown' ? 'markdown' : 'insight')
 
 const getKindDefaultHeight = (_kind: TileType) => 8
-
 const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
-
 const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileType(tile))
-
 const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileType(tile))
 
 const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
@@ -148,35 +147,48 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayout
 
 export const DashboardGrid = ({
   tiles,
-  editable,
-  onEditTile,
-  onDeleteTile,
+  mode = 'view',
+  selectedTileId,
+  onDuplicateTile,
+  onSelectTile,
   onLayoutsChange,
   globalTimeRange,
   globalGranularity,
 }: {
   tiles: DashboardTile[]
-  editable?: boolean
-  onEditTile?: (tile: DashboardTile) => void
-  onDeleteTile?: (tile: DashboardTile) => void
+  mode?: DashboardMode
+  // The currently-selected tile id (drives a focus ring in edit mode).
+  selectedTileId?: string | null
+  onDuplicateTile?: (tile: DashboardTile) => void
+  onSelectTile?: (tileId: string) => void
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
+  const editable = mode === 'edit'
 
   // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
   // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
   // so loading a dashboard never triggers spurious updateTile writes.
   const persistLatestLayouts = () => {
+    if (!editable) return
     if (latestLayoutsRef.current) {
       onLayoutsChange?.(latestLayoutsRef.current)
     }
   }
 
+  const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
+    if (!editable || !onSelectTile) return
+    const target = event.target as HTMLElement | null
+    // Don't steal clicks on the resize handle, tile-menu controls, or text input.
+    if (target?.closest('.react-resizable-handle, button, a, input, textarea, [data-no-drag="true"]')) return
+    onSelectTile(tile.id)
+  }
+
   return (
-    <ResponsiveGridLayoutView
+    <ResponsiveGridLayoutWithWidth
       className="layout dashboard-grid"
       breakpoints={BREAKPOINTS}
       cols={COLS}
@@ -184,8 +196,8 @@ export const DashboardGrid = ({
       rowHeight={24}
       margin={[16, 16]}
       containerPadding={[0, 0]}
-      isDraggable={!!editable}
-      isResizable={!!editable}
+      isDraggable={editable}
+      isResizable={editable}
       draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
       onLayoutChange={(_layout, allLayouts) => {
         latestLayoutsRef.current = allLayouts
@@ -194,18 +206,25 @@ export const DashboardGrid = ({
       onResizeStop={persistLatestLayouts}
     >
       {tiles.map(tile => (
-        <div key={tile.id} className="group flex h-full min-h-0 cursor-grab flex-col active:cursor-grabbing">
+        <div
+          key={tile.id}
+          className={[
+            'group flex h-full min-h-0 flex-col',
+            editable ? 'cursor-grab active:cursor-grabbing' : '',
+            selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+          ].join(' ')}
+          onMouseDown={handleTileSelect(tile)}
+        >
           <div className="min-h-0 flex-1">
             <DashboardTileBody
               tile={tile}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
-              onEdit={editable ? onEditTile : undefined}
-              onDelete={editable ? onDeleteTile : undefined}
+              onDuplicate={editable ? onDuplicateTile : undefined}
             />
           </div>
         </div>
       ))}
-    </ResponsiveGridLayoutView>
+    </ResponsiveGridLayoutWithWidth>
   )
 }

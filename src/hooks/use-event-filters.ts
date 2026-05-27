@@ -1,4 +1,4 @@
-import { atom, useAtom } from 'jotai'
+import { atom, type PrimitiveAtom, useAtom } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
@@ -41,7 +41,16 @@ export const serializeEntry = (e: EventFilterEntry) => ({
   ...(e.aggregationProperty !== undefined && { aggregationProperty: e.aggregationProperty }),
 })
 
-export const useEventFilters = (defaultEntries: EventFilterEntry[] = []) => {
+export type EventFiltersController = {
+  readonly entries: EventFilterEntry[]
+  readonly validEntries: EventFilterEntry[]
+  readonly filtersAtom: PrimitiveAtom<EventFilterEntry[]>
+  readonly setAggregation: (id: EntryId, aggregation: AggregationType) => void
+  readonly setAggregationProperty: (id: EntryId, aggregationProperty: string) => void
+  readonly reset: (nextEntries?: EventFilterEntry[]) => void
+}
+
+export const useEventFilters = (defaultEntries: EventFilterEntry[] = []): EventFiltersController => {
   const [filtersAtom] = useState(() => atom<EventFilterEntry[]>(defaultEntries))
   const [entries, setEntries] = useAtom(filtersAtom)
 
