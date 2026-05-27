@@ -25,6 +25,7 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
+import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { KpiTile } from './kpi-tile'
 import { getInitialGranularity, getProtoRange } from './query'
@@ -119,7 +120,29 @@ export const DashboardInsightContent = ({
     { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
   )
 
+  // Comparison-period query: only fires when the tile has compare=PRIOR. Keyed
+  // independently in the cache so re-renders don't double-fetch.
+  const comparisonQuery = useMemo(
+    () => (tile ? buildComparisonQuery(effectiveQuery, effectiveTimeRange, tile.compare) : undefined),
+    [effectiveQuery, effectiveTimeRange, tile],
+  )
+  const comparisonQueryKey = stringifyQueryKey({
+    prefix: `${queryKeyPrefix}::compare`,
+    projectId,
+    query: comparisonQuery,
+  })
+  const { data: comparisonData } = useDebouncedQuery(
+    comparisonQueryKey,
+    async () => {
+      if (!comparisonQuery) throw new Error('Missing comparison query')
+      const resp = await insightsRPC.query(comparisonQuery, { headers })
+      return resp.result
+    },
+    { enabled: !!comparisonQuery && !!headers, debounceMs: 0 },
+  )
+
   const result = data ?? { case: undefined, value: undefined }
+  const comparisonResult = comparisonData ?? { case: undefined, value: undefined }
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
@@ -174,16 +197,18 @@ export const DashboardInsightContent = ({
     [effectiveQuery?.spec?.events],
   )
 
-  // KPI tiles short-circuit the chart pipeline. Compare-vs-prior is wired in
-  // Task 13; for now we render the current value only.
+  // KPI tiles short-circuit the chart pipeline. Compare-vs-prior issues a second
+  // query with a time range shifted back by the window's length; the delta is
+  // computed inside KpiTile.
   if (tile && resolvedViewMode === DashboardTileViewMode.KPI) {
+    const priorTrends = comparisonResult.case === 'trends' ? [...comparisonResult.value.series] : undefined
     return (
       <div className="h-full min-h-0 overflow-hidden">
         <KpiTile
           tile={tile}
           currentSeries={trendSeries}
-          priorSeries={undefined}
-          comparisonLabel={undefined}
+          priorSeries={priorTrends}
+          comparisonLabel={comparisonQuery ? formatComparePeriodLabel(effectiveTimeRange) : undefined}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
         />
       </div>
