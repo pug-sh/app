@@ -2,7 +2,6 @@ import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import { TimeRangePreset, TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
@@ -16,11 +15,10 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
 type Props = {
-  primary: string
   globalTimeRange: TimeRange | undefined
 }
 
-const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
+const EventFeedBlock = ({ globalTimeRange }: Props) => {
   const activityRPC = useAtomValue(activityRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const [events, setEvents] = useState<ActivityEvent[]>([])
@@ -35,7 +33,6 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
       const effectiveTimeRange = globalTimeRange ?? resolveDashboardTimeRangePreset(TimeRangePreset.LAST_30_DAYS)
       const resp = await activityRPC.getEventExplorer(
         {
-          events: [create(EventFilterSchema, { kind: primary })],
           timeRange: create(TimeRangeSchema, toProtoTimeRange(effectiveTimeRange)),
           pageToken: '',
         },
@@ -48,7 +45,7 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
     } finally {
       setLoading(false)
     }
-  }, [activityRPC, globalTimeRange, headers, primary])
+  }, [activityRPC, globalTimeRange, headers])
 
   useEffect(() => {
     load()
@@ -56,10 +53,7 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
 
   return (
     <div className="rounded-lg border border-border/60 bg-background p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Live event feed</h3>
-        <span className="font-mono text-[10px] text-muted-foreground">via {primary}</span>
-      </div>
+      <h3 className="mb-3 text-sm font-semibold">Live event feed</h3>
       {loading ? (
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
       ) : error ? (
