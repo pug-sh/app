@@ -79,7 +79,7 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
   if (series.length === 0 || stepNames.length === 0) return null
 
   return (
-    <div className="mt-4 rounded-lg border border-border/60 p-4">
+    <div className="mt-4 p-4">
       <ChartContainer config={chartConfig} className="h-64 w-full">
         <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap="20%" barGap={2}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />

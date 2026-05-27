@@ -58,7 +58,7 @@ export const RetentionCohort = ({
   }))
 
   return (
-    <div className="mt-4 border border-border rounded-lg overflow-auto max-h-full">
+    <div className="mt-4 overflow-auto max-h-full">
       <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">Retention by cohort</p>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
