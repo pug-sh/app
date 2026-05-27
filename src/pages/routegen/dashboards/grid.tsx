@@ -148,6 +148,7 @@ export const DashboardGrid = ({
   tiles,
   pageRef,
   mode = 'view',
+  selectedTileId,
   onEditTile,
   onDeleteTile,
   onSelectTile,
@@ -158,6 +159,8 @@ export const DashboardGrid = ({
   tiles: DashboardTile[]
   pageRef: RefObject<HTMLElement | null>
   mode?: DashboardMode
+  // The currently-selected tile id (drives a focus ring in edit mode).
+  selectedTileId?: string | null
   onEditTile?: (tile: DashboardTile) => void
   onDeleteTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
@@ -210,9 +213,11 @@ export const DashboardGrid = ({
       {tiles.map(tile => (
         <div
           key={tile.id}
-          className={['group flex h-full min-h-0 flex-col', editable ? 'cursor-grab active:cursor-grabbing' : ''].join(
-            ' ',
-          )}
+          className={[
+            'group flex h-full min-h-0 flex-col',
+            editable ? 'cursor-grab active:cursor-grabbing' : '',
+            selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+          ].join(' ')}
           onMouseDown={handleTileSelect(tile)}
         >
           <div className="min-h-0 flex-1">

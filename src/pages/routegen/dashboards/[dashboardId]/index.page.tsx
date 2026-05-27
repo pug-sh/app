@@ -1,8 +1,8 @@
-import { useAtomValue, useSetAtom } from 'jotai'
-import { Clock, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
-import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Dashboard, DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
@@ -18,11 +18,14 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
-import { deleteDashboardAtom, fetchDashboardAtom, updateDashboardAtom } from '../dashboard.atoms'
+import { deleteDashboardAtom, fetchDashboardAtom, updateDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
+import { cloneForDraft } from '../draft-state'
+import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { InlineEditableText } from '../editor-shared'
 import { DashboardGrid } from '../grid'
 import { DashboardEmptyState } from '../tiles'
+import { buildUpsertRequest } from '../upsert-dashboard'
 
 const GLOBAL_DASHBOARD_GRANULARITIES = [
   { label: 'Select granularity', value: Granularity.UNSPECIFIED },
@@ -30,6 +33,29 @@ const GLOBAL_DASHBOARD_GRANULARITIES = [
 ] as const
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+// Loose tile equality: proto JSON serialization is stable enough for a dirty
+// count surface (not a security-sensitive equality check).
+const tilesEqual = (a: DashboardTile, b: DashboardTile): boolean => JSON.stringify(a) === JSON.stringify(b)
+
+const countChanges = (a: Dashboard, b: Dashboard): number => {
+  let count = 0
+  if (a.displayName !== b.displayName) count++
+  if (a.description !== b.description) count++
+
+  const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
+  const bById = new Map(b.tiles.map(tile => [tile.id, tile]))
+  for (const id of new Set([...aById.keys(), ...bById.keys()])) {
+    const left = aById.get(id)
+    const right = bById.get(id)
+    if (!left || !right) {
+      count++
+      continue
+    }
+    if (!tilesEqual(left, right)) count++
+  }
+  return count
+}
 
 const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
   if (!range) return Granularity.UNSPECIFIED
@@ -47,9 +73,17 @@ const DashboardDetail = () => {
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)
   const updateDashboard = useSetAtom(updateDashboardAtom)
+  const upsertDashboard = useSetAtom(upsertDashboardAtom)
+  const [saving, setSaving] = useState(false)
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const pageRef = useRef<HTMLDivElement | null>(null)
+  // Edit-mode state: 'view' vs 'edit', the selected tile (for the side panel
+  // in a later task), and the localStorage-backed draft for this dashboard.
+  const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
+  const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
+  const [storedDraft, setStoredDraft] = useAtom(draftAtom)
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [loading, setLoading] = useState(false)
@@ -133,6 +167,53 @@ const DashboardDetail = () => {
     setGlobalGranularity(getAutoGlobalGranularity(range))
   }, [])
 
+  const enterEditMode = useCallback(() => {
+    if (!dashboard) return
+    setStoredDraft({
+      draft: cloneForDraft(dashboard),
+      viewSnapshot: cloneForDraft(dashboard),
+      startedAt: Date.now(),
+    })
+    setMode('edit')
+    setSelectedTileId(dashboard.tiles[0]?.id ?? null)
+  }, [dashboard, setStoredDraft])
+
+  const exitEditMode = useCallback(() => {
+    if (!dashboardId) return
+    setStoredDraft(null)
+    clearDraftKey(dashboardId)
+    setMode('view')
+    setSelectedTileId(null)
+  }, [dashboardId, setStoredDraft])
+
+  const effectiveDashboard = mode === 'edit' && storedDraft ? storedDraft.draft : dashboard
+
+  const dirtyCount = useMemo(() => {
+    if (!storedDraft) return 0
+    return countChanges(storedDraft.viewSnapshot, storedDraft.draft)
+  }, [storedDraft])
+
+  const handleSave = useCallback(async () => {
+    if (!storedDraft || !dashboardId) return
+    setSaving(true)
+    try {
+      const response = await upsertDashboard(buildUpsertRequest(storedDraft.draft))
+      if (response) setDashboard(response)
+      setStoredDraft(null)
+      clearDraftKey(dashboardId)
+      setMode('view')
+      setSelectedTileId(null)
+    } catch (err) {
+      toastRPCError(err, 'Failed to save dashboard')
+    } finally {
+      setSaving(false)
+    }
+  }, [dashboardId, setStoredDraft, storedDraft, upsertDashboard])
+
+  const handleDiscard = useCallback(() => {
+    exitEditMode()
+  }, [exitEditMode])
+
   const requestDeleteDashboard = useCallback(() => {
     if (!dashboard) return
     setDeleteTarget({
@@ -186,6 +267,25 @@ const DashboardDetail = () => {
             value={globalGranularity}
             onChange={setGlobalGranularity}
           />
+          {mode === 'view' ? (
+            <Button size="sm" variant="outline" onClick={enterEditMode}>
+              <Edit3 className="size-4" />
+              Edit
+            </Button>
+          ) : (
+            <>
+              <span className="text-muted-foreground text-xs">
+                {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
+              </span>
+              <Button size="sm" variant="ghost" onClick={handleDiscard} disabled={saving}>
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={saving || dirtyCount === 0}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+                Save
+              </Button>
+            </>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
               <MoreHorizontal className="size-4" />
@@ -201,10 +301,16 @@ const DashboardDetail = () => {
       ) : null,
     [
       dashboard,
+      dirtyCount,
+      enterEditMode,
       globalGranularity,
       globalTimeRange,
+      handleDiscard,
       handleGlobalTimeRangeChange,
+      handleSave,
+      mode,
       requestDeleteDashboard,
+      saving,
       savingDashboard,
     ],
   )
@@ -213,14 +319,21 @@ const DashboardDetail = () => {
     () => (
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1 space-y-3">
-          <InlineEditableText
-            value={displayNameDraft}
-            onChange={setDisplayNameDraft}
-            onBlur={persistDashboardMeta}
-            placeholder={UNTITLED_DASHBOARD_NAME}
-            disabled={savingDashboard}
-            className="min-h-12 text-3xl font-semibold tracking-tight outline-hidden"
-          />
+          <div className="flex items-center gap-3">
+            <InlineEditableText
+              value={displayNameDraft}
+              onChange={setDisplayNameDraft}
+              onBlur={persistDashboardMeta}
+              placeholder={UNTITLED_DASHBOARD_NAME}
+              disabled={savingDashboard || mode === 'edit'}
+              className="min-h-12 flex-1 text-3xl font-semibold tracking-tight outline-hidden"
+            />
+            {mode === 'edit' ? (
+              <span className="rounded bg-amber-100 px-2 py-0.5 font-semibold text-[10px] text-amber-900 uppercase tracking-wider">
+                Editing
+              </span>
+            ) : null}
+          </div>
           <InlineEditableText
             value={descriptionDraft}
             onChange={setDescriptionDraft}
@@ -281,18 +394,20 @@ const DashboardDetail = () => {
           />
         ) : null}
 
-        {dashboard.tiles.length === 0 ? (
+        {effectiveDashboard && effectiveDashboard.tiles.length === 0 ? (
           <div className="space-y-4">
-            <DashboardEmptyState title="No tiles yet" description="Editing UI returns in a follow-up commit." />
+            <DashboardEmptyState title="No tiles yet" description="Add a tile from the toolbar after clicking Edit." />
           </div>
         ) : (
           <DashboardGrid
-            tiles={dashboard.tiles}
+            tiles={effectiveDashboard?.tiles ?? []}
             pageRef={pageRef}
-            mode="view"
+            mode={mode}
+            selectedTileId={selectedTileId}
             globalTimeRange={globalTimeRange}
             globalGranularity={tileGranularityOverride}
             onLayoutsChange={handleLayoutsChange}
+            onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
           />
         )}
       </div>
