@@ -12,6 +12,7 @@ import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from 
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { GRANULARITIES } from '../insights/constants'
 import { OptionChip } from '../insights/controls'
+import AnalyticsMode from './analytics-mode'
 import {
   fetchOverviewSchemaAtom,
   overviewSchemaAtom,
@@ -95,11 +96,7 @@ const Overview = () => {
           </Button>
         </div>
       ) : hasEvents ? (
-        <div className="text-sm text-muted-foreground">
-          Analytics mode (Task 6). Range:{' '}
-          {globalTimeRange ? `${globalTimeRange.from.toISOString()} → ${globalTimeRange.to.toISOString()}` : 'auto'},
-          granularity: {tileGranularityOverride ?? 'auto'}.
-        </div>
+        <AnalyticsMode globalTimeRange={globalTimeRange} globalGranularity={tileGranularityOverride} />
       ) : (
         <SetupMode project={project} />
       )}
