@@ -7,6 +7,7 @@ import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insi
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
 
 const escapeMarkdownHTML = (value: string) =>
@@ -22,14 +23,24 @@ const sanitizeMarkdownHTML = (markup: string) =>
   )
 
 const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNode }) => {
+  const hideTitle = tile.header?.hideTitle === true
+  const accent = tile.header?.accentColor ?? ''
+  const icon = tile.header?.icon ?? ''
+
   return (
-    <div className="group flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4">
-      <div className="mb-3 flex min-w-0 shrink-0 items-start gap-3 pr-8">
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold">{tile.displayName}</h3>
-          {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
+    <div className="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4">
+      {accent ? (
+        <div className={`absolute top-0 left-0 h-full w-[3px] ${accentStripClass(accent)}`} aria-hidden />
+      ) : null}
+      {hideTitle ? null : (
+        <div className="mb-3 flex min-w-0 shrink-0 items-start gap-2 pr-8">
+          {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-sm font-semibold">{tile.displayName}</h3>
+            {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
+          </div>
         </div>
-      </div>
+      )}
       <div className="min-h-0 flex-1 overflow-hidden pt-0.5">{children}</div>
     </div>
   )
