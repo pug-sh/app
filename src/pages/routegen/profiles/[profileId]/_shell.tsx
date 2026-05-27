@@ -1,10 +1,9 @@
 import { useAtomValue } from 'jotai'
-import { Copy } from 'lucide-react'
+import { Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'wouter'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
-import LoadingSpinner from '@/components/loading-spinner'
 import ProjectLink from '@/components/project-link'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -60,7 +59,11 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   if (!profile) {
     return (
       <Page title="Profile" description={profileId}>
-        <LoadingSpinner />
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <UserX className="w-8 h-8 mb-3 opacity-20" />
+          <p className="text-sm">No profile found</p>
+          <p className="mt-1 font-mono text-xs">{profileId}</p>
+        </div>
       </Page>
     )
   }
@@ -72,8 +75,13 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   const platform = [browser, os].filter(Boolean).join(' · ')
   const place = [profile.activity?.city, profile.activity?.country].filter(Boolean).join(', ')
 
-  const base = `/profiles/${profileId}`
-  const activeTab = [...TABS].reverse().find(t => location.endsWith(base + t.suffix)) ?? TABS[0]
+  const base = `/profiles/${encodeURIComponent(profileId)}`
+  // Tail = URL segment after `base`. '' for overview, '/events' / '/sessions/[id]' for sub-tabs.
+  // Drilling into '/sessions/:sessionId' should still keep the Sessions tab active.
+  const baseIdx = location.indexOf(base)
+  const tail = baseIdx >= 0 ? location.slice(baseIdx + base.length) : ''
+  const activeTab =
+    TABS.find(t => (t.suffix === '' ? tail === '' : tail === t.suffix || tail.startsWith(t.suffix + '/'))) ?? TABS[0]
 
   const header = (
     <div className="space-y-3">

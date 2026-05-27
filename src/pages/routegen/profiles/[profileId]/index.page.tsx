@@ -1,15 +1,19 @@
 import { useAtomValue } from 'jotai'
+import { AlertCircle, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useParams } from 'wouter'
 import type { ActivityEvent, HeatmapDay } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
+import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
+import { toastRPCError } from '@/lib/rpc-error'
 import { structToEntries } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { profileFamilyAtom, profileStatsFamilyAtom } from './_data'
@@ -47,6 +51,8 @@ const Heatmap = ({ days }: { days: HeatmapDay[] }) => {
 
 const ProfileOverview = () => {
   const { profileId } = useParams<{ profileId: string }>()
+  const project = useAtomValue(activeProjectAtom)
+  if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
   return (
     <ProfileShell profileId={profileId}>
@@ -63,25 +69,35 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const [recent, setRecent] = useState<ActivityEvent[]>([])
   const [loadingRecent, setLoadingRecent] = useState(true)
+  const [recentError, setRecentError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!headers) return
     let cancelled = false
     setLoadingRecent(true)
+    setRecentError(null)
     activityRPC
       .getActivityFeed({ distinctId: profileId, pageSize: 10, pageToken: '' }, { headers })
       .then(resp => {
         if (!cancelled) setRecent(resp.events.slice(0, 10))
       })
-      .catch(err => console.error('getActivityFeed (overview) failed:', err))
+      .catch(err => {
+        if (cancelled) return
+        toastRPCError(err, 'Failed to load recent activity')
+        setRecentError(err instanceof Error ? err.message : 'Failed to load recent activity')
+      })
       .finally(() => {
         if (!cancelled) setLoadingRecent(false)
       })
     return () => {
       cancelled = true
     }
-  }, [profileId, headers, activityRPC])
+  }, [profileId, headers, activityRPC, reloadKey])
 
+  // structToEntries strips object/array/null values; total trait count comes from raw keys
+  // so the "See all N" link matches what the Properties tab actually renders.
+  const totalProps = Object.keys(profile?.properties ?? {}).length
   const propEntries = profile?.properties ? structToEntries(profile.properties) : []
   const sortedProps = [...propEntries].sort(
     ([a], [b]) => Number(a.startsWith('$')) - Number(b.startsWith('$')) || a.localeCompare(b),
@@ -97,7 +113,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
 
       {topProps.length > 0 && (
         <section>
-          <SectionHeader title="Identified properties" right={`${propEntries.length} traits`} />
+          <SectionHeader title="Identified properties" right={`${totalProps} traits`} />
           <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-1.5 text-xs">
             {topProps.map(([key, value]) => (
               <div key={key} className="contents">
@@ -108,12 +124,12 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
               </div>
             ))}
           </dl>
-          {propEntries.length > 5 && (
+          {totalProps > topProps.length && (
             <ProjectLink
-              href={`/profiles/${profileId}/properties`}
+              href={`/profiles/${encodeURIComponent(profileId)}/properties`}
               className="mt-3 inline-block text-xs text-primary hover:underline underline-offset-4"
             >
-              See all {propEntries.length} →
+              See all {totalProps} →
             </ProjectLink>
           )}
         </section>
@@ -123,6 +139,14 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
         <SectionHeader title="Recent activity" right="last 10 events" />
         {loadingRecent ? (
           <LoadingSpinner />
+        ) : recentError && recent.length === 0 ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>{recentError}</span>
+            <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => setReloadKey(k => k + 1)}>
+              Retry
+            </Button>
+          </div>
         ) : recent.length === 0 ? (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">No events yet for this profile.</p>
@@ -156,7 +180,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
           </ul>
         )}
         <ProjectLink
-          href={`/profiles/${profileId}/events`}
+          href={`/profiles/${encodeURIComponent(profileId)}/events`}
           className="mt-3 inline-block text-xs text-primary hover:underline underline-offset-4"
         >
           See all events →

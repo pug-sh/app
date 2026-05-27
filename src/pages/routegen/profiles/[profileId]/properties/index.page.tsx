@@ -1,27 +1,29 @@
 import type { JsonValue } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { Copy } from 'lucide-react'
+import { Copy, User } from 'lucide-react'
 import { useMemo } from 'react'
 import { useParams } from 'wouter'
+import NoProject from '@/components/no-project'
+import { activeProjectAtom } from '@/data/workspace.atoms'
 import { profileFamilyAtom } from '../_data'
 import ProfileShell from '../_shell'
 
 type Entry = { key: string; value: JsonValue; type: string; display: string }
 
-const inferType = (v: JsonValue): string => {
+const inferType = (v: JsonValue) => {
   if (v === null) return 'null'
   if (Array.isArray(v)) return 'array'
   return typeof v
 }
 
-const displayValue = (v: JsonValue): string => {
+const displayValue = (v: JsonValue) => {
   if (v === null) return 'null'
   if (typeof v === 'string') return v
   if (typeof v === 'object') return JSON.stringify(v)
   return String(v)
 }
 
-const toEntries = (obj: Record<string, JsonValue> | undefined): Entry[] => {
+const toEntries = (obj: Record<string, JsonValue> | undefined) => {
   if (!obj) return []
   return Object.entries(obj).map(([key, value]) => ({
     key,
@@ -33,6 +35,8 @@ const toEntries = (obj: Record<string, JsonValue> | undefined): Entry[] => {
 
 const ProfileProperties = () => {
   const { profileId } = useParams<{ profileId: string }>()
+  const project = useAtomValue(activeProjectAtom)
+  if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
   return (
     <ProfileShell profileId={profileId}>

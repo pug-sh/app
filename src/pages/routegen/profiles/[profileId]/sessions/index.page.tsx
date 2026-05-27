@@ -1,13 +1,17 @@
 import { useAtomValue } from 'jotai'
+import { AlertCircle, User } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
+import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { Button } from '@/components/ui/button'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
+import { toastRPCError } from '@/lib/rpc-error'
 import { structGet } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -21,7 +25,7 @@ type SessionRow = {
   device: string
 }
 
-const groupSessions = (events: ActivityEvent[]): SessionRow[] => {
+const groupSessions = (events: ActivityEvent[]) => {
   const buckets = new Map<string, ActivityEvent[]>()
   for (const e of events) {
     if (!e.sessionId) continue
@@ -61,6 +65,8 @@ type SortKey = 'started' | 'duration' | 'events'
 
 const ProfileSessions = () => {
   const { profileId } = useParams<{ profileId: string }>()
+  const project = useAtomValue(activeProjectAtom)
+  if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
   return (
     <ProfileShell profileId={profileId}>
@@ -74,25 +80,32 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
   const [sortKey, setSortKey] = useState<SortKey>('started')
 
   useEffect(() => {
     if (!headers) return
     let cancelled = false
     setLoading(true)
+    setError(null)
     activityRPC
       .getActivityFeed({ distinctId: profileId, pageSize: 200, pageToken: '' }, { headers })
       .then(resp => {
         if (!cancelled) setEvents(resp.events)
       })
-      .catch(err => console.error('getActivityFeed (sessions) failed:', err))
+      .catch(err => {
+        if (cancelled) return
+        toastRPCError(err, 'Failed to load sessions')
+        setError(err instanceof Error ? err.message : 'Failed to load sessions')
+      })
       .finally(() => {
         if (!cancelled) setLoading(false)
       })
     return () => {
       cancelled = true
     }
-  }, [profileId, headers, activityRPC])
+  }, [profileId, headers, activityRPC, reloadKey])
 
   const rows = useMemo(() => {
     const grouped = groupSessions(events)
@@ -109,6 +122,17 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
   }, [events, sortKey])
 
   if (loading) return <LoadingSpinner />
+  if (error && rows.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <AlertCircle className="w-10 h-10 mb-4 opacity-15" />
+        <p className="text-sm font-medium mb-1">{error}</p>
+        <Button variant="outline" size="sm" className="mt-2" onClick={() => setReloadKey(k => k + 1)}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
   if (rows.length === 0) return <p className="text-xs text-muted-foreground">No sessions yet for this profile.</p>
 
   const SortHeader = ({ k, label }: { k: SortKey; label: string }) => (
@@ -140,7 +164,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
           <tr key={r.sessionId} className="border-b border-border/50 transition-colors hover:bg-muted/40">
             <td className="py-2.5 pr-4">
               <ProjectLink
-                href={`/profiles/${profileId}/sessions/${r.sessionId}`}
+                href={`/profiles/${encodeURIComponent(profileId)}/sessions/${encodeURIComponent(r.sessionId)}`}
                 className="text-xs font-mono text-primary hover:underline underline-offset-4"
               >
                 {r.sessionId.slice(0, 8)}
