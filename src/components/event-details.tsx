@@ -1,38 +1,54 @@
-import { Braces } from 'lucide-react'
+import { Braces, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { Button } from '@/components/ui/button'
 import { PropChip } from '@/components/ui/prop-chip'
 import { Toggle } from '@/components/ui/toggle'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { structToEntries } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 import { partitionEventProps } from '@/lib/well-known-events'
 
 export const EventDetails = ({ event }: { event: ActivityEvent }) => {
   const [jsonMode, setJsonMode] = useState(false)
+  const { copied, copy } = useCopyToClipboard()
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
   const { schemaProps, extraProps } = partitionEventProps(event.kind, event.customProperties)
 
+  const json = JSON.stringify(
+    {
+      event_id: event.eventId,
+      kind: event.kind,
+      distinct_id: event.distinctId,
+      session_id: event.sessionId || undefined,
+      occur_time: d?.toISOString(),
+      auto_properties: event.autoProperties,
+      custom_properties: event.customProperties,
+    },
+    null,
+    2,
+  )
+
   return (
     <div className="space-y-2" onClick={e => e.stopPropagation()}>
-      <Toggle size="sm" pressed={jsonMode} onPressedChange={setJsonMode}>
-        <Braces className="w-3.5 h-3.5" />
-      </Toggle>
+      <div className="flex items-center gap-1">
+        <Toggle size="sm" pressed={jsonMode} onPressedChange={setJsonMode}>
+          <Braces className="w-3.5 h-3.5" />
+        </Toggle>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => copy(json)}
+          aria-label="Copy raw JSON"
+          title="Copy raw JSON"
+        >
+          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+        </Button>
+      </div>
       {jsonMode ? (
         <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-x-auto whitespace-pre-wrap break-all">
-          {JSON.stringify(
-            {
-              event_id: event.eventId,
-              kind: event.kind,
-              distinct_id: event.distinctId,
-              session_id: event.sessionId || undefined,
-              occur_time: d?.toISOString(),
-              auto_properties: event.autoProperties,
-              custom_properties: event.customProperties,
-            },
-            null,
-            2,
-          )}
+          {json}
         </pre>
       ) : (
         <>
