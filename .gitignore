@@ -16,7 +16,7 @@ dist-ssr
 proto
 
 # Generated proto code (regenerate with: pnpm generate)
-src/api/genproto
+# src/api/genproto
 
 # Editor directories and files
 .vscode/*
