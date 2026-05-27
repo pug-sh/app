@@ -52,6 +52,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const platformDetail = [browserLabel, osLabel].filter(Boolean).join(' · ')
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
+  const location = [city, country].filter(Boolean).join(', ')
 
   return (
     <>
@@ -74,8 +75,8 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             {event.kind}
           </Badge>
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground whitespace-nowrap align-middle">
-          {(city || country) && [city, country].filter(Boolean).join(', ')}
+        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={location || undefined}>
+          <div className="truncate">{location}</div>
         </td>
         <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={platformDetail || undefined}>
           <div className="truncate">{platform}</div>
@@ -313,7 +314,7 @@ const EventExplorer = () => {
               <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
                 <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
-                <th className="py-2 pr-2 text-left font-medium w-20">Location</th>
+                <th className="py-2 pr-2 text-left font-medium w-32">Location</th>
                 <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
                 <th className="py-2 pr-2 text-left font-medium">Properties</th>
                 <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
