@@ -159,7 +159,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <ProfilesBlock />
           <CampaignsBlock />
-          <EventFeedBlock primary={bindings.primary} globalTimeRange={globalTimeRange} />
+          <EventFeedBlock globalTimeRange={globalTimeRange} />
         </div>
       </section>
 

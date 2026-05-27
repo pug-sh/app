@@ -68,7 +68,7 @@ const ProfilesBlock = () => {
             <li key={profile.id} className="group flex items-center justify-between gap-3 py-2">
               <ProjectLink
                 href={`/profiles/${encodeURIComponent(profile.id)}/events`}
-                className="flex min-w-0 items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+                className="flex min-w-0 items-center gap-2 text-xs text-primary hover:underline underline-offset-4"
               >
                 <User className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="truncate font-mono">{profile.externalId || profile.id}</span>
