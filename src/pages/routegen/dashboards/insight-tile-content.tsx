@@ -3,7 +3,11 @@ import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
-import type { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  type DashboardTile,
+  type DashboardTileViewMode,
+  VisualizationOptions_YAxisFormat,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   AggregationType,
   type Granularity,
@@ -25,26 +29,56 @@ import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { getInitialGranularity, getProtoRange } from './query'
 import { dashboardTileViewModeToViewMode } from './tile-settings'
 
+// Format a numeric value for KPI display based on the tile's chosen y-axis format.
+// Also used to format any KPI delta sub-value consistently.
+export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
+  return (value: number): string => {
+    if (!Number.isFinite(value)) return '—'
+    switch (format) {
+      case VisualizationOptions_YAxisFormat.PERCENT:
+        return `${(value * 100).toFixed(1)}%`
+      case VisualizationOptions_YAxisFormat.DURATION_MS:
+        return formatDuration(value)
+      default:
+        return value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+    }
+  }
+}
+
+const formatDuration = (ms: number): string => {
+  if (ms < 1000) return `${Math.round(ms)}ms`
+  const seconds = ms / 1000
+  if (seconds < 60) return `${seconds.toFixed(1)}s`
+  const minutes = seconds / 60
+  if (minutes < 60) return `${minutes.toFixed(1)}m`
+  return `${(minutes / 60).toFixed(1)}h`
+}
+
 const stringifyQueryKey = (value: unknown) =>
   JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
 
 export const DashboardInsightContent = ({
+  tile,
+  viewMode,
   query,
   defaultTimeRange,
   timeRangeOverride,
   granularityOverride,
-  viewMode,
   queryKeyPrefix,
   compact = false,
 }: {
+  // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
+  // + viz options apply) or just a viewMode (for overview/static tiles).
+  tile?: DashboardTile
+  viewMode?: DashboardTileViewMode
   query: QueryRequest | undefined
   defaultTimeRange: TimeRangePreset | undefined
   timeRangeOverride?: TimeRange
   granularityOverride?: Granularity
-  viewMode: DashboardTileViewMode | undefined
   queryKeyPrefix: string
   compact?: boolean
 }) => {
+  const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const effectiveTimeRange = useMemo(
@@ -57,7 +91,7 @@ export const DashboardInsightContent = ({
     () => granularityOverride ?? getInitialGranularity(query),
     [granularityOverride, query],
   )
-  const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(viewMode), [viewMode])
+  const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
@@ -173,19 +207,22 @@ export const DashboardInsightContent = ({
 }
 
 export const DashboardInsightPreview = ({
+  tile,
+  viewMode,
   query,
   defaultTimeRange,
-  viewMode,
 }: {
+  tile?: DashboardTile
+  viewMode?: DashboardTileViewMode
   query: QueryRequest | undefined
   defaultTimeRange: TimeRangePreset | undefined
-  viewMode: DashboardTileViewMode | undefined
 }) => (
   <div className="h-80 min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background/60 p-3">
     <DashboardInsightContent
+      tile={tile}
+      viewMode={viewMode}
       query={query}
       defaultTimeRange={defaultTimeRange}
-      viewMode={viewMode}
       queryKeyPrefix="editor-preview"
       compact
     />

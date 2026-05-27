@@ -76,11 +76,11 @@ const DashboardInsightTile = ({
   return (
     <TileShell tile={tile}>
       <DashboardInsightContent
+        tile={tile}
         query={query}
         defaultTimeRange={undefined}
         timeRangeOverride={globalTimeRange}
         granularityOverride={globalGranularity}
-        viewMode={tile.viewMode}
         queryKeyPrefix={tile.id}
         compact
       />
