@@ -102,7 +102,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <div className="flex h-72 min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
+          <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
             <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
               <h3 className="truncate text-sm font-semibold">Active users trend</h3>
             </div>
@@ -119,7 +119,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
             <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">via {bindings.primary}</p>
           </div>
 
-          <div className="flex h-72 min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
+          <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
             <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
               <h3 className="truncate text-sm font-semibold">Retention</h3>
             </div>
