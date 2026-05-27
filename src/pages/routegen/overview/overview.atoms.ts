@@ -15,6 +15,10 @@ export const fetchOverviewSchemaAtom = atom(null, async (get, set) => {
   if (!headers) return
   set(overviewSchemaLoadingAtom, true)
   set(overviewSchemaErrorAtom, null)
+  // Drop the previous project's schema so tile queries don't fire with stale bindings
+  // during the project-switch roundtrip; the page shows its loading state until the
+  // new schema lands.
+  set(overviewSchemaAtom, null)
   try {
     const resp = await insightsRPC.getFilterSchema({}, { headers })
     set(overviewSchemaAtom, resp)

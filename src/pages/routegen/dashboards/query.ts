@@ -1,8 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import type { PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
-import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
-import { type TimeRange as ProtoTimeRange, TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
+import type { TimeRange as ProtoTimeRange } from '@/api/genproto/common/v1/time_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   AggregationType,
@@ -11,31 +10,23 @@ import {
   InsightQuerySpecSchema,
   InsightType,
   type QueryRequest,
-  QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { TimeRange } from '@/components/date-range-picker'
 import { type ActiveFilter, FILTER_OPERATORS } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
-import { DEFAULT_DASHBOARD_TIME_RANGE_PRESET, INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { tsToDate } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
   displayName: string
   description: string
-  defaultTimeRange: TimeRangePreset
-  timeRange: TimeRange | undefined
   insightType: InsightType
-  granularity: Granularity
   eventEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
 }
-
-export const getDefaultTimeRange = () => INSIGHTS_PRESETS[0].resolve()
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
   const from = tsToDate(range?.from)
@@ -78,6 +69,10 @@ export const parseSpecPropFilters = (spec?: InsightQuerySpec) =>
 export const parseSpecBreakdowns = (spec?: InsightQuerySpec) =>
   (spec?.breakdowns ?? []).map(item => item.property).filter(Boolean)
 
+// Read the granularity off a QueryRequest if it's one of the supported values, falling
+// back to DAY otherwise. Load-bearing for the editor's live preview, where buildInsightSpec
+// callers populate granularity directly on the wrapper QueryRequest; saved tiles always
+// pass UNSPECIFIED here and fall through to DAY.
 export const getInitialGranularity = (query?: QueryRequest) => {
   const granularity = query?.granularity
   if (
@@ -107,10 +102,7 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
   return {
     displayName: tile?.displayName ?? '',
     description: tile?.description ?? '',
-    defaultTimeRange: DEFAULT_DASHBOARD_TIME_RANGE_PRESET,
-    timeRange: getDefaultTimeRange(),
     insightType: getInitialInsightType(spec),
-    granularity: Granularity.DAY,
     eventEntries: parseSpecEntries(spec),
     propFilters: parseSpecPropFilters(spec),
     breakdowns: parseSpecBreakdowns(spec),
@@ -148,25 +140,4 @@ export const buildInsightSpec = ({
       propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : [],
     filterGroupsOperator: LogicalOperator.AND,
     includeStepTiming: false,
-  })
-
-export const buildInsightQuery = ({
-  insightType,
-  granularity,
-  timeRange,
-  validEntries,
-  propFilters,
-  breakdowns,
-}: {
-  insightType: InsightType
-  granularity: Granularity
-  timeRange: TimeRange | undefined
-  validEntries: EventFilterEntry[]
-  propFilters: ActiveFilter[]
-  breakdowns: string[]
-}) =>
-  create(QueryRequestSchema, {
-    spec: buildInsightSpec({ insightType, validEntries, propFilters, breakdowns }),
-    granularity,
-    timeRange: timeRange ? create(TimeRangeSchema, toProtoTimeRange(timeRange)) : undefined,
   })

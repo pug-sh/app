@@ -3,13 +3,15 @@ import { useAtomValue } from 'jotai'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
-import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
+import { TimeRangePreset, TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { getSeriesColor } from '@/lib/event-colors'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
 type Props = {
@@ -29,10 +31,11 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
     setLoading(true)
     setError(null)
     try {
+      const effectiveTimeRange = globalTimeRange ?? resolveDashboardTimeRangePreset(TimeRangePreset.LAST_30_DAYS)
       const resp = await activityRPC.getEventExplorer(
         {
           events: [create(EventFilterSchema, { kind: primary })],
-          timeRange: globalTimeRange ? create(TimeRangeSchema, toProtoTimeRange(globalTimeRange)) : undefined,
+          timeRange: create(TimeRangeSchema, toProtoTimeRange(effectiveTimeRange)),
           pageToken: '',
         },
         { headers },
@@ -69,14 +72,21 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
         <p className="text-xs text-muted-foreground">No events in the selected range.</p>
       ) : (
         <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto">
-          {events.map(event => (
-            <li key={event.eventId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 text-xs">
-              <span className="min-w-0 truncate font-mono">{event.distinctId}</span>
-              <Badge variant="outline" className="shrink-0 text-[10px]">
-                {event.kind}
-              </Badge>
-            </li>
-          ))}
+          {events.map(event => {
+            const colors = getSeriesColor(event.kind)
+            return (
+              <li key={event.eventId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 text-xs">
+                <span className="min-w-0 truncate font-mono">{event.distinctId}</span>
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 text-[10px]"
+                  style={{ backgroundColor: colors.fill, color: colors.dot }}
+                >
+                  {event.kind}
+                </Badge>
+              </li>
+            )
+          })}
         </ul>
       )}
     </div>

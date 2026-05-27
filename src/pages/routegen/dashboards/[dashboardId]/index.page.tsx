@@ -133,6 +133,8 @@ const DashboardDetail = () => {
         id: dashboard.id,
         displayName: nextDisplayName,
         description: nextDescription,
+        defaultTimeRange: dashboard.defaultTimeRange,
+        defaultGranularity: dashboard.defaultGranularity,
       })
       if (nextDashboard) setDashboard(nextDashboard)
     } catch (err) {

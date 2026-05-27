@@ -6,26 +6,24 @@ import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/da
 import {
   AggregationType,
   EventQuerySchema,
-  type Granularity,
   InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { TimeRange } from '@/components/date-range-picker'
+import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import CampaignsBlock from './campaigns-block'
 import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
+import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
-import PlatformTile from './platform-tile'
+import PlatformTile, { resolveOsPropertyKey } from './platform-tile'
 import ProfilesBlock from './profiles-block'
+import { composeFunnelSteps } from './tile-bindings'
 import TopEventsBlock from './top-events-block'
 
-type Props = {
-  globalTimeRange: TimeRange | undefined
-  globalGranularity: Granularity | undefined
-}
+type Props = GlobalOverrides
 
 const buildTrendsQuery = (kind: string, aggregation: AggregationType) =>
   create(QueryRequestSchema, {
@@ -51,23 +49,19 @@ const buildRetentionQuery = (kind: string) =>
     }),
   })
 
-const SectionDivider = ({ title, count }: { title: string; count?: string }) => (
-  <div className="mb-3 flex items-center gap-2">
-    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
-    <div className="h-px flex-1 bg-border" />
-    {count ? <span className="text-[10px] text-muted-foreground">{count}</span> : null}
-  </div>
-)
-
 const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   const schema = useAtomValue(overviewSchemaAtom)
   const bindings = useAtomValue(overviewBindingsAtom)
   if (!schema || !bindings) return null
 
+  const funnelSteps = composeFunnelSteps(bindings)
+  const osPropertyKey = resolveOsPropertyKey(schema)
+  const showConversionSection = funnelSteps.length >= 2 || osPropertyKey !== null
+
   return (
     <div className="space-y-10">
       <section>
-        <SectionDivider title="Activity" />
+        <SectionHeader title="Activity" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <KpiTile
             title="Active users"
@@ -146,21 +140,23 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </div>
       </section>
 
-      <section>
-        <SectionDivider title="Conversion" />
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
-          <PlatformTile
-            schema={schema}
-            primary={bindings.primary}
-            globalTimeRange={globalTimeRange}
-            globalGranularity={globalGranularity}
-          />
-        </div>
-      </section>
+      {showConversionSection ? (
+        <section>
+          <SectionHeader title="Conversion" />
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
+            <PlatformTile
+              schema={schema}
+              primary={bindings.primary}
+              globalTimeRange={globalTimeRange}
+              globalGranularity={globalGranularity}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section>
-        <SectionDivider title="People & comms" />
+        <SectionHeader title="People & comms" />
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <ProfilesBlock />
           <CampaignsBlock />
@@ -169,7 +165,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       <section>
-        <SectionDivider title="Schema" count={`${schema.events.length} kinds`} />
+        <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
         <TopEventsBlock events={schema.events} />
       </section>
     </div>

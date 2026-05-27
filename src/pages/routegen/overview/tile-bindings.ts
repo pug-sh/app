@@ -6,19 +6,24 @@ import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 const SIGNIN_CANDIDATES = ['signin', 'signup', 'identified', 'account_created'] as const
 const CONVERSION_CANDIDATES = ['purchased', 'checkout_completed', 'conversion', 'subscription_started'] as const
 
-export type Bindings = {
+type SigninKind = (typeof SIGNIN_CANDIDATES)[number]
+type ConversionKind = (typeof CONVERSION_CANDIDATES)[number]
+
+export type Bindings = Readonly<{
   // The most-active event kind. Drives "active users", "event volume",
-  // retention, the funnel's first step, and the live event feed.
+  // retention, funnel, platform breakdown, and the live event feed.
   primary: string
   // First candidate kind that exists in the project. Null = no candidate
   // matched, in which case dependent tiles should hide themselves.
-  signinLike: string | null
-  conversionLike: string | null
-  // Top events by count, capped at 5. Used by the "Top events" bar list.
-  topN: EventNameMeta[]
-}
+  signinLike: SigninKind | null
+  conversionLike: ConversionKind | null
+}>
 
-const findFirst = (candidates: readonly string[], available: Set<string>): string | null => {
+// Number(b.count - a.count): EventNameMeta.count is bigint (uint64). Doing the
+// subtraction first keeps the diff in bigint, then collapsing to number is safe
+// for any realistic event volume.
+
+const findFirst = <T extends string>(candidates: readonly T[], available: Set<string>): T | null => {
   for (const candidate of candidates) {
     if (available.has(candidate)) return candidate
   }
@@ -33,7 +38,6 @@ export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
     primary: sorted[0].name,
     signinLike: findFirst(SIGNIN_CANDIDATES, available),
     conversionLike: findFirst(CONVERSION_CANDIDATES, available),
-    topN: sorted.slice(0, 5),
   }
 }
 

@@ -4,19 +4,16 @@ import { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   EventQuerySchema,
-  type Granularity,
   InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { TimeRange } from '@/components/date-range-picker'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import type { GlobalOverrides } from './global-overrides'
 import { type Bindings, composeFunnelSteps } from './tile-bindings'
 
-type Props = {
+type Props = GlobalOverrides & {
   bindings: Bindings
-  globalTimeRange: TimeRange | undefined
-  globalGranularity: Granularity | undefined
 }
 
 const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => {

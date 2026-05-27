@@ -1,5 +1,6 @@
 import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 import { Badge } from '@/components/ui/badge'
+import { getSeriesColor } from '@/lib/event-colors'
 import { tsToDate } from '@/lib/timestamp'
 
 const formatCount = (n: bigint) => n.toLocaleString()
@@ -27,16 +28,24 @@ const TopEventsBlock = ({ events }: { events: EventNameMeta[] }) => {
         {sorted.map(event => {
           const value = Number(event.count)
           const widthPct = max > 0 ? Math.max(2, (value / max) * 100) : 0
+          const colors = getSeriesColor(event.name)
           return (
             <li key={event.name} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 text-xs">
               <div className="min-w-0">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <Badge variant="outline" className="shrink-0 truncate font-mono text-[10px]">
+                  <Badge
+                    variant="secondary"
+                    className="shrink-0 truncate font-mono text-[10px]"
+                    style={{ backgroundColor: colors.fill, color: colors.dot }}
+                  >
                     {event.name}
                   </Badge>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted/50">
-                  <div className="h-full rounded-full bg-primary/70" style={{ width: `${widthPct}%` }} />
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${widthPct}%`, backgroundColor: colors.line }}
+                  />
                 </div>
               </div>
               <span className="shrink-0 font-mono tabular-nums">{formatCount(event.count)}</span>

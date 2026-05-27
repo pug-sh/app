@@ -23,10 +23,7 @@ import SetupMode from './setup-mode'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-const GLOBAL_GRANULARITIES = [
-  { label: 'Select granularity', value: Granularity.UNSPECIFIED },
-  ...GRANULARITIES,
-] as const
+const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
 
 const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
   if (!range) return Granularity.UNSPECIFIED
@@ -46,10 +43,12 @@ const Overview = () => {
 
   const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialOverrides.timeRange)
-  const [globalGranularity, setGlobalGranularity] = useState(() => {
-    if (initialOverrides.granularity !== undefined) return initialOverrides.granularity
-    return getAutoGlobalGranularity(initialOverrides.timeRange)
-  })
+  // Stores only the user's explicit pick. UNSPECIFIED means "auto-derive from time range"
+  // and the derivation happens at the consumption point below, so it stays in sync as the
+  // user changes the time-range picker.
+  const [globalGranularity, setGlobalGranularity] = useState<Granularity>(
+    () => initialOverrides.granularity ?? Granularity.UNSPECIFIED,
+  )
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -62,9 +61,11 @@ const Overview = () => {
   if (!project) return <NoProject title="Overview" icon={LayoutDashboard} />
 
   const hasEvents = (schema?.events.length ?? 0) > 0
-  const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
+  const effectiveGranularity =
+    globalGranularity === Granularity.UNSPECIFIED ? getAutoGlobalGranularity(globalTimeRange) : globalGranularity
+  const tileGranularityOverride = effectiveGranularity === Granularity.UNSPECIFIED ? undefined : effectiveGranularity
 
-  const pageActions = (
+  const pageActions = hasEvents ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <DateRangePicker
         value={globalTimeRange}
@@ -81,7 +82,7 @@ const Overview = () => {
         onChange={setGlobalGranularity}
       />
     </div>
-  )
+  ) : null
 
   return (
     <Page title="Overview" description={`Project: ${project.displayName}`} actions={pageActions}>

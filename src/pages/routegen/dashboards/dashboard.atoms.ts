@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { atom } from 'jotai'
+import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import type {
   Dashboard,
   DashboardsServiceCreateTileRequest,
@@ -11,6 +12,7 @@ import {
   DashboardsServiceDeleteTileRequestSchema,
   DashboardsServiceUpdateRequestSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { dashboardsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 
@@ -80,7 +82,20 @@ export const fetchDashboardAtom = atom(null, async (get, _set, id: string) => {
 
 export const updateDashboardAtom = atom(
   null,
-  async (get, set, input: { id: string; displayName: string; description: string }) => {
+  async (
+    get,
+    set,
+    input: {
+      id: string
+      displayName: string
+      description: string
+      // Required: the wire protocol writes both unconditionally on Update, so callers
+      // must pass the current dashboard's values to avoid silently zeroing them when
+      // they only meant to rename.
+      defaultTimeRange: TimeRangePreset
+      defaultGranularity: Granularity
+    },
+  ) => {
     const headers = get(projectHeaderAtom)
     if (!headers) return null
 

@@ -7,18 +7,17 @@ import {
   AggregationType,
   BreakdownSchema,
   EventQuerySchema,
-  type Granularity,
   InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { TimeRange } from '@/components/date-range-picker'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import type { GlobalOverrides } from './global-overrides'
 
 // Tried in order. First key present in the project's auto-properties wins.
 const OS_PROPERTY_CANDIDATES = ['$osName', '$os', '$osFamily', '$platform']
 
-const resolveOsPropertyKey = (schema: GetFilterSchemaResponse): string | null => {
+export const resolveOsPropertyKey = (schema: GetFilterSchemaResponse): string | null => {
   const available = new Set(schema.autoPropertyKeys.map(p => p.name))
   for (const candidate of OS_PROPERTY_CANDIDATES) {
     if (available.has(candidate)) return candidate
@@ -26,11 +25,9 @@ const resolveOsPropertyKey = (schema: GetFilterSchemaResponse): string | null =>
   return null
 }
 
-type Props = {
+type Props = GlobalOverrides & {
   schema: GetFilterSchemaResponse
   primary: string
-  globalTimeRange: TimeRange | undefined
-  globalGranularity: Granularity | undefined
 }
 
 const PlatformTile = ({ schema, primary, globalTimeRange, globalGranularity }: Props) => {

@@ -21,15 +21,7 @@ const sanitizeMarkdownHTML = (markup: string) =>
     DANGEROUS_URL_SCHEME.test(url) ? `${attr}${quote}#${quote}` : match,
   )
 
-const TileShell = ({
-  tile,
-  timeRangeLabel,
-  children,
-}: {
-  tile: DashboardTile
-  timeRangeLabel?: string
-  children: ReactNode
-}) => {
+const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNode }) => {
   return (
     <div className="group flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4">
       <div className="mb-3 flex min-w-0 shrink-0 items-start gap-3 pr-8">
@@ -37,11 +29,6 @@ const TileShell = ({
           <h3 className="truncate text-sm font-semibold">{tile.displayName}</h3>
           {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
         </div>
-        {timeRangeLabel ? (
-          <span className="shrink-0 rounded-md border border-border/60 bg-muted/30 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-muted-foreground">
-            {timeRangeLabel}
-          </span>
-        ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-hidden pt-0.5">{children}</div>
     </div>
@@ -76,7 +63,7 @@ const DashboardInsightTile = ({
   const query = spec ? create(QueryRequestSchema, { spec }) : undefined
 
   return (
-    <TileShell tile={tile} timeRangeLabel={undefined}>
+    <TileShell tile={tile}>
       <DashboardInsightContent
         query={query}
         defaultTimeRange={undefined}
