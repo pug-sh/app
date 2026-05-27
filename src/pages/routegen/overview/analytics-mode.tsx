@@ -101,42 +101,40 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           ) : null}
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
-            <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-              <h3 className="truncate text-sm font-semibold">Active users trend</h3>
-            </div>
-            <div className="min-h-0 flex-1">
-              <DashboardInsightContent
-                query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
-                defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
-                timeRangeOverride={globalTimeRange}
-                granularityOverride={globalGranularity}
-                viewMode={DashboardTileViewMode.LINE}
-                queryKeyPrefix="overview-trend-active"
-              />
-            </div>
-            <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">via {bindings.primary}</p>
+        <div className="mt-6 flex h-[360px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
+          <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+            <h3 className="truncate text-sm font-semibold">Active users trend</h3>
           </div>
+          <div className="min-h-0 flex-1">
+            <DashboardInsightContent
+              query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
+              defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+              timeRangeOverride={globalTimeRange}
+              granularityOverride={globalGranularity}
+              viewMode={DashboardTileViewMode.LINE}
+              queryKeyPrefix="overview-trend-active"
+            />
+          </div>
+          <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">via {bindings.primary}</p>
+        </div>
 
-          <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
-            <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-              <h3 className="truncate text-sm font-semibold">Retention</h3>
-            </div>
-            <div className="min-h-0 flex-1">
-              <DashboardInsightContent
-                query={buildRetentionQuery(bindings.primary)}
-                defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
-                timeRangeOverride={globalTimeRange}
-                granularityOverride={globalGranularity}
-                viewMode={DashboardTileViewMode.UNSPECIFIED}
-                queryKeyPrefix="overview-retention"
-              />
-            </div>
-            <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">
-              via {bindings.primary} → {bindings.primary}
-            </p>
+        <div className="mt-3 flex h-[520px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
+          <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
+            <h3 className="truncate text-sm font-semibold">Retention</h3>
           </div>
+          <div className="min-h-0 flex-1">
+            <DashboardInsightContent
+              query={buildRetentionQuery(bindings.primary)}
+              defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+              timeRangeOverride={globalTimeRange}
+              granularityOverride={globalGranularity}
+              viewMode={DashboardTileViewMode.UNSPECIFIED}
+              queryKeyPrefix="overview-retention"
+            />
+          </div>
+          <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">
+            via {bindings.primary} → {bindings.primary}
+          </p>
         </div>
       </section>
 
