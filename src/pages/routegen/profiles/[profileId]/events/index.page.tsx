@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Activity, AlertCircle, Calendar, Clock, Globe, Loader2, Monitor, Smartphone } from 'lucide-react'
+import { Activity, AlertCircle, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useParams } from 'wouter'
@@ -8,8 +8,6 @@ import { activityRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
-import HoverSwap from '@/components/hover-swap'
-import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
@@ -20,12 +18,12 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
-import { isMobileOS } from '@/lib/format'
+import { formatRelative } from '@/hooks/use-relative-time'
 import { structGet } from '@/lib/struct'
-import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { formatClock, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
+import ProfileShell from '../_shell'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -37,75 +35,6 @@ const formatDateHeader = (d: Date) => {
   if (target.getTime() === today.getTime()) return 'Today'
   if (target.getTime() === yesterday.getTime()) return 'Yesterday'
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-}
-
-// ── Profile Summary ─────────────────────────────────────────────────────────
-
-// Events are sorted newest-first from the API
-const ProfileSummary = ({ distinctId, events }: { distinctId: string; events: ActivityEvent[] }) => {
-  const firstSeen = events.length > 0 ? tsToDate(events[events.length - 1].occurTime) : null
-  const lastSeen = events.length > 0 ? tsToDate(events[0].occurTime) : null
-  const lastSeenRelative = useRelativeTime(lastSeen)
-  const uniqueKinds = new Set(events.map(e => e.kind)).size
-  const uniqueSessions = new Set(events.filter(e => e.sessionId).map(e => e.sessionId)).size
-  const lastAuto = events.length > 0 ? events[0].autoProperties : undefined
-  const browser = structGet(lastAuto, '$browser')
-  const os = structGet(lastAuto, '$os')
-  const country = structGet(lastAuto, '$country')
-  const city = structGet(lastAuto, '$city')
-
-  return (
-    <div className="mb-4">
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <Activity className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-mono text-sm font-medium truncate">{distinctId}</p>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-            {firstSeen && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                First seen <HoverSwap primary={formatDateTime(firstSeen)} secondary={formatRelative(firstSeen)} />
-              </span>
-            )}
-            {lastSeen && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Last seen <HoverSwap primary={formatDateTime(lastSeen)} secondary={lastSeenRelative} />
-              </span>
-            )}
-            {(browser || os) && (
-              <span className="flex items-center gap-1">
-                {isMobileOS(os) ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
-                {[browser, os].filter(Boolean).join(' / ')}
-              </span>
-            )}
-            {(country || city) && (
-              <span className="flex items-center gap-1">
-                <Globe className="w-3 h-3" />
-                {[city, country].filter(Boolean).join(', ')}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-6 shrink-0 text-center">
-          <div>
-            <p className="text-2xl font-semibold tabular-nums">{events.length}</p>
-            <p className="text-[10px] text-muted-foreground">Events</p>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold tabular-nums">{uniqueKinds}</p>
-            <p className="text-[10px] text-muted-foreground">Types</p>
-          </div>
-          <div>
-            <p className="text-2xl font-semibold tabular-nums">{uniqueSessions}</p>
-            <p className="text-[10px] text-muted-foreground">Sessions</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 // ── Session Lanes ───────────────────────────────────────────────────────────
@@ -237,7 +166,7 @@ const UserActivity = () => {
   if (!project) return <NoProject title="User Activity" icon={Activity} />
 
   return (
-    <Page title="Profile Activity" description={profileId}>
+    <ProfileShell profileId={profileId ?? ''}>
       {loading && events.length === 0 ? (
         <LoadingSpinner />
       ) : error && events.length === 0 ? (
@@ -250,8 +179,6 @@ const UserActivity = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <ProfileSummary distinctId={profileId ?? ''} events={events} />
-
           <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
             <div className="flex flex-wrap items-center gap-2">
               <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
@@ -396,7 +323,7 @@ const UserActivity = () => {
           <p className="text-xs">No activity for this user</p>
         </div>
       )}
-    </Page>
+    </ProfileShell>
   )
 }
 
