@@ -4,8 +4,8 @@ import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_sc
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
-import type { useFilterState } from '@/hooks/use-filter-state'
+import type { EventFilterEntry, EventFiltersController } from '@/hooks/use-event-filters'
+import type { FilterStateController } from '@/hooks/use-filter-state'
 import { getSeriesColor } from '@/lib/event-colors'
 
 export type InsightFieldsProps = {
@@ -14,8 +14,8 @@ export type InsightFieldsProps = {
   schemaError: string | null
   globalSchema: GetFilterSchemaResponse | null
   globalSchemaError: string | null
-  eventFilters: ReturnType<typeof useEventFilters>
-  filterState: ReturnType<typeof useFilterState>
+  eventFilters: EventFiltersController
+  filterState: FilterStateController
   breakdowns: string[]
   addBreakdown: (property: string) => void
   removeBreakdown: (property: string) => void

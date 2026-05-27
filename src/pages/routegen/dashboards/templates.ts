@@ -30,8 +30,6 @@ export type TileTemplate = {
   build: () => DashboardTileInput
 }
 
-// Layouts default to y=0 here; the page shifts new tiles to the bottom of the
-// grid before adding to the draft (see appendDraftTile in draft-state.ts).
 const layoutsFor = (w: number, h: number) =>
   ['lg', 'md', 'sm', 'xs', 'xxs'].map(bp =>
     create(ResponsiveGridLayoutSchema, { breakpoint: bp, x: 0, y: 0, w, h, minW: 2, minH: 4 }),
@@ -44,8 +42,10 @@ const insightContent = (insightType: InsightType) => ({
   }),
 })
 
-export const TILE_TEMPLATES: TileTemplate[] = [
-  {
+// Registry keyed by id so adding a new TileTemplateId forces a matching entry
+// at compile time (TS errors on missing keys).
+const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
+  'kpi-big-number': {
     id: 'kpi-big-number',
     displayName: 'Big number (KPI)',
     description: 'Single metric with delta vs prior and a sparkline.',
@@ -60,7 +60,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(3, 4),
       }),
   },
-  {
+  'daily-active-users': {
     id: 'daily-active-users',
     displayName: 'Daily active users',
     description: 'Trend line of unique users by day.',
@@ -74,7 +74,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(6, 8),
       }),
   },
-  {
+  'signup-activation-funnel': {
     id: 'signup-activation-funnel',
     displayName: 'Signup → activation funnel',
     description: 'Conversion through ordered steps.',
@@ -88,7 +88,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(6, 8),
       }),
   },
-  {
+  'day-7-retention': {
     id: 'day-7-retention',
     displayName: 'Day-7 retention',
     description: 'Cohort retention curve.',
@@ -102,7 +102,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(6, 8),
       }),
   },
-  {
+  'top-events': {
     id: 'top-events',
     displayName: 'Top events',
     description: 'Ranked event volume table.',
@@ -116,7 +116,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(6, 8),
       }),
   },
-  {
+  'text-note': {
     id: 'text-note',
     displayName: 'Text note',
     description: 'Markdown for context or links.',
@@ -131,7 +131,7 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(4, 6),
       }),
   },
-  {
+  'custom-chart': {
     id: 'custom-chart',
     displayName: 'Custom chart',
     description: 'Empty insight — configure from scratch.',
@@ -144,6 +144,18 @@ export const TILE_TEMPLATES: TileTemplate[] = [
         layouts: layoutsFor(6, 8),
       }),
   },
+}
+
+const TEMPLATE_ORDER: readonly TileTemplateId[] = [
+  'kpi-big-number',
+  'daily-active-users',
+  'signup-activation-funnel',
+  'day-7-retention',
+  'top-events',
+  'text-note',
+  'custom-chart',
 ]
 
-export const findTileTemplate = (id: TileTemplateId): TileTemplate | undefined => TILE_TEMPLATES.find(t => t.id === id)
+export const TILE_TEMPLATES: readonly TileTemplate[] = TEMPLATE_ORDER.map(id => TILE_TEMPLATES_BY_ID[id])
+
+export const findTileTemplate = (id: TileTemplateId): TileTemplate => TILE_TEMPLATES_BY_ID[id]

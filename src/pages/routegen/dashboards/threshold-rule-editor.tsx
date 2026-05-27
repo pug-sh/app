@@ -34,9 +34,10 @@ export const ThresholdRuleEditor = ({ rule, onChange, onRemove }: ThresholdRuleE
   const patch = (next: Partial<{ operator: ThresholdRule_Operator; value: number; tone: ThresholdRule_Tone }>) => {
     onChange(
       create(ThresholdRuleSchema, {
-        operator: next.operator ?? rule.operator,
-        value: next.value ?? rule.value,
-        tone: next.tone ?? rule.tone,
+        operator: rule.operator,
+        value: rule.value,
+        tone: rule.tone,
+        ...next,
       }),
     )
   }

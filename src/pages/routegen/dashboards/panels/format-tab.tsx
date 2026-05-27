@@ -39,10 +39,11 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
   ) =>
     onPatch({
       visualization: create(VisualizationOptionsSchema, {
-        yAxisFormat: next.yAxisFormat ?? viz?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
-        logScale: next.logScale ?? viz?.logScale ?? false,
-        hideLegend: next.hideLegend ?? viz?.hideLegend ?? false,
-        zeroBaseline: next.zeroBaseline ?? viz?.zeroBaseline ?? false,
+        yAxisFormat: viz?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
+        logScale: viz?.logScale ?? false,
+        hideLegend: viz?.hideLegend ?? false,
+        zeroBaseline: viz?.zeroBaseline ?? false,
+        ...next,
       }),
     })
 

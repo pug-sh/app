@@ -17,9 +17,10 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
     const current = tile.header
     onPatch({
       header: create(TileHeaderSchema, {
-        icon: next.icon ?? current?.icon ?? '',
-        accentColor: next.accentColor ?? current?.accentColor ?? '',
-        hideTitle: next.hideTitle ?? current?.hideTitle ?? false,
+        icon: current?.icon ?? '',
+        accentColor: current?.accentColor ?? '',
+        hideTitle: current?.hideTitle ?? false,
+        ...next,
       }),
     })
   }
