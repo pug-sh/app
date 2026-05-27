@@ -14,19 +14,24 @@ import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } 
 
 type BuilderStep = 'property' | 'operator' | 'value'
 
+type ValueMode = 'property' | 'userId'
+
 export const FilterBuilder = ({
   schema,
   schemaError,
   onAdd,
   kindFilter,
+  onUserIdSet,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   onAdd: (filter: ActiveFilter) => void
   kindFilter?: string
+  onUserIdSet?: (id: string) => void
 }) => {
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState<BuilderStep>('property')
+  const [valueMode, setValueMode] = useState<ValueMode>('property')
   const [prop, setProp] = useState('')
   const [propSource, setPropSource] = useState(PropertySource.UNSPECIFIED)
   const [op, setOp] = useState(FilterOperator.EQUALS)
@@ -40,10 +45,15 @@ export const FilterBuilder = ({
     () => (allowedOperators ? FILTER_OPERATORS.filter(o => allowedOperators.has(o.value)) : FILTER_OPERATORS),
     [allowedOperators],
   )
-  const { suggestions, loaded, error } = useSuggestions(step === 'value' ? prop : '', propSource, kindFilter)
+  const { suggestions, loaded, error } = useSuggestions(
+    step === 'value' && valueMode === 'property' ? prop : '',
+    propSource,
+    kindFilter,
+  )
 
   const reset = () => {
     setStep('property')
+    setValueMode('property')
     setProp('')
     setPropSource(PropertySource.UNSPECIFIED)
     setOp(FilterOperator.EQUALS)
@@ -55,6 +65,12 @@ export const FilterBuilder = ({
     setProp(key)
     setPropSource(source)
     setStep('operator')
+  }
+
+  const pickUserId = () => {
+    setValueMode('userId')
+    setVal('')
+    setStep('value')
   }
 
   const pickOperator = (operator: FilterOperator) => {
@@ -72,6 +88,14 @@ export const FilterBuilder = ({
   }
 
   const commitFilter = () => {
+    if (valueMode === 'userId') {
+      const v = val.trim()
+      if (!v) return
+      onUserIdSet?.(v)
+      setOpen(false)
+      reset()
+      return
+    }
     if (opMeta?.arity === 'range') {
       const [min, max] = vals
       if (!min?.trim() || !max?.trim()) return
@@ -106,18 +130,21 @@ export const FilterBuilder = ({
             type="button"
             onClick={() => {
               setStep('property')
+              setValueMode('property')
               setProp('')
               setOp(FilterOperator.EQUALS)
             }}
             className="hover:text-foreground cursor-pointer"
           >
-            Property
+            {valueMode === 'userId' ? 'Identity' : 'Property'}
           </button>
           <ChevronRight className="w-2.5 h-2.5" />
-          <span className="font-mono text-foreground">{prop}</span>
+          <span className={valueMode === 'userId' ? 'text-foreground' : 'font-mono text-foreground'}>
+            {valueMode === 'userId' ? 'User ID' : prop}
+          </span>
         </>
       )}
-      {step === 'value' && (
+      {step === 'value' && valueMode === 'property' && (
         <>
           <ChevronRight className="w-2.5 h-2.5" />
           <button type="button" onClick={() => setStep('operator')} className="hover:text-foreground cursor-pointer">
@@ -150,6 +177,9 @@ export const FilterBuilder = ({
             placeholder="Filter by property..."
             mode={{ kind: 'pick' }}
             onSelect={(name, source) => pickProperty(name, source)}
+            extraGroup={
+              onUserIdSet ? { heading: 'Identity', items: [{ label: 'User ID', onSelect: pickUserId }] } : undefined
+            }
           />
         )}
 
@@ -171,7 +201,19 @@ export const FilterBuilder = ({
           </div>
         )}
 
-        {step === 'value' && opMeta?.arity === 'range' && (
+        {step === 'value' && valueMode === 'userId' && (
+          <SingleValueEditor
+            value={val}
+            onChange={setVal}
+            onCommit={commitFilter}
+            suggestions={[]}
+            loaded={true}
+            error={false}
+            footer={<ApplyFooter onClick={commitFilter} disabled={!val.trim()} />}
+          />
+        )}
+
+        {step === 'value' && valueMode === 'property' && opMeta?.arity === 'range' && (
           <BetweenValueEditor
             min={vals[0] ?? ''}
             max={vals[1] ?? ''}
@@ -182,7 +224,7 @@ export const FilterBuilder = ({
           />
         )}
 
-        {step === 'value' && opMeta?.arity === 'list' && (
+        {step === 'value' && valueMode === 'property' && opMeta?.arity === 'list' && (
           <MultiValueEditor
             values={vals}
             onAdd={addMultiValues}
@@ -195,7 +237,7 @@ export const FilterBuilder = ({
           />
         )}
 
-        {step === 'value' && opMeta?.arity === undefined && (
+        {step === 'value' && valueMode === 'property' && opMeta?.arity === undefined && (
           <SingleValueEditor
             value={val}
             onChange={setVal}
