@@ -76,14 +76,14 @@ const PropertiesSection = ({ title, entries }: { title: string; entries: Entry[]
       <tbody>
         {entries.map(e => (
           <tr key={e.key} className="group border-b border-border/50 transition-colors hover:bg-muted/40">
-            <td className="py-2 pr-6 align-middle whitespace-nowrap">
+            <td className="py-2 pr-6 align-baseline whitespace-nowrap leading-5">
               <span className="font-mono text-xs">{e.key}</span>
             </td>
-            <td className="py-2 pr-6 align-middle whitespace-nowrap">
+            <td className="py-2 pr-6 align-baseline whitespace-nowrap leading-5">
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{e.type}</span>
             </td>
-            <td className="py-2 pr-4 align-middle w-full">
-              <div className="flex items-center gap-2">
+            <td className="py-2 pr-4 align-baseline w-full leading-5">
+              <div className="flex items-baseline gap-2">
                 <span className="truncate text-xs" title={e.display}>
                   {e.display}
                 </span>
