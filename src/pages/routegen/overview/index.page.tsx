@@ -1,11 +1,17 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { LayoutDashboard } from 'lucide-react'
-import { useEffect } from 'react'
+import { Clock, LayoutDashboard } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
+import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
+import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { GRANULARITIES } from '../insights/constants'
+import { OptionChip } from '../insights/controls'
 import {
   fetchOverviewSchemaAtom,
   overviewSchemaAtom,
@@ -14,6 +20,22 @@ import {
 } from './overview.atoms'
 import SetupMode from './setup-mode'
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+const GLOBAL_GRANULARITIES = [
+  { label: 'Select granularity', value: Granularity.UNSPECIFIED },
+  ...GRANULARITIES,
+] as const
+
+const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
+  if (!range) return Granularity.UNSPECIFIED
+  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
+  if (durationMs <= DAY_MS) return Granularity.HOUR
+  if (durationMs <= 90 * DAY_MS) return Granularity.DAY
+  if (durationMs <= 365 * DAY_MS) return Granularity.WEEK
+  return Granularity.MONTH
+}
+
 const Overview = () => {
   const project = useAtomValue(activeProjectAtom)
   const schema = useAtomValue(overviewSchemaAtom)
@@ -21,16 +43,47 @@ const Overview = () => {
   const error = useAtomValue(overviewSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchOverviewSchemaAtom)
 
+  const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialOverrides.timeRange)
+  const [globalGranularity, setGlobalGranularity] = useState(() => {
+    if (initialOverrides.granularity !== undefined) return initialOverrides.granularity
+    return getAutoGlobalGranularity(initialOverrides.timeRange)
+  })
+
   useEffect(() => {
     if (project) fetchSchema()
   }, [fetchSchema, project])
 
+  useEffect(() => {
+    writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
+  }, [globalGranularity, globalTimeRange])
+
   if (!project) return <NoProject title="Overview" icon={LayoutDashboard} />
 
   const hasEvents = (schema?.events.length ?? 0) > 0
+  const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
+
+  const pageActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <DateRangePicker
+        value={globalTimeRange}
+        onChange={setGlobalTimeRange}
+        presets={INSIGHTS_PRESETS}
+        allowUnset
+        unsetLabel="Select time"
+      />
+      <OptionChip
+        label="granularity"
+        icon={Clock}
+        options={GLOBAL_GRANULARITIES}
+        value={globalGranularity}
+        onChange={setGlobalGranularity}
+      />
+    </div>
+  )
 
   return (
-    <Page title="Overview" description={`Project: ${project.displayName}`}>
+    <Page title="Overview" description={`Project: ${project.displayName}`} actions={pageActions}>
       {loading && !schema ? (
         <LoadingSpinner />
       ) : error ? (
@@ -42,7 +95,11 @@ const Overview = () => {
           </Button>
         </div>
       ) : hasEvents ? (
-        <div className="text-sm text-muted-foreground">Analytics mode (Task 6).</div>
+        <div className="text-sm text-muted-foreground">
+          Analytics mode (Task 6). Range:{' '}
+          {globalTimeRange ? `${globalTimeRange.from.toISOString()} → ${globalTimeRange.to.toISOString()}` : 'auto'},
+          granularity: {tileGranularityOverride ?? 'auto'}.
+        </div>
       ) : (
         <SetupMode project={project} />
       )}
