@@ -12,6 +12,7 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import FunnelTile from './funnel-tile'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 
@@ -137,7 +138,10 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
       <section>
         <SectionDivider title="Conversion" />
-        <div className="text-sm text-muted-foreground">Funnel + platform breakdown (Tasks 10-11).</div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
+          <div className="text-sm text-muted-foreground">Platform breakdown (Task 11).</div>
+        </div>
       </section>
 
       <section>
