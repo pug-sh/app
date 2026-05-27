@@ -19,6 +19,7 @@ import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import PlatformTile from './platform-tile'
 import ProfilesBlock from './profiles-block'
+import TopEventsBlock from './top-events-block'
 
 type Props = {
   globalTimeRange: TimeRange | undefined
@@ -164,7 +165,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
       <section>
         <SectionDivider title="Schema" count={`${schema.events.length} kinds`} />
-        <div className="text-sm text-muted-foreground">Top events (Task 15).</div>
+        <TopEventsBlock events={schema.events} />
       </section>
     </div>
   )
