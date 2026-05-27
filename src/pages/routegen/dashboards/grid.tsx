@@ -149,8 +149,6 @@ export const DashboardGrid = ({
   pageRef,
   mode = 'view',
   selectedTileId,
-  onEditTile,
-  onDeleteTile,
   onDuplicateTile,
   onSelectTile,
   onLayoutsChange,
@@ -162,8 +160,6 @@ export const DashboardGrid = ({
   mode?: DashboardMode
   // The currently-selected tile id (drives a focus ring in edit mode).
   selectedTileId?: string | null
-  onEditTile?: (tile: DashboardTile) => void
-  onDeleteTile?: (tile: DashboardTile) => void
   onDuplicateTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
   onLayoutsChange?: (layouts: DashboardLayouts) => void
@@ -227,8 +223,6 @@ export const DashboardGrid = ({
               tile={tile}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
-              onEdit={editable ? onEditTile : undefined}
-              onDelete={editable ? onDeleteTile : undefined}
               onDuplicate={editable ? onDuplicateTile : undefined}
             />
           </div>

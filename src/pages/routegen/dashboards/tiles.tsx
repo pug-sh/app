@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { Copy, Edit3, MoreHorizontal, Trash2, TrendingUp } from 'lucide-react'
+import { Copy, MoreHorizontal, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -90,15 +90,11 @@ const DashboardInsightTile = ({
 
 export const DashboardTileBody = ({
   tile,
-  onEdit,
-  onDelete,
   onDuplicate,
   globalTimeRange,
   globalGranularity,
 }: {
   tile: DashboardTile
-  onEdit?: (tile: DashboardTile) => void
-  onDelete?: (tile: DashboardTile) => void
   onDuplicate?: (tile: DashboardTile) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
@@ -111,7 +107,7 @@ export const DashboardTileBody = ({
         <DashboardInsightTile tile={tile} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
       )}
     </div>
-    {onEdit || onDelete || onDuplicate ? (
+    {onDuplicate ? (
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -126,24 +122,10 @@ export const DashboardTileBody = ({
           <MoreHorizontal className="size-3.5" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          {onEdit ? (
-            <DropdownMenuItem onClick={() => onEdit(tile)}>
-              <Edit3 className="size-4" />
-              Edit
-            </DropdownMenuItem>
-          ) : null}
-          {onDuplicate ? (
-            <DropdownMenuItem onClick={() => onDuplicate(tile)}>
-              <Copy className="size-4" />
-              Duplicate
-            </DropdownMenuItem>
-          ) : null}
-          {onDelete ? (
-            <DropdownMenuItem variant="destructive" onClick={() => onDelete(tile)}>
-              <Trash2 className="size-4" />
-              Delete
-            </DropdownMenuItem>
-          ) : null}
+          <DropdownMenuItem onClick={() => onDuplicate(tile)}>
+            <Copy className="size-4" />
+            Duplicate
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ) : null}

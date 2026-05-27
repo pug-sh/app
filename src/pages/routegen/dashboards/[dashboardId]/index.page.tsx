@@ -1,11 +1,13 @@
-import { create } from '@bufbuild/protobuf'
+import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
 import {
   type Dashboard,
+  DashboardSchema,
   type DashboardTile,
+  DashboardTileSchema,
   ResponsiveGridLayoutSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -42,10 +44,6 @@ const GLOBAL_DASHBOARD_GRANULARITIES = [
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-// Loose tile equality: proto JSON serialization is stable enough for a dirty
-// count surface (not a security-sensitive equality check).
-const tilesEqual = (a: DashboardTile, b: DashboardTile): boolean => JSON.stringify(a) === JSON.stringify(b)
-
 const formatRelative = (ts: number): string => {
   const elapsed = Date.now() - ts
   const minutes = Math.round(elapsed / 60_000)
@@ -70,7 +68,7 @@ const countChanges = (a: Dashboard, b: Dashboard): number => {
       count++
       continue
     }
-    if (!tilesEqual(left, right)) count++
+    if (!equals(DashboardTileSchema, left, right)) count++
   }
   return count
 }
@@ -217,7 +215,7 @@ const DashboardDetail = () => {
     setSaving(true)
     try {
       const response = await upsertDashboard(buildUpsertRequest(storedDraft.draft))
-      if (response) setDashboard(response)
+      setDashboard(response)
       setStoredDraft(null)
       clearDraftKey(dashboardId)
       setMode('view')
@@ -239,7 +237,7 @@ const DashboardDetail = () => {
   // has changed externally — surface a conflict prompt.
   const resumeBanner = useMemo<'none' | 'resume' | 'conflict'>(() => {
     if (mode !== 'view' || !dashboard || !storedDraft) return 'none'
-    return JSON.stringify(storedDraft.viewSnapshot) === JSON.stringify(dashboard) ? 'resume' : 'conflict'
+    return equals(DashboardSchema, storedDraft.viewSnapshot, dashboard) ? 'resume' : 'conflict'
   }, [dashboard, mode, storedDraft])
 
   const resumeEditing = useCallback(() => {
@@ -259,13 +257,6 @@ const DashboardDetail = () => {
 
   const handleConfirmDelete = useCallback(async () => {
     if (!dashboard || !deleteTarget) return
-
-    if (deleteTarget.type === 'tile') {
-      // Tile deletion is reintroduced via draft state in Task 24.
-      setDeleteTarget(null)
-      return
-    }
-
     setSavingDashboard(true)
     try {
       await deleteDashboard(deleteTarget.dashboardId)

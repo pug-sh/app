@@ -104,9 +104,10 @@ export const updateDashboardAtom = atom(
 
 export const upsertDashboardAtom = atom(null, async (get, _set, input: DashboardsServiceUpsertRequest) => {
   const headers = get(projectHeaderAtom)
-  if (!headers) return null
+  if (!headers) throw new Error('No active project')
 
   const dashboardsRPC = get(dashboardsRPCAtom)
   const resp = await dashboardsRPC.upsert(input, { headers })
-  return resp.dashboard ?? null
+  if (!resp.dashboard) throw new Error('Upsert returned no dashboard')
+  return resp.dashboard
 })
