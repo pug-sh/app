@@ -13,6 +13,7 @@ import {
 import type { TimeRange } from '@/components/date-range-picker'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import CampaignsBlock from './campaigns-block'
+import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
@@ -157,6 +158,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <ProfilesBlock />
           <CampaignsBlock />
+          <EventFeedBlock primary={bindings.primary} globalTimeRange={globalTimeRange} />
         </div>
       </section>
 
