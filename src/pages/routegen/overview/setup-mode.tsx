@@ -10,7 +10,8 @@ import { fetchOverviewSchemaAtom, overviewSchemaLoadingAtom } from './overview.a
 const CopyableCode = ({ label, value, masked = false }: { label: string; value: string; masked?: boolean }) => {
   const { copied, copy } = useCopyToClipboard()
   const [revealed, setRevealed] = useState(!masked)
-  const display = revealed ? value : `${value.slice(0, 8)}••••••••••••`
+  const safe = value ?? ''
+  const display = revealed ? safe : `${safe.slice(0, 8)}••••••••••••`
 
   return (
     <tr className="border-b border-border/50">
@@ -25,7 +26,7 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
               {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
             </Button>
           )}
-          <Button variant="ghost" size="icon-xs" onClick={() => copy(value)}>
+          <Button variant="ghost" size="icon-xs" onClick={() => copy(safe)}>
             {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
           </Button>
         </span>

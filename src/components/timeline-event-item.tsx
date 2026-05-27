@@ -36,20 +36,24 @@ const TimelineEventItem = ({
       />
 
       <div className={cn('py-2.5 pr-3 transition-colors', hasMore && 'hover:bg-muted/40')}>
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="secondary"
-            className="text-[11px] font-medium px-2 py-0.5"
-            style={{ backgroundColor: colors.fill, color: colors.dot }}
-          >
-            {event.kind}
-          </Badge>
+        <div className="flex items-center gap-3">
+          <div className="w-32 shrink-0">
+            <Badge
+              variant="secondary"
+              className="text-[11px] font-medium px-2 py-0.5 max-w-full truncate"
+              style={{ backgroundColor: colors.fill, color: colors.dot }}
+            >
+              {event.kind}
+            </Badge>
+          </div>
           {timeLabel && (
-            <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap">
+            <span className="w-20 shrink-0 text-xs text-muted-foreground tabular-nums whitespace-nowrap">
               <HoverSwap primary={timeLabel.primary} secondary={timeLabel.secondary} />
             </span>
           )}
-          <InlineEventProps {...inlineResult} />
+          <div className="min-w-0 flex-1">
+            <InlineEventProps {...inlineResult} />
+          </div>
           {hasMore && (
             <span className="ml-auto">
               {expanded ? (

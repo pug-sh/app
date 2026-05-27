@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
-import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
@@ -16,6 +15,7 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
+import ProfileShell from '../../_shell'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -211,7 +211,7 @@ const SessionView = () => {
   if (!project) return <NoProject title="Session" icon={Timer} />
 
   return (
-    <Page title="Session" description={sessionId}>
+    <ProfileShell profileId={profileId}>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
@@ -255,7 +255,7 @@ const SessionView = () => {
           <p className="text-xs">This session has no recorded events</p>
         </div>
       )}
-    </Page>
+    </ProfileShell>
   )
 }
 
