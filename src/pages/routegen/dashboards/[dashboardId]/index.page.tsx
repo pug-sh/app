@@ -1,7 +1,7 @@
 import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import {
   type Dashboard,
@@ -94,7 +94,6 @@ const DashboardDetail = () => {
   const [showPicker, setShowPicker] = useState(false)
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
-  const pageRef = useRef<HTMLDivElement | null>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
@@ -474,7 +473,7 @@ const DashboardDetail = () => {
 
   return (
     <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
-      <div ref={pageRef} className="space-y-6">
+      <div className="space-y-6">
         {resumeBanner !== 'none' && storedDraft ? (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
             <div className="min-w-0">
@@ -516,7 +515,6 @@ const DashboardDetail = () => {
             <div className="min-w-0 flex-1">
               <DashboardGrid
                 tiles={effectiveDashboard?.tiles ?? []}
-                pageRef={pageRef}
                 mode={mode}
                 selectedTileId={selectedTileId}
                 globalTimeRange={globalTimeRange}

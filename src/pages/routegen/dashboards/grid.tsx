@@ -1,16 +1,17 @@
 import { create } from '@bufbuild/protobuf'
-import { type RefObject, useMemo, useRef } from 'react'
-import { type LayoutItem, Responsive, type ResponsiveLayouts } from 'react-grid-layout/legacy'
+import { useMemo, useRef } from 'react'
+import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
-import { withPageWidth } from './page-width-provider'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
+
+const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -146,7 +147,6 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayout
 
 export const DashboardGrid = ({
   tiles,
-  pageRef,
   mode = 'view',
   selectedTileId,
   onDuplicateTile,
@@ -156,7 +156,6 @@ export const DashboardGrid = ({
   globalGranularity,
 }: {
   tiles: DashboardTile[]
-  pageRef: RefObject<HTMLElement | null>
   mode?: DashboardMode
   // The currently-selected tile id (drives a focus ring in edit mode).
   selectedTileId?: string | null
@@ -169,8 +168,6 @@ export const DashboardGrid = ({
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
   const editable = mode === 'edit'
-
-  const ResponsiveGridLayoutView = useMemo(() => withPageWidth(Responsive, pageRef), [pageRef])
 
   // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
   // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
@@ -191,7 +188,7 @@ export const DashboardGrid = ({
   }
 
   return (
-    <ResponsiveGridLayoutView
+    <ResponsiveGridLayoutWithWidth
       className="layout dashboard-grid"
       breakpoints={BREAKPOINTS}
       cols={COLS}
@@ -228,6 +225,6 @@ export const DashboardGrid = ({
           </div>
         </div>
       ))}
-    </ResponsiveGridLayoutView>
+    </ResponsiveGridLayoutWithWidth>
   )
 }
