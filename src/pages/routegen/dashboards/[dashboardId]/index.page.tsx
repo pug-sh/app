@@ -1,8 +1,13 @@
+import { create } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
-import type { Dashboard, DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  type Dashboard,
+  type DashboardTile,
+  ResponsiveGridLayoutSchema,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
@@ -17,13 +22,15 @@ import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
-import { UNTITLED_DASHBOARD_NAME } from '../constants'
+import { TILE_MIN_H, TILE_MIN_W, UNTITLED_DASHBOARD_NAME } from '../constants'
 import { deleteDashboardAtom, fetchDashboardAtom, updateDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
-import { cloneForDraft } from '../draft-state'
+import { appendDraftTile, cloneForDraft, patchTile, removeDraftTile } from '../draft-state'
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
+import { buildDuplicateTileInput } from '../duplicate-tile'
 import { InlineEditableText } from '../editor-shared'
-import { DashboardGrid } from '../grid'
+import { DashboardGrid, type DashboardLayouts } from '../grid'
+import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
 
@@ -268,11 +275,64 @@ const DashboardDetail = () => {
     }
   }, [dashboard, deleteDashboard, deleteTarget, navigate])
 
-  const handleLayoutsChange = useCallback(() => {
-    // No-op — layout persistence reintroduced via draft state in Task 16.
-    // Dragging is disabled while editable=false so this should not fire, but
-    // keep the prop satisfied so DashboardGrid's typing stays the same.
-  }, [])
+  const handleLayoutsChange = useCallback(
+    (layouts: DashboardLayouts) => {
+      if (mode !== 'edit' || !storedDraft) return
+      // Apply each breakpoint's layout items back onto the matching tile in the draft.
+      let next = storedDraft.draft
+      for (const breakpoint of Object.keys(layouts) as Array<keyof typeof layouts>) {
+        const items = layouts[breakpoint]
+        if (!items) continue
+        for (const item of items) {
+          const id = item.i as string
+          const tile = next.tiles.find(t => t.id === id)
+          if (!tile) continue
+          const otherLayouts = tile.layouts.filter(l => l.breakpoint !== breakpoint)
+          const updatedLayout = create(ResponsiveGridLayoutSchema, {
+            breakpoint: breakpoint as string,
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
+            minW: item.minW ?? TILE_MIN_W,
+            maxW: item.maxW ?? 0,
+            minH: item.minH ?? TILE_MIN_H,
+            maxH: item.maxH ?? 0,
+            static: item.static ?? false,
+          })
+          next = patchTile(next, id, { layouts: [...otherLayouts, updatedLayout] })
+        }
+      }
+      setStoredDraft({ ...storedDraft, draft: next })
+    },
+    [mode, setStoredDraft, storedDraft],
+  )
+
+  const selectedTile = useMemo(() => {
+    if (mode !== 'edit' || !storedDraft) return null
+    return storedDraft.draft.tiles.find(tile => tile.id === selectedTileId) ?? null
+  }, [mode, selectedTileId, storedDraft])
+
+  const patchSelectedTile = useCallback(
+    (patch: Partial<DashboardTile>) => {
+      if (!storedDraft || !selectedTileId) return
+      setStoredDraft({ ...storedDraft, draft: patchTile(storedDraft.draft, selectedTileId, patch) })
+    },
+    [selectedTileId, setStoredDraft, storedDraft],
+  )
+
+  const removeSelectedTile = useCallback(() => {
+    if (!storedDraft || !selectedTileId) return
+    setStoredDraft({ ...storedDraft, draft: removeDraftTile(storedDraft.draft, selectedTileId) })
+    setSelectedTileId(null)
+  }, [selectedTileId, setStoredDraft, storedDraft])
+
+  const duplicateSelectedTile = useCallback(() => {
+    if (!storedDraft || !selectedTile) return
+    const input = buildDuplicateTileInput(selectedTile)
+    const nextDraft = appendDraftTile(storedDraft.draft, input)
+    setStoredDraft({ ...storedDraft, draft: nextDraft })
+  }, [selectedTile, setStoredDraft, storedDraft])
 
   const pageActions = useMemo(
     () =>
@@ -443,16 +503,30 @@ const DashboardDetail = () => {
             <DashboardEmptyState title="No tiles yet" description="Add a tile from the toolbar after clicking Edit." />
           </div>
         ) : (
-          <DashboardGrid
-            tiles={effectiveDashboard?.tiles ?? []}
-            pageRef={pageRef}
-            mode={mode}
-            selectedTileId={selectedTileId}
-            globalTimeRange={globalTimeRange}
-            globalGranularity={tileGranularityOverride}
-            onLayoutsChange={handleLayoutsChange}
-            onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
-          />
+          <div className="flex min-h-0 gap-4">
+            <div className="min-w-0 flex-1">
+              <DashboardGrid
+                tiles={effectiveDashboard?.tiles ?? []}
+                pageRef={pageRef}
+                mode={mode}
+                selectedTileId={selectedTileId}
+                globalTimeRange={globalTimeRange}
+                globalGranularity={tileGranularityOverride}
+                onLayoutsChange={handleLayoutsChange}
+                onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+              />
+            </div>
+            {mode === 'edit' && selectedTile ? (
+              <TileConfigPanel
+                key={selectedTile.id}
+                tile={selectedTile}
+                onClose={() => setSelectedTileId(null)}
+                onPatch={patchSelectedTile}
+                onDelete={removeSelectedTile}
+                onDuplicate={duplicateSelectedTile}
+              />
+            ) : null}
+          </div>
         )}
       </div>
     </Page>
