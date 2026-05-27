@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
 import {
@@ -30,6 +30,7 @@ import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
 import { InlineEditableText } from '../editor-shared'
 import { DashboardGrid, type DashboardLayouts } from '../grid'
+import { TemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
@@ -92,6 +93,7 @@ const DashboardDetail = () => {
   const updateDashboard = useSetAtom(updateDashboardAtom)
   const upsertDashboard = useSetAtom(upsertDashboardAtom)
   const [saving, setSaving] = useState(false)
+  const [showPicker, setShowPicker] = useState(false)
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const pageRef = useRef<HTMLDivElement | null>(null)
@@ -359,6 +361,10 @@ const DashboardDetail = () => {
             </Button>
           ) : (
             <>
+              <Button size="sm" variant="outline" onClick={() => setShowPicker(prev => !prev)}>
+                <Plus className="size-4" />
+                Add
+              </Button>
               <span className="text-muted-foreground text-xs">
                 {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
               </span>
@@ -398,6 +404,18 @@ const DashboardDetail = () => {
       saving,
       savingDashboard,
     ],
+  )
+
+  const handleSelectTemplate = useCallback(
+    (template: { build: () => Parameters<typeof appendDraftTile>[1] }) => {
+      if (!storedDraft) return
+      const tileInput = template.build()
+      const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
+      setStoredDraft({ ...storedDraft, draft: nextDraft })
+      setShowPicker(false)
+      setSelectedTileId(nextDraft.tiles[nextDraft.tiles.length - 1]?.id ?? null)
+    },
+    [setStoredDraft, storedDraft],
   )
 
   const pageHeader = useMemo(
@@ -487,6 +505,10 @@ const DashboardDetail = () => {
               </Button>
             </div>
           </div>
+        ) : null}
+
+        {mode === 'edit' && showPicker ? (
+          <TemplatePicker onClose={() => setShowPicker(false)} onSelect={handleSelectTemplate} />
         ) : null}
 
         {deleteTarget ? (
