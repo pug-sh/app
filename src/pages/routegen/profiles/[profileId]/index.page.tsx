@@ -5,6 +5,7 @@ import { useParams } from 'wouter'
 import type { ActivityEvent, HeatmapDay } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
+import { InlineEventProps } from '@/components/inline-event-props'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
@@ -16,6 +17,7 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { toastRPCError } from '@/lib/rpc-error'
 import { structToEntries } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
+import { resolveInlineProps } from '@/lib/well-known-events'
 import { profileFamilyAtom, profileStatsFamilyAtom } from './_data'
 import ProfileShell from './_shell'
 
@@ -162,6 +164,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
             {recent.map(e => {
               const d = tsToDate(e.occurTime)
               const colors = getSeriesColor(e.kind)
+              const inline = resolveInlineProps(e.kind, e.customProperties, e.autoProperties)
               return (
                 <li key={e.eventId} className="flex items-center gap-3 py-2 text-xs">
                   <Badge
@@ -171,9 +174,14 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
                   >
                     {e.kind}
                   </Badge>
-                  <span className="text-muted-foreground tabular-nums">
-                    {d && <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />}
-                  </span>
+                  {d && (
+                    <span className="text-muted-foreground tabular-nums whitespace-nowrap shrink-0">
+                      <HoverSwap primary={formatRelative(d)} secondary={formatDateTime(d)} />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <InlineEventProps {...inline} />
+                  </div>
                 </li>
               )
             })}
