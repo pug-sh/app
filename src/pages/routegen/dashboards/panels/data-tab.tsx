@@ -57,9 +57,6 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     selectedEventKinds: eventFilters.entries.map(entry => entry.kind),
   })
 
-  // Rebuild the spec whenever an editor field changes and push it onto the tile.
-  // Refs are passed via useEffect deps so re-renders don't spam onPatch when
-  // nothing meaningful changed.
   useEffect(() => {
     if (tile.content.case !== 'insight') return
     const spec = buildInsightSpec({
@@ -71,9 +68,11 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     onPatch({
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
     })
-    // We intentionally exclude `tile` and `onPatch` from deps — we only want the
-    // patch to fire when *editor* state changes, not when a parent re-render
-    // produces a new tile object identity.
+    // Exclude `tile` and `onPatch`: this fires only on editor-state changes, not
+    // on parent re-renders that produce a new tile object identity. In-place
+    // mutation of the same tile from outside the panel will not re-seed local
+    // editor state — DataTab is keyed by tile.id so cross-tile switches do
+    // re-seed cleanly.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns])
 

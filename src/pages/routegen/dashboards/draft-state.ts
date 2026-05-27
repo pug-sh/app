@@ -9,10 +9,8 @@ import {
   ResponsiveGridLayoutSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 
-// Deep clone a server Dashboard for use as the editor draft.
 export const cloneForDraft = (source: Dashboard): Dashboard => clone(DashboardSchema, source)
 
-// Replace a tile's fields. Returns a new Dashboard; the input is not mutated.
 export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<DashboardTile>): Dashboard => ({
   ...dashboard,
   tiles: dashboard.tiles.map(tile => (tile.id === tileId ? ({ ...tile, ...patch } as DashboardTile) : tile)),

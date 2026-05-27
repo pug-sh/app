@@ -4,8 +4,7 @@ import {
   ThresholdRule_Tone,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 
-// Evaluate a list of threshold rules against a single value. First match wins.
-// Returns null when no rule matches, or when the value is non-finite.
+// First-match-wins. Returns null when no rule matches or value is non-finite.
 export const evaluateThresholds = (value: number, rules: ThresholdRule[]): ThresholdRule_Tone | null => {
   if (!Number.isFinite(value)) return null
   for (const rule of rules) {

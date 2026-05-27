@@ -73,7 +73,7 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
         <div className="space-y-2">
           {tile.thresholds.map((rule, idx) => (
             <ThresholdRuleEditor
-              key={`${rule.operator}-${idx}`}
+              key={idx}
               rule={rule}
               onChange={next => updateRule(idx, next)}
               onRemove={() => removeRule(idx)}

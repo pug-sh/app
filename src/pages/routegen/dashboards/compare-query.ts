@@ -5,9 +5,6 @@ import { type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/ins
 import type { TimeRange } from '@/components/date-range-picker'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
-// Given the primary query and the user's compare selection, return the comparison
-// QueryRequest with the time range shifted back by the window's length. Returns
-// undefined when no comparison applies.
 export const buildComparisonQuery = (
   query: QueryRequest | undefined,
   effectiveTimeRange: TimeRange,

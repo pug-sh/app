@@ -31,8 +31,6 @@ import { type KpiCompare, KpiTile } from './kpi-tile'
 import { getInitialGranularity, getProtoRange } from './query'
 import { dashboardTileViewModeToViewMode } from './tile-settings'
 
-// Format a numeric value for KPI display based on the tile's chosen y-axis format.
-// Also used to format any KPI delta sub-value consistently.
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
   return (value: number): string => {
     if (!Number.isFinite(value)) return '—'
@@ -120,7 +118,6 @@ export const DashboardInsightContent = ({
     { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
   )
 
-  // Comparison-period query: only fires when the tile has compare=PRIOR.
   const comparisonQuery = useMemo(
     () => (tile ? buildComparisonQuery(effectiveQuery, effectiveTimeRange, tile.compare) : undefined),
     [effectiveQuery, effectiveTimeRange, tile],

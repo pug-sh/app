@@ -79,14 +79,12 @@ const protoStorage = {
 
 const draftKey = (dashboardId: string) => `pug:dashboard-draft:${dashboardId}`
 
-// One atom per dashboard id, persisted to localStorage.
 export const draftAtomFamily = atomFamily((dashboardId: string) =>
   atomWithStorage<StoredDraft | null>(draftKey(dashboardId), null, protoStorage),
 )
 
-// Imperative helper for callers that want to clear a specific dashboard's draft
-// entry without going through the atom (used after a successful Save and on
-// dashboard delete).
+// Imperative escape hatch for non-React callers that need to clear a draft key
+// without reading the atom (avoids triggering React renders).
 export const clearDraftKey = (dashboardId: string) => {
   localStorage.removeItem(draftKey(dashboardId))
 }

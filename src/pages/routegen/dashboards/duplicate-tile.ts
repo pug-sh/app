@@ -11,9 +11,7 @@ import {
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 
-// Build a DashboardTileInput that duplicates `source` immediately below it.
-// The result has an empty id (server assigns one on Upsert) and y-shifted layouts
-// so the clone lands directly below the source in every breakpoint.
+// y-shifted layouts so the clone lands directly below the source in every breakpoint.
 export const buildDuplicateTileInput = (source: DashboardTile): DashboardTileInput => {
   const layouts = source.layouts.map(layout =>
     create(ResponsiveGridLayoutSchema, {

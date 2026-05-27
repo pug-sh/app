@@ -95,8 +95,6 @@ const DashboardDetail = () => {
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const pageRef = useRef<HTMLDivElement | null>(null)
-  // Edit-mode state: 'view' vs 'edit', the selected tile (for the side panel
-  // in a later task), and the localStorage-backed draft for this dashboard.
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
