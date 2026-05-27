@@ -20,7 +20,7 @@ import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { structGet } from '@/lib/struct'
-import { formatClock, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
 import ProfileShell from '../_shell'
@@ -218,7 +218,6 @@ const UserActivity = () => {
                 {group.events.map((event, i) => {
                   const activeLanes = lanes.filter(l => i >= l.firstIdx && i <= l.lastIdx)
                   const d = tsToDate(event.occurTime)
-                  const isToday = group.label === 'Today'
                   return (
                     <div key={event.eventId} className="flex">
                       <div className="flex-1 min-w-0">
@@ -227,8 +226,8 @@ const UserActivity = () => {
                           timeLabel={
                             d
                               ? {
-                                  primary: isToday ? formatRelative(d) : formatClock(d),
-                                  secondary: isToday ? formatClock(d) : formatRelative(d),
+                                  primary: formatRelative(d),
+                                  secondary: formatDateTime(d),
                                 }
                               : null
                           }
