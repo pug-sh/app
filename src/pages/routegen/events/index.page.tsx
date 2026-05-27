@@ -16,7 +16,6 @@ import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useEventFilters } from '@/hooks/use-event-filters'
@@ -143,7 +142,6 @@ const EventExplorer = () => {
 
   // Applied filter state (drives API calls)
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
-  const [userInput, setUserInput] = useState('')
   const [userFilter, setUserFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
@@ -176,10 +174,6 @@ const EventExplorer = () => {
   useEffect(() => {
     writeFilterQueryParams(eventFilters.entries, propFilters)
   }, [eventFilters.entries, propFilters])
-
-  const commitUserFilter = () => {
-    setUserFilter(userInput.trim())
-  }
 
   const fetchEvents = useCallback(
     async (pageToken = '') => {
@@ -239,7 +233,7 @@ const EventExplorer = () => {
           schemaError={schemaError}
         />
         <div className="flex items-center gap-2 flex-wrap">
-          {userFilter ? (
+          {userFilter && (
             <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
               <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">user</span>
               <Popover>
@@ -253,10 +247,7 @@ const EventExplorer = () => {
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         const v = (e.target as HTMLInputElement).value.trim()
-                        if (v) {
-                          setUserFilter(v)
-                          setUserInput(v)
-                        }
+                        if (v) setUserFilter(v)
                       }
                     }}
                     className="w-full h-7 px-2 text-xs font-mono rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring"
@@ -266,30 +257,22 @@ const EventExplorer = () => {
               </Popover>
               <button
                 type="button"
-                onClick={() => {
-                  setUserFilter('')
-                  setUserInput('')
-                }}
+                onClick={() => setUserFilter('')}
                 className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
               >
                 <X className="w-3 h-3" />
               </button>
             </span>
-          ) : (
-            <Input
-              placeholder="User ID"
-              value={userInput}
-              onChange={e => setUserInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') commitUserFilter()
-              }}
-              className="w-40 h-7 text-sm"
-            />
           )}
           {propFilters.map((f, i) => (
             <FilterChip key={i} filter={f} onRemove={() => removeFilter(i)} onUpdate={next => updateFilter(i, next)} />
           ))}
-          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+          <FilterBuilder
+            schema={globalSchema}
+            schemaError={globalSchemaError}
+            onAdd={addFilter}
+            onUserIdSet={userFilter ? undefined : setUserFilter}
+          />
           {events.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground tabular-nums">{events.length} events</span>
           )}

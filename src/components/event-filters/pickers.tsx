@@ -22,12 +22,14 @@ export const PropertyPickerList = ({
   placeholder,
   mode,
   onSelect,
+  extraGroup,
 }: {
   schema: GetFilterSchemaResponse | null
   schemaError: string | null
   placeholder: string
   mode: PropertyPickerMode
   onSelect: (name: string, source: PropertySource) => void
+  extraGroup?: { heading: string; items: ReadonlyArray<{ label: string; onSelect: () => void }> }
 }) => {
   const selected = mode.kind === 'multi-select' ? mode.selected : null
   const hasSystem = schema && schema.autoPropertyKeys.length > 0
@@ -39,6 +41,15 @@ export const PropertyPickerList = ({
       <CommandInput placeholder={placeholder} className="text-xs" />
       <CommandList>
         <CommandEmpty className="py-4 text-xs">{getSchemaEmptyMessage(schema, schemaError)}</CommandEmpty>
+        {extraGroup && (
+          <CommandGroup heading={extraGroup.heading}>
+            {extraGroup.items.map(item => (
+              <CommandItem key={item.label} value={item.label} onSelect={item.onSelect} className="text-xs py-1.5">
+                <span className="truncate">{item.label}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
         {hasSystem && (
           <CommandGroup heading="System">
             {schema.autoPropertyKeys.map(pk => (
