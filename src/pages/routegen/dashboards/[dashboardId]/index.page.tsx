@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { BarChart3, Clock, FileText, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Clock, LayoutGrid, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -18,23 +18,11 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
-import { createInsightTile, createMarkdownTile } from '../create-tile-actions'
-import {
-  createDashboardTileAtom,
-  deleteDashboardAtom,
-  deleteDashboardTileAtom,
-  fetchDashboardAtom,
-  removeDashboardTile,
-  updateDashboardAtom,
-  updateDashboardTileAtom,
-} from '../dashboard.atoms'
+import { deleteDashboardAtom, fetchDashboardAtom, updateDashboardAtom } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { InlineEditableText } from '../editor-shared'
-import { DashboardGrid, type DashboardLayouts } from '../grid'
-import { DashboardTileEditor } from '../tile-editor'
+import { DashboardGrid } from '../grid'
 import { DashboardEmptyState } from '../tiles'
-import type { EditorState, InsightTileInput, MarkdownTileInput } from '../types'
-import { persistTileLayouts, updateInsightTile, updateMarkdownTile } from '../update-tile-actions'
 
 const GLOBAL_DASHBOARD_GRANULARITIES = [
   { label: 'Select granularity', value: Granularity.UNSPECIFIED },
@@ -57,29 +45,22 @@ const DashboardDetail = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
-  const createTile = useSetAtom(createDashboardTileAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)
-  const deleteTile = useSetAtom(deleteDashboardTileAtom)
   const updateDashboard = useSetAtom(updateDashboardAtom)
-  const updateTile = useSetAtom(updateDashboardTileAtom)
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
-  const dashboardRef = useRef<Dashboard | null>(null)
   const [displayNameDraft, setDisplayNameDraft] = useState('')
   const [descriptionDraft, setDescriptionDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [editor, setEditor] = useState<EditorState | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
   const [savingDashboard, setSavingDashboard] = useState(false)
-  const [savingTile, setSavingTile] = useState(false)
   const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
   const [globalGranularity, setGlobalGranularity] = useState(() => {
     if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
     return getAutoGlobalGranularity(initialGlobalOverrides.timeRange)
   })
-  dashboardRef.current = dashboard
 
   const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
 
@@ -146,38 +127,6 @@ const DashboardDetail = () => {
     }
   }, [dashboard, descriptionDraft, displayNameDraft, updateDashboard])
 
-  const handleCreateInsight = async (input: InsightTileInput) => {
-    if (!dashboard) return
-    await createInsightTile({ dashboard, createTile, setDashboard, setEditor, setSavingTile, input })
-  }
-
-  const handleCreateMarkdown = async (input: MarkdownTileInput) => {
-    if (!dashboard) return
-    await createMarkdownTile({ dashboard, createTile, setDashboard, setEditor, setSavingTile, input })
-  }
-
-  const handleAddTextNote = async () => {
-    if (!dashboard) return
-
-    setEditor({ kind: 'create', type: 'markdown' })
-  }
-
-  const handleUpdateInsight = async (input: InsightTileInput) => {
-    if (!dashboard || editor?.kind !== 'edit') return
-    await updateInsightTile({ dashboard, editor, updateTile, setDashboard, setEditor, setSavingTile, input })
-  }
-
-  const handleUpdateMarkdown = async (input: MarkdownTileInput) => {
-    if (!dashboard || editor?.kind !== 'edit') return
-    await updateMarkdownTile({ dashboard, editor, updateTile, setDashboard, setSavingTile, input })
-  }
-
-  const handleLayoutsChange = async (layouts: DashboardLayouts) => {
-    const currentDashboard = dashboardRef.current
-    if (!currentDashboard) return
-    await persistTileLayouts({ dashboard: currentDashboard, layouts, updateTile, setDashboard })
-  }
-
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     setGlobalTimeRange(range)
     setGlobalGranularity(getAutoGlobalGranularity(range))
@@ -196,20 +145,8 @@ const DashboardDetail = () => {
     if (!dashboard || !deleteTarget) return
 
     if (deleteTarget.type === 'tile') {
-      setSavingTile(true)
-      try {
-        await deleteTile({
-          id: deleteTarget.tileId,
-          dashboardId: dashboard.id,
-        })
-        setDashboard(current => (current ? removeDashboardTile(current, deleteTarget.tileId) : current))
-        setEditor(current => (current?.kind === 'edit' && current.tile.id === deleteTarget.tileId ? null : current))
-        setDeleteTarget(null)
-      } catch (err) {
-        toastRPCError(err, 'Failed to delete tile')
-      } finally {
-        setSavingTile(false)
-      }
+      // Tile deletion is reintroduced via draft state in Task 24.
+      setDeleteTarget(null)
       return
     }
 
@@ -222,7 +159,13 @@ const DashboardDetail = () => {
       toastRPCError(err, 'Failed to delete dashboard')
       setSavingDashboard(false)
     }
-  }, [dashboard, deleteDashboard, deleteTarget, deleteTile, navigate])
+  }, [dashboard, deleteDashboard, deleteTarget, navigate])
+
+  const handleLayoutsChange = useCallback(() => {
+    // No-op — layout persistence reintroduced via draft state in Task 16.
+    // Dragging is disabled while editable=false so this should not fire, but
+    // keep the prop satisfied so DashboardGrid's typing stays the same.
+  }, [])
 
   const pageActions = useMemo(
     () =>
@@ -243,22 +186,6 @@ const DashboardDetail = () => {
             onChange={setGlobalGranularity}
           />
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button size="sm" variant="outline" />}>
-              <Plus className="size-4" />
-              Add
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-36">
-              <DropdownMenuItem onClick={() => setEditor({ kind: 'create', type: 'insight' })}>
-                <BarChart3 className="size-4" />
-                Chart
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleAddTextNote} disabled={savingTile}>
-                <FileText className="size-4" />
-                Text note
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
               <MoreHorizontal className="size-4" />
             </DropdownMenuTrigger>
@@ -275,11 +202,9 @@ const DashboardDetail = () => {
       dashboard,
       globalGranularity,
       globalTimeRange,
-      handleAddTextNote,
       handleGlobalTimeRangeChange,
       requestDeleteDashboard,
       savingDashboard,
-      savingTile,
     ],
   )
 
@@ -349,57 +274,24 @@ const DashboardDetail = () => {
         {deleteTarget ? (
           <DashboardDeleteConfirmation
             target={deleteTarget}
-            deleting={savingDashboard || savingTile}
+            deleting={savingDashboard}
             onCancel={() => setDeleteTarget(null)}
             onConfirm={handleConfirmDelete}
           />
         ) : null}
 
-        {editor ? (
-          <DashboardTileEditor
-            key={editor.kind === 'edit' ? editor.tile.id : `create-${editor.type}`}
-            tile={editor.kind === 'edit' ? editor.tile : undefined}
-            type={editor.kind === 'create' ? editor.type : undefined}
-            saving={savingTile}
-            onCancel={() => setEditor(null)}
-            onCreateInsight={editor.kind === 'edit' ? handleUpdateInsight : handleCreateInsight}
-            onCreateMarkdown={editor.kind === 'edit' ? handleUpdateMarkdown : handleCreateMarkdown}
-          />
-        ) : null}
-
         {dashboard.tiles.length === 0 ? (
           <div className="space-y-4">
-            <DashboardEmptyState title="No tiles yet" description="Add a chart or text note." />
+            <DashboardEmptyState title="No tiles yet" description="Editing UI returns in a follow-up commit." />
           </div>
         ) : (
           <DashboardGrid
             tiles={dashboard.tiles}
-            editable
             globalTimeRange={globalTimeRange}
             globalGranularity={tileGranularityOverride}
-            onEditTile={tile =>
-              setEditor({
-                kind: 'edit',
-                tile,
-              })
-            }
-            onDeleteTile={tile =>
-              setDeleteTarget({
-                type: 'tile',
-                tileId: tile.id,
-                displayName: tile.displayName || 'Untitled tile',
-              })
-            }
             onLayoutsChange={handleLayoutsChange}
           />
         )}
-
-        {savingTile ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="size-3.5 animate-spin" />
-            Saving tile changes...
-          </div>
-        ) : null}
       </div>
     </Page>
   )

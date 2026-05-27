@@ -1,15 +1,9 @@
 import { create } from '@bufbuild/protobuf'
 import { atom } from 'jotai'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
-import type {
-  Dashboard,
-  DashboardsServiceCreateTileRequest,
-  DashboardsServiceUpdateTileRequest,
-  DashboardTile,
-} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Dashboard, DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   DashboardsServiceDeleteRequestSchema,
-  DashboardsServiceDeleteTileRequestSchema,
   DashboardsServiceUpdateRequestSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -107,33 +101,6 @@ export const updateDashboardAtom = atom(
     return resp.dashboard ?? null
   },
 )
-
-export const createDashboardTileAtom = atom(null, async (get, set, input: DashboardsServiceCreateTileRequest) => {
-  const headers = get(projectHeaderAtom)
-  if (!headers) return null
-
-  const dashboardsRPC = get(dashboardsRPCAtom)
-  const resp = await dashboardsRPC.createTile(input, { headers })
-  await set(fetchDashboardsAtom)
-  return resp.tile ?? null
-})
-
-export const updateDashboardTileAtom = atom(null, async (get, _set, input: DashboardsServiceUpdateTileRequest) => {
-  const headers = get(projectHeaderAtom)
-  if (!headers) return null
-
-  const dashboardsRPC = get(dashboardsRPCAtom)
-  const resp = await dashboardsRPC.updateTile(input, { headers })
-  return resp.tile ?? null
-})
-
-export const deleteDashboardTileAtom = atom(null, async (get, _set, input: { id: string; dashboardId: string }) => {
-  const headers = get(projectHeaderAtom)
-  if (!headers) return
-
-  const dashboardsRPC = get(dashboardsRPCAtom)
-  await dashboardsRPC.deleteTile(create(DashboardsServiceDeleteTileRequestSchema, input), { headers })
-})
 
 export const replaceDashboardTile = (dashboard: Dashboard, nextTile: DashboardTile) => ({
   ...dashboard,
