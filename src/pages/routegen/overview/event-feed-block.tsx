@@ -7,6 +7,7 @@ import { TimeRangePreset, TimeRangeSchema } from '@/api/genproto/common/v1/time_
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
+import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
@@ -76,7 +77,12 @@ const EventFeedBlock = ({ primary, globalTimeRange }: Props) => {
             const colors = getSeriesColor(event.kind)
             return (
               <li key={event.eventId} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 text-xs">
-                <span className="min-w-0 truncate font-mono">{event.distinctId}</span>
+                <ProjectLink
+                  href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
+                  className="min-w-0 truncate font-mono text-primary hover:underline underline-offset-4"
+                >
+                  {event.distinctId}
+                </ProjectLink>
                 <Badge
                   variant="secondary"
                   className="shrink-0 text-[10px]"
