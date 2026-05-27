@@ -16,6 +16,7 @@ import FunnelTile from './funnel-tile'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import PlatformTile from './platform-tile'
+import ProfilesBlock from './profiles-block'
 
 type Props = {
   globalTimeRange: TimeRange | undefined
@@ -152,7 +153,9 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
       <section>
         <SectionDivider title="People & comms" />
-        <div className="text-sm text-muted-foreground">Profiles + campaigns + event feed (Tasks 12-14).</div>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <ProfilesBlock />
+        </div>
       </section>
 
       <section>
