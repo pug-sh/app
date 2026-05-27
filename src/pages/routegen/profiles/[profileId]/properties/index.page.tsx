@@ -1,9 +1,8 @@
 import type { JsonValue } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { Copy, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { Copy } from 'lucide-react'
+import { useMemo } from 'react'
 import { useParams } from 'wouter'
-import { Input } from '@/components/ui/input'
 import { profileFamilyAtom } from '../_data'
 import ProfileShell from '../_shell'
 
@@ -44,17 +43,15 @@ const ProfileProperties = () => {
 
 const PropertiesBody = ({ profileId }: { profileId: string }) => {
   const profile = useAtomValue(profileFamilyAtom(profileId))
-  const [q, setQ] = useState('')
 
   const { custom, system, total } = useMemo(() => {
     const all = toEntries(profile?.properties as Record<string, JsonValue> | undefined)
-    const filtered = q ? all.filter(e => e.key.toLowerCase().includes(q.toLowerCase())) : all
     return {
-      custom: filtered.filter(e => !e.key.startsWith('$')).sort((a, b) => a.key.localeCompare(b.key)),
-      system: filtered.filter(e => e.key.startsWith('$')).sort((a, b) => a.key.localeCompare(b.key)),
+      custom: all.filter(e => !e.key.startsWith('$')).sort((a, b) => a.key.localeCompare(b.key)),
+      system: all.filter(e => e.key.startsWith('$')).sort((a, b) => a.key.localeCompare(b.key)),
       total: all.length,
     }
-  }, [profile?.properties, q])
+  }, [profile?.properties])
 
   if (total === 0) {
     return <p className="text-xs text-muted-foreground">No properties identified for this profile yet.</p>
@@ -62,22 +59,8 @@ const PropertiesBody = ({ profileId }: { profileId: string }) => {
 
   return (
     <div className="space-y-6">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          placeholder="Filter properties…"
-          className="pl-7 h-8 text-xs"
-        />
-      </div>
       {custom.length > 0 && <PropertiesSection title="Custom traits" entries={custom} />}
       {system.length > 0 && <PropertiesSection title="System traits" entries={system} />}
-      {custom.length === 0 && system.length === 0 && q && (
-        <p className="text-xs text-muted-foreground">
-          No properties match "<span className="font-mono">{q}</span>".
-        </p>
-      )}
     </div>
   )
 }
