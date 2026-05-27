@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { atom } from 'jotai'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
-import type { Dashboard, DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type {
+  Dashboard,
+  DashboardsServiceUpsertRequest,
+  DashboardTile,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   DashboardsServiceDeleteRequestSchema,
   DashboardsServiceUpdateRequestSchema,
@@ -101,6 +105,15 @@ export const updateDashboardAtom = atom(
     return resp.dashboard ?? null
   },
 )
+
+export const upsertDashboardAtom = atom(null, async (get, _set, input: DashboardsServiceUpsertRequest) => {
+  const headers = get(projectHeaderAtom)
+  if (!headers) return null
+
+  const dashboardsRPC = get(dashboardsRPCAtom)
+  const resp = await dashboardsRPC.upsert(input, { headers })
+  return resp.dashboard ?? null
+})
 
 export const replaceDashboardTile = (dashboard: Dashboard, nextTile: DashboardTile) => ({
   ...dashboard,
