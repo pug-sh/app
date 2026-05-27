@@ -52,7 +52,13 @@ export const ThresholdRuleEditor = ({ rule, onChange, onRemove }: ThresholdRuleE
       <input
         type="number"
         value={Number.isFinite(rule.value) ? rule.value : 0}
-        onChange={e => patch({ value: Number.parseFloat(e.target.value) || 0 })}
+        onChange={e => {
+          const parsed = Number.parseFloat(e.target.value)
+          // Mid-typing states like "-" or "" parse to NaN. Preserve the current
+          // value so the input doesn't snap to 0 and block entering negatives.
+          if (Number.isNaN(parsed)) return
+          patch({ value: parsed })
+        }}
         className="w-20 rounded border border-border bg-background px-1.5 py-1 text-xs tabular-nums"
       />
       <OptionChip label="tone" options={TONE_OPTIONS} value={rule.tone} onChange={tone => patch({ tone })} />

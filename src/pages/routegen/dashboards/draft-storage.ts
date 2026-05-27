@@ -42,7 +42,10 @@ const protoStorage = {
     try {
       return deserialize(raw)
     } catch (err) {
-      console.error('Failed to deserialize dashboard draft:', key, err)
+      // Schema-incompatible drafts (after a proto change) can't be recovered.
+      // Drop the corrupt entry so it stops retriggering on every mount.
+      console.error('Failed to deserialize dashboard draft, discarding:', key, err)
+      localStorage.removeItem(key)
       return initialValue
     }
   },
