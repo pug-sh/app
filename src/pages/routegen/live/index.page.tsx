@@ -95,7 +95,14 @@ const VisitorRow = ({ visitor, selected, onClick }: VisitorRowProps) => {
             )}
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
-            {locality ? <>{locality}{countryName && <span className="text-muted-foreground/60"> · {countryName}</span>}</> : countryName || '—'}
+            {locality ? (
+              <>
+                {locality}
+                {countryName && <span className="text-muted-foreground/60"> · {countryName}</span>}
+              </>
+            ) : (
+              countryName || '—'
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
             {browser && <span className="truncate">{browser}</span>}
@@ -192,9 +199,7 @@ const LiveVisitorsPage = () => {
           <div className="flex items-center gap-3">
             {loading && events.length > 0 && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
             {lastUpdated && (
-              <span className="text-xs text-muted-foreground">
-                Updated {formatRelative(lastUpdated)}
-              </span>
+              <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>
             )}
           </div>
         </div>
@@ -246,9 +251,7 @@ const LiveVisitorsPage = () => {
 
             {selectedVisitor && (
               <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-muted/30 px-4 py-2">
-                <span className="truncate text-[11px] text-muted-foreground">
-                  Focused on selected visitor
-                </span>
+                <span className="truncate text-[11px] text-muted-foreground">Focused on selected visitor</span>
                 <button
                   type="button"
                   onClick={() => setSelectedDistinctId(null)}
