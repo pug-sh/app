@@ -197,11 +197,15 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
       markers: [],
     })
 
-    const onResize = () => {
+    const layout = () => {
       width = container.offsetWidth
       height = container.offsetHeight
       globe.update({ width: width * dpr, height: height * dpr })
     }
+
+    layout()
+
+    const onResize = () => layout()
     window.addEventListener('resize', onResize)
 
     const onPointerDown = (e: PointerEvent) => {
@@ -297,9 +301,8 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
     <div ref={containerRef} className="relative h-full w-full touch-none">
       <canvas
         ref={canvasRef}
+        className="absolute inset-0 h-full w-full"
         style={{
-          width: '100%',
-          height: '100%',
           opacity: 0,
           transition: 'opacity 700ms ease',
           cursor: 'grab',

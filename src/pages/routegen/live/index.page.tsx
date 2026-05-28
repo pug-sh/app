@@ -8,7 +8,6 @@ import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
-import Page from '@/components/layout/page'
 import LiveGlobe from '@/components/live-globe'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
@@ -45,6 +44,37 @@ const LiveDot = () => (
     <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
     <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
   </span>
+)
+
+type LiveStatusHeaderProps = {
+  visitorCount: number
+  loading: boolean
+  lastUpdated: Date | null
+  showRefreshSpinner?: boolean
+}
+
+const LiveStatusHeader = ({ visitorCount, loading, lastUpdated, showRefreshSpinner }: LiveStatusHeaderProps) => (
+  <div className="flex items-start justify-between gap-6">
+    <div>
+      <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+        Live
+        {!loading && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <LiveDot />
+            <span>{visitorCount}</span>
+            <span className="hidden sm:inline">online</span>
+          </span>
+        )}
+      </h1>
+      <p className="mt-1 text-sm text-muted-foreground">Visitors active in the last 5 minutes</p>
+    </div>
+    <div className="flex shrink-0 items-center gap-3">
+      {showRefreshSpinner && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+      {lastUpdated && (
+        <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>
+      )}
+    </div>
+  </div>
 )
 
 type VisitorRowProps = {
@@ -179,115 +209,100 @@ const LiveVisitorsPage = () => {
   if (!project) return <NoProject title="Live" icon={Radio} />
 
   return (
-    <Page
-      title="Live"
-      header={
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-              Live
-              {!loading && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                  <LiveDot />
-                  <span>{visitorCount}</span>
-                  <span className="hidden sm:inline">online</span>
-                </span>
-              )}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Visitors active in the last 5 minutes</p>
+    <>
+      <span className="sr-only">Live</span>
+      <div className="relative h-[calc(100svh-3rem)] overflow-hidden bg-muted/10">
+        {loading && events.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
-          <div className="flex items-center gap-3">
-            {loading && events.length > 0 && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-            {lastUpdated && (
-              <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>
-            )}
+        ) : error && events.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={load}>
+              Retry
+            </Button>
           </div>
-        </div>
-      }
-    >
-      {loading && events.length === 0 ? (
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : error && events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-          <p className="text-sm text-muted-foreground">{error}</p>
-          <Button variant="outline" size="sm" onClick={load}>
-            Retry
-          </Button>
-        </div>
-      ) : (
-        <div className="relative h-[calc(100vh-10rem)] min-h-[34rem] overflow-hidden rounded-2xl border border-border/40 bg-muted/10">
-          <div className="absolute inset-0">
+        ) : (
+          <>
             <LiveGlobe
               visitors={allVisitors}
               focusedIso={focusedIso}
               selectedDistinctId={selectedDistinctId}
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
             />
-          </div>
 
-          <aside className="absolute inset-y-4 left-4 z-10 flex w-[22rem] flex-col overflow-hidden rounded-xl bg-background/85 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
-            <div className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
-              <div className="flex items-center gap-2">
-                <LiveDot />
-                <span className="text-sm font-semibold">{visitorCount} live</span>
-              </div>
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Monitor className="size-3" />
-                  <span>{devices.desktop}</span>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Smartphone className="size-3" />
-                  <span>{devices.mobile}</span>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Users className="size-3" />
-                  <span>{countryCount}</span>
-                </span>
-              </div>
+            <div className="absolute top-4 right-4 z-10 max-w-md rounded-xl bg-background/85 px-4 py-3 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
+              <LiveStatusHeader
+                visitorCount={visitorCount}
+                loading={loading}
+                lastUpdated={lastUpdated}
+                showRefreshSpinner={loading && events.length > 0}
+              />
             </div>
 
-            {selectedVisitor && (
-              <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-muted/30 px-4 py-2">
-                <span className="truncate text-[11px] text-muted-foreground">Focused on selected visitor</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDistinctId(null)}
-                  className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-3" /> Reset
-                </button>
+            <aside className="absolute inset-y-4 left-4 z-10 flex w-[22rem] flex-col overflow-hidden rounded-xl bg-background/85 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
+              <div className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <LiveDot />
+                  <span className="text-sm font-semibold">{visitorCount} live</span>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Monitor className="size-3" />
+                    <span>{devices.desktop}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Smartphone className="size-3" />
+                    <span>{devices.mobile}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Users className="size-3" />
+                    <span>{countryCount}</span>
+                  </span>
+                </div>
               </div>
-            )}
 
-            {allVisitors.length === 0 ? (
-              <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-sm text-muted-foreground">
-                No active visitors right now.
-              </div>
-            ) : (
-              <ul className="flex-1 space-y-0.5 overflow-y-auto p-2">
-                {allVisitors.map(visitor => (
-                  <VisitorRow
-                    key={visitor.distinctId}
-                    visitor={visitor}
-                    selected={visitor.distinctId === selectedDistinctId}
-                    onClick={() =>
-                      setSelectedDistinctId(prev => (prev === visitor.distinctId ? null : visitor.distinctId))
-                    }
-                  />
-                ))}
-              </ul>
-            )}
+              {selectedVisitor && (
+                <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-muted/30 px-4 py-2">
+                  <span className="truncate text-[11px] text-muted-foreground">Focused on selected visitor</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDistinctId(null)}
+                    className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" /> Reset
+                  </button>
+                </div>
+              )}
 
-            {error && events.length > 0 && (
-              <div className="border-t border-border/40 px-4 py-2 text-xs text-destructive">{error}</div>
-            )}
-          </aside>
-        </div>
-      )}
-    </Page>
+              {allVisitors.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-sm text-muted-foreground">
+                  No active visitors right now.
+                </div>
+              ) : (
+                <ul className="flex-1 space-y-0.5 overflow-y-auto p-2">
+                  {allVisitors.map(visitor => (
+                    <VisitorRow
+                      key={visitor.distinctId}
+                      visitor={visitor}
+                      selected={visitor.distinctId === selectedDistinctId}
+                      onClick={() =>
+                        setSelectedDistinctId(prev => (prev === visitor.distinctId ? null : visitor.distinctId))
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
+
+              {error && events.length > 0 && (
+                <div className="border-t border-border/40 px-4 py-2 text-xs text-destructive">{error}</div>
+              )}
+            </aside>
+          </>
+        )}
+      </div>
+    </>
   )
 }
 
