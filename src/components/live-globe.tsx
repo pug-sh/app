@@ -88,6 +88,8 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
   const targetPhiRef = useRef(0)
   const targetThetaRef = useRef(0.22)
   const focusedRef = useRef(false)
+  const draggingRef = useRef(false)
+  const dragStartRef = useRef({ x: 0, y: 0, phi: 0, theta: 0 })
 
   const markers = useMemo<CountryMarker[]>(() => {
     const byCountry = new Map<string, ActivityEvent[]>()
@@ -163,13 +165,55 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
     }
     window.addEventListener('resize', onResize)
 
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return
+      draggingRef.current = true
+      focusedRef.current = false
+      dragStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        phi: phiRef.current,
+        theta: thetaRef.current,
+      }
+      container.setPointerCapture(e.pointerId)
+      canvas.style.cursor = 'grabbing'
+    }
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!draggingRef.current) return
+      const dx = e.clientX - dragStartRef.current.x
+      const dy = e.clientY - dragStartRef.current.y
+      const phi = dragStartRef.current.phi + dx * 0.005
+      const theta = Math.max(-0.55, Math.min(0.55, dragStartRef.current.theta + dy * 0.003))
+      phiRef.current = phi
+      thetaRef.current = theta
+      targetPhiRef.current = phi
+      targetThetaRef.current = theta
+    }
+
+    const endDrag = (e: PointerEvent) => {
+      if (!draggingRef.current) return
+      draggingRef.current = false
+      if (container.hasPointerCapture(e.pointerId)) {
+        container.releasePointerCapture(e.pointerId)
+      }
+      canvas.style.cursor = 'grab'
+    }
+
+    container.addEventListener('pointerdown', onPointerDown)
+    container.addEventListener('pointermove', onPointerMove)
+    container.addEventListener('pointerup', endDrag)
+    container.addEventListener('pointercancel', endDrag)
+
     let raf = 0
     const tick = () => {
-      if (!focusedRef.current) {
+      if (!focusedRef.current && !draggingRef.current) {
         targetPhiRef.current -= 0.0016
       }
-      phiRef.current += (targetPhiRef.current - phiRef.current) * 0.07
-      thetaRef.current += (targetThetaRef.current - thetaRef.current) * 0.07
+      if (!draggingRef.current) {
+        phiRef.current += (targetPhiRef.current - phiRef.current) * 0.07
+        thetaRef.current += (targetThetaRef.current - thetaRef.current) * 0.07
+      }
 
       globe.update({ phi: phiRef.current, theta: thetaRef.current })
 
@@ -201,13 +245,17 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
     return () => {
       window.clearTimeout(fadeIn)
       window.removeEventListener('resize', onResize)
+      container.removeEventListener('pointerdown', onPointerDown)
+      container.removeEventListener('pointermove', onPointerMove)
+      container.removeEventListener('pointerup', endDrag)
+      container.removeEventListener('pointercancel', endDrag)
       cancelAnimationFrame(raf)
       globe.destroy()
     }
   }, [])
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full touch-none">
       <canvas
         ref={canvasRef}
         style={{
@@ -215,6 +263,7 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
           height: '100%',
           opacity: 0,
           transition: 'opacity 700ms ease',
+          cursor: 'grab',
         }}
       />
       <div className="pointer-events-none absolute inset-0">
