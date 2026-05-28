@@ -1,5 +1,5 @@
 import createGlobe from 'cobe'
-import { Facehash } from 'facehash'
+import { Facehash, stringHash } from 'facehash'
 import { useEffect, useMemo, useRef } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { COUNTRY_CENTROIDS } from '@/components/country-centroids'
@@ -13,11 +13,9 @@ type Props = {
   onSelectVisitor?: (distinctId: string) => void
 }
 
-type CountryMarker = {
+type VisitorMarker = {
+  distinctId: string
   iso: string
-  primaryDistinctId: string
-  visitorIds: string[]
-  count: number
   lat: number
   lng: number
 }
@@ -36,6 +34,41 @@ const VIBRANT_COLORS = [
   '#8b5cf6',
   '#ec4899',
 ]
+
+/** Approximate geographic spread (degrees) for placing avatars within a country silhouette. */
+const COUNTRY_SPREAD_DEG: Record<string, number> = {
+  AR: 12,
+  AU: 20,
+  BR: 14,
+  CA: 22,
+  CN: 16,
+  DZ: 10,
+  EG: 6,
+  ID: 12,
+  IN: 10,
+  IR: 8,
+  KZ: 14,
+  LY: 8,
+  MX: 10,
+  MN: 8,
+  RU: 25,
+  SA: 10,
+  US: 18,
+}
+
+const spreadFor = (iso: string, count: number) => {
+  const base = COUNTRY_SPREAD_DEG[iso] ?? 5
+  return base * Math.min(1.35, 0.75 + Math.sqrt(count) * 0.12)
+}
+
+/** Deterministic lat/lng offset within a country — fills the dot cluster, not a ring. */
+const scatterLatLng = (distinctId: string, iso: string, count: number): [number, number] => {
+  const h = stringHash(`${distinctId}:${iso}`)
+  const angle = ((h & 0xffff) / 0xffff) * 2 * Math.PI
+  const r = Math.sqrt(((h >>> 16) & 0xffff) / 0xffff)
+  const spread = spreadFor(iso, count)
+  return [Math.cos(angle) * r * spread, Math.sin(angle) * r * spread * 0.7]
+}
 
 /** Mirrors cobe's internal lat/lng → 2D projection so we can position HTML overlays. */
 const project = (lat: number, lng: number, phi: number, theta: number, ratio: number): Projected => {
@@ -81,7 +114,7 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const markerRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
-  const markersRef = useRef<CountryMarker[]>([])
+  const markersRef = useRef<VisitorMarker[]>([])
 
   const phiRef = useRef(0)
   const thetaRef = useRef(0.22)
@@ -91,7 +124,7 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
   const draggingRef = useRef(false)
   const dragStartRef = useRef({ x: 0, y: 0, phi: 0, theta: 0 })
 
-  const markers = useMemo<CountryMarker[]>(() => {
+  const markers = useMemo<VisitorMarker[]>(() => {
     const byCountry = new Map<string, ActivityEvent[]>()
     for (const v of visitors) {
       const c = structGet(v.autoProperties, '$country')
@@ -102,17 +135,19 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
       arr.push(v)
       byCountry.set(iso, arr)
     }
-    const result: CountryMarker[] = []
+
+    const result: VisitorMarker[] = []
     for (const [iso, vs] of byCountry) {
-      const [lng, lat] = COUNTRY_CENTROIDS[iso]
-      result.push({
-        iso,
-        primaryDistinctId: vs[0].distinctId,
-        visitorIds: vs.map(v => v.distinctId),
-        count: vs.length,
-        lat,
-        lng,
-      })
+      const [baseLng, baseLat] = COUNTRY_CENTROIDS[iso]
+      for (const v of vs) {
+        const [dLng, dLat] = scatterLatLng(v.distinctId, iso, vs.length)
+        result.push({
+          distinctId: v.distinctId,
+          iso,
+          lng: baseLng + dLng,
+          lat: baseLat + dLat,
+        })
+      }
     }
     return result
   }, [visitors])
@@ -120,10 +155,14 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
   markersRef.current = markers
 
   useEffect(() => {
-    if (focusedIso && COUNTRY_CENTROIDS[focusedIso]) {
-      const [lng, lat] = COUNTRY_CENTROIDS[focusedIso]
-      const lngRad = (lng * Math.PI) / 180
-      const latRad = (lat * Math.PI) / 180
+    const target =
+      (selectedDistinctId && markers.find(m => m.distinctId === selectedDistinctId)) ||
+      (focusedIso && markers.find(m => m.iso === focusedIso)) ||
+      null
+
+    if (target) {
+      const lngRad = (target.lng * Math.PI) / 180
+      const latRad = (target.lat * Math.PI) / 180
       targetPhiRef.current = shortestPhi(phiRef.current, -Math.PI / 2 - lngRad)
       targetThetaRef.current = Math.max(-0.55, Math.min(0.55, latRad))
       focusedRef.current = true
@@ -131,7 +170,7 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
       focusedRef.current = false
       targetThetaRef.current = 0.22
     }
-  }, [focusedIso])
+  }, [focusedIso, selectedDistinctId, markers])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -219,7 +258,7 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
 
       const ratio = width / Math.max(1, height)
       for (const m of markersRef.current) {
-        const el = markerRefs.current.get(m.iso)
+        const el = markerRefs.current.get(m.distinctId)
         if (!el) continue
         const pos = project(m.lat, m.lng, phiRef.current, thetaRef.current, ratio)
         el.style.left = `${(pos.x * 100).toFixed(3)}%`
@@ -268,18 +307,18 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
       />
       <div className="pointer-events-none absolute inset-0">
         {markers.map(m => {
-          const selected = selectedDistinctId !== null && m.visitorIds.includes(selectedDistinctId)
+          const selected = m.distinctId === selectedDistinctId
           return (
             <button
-              key={m.iso}
+              key={m.distinctId}
               type="button"
               ref={el => {
-                if (el) markerRefs.current.set(m.iso, el)
-                else markerRefs.current.delete(m.iso)
+                if (el) markerRefs.current.set(m.distinctId, el)
+                else markerRefs.current.delete(m.distinctId)
               }}
-              onClick={() => onSelectVisitor?.(m.primaryDistinctId)}
-              aria-label={`${m.count} visitor${m.count === 1 ? '' : 's'} from ${formatCountryName(m.iso)}`}
-              title={`${formatCountryName(m.iso)} — ${m.count} live`}
+              onClick={() => onSelectVisitor?.(m.distinctId)}
+              aria-label={`Visitor from ${formatCountryName(m.iso)}`}
+              title={formatCountryName(m.iso)}
               style={{
                 position: 'absolute',
                 opacity: 0,
@@ -289,26 +328,21 @@ const LiveGlobe = ({ visitors, focusedIso = null, selectedDistinctId = null, onS
               className="group/marker"
             >
               <span
-                className={`relative block rounded-full ring-[3px] shadow-lg transition-transform duration-200 group-hover/marker:scale-110 ${
+                className={`relative block rounded-full ring-2 shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
                   selected
                     ? 'z-20 ring-emerald-500 scale-110 shadow-emerald-500/50'
-                    : 'z-10 ring-white shadow-black/15'
+                    : 'z-10 ring-white/90 shadow-black/10'
                 }`}
               >
                 <Facehash
-                  name={m.primaryDistinctId}
-                  size={44}
+                  name={m.distinctId}
+                  size={32}
                   showInitial={false}
                   intensity3d="dramatic"
                   interactive={false}
                   colors={VIBRANT_COLORS}
                   className="block rounded-full"
                 />
-                {m.count > 1 && (
-                  <span className="absolute -bottom-1.5 -right-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold text-background ring-2 ring-background">
-                    {m.count}
-                  </span>
-                )}
               </span>
             </button>
           )
