@@ -12,6 +12,7 @@ import {
   Moon,
   PanelsTopLeft,
   Plus,
+  Radio,
   Settings,
   Sun,
   TrendingUp,
@@ -58,6 +59,7 @@ import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } fro
 
 const navItems = [
   { path: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { path: 'live', label: 'Live', icon: Radio },
   { path: 'dashboards', label: 'Dashboards', icon: PanelsTopLeft },
   { path: 'campaigns', label: 'Campaigns', icon: Megaphone },
   { path: 'profiles', label: 'Profiles', icon: ContactRound },
