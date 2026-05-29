@@ -227,17 +227,20 @@ export const DashboardGrid = ({
       {tiles.map(tile => (
         <div
           key={tile.id}
-          ref={highlightTileId === tile.id ? highlightRef : undefined}
           className={[
             'group flex h-full min-h-0 flex-col',
             selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
             highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
           ].join(' ')}
         >
-          {/* Selection is wired on this inner node, not the grid-item root: react-grid-layout
-              wraps the root in <DraggableCore>/<Resizable>, which clone it and overwrite its
-              onMouseDown with their own drag handler. A handler nested here is never clobbered. */}
-          <div className="min-h-0 flex-1" onMouseDown={handleTileSelect(tile)}>
+          {/* Selection and the highlight ref live on this inner node, not the grid-item root:
+              react-grid-layout clones the root (wrapping it in <DraggableCore>/<Resizable>) and
+              overwrites its onMouseDown and ref with its own. Props nested here are never clobbered. */}
+          <div
+            ref={highlightTileId === tile.id ? highlightRef : undefined}
+            className="min-h-0 flex-1"
+            onMouseDown={handleTileSelect(tile)}
+          >
             <DashboardTileBody
               tile={tile}
               editing={editable}
