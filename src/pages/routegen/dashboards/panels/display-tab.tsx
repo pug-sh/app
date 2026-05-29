@@ -1,6 +1,12 @@
 import { create } from '@bufbuild/protobuf'
 import type { ReactNode } from 'react'
-import { type DashboardTile, TileHeaderSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  type DashboardTile,
+  DashboardTileViewMode,
+  TileHeaderSchema,
+  VisualizationOptions_YAxisFormat,
+  VisualizationOptionsSchema,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
@@ -26,6 +32,20 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
     })
   }
 
+  const setViz = (next: Partial<{ hideSparkline: boolean }>) => {
+    const current = tile.visualization
+    onPatch({
+      visualization: create(VisualizationOptionsSchema, {
+        yAxisFormat: current?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
+        logScale: current?.logScale ?? false,
+        hideLegend: current?.hideLegend ?? false,
+        zeroBaseline: current?.zeroBaseline ?? false,
+        hideSparkline: current?.hideSparkline ?? false,
+        ...next,
+      }),
+    })
+  }
+
   const isInsight = tile.content.case === 'insight'
 
   return (
@@ -38,6 +58,19 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
             value={tile.viewMode}
             onChange={next => onPatch({ viewMode: next })}
           />
+        </Section>
+      ) : null}
+
+      {isInsight && tile.viewMode === DashboardTileViewMode.KPI ? (
+        <Section label="KPI">
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={tile.visualization?.hideSparkline === true}
+              onChange={e => setViz({ hideSparkline: e.target.checked })}
+            />
+            Hide sparkline
+          </label>
         </Section>
       ) : null}
 
