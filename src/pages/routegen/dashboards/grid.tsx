@@ -1,7 +1,11 @@
 import { create } from '@bufbuild/protobuf'
 import { useEffect, useMemo, useRef } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
-import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  type DashboardTile,
+  DashboardTileViewMode,
+  ResponsiveGridLayoutSchema,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
@@ -21,8 +25,19 @@ const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'm
 
 const getKindDefaultHeight = (_kind: TileType) => 8
 const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
-const getTileDefaultHeight = (tile: DashboardTile) => getKindDefaultHeight(getTileType(tile))
-const getTileMinHeight = (tile: DashboardTile) => getKindMinHeight(getTileType(tile))
+
+// KPI tiles render a single number (± sparkline), so they get compact sizing
+// rather than inheriting the chart min-height that would otherwise force them
+// tall and leave a large empty band.
+const KPI_DEFAULT_H = 4
+// Min 4 (not lower): below this the title + number + delta + sparkline clip.
+const KPI_MIN_H = 4
+const isKpiTile = (tile: DashboardTile) =>
+  tile.content.case === 'insight' && tile.viewMode === DashboardTileViewMode.KPI
+
+const getTileDefaultHeight = (tile: DashboardTile) =>
+  isKpiTile(tile) ? KPI_DEFAULT_H : getKindDefaultHeight(getTileType(tile))
+const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H : getKindMinHeight(getTileType(tile)))
 
 const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
   const existing = tile.layouts.find(layout => layout.breakpoint === breakpoint)
@@ -30,8 +45,11 @@ const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS
     const minHeight = getTileMinHeight(tile)
     return {
       ...existing,
+      // Take the minimum from the current tile kind, not the stored layout, so a
+      // tile whose kind min shrank (e.g. a KPI tile, now min 4) can be resized
+      // down past a stale stored minH (older KPI layouts persisted minH: 7).
       h: Math.max(existing.h, minHeight),
-      minH: Math.max(existing.minH || TILE_MIN_H, minHeight),
+      minH: minHeight,
     }
   }
 
