@@ -39,7 +39,7 @@ import { buildDuplicateTileInput } from '../duplicate-tile'
 import { EditBar } from '../edit-bar'
 import { InlineEditableText } from '../editor-shared'
 import { DashboardGrid, type DashboardLayouts } from '../grid'
-import { TemplatePicker } from '../template-picker'
+import { InlineTemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
@@ -461,9 +461,12 @@ const DashboardDetail = () => {
   }, [autoFocusName, dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
 
   const handleEscapeDeselect = useCallback(() => {
-    // When the add-tile picker is open, let its own Esc close it rather than
-    // also clearing the tile selection in the same keypress.
-    if (showPicker) return
+    // Esc closes the inline add-tile picker first if it's open; otherwise it
+    // clears the current tile selection.
+    if (showPicker) {
+      setShowPicker(false)
+      return
+    }
     setSelectedTileId(null)
   }, [showPicker])
 
@@ -557,30 +560,20 @@ const DashboardDetail = () => {
                 />
               ) : null}
               {mode === 'edit' ? (
-                <TemplatePicker
-                  open={showPicker}
-                  onOpenChange={setShowPicker}
-                  onSelect={handleSelectTemplate}
-                  trigger={
-                    (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
-                      <button
-                        type="button"
-                        className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-16 text-primary text-sm transition-colors hover:bg-primary/5"
-                      >
-                        <Plus className="size-6" />
-                        Add your first tile
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
-                      >
-                        <Plus className="size-4" />
-                        Add tile
-                      </button>
-                    )
-                  }
-                />
+                (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+                  <InlineTemplatePicker onSelect={handleSelectTemplate} />
+                ) : showPicker ? (
+                  <InlineTemplatePicker onSelect={handleSelectTemplate} onCancel={() => setShowPicker(false)} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
+                  >
+                    <Plus className="size-4" />
+                    Add tile
+                  </button>
+                )
               ) : null}
             </div>
             {mode === 'edit' && (effectiveDashboard?.tiles.length ?? 0) > 0 ? (
