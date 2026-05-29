@@ -1,7 +1,8 @@
 import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Clock, Edit3, LayoutGrid, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Clock, Edit3, LayoutGrid, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useParams } from 'wouter'
 import {
   type Dashboard,
@@ -25,17 +26,19 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { TILE_MIN_H, TILE_MIN_W, UNTITLED_DASHBOARD_NAME } from '../constants'
-import { deleteDashboardAtom, fetchDashboardAtom, updateDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
+import { deleteDashboardAtom, fetchDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
-import { appendDraftTile, cloneForDraft, patchTile, removeDraftTile } from '../draft-state'
+import { appendDraftTile, cloneForDraft, patchDashboardMetadata, patchTile, removeDraftTile } from '../draft-state'
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
+import { EditBar } from '../edit-bar'
 import { InlineEditableText } from '../editor-shared'
 import { DashboardGrid, type DashboardLayouts } from '../grid'
 import { TemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
+import { useEditorShortcuts } from '../use-editor-shortcuts'
 
 const GLOBAL_DASHBOARD_GRANULARITIES = [
   { label: 'Select granularity', value: Granularity.UNSPECIFIED },
@@ -88,7 +91,6 @@ const DashboardDetail = () => {
   const project = useAtomValue(activeProjectAtom)
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)
-  const updateDashboard = useSetAtom(updateDashboardAtom)
   const upsertDashboard = useSetAtom(upsertDashboardAtom)
   const [saving, setSaving] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -96,10 +98,10 @@ const DashboardDetail = () => {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
-  const [displayNameDraft, setDisplayNameDraft] = useState('')
-  const [descriptionDraft, setDescriptionDraft] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
@@ -136,45 +138,17 @@ const DashboardDetail = () => {
   }, [loadDashboard, project])
 
   useEffect(() => {
-    setDisplayNameDraft(dashboard?.displayName ?? '')
-    setDescriptionDraft(dashboard?.description ?? '')
-  }, [dashboard?.description, dashboard?.displayName])
-
-  useEffect(() => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
 
-  const persistDashboardMeta = useCallback(async () => {
-    if (!dashboard) return
-
-    const nextDisplayName = displayNameDraft.trim()
-    const nextDescription = descriptionDraft.trim()
-    if (!nextDisplayName) {
-      setDisplayNameDraft(dashboard.displayName)
-      toastRPCError(new Error('Dashboard name is required'), 'Invalid dashboard')
-      return
-    }
-
-    if (nextDisplayName === dashboard.displayName && nextDescription === dashboard.description) return
-
-    setSavingDashboard(true)
-    try {
-      const nextDashboard = await updateDashboard({
-        id: dashboard.id,
-        displayName: nextDisplayName,
-        description: nextDescription,
-        defaultTimeRange: dashboard.defaultTimeRange,
-        defaultGranularity: dashboard.defaultGranularity,
-      })
-      if (nextDashboard) setDashboard(nextDashboard)
-    } catch (err) {
-      setDisplayNameDraft(dashboard.displayName)
-      setDescriptionDraft(dashboard.description)
-      toastRPCError(err, 'Failed to update dashboard')
-    } finally {
-      setSavingDashboard(false)
-    }
-  }, [dashboard, descriptionDraft, displayNameDraft, updateDashboard])
+  const patchDraftMeta = useCallback(
+    (patch: Partial<Pick<Dashboard, 'displayName' | 'description'>>) => {
+      setStoredDraft(current =>
+        current ? { ...current, draft: patchDashboardMetadata(current.draft, patch) } : current,
+      )
+    },
+    [setStoredDraft],
+  )
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     setGlobalTimeRange(range)
@@ -209,6 +183,10 @@ const DashboardDetail = () => {
 
   const handleSave = useCallback(async () => {
     if (!storedDraft || !dashboardId) return
+    if (!storedDraft.draft.displayName.trim()) {
+      toast.error('Dashboard name is required')
+      return
+    }
     setSaving(true)
     try {
       const response = await upsertDashboard(buildUpsertRequest(storedDraft.draft))
@@ -315,12 +293,45 @@ const DashboardDetail = () => {
     setSelectedTileId(null)
   }, [selectedTileId, setStoredDraft, storedDraft])
 
+  const handlePatchTile = useCallback(
+    (tileId: string, patch: Partial<DashboardTile>) => {
+      setStoredDraft(current => (current ? { ...current, draft: patchTile(current.draft, tileId, patch) } : current))
+    },
+    [setStoredDraft],
+  )
+
+  const highlightTimerRef = useRef<number | null>(null)
+  const focusNewTile = useCallback((tileId: string) => {
+    setSelectedTileId(tileId)
+    setHighlightTileId(tileId)
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightTileId(current => (current === tileId ? null : current)),
+      1200,
+    )
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    },
+    [],
+  )
+
+  const duplicateTile = useCallback(
+    (tile: DashboardTile) => {
+      if (!storedDraft) return
+      const nextDraft = appendDraftTile(storedDraft.draft, buildDuplicateTileInput(tile))
+      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
+      setStoredDraft({ ...storedDraft, draft: nextDraft })
+      if (newId) focusNewTile(newId)
+    },
+    [focusNewTile, setStoredDraft, storedDraft],
+  )
+
   const duplicateSelectedTile = useCallback(() => {
-    if (!storedDraft || !selectedTile) return
-    const input = buildDuplicateTileInput(selectedTile)
-    const nextDraft = appendDraftTile(storedDraft.draft, input)
-    setStoredDraft({ ...storedDraft, draft: nextDraft })
-  }, [selectedTile, setStoredDraft, storedDraft])
+    if (selectedTile) duplicateTile(selectedTile)
+  }, [duplicateTile, selectedTile])
 
   const pageActions = useMemo(
     () =>
@@ -345,24 +356,7 @@ const DashboardDetail = () => {
               <Edit3 className="size-4" />
               Edit
             </Button>
-          ) : (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setShowPicker(prev => !prev)}>
-                <Plus className="size-4" />
-                Add
-              </Button>
-              <span className="text-muted-foreground text-xs">
-                {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
-              </span>
-              <Button size="sm" variant="ghost" onClick={handleDiscard} disabled={saving}>
-                Discard
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={saving || dirtyCount === 0}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                Save
-              </Button>
-            </>
-          )}
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
               <MoreHorizontal className="size-4" />
@@ -378,16 +372,12 @@ const DashboardDetail = () => {
       ) : null,
     [
       dashboard,
-      dirtyCount,
       enterEditMode,
       globalGranularity,
       globalTimeRange,
-      handleDiscard,
       handleGlobalTimeRangeChange,
-      handleSave,
       mode,
       requestDeleteDashboard,
-      saving,
       savingDashboard,
     ],
   )
@@ -397,53 +387,65 @@ const DashboardDetail = () => {
       if (!storedDraft) return
       const tileInput = template.build()
       const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
+      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
       setStoredDraft({ ...storedDraft, draft: nextDraft })
       setShowPicker(false)
-      setSelectedTileId(nextDraft.tiles[nextDraft.tiles.length - 1]?.id ?? null)
+      if (newId) focusNewTile(newId)
     },
-    [setStoredDraft, storedDraft],
+    [focusNewTile, setStoredDraft, storedDraft],
   )
 
-  const pageHeader = useMemo(
-    () => (
+  const pageHeader = useMemo(() => {
+    const editing = mode === 'edit'
+    const meta = editing ? effectiveDashboard : dashboard
+    return (
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex items-center gap-3">
+          {editing ? (
             <InlineEditableText
-              value={displayNameDraft}
-              onChange={setDisplayNameDraft}
-              onBlur={persistDashboardMeta}
+              value={meta?.displayName ?? ''}
+              onChange={next => patchDraftMeta({ displayName: next })}
               placeholder={UNTITLED_DASHBOARD_NAME}
-              disabled={savingDashboard || mode === 'edit'}
               className="min-h-12 flex-1 text-3xl font-semibold tracking-tight outline-hidden"
             />
-            {mode === 'edit' ? (
-              <span className="rounded bg-amber-100 px-2 py-0.5 font-semibold text-[10px] text-amber-900 uppercase tracking-wider">
-                Editing
-              </span>
-            ) : null}
-          </div>
-          <InlineEditableText
-            value={descriptionDraft}
-            onChange={setDescriptionDraft}
-            onBlur={persistDashboardMeta}
-            placeholder="Add a short description for what this dashboard tracks"
-            disabled={savingDashboard}
-            multiline
-            className="min-h-8 max-w-3xl text-sm text-muted-foreground outline-hidden"
-          />
-          {savingDashboard ? (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              Saving dashboard details...
-            </div>
+          ) : (
+            <h1 className="min-h-12 text-3xl font-semibold tracking-tight">
+              {dashboard?.displayName || UNTITLED_DASHBOARD_NAME}
+            </h1>
+          )}
+          {editing ? (
+            <InlineEditableText
+              value={meta?.description ?? ''}
+              onChange={next => patchDraftMeta({ description: next })}
+              placeholder="Add a short description for what this dashboard tracks"
+              multiline
+              className="min-h-8 max-w-3xl text-sm text-muted-foreground outline-hidden"
+            />
+          ) : dashboard?.description ? (
+            <p className="min-h-8 max-w-3xl text-sm text-muted-foreground">{dashboard.description}</p>
           ) : null}
         </div>
         <div className="shrink-0">{pageActions}</div>
       </div>
-    ),
-    [descriptionDraft, displayNameDraft, pageActions, persistDashboardMeta, savingDashboard],
-  )
+    )
+  }, [dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
+
+  const handleEscapeDeselect = useCallback(() => {
+    // When the add-tile picker is open, let its own Esc close it rather than
+    // also clearing the tile selection in the same keypress.
+    if (showPicker) return
+    setSelectedTileId(null)
+  }, [showPicker])
+
+  const openPicker = useCallback(() => setShowPicker(true), [])
+
+  useEditorShortcuts({
+    active: mode === 'edit',
+    dirty: dirtyCount > 0,
+    onSave: handleSave,
+    onDeselect: handleEscapeDeselect,
+    onAdd: openPicker,
+  })
 
   if (!project) return <NoProject title="Dashboards" icon={LayoutGrid} />
 
@@ -474,6 +476,9 @@ const DashboardDetail = () => {
   return (
     <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
       <div className="space-y-6">
+        {mode === 'edit' ? (
+          <EditBar dirtyCount={dirtyCount} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
+        ) : null}
         {resumeBanner !== 'none' && storedDraft ? (
           <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
             <div className="min-w-0">
@@ -493,10 +498,6 @@ const DashboardDetail = () => {
           </div>
         ) : null}
 
-        {mode === 'edit' && showPicker ? (
-          <TemplatePicker onClose={() => setShowPicker(false)} onSelect={handleSelectTemplate} />
-        ) : null}
-
         {deleteTarget ? (
           <DashboardDeleteConfirmation
             target={deleteTarget}
@@ -506,36 +507,58 @@ const DashboardDetail = () => {
           />
         ) : null}
 
-        {effectiveDashboard && effectiveDashboard.tiles.length === 0 ? (
-          <div className="space-y-4">
-            <DashboardEmptyState title="No tiles yet" description="Add a tile from the toolbar after clicking Edit." />
-          </div>
+        {mode === 'view' && (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+          <DashboardEmptyState title="No tiles yet" description="Click Edit to start adding tiles." />
         ) : (
           <div className="flex min-h-0 gap-4">
-            <div className="min-w-0 flex-1">
-              <DashboardGrid
-                tiles={effectiveDashboard?.tiles ?? []}
-                mode={mode}
-                selectedTileId={selectedTileId}
-                globalTimeRange={globalTimeRange}
-                globalGranularity={tileGranularityOverride}
-                onLayoutsChange={handleLayoutsChange}
-                onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
-                onDuplicateTile={
-                  mode === 'edit'
-                    ? tile => {
-                        if (!storedDraft) return
-                        const input = buildDuplicateTileInput(tile)
-                        setStoredDraft({ ...storedDraft, draft: appendDraftTile(storedDraft.draft, input) })
-                      }
-                    : undefined
-                }
-              />
+            <div className="min-w-0 flex-1 space-y-4">
+              {(effectiveDashboard?.tiles.length ?? 0) > 0 ? (
+                <DashboardGrid
+                  tiles={effectiveDashboard?.tiles ?? []}
+                  mode={mode}
+                  selectedTileId={selectedTileId}
+                  highlightTileId={highlightTileId}
+                  globalTimeRange={globalTimeRange}
+                  globalGranularity={tileGranularityOverride}
+                  onLayoutsChange={handleLayoutsChange}
+                  onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+                  onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
+                  onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
+                />
+              ) : null}
+              {mode === 'edit' ? (
+                <TemplatePicker
+                  open={showPicker}
+                  onOpenChange={setShowPicker}
+                  onSelect={handleSelectTemplate}
+                  trigger={
+                    (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+                      <button
+                        type="button"
+                        className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-16 text-primary text-sm transition-colors hover:bg-primary/5"
+                      >
+                        <Plus className="size-6" />
+                        Add your first tile
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
+                      >
+                        <Plus className="size-4" />
+                        Add tile
+                      </button>
+                    )
+                  }
+                />
+              ) : null}
             </div>
-            {mode === 'edit' && selectedTile ? (
+            {mode === 'edit' && (effectiveDashboard?.tiles.length ?? 0) > 0 ? (
               <TileConfigPanel
-                key={selectedTile.id}
+                key={selectedTile?.id ?? '__none__'}
                 tile={selectedTile}
+                collapsed={railCollapsed}
+                onToggleCollapse={() => setRailCollapsed(value => !value)}
                 onClose={() => setSelectedTileId(null)}
                 onPatch={patchSelectedTile}
                 onDelete={removeSelectedTile}
