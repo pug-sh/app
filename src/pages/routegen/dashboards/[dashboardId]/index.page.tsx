@@ -26,7 +26,12 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { TILE_MIN_H, TILE_MIN_W, UNTITLED_DASHBOARD_NAME } from '../constants'
-import { deleteDashboardAtom, fetchDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
+import {
+  deleteDashboardAtom,
+  fetchDashboardAtom,
+  pendingEditDashboardIdAtom,
+  upsertDashboardAtom,
+} from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { appendDraftTile, cloneForDraft, patchDashboardMetadata, patchTile, removeDraftTile } from '../draft-state'
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
@@ -97,11 +102,13 @@ const DashboardDetail = () => {
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [autoFocusName, setAutoFocusName] = useState(false)
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
+  const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
@@ -155,16 +162,20 @@ const DashboardDetail = () => {
     setGlobalGranularity(getAutoGlobalGranularity(range))
   }, [])
 
-  const enterEditMode = useCallback(() => {
-    if (!dashboard) return
-    setStoredDraft({
-      draft: cloneForDraft(dashboard),
-      viewSnapshot: cloneForDraft(dashboard),
-      startedAt: Date.now(),
-    })
-    setMode('edit')
-    setSelectedTileId(dashboard.tiles[0]?.id ?? null)
-  }, [dashboard, setStoredDraft])
+  const enterEditMode = useCallback(
+    (opts?: { focusName?: boolean }) => {
+      if (!dashboard) return
+      setStoredDraft({
+        draft: cloneForDraft(dashboard),
+        viewSnapshot: cloneForDraft(dashboard),
+        startedAt: Date.now(),
+      })
+      setMode('edit')
+      setSelectedTileId(dashboard.tiles[0]?.id ?? null)
+      setAutoFocusName(opts?.focusName ?? false)
+    },
+    [dashboard, setStoredDraft],
+  )
 
   const exitEditMode = useCallback(() => {
     if (!dashboardId) return
@@ -173,6 +184,14 @@ const DashboardDetail = () => {
     setMode('view')
     setSelectedTileId(null)
   }, [dashboardId, setStoredDraft])
+
+  // A freshly created dashboard records its id in pendingEditDashboardIdAtom; once
+  // it has loaded here, open straight into edit mode with the name field focused.
+  useEffect(() => {
+    if (!dashboard || pendingEditId !== dashboard.id) return
+    setPendingEditId(null)
+    if (mode === 'view') enterEditMode({ focusName: true })
+  }, [dashboard, pendingEditId, mode, enterEditMode, setPendingEditId])
 
   const effectiveDashboard = mode === 'edit' && storedDraft ? storedDraft.draft : dashboard
 
@@ -352,7 +371,7 @@ const DashboardDetail = () => {
             onChange={setGlobalGranularity}
           />
           {mode === 'view' ? (
-            <Button size="sm" variant="outline" onClick={enterEditMode}>
+            <Button size="sm" variant="outline" onClick={() => enterEditMode()}>
               <Edit3 className="size-4" />
               Edit
             </Button>
@@ -406,6 +425,7 @@ const DashboardDetail = () => {
               value={meta?.displayName ?? ''}
               onChange={next => patchDraftMeta({ displayName: next })}
               placeholder={UNTITLED_DASHBOARD_NAME}
+              autoFocus={autoFocusName}
               className="min-h-12 flex-1 text-3xl font-semibold tracking-tight outline-hidden"
             />
           ) : (
@@ -428,7 +448,7 @@ const DashboardDetail = () => {
         <div className="shrink-0">{pageActions}</div>
       </div>
     )
-  }, [dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
+  }, [autoFocusName, dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
 
   const handleEscapeDeselect = useCallback(() => {
     // When the add-tile picker is open, let its own Esc close it rather than

@@ -14,6 +14,7 @@ export const InlineEditableText = ({
   placeholder,
   disabled,
   multiline,
+  autoFocus,
   className,
 }: {
   value: string
@@ -22,6 +23,7 @@ export const InlineEditableText = ({
   placeholder: string
   disabled?: boolean
   multiline?: boolean
+  autoFocus?: boolean
   className?: string
 }) => {
   const ref = useRef<HTMLDivElement>(null)
@@ -35,6 +37,20 @@ export const InlineEditableText = ({
       ref.current.textContent = nextValue
     }
   }, [multiline, value])
+
+  // When requested, focus the field and select its contents on mount so a freshly
+  // created dashboard lets the user type a name immediately. Runs after the
+  // value-sync effect above, so the contents are populated before selection.
+  useEffect(() => {
+    if (!autoFocus || !ref.current) return
+    const element = ref.current
+    element.focus()
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }, [autoFocus])
 
   return (
     <div className="relative">

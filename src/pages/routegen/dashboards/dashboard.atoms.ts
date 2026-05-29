@@ -41,6 +41,10 @@ export const fetchDashboardsAtom = atom(null, async (get, set) => {
   }
 })
 
+// One-shot signal: holds the id of a just-created dashboard so the detail page
+// can open it directly in edit mode. Consumed (reset to null) on first read.
+export const pendingEditDashboardIdAtom = atom<string | null>(null)
+
 export const createDashboardAtom = atom(null, async (get, set, input: { displayName: string; description: string }) => {
   const headers = get(projectHeaderAtom)
   if (!headers) return null
@@ -48,7 +52,9 @@ export const createDashboardAtom = atom(null, async (get, set, input: { displayN
   const dashboardsRPC = get(dashboardsRPCAtom)
   const resp = await dashboardsRPC.create(input, { headers })
   await set(fetchDashboardsAtom)
-  return resp.dashboard ?? null
+  const dashboard = resp.dashboard ?? null
+  if (dashboard) set(pendingEditDashboardIdAtom, dashboard.id)
+  return dashboard
 })
 
 export const deleteDashboardAtom = atom(null, async (get, set, id: string) => {
