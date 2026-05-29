@@ -13,12 +13,13 @@ import {
 import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
-import ActivityMapTile from './activity-map-tile'
+import { ActivityMapTile } from './activity-map-tile'
 import CampaignsBlock from './campaigns-block'
 import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
+import { OverviewTileShell } from './overview-tile-shell'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import PlatformTile, { resolveOsPropertyKey } from './platform-tile'
 import ProfilesBlock from './profiles-block'
@@ -103,36 +104,42 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           ) : null}
         </div>
 
-        <div className="mt-6">
-          <ActivityMapTile
-            schema={schema}
-            primary={bindings.primary}
-            globalTimeRange={globalTimeRange}
-            globalGranularity={globalGranularity}
-          />
-        </div>
-
-        <div className="mt-3 flex h-[360px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
-          <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-            <h3 className="truncate text-sm font-semibold">Active users trend</h3>
-          </div>
-          <div className="min-h-0 flex-1">
-            <DashboardInsightContent
-              query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
-              defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
-              timeRangeOverride={globalTimeRange}
-              granularityOverride={globalGranularity}
-              viewMode={DashboardTileViewMode.LINE}
-              queryKeyPrefix="overview-trend-active"
+        <div className="mt-3 grid min-h-0 grid-cols-1 gap-3 lg:h-[360px] lg:grid-cols-3">
+          <div className="h-[360px] min-h-0 overflow-hidden lg:h-full">
+            <ActivityMapTile
+              schema={schema}
+              primary={bindings.primary}
+              globalTimeRange={globalTimeRange}
+              globalGranularity={globalGranularity}
             />
           </div>
-          <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">via {bindings.primary}</p>
+          <div className="min-h-0 overflow-hidden lg:col-span-2 lg:h-full">
+            <OverviewTileShell
+              title="Active users trend"
+              footer={`via ${bindings.primary}`}
+              contentClassName="flex flex-col px-4 py-2"
+              className="h-[360px] lg:h-full"
+            >
+              <div className="min-h-0 flex-1">
+                <DashboardInsightContent
+                  query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
+                  defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+                  timeRangeOverride={globalTimeRange}
+                  granularityOverride={globalGranularity}
+                  viewMode={DashboardTileViewMode.LINE}
+                  queryKeyPrefix="overview-trend-active"
+                />
+              </div>
+            </OverviewTileShell>
+          </div>
         </div>
 
-        <div className="mt-3 flex h-[520px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
-          <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-            <h3 className="truncate text-sm font-semibold">Retention</h3>
-          </div>
+        <OverviewTileShell
+          title="Retention"
+          footer={`via ${bindings.primary} → ${bindings.primary}`}
+          contentClassName="flex flex-col px-4 py-2"
+          className="mt-3 h-[520px]"
+        >
           <div className="min-h-0 flex-1">
             <DashboardInsightContent
               query={buildRetentionQuery(bindings.primary)}
@@ -143,10 +150,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
               queryKeyPrefix="overview-retention"
             />
           </div>
-          <p className="mt-2 shrink-0 font-mono text-[10px] text-muted-foreground">
-            via {bindings.primary} → {bindings.primary}
-          </p>
-        </div>
+        </OverviewTileShell>
       </section>
 
       {showConversionSection ? (

@@ -75,8 +75,10 @@ export const useActivityMapData = ({
     { enabled: !!effectiveQuery && !!headers && !!countryKey, debounceMs: 0 },
   )
 
-  const countries =
-    data?.case === 'trends' && countryKey ? countryCountsFromTrendSeries([...data.value.series], countryKey) : []
+  const countries = useMemo(
+    () => (data?.case === 'trends' && countryKey ? countryCountsFromTrendSeries([...data.value.series], countryKey) : []),
+    [countryKey, data],
+  )
 
   return {
     countries,
@@ -101,16 +103,16 @@ export const ActivityMapView = ({ countries, loading, error, retry, className }:
 
   if (loading && countries.length === 0) {
     return (
-      <div className={`${stateClass} flex items-center justify-center bg-muted/20`}>
-        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      <div className={`${stateClass} flex items-center justify-center`}>
+        <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className={`${stateClass} flex flex-col items-center justify-center gap-2 bg-muted/20 text-center`}>
-        <Globe className="size-8 opacity-15" />
+      <div className={`${stateClass} flex flex-col items-center justify-center gap-2 text-center`}>
+        <Globe className="size-7 opacity-15" />
         <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => retry()}>
           Retry
@@ -121,10 +123,9 @@ export const ActivityMapView = ({ countries, loading, error, retry, className }:
 
   if (countries.length === 0) {
     return (
-      <div className={`${stateClass} flex flex-col items-center justify-center bg-muted/20 text-center`}>
-        <Globe className="mb-3 size-8 opacity-15" />
-        <p className="text-sm font-medium">No location data yet</p>
-        <p className="mt-1 text-xs text-muted-foreground">Events need a country to appear on the map</p>
+      <div className={`${stateClass} flex flex-col items-center justify-center text-center`}>
+        <Globe className="mb-2 size-7 opacity-15" />
+        <p className="text-sm text-muted-foreground">No location data yet</p>
       </div>
     )
   }
@@ -138,5 +139,5 @@ export const ActivityMapView = ({ countries, loading, error, retry, className }:
 
 export const ActivityMapContent = (props: ActivityMapDataProps) => {
   const state = useActivityMapData(props)
-  return <ActivityMapView {...state} className="relative h-full min-h-0" />
+  return <ActivityMapView {...state} className="relative h-full min-h-0 overflow-hidden" />
 }
