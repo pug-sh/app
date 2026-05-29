@@ -319,16 +319,26 @@ const DashboardDetail = () => {
     [setStoredDraft],
   )
 
-  const highlightTimerRef = useRef<number | null>(null)
-  const focusNewTile = useCallback((tileId: string) => {
+  // Selecting a tile reveals the config rail so its settings are visible even if
+  // the rail was previously collapsed.
+  const selectTile = useCallback((tileId: string) => {
     setSelectedTileId(tileId)
-    setHighlightTileId(tileId)
-    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-    highlightTimerRef.current = window.setTimeout(
-      () => setHighlightTileId(current => (current === tileId ? null : current)),
-      1200,
-    )
+    setRailCollapsed(false)
   }, [])
+
+  const highlightTimerRef = useRef<number | null>(null)
+  const focusNewTile = useCallback(
+    (tileId: string) => {
+      selectTile(tileId)
+      setHighlightTileId(tileId)
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+      highlightTimerRef.current = window.setTimeout(
+        () => setHighlightTileId(current => (current === tileId ? null : current)),
+        1200,
+      )
+    },
+    [selectTile],
+  )
 
   useEffect(
     () => () => {
@@ -541,7 +551,7 @@ const DashboardDetail = () => {
                   globalTimeRange={globalTimeRange}
                   globalGranularity={tileGranularityOverride}
                   onLayoutsChange={handleLayoutsChange}
-                  onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+                  onSelectTile={mode === 'edit' ? selectTile : undefined}
                   onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
                   onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
                 />

@@ -233,9 +233,11 @@ export const DashboardGrid = ({
             selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
             highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
           ].join(' ')}
-          onMouseDown={handleTileSelect(tile)}
         >
-          <div className="min-h-0 flex-1">
+          {/* Selection is wired on this inner node, not the grid-item root: react-grid-layout
+              wraps the root in <DraggableCore>/<Resizable>, which clone it and overwrite its
+              onMouseDown with their own drag handler. A handler nested here is never clobbered. */}
+          <div className="min-h-0 flex-1" onMouseDown={handleTileSelect(tile)}>
             <DashboardTileBody
               tile={tile}
               editing={editable}
