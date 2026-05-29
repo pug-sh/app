@@ -5,8 +5,6 @@ import { structGet } from '@/lib/struct'
 export const LIVE_WINDOW_MS = 5 * 60 * 1000
 export const LIVE_POLL_MS = 10_000
 export const LIVE_PAGE_SIZE = 1000
-export const LIVE_LIST_LIMIT = 100
-
 export type CountryCount = {
   country: string
   count: number
@@ -53,10 +51,6 @@ export const countryBreakdown = (visitors: ActivityEvent[]): CountryCount[] => {
     .sort((a, b) => b.count - a.count || a.country.localeCompare(b.country))
 }
 
-/** ISO 3166-1 alpha-2 code → live visitor count. */
-export const countryCountsToMap = (countries: CountryCount[]): Map<string, number> =>
-  new Map(countries.map(({ country, count }) => [country.toUpperCase(), count]))
-
 export const deviceBreakdown = (visitors: ActivityEvent[]): DeviceBreakdown => {
   let mobile = 0
   let desktop = 0
@@ -65,15 +59,6 @@ export const deviceBreakdown = (visitors: ActivityEvent[]): DeviceBreakdown => {
     else desktop++
   }
   return { desktop, mobile }
-}
-
-export const formatVisitorLocation = (auto: JsonObject | undefined): string => {
-  const city = structGet(auto, '$city')
-  const region = structGet(auto, '$region')
-  const countryCode = structGet(auto, '$country')
-  const country = countryCode ? formatCountryName(countryCode) : undefined
-  const parts = [city, region, country].filter(Boolean)
-  return parts.join(', ') || '—'
 }
 
 export const formatPagePath = (url: string | undefined): string => {
@@ -90,12 +75,6 @@ export const formatPagePath = (url: string | undefined): string => {
 }
 
 export const isMobileVisitor = (auto: JsonObject | undefined): boolean => structGet(auto, '$mobile') === 'true'
-
-export const countryFlag = (code: string) => {
-  const upper = code.toUpperCase()
-  if (upper.length !== 2) return ''
-  return String.fromCodePoint(0x1f1e6 + upper.charCodeAt(0) - 65, 0x1f1e6 + upper.charCodeAt(1) - 65)
-}
 
 export const liveTimeRange = (now = new Date()) => ({
   from: new Date(now.getTime() - LIVE_WINDOW_MS),

@@ -29,14 +29,6 @@ export type VisitorMapMarker = {
   lng: number
 }
 
-export type LocationMapCluster = {
-  iso: string
-  region?: string
-  lat: number
-  lng: number
-  count: number
-}
-
 const COUNTRY_SPREAD_DEG: Record<string, number> = {
   AR: 12,
   AU: 20,
@@ -140,12 +132,3 @@ export const buildVisitorMapMarkers = (visitors: ActivityEvent[]): VisitorMapMar
 
   return result
 }
-
-export const buildLocationClusters = (visitors: ActivityEvent[]): LocationMapCluster[] =>
-  buildGroups(visitors).map(group => ({
-    iso: group.iso,
-    region: group.region,
-    lat: group.baseLat,
-    lng: group.baseLng,
-    count: group.visitors.length,
-  }))
