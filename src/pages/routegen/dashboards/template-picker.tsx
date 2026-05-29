@@ -1,69 +1,63 @@
-import type { ReactElement } from 'react'
-import { useState } from 'react'
-import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { TileSectionHeader } from './editor-shared'
 import { TEMPLATE_GROUPS, TILE_TEMPLATES, type TileTemplate } from './templates'
 
-type TemplatePickerProps = {
-  trigger: ReactElement
-  open: boolean
-  onOpenChange: (open: boolean) => void
+type InlineTemplatePickerProps = {
   onSelect: (template: TileTemplate) => void
+  // When provided, render a collapse (×) control — used for the "add another
+  // tile" flow. Omitted on an empty dashboard, where the picker is shown
+  // directly and there is nothing to collapse back to.
+  onCancel?: () => void
 }
 
-export const TemplatePicker = ({ trigger, open, onOpenChange, onSelect }: TemplatePickerProps) => {
-  const [query, setQuery] = useState('')
-  const normalized = query.trim().toLowerCase()
-  const matches = (template: TileTemplate) =>
-    !normalized || `${template.displayName} ${template.description}`.toLowerCase().includes(normalized)
-
+// Inline add-tile picker: renders the tile templates as a grid of light bordered
+// option tiles directly in the canvas flow (no popover). Grouped under the shared
+// section-divider headers to match the rest of the editor.
+export const InlineTemplatePicker = ({ onSelect, onCancel }: InlineTemplatePickerProps) => {
   return (
-    <Popover
-      open={open}
-      onOpenChange={next => {
-        if (!next) setQuery('')
-        onOpenChange(next)
-      }}
-    >
-      <PopoverTrigger render={trigger} />
-      <PopoverContent align="start" className="w-80 p-2">
-        <Input
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search tile types…"
-          className="mb-1 h-8"
-        />
-        <div className="max-h-80 space-y-3 overflow-auto">
-          {TEMPLATE_GROUPS.map(({ label, group }) => {
-            const items = TILE_TEMPLATES.filter(template => template.group === group && matches(template))
-            if (items.length === 0) return null
-            return (
-              <div key={group}>
-                <div className="mb-1 px-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
-                  {label}
-                </div>
+    <div className="rounded-lg border border-border/60 p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="font-medium text-sm">Add a tile</span>
+        {onCancel ? (
+          <Button size="icon-xs" variant="ghost" onClick={onCancel} aria-label="Close">
+            <X className="size-4" />
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="space-y-4">
+        {TEMPLATE_GROUPS.map(({ label, group }) => {
+          const items = TILE_TEMPLATES.filter(template => template.group === group)
+          if (items.length === 0) return null
+          return (
+            <div key={group}>
+              <TileSectionHeader title={label} />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {items.map(template => {
                   const Icon = template.icon
                   return (
                     <button
                       key={template.id}
                       type="button"
-                      className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
                       onClick={() => onSelect(template)}
+                      className="flex items-start gap-3 rounded-lg border border-border/60 bg-background p-3 text-left transition-colors hover:border-border hover:bg-muted/40"
                     >
-                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
+                        <Icon className="size-4" />
+                      </span>
                       <span className="min-w-0">
                         <span className="block font-medium text-sm">{template.displayName}</span>
-                        <span className="block text-muted-foreground text-xs">{template.description}</span>
+                        <span className="mt-0.5 block text-muted-foreground text-xs">{template.description}</span>
                       </span>
                     </button>
                   )
                 })}
               </div>
-            )
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

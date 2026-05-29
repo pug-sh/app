@@ -17,6 +17,7 @@ import { ThresholdRuleEditor } from '../threshold-rule-editor'
 const Y_FORMAT_OPTIONS = [
   { label: 'Plain', value: VisualizationOptions_YAxisFormat.UNSPECIFIED },
   { label: 'Number', value: VisualizationOptions_YAxisFormat.NUMBER },
+  { label: 'Compact (27K)', value: VisualizationOptions_YAxisFormat.COMPACT },
   { label: '%', value: VisualizationOptions_YAxisFormat.PERCENT },
   { label: 'Duration (ms)', value: VisualizationOptions_YAxisFormat.DURATION_MS },
 ]

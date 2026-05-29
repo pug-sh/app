@@ -6,10 +6,9 @@ import {
   type DashboardTileInput,
   DashboardTileInputSchema,
   DashboardTileViewMode,
+  GridPositionSchema,
   InsightTileContentSchema,
   MarkdownTileContentSchema,
-  ResponsiveGridLayoutSchema,
-  TileHeaderSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightQuerySpecSchema, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 
@@ -33,10 +32,7 @@ export type TileTemplate = {
   build: () => DashboardTileInput
 }
 
-const layoutsFor = (w: number, h: number) =>
-  ['lg', 'md', 'sm', 'xs', 'xxs'].map(bp =>
-    create(ResponsiveGridLayoutSchema, { breakpoint: bp, x: 0, y: 0, w, h, minW: 2, minH: 4 }),
-  )
+const positionFor = (w: number, h: number) => create(GridPositionSchema, { x: 0, y: 0, w, h })
 
 const insightContent = (insightType: InsightType) => ({
   case: 'insight' as const,
@@ -60,8 +56,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.KPI,
         compare: ComparePeriod.PRIOR,
-        header: create(TileHeaderSchema, { accentColor: 'blue' }),
-        layouts: layoutsFor(3, 4),
+        position: positionFor(18, 9),
       }),
   },
   'daily-active-users': {
@@ -75,8 +70,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Daily active users',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'blue' }),
-        layouts: layoutsFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'signup-activation-funnel': {
@@ -90,8 +84,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Funnel',
         content: insightContent(InsightType.FUNNEL),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'green' }),
-        layouts: layoutsFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'day-7-retention': {
@@ -105,8 +98,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Retention',
         content: insightContent(InsightType.RETENTION),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'purple' }),
-        layouts: layoutsFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'top-events': {
@@ -120,8 +112,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Top events',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.TABLE,
-        header: create(TileHeaderSchema, { accentColor: 'gray' }),
-        layouts: layoutsFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'text-note': {
@@ -137,7 +128,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
           case: 'markdown',
           value: create(MarkdownTileContentSchema, { body: '# Note\n\nWrite a short note here.' }),
         },
-        layouts: layoutsFor(4, 6),
+        position: positionFor(24, 13),
       }),
   },
   'custom-chart': {
@@ -151,7 +142,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Untitled chart',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.LINE,
-        layouts: layoutsFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
 }

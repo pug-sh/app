@@ -48,7 +48,7 @@ const CampaignsBlock = () => {
   )
 
   return (
-    <div className="rounded-lg border border-border/60 bg-background p-4">
+    <div className="rounded-lg bg-background p-4">
       <h3 className="mb-3 text-sm font-semibold">Recent campaigns</h3>
       {loading ? (
         <Loader2 className="size-4 animate-spin text-muted-foreground" />

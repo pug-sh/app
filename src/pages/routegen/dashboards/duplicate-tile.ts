@@ -3,23 +3,20 @@ import {
   type DashboardTile,
   type DashboardTileInput,
   DashboardTileInputSchema,
+  GridPositionSchema,
   InsightTileContentSchema,
   MarkdownTileContentSchema,
-  ResponsiveGridLayoutSchema,
   ThresholdRuleSchema,
   TileHeaderSchema,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { tilePosition } from './draft-state'
 
-// y-shifted layouts so the clone lands directly below the source in every breakpoint.
+// Build an input for a duplicate of `source`. The position carries the source's
+// size; appendDraftTile drops it below the bottommost tile, so the y here is just
+// a sensible starting point.
 export const buildDuplicateTileInput = (source: DashboardTile): DashboardTileInput => {
-  const layouts = source.layouts.map(layout =>
-    create(ResponsiveGridLayoutSchema, {
-      ...clone(ResponsiveGridLayoutSchema, layout),
-      y: layout.y + layout.h,
-    }),
-  )
-
+  const pos = tilePosition(source)
   return create(DashboardTileInputSchema, {
     id: '',
     displayName: source.displayName,
@@ -30,7 +27,7 @@ export const buildDuplicateTileInput = (source: DashboardTile): DashboardTileInp
         : source.content.case === 'insight'
           ? { case: 'insight', value: clone(InsightTileContentSchema, source.content.value) }
           : { case: undefined },
-    layouts,
+    position: create(GridPositionSchema, { x: pos.x, y: pos.y + pos.h, w: pos.w, h: pos.h }),
     viewMode: source.viewMode,
     compare: source.compare,
     thresholds: source.thresholds.map(t => clone(ThresholdRuleSchema, t)),

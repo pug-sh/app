@@ -5,11 +5,18 @@ import {
   type DashboardTile,
   type DashboardTileInput,
   DashboardTileSchema,
-  type ResponsiveGridLayout,
-  ResponsiveGridLayoutSchema,
+  type GridPosition,
+  GridPositionSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 
 export const cloneForDraft = (source: Dashboard): Dashboard => clone(DashboardSchema, source)
+
+const DEFAULT_POSITION = { x: 0, y: 0, w: 36, h: 18 }
+
+// A tile's grid position in fine-grid units. The single read path for tile
+// placement; falls back to a default for any tile that lacks a position.
+export const tilePosition = (tile: DashboardTile): GridPosition =>
+  tile.position ?? create(GridPositionSchema, DEFAULT_POSITION)
 
 export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<DashboardTile>): Dashboard => ({
   ...dashboard,
@@ -17,17 +24,26 @@ export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<D
 })
 
 // Append a new tile built from a template or duplicate. We synthesize a local id
-// so the side panel can address it before Upsert assigns the real one.
+// so the side panel can address it before Upsert assigns the real one. The tile
+// is dropped directly below the bottommost existing tile.
 export const appendDraftTile = (dashboard: Dashboard, input: DashboardTileInput): Dashboard => {
   const localId = `draft-${Math.random().toString(36).slice(2, 10)}`
-  const shifted = shiftLayoutsBelowBottom(dashboard.tiles, input.layouts)
+  const bottomY = dashboard.tiles.reduce((max, tile) => {
+    const pos = tilePosition(tile)
+    return Math.max(max, pos.y + pos.h)
+  }, 0)
+  const base = input.position ?? create(GridPositionSchema, DEFAULT_POSITION)
+  // Drop the tile below the lowest one, leaving a one-track gap (unless the board
+  // is empty). x stays at the template's column so new tiles stack cleanly.
+  const y = dashboard.tiles.length > 0 ? bottomY + 1 : 0
+  const position = create(GridPositionSchema, { x: base.x, y, w: base.w, h: base.h })
   const tile = create(DashboardTileSchema, {
     id: localId,
     dashboardId: dashboard.id,
     displayName: input.displayName,
     description: input.description,
     content: input.content,
-    layouts: shifted,
+    position,
     viewMode: input.viewMode,
     compare: input.compare,
     thresholds: input.thresholds,
@@ -42,11 +58,6 @@ export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard
   tiles: dashboard.tiles.filter(tile => tile.id !== tileId),
 })
 
-export const patchTileLayouts = (dashboard: Dashboard, tileId: string, layouts: ResponsiveGridLayout[]): Dashboard => ({
-  ...dashboard,
-  tiles: dashboard.tiles.map(tile => (tile.id === tileId ? { ...tile, layouts } : tile)),
-})
-
 export const patchDashboardMetadata = (
   dashboard: Dashboard,
   patch: Partial<Pick<Dashboard, 'displayName' | 'description'>>,
@@ -54,24 +65,3 @@ export const patchDashboardMetadata = (
   ...dashboard,
   ...patch,
 })
-
-// For each breakpoint in `layouts`, shift y so the new tile lands just below the
-// bottommost existing tile at that breakpoint.
-const shiftLayoutsBelowBottom = (
-  existing: DashboardTile[],
-  layouts: ResponsiveGridLayout[],
-): ResponsiveGridLayout[] => {
-  const bottomY = new Map<string, number>()
-  for (const tile of existing) {
-    for (const layout of tile.layouts) {
-      const prev = bottomY.get(layout.breakpoint) ?? 0
-      bottomY.set(layout.breakpoint, Math.max(prev, layout.y + layout.h))
-    }
-  }
-  return layouts.map(layout =>
-    create(ResponsiveGridLayoutSchema, {
-      ...clone(ResponsiveGridLayoutSchema, layout),
-      y: bottomY.get(layout.breakpoint) ?? layout.y,
-    }),
-  )
-}

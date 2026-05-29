@@ -9,7 +9,7 @@ import {
   DashboardSchema,
   type DashboardTile,
   DashboardTileSchema,
-  ResponsiveGridLayoutSchema,
+  GridPositionSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
@@ -25,8 +25,13 @@ import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
-import { TILE_MIN_H, TILE_MIN_W, UNTITLED_DASHBOARD_NAME } from '../constants'
-import { deleteDashboardAtom, fetchDashboardAtom, upsertDashboardAtom } from '../dashboard.atoms'
+import { UNTITLED_DASHBOARD_NAME } from '../constants'
+import {
+  deleteDashboardAtom,
+  fetchDashboardAtom,
+  pendingEditDashboardIdAtom,
+  upsertDashboardAtom,
+} from '../dashboard.atoms'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { appendDraftTile, cloneForDraft, patchDashboardMetadata, patchTile, removeDraftTile } from '../draft-state'
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
@@ -34,7 +39,7 @@ import { buildDuplicateTileInput } from '../duplicate-tile'
 import { EditBar } from '../edit-bar'
 import { InlineEditableText } from '../editor-shared'
 import { DashboardGrid, type DashboardLayouts } from '../grid'
-import { TemplatePicker } from '../template-picker'
+import { InlineTemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
@@ -97,11 +102,13 @@ const DashboardDetail = () => {
   const navigate = useProjectNavigate()
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('view')
+  const [autoFocusName, setAutoFocusName] = useState(false)
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
+  const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
@@ -155,16 +162,20 @@ const DashboardDetail = () => {
     setGlobalGranularity(getAutoGlobalGranularity(range))
   }, [])
 
-  const enterEditMode = useCallback(() => {
-    if (!dashboard) return
-    setStoredDraft({
-      draft: cloneForDraft(dashboard),
-      viewSnapshot: cloneForDraft(dashboard),
-      startedAt: Date.now(),
-    })
-    setMode('edit')
-    setSelectedTileId(dashboard.tiles[0]?.id ?? null)
-  }, [dashboard, setStoredDraft])
+  const enterEditMode = useCallback(
+    (opts?: { focusName?: boolean }) => {
+      if (!dashboard) return
+      setStoredDraft({
+        draft: cloneForDraft(dashboard),
+        viewSnapshot: cloneForDraft(dashboard),
+        startedAt: Date.now(),
+      })
+      setMode('edit')
+      setSelectedTileId(dashboard.tiles[0]?.id ?? null)
+      setAutoFocusName(opts?.focusName ?? false)
+    },
+    [dashboard, setStoredDraft],
+  )
 
   const exitEditMode = useCallback(() => {
     if (!dashboardId) return
@@ -173,6 +184,14 @@ const DashboardDetail = () => {
     setMode('view')
     setSelectedTileId(null)
   }, [dashboardId, setStoredDraft])
+
+  // A freshly created dashboard records its id in pendingEditDashboardIdAtom; once
+  // it has loaded here, open straight into edit mode with the name field focused.
+  useEffect(() => {
+    if (!dashboard || pendingEditId !== dashboard.id) return
+    setPendingEditId(null)
+    if (mode === 'view') enterEditMode({ focusName: true })
+  }, [dashboard, pendingEditId, mode, enterEditMode, setPendingEditId])
 
   const effectiveDashboard = mode === 'edit' && storedDraft ? storedDraft.draft : dashboard
 
@@ -244,30 +263,17 @@ const DashboardDetail = () => {
   const handleLayoutsChange = useCallback(
     (layouts: DashboardLayouts) => {
       if (mode !== 'edit' || !storedDraft) return
-      // Apply each breakpoint's layout items back onto the matching tile in the draft.
+      // Single uniform layout: write each item's geometry back as the tile's
+      // canonical grid position.
+      const items = layouts.lg
+      if (!items) return
       let next = storedDraft.draft
-      for (const breakpoint of Object.keys(layouts) as Array<keyof typeof layouts>) {
-        const items = layouts[breakpoint]
-        if (!items) continue
-        for (const item of items) {
-          const id = item.i as string
-          const tile = next.tiles.find(t => t.id === id)
-          if (!tile) continue
-          const otherLayouts = tile.layouts.filter(l => l.breakpoint !== breakpoint)
-          const updatedLayout = create(ResponsiveGridLayoutSchema, {
-            breakpoint: breakpoint as string,
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
-            minW: item.minW ?? TILE_MIN_W,
-            maxW: item.maxW ?? 0,
-            minH: item.minH ?? TILE_MIN_H,
-            maxH: item.maxH ?? 0,
-            static: item.static ?? false,
-          })
-          next = patchTile(next, id, { layouts: [...otherLayouts, updatedLayout] })
-        }
+      for (const item of items) {
+        const id = item.i as string
+        if (!next.tiles.some(tile => tile.id === id)) continue
+        next = patchTile(next, id, {
+          position: create(GridPositionSchema, { x: item.x, y: item.y, w: item.w, h: item.h }),
+        })
       }
       setStoredDraft({ ...storedDraft, draft: next })
     },
@@ -300,16 +306,26 @@ const DashboardDetail = () => {
     [setStoredDraft],
   )
 
-  const highlightTimerRef = useRef<number | null>(null)
-  const focusNewTile = useCallback((tileId: string) => {
+  // Selecting a tile reveals the config rail so its settings are visible even if
+  // the rail was previously collapsed.
+  const selectTile = useCallback((tileId: string) => {
     setSelectedTileId(tileId)
-    setHighlightTileId(tileId)
-    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-    highlightTimerRef.current = window.setTimeout(
-      () => setHighlightTileId(current => (current === tileId ? null : current)),
-      1200,
-    )
+    setRailCollapsed(false)
   }, [])
+
+  const highlightTimerRef = useRef<number | null>(null)
+  const focusNewTile = useCallback(
+    (tileId: string) => {
+      selectTile(tileId)
+      setHighlightTileId(tileId)
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+      highlightTimerRef.current = window.setTimeout(
+        () => setHighlightTileId(current => (current === tileId ? null : current)),
+        1200,
+      )
+    },
+    [selectTile],
+  )
 
   useEffect(
     () => () => {
@@ -352,7 +368,7 @@ const DashboardDetail = () => {
             onChange={setGlobalGranularity}
           />
           {mode === 'view' ? (
-            <Button size="sm" variant="outline" onClick={enterEditMode}>
+            <Button size="sm" variant="outline" onClick={() => enterEditMode()}>
               <Edit3 className="size-4" />
               Edit
             </Button>
@@ -406,6 +422,7 @@ const DashboardDetail = () => {
               value={meta?.displayName ?? ''}
               onChange={next => patchDraftMeta({ displayName: next })}
               placeholder={UNTITLED_DASHBOARD_NAME}
+              autoFocus={autoFocusName}
               className="min-h-12 flex-1 text-3xl font-semibold tracking-tight outline-hidden"
             />
           ) : (
@@ -428,12 +445,15 @@ const DashboardDetail = () => {
         <div className="shrink-0">{pageActions}</div>
       </div>
     )
-  }, [dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
+  }, [autoFocusName, dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
 
   const handleEscapeDeselect = useCallback(() => {
-    // When the add-tile picker is open, let its own Esc close it rather than
-    // also clearing the tile selection in the same keypress.
-    if (showPicker) return
+    // Esc closes the inline add-tile picker first if it's open; otherwise it
+    // clears the current tile selection.
+    if (showPicker) {
+      setShowPicker(false)
+      return
+    }
     setSelectedTileId(null)
   }, [showPicker])
 
@@ -521,36 +541,26 @@ const DashboardDetail = () => {
                   globalTimeRange={globalTimeRange}
                   globalGranularity={tileGranularityOverride}
                   onLayoutsChange={handleLayoutsChange}
-                  onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+                  onSelectTile={mode === 'edit' ? selectTile : undefined}
                   onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
                   onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
                 />
               ) : null}
               {mode === 'edit' ? (
-                <TemplatePicker
-                  open={showPicker}
-                  onOpenChange={setShowPicker}
-                  onSelect={handleSelectTemplate}
-                  trigger={
-                    (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
-                      <button
-                        type="button"
-                        className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-16 text-primary text-sm transition-colors hover:bg-primary/5"
-                      >
-                        <Plus className="size-6" />
-                        Add your first tile
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
-                      >
-                        <Plus className="size-4" />
-                        Add tile
-                      </button>
-                    )
-                  }
-                />
+                (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+                  <InlineTemplatePicker onSelect={handleSelectTemplate} />
+                ) : showPicker ? (
+                  <InlineTemplatePicker onSelect={handleSelectTemplate} onCancel={() => setShowPicker(false)} />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
+                  >
+                    <Plus className="size-4" />
+                    Add tile
+                  </button>
+                )
               ) : null}
             </div>
             {mode === 'edit' && (effectiveDashboard?.tiles.length ?? 0) > 0 ? (

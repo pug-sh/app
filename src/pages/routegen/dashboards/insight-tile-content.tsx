@@ -39,6 +39,8 @@ export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | unde
         return `${(value * 100).toFixed(1)}%`
       case VisualizationOptions_YAxisFormat.DURATION_MS:
         return formatDuration(value)
+      case VisualizationOptions_YAxisFormat.COMPACT:
+        return value.toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 })
       default:
         return value.toLocaleString('en-US', { maximumFractionDigits: 2 })
     }
