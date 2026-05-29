@@ -12,7 +12,6 @@ import { formatCountryName } from '@/lib/live-visitors'
 
 type Props = {
   visitors: ActivityEvent[]
-  focusedIso?: string | null
   selectedDistinctId?: string | null
   onSelectVisitor?: (distinctId: string) => void
   viewportPadding?: {
@@ -122,22 +121,17 @@ const MapLayout = ({ enabled, viewportPadding }: { enabled: boolean; viewportPad
 
 const MapFocus = ({
   markers,
-  focusedIso,
   selectedDistinctId,
   viewportPadding,
 }: {
   markers: VisitorMapMarker[]
-  focusedIso: string | null
   selectedDistinctId: string | null
   viewportPadding?: Props['viewportPadding']
 }) => {
   const map = useMap()
 
   useEffect(() => {
-    const target =
-      (selectedDistinctId && markers.find(m => m.distinctId === selectedDistinctId)) ||
-      (focusedIso && markers.find(m => m.iso === focusedIso)) ||
-      null
+    const target = selectedDistinctId ? markers.find(m => m.distinctId === selectedDistinctId) : null
     if (!target) return
     const padding = resolvePadding(viewportPadding)
     map.flyToBounds(L.latLngBounds([target.lat, target.lng], [target.lat, target.lng]), {
@@ -146,7 +140,7 @@ const MapFocus = ({
       paddingBottomRight: [padding.right, padding.bottom],
       duration: 0.7,
     })
-  }, [focusedIso, selectedDistinctId, markers, map, viewportPadding])
+  }, [selectedDistinctId, markers, map, viewportPadding])
 
   return null
 }
@@ -351,16 +345,10 @@ const renderMarker = (
   )
 }
 
-const LiveVisitorMap = ({
-  visitors,
-  focusedIso = null,
-  selectedDistinctId = null,
-  onSelectVisitor,
-  viewportPadding,
-}: Props) => {
+const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, viewportPadding }: Props) => {
   const dark = useResolvedDark()
   const markers = useMemo(() => buildVisitorMapMarkers(visitors), [visitors])
-  const hasFocus = Boolean(selectedDistinctId || focusedIso)
+  const hasFocus = Boolean(selectedDistinctId)
   const mapStyle = {
     '--live-map-tile-filter': dark ? CARTO_DARK_FILTER : 'none',
   } as CSSProperties
@@ -382,12 +370,7 @@ const LiveVisitorMap = ({
     >
       <BasemapLayer dark={dark} />
       <MapLayout enabled={!hasFocus} viewportPadding={viewportPadding} />
-      <MapFocus
-        markers={markers}
-        focusedIso={focusedIso ?? null}
-        selectedDistinctId={selectedDistinctId ?? null}
-        viewportPadding={viewportPadding}
-      />
+      <MapFocus markers={markers} selectedDistinctId={selectedDistinctId ?? null} viewportPadding={viewportPadding} />
       <AvatarMarkerLayer
         markers={markers}
         selectedDistinctId={selectedDistinctId ?? null}

@@ -194,12 +194,6 @@ const LiveVisitorsPage = () => {
     [allVisitors, selectedDistinctId],
   )
 
-  const focusedIso = useMemo(() => {
-    if (!selectedVisitor) return null
-    const c = structGet(selectedVisitor.autoProperties, '$country')
-    return c ? c.toUpperCase() : null
-  }, [selectedVisitor])
-
   if (!project) return <NoProject title="Live" icon={Radio} />
 
   return (
@@ -221,7 +215,6 @@ const LiveVisitorsPage = () => {
           <>
             <LiveVisitorMap
               visitors={allVisitors}
-              focusedIso={focusedIso}
               selectedDistinctId={selectedDistinctId}
               viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
