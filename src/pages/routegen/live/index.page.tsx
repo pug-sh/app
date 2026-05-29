@@ -8,11 +8,12 @@ import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
-import LiveGlobe from '@/components/live-globe'
+import LiveVisitorMap from '@/components/live-visitor-map'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
+import { LIVE_AVATAR_COLORS } from '@/lib/live-map-markers'
 import {
   countryBreakdown,
   dedupeVisitors,
@@ -27,17 +28,12 @@ import {
 import { structGet } from '@/lib/struct'
 import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 
-const VIBRANT_COLORS = [
-  '#f43f5e',
-  '#fb923c',
-  '#f59e0b',
-  '#84cc16',
-  '#10b981',
-  '#06b6d4',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-]
+const LIVE_MAP_VIEWPORT_PADDING = {
+  left: 16,
+  right: 16,
+  top: 76,
+  bottom: 16,
+}
 
 const LiveDot = () => (
   <span className="relative flex size-2">
@@ -70,9 +66,7 @@ const LiveStatusHeader = ({ visitorCount, loading, lastUpdated, showRefreshSpinn
     </div>
     <div className="flex shrink-0 items-center gap-3">
       {showRefreshSpinner && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-      {lastUpdated && (
-        <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>
-      )}
+      {lastUpdated && <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>}
     </div>
   </div>
 )
@@ -112,7 +106,7 @@ const VisitorRow = ({ visitor, selected, onClick }: VisitorRowProps) => {
           showInitial={false}
           intensity3d="dramatic"
           interactive={false}
-          colors={VIBRANT_COLORS}
+          colors={LIVE_AVATAR_COLORS}
           className="shrink-0 rounded-full ring-1 ring-border/40"
         />
         <div className="min-w-0 flex-1">
@@ -211,7 +205,7 @@ const LiveVisitorsPage = () => {
   return (
     <>
       <span className="sr-only">Live</span>
-      <div className="relative h-[calc(100svh-3rem)] overflow-hidden bg-muted/10">
+      <div className="absolute inset-0 overflow-hidden bg-muted/10">
         {loading && events.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -225,10 +219,11 @@ const LiveVisitorsPage = () => {
           </div>
         ) : (
           <>
-            <LiveGlobe
+            <LiveVisitorMap
               visitors={allVisitors}
               focusedIso={focusedIso}
               selectedDistinctId={selectedDistinctId}
+              viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
             />
 
@@ -241,8 +236,8 @@ const LiveVisitorsPage = () => {
               />
             </div>
 
-            <aside className="absolute inset-y-4 left-4 z-10 flex w-[22rem] flex-col overflow-hidden rounded-xl bg-background/85 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
-              <div className="flex items-center justify-between gap-2 border-b border-border/40 px-4 py-3">
+            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/65 shadow-xl ring-1 ring-border/40 backdrop-blur-md">
+              <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <LiveDot />
                   <span className="text-sm font-semibold">{visitorCount} live</span>
@@ -264,7 +259,7 @@ const LiveVisitorsPage = () => {
               </div>
 
               {selectedVisitor && (
-                <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-muted/30 px-4 py-2">
+                <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-muted/20 px-4 py-2">
                   <span className="truncate text-[11px] text-muted-foreground">Focused on selected visitor</span>
                   <button
                     type="button"
@@ -281,7 +276,7 @@ const LiveVisitorsPage = () => {
                   No active visitors right now.
                 </div>
               ) : (
-                <ul className="flex-1 space-y-0.5 overflow-y-auto p-2">
+                <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
                   {allVisitors.map(visitor => (
                     <VisitorRow
                       key={visitor.distinctId}
@@ -296,7 +291,7 @@ const LiveVisitorsPage = () => {
               )}
 
               {error && events.length > 0 && (
-                <div className="border-t border-border/40 px-4 py-2 text-xs text-destructive">{error}</div>
+                <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>
               )}
             </aside>
           </>
