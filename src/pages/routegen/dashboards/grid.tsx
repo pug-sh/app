@@ -13,13 +13,13 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Grid metrics. The react-grid-layout margin is 0 so tiles occupy whole integer
-// cells edge-to-edge — continuous layouts are possible. The visual gap between
-// cards is a per-card inset (GRID_GAP, applied as p-2 below), not structural
-// margin. Row height folds in the old row pitch (24px row + 16px margin) so tiles
-// migrated from the legacy per-breakpoint layouts keep the same rendered size.
-const GRID_ROW_HEIGHT = 40
-const GRID_GAP = 16
+// Fine uniform grid. react-grid-layout runs with margin 0 and a high column count
+// (COLS.lg), so one column ≈ one row ≈ the visual gap (~18px). Cards fill their
+// cells with no inset; a gap between tiles is simply an empty track, and two tiles
+// with no empty track between them sit flush — continuous. compactType is null so
+// tiles stay exactly where they are placed (no auto-stacking that would swallow
+// the empty gap tracks).
+const GRID_ROW_HEIGHT = 18
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -27,22 +27,18 @@ export type DashboardMode = 'view' | 'edit'
 
 const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'markdown' ? 'markdown' : 'insight')
 
-const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
-
-// KPI tiles render a single number (± sparkline), so they get a compact min
-// height rather than inheriting the chart min that would force them tall and
-// leave a large empty band. Min 4 (not lower): below this the title + number +
-// delta + sparkline clip.
-const KPI_MIN_H = 4
+// Min heights in fine rows (~18px each). Charts need real height; KPI tiles are
+// compact (single number ± sparkline); markdown sits in between.
+const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 15 : TILE_MIN_H)
+const KPI_MIN_H = 9
 const isKpiTile = (tile: DashboardTile) =>
   tile.content.case === 'insight' && tile.viewMode === DashboardTileViewMode.KPI
 
 const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H : getKindMinHeight(getTileType(tile)))
 
 // Build react-grid-layout's single-breakpoint layout from each tile's stored
-// position (migrated from legacy per-breakpoint layouts by tilePosition). Min
-// width/height come from the tile kind, not storage, so a tile whose kind min
-// shrank (e.g. a KPI tile) can still be resized down past a stale persisted min.
+// position. Min width/height come from the tile kind, not storage, so a tile whose
+// kind min shrank (e.g. a KPI tile) can still be resized down past a stale min.
 const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
   lg: tiles.map(tile => {
     const pos = tilePosition(tile)
@@ -60,11 +56,8 @@ const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
   }),
 })
 
-// Snap-grid guide overlay shown behind tiles in edit mode. Cells are uniform
-// (margin 0): --col-w is the measured column width (canvas / cols) and --row-h
-// the row height. Within every cell a pair of lines is drawn at the card inset
-// and at (cell - inset) — exactly where card borders land — so gaps read as
-// double lines and tiles snap onto them whether spaced or placed continuously.
+// Faint snap-grid behind tiles in edit mode: one line per fine column/row, so the
+// snap targets — and where a tile will sit flush vs leave a gap — are visible.
 const GridGuides = () => {
   const ref = useRef<HTMLDivElement>(null)
   const [columnWidth, setColumnWidth] = useState(0)
@@ -84,16 +77,7 @@ const GridGuides = () => {
       ref={ref}
       aria-hidden
       className="dashboard-grid-guides pointer-events-none absolute inset-0"
-      style={
-        columnWidth > 0
-          ? ({
-              backgroundSize: `${columnWidth}px ${GRID_ROW_HEIGHT}px`,
-              '--col-w': `${columnWidth}px`,
-              '--row-h': `${GRID_ROW_HEIGHT}px`,
-              '--inset': `${GRID_GAP / 2}px`,
-            } as React.CSSProperties)
-          : undefined
-      }
+      style={columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_ROW_HEIGHT}px` } : undefined}
     />
   )
 }
@@ -168,6 +152,7 @@ export const DashboardGrid = ({
         rowHeight={GRID_ROW_HEIGHT}
         margin={[0, 0]}
         containerPadding={[0, 0]}
+        compactType={null}
         isDraggable={editable}
         isResizable={editable}
         draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
@@ -176,9 +161,9 @@ export const DashboardGrid = ({
         onResizeStop={layout => persistLayout(layout)}
       >
         {tiles.map(tile => (
-          // The grid item is the whole cell; p-2 insets the card so adjacent
-          // cards show a GRID_GAP (16px) gap without any structural margin.
-          <div key={tile.id} className="group flex h-full min-h-0 flex-col p-2">
+          // Cards fill their cell (no inset). A gap is an empty track; two tiles
+          // with no empty track between them sit flush (continuous).
+          <div key={tile.id} className="group flex h-full min-h-0 flex-col">
             {/* Selection, the highlight ref, and the click handler live on this
               inner node, not the grid-item root: react-grid-layout clones the root
               (wrapping it in <DraggableCore>/<Resizable>) and overwrites its

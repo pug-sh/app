@@ -11,16 +11,12 @@ import {
 
 export const cloneForDraft = (source: Dashboard): Dashboard => clone(DashboardSchema, source)
 
-const DEFAULT_POSITION = { x: 0, y: 0, w: 6, h: 6 }
+const DEFAULT_POSITION = { x: 0, y: 0, w: 36, h: 18 }
 
-// A tile's grid position, migrating legacy per-breakpoint `layouts`: prefer the
-// new single `position`; otherwise derive it from the old lg layout (or the
-// first one). This is the single read path for tile placement.
-export const tilePosition = (tile: DashboardTile): GridPosition => {
-  if (tile.position) return tile.position
-  const legacy = tile.layouts.find(layout => layout.breakpoint === 'lg') ?? tile.layouts[0]
-  return create(GridPositionSchema, legacy ? { x: legacy.x, y: legacy.y, w: legacy.w, h: legacy.h } : DEFAULT_POSITION)
-}
+// A tile's grid position in fine-grid units. The single read path for tile
+// placement; falls back to a default for any tile that lacks a position.
+export const tilePosition = (tile: DashboardTile): GridPosition =>
+  tile.position ?? create(GridPositionSchema, DEFAULT_POSITION)
 
 export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<DashboardTile>): Dashboard => ({
   ...dashboard,
@@ -37,7 +33,10 @@ export const appendDraftTile = (dashboard: Dashboard, input: DashboardTileInput)
     return Math.max(max, pos.y + pos.h)
   }, 0)
   const base = input.position ?? create(GridPositionSchema, DEFAULT_POSITION)
-  const position = create(GridPositionSchema, { x: base.x, y: bottomY, w: base.w, h: base.h })
+  // Drop the tile below the lowest one, leaving a one-track gap (unless the board
+  // is empty). x stays at the template's column so new tiles stack cleanly.
+  const y = dashboard.tiles.length > 0 ? bottomY + 1 : 0
+  const position = create(GridPositionSchema, { x: base.x, y, w: base.w, h: base.h })
   const tile = create(DashboardTileSchema, {
     id: localId,
     dashboardId: dashboard.id,

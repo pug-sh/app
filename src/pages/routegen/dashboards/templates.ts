@@ -56,7 +56,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.KPI,
         compare: ComparePeriod.PRIOR,
-        position: positionFor(3, 4),
+        position: positionFor(18, 9),
       }),
   },
   'daily-active-users': {
@@ -70,7 +70,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Daily active users',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.LINE,
-        position: positionFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'signup-activation-funnel': {
@@ -84,7 +84,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Funnel',
         content: insightContent(InsightType.FUNNEL),
         viewMode: DashboardTileViewMode.LINE,
-        position: positionFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'day-7-retention': {
@@ -98,7 +98,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Retention',
         content: insightContent(InsightType.RETENTION),
         viewMode: DashboardTileViewMode.LINE,
-        position: positionFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'top-events': {
@@ -112,7 +112,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Top events',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.TABLE,
-        position: positionFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
   'text-note': {
@@ -128,7 +128,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
           case: 'markdown',
           value: create(MarkdownTileContentSchema, { body: '# Note\n\nWrite a short note here.' }),
         },
-        position: positionFor(4, 6),
+        position: positionFor(24, 13),
       }),
   },
   'custom-chart': {
@@ -142,7 +142,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Untitled chart',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.LINE,
-        position: positionFor(6, 8),
+        position: positionFor(36, 18),
       }),
   },
 }
