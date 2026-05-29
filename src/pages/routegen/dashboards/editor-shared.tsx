@@ -54,8 +54,10 @@ export const InlineEditableText = ({
 
   return (
     <div className="relative">
+      {/* Mirror the editable's typography (size/weight/tracking) so the placeholder
+          matches the text the user will actually type; opacity just fades it. */}
       {!value.trim() ? (
-        <div className="pointer-events-none absolute inset-0 text-muted-foreground/60">{placeholder}</div>
+        <div className={`pointer-events-none absolute inset-0 opacity-60 ${className ?? ''}`}>{placeholder}</div>
       ) : null}
       <div
         ref={ref}
