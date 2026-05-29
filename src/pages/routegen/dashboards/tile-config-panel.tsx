@@ -2,6 +2,7 @@ import { PanelRightClose, PanelRightOpen, X } from 'lucide-react'
 import { useState } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Button } from '@/components/ui/button'
+import { InlineEditableText } from './editor-shared'
 import { DataTab } from './panels/data-tab'
 import { DisplayTab } from './panels/display-tab'
 import { FormatTab } from './panels/format-tab'
@@ -42,7 +43,18 @@ export const TileConfigPanel = ({
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-border/60 border-l bg-background">
       <div className="flex items-center justify-between gap-2 border-border/60 border-b px-4 py-3">
-        <div className="min-w-0 truncate font-semibold text-sm">{tile?.displayName || 'Tile settings'}</div>
+        {tile ? (
+          <div className="min-w-0 flex-1">
+            <InlineEditableText
+              value={tile.displayName}
+              onChange={next => onPatch({ displayName: next })}
+              placeholder="Untitled tile"
+              className="font-semibold text-sm outline-hidden"
+            />
+          </div>
+        ) : (
+          <div className="min-w-0 flex-1 truncate font-semibold text-sm">Tile settings</div>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Button size="icon-xs" variant="ghost" onClick={onToggleCollapse} aria-label="Collapse panel">
             <PanelRightClose className="size-4" />
