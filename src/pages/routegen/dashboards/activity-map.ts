@@ -11,7 +11,10 @@ import {
   QueryRequestSchema,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { CountryActivity } from '@/components/activity-heatmap-map'
+export type CountryActivity = {
+  iso: string
+  count: number
+}
 
 export const COUNTRY_PROPERTY = '$country'
 export const COUNTRY_BREAKDOWN_LIMIT = 50

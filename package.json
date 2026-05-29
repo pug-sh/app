@@ -36,6 +36,7 @@
     "react-grid-layout": "^2.2.3",
     "react-hook-form": "^7.72.1",
     "react-leaflet": "^5.0.0",
+    "react-svg-worldmap": "2.0.0-alpha.16",
     "recharts": "^3.8.1",
     "shadcn": "^4.1.0",
     "snarkdown": "^2.0.0",
