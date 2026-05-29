@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, ResponsiveGridLayoutSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -149,8 +149,10 @@ export const DashboardGrid = ({
   tiles,
   mode = 'view',
   selectedTileId,
+  highlightTileId,
   onDuplicateTile,
   onSelectTile,
+  onPatchTile,
   onLayoutsChange,
   globalTimeRange,
   globalGranularity,
@@ -159,8 +161,11 @@ export const DashboardGrid = ({
   mode?: DashboardMode
   // The currently-selected tile id (drives a focus ring in edit mode).
   selectedTileId?: string | null
+  // A just-added tile to briefly highlight and scroll into view.
+  highlightTileId?: string | null
   onDuplicateTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
+  onPatchTile?: (tileId: string, patch: Partial<DashboardTile>) => void
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
@@ -168,6 +173,14 @@ export const DashboardGrid = ({
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
   const editable = mode === 'edit'
+  const highlightRef = useRef<HTMLDivElement>(null)
+
+  // Bring a just-added/duplicated tile into view so it never lands off-screen.
+  useEffect(() => {
+    if (highlightTileId && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [highlightTileId])
 
   // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
   // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
@@ -182,8 +195,13 @@ export const DashboardGrid = ({
   const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
     if (!editable || !onSelectTile) return
     const target = event.target as HTMLElement | null
-    // Don't steal clicks on the resize handle, tile-menu controls, or text input.
-    if (target?.closest('.react-resizable-handle, button, a, input, textarea, [data-no-drag="true"]')) return
+    // Don't steal presses on the resize handle, controls, or editable text.
+    if (
+      target?.closest(
+        '.react-resizable-handle, button, a, input, textarea, [contenteditable="true"], [data-no-drag="true"]',
+      )
+    )
+      return
     onSelectTile(tile.id)
   }
 
@@ -199,6 +217,7 @@ export const DashboardGrid = ({
       isDraggable={editable}
       isResizable={editable}
       draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
+      draggableHandle=".tile-drag-handle"
       onLayoutChange={(_layout, allLayouts) => {
         latestLayoutsRef.current = allLayouts
       }}
@@ -208,16 +227,19 @@ export const DashboardGrid = ({
       {tiles.map(tile => (
         <div
           key={tile.id}
+          ref={highlightTileId === tile.id ? highlightRef : undefined}
           className={[
             'group flex h-full min-h-0 flex-col',
-            editable ? 'cursor-grab active:cursor-grabbing' : '',
             selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+            highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
           ].join(' ')}
           onMouseDown={handleTileSelect(tile)}
         >
           <div className="min-h-0 flex-1">
             <DashboardTileBody
               tile={tile}
+              editing={editable}
+              onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
               onDuplicate={editable ? onDuplicateTile : undefined}

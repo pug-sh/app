@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
+import { TileHeaderEdit } from './tile-header-edit'
 
 const escapeMarkdownHTML = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -22,7 +23,13 @@ const sanitizeMarkdownHTML = (markup: string) =>
     DANGEROUS_URL_SCHEME.test(url) ? `${attr}${quote}#${quote}` : match,
   )
 
-const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNode }) => {
+type TileContentProps = {
+  tile: DashboardTile
+  editing?: boolean
+  onPatch?: (patch: Partial<DashboardTile>) => void
+}
+
+const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
@@ -32,7 +39,11 @@ const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNod
       {accent ? (
         <div className={`absolute top-0 left-0 h-full w-[3px] ${accentStripClass(accent)}`} aria-hidden />
       ) : null}
-      {hideTitle ? null : (
+      {editing && onPatch ? (
+        // Edit mode always shows the grip + inline rename, even when the title is
+        // hidden in view mode — you still need a way to move and name the tile.
+        <TileHeaderEdit tile={tile} onPatch={onPatch} />
+      ) : hideTitle ? null : (
         <div className="mb-3 flex min-w-0 shrink-0 items-start gap-2 pr-8">
           {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}
           <div className="min-w-0 flex-1">
@@ -46,13 +57,13 @@ const TileShell = ({ tile, children }: { tile: DashboardTile; children: ReactNod
   )
 }
 
-const DashboardMarkdownTile = ({ tile }: { tile: DashboardTile }) => {
+const DashboardMarkdownTile = ({ tile, editing, onPatch }: TileContentProps) => {
   if (tile.content.case !== 'markdown') return null
 
   const html = sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(tile.content.value.body)))
 
   return (
-    <TileShell tile={tile}>
+    <TileShell tile={tile} editing={editing} onPatch={onPatch}>
       <div
         className="markdown-body h-full overflow-auto pr-1 text-sm leading-6 text-foreground"
         dangerouslySetInnerHTML={{ __html: html }}
@@ -63,10 +74,11 @@ const DashboardMarkdownTile = ({ tile }: { tile: DashboardTile }) => {
 
 const DashboardInsightTile = ({
   tile,
+  editing,
+  onPatch,
   globalTimeRange,
   globalGranularity,
-}: {
-  tile: DashboardTile
+}: TileContentProps & {
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
 }) => {
@@ -74,7 +86,7 @@ const DashboardInsightTile = ({
   const query = spec ? create(QueryRequestSchema, { spec }) : undefined
 
   return (
-    <TileShell tile={tile}>
+    <TileShell tile={tile} editing={editing} onPatch={onPatch}>
       <DashboardInsightContent
         tile={tile}
         query={query}
@@ -90,11 +102,15 @@ const DashboardInsightTile = ({
 
 export const DashboardTileBody = ({
   tile,
+  editing,
+  onPatch,
   onDuplicate,
   globalTimeRange,
   globalGranularity,
 }: {
   tile: DashboardTile
+  editing?: boolean
+  onPatch?: (patch: Partial<DashboardTile>) => void
   onDuplicate?: (tile: DashboardTile) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
@@ -102,9 +118,15 @@ export const DashboardTileBody = ({
   <div className="group relative h-full min-h-0">
     <div className="h-full min-h-0">
       {tile.content.case === 'markdown' ? (
-        <DashboardMarkdownTile tile={tile} />
+        <DashboardMarkdownTile tile={tile} editing={editing} onPatch={onPatch} />
       ) : (
-        <DashboardInsightTile tile={tile} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
+        <DashboardInsightTile
+          tile={tile}
+          editing={editing}
+          onPatch={onPatch}
+          globalTimeRange={globalTimeRange}
+          globalGranularity={globalGranularity}
+        />
       )}
     </div>
     {onDuplicate ? (

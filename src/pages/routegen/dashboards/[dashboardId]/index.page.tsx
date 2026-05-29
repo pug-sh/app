@@ -97,6 +97,7 @@ const DashboardDetail = () => {
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const [railCollapsed, setRailCollapsed] = useState(false)
+  const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
   const [loading, setLoading] = useState(false)
@@ -290,12 +291,33 @@ const DashboardDetail = () => {
     setSelectedTileId(null)
   }, [selectedTileId, setStoredDraft, storedDraft])
 
+  const handlePatchTile = useCallback(
+    (tileId: string, patch: Partial<DashboardTile>) => {
+      setStoredDraft(current => (current ? { ...current, draft: patchTile(current.draft, tileId, patch) } : current))
+    },
+    [setStoredDraft],
+  )
+
+  const focusNewTile = useCallback((tileId: string) => {
+    setSelectedTileId(tileId)
+    setHighlightTileId(tileId)
+    window.setTimeout(() => setHighlightTileId(current => (current === tileId ? null : current)), 1200)
+  }, [])
+
+  const duplicateTile = useCallback(
+    (tile: DashboardTile) => {
+      if (!storedDraft) return
+      const nextDraft = appendDraftTile(storedDraft.draft, buildDuplicateTileInput(tile))
+      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
+      setStoredDraft({ ...storedDraft, draft: nextDraft })
+      if (newId) focusNewTile(newId)
+    },
+    [focusNewTile, setStoredDraft, storedDraft],
+  )
+
   const duplicateSelectedTile = useCallback(() => {
-    if (!storedDraft || !selectedTile) return
-    const input = buildDuplicateTileInput(selectedTile)
-    const nextDraft = appendDraftTile(storedDraft.draft, input)
-    setStoredDraft({ ...storedDraft, draft: nextDraft })
-  }, [selectedTile, setStoredDraft, storedDraft])
+    if (selectedTile) duplicateTile(selectedTile)
+  }, [duplicateTile, selectedTile])
 
   const pageActions = useMemo(
     () =>
@@ -351,11 +373,12 @@ const DashboardDetail = () => {
       if (!storedDraft) return
       const tileInput = template.build()
       const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
+      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
       setStoredDraft({ ...storedDraft, draft: nextDraft })
       setShowPicker(false)
-      setSelectedTileId(nextDraft.tiles[nextDraft.tiles.length - 1]?.id ?? null)
+      if (newId) focusNewTile(newId)
     },
-    [setStoredDraft, storedDraft],
+    [focusNewTile, setStoredDraft, storedDraft],
   )
 
   const pageHeader = useMemo(() => {
@@ -468,19 +491,13 @@ const DashboardDetail = () => {
                 tiles={effectiveDashboard?.tiles ?? []}
                 mode={mode}
                 selectedTileId={selectedTileId}
+                highlightTileId={highlightTileId}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={tileGranularityOverride}
                 onLayoutsChange={handleLayoutsChange}
                 onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
-                onDuplicateTile={
-                  mode === 'edit'
-                    ? tile => {
-                        if (!storedDraft) return
-                        const input = buildDuplicateTileInput(tile)
-                        setStoredDraft({ ...storedDraft, draft: appendDraftTile(storedDraft.draft, input) })
-                      }
-                    : undefined
-                }
+                onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
+                onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
               />
             </div>
             {mode === 'edit' ? (
