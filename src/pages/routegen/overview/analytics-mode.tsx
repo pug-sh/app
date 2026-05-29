@@ -19,8 +19,8 @@ import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
-import { OverviewTileShell } from './overview-tile-shell'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
+import { OverviewTileShell } from './overview-tile-shell'
 import PlatformTile, { resolveOsPropertyKey } from './platform-tile'
 import ProfilesBlock from './profiles-block'
 import { composeFunnelSteps } from './tile-bindings'
@@ -65,7 +65,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
     <div className="space-y-10">
       <section>
         <SectionHeader title="Activity" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
           <KpiTile
             title="Active users"
             via={bindings.primary}
@@ -104,7 +104,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           ) : null}
         </div>
 
-        <div className="mt-3 grid min-h-0 grid-cols-1 gap-3 lg:h-[360px] lg:grid-cols-3">
+        <div className="mt-[18px] grid min-h-0 grid-cols-1 gap-[18px] lg:h-[360px] lg:grid-cols-3">
           <div className="h-[360px] min-h-0 overflow-hidden lg:h-full">
             <ActivityMapTile
               schema={schema}
@@ -117,7 +117,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
             <OverviewTileShell
               title="Active users trend"
               footer={`via ${bindings.primary}`}
-              contentClassName="flex flex-col px-4 py-2"
+              contentClassName="flex flex-col"
               className="h-[360px] lg:h-full"
             >
               <div className="min-h-0 flex-1">
@@ -137,8 +137,8 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <OverviewTileShell
           title="Retention"
           footer={`via ${bindings.primary} → ${bindings.primary}`}
-          contentClassName="flex flex-col px-4 py-2"
-          className="mt-3 h-[520px]"
+          contentClassName="flex flex-col"
+          className="mt-[18px] h-[520px]"
         >
           <div className="min-h-0 flex-1">
             <DashboardInsightContent
@@ -156,7 +156,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       {showConversionSection ? (
         <section>
           <SectionHeader title="Conversion" />
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
             <PlatformTile
               schema={schema}
@@ -170,7 +170,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
       <section>
         <SectionHeader title="People & comms" />
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
           <ProfilesBlock />
           <CampaignsBlock />
           <EventFeedBlock globalTimeRange={globalTimeRange} />

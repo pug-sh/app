@@ -14,7 +14,7 @@ type Props = GlobalOverrides & {
 const KpiTile = ({ title, via, query, globalTimeRange, globalGranularity, queryKeyPrefix }: Props) => (
   <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4">
     <div className="flex min-w-0 shrink-0 items-start justify-between gap-3">
-      <h3 className="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</h3>
+      <h3 className="truncate text-sm font-semibold">{title}</h3>
     </div>
     <div className="min-h-0 flex-1 pt-2">
       <DashboardInsightContent
