@@ -96,6 +96,7 @@ const DashboardDetail = () => {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
+  const [railCollapsed, setRailCollapsed] = useState(false)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
   const [loading, setLoading] = useState(false)
@@ -482,10 +483,12 @@ const DashboardDetail = () => {
                 }
               />
             </div>
-            {mode === 'edit' && selectedTile ? (
+            {mode === 'edit' ? (
               <TileConfigPanel
-                key={selectedTile.id}
+                key={selectedTile?.id ?? '__none__'}
                 tile={selectedTile}
+                collapsed={railCollapsed}
+                onToggleCollapse={() => setRailCollapsed(value => !value)}
                 onClose={() => setSelectedTileId(null)}
                 onPatch={patchSelectedTile}
                 onDelete={removeSelectedTile}
