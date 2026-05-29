@@ -37,6 +37,7 @@ import { TemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { buildUpsertRequest } from '../upsert-dashboard'
+import { useEditorShortcuts } from '../use-editor-shortcuts'
 
 const GLOBAL_DASHBOARD_GRANULARITIES = [
   { label: 'Select granularity', value: Granularity.UNSPECIFIED },
@@ -415,6 +416,14 @@ const DashboardDetail = () => {
       </div>
     )
   }, [dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
+
+  useEditorShortcuts({
+    active: mode === 'edit',
+    dirty: dirtyCount > 0,
+    onSave: handleSave,
+    onDeselect: () => setSelectedTileId(null),
+    onAdd: () => setShowPicker(true),
+  })
 
   if (!project) return <NoProject title="Dashboards" icon={LayoutGrid} />
 
