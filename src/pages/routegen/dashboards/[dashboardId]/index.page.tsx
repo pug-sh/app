@@ -1,6 +1,6 @@
 import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Clock, Edit3, LayoutGrid, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Clock, Edit3, LayoutGrid, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import {
@@ -467,10 +467,6 @@ const DashboardDetail = () => {
           </div>
         ) : null}
 
-        {mode === 'edit' && showPicker ? (
-          <TemplatePicker onClose={() => setShowPicker(false)} onSelect={handleSelectTemplate} />
-        ) : null}
-
         {deleteTarget ? (
           <DashboardDeleteConfirmation
             target={deleteTarget}
@@ -480,27 +476,53 @@ const DashboardDetail = () => {
           />
         ) : null}
 
-        {effectiveDashboard && effectiveDashboard.tiles.length === 0 ? (
-          <div className="space-y-4">
-            <DashboardEmptyState title="No tiles yet" description="Add a tile from the toolbar after clicking Edit." />
-          </div>
+        {mode === 'view' && (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+          <DashboardEmptyState title="No tiles yet" description="Click Edit to start adding tiles." />
         ) : (
           <div className="flex min-h-0 gap-4">
-            <div className="min-w-0 flex-1">
-              <DashboardGrid
-                tiles={effectiveDashboard?.tiles ?? []}
-                mode={mode}
-                selectedTileId={selectedTileId}
-                highlightTileId={highlightTileId}
-                globalTimeRange={globalTimeRange}
-                globalGranularity={tileGranularityOverride}
-                onLayoutsChange={handleLayoutsChange}
-                onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
-                onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
-                onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
-              />
+            <div className="min-w-0 flex-1 space-y-4">
+              {(effectiveDashboard?.tiles.length ?? 0) > 0 ? (
+                <DashboardGrid
+                  tiles={effectiveDashboard?.tiles ?? []}
+                  mode={mode}
+                  selectedTileId={selectedTileId}
+                  highlightTileId={highlightTileId}
+                  globalTimeRange={globalTimeRange}
+                  globalGranularity={tileGranularityOverride}
+                  onLayoutsChange={handleLayoutsChange}
+                  onSelectTile={mode === 'edit' ? setSelectedTileId : undefined}
+                  onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
+                  onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
+                />
+              ) : null}
+              {mode === 'edit' ? (
+                <TemplatePicker
+                  open={showPicker}
+                  onOpenChange={setShowPicker}
+                  onSelect={handleSelectTemplate}
+                  trigger={
+                    (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
+                      <button
+                        type="button"
+                        className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-16 text-primary text-sm transition-colors hover:bg-primary/5"
+                      >
+                        <Plus className="size-6" />
+                        Add your first tile
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
+                      >
+                        <Plus className="size-4" />
+                        Add tile
+                      </button>
+                    )
+                  }
+                />
+              ) : null}
             </div>
-            {mode === 'edit' ? (
+            {mode === 'edit' && (effectiveDashboard?.tiles.length ?? 0) > 0 ? (
               <TileConfigPanel
                 key={selectedTile?.id ?? '__none__'}
                 tile={selectedTile}

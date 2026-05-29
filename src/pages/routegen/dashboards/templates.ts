@@ -22,8 +22,11 @@ export type TileTemplateId =
   | 'text-note'
   | 'custom-chart'
 
+export type TileTemplateGroup = 'suggested' | 'blank'
+
 export type TileTemplate = {
   id: TileTemplateId
+  group: TileTemplateGroup
   displayName: string
   description: string
   icon: LucideIcon
@@ -47,6 +50,7 @@ const insightContent = (insightType: InsightType) => ({
 const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   'kpi-big-number': {
     id: 'kpi-big-number',
+    group: 'blank',
     displayName: 'Big number (KPI)',
     description: 'Single metric with delta vs prior and a sparkline.',
     icon: Hash,
@@ -62,6 +66,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'daily-active-users': {
     id: 'daily-active-users',
+    group: 'suggested',
     displayName: 'Daily active users',
     description: 'Trend line of unique users by day.',
     icon: LineChart,
@@ -76,6 +81,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'signup-activation-funnel': {
     id: 'signup-activation-funnel',
+    group: 'suggested',
     displayName: 'Signup → activation funnel',
     description: 'Conversion through ordered steps.',
     icon: BarChart3,
@@ -90,6 +96,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'day-7-retention': {
     id: 'day-7-retention',
+    group: 'suggested',
     displayName: 'Day-7 retention',
     description: 'Cohort retention curve.',
     icon: Sparkles,
@@ -104,6 +111,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'top-events': {
     id: 'top-events',
+    group: 'suggested',
     displayName: 'Top events',
     description: 'Ranked event volume table.',
     icon: Trophy,
@@ -118,6 +126,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'text-note': {
     id: 'text-note',
+    group: 'blank',
     displayName: 'Text note',
     description: 'Markdown for context or links.',
     icon: FileText,
@@ -133,6 +142,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
   },
   'custom-chart': {
     id: 'custom-chart',
+    group: 'blank',
     displayName: 'Custom chart',
     description: 'Empty insight — configure from scratch.',
     icon: ListOrdered,
@@ -157,5 +167,12 @@ const TEMPLATE_ORDER: readonly TileTemplateId[] = [
 ]
 
 export const TILE_TEMPLATES: readonly TileTemplate[] = TEMPLATE_ORDER.map(id => TILE_TEMPLATES_BY_ID[id])
+
+// Section order + labels for the picker. Each group renders as a flat,
+// single-level list (no nested menus, per the light/minimal aesthetic).
+export const TEMPLATE_GROUPS: { label: string; group: TileTemplateGroup }[] = [
+  { label: 'Suggested metrics', group: 'suggested' },
+  { label: 'Build your own', group: 'blank' },
+]
 
 export const findTileTemplate = (id: TileTemplateId): TileTemplate => TILE_TEMPLATES_BY_ID[id]

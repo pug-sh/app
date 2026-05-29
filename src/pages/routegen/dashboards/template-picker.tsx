@@ -1,36 +1,63 @@
-import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { TILE_TEMPLATES, type TileTemplate } from './templates'
+import type { ReactElement } from 'react'
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TEMPLATE_GROUPS, TILE_TEMPLATES, type TileTemplate } from './templates'
 
 type TemplatePickerProps = {
+  trigger: ReactElement
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onSelect: (template: TileTemplate) => void
-  onClose: () => void
 }
 
-export const TemplatePicker = ({ onSelect, onClose }: TemplatePickerProps) => (
-  <div className="rounded-lg border border-border/60 bg-background p-4">
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="font-semibold text-sm">Add a tile</h3>
-      <Button size="icon-xs" variant="ghost" onClick={onClose} aria-label="Close picker">
-        <X className="size-4" />
-      </Button>
-    </div>
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-      {TILE_TEMPLATES.map(template => {
-        const Icon = template.icon
-        return (
-          <button
-            key={template.id}
-            type="button"
-            className="flex flex-col gap-1.5 rounded-md border border-border/60 p-3 text-left transition-colors hover:bg-muted/40"
-            onClick={() => onSelect(template)}
-          >
-            <Icon className="size-4 text-muted-foreground" />
-            <div className="font-medium text-sm">{template.displayName}</div>
-            <div className="text-muted-foreground text-xs">{template.description}</div>
-          </button>
-        )
-      })}
-    </div>
-  </div>
-)
+export const TemplatePicker = ({ trigger, open, onOpenChange, onSelect }: TemplatePickerProps) => {
+  const [query, setQuery] = useState('')
+  const normalized = query.trim().toLowerCase()
+  const matches = (template: TileTemplate) =>
+    !normalized || `${template.displayName} ${template.description}`.toLowerCase().includes(normalized)
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger render={trigger} />
+      <PopoverContent align="start" className="w-80 p-2">
+        <Input
+          value={query}
+          onChange={event => setQuery(event.target.value)}
+          placeholder="Search tile types…"
+          className="mb-1 h-8"
+        />
+        <div className="max-h-80 space-y-3 overflow-auto">
+          {TEMPLATE_GROUPS.map(({ label, group }) => {
+            const items = TILE_TEMPLATES.filter(template => template.group === group && matches(template))
+            if (items.length === 0) return null
+            return (
+              <div key={group}>
+                <div className="mb-1 px-1 font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {label}
+                </div>
+                {items.map(template => {
+                  const Icon = template.icon
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
+                      onClick={() => onSelect(template)}
+                    >
+                      <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-sm">{template.displayName}</span>
+                        <span className="block text-muted-foreground text-xs">{template.description}</span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
