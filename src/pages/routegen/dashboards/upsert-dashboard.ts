@@ -9,6 +9,7 @@ import {
   InsightTileContentSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { tilePosition } from './draft-state'
 
 // Strip server-assigned fields and copy the rest into a DashboardTileInput.
 // Local-only draft ids (prefixed "draft-") are sent as empty so the server
@@ -24,7 +25,7 @@ export const tileToInput = (tile: DashboardTile): DashboardTileInput =>
         : tile.content.case === 'markdown'
           ? { case: 'markdown', value: clone(MarkdownTileContentSchema, tile.content.value) }
           : { case: undefined },
-    layouts: tile.layouts,
+    position: tilePosition(tile),
     viewMode: tile.viewMode,
     compare: tile.compare,
     thresholds: tile.thresholds,

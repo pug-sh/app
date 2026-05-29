@@ -9,7 +9,7 @@ import {
   DashboardSchema,
   type DashboardTile,
   DashboardTileSchema,
-  ResponsiveGridLayoutSchema,
+  GridPositionSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
@@ -25,7 +25,7 @@ import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
-import { TILE_MIN_H, TILE_MIN_W, UNTITLED_DASHBOARD_NAME } from '../constants'
+import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import {
   deleteDashboardAtom,
   fetchDashboardAtom,
@@ -263,30 +263,17 @@ const DashboardDetail = () => {
   const handleLayoutsChange = useCallback(
     (layouts: DashboardLayouts) => {
       if (mode !== 'edit' || !storedDraft) return
-      // Apply each breakpoint's layout items back onto the matching tile in the draft.
+      // Single uniform layout: write each item's geometry back as the tile's
+      // canonical grid position.
+      const items = layouts.lg
+      if (!items) return
       let next = storedDraft.draft
-      for (const breakpoint of Object.keys(layouts) as Array<keyof typeof layouts>) {
-        const items = layouts[breakpoint]
-        if (!items) continue
-        for (const item of items) {
-          const id = item.i as string
-          const tile = next.tiles.find(t => t.id === id)
-          if (!tile) continue
-          const otherLayouts = tile.layouts.filter(l => l.breakpoint !== breakpoint)
-          const updatedLayout = create(ResponsiveGridLayoutSchema, {
-            breakpoint: breakpoint as string,
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
-            minW: item.minW ?? TILE_MIN_W,
-            maxW: item.maxW ?? 0,
-            minH: item.minH ?? TILE_MIN_H,
-            maxH: item.maxH ?? 0,
-            static: item.static ?? false,
-          })
-          next = patchTile(next, id, { layouts: [...otherLayouts, updatedLayout] })
-        }
+      for (const item of items) {
+        const id = item.i as string
+        if (!next.tiles.some(tile => tile.id === id)) continue
+        next = patchTile(next, id, {
+          position: create(GridPositionSchema, { x: item.x, y: item.y, w: item.w, h: item.h }),
+        })
       }
       setStoredDraft({ ...storedDraft, draft: next })
     },

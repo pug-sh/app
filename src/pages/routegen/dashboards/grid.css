@@ -10,12 +10,29 @@
   border-color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
 }
 
-/* Edit-mode snap-grid: faint dots at column/row intersections. background-size
-   is set inline (grid.tsx) to match react-grid-layout's column and row pitch. */
-.dashboard-grid-dots {
-  background-image: radial-gradient(
-    circle at 0 0,
-    color-mix(in oklch, var(--muted-foreground) 45%, transparent) 1.5px,
-    transparent 1.5px
-  );
+/* Edit-mode snap-grid: double guide lines that bracket every gap. Cells are
+   uniform (react-grid-layout margin is 0). Within every cell a line is drawn at
+   the card inset (--inset) and at (cell - inset) — exactly where card borders
+   land — leaving the gap between cards clear, so tile borders sit on lines
+   whether cards are spaced or placed continuously. --col-w, --row-h and --inset
+   are set inline (grid.tsx) to match the measured column width and row height. */
+.dashboard-grid-guides {
+  --grid-line: color-mix(in oklch, var(--muted-foreground) 32%, transparent);
+  background-image:
+    linear-gradient(
+      to right,
+      transparent var(--inset),
+      var(--grid-line) var(--inset) calc(var(--inset) + 1px),
+      transparent calc(var(--inset) + 1px) calc(var(--col-w) - var(--inset)),
+      var(--grid-line) calc(var(--col-w) - var(--inset)) calc(var(--col-w) - var(--inset) + 1px),
+      transparent calc(var(--col-w) - var(--inset) + 1px)
+    ),
+    linear-gradient(
+      to bottom,
+      transparent var(--inset),
+      var(--grid-line) var(--inset) calc(var(--inset) + 1px),
+      transparent calc(var(--inset) + 1px) calc(var(--row-h) - var(--inset)),
+      var(--grid-line) calc(var(--row-h) - var(--inset)) calc(var(--row-h) - var(--inset) + 1px),
+      transparent calc(var(--row-h) - var(--inset) + 1px)
+    );
 }

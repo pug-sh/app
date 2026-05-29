@@ -1,14 +1,10 @@
-import { create } from '@bufbuild/protobuf'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
-import {
-  type DashboardTile,
-  DashboardTileViewMode,
-  ResponsiveGridLayoutSchema,
-} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
-import { BREAKPOINT_KEYS, BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
+import { BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
+import { tilePosition } from './draft-state'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
@@ -17,11 +13,13 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Grid metrics, shared by the react-grid-layout config and the edit-mode dot
-// overlay so the dots stay aligned with where tiles actually snap.
-const GRID_MARGIN = 16
-const GRID_ROW_HEIGHT = 24
-const GRID_ROW_PITCH = GRID_ROW_HEIGHT + GRID_MARGIN
+// Grid metrics. The react-grid-layout margin is 0 so tiles occupy whole integer
+// cells edge-to-edge — continuous layouts are possible. The visual gap between
+// cards is a per-card inset (GRID_GAP, applied as p-2 below), not structural
+// margin. Row height folds in the old row pitch (24px row + 16px margin) so tiles
+// migrated from the legacy per-breakpoint layouts keep the same rendered size.
+const GRID_ROW_HEIGHT = 40
+const GRID_GAP = 16
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -29,122 +27,52 @@ export type DashboardMode = 'view' | 'edit'
 
 const getTileType = (tile: DashboardTile): TileType => (tile.content.case === 'markdown' ? 'markdown' : 'insight')
 
-const getKindDefaultHeight = (_kind: TileType) => 8
 const getKindMinHeight = (kind: TileType) => (kind === 'insight' ? 7 : TILE_MIN_H)
 
-// KPI tiles render a single number (± sparkline), so they get compact sizing
-// rather than inheriting the chart min-height that would otherwise force them
-// tall and leave a large empty band.
-const KPI_DEFAULT_H = 4
-// Min 4 (not lower): below this the title + number + delta + sparkline clip.
+// KPI tiles render a single number (± sparkline), so they get a compact min
+// height rather than inheriting the chart min that would force them tall and
+// leave a large empty band. Min 4 (not lower): below this the title + number +
+// delta + sparkline clip.
 const KPI_MIN_H = 4
 const isKpiTile = (tile: DashboardTile) =>
   tile.content.case === 'insight' && tile.viewMode === DashboardTileViewMode.KPI
 
-const getTileDefaultHeight = (tile: DashboardTile) =>
-  isKpiTile(tile) ? KPI_DEFAULT_H : getKindDefaultHeight(getTileType(tile))
 const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H : getKindMinHeight(getTileType(tile)))
 
-const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS, fallbackY: number) => {
-  const existing = tile.layouts.find(layout => layout.breakpoint === breakpoint)
-  if (existing) {
-    const minHeight = getTileMinHeight(tile)
+// Build react-grid-layout's single-breakpoint layout from each tile's stored
+// position (migrated from legacy per-breakpoint layouts by tilePosition). Min
+// width/height come from the tile kind, not storage, so a tile whose kind min
+// shrank (e.g. a KPI tile) can still be resized down past a stale persisted min.
+const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
+  lg: tiles.map(tile => {
+    const pos = tilePosition(tile)
+    const minH = getTileMinHeight(tile)
     return {
-      ...existing,
-      // Take the minimum from the current tile kind, not the stored layout, so a
-      // tile whose kind min shrank (e.g. a KPI tile, now min 4) can be resized
-      // down past a stale stored minH (older KPI layouts persisted minH: 7).
-      h: Math.max(existing.h, minHeight),
-      minH: minHeight,
+      i: tile.id,
+      x: pos.x,
+      y: pos.y,
+      w: pos.w,
+      h: Math.max(pos.h, minH),
+      minW: TILE_MIN_W,
+      minH,
+      static: false,
     }
-  }
+  }),
+})
 
-  const width = Math.min(COLS[breakpoint], 6)
-  return {
-    breakpoint,
-    x: 0,
-    y: fallbackY,
-    w: width,
-    h: getTileDefaultHeight(tile),
-    minW: TILE_MIN_W,
-    maxW: 0,
-    minH: getTileMinHeight(tile),
-    maxH: 0,
-    static: false,
-  }
-}
-
-const getLayoutsForTiles = (tiles: DashboardTile[]) => {
-  const layouts: DashboardLayouts = {}
-  for (const breakpoint of BREAKPOINT_KEYS) {
-    let nextY = 0
-    layouts[breakpoint] = tiles.map(tile => {
-      const layout = getLayoutBase(tile, breakpoint, nextY)
-      nextY = Math.max(nextY, layout.y + layout.h)
-      return {
-        i: tile.id,
-        x: layout.x,
-        y: layout.y,
-        w: layout.w,
-        h: layout.h,
-        minW: layout.minW || TILE_MIN_W,
-        minH: layout.minH || TILE_MIN_H,
-        maxW: layout.maxW || undefined,
-        maxH: layout.maxH || undefined,
-        static: layout.static,
-      }
-    })
-  }
-  return layouts
-}
-
-const layoutItemToProto = (
-  item: LayoutItem,
-  breakpoint: keyof typeof BREAKPOINTS,
-  existing?: DashboardTile['layouts'][number],
-) =>
-  create(ResponsiveGridLayoutSchema, {
-    breakpoint,
-    x: item.x,
-    y: item.y,
-    w: item.w,
-    h: item.h,
-    minW: item.minW ?? existing?.minW ?? TILE_MIN_W,
-    maxW: item.maxW ?? existing?.maxW ?? 0,
-    minH: item.minH ?? existing?.minH ?? TILE_MIN_H,
-    maxH: item.maxH ?? existing?.maxH ?? 0,
-    static: item.static ?? existing?.static ?? false,
-  })
-
-export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayouts) => {
-  const nextLayouts = BREAKPOINT_KEYS.flatMap(breakpoint => {
-    const current = layouts[breakpoint]?.find(item => item.i === tile.id)
-    if (!current) return []
-    const existing = tile.layouts.find(layout => layout.breakpoint === breakpoint)
-    return [layoutItemToProto(current, breakpoint, existing)]
-  })
-
-  return {
-    ...tile,
-    layouts: nextLayouts.length > 0 ? nextLayouts : tile.layouts,
-  }
-}
-
-// Snap-grid dot overlay shown behind tiles in edit mode. Its background-size
-// tracks react-grid-layout's column pitch ((W - margins)/cols + margin) so the
-// dots stay aligned with the snap grid as the canvas width changes — e.g. when
-// the config rail opens or the window resizes.
-const GridDots = () => {
+// Snap-grid guide overlay shown behind tiles in edit mode. Cells are uniform
+// (margin 0): --col-w is the measured column width (canvas / cols) and --row-h
+// the row height. Within every cell a pair of lines is drawn at the card inset
+// and at (cell - inset) — exactly where card borders land — so gaps read as
+// double lines and tiles snap onto them whether spaced or placed continuously.
+const GridGuides = () => {
   const ref = useRef<HTMLDivElement>(null)
-  const [columnPitch, setColumnPitch] = useState(0)
+  const [columnWidth, setColumnWidth] = useState(0)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => {
-      const colWidth = (el.clientWidth - GRID_MARGIN * (COLS.lg - 1)) / COLS.lg
-      setColumnPitch(colWidth + GRID_MARGIN)
-    }
+    const measure = () => setColumnWidth(el.clientWidth / COLS.lg)
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
@@ -155,8 +83,17 @@ const GridDots = () => {
     <div
       ref={ref}
       aria-hidden
-      className="dashboard-grid-dots pointer-events-none absolute inset-0"
-      style={columnPitch > 0 ? { backgroundSize: `${columnPitch}px ${GRID_ROW_PITCH}px` } : undefined}
+      className="dashboard-grid-guides pointer-events-none absolute inset-0"
+      style={
+        columnWidth > 0
+          ? ({
+              backgroundSize: `${columnWidth}px ${GRID_ROW_HEIGHT}px`,
+              '--col-w': `${columnWidth}px`,
+              '--row-h': `${GRID_ROW_HEIGHT}px`,
+              '--inset': `${GRID_GAP / 2}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
     />
   )
 }
@@ -187,7 +124,6 @@ export const DashboardGrid = ({
   globalGranularity?: Granularity
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
-  const latestLayoutsRef = useRef<DashboardLayouts | null>(null)
   const editable = mode === 'edit'
   const highlightRef = useRef<HTMLDivElement>(null)
 
@@ -198,14 +134,14 @@ export const DashboardGrid = ({
     }
   }, [highlightTileId])
 
-  // react-grid-layout fires onLayoutChange on mount and breakpoint reflow, not just on user
-  // edits. Record the latest layout there, but only persist on an explicit drag/resize stop
-  // so loading a dashboard never triggers spurious updateTile writes.
-  const persistLatestLayouts = () => {
+  // Persist only on an explicit drag/resize stop, never on mount/reflow, so loading
+  // a dashboard never triggers spurious writes. RGL hands the stop callback the
+  // final layout array directly — we deliberately do NOT read it from onLayoutChange
+  // via a ref, because RGL fires the stop callback *before* that final onLayoutChange,
+  // so the ref would still hold the pre-edit layout.
+  const persistLayout = (layout: readonly LayoutItem[]) => {
     if (!editable) return
-    if (latestLayoutsRef.current) {
-      onLayoutsChange?.(latestLayoutsRef.current)
-    }
+    onLayoutsChange?.({ lg: layout })
   }
 
   const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
@@ -223,41 +159,38 @@ export const DashboardGrid = ({
 
   return (
     <div className="relative">
-      {editable ? <GridDots /> : null}
+      {editable ? <GridGuides /> : null}
       <ResponsiveGridLayoutWithWidth
         className="layout dashboard-grid"
         breakpoints={BREAKPOINTS}
         cols={COLS}
         layouts={layouts}
         rowHeight={GRID_ROW_HEIGHT}
-        margin={[GRID_MARGIN, GRID_MARGIN]}
+        margin={[0, 0]}
         containerPadding={[0, 0]}
         isDraggable={editable}
         isResizable={editable}
         draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
         draggableHandle=".tile-drag-handle"
-        onLayoutChange={(_layout, allLayouts) => {
-          latestLayoutsRef.current = allLayouts
-        }}
-        onDragStop={persistLatestLayouts}
-        onResizeStop={persistLatestLayouts}
+        onDragStop={layout => persistLayout(layout)}
+        onResizeStop={layout => persistLayout(layout)}
       >
         {tiles.map(tile => (
-          <div
-            key={tile.id}
-            className={[
-              'group flex h-full min-h-0 flex-col',
-              selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
-              highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
-            ].join(' ')}
-          >
-            {/* Selection and the highlight ref live on this inner node, not the grid-item root:
-              react-grid-layout clones the root (wrapping it in <DraggableCore>/<Resizable>) and
-              overwrites its onMouseDown and ref with its own. Props nested here are never clobbered. */}
+          // The grid item is the whole cell; p-2 insets the card so adjacent
+          // cards show a GRID_GAP (16px) gap without any structural margin.
+          <div key={tile.id} className="group flex h-full min-h-0 flex-col p-2">
+            {/* Selection, the highlight ref, and the click handler live on this
+              inner node, not the grid-item root: react-grid-layout clones the root
+              (wrapping it in <DraggableCore>/<Resizable>) and overwrites its
+              onMouseDown and ref with its own. Props nested here are never clobbered. */}
             <div
               ref={highlightTileId === tile.id ? highlightRef : undefined}
-              className="min-h-0 flex-1"
               onMouseDown={handleTileSelect(tile)}
+              className={[
+                'min-h-0 flex-1',
+                selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+                highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
+              ].join(' ')}
             >
               <DashboardTileBody
                 tile={tile}
