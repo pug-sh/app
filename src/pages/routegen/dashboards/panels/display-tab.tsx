@@ -13,13 +13,14 @@ type DisplayTabProps = {
 }
 
 export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
-  const setHeader = (next: Partial<{ icon: string; accentColor: string; hideTitle: boolean }>) => {
+  const setHeader = (next: Partial<{ icon: string; accentColor: string; hideTitle: boolean; borderless: boolean }>) => {
     const current = tile.header
     onPatch({
       header: create(TileHeaderSchema, {
         icon: current?.icon ?? '',
         accentColor: current?.accentColor ?? '',
         hideTitle: current?.hideTitle ?? false,
+        borderless: current?.borderless ?? false,
         ...next,
       }),
     })
@@ -93,6 +94,17 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
             onChange={e => setHeader({ hideTitle: e.target.checked })}
           />
           Hide title
+        </label>
+      </Section>
+
+      <Section label="Surface">
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={tile.header?.borderless === true}
+            onChange={e => setHeader({ borderless: e.target.checked })}
+          />
+          Borderless
         </label>
       </Section>
     </div>

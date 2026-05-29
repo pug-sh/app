@@ -33,9 +33,15 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
+  const borderless = tile.header?.borderless === true
 
   return (
-    <div className="group relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4">
+    <div
+      className={[
+        'group relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg p-4',
+        borderless ? '' : 'border border-border/60 bg-background',
+      ].join(' ')}
+    >
       {accent ? (
         <div className={`absolute top-0 left-0 h-full w-[3px] ${accentStripClass(accent)}`} aria-hidden />
       ) : null}
