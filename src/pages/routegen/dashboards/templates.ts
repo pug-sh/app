@@ -9,7 +9,6 @@ import {
   InsightTileContentSchema,
   MarkdownTileContentSchema,
   ResponsiveGridLayoutSchema,
-  TileHeaderSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightQuerySpecSchema, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 
@@ -60,7 +59,6 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.KPI,
         compare: ComparePeriod.PRIOR,
-        header: create(TileHeaderSchema, { accentColor: 'blue' }),
         layouts: layoutsFor(3, 4),
       }),
   },
@@ -75,7 +73,6 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Daily active users',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'blue' }),
         layouts: layoutsFor(6, 8),
       }),
   },
@@ -90,7 +87,6 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Funnel',
         content: insightContent(InsightType.FUNNEL),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'green' }),
         layouts: layoutsFor(6, 8),
       }),
   },
@@ -105,7 +101,6 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Retention',
         content: insightContent(InsightType.RETENTION),
         viewMode: DashboardTileViewMode.LINE,
-        header: create(TileHeaderSchema, { accentColor: 'purple' }),
         layouts: layoutsFor(6, 8),
       }),
   },
@@ -120,7 +115,6 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
         displayName: 'Top events',
         content: insightContent(InsightType.TRENDS),
         viewMode: DashboardTileViewMode.TABLE,
-        header: create(TileHeaderSchema, { accentColor: 'gray' }),
         layouts: layoutsFor(6, 8),
       }),
   },
