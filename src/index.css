@@ -248,3 +248,46 @@
 .live-visitor-popup .leaflet-popup-tip {
   background: color-mix(in oklab, var(--background) 86%, transparent);
 }
+
+.activity-heatmap-popup .leaflet-popup-content-wrapper {
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--background) 90%, transparent);
+  color: var(--foreground);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  backdrop-filter: blur(10px);
+}
+
+.activity-heatmap-popup .leaflet-popup-content {
+  width: auto !important;
+  margin: 0.5rem 0.625rem;
+}
+
+.activity-heatmap-popup .leaflet-popup-tip {
+  background: color-mix(in oklab, var(--background) 90%, transparent);
+}
+
+.activity-heatmap-map .leaflet-control-attribution {
+  margin: 0;
+  padding: 0 4px 2px;
+  background: transparent;
+  font-size: 9px;
+  line-height: 1.2;
+  color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+}
+
+.activity-heatmap-map .leaflet-control-attribution a {
+  color: inherit;
+}
+
+.activity-heatmap-map .leaflet-container {
+  background: #e8eef4;
+}
+
+.dark .activity-heatmap-map .leaflet-container {
+  background: #1a1a1a;
+}
+
+.activity-heatmap-map .activity-heatmap-country {
+  cursor: pointer;
+}

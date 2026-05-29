@@ -13,6 +13,7 @@ import {
 import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import ActivityMapTile from './activity-map-tile'
 import CampaignsBlock from './campaigns-block'
 import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
@@ -102,7 +103,16 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           ) : null}
         </div>
 
-        <div className="mt-6 flex h-[360px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
+        <div className="mt-6">
+          <ActivityMapTile
+            schema={schema}
+            primary={bindings.primary}
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+          />
+        </div>
+
+        <div className="mt-3 flex h-[360px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
           <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
             <h3 className="truncate text-sm font-semibold">Active users trend</h3>
           </div>
