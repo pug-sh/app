@@ -32,10 +32,9 @@ export type TileTemplate = {
   build: () => DashboardTileInput
 }
 
-const layoutsFor = (w: number, h: number) =>
-  ['lg', 'md', 'sm', 'xs', 'xxs'].map(bp =>
-    create(ResponsiveGridLayoutSchema, { breakpoint: bp, x: 0, y: 0, w, h, minW: 2, minH: 4 }),
-  )
+const layoutsFor = (w: number, h: number) => [
+  create(ResponsiveGridLayoutSchema, { breakpoint: 'lg', x: 0, y: 0, w, h, minW: 2, minH: 4 }),
+]
 
 const insightContent = (insightType: InsightType) => ({
   case: 'insight' as const,

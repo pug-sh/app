@@ -53,7 +53,7 @@ const getLayoutBase = (tile: DashboardTile, breakpoint: keyof typeof BREAKPOINTS
     }
   }
 
-  const width = Math.min(COLS[breakpoint], breakpoint === 'lg' ? 6 : breakpoint === 'md' ? 5 : 4)
+  const width = Math.min(COLS[breakpoint], 6)
   return {
     breakpoint,
     x: 0,
@@ -109,45 +109,6 @@ const layoutItemToProto = (
     maxH: item.maxH ?? existing?.maxH ?? 0,
     static: item.static ?? existing?.static ?? false,
   })
-
-const getDefaultNewTileLayouts = (tiles: DashboardTile[], kind: TileType = 'insight') => {
-  const layouts = getLayoutsForTiles(tiles)
-  return BREAKPOINT_KEYS.map(breakpoint => {
-    const items = layouts[breakpoint] ?? []
-    const nextY = items.reduce((max, item) => Math.max(max, item.y + item.h), 0)
-    const width = Math.min(COLS[breakpoint], breakpoint === 'lg' ? 6 : breakpoint === 'md' ? 5 : 4)
-    const defaultHeight = getKindDefaultHeight(kind)
-    const minHeight = getKindMinHeight(kind)
-    return {
-      breakpoint,
-      x: 0,
-      y: nextY,
-      w: width,
-      h: defaultHeight,
-      minW: TILE_MIN_W,
-      maxW: 0,
-      minH: minHeight,
-      maxH: 0,
-      static: false,
-    }
-  })
-}
-
-export const buildCreatedTileLayouts = (tiles: DashboardTile[], kind: TileType = 'insight') =>
-  getDefaultNewTileLayouts(tiles, kind).map(layout =>
-    create(ResponsiveGridLayoutSchema, {
-      breakpoint: layout.breakpoint,
-      x: layout.x,
-      y: layout.y,
-      w: layout.w,
-      h: layout.h,
-      minW: layout.minW,
-      maxW: layout.maxW,
-      minH: layout.minH,
-      maxH: layout.maxH,
-      static: layout.static,
-    }),
-  )
 
 export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayouts) => {
   const nextLayouts = BREAKPOINT_KEYS.flatMap(breakpoint => {
