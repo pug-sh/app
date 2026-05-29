@@ -136,11 +136,11 @@ const AuthenticatedApp = () => {
       <Suspense fallback={null}>
         <AppSidebar />
       </Suspense>
-      <SidebarInset>
+      <SidebarInset className="min-h-0">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
         </header>
-        <main className="flex-1 min-w-0 overflow-x-clip">
+        <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <Suspense fallback={<LoadingSpinner />}>
             <Router />
           </Suspense>
