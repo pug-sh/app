@@ -41,17 +41,6 @@ const buildTrendsQuery = (kind: string, aggregation: AggregationType) =>
     }),
   })
 
-const buildRetentionQuery = (kind: string) =>
-  create(QueryRequestSchema, {
-    spec: create(InsightQuerySpecSchema, {
-      insightType: InsightType.RETENTION,
-      events: [
-        create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
-        create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) }),
-      ],
-    }),
-  })
-
 const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   const schema = useAtomValue(overviewSchemaAtom)
   const bindings = useAtomValue(overviewBindingsAtom)
@@ -133,24 +122,6 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
             </OverviewTileShell>
           </div>
         </div>
-
-        <OverviewTileShell
-          title="Retention"
-          footer={`via ${bindings.primary} → ${bindings.primary}`}
-          contentClassName="flex flex-col"
-          className="mt-[18px] h-[520px]"
-        >
-          <div className="min-h-0 flex-1">
-            <DashboardInsightContent
-              query={buildRetentionQuery(bindings.primary)}
-              defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
-              timeRangeOverride={globalTimeRange}
-              granularityOverride={globalGranularity}
-              viewMode={DashboardTileViewMode.UNSPECIFIED}
-              queryKeyPrefix="overview-retention"
-            />
-          </div>
-        </OverviewTileShell>
       </section>
 
       {showConversionSection ? (
