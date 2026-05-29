@@ -1,7 +1,8 @@
 import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Clock, Edit3, LayoutGrid, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { useParams } from 'wouter'
 import {
   type Dashboard,
@@ -183,7 +184,7 @@ const DashboardDetail = () => {
   const handleSave = useCallback(async () => {
     if (!storedDraft || !dashboardId) return
     if (!storedDraft.draft.displayName.trim()) {
-      toastRPCError(new Error('Dashboard name is required'), 'Invalid dashboard')
+      toast.error('Dashboard name is required')
       return
     }
     setSaving(true)
@@ -299,11 +300,23 @@ const DashboardDetail = () => {
     [setStoredDraft],
   )
 
+  const highlightTimerRef = useRef<number | null>(null)
   const focusNewTile = useCallback((tileId: string) => {
     setSelectedTileId(tileId)
     setHighlightTileId(tileId)
-    window.setTimeout(() => setHighlightTileId(current => (current === tileId ? null : current)), 1200)
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightTileId(current => (current === tileId ? null : current)),
+      1200,
+    )
   }, [])
+
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    },
+    [],
+  )
 
   const duplicateTile = useCallback(
     (tile: DashboardTile) => {
@@ -417,12 +430,21 @@ const DashboardDetail = () => {
     )
   }, [dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
 
+  const handleEscapeDeselect = useCallback(() => {
+    // When the add-tile picker is open, let its own Esc close it rather than
+    // also clearing the tile selection in the same keypress.
+    if (showPicker) return
+    setSelectedTileId(null)
+  }, [showPicker])
+
+  const openPicker = useCallback(() => setShowPicker(true), [])
+
   useEditorShortcuts({
     active: mode === 'edit',
     dirty: dirtyCount > 0,
     onSave: handleSave,
-    onDeselect: () => setSelectedTileId(null),
-    onAdd: () => setShowPicker(true),
+    onDeselect: handleEscapeDeselect,
+    onAdd: openPicker,
   })
 
   if (!project) return <NoProject title="Dashboards" icon={LayoutGrid} />

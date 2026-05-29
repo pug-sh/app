@@ -18,7 +18,13 @@ export const TemplatePicker = ({ trigger, open, onOpenChange, onSelect }: Templa
     !normalized || `${template.displayName} ${template.description}`.toLowerCase().includes(normalized)
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover
+      open={open}
+      onOpenChange={next => {
+        if (!next) setQuery('')
+        onOpenChange(next)
+      }}
+    >
       <PopoverTrigger render={trigger} />
       <PopoverContent align="start" className="w-80 p-2">
         <Input

@@ -16,7 +16,7 @@ export const EditBar = ({
   const [confirming, setConfirming] = useState(false)
   const barRef = useRef<HTMLDivElement>(null)
 
-  // Auto-revert the discard confirmation when a click lands outside the bar.
+  // Auto-revert the discard confirmation on any pointerdown outside the bar.
   useEffect(() => {
     if (!confirming) return
     const onPointerDown = (event: PointerEvent) => {

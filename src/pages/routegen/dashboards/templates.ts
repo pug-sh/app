@@ -169,10 +169,18 @@ const TEMPLATE_ORDER: readonly TileTemplateId[] = [
 export const TILE_TEMPLATES: readonly TileTemplate[] = TEMPLATE_ORDER.map(id => TILE_TEMPLATES_BY_ID[id])
 
 // Section order + labels for the picker. Each group renders as a flat,
-// single-level list (no nested menus, per the light/minimal aesthetic).
-export const TEMPLATE_GROUPS: { label: string; group: TileTemplateGroup }[] = [
-  { label: 'Suggested metrics', group: 'suggested' },
-  { label: 'Build your own', group: 'blank' },
-]
+// single-level list (no nested menus, per the light/minimal aesthetic). Labels
+// are keyed by TileTemplateGroup so a new group must declare a label (and thus
+// can't silently fail to render).
+const TEMPLATE_GROUP_LABELS: Record<TileTemplateGroup, string> = {
+  suggested: 'Suggested metrics',
+  blank: 'Build your own',
+}
+
+const TEMPLATE_GROUP_ORDER: readonly TileTemplateGroup[] = ['suggested', 'blank']
+
+export const TEMPLATE_GROUPS: readonly { label: string; group: TileTemplateGroup }[] = TEMPLATE_GROUP_ORDER.map(
+  group => ({ label: TEMPLATE_GROUP_LABELS[group], group }),
+)
 
 export const findTileTemplate = (id: TileTemplateId): TileTemplate => TILE_TEMPLATES_BY_ID[id]

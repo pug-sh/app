@@ -20,8 +20,9 @@ export const useEditorShortcuts = ({
     const onKeyDown = (event: KeyboardEvent) => {
       const mod = event.metaKey || event.ctrlKey
       if (mod && event.key.toLowerCase() === 's') {
+        if (!dirty) return // nothing to save — leave the browser's default alone
         event.preventDefault() // beat the browser's native "save page" dialog
-        if (dirty) onSave()
+        onSave()
         return
       }
       if (mod && event.key.toLowerCase() === 'k') {
