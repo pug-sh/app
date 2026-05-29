@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import {
   type DashboardTile,
@@ -16,6 +16,12 @@ import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
+
+// Grid metrics, shared by the react-grid-layout config and the edit-mode dot
+// overlay so the dots stay aligned with where tiles actually snap.
+const GRID_MARGIN = 16
+const GRID_ROW_HEIGHT = 24
+const GRID_ROW_PITCH = GRID_ROW_HEIGHT + GRID_MARGIN
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -124,6 +130,37 @@ export const withUpdatedLayouts = (tile: DashboardTile, layouts: DashboardLayout
   }
 }
 
+// Snap-grid dot overlay shown behind tiles in edit mode. Its background-size
+// tracks react-grid-layout's column pitch ((W - margins)/cols + margin) so the
+// dots stay aligned with the snap grid as the canvas width changes — e.g. when
+// the config rail opens or the window resizes.
+const GridDots = () => {
+  const ref = useRef<HTMLDivElement>(null)
+  const [columnPitch, setColumnPitch] = useState(0)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const colWidth = (el.clientWidth - GRID_MARGIN * (COLS.lg - 1)) / COLS.lg
+      setColumnPitch(colWidth + GRID_MARGIN)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="dashboard-grid-dots pointer-events-none absolute inset-0"
+      style={columnPitch > 0 ? { backgroundSize: `${columnPitch}px ${GRID_ROW_PITCH}px` } : undefined}
+    />
+  )
+}
+
 export const DashboardGrid = ({
   tiles,
   mode = 'view',
@@ -185,52 +222,55 @@ export const DashboardGrid = ({
   }
 
   return (
-    <ResponsiveGridLayoutWithWidth
-      className="layout dashboard-grid"
-      breakpoints={BREAKPOINTS}
-      cols={COLS}
-      layouts={layouts}
-      rowHeight={24}
-      margin={[16, 16]}
-      containerPadding={[0, 0]}
-      isDraggable={editable}
-      isResizable={editable}
-      draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
-      draggableHandle=".tile-drag-handle"
-      onLayoutChange={(_layout, allLayouts) => {
-        latestLayoutsRef.current = allLayouts
-      }}
-      onDragStop={persistLatestLayouts}
-      onResizeStop={persistLatestLayouts}
-    >
-      {tiles.map(tile => (
-        <div
-          key={tile.id}
-          className={[
-            'group flex h-full min-h-0 flex-col',
-            selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
-            highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
-          ].join(' ')}
-        >
-          {/* Selection and the highlight ref live on this inner node, not the grid-item root:
+    <div className="relative">
+      {editable ? <GridDots /> : null}
+      <ResponsiveGridLayoutWithWidth
+        className="layout dashboard-grid"
+        breakpoints={BREAKPOINTS}
+        cols={COLS}
+        layouts={layouts}
+        rowHeight={GRID_ROW_HEIGHT}
+        margin={[GRID_MARGIN, GRID_MARGIN]}
+        containerPadding={[0, 0]}
+        isDraggable={editable}
+        isResizable={editable}
+        draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
+        draggableHandle=".tile-drag-handle"
+        onLayoutChange={(_layout, allLayouts) => {
+          latestLayoutsRef.current = allLayouts
+        }}
+        onDragStop={persistLatestLayouts}
+        onResizeStop={persistLatestLayouts}
+      >
+        {tiles.map(tile => (
+          <div
+            key={tile.id}
+            className={[
+              'group flex h-full min-h-0 flex-col',
+              selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+              highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
+            ].join(' ')}
+          >
+            {/* Selection and the highlight ref live on this inner node, not the grid-item root:
               react-grid-layout clones the root (wrapping it in <DraggableCore>/<Resizable>) and
               overwrites its onMouseDown and ref with its own. Props nested here are never clobbered. */}
-          <div
-            ref={highlightTileId === tile.id ? highlightRef : undefined}
-            className="min-h-0 flex-1"
-            onMouseDown={handleTileSelect(tile)}
-          >
-            <DashboardTileBody
-              tile={tile}
-              editing={editable}
-              onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
-              globalTimeRange={globalTimeRange}
-              globalGranularity={globalGranularity}
-              onDuplicate={editable ? onDuplicateTile : undefined}
-            />
+            <div
+              ref={highlightTileId === tile.id ? highlightRef : undefined}
+              className="min-h-0 flex-1"
+              onMouseDown={handleTileSelect(tile)}
+            >
+              <DashboardTileBody
+                tile={tile}
+                editing={editable}
+                onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
+                globalTimeRange={globalTimeRange}
+                globalGranularity={globalGranularity}
+                onDuplicate={editable ? onDuplicateTile : undefined}
+              />
+            </div>
           </div>
-        </div>
-      ))}
-    </ResponsiveGridLayoutWithWidth>
+        ))}
+      </ResponsiveGridLayoutWithWidth>
+    </div>
   )
 }

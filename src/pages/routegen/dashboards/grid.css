@@ -9,3 +9,13 @@
 .dashboard-grid .react-grid-item > .react-resizable-handle::after {
   border-color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
 }
+
+/* Edit-mode snap-grid: faint dots at column/row intersections. background-size
+   is set inline (grid.tsx) to match react-grid-layout's column and row pitch. */
+.dashboard-grid-dots {
+  background-image: radial-gradient(
+    circle at 0 0,
+    color-mix(in oklch, var(--muted-foreground) 45%, transparent) 1.5px,
+    transparent 1.5px
+  );
+}
