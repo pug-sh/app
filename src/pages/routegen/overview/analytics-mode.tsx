@@ -99,7 +99,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           ) : null}
         </div>
 
-        <div className="mt-[18px] grid min-h-0 grid-cols-1 gap-[18px] lg:h-[360px] lg:grid-cols-3">
+        <div className="mt-[18px] grid min-h-0 grid-cols-1 gap-[18px] lg:h-[360px] lg:grid-cols-2">
           <div className="h-[360px] min-h-0 overflow-hidden lg:h-full">
             <ActivityMapTile
               schema={schema}
@@ -108,7 +108,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
               globalGranularity={globalGranularity}
             />
           </div>
-          <div className="min-h-0 overflow-hidden lg:col-span-2 lg:h-full">
+          <div className="min-h-0 overflow-hidden lg:h-full">
             <OverviewTileShell
               title="Active users trend"
               footer={`via ${bindings.primary}`}
