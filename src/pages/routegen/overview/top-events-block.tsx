@@ -48,8 +48,8 @@ const TopEventsBlock = ({ events }: { events: EventNameMeta[] }) => {
                   />
                 </div>
               </div>
-              <span className="shrink-0 font-mono tabular-nums">{formatCount(event.count)}</span>
-              <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+              <span className="shrink-0 tabular-nums">{formatCount(event.count)}</span>
+              <span className="shrink-0 text-[10px] text-muted-foreground">
                 {formatLastSeen(tsToDate(event.lastSeenAt))}
               </span>
             </li>

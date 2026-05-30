@@ -116,24 +116,24 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
                         <div className="space-y-0.5 pl-3.5">
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-muted-foreground">Completed</span>
-                            <span className="font-mono tabular-nums">{compactNumber(count)}</span>
+                            <span className="tabular-nums">{compactNumber(count)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-muted-foreground">From start</span>
-                            <span className="font-mono tabular-nums">{conv.toFixed(1)}%</span>
+                            <span className="tabular-nums">{conv.toFixed(1)}%</span>
                           </div>
                           {!isMultiSeries && (
                             <>
                               <div className="flex items-center justify-between gap-4">
                                 <span className="text-muted-foreground">From previous</span>
-                                <span className="font-mono tabular-nums">
+                                <span className="tabular-nums">
                                   {Number.isFinite(fromPrev) ? `${fromPrev.toFixed(1)}%` : '—'}
                                 </span>
                               </div>
                               {Number.isFinite(dropOff) && (
                                 <div className="flex items-center justify-between gap-4">
                                   <span className="text-muted-foreground">Drop-off</span>
-                                  <span className="font-mono tabular-nums">{compactNumber(dropOff)}</span>
+                                  <span className="tabular-nums">{compactNumber(dropOff)}</span>
                                 </div>
                               )}
                             </>

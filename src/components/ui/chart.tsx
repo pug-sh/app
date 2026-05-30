@@ -107,8 +107,8 @@ export const ChartTooltipContent = React.forwardRef<
                 formatter(value, datum.name as string | undefined, datum, index, datum.payload)
               ) : (
                 <>
-                  <span className="text-muted-foreground">{defaultName}</span>
-                  <span className="ml-auto font-mono tabular-nums text-foreground">
+                  <span className="truncate text-muted-foreground">{defaultName}</span>
+                  <span className="ml-auto font-medium tabular-nums text-foreground">
                     {typeof value === 'number' ? value.toLocaleString() : String(value ?? '')}
                   </span>
                 </>

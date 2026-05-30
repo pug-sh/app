@@ -1,8 +1,11 @@
+import { Fragment } from 'react'
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ChartPoint } from './types'
+
+type DetailStat = { label: string; value: string }
 
 export const SummaryStats = ({
   series,
@@ -26,34 +29,51 @@ export const SummaryStats = ({
         const min = vals.length > 0 ? Math.min(...vals) : 0
         const max = Math.max(...vals, 0)
         const aggregation = aggregations[si] ?? AggregationType.TOTAL
+
         let headline = total
-        let detail = `avg ${compactNumber(Math.round(avg))} · peak ${compactNumber(max)}`
+        let stats: DetailStat[] = [
+          { label: 'avg', value: compactNumber(Math.round(avg)) },
+          { label: 'peak', value: compactNumber(max) },
+        ]
 
         if (aggregation === AggregationType.AVG) {
           headline = avg
-          detail = `min ${compactNumber(min)} · max ${compactNumber(max)}`
+          stats = [
+            { label: 'min', value: compactNumber(min) },
+            { label: 'max', value: compactNumber(max) },
+          ]
         } else if (aggregation === AggregationType.MIN) {
           headline = min
-          detail = `avg ${compactNumber(Math.round(avg))} · peak ${compactNumber(max)}`
+          stats = [
+            { label: 'avg', value: compactNumber(Math.round(avg)) },
+            { label: 'peak', value: compactNumber(max) },
+          ]
         } else if (aggregation === AggregationType.MAX) {
           headline = max
-          detail = `avg ${compactNumber(Math.round(avg))} · floor ${compactNumber(min)}`
+          stats = [
+            { label: 'avg', value: compactNumber(Math.round(avg)) },
+            { label: 'floor', value: compactNumber(min) },
+          ]
         }
+
         return (
-          <div key={si} className="flex min-w-0 items-start gap-2.5">
-            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
-            <div className="min-w-0 space-y-0.5">
-              {!compact && <p className="truncate text-xs text-muted-foreground">{name}</p>}
-              <p
-                className={cn(
-                  'text-lg font-medium tabular-nums tracking-tight text-foreground',
-                  compact && 'truncate',
-                )}
-              >
+          <div key={si} className="min-w-0">
+            {!compact && <p className="mb-0.5 truncate text-xs text-muted-foreground">{name}</p>}
+            <div className="flex items-center gap-2">
+              <span className="size-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
+              <p className="truncate text-lg font-medium tracking-tight tabular-nums text-foreground">
                 {compactNumber(headline)}
               </p>
-              <p className={cn('text-[11px] text-muted-foreground/70', compact && 'truncate')}>{detail}</p>
             </div>
+            <p className="mt-0.5 truncate pl-4 text-[11px]">
+              {stats.map((stat, i) => (
+                <Fragment key={stat.label}>
+                  {i > 0 && <span className="text-muted-foreground/40"> · </span>}
+                  <span className="text-muted-foreground/50">{stat.label} </span>
+                  <span className="text-muted-foreground tabular-nums">{stat.value}</span>
+                </Fragment>
+              ))}
+            </p>
           </div>
         )
       })}
