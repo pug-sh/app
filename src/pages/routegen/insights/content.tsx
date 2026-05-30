@@ -232,6 +232,7 @@ export const InsightsContent = ({
           seriesColors={seriesColors}
           aggregations={seriesAggregations}
           compact={compact}
+          showSeriesNames={breakdowns.length > 0}
         />
         <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
       </div>

@@ -7,21 +7,38 @@ import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
 
+const breakdownDisplayName = (name: string) => {
+  const sep = name.indexOf(' · ')
+  if (sep >= 0) return name.slice(sep + 3)
+  return '(direct)'
+}
+
 export const SummaryStats = ({
   series,
   data,
   seriesColors,
   aggregations,
   compact = false,
+  showSeriesNames = false,
 }: {
   series: string[]
   data: ChartPoint[]
   seriesColors: SeriesColor[]
   aggregations: AggregationType[]
   compact?: boolean
+  showSeriesNames?: boolean
 }) => {
   return (
-    <div className={cn('grid grid-cols-2', compact ? 'mb-0 gap-x-5 gap-y-3' : 'mb-1 gap-3 sm:grid-cols-4')}>
+    <div
+      className={cn(
+        'grid grid-cols-2',
+        compact && showSeriesNames
+          ? 'mb-0 gap-x-4 gap-y-2'
+          : compact
+            ? 'mb-0 gap-x-5 gap-y-4'
+            : 'mb-1 gap-4 sm:grid-cols-4',
+      )}
+    >
       {series.map((name, si) => {
         const vals = data.map(d => d.values[si] ?? 0)
         const total = vals.reduce((a, b) => a + b, 0)
@@ -56,21 +73,45 @@ export const SummaryStats = ({
           ]
         }
 
-        return (
-          <div key={si} className="min-w-0">
-            {!compact && <p className="mb-0.5 truncate text-xs text-muted-foreground">{name}</p>}
-            <div className="flex items-center gap-2">
+        if (showSeriesNames) {
+          return (
+            <div key={si} className="flex min-w-0 items-center gap-2">
               <span className="size-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
-              <p className="truncate text-lg font-medium tracking-tight tabular-nums text-foreground">
+              <span className="truncate text-sm font-medium tabular-nums text-foreground">
+                {compactNumber(headline)}
+              </span>
+              <span className="truncate text-xs text-muted-foreground">{breakdownDisplayName(name)}</span>
+            </div>
+          )
+        }
+
+        return (
+          <div key={si} className="min-w-0 space-y-1">
+            {!compact && (
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
+                <span className="truncate text-[12px] font-medium text-muted-foreground">{name}</span>
+              </div>
+            )}
+            <div className={cn('flex items-center', compact ? 'gap-2' : 'gap-0')}>
+              {compact && (
+                <span className="size-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
+              )}
+              <p
+                className={cn(
+                  'truncate font-semibold leading-tight tracking-tight tabular-nums text-foreground',
+                  compact ? 'text-lg' : 'text-[22px]',
+                )}
+              >
                 {compactNumber(headline)}
               </p>
             </div>
-            <p className="mt-0.5 truncate pl-4 text-[11px]">
+            <p className="truncate text-[11px] leading-none">
               {stats.map((stat, i) => (
                 <Fragment key={stat.label}>
-                  {i > 0 && <span className="text-muted-foreground/40"> · </span>}
-                  <span className="text-muted-foreground/50">{stat.label} </span>
-                  <span className="text-muted-foreground tabular-nums">{stat.value}</span>
+                  {i > 0 && <span className="text-muted-foreground/30"> · </span>}
+                  <span className="text-muted-foreground/60">{stat.label}</span>
+                  <span className="ml-0.5 text-muted-foreground tabular-nums">{stat.value}</span>
                 </Fragment>
               ))}
             </p>
