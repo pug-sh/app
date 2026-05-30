@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WorldMap, type CountryContext } from 'react-svg-worldmap'
+import { type CountryContext, WorldMap } from 'react-svg-worldmap'
 
 // react-svg-worldmap renders width = size, height = size * 3/4 (its heightRatio),
 // and that 4:3 frame includes large ocean bands + Antarctica. Match it here.

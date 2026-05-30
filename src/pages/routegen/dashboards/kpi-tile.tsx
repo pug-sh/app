@@ -88,7 +88,9 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata }:
 
   const summary = (
     <div className="space-y-2">
-      <div className={cn('text-3xl font-semibold tracking-tight tabular-nums', numberColor)}>{formatValue(current)}</div>
+      <div className={cn('text-3xl font-semibold tracking-tight tabular-nums', numberColor)}>
+        {formatValue(current)}
+      </div>
       {compareRow}
     </div>
   )

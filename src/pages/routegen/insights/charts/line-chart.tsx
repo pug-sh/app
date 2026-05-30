@@ -3,7 +3,14 @@ import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import type { SeriesColor } from '@/lib/event-colors'
 import { cn } from '@/lib/utils'
-import { COMPACT_CHART_AXIS_CLASS, formatTooltipLabel, SHARED_MARGIN, SHARED_X_AXIS, sharedYAxis, useChartPrep } from './common'
+import {
+  COMPACT_CHART_AXIS_CLASS,
+  formatTooltipLabel,
+  SHARED_MARGIN,
+  SHARED_X_AXIS,
+  sharedYAxis,
+  useChartPrep,
+} from './common'
 import type { ChartPoint } from './types'
 
 export const LineChart = ({

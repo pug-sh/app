@@ -207,7 +207,9 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
             ) : (
               <>
                 <span className="text-sm font-medium">{highestConv?.label}</span>
-                <span className="text-lg font-medium tabular-nums text-foreground">{highestConv?.rate.toFixed(1)}%</span>
+                <span className="text-lg font-medium tabular-nums text-foreground">
+                  {highestConv?.rate.toFixed(1)}%
+                </span>
               </>
             )}
           </div>
