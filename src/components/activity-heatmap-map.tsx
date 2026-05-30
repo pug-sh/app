@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { WorldMap, type CountryContext } from 'react-svg-worldmap'
 
+// react-svg-worldmap renders width = size, height = size * 3/4 (its heightRatio),
+// and that 4:3 frame includes large ocean bands + Antarctica. Match it here.
 const MAP_HEIGHT_RATIO = 3 / 4
 
 type Props = {
@@ -47,6 +49,9 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
       const width = el.clientWidth
       const height = el.clientHeight
       if (width <= 0 || height <= 0) return
+      // Contain: fit the whole map inside the tile so nothing is clipped. The map's
+      // fixed 4:3 frame has an oversized bottom band (Antarctica), so a cover/crop
+      // fit eats into the northern continents — contain avoids that entirely.
       const next = Math.floor(Math.min(width, height / MAP_HEIGHT_RATIO))
       setSize(prev => (prev === next ? prev : next))
     }
