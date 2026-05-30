@@ -22,7 +22,7 @@ const TopEventsBlock = ({ events }: { events: EventNameMeta[] }) => {
   const max = Number(sorted[0].count)
 
   return (
-    <div className="rounded-lg bg-background p-4">
+    <div className="rounded-lg border border-border/60 bg-background p-4">
       <h3 className="mb-3 text-sm font-semibold">Top events</h3>
       <ul className="space-y-3">
         {sorted.map(event => {

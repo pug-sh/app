@@ -12,7 +12,12 @@ type Props = {
 
 export function OverviewTileShell({ title, footer, meta, children, contentClassName, className }: Props) {
   return (
-    <div className={cn('flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-background p-4', className)}>
+    <div
+      className={cn(
+        'flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-background p-4',
+        className,
+      )}
+    >
       <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
         <h3 className="truncate text-sm font-semibold">{title}</h3>
         {meta}

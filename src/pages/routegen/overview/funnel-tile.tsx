@@ -28,7 +28,7 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
   })
 
   return (
-    <div className="flex h-[480px] min-h-0 flex-col rounded-lg bg-background p-4">
+    <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
       <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
         <h3 className="truncate text-sm font-semibold">Auto funnel</h3>
       </div>
