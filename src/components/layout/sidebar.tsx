@@ -16,7 +16,6 @@ import {
   Sun,
   TrendingUp,
   Users,
-  UsersRound,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -62,7 +61,6 @@ const navItems = [
   { path: 'dashboards', label: 'Dashboards', icon: PanelsTopLeft },
   { path: 'profiles', label: 'Profiles', icon: ContactRound },
   { path: 'insights', label: 'Insights', icon: TrendingUp },
-  { path: 'segments', label: 'Segments', icon: UsersRound },
   { path: 'events', label: 'Events', icon: BookOpen },
   { path: 'members', label: 'Members', icon: Users },
   { path: 'settings', label: 'Settings', icon: Settings },
