@@ -68,6 +68,7 @@ const BreakdownTile = ({
           granularityOverride={globalGranularity}
           viewMode={viewMode}
           queryKeyPrefix={queryKeyPrefix}
+          compact
         />
       </div>
     </OverviewTileShell>

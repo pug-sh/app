@@ -68,6 +68,7 @@ export const DashboardInsightContent = ({
   granularityOverride,
   queryKeyPrefix,
   compact = false,
+  kpiMetadata,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -79,6 +80,7 @@ export const DashboardInsightContent = ({
   granularityOverride?: Granularity
   queryKeyPrefix: string
   compact?: boolean
+  kpiMetadata?: string
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
@@ -226,6 +228,7 @@ export const DashboardInsightContent = ({
           currentSeries={trendSeries}
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
+          metadata={kpiMetadata}
         />
       </div>
     )

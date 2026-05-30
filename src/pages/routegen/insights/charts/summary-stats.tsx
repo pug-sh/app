@@ -41,13 +41,18 @@ export const SummaryStats = ({
         }
         return (
           <div key={si} className="flex min-w-0 items-start gap-2.5">
-            <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: seriesColors[si]?.dot }} />
+            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
             <div className="min-w-0 space-y-0.5">
-              <p className="text-xs text-muted-foreground truncate">{name}</p>
-              <p className={cn('font-semibold tabular-nums tracking-tight', compact ? 'text-base' : 'text-lg')}>
+              {!compact && <p className="truncate text-xs text-muted-foreground">{name}</p>}
+              <p
+                className={cn(
+                  'text-lg font-medium tabular-nums tracking-tight text-foreground',
+                  compact && 'truncate',
+                )}
+              >
                 {compactNumber(headline)}
               </p>
-              <p className={cn('text-[11px] text-muted-foreground', compact && 'truncate')}>{detail}</p>
+              <p className={cn('text-[11px] text-muted-foreground/70', compact && 'truncate')}>{detail}</p>
             </div>
           </div>
         )

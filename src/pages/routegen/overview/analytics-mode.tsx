@@ -11,7 +11,6 @@ import {
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import ProjectLink from '@/components/project-link'
-import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { ActivityMapTile } from './activity-map-tile'
 import BreakdownTile from './breakdown-tile'
@@ -19,6 +18,7 @@ import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
+import OverviewSectionHeader from './overview-section-header'
 import { OverviewTileShell } from './overview-tile-shell'
 import { composeFunnelSteps } from './tile-bindings'
 import TopEventsBlock from './top-events-block'
@@ -59,7 +59,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   return (
     <div className="space-y-10">
       <section>
-        <SectionHeader title="Activity" />
+        <OverviewSectionHeader title="Activity" />
         <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
           <KpiTile
             title="Active users"
@@ -123,6 +123,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
                   granularityOverride={globalGranularity}
                   viewMode={DashboardTileViewMode.LINE}
                   queryKeyPrefix="overview-trend-active"
+                  compact
                 />
               </div>
             </OverviewTileShell>
@@ -132,7 +133,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
       {showConversionSection ? (
         <section>
-          <SectionHeader title="Conversion" />
+          <OverviewSectionHeader title="Conversion" />
           <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
             <OverviewTileShell
@@ -149,6 +150,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
                   granularityOverride={globalGranularity}
                   viewMode={DashboardTileViewMode.LINE}
                   queryKeyPrefix="overview-trend-conversion"
+                  compact
                 />
               </div>
             </OverviewTileShell>
@@ -157,7 +159,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       ) : null}
 
       <section>
-        <SectionHeader title="Acquisition" />
+        <OverviewSectionHeader title="Acquisition" />
         <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
           <BreakdownTile
             title="Platform breakdown"
@@ -179,7 +181,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       <section>
-        <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
+        <OverviewSectionHeader title="Schema" count={`${schema.events.length} kinds`} />
         <TopEventsBlock events={schema.events} />
       </section>
 

@@ -200,27 +200,27 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
     <div className="mt-4 space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Highest conversion rate</p>
+          <p className="text-xs font-normal text-muted-foreground">Highest conversion rate</p>
           <div className="flex items-baseline gap-2">
             {allRatesZero ? (
-              <span className="text-2xl font-semibold tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{highestConv?.label}</span>
-                <span className="text-2xl font-semibold tabular-nums">{highestConv?.rate.toFixed(1)}%</span>
+                <span className="text-lg font-medium tabular-nums text-foreground">{highestConv?.rate.toFixed(1)}%</span>
               </>
             )}
           </div>
         </div>
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Most conversions</p>
+          <p className="text-xs font-normal text-muted-foreground">Most conversions</p>
           <div className="flex items-baseline gap-2">
             {allCompletedZero ? (
-              <span className="text-2xl font-semibold tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{mostCompleted?.label}</span>
-                <span className="text-2xl font-semibold tabular-nums">
+                <span className="text-lg font-medium tabular-nums text-foreground">
                   {compactNumber(mostCompleted?.completed ?? 0)}
                 </span>
               </>
