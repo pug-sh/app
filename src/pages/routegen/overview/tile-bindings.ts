@@ -4,7 +4,13 @@ import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 // in the project's event schema wins. Add more entries here as we discover
 // common customer conventions.
 const SIGNIN_CANDIDATES = ['signin', 'signup', 'identified', 'account_created'] as const
-const CONVERSION_CANDIDATES = ['purchased', 'checkout_completed', 'conversion', 'subscription_started'] as const
+const CONVERSION_CANDIDATES = [
+  'purchased',
+  'purchase',
+  'checkout_completed',
+  'conversion',
+  'subscription_started',
+] as const
 
 type SigninKind = (typeof SIGNIN_CANDIDATES)[number]
 type ConversionKind = (typeof CONVERSION_CANDIDATES)[number]
