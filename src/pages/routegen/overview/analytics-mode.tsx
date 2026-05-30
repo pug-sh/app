@@ -60,7 +60,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
     <div className="space-y-10">
       <section>
         <OverviewSectionHeader title="Activity" />
-        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <KpiTile
             title="Active users"
             via={bindings.primary}
@@ -76,6 +76,14 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
             globalTimeRange={globalTimeRange}
             globalGranularity={globalGranularity}
             queryKeyPrefix="overview-kpi-volume"
+          />
+          <KpiTile
+            title="Events per user"
+            via={bindings.primary}
+            query={buildTrendsQuery(bindings.primary, AggregationType.PER_USER_AVG)}
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+            queryKeyPrefix="overview-kpi-avg-per-user"
           />
           {bindings.signinLike ? (
             <KpiTile
