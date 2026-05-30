@@ -14,15 +14,12 @@ import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { ActivityMapTile } from './activity-map-tile'
-import CampaignsBlock from './campaigns-block'
-import EventFeedBlock from './event-feed-block'
 import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import { OverviewTileShell } from './overview-tile-shell'
 import PlatformTile, { resolveOsPropertyKey } from './platform-tile'
-import ProfilesBlock from './profiles-block'
 import { composeFunnelSteps } from './tile-bindings'
 import TopEventsBlock from './top-events-block'
 
@@ -138,15 +135,6 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           </div>
         </section>
       ) : null}
-
-      <section>
-        <SectionHeader title="People & comms" />
-        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-3">
-          <ProfilesBlock />
-          <CampaignsBlock />
-          <EventFeedBlock globalTimeRange={globalTimeRange} />
-        </div>
-      </section>
 
       <section>
         <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
