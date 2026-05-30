@@ -83,11 +83,23 @@ export const DashboardInsightContent = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
+  // Key the memo on the embedded range's *content* (primitive millis), not on `query`'s
+  // identity. Callers rebuild `query` inline each render; keying on identity re-ran the
+  // preset resolver → new Date() every render, advancing timeRange.to → the stringified
+  // queryKey changed → useDebouncedQuery refetched in an infinite loop.
+  const embeddedRange = query ? getProtoRange(query.timeRange) : undefined
+  const embeddedFromMs = embeddedRange?.from.getTime()
+  const embeddedToMs = embeddedRange?.to.getTime()
   const effectiveTimeRange = useMemo(
     () =>
       timeRangeOverride ??
-      resolveDashboardTimeRangePreset(defaultTimeRange, query ? getProtoRange(query.timeRange) : undefined),
-    [defaultTimeRange, query, timeRangeOverride],
+      resolveDashboardTimeRangePreset(
+        defaultTimeRange,
+        embeddedFromMs !== undefined && embeddedToMs !== undefined
+          ? { from: new Date(embeddedFromMs), to: new Date(embeddedToMs) }
+          : undefined,
+      ),
+    [defaultTimeRange, timeRangeOverride, embeddedFromMs, embeddedToMs],
   )
   const effectiveGranularity = useMemo(
     () => granularityOverride ?? getInitialGranularity(query),
