@@ -14,14 +14,20 @@ import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { ActivityMapTile } from './activity-map-tile'
+import BreakdownTile from './breakdown-tile'
 import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import { OverviewTileShell } from './overview-tile-shell'
-import PlatformTile, { resolveOsPropertyKey } from './platform-tile'
 import { composeFunnelSteps } from './tile-bindings'
 import TopEventsBlock from './top-events-block'
+
+// Device/acquisition auto-properties are queried literally rather than resolved from
+// schema.autoPropertyKeys — that rollup is sparse and omits keys (e.g. $os) the raw
+// events still carry. The Query RPC reads raw events, so these breakdowns populate.
+const OS_PROPERTY = '$os'
+const UTM_SOURCE_PROPERTY = '$utmSource'
 
 type Props = GlobalOverrides
 
@@ -44,8 +50,11 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   if (!schema || !bindings) return null
 
   const funnelSteps = composeFunnelSteps(bindings)
-  const osPropertyKey = resolveOsPropertyKey(schema)
-  const showConversionSection = funnelSteps.length >= 2 || osPropertyKey !== null
+  const showConversionSection = funnelSteps.length >= 2
+  // Prefer an explicit conversion-like event; otherwise the funnel's last step is the
+  // deepest conversion. Only read in the showConversionSection branch, where funnelSteps
+  // has >= 2 entries, so the fallback index is always valid.
+  const conversionKind = bindings.conversionLike ?? funnelSteps[funnelSteps.length - 1]
 
   return (
     <div className="space-y-10">
@@ -126,15 +135,48 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           <SectionHeader title="Conversion" />
           <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
-            <PlatformTile
-              schema={schema}
-              primary={bindings.primary}
-              globalTimeRange={globalTimeRange}
-              globalGranularity={globalGranularity}
-            />
+            <OverviewTileShell
+              title="Conversion trend"
+              footer={`via ${conversionKind}`}
+              contentClassName="flex flex-col"
+              className="h-[480px]"
+            >
+              <div className="min-h-0 flex-1">
+                <DashboardInsightContent
+                  query={buildTrendsQuery(conversionKind, AggregationType.TOTAL)}
+                  defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+                  timeRangeOverride={globalTimeRange}
+                  granularityOverride={globalGranularity}
+                  viewMode={DashboardTileViewMode.LINE}
+                  queryKeyPrefix="overview-trend-conversion"
+                />
+              </div>
+            </OverviewTileShell>
           </div>
         </section>
       ) : null}
+
+      <section>
+        <SectionHeader title="Acquisition" />
+        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+          <BreakdownTile
+            title="Platform breakdown"
+            eventKind={bindings.primary}
+            breakdownProperty={OS_PROPERTY}
+            queryKeyPrefix="overview-breakdown-os"
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+          />
+          <BreakdownTile
+            title="Traffic source"
+            eventKind={bindings.primary}
+            breakdownProperty={UTM_SOURCE_PROPERTY}
+            queryKeyPrefix="overview-breakdown-utm-source"
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+          />
+        </div>
+      </section>
 
       <section>
         <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
