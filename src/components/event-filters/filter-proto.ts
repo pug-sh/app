@@ -1,5 +1,25 @@
+import type { PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import type { ActiveFilter } from './filter-model'
+import { type ActiveFilter, FILTER_OPERATORS } from './filter-model'
+
+export const fromProtoFilter = (filter: PropertyFilter): ActiveFilter => {
+  const property = filter.property ?? ''
+  const source = filter.source
+  const operator = filter.operator
+  const arity = FILTER_OPERATORS.find(option => option.value === operator)?.arity
+  const values = filter.values ?? []
+
+  if (arity === 'none') {
+    return { property, source, operator, kind: 'presence' }
+  }
+  if (arity === 'range') {
+    return { property, source, operator, kind: 'range', min: values[0] ?? '', max: values[1] ?? '' }
+  }
+  if (arity === 'list') {
+    return { property, source, operator, kind: 'multi', values }
+  }
+  return { property, source, operator, kind: 'single', value: filter.value ?? '' }
+}
 
 export const toProtoFilters = (filters: readonly ActiveFilter[]) =>
   filters.map(f => {

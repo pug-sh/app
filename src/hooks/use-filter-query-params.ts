@@ -5,8 +5,14 @@ import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
+import {
+  DEFAULT_USER_FLOW_CONFIG,
+  parseSerializedUserFlowConfig,
+  serializeUserFlowConfig,
+  type UserFlowConfig,
+} from '@/pages/routegen/insights/user-flow'
 
-const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
+const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION, InsightType.USER_FLOW]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [
   AggregationType.TOTAL,
@@ -41,6 +47,7 @@ const GRANULARITY_PARAM = 'gr'
 const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
+const USER_FLOW_PARAM = 'uf'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -245,8 +252,10 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
+  const rawUserFlow = parseJSONParam(params.get(USER_FLOW_PARAM))
+  const userFlowConfig = parseSerializedUserFlowConfig(rawUserFlow) ?? DEFAULT_USER_FLOW_CONFIG
 
-  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, parseWarning }
+  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, userFlowConfig, parseWarning }
 }
 
 export const writeFilterQueryParams = (
@@ -257,6 +266,7 @@ export const writeFilterQueryParams = (
     granularity?: Granularity
     timeRange?: TimeRange
     breakdowns?: string[]
+    userFlowConfig?: UserFlowConfig
   },
 ) => {
   const url = new URL(window.location.href)
@@ -270,6 +280,13 @@ export const writeFilterQueryParams = (
   setJSONParam(BREAKDOWNS_PARAM, opts?.breakdowns ?? [])
 
   setOrDelete(url, INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
+  setOrDelete(
+    url,
+    USER_FLOW_PARAM,
+    opts?.insightType === InsightType.USER_FLOW && opts.userFlowConfig
+      ? JSON.stringify(serializeUserFlowConfig(opts.userFlowConfig))
+      : undefined,
+  )
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)

@@ -1,5 +1,11 @@
 import { TrendingUp } from 'lucide-react'
-import type { AggregationType, Granularity, RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type {
+  AggregationType,
+  Granularity,
+  RetentionSeries,
+  UserFlowResult,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
+import { UserFlowQuery_GroupBy } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
 import {
@@ -12,6 +18,7 @@ import {
   type FunnelSeriesData,
   LineChart,
   RetentionCohort,
+  SankeyChart,
   SummaryStats,
 } from './charts'
 import type { ViewMode } from './constants'
@@ -24,6 +31,7 @@ export const InsightsContent = ({
   resultSeriesCount,
   isRetention,
   isTrends,
+  isUserFlow,
   hasIncompleteNumericAggregation,
   chartData,
   seriesNames,
@@ -37,6 +45,8 @@ export const InsightsContent = ({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  userFlowResult,
+  userFlowGroupBy,
   compact = false,
 }: {
   error: string | null
@@ -46,6 +56,7 @@ export const InsightsContent = ({
   resultSeriesCount: number
   isRetention: boolean
   isTrends: boolean
+  isUserFlow: boolean
   hasIncompleteNumericAggregation: boolean
   chartData: ChartPoint[]
   seriesNames: string[]
@@ -59,11 +70,15 @@ export const InsightsContent = ({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  userFlowResult?: UserFlowResult
+  userFlowGroupBy?: UserFlowQuery_GroupBy
   compact?: boolean
 }) => {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
+
+  const showUserFlow = isUserFlow || resultCase === 'userFlow'
 
   const renderLoadingEmptyState = () => (
     <div
@@ -75,7 +90,9 @@ export const InsightsContent = ({
     >
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
-      <p className="text-xs">Pick an event above to start</p>
+      <p className="text-xs">
+        {showUserFlow ? 'Adjust the query above to explore transitions' : 'Pick an event above to start'}
+      </p>
     </div>
   )
 
@@ -87,7 +104,9 @@ export const InsightsContent = ({
           : 'flex h-48 items-center justify-center text-muted-foreground'
       }
     >
-      <p className="text-sm">No events recorded in this period</p>
+      <p className="text-sm">
+        {showUserFlow ? 'No transitions recorded in this period' : 'No events recorded in this period'}
+      </p>
     </div>
   )
 
@@ -152,6 +171,18 @@ export const InsightsContent = ({
     return <FunnelChart series={funnelSeriesData} />
   }
 
+  const renderUserFlowContent = () => {
+    if (!userFlowResult) return renderLoadingEmptyState()
+    if (userFlowResult.links.length === 0) return renderNoEvents()
+    return (
+      <SankeyChart
+        result={userFlowResult}
+        groupBy={userFlowGroupBy}
+        className={compact ? 'h-full min-h-[120px] w-full' : undefined}
+      />
+    )
+  }
+
   const renderRetentionContent = () => {
     if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
     if (breakdowns.length > 0) {
@@ -212,6 +243,7 @@ export const InsightsContent = ({
     )
   }
 
+  if (showUserFlow) return renderUserFlowContent()
   if (isRetention) return renderRetentionContent()
   if (!isTrends) return renderFunnelContent()
   if (hasIncompleteNumericAggregation) {

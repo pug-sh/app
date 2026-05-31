@@ -45,6 +45,8 @@ import {
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
+import { buildUserFlowQuery, DEFAULT_USER_FLOW_CONFIG, isUserFlowConfigValid, type UserFlowConfig } from './user-flow'
+import { UserFlowControls } from './user-flow-controls'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
   if (initialInsightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialInsightType)) {
@@ -98,6 +100,9 @@ const Insights = () => {
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
   const [viewMode, setViewMode] = useState<ViewMode>('line')
+  const [userFlowConfig, setUserFlowConfig] = useState<UserFlowConfig>(
+    () => initialFilterState.userFlowConfig ?? DEFAULT_USER_FLOW_CONFIG,
+  )
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
 
@@ -111,6 +116,8 @@ const Insights = () => {
   const removeBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => prev.filter(p => p !== prop))
   }, [])
+
+  const isUserFlow = insightType === InsightType.USER_FLOW
 
   // Schema loading and URL sync.
   const store = useStore()
@@ -126,7 +133,11 @@ const Insights = () => {
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
-    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+    selectedEventKinds: isUserFlow
+      ? userFlowConfig.scope.kind
+        ? [userFlowConfig.scope.kind]
+        : []
+      : eventFilters.entries.map(e => e.kind),
   })
 
   useEffect(() => {
@@ -134,14 +145,21 @@ const Insights = () => {
   }, [project, fetchSchema])
 
   useEffect(() => {
-    writeFilterQueryParams(eventFilters.entries, propFilters, { insightType, granularity, timeRange, breakdowns })
-  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns])
+    writeFilterQueryParams(eventFilters.entries, propFilters, {
+      insightType,
+      granularity,
+      timeRange,
+      breakdowns,
+      userFlowConfig: isUserFlow ? userFlowConfig : undefined,
+    })
+  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns, userFlowConfig, isUserFlow])
 
   // Derived query config.
   const validEntries = eventFilters.validEntries
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTimeSeriesInsight = isTrends || isRetention
+  const userFlowReady = isUserFlowConfigValid(userFlowConfig)
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = isRetention ? 2 : undefined
 
@@ -163,6 +181,7 @@ const Insights = () => {
     granularity,
     propFilters,
     breakdowns,
+    userFlowConfig,
   })
 
   // Remote query execution.
@@ -182,38 +201,51 @@ const Insights = () => {
           timeRange: toProtoTimeRange(timeRange),
           spec: {
             insightType,
-            events: validEntries.map(entry => ({
-              event: {
-                kind: entry.kind,
-                filters: toProtoFilters(entry.filters),
-              },
-              aggregation:
-                insightType === InsightType.TRENDS
-                  ? (entry.aggregation ?? AggregationType.TOTAL)
-                  : AggregationType.TOTAL,
-              aggregationProperty: getAggregationProperty({
-                insightType,
-                aggregation: entry.aggregation,
-                aggregationProperty: entry.aggregationProperty,
-              }),
-            })),
+            events: isUserFlow
+              ? []
+              : validEntries.map(entry => ({
+                  event: {
+                    kind: entry.kind,
+                    filters: toProtoFilters(entry.filters),
+                  },
+                  aggregation:
+                    insightType === InsightType.TRENDS
+                      ? (entry.aggregation ?? AggregationType.TOTAL)
+                      : AggregationType.TOTAL,
+                  aggregationProperty: getAggregationProperty({
+                    insightType,
+                    aggregation: entry.aggregation,
+                    aggregationProperty: entry.aggregationProperty,
+                  }),
+                })),
+            userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
-            breakdowns: breakdowns.map(property => ({ property })),
-            breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
+            breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
+            breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
           },
         },
         { headers },
       )
       return resp.result
     },
-    { enabled: !!project && validEntries.length > 0 && !!timeRange && !hasIncompleteNumericAggregation },
+    {
+      enabled:
+        !!project &&
+        !!timeRange &&
+        !hasIncompleteNumericAggregation &&
+        (isUserFlow ? userFlowReady : validEntries.length > 0),
+    },
   )
 
   // Result normalization.
   const result = queryResult ?? EMPTY_RESULT
   const unknownResultCase =
-    result.case !== undefined && result.case !== 'trends' && result.case !== 'funnel' && result.case !== 'retention'
+    result.case !== undefined &&
+    result.case !== 'trends' &&
+    result.case !== 'funnel' &&
+    result.case !== 'retention' &&
+    result.case !== 'userFlow'
   let resultSeriesCount = 0
   if (result.case === 'trends' || result.case === 'funnel' || result.case === 'retention') {
     resultSeriesCount = result.value.series.length
@@ -294,6 +326,7 @@ const Insights = () => {
     [eventFilters.entries],
   )
   const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
+  const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
 
   // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
@@ -350,30 +383,42 @@ const Insights = () => {
         </div>
 
         <div className="space-y-1">
-          <EventFilterBar
-            filtersAtom={eventFilters.filtersAtom}
-            events={schema?.events}
-            schema={schema}
-            schemaError={schemaError}
-            showLetters
-            seriesColors={eventFilterColors}
-            getEventColor={getEventColorDot}
-            renderRowExtra={renderRowExtra}
-            maxEvents={maxEvents}
-          />
-          {isRetention && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Tooltip>
-                <TooltipTrigger className="inline-flex items-center cursor-help">
-                  <CircleHelp className="w-3.5 h-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                  Use up to two events: A defines the cohort entry event, B defines the return event. If B is omitted, A
-                  is used for both cohort and return.
-                </TooltipContent>
-              </Tooltip>
-              <span>Retention supports up to 2 events (A = cohort, B = return).</span>
-            </div>
+          {isUserFlow ? (
+            <UserFlowControls
+              config={userFlowConfig}
+              onChange={setUserFlowConfig}
+              schema={schema}
+              schemaError={schemaError}
+              events={schema?.events}
+            />
+          ) : (
+            <>
+              <EventFilterBar
+                filtersAtom={eventFilters.filtersAtom}
+                events={schema?.events}
+                schema={schema}
+                schemaError={schemaError}
+                showLetters
+                seriesColors={eventFilterColors}
+                getEventColor={getEventColorDot}
+                renderRowExtra={renderRowExtra}
+                maxEvents={maxEvents}
+              />
+              {isRetention && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center cursor-help">
+                      <CircleHelp className="w-3.5 h-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                      Use up to two events: A defines the cohort entry event, B defines the return event. If B is
+                      omitted, A is used for both cohort and return.
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>Retention supports up to 2 events (A = cohort, B = return).</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -387,18 +432,23 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
-          {breakdowns.map(prop => (
-            <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />
-          ))}
-          <BreakdownBuilder
-            schema={globalSchema}
-            schemaError={globalSchemaError}
-            breakdowns={breakdowns}
-            onAdd={addBreakdown}
-            onRemove={removeBreakdown}
-            disabled={breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined}
-          />
+          {!isUserFlow && (propFilters.length > 0 || breakdowns.length > 0) && (
+            <span className="h-4 w-px bg-border mx-0.5" />
+          )}
+          {!isUserFlow &&
+            breakdowns.map(prop => <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />)}
+          {!isUserFlow && (
+            <BreakdownBuilder
+              schema={globalSchema}
+              schemaError={globalSchemaError}
+              breakdowns={breakdowns}
+              onAdd={addBreakdown}
+              onRemove={removeBreakdown}
+              disabled={
+                breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined
+              }
+            />
+          )}
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
       </div>
@@ -411,6 +461,7 @@ const Insights = () => {
         resultSeriesCount={resultSeriesCount}
         isRetention={isRetention}
         isTrends={isTrends}
+        isUserFlow={isUserFlow}
         hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
         chartData={chartData}
         seriesNames={seriesNames}
@@ -424,6 +475,8 @@ const Insights = () => {
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        userFlowResult={userFlowResult}
+        userFlowGroupBy={userFlowConfig.groupBy}
       />
     </Page>
   )

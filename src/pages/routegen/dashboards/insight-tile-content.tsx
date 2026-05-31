@@ -25,6 +25,7 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
+import { isUserFlowConfigValid, parseUserFlowConfig } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
@@ -58,6 +59,13 @@ const formatDuration = (ms: number): string => {
 
 const stringifyQueryKey = (value: unknown) =>
   JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
+
+const queryReady = (query: QueryRequest) => {
+  if (query.spec?.insightType === InsightType.USER_FLOW) {
+    return isUserFlowConfigValid(parseUserFlowConfig(query.spec.userFlow))
+  }
+  return (query.spec?.events.length ?? 0) > 0
+}
 
 export const DashboardInsightContent = ({
   tile,
@@ -129,7 +137,7 @@ export const DashboardInsightContent = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
+    { enabled: !!effectiveQuery && !!headers && queryReady(effectiveQuery), debounceMs: 0 },
   )
 
   const comparisonQuery = useMemo(
@@ -181,6 +189,8 @@ export const DashboardInsightContent = ({
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? [], [retentionSeriesList])
   const isTrends = effectiveQuery?.spec?.insightType === InsightType.TRENDS
   const isRetention = effectiveQuery?.spec?.insightType === InsightType.RETENTION
+  const isUserFlow = effectiveQuery?.spec?.insightType === InsightType.USER_FLOW
+  const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
@@ -236,7 +246,7 @@ export const DashboardInsightContent = ({
       <InsightsContent
         error={error}
         retry={retry}
-        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention'].includes(result.case)}
+        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention', 'userFlow'].includes(result.case)}
         resultCase={result.case}
         resultSeriesCount={
           result.case === 'trends' || result.case === 'funnel' || result.case === 'retention'
@@ -245,6 +255,7 @@ export const DashboardInsightContent = ({
         }
         isRetention={isRetention}
         isTrends={isTrends}
+        isUserFlow={isUserFlow}
         hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
         chartData={chartData}
         seriesNames={seriesNames}
@@ -258,6 +269,8 @@ export const DashboardInsightContent = ({
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        userFlowResult={userFlowResult}
+        userFlowGroupBy={effectiveQuery?.spec?.userFlow?.groupBy}
         compact={compact}
       />
     </div>

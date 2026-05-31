@@ -40,38 +40,41 @@ export const InsightFields = ({
   renderRowExtra,
 }: InsightFieldsProps) => {
   const isRetention = insightType === InsightType.RETENTION
+  const isUserFlow = insightType === InsightType.USER_FLOW
   const { propFilters, addFilter, updateFilter, removeFilter } = filterState
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
-        <EventFilterBar
-          filtersAtom={eventFilters.filtersAtom}
-          events={schema?.events}
-          schema={schema}
-          schemaError={schemaError}
-          showLetters
-          seriesColors={eventFilters.entries.map((entry, index) =>
-            getSeriesColor(entry.kind || `step ${index + 1}`, index),
-          )}
-          getEventColor={eventName => getSeriesColor(eventName).dot}
-          renderRowExtra={renderRowExtra}
-          maxEvents={isRetention ? 2 : undefined}
-        />
-        {isRetention ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Tooltip>
-              <TooltipTrigger className="inline-flex cursor-help items-center">
-                <CircleHelp className="h-3.5 w-3.5" />
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                Use up to two events: A defines the cohort entry event, B defines the return event.
-              </TooltipContent>
-            </Tooltip>
-            <span>Retention supports up to 2 events.</span>
-          </div>
-        ) : null}
-      </div>
+      {!isUserFlow ? (
+        <div className="space-y-1">
+          <EventFilterBar
+            filtersAtom={eventFilters.filtersAtom}
+            events={schema?.events}
+            schema={schema}
+            schemaError={schemaError}
+            showLetters
+            seriesColors={eventFilters.entries.map((entry, index) =>
+              getSeriesColor(entry.kind || `step ${index + 1}`, index),
+            )}
+            getEventColor={eventName => getSeriesColor(eventName).dot}
+            renderRowExtra={renderRowExtra}
+            maxEvents={isRetention ? 2 : undefined}
+          />
+          {isRetention ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Tooltip>
+                <TooltipTrigger className="inline-flex cursor-help items-center">
+                  <CircleHelp className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                  Use up to two events: A defines the cohort entry event, B defines the return event.
+                </TooltipContent>
+              </Tooltip>
+              <span>Retention supports up to 2 events.</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         {propFilters.map((filter, index) => (
@@ -83,18 +86,24 @@ export const InsightFields = ({
           />
         ))}
         <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-        {propFilters.length > 0 || breakdowns.length > 0 ? <span className="mx-0.5 h-4 w-px bg-border" /> : null}
-        {breakdowns.map(property => (
-          <BreakdownChip key={property} property={property} onRemove={() => removeBreakdown(property)} />
-        ))}
-        <BreakdownBuilder
-          schema={globalSchema}
-          schemaError={globalSchemaError}
-          breakdowns={breakdowns}
-          onAdd={addBreakdown}
-          onRemove={removeBreakdown}
-          disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
-        />
+        {!isUserFlow && (propFilters.length > 0 || breakdowns.length > 0) ? (
+          <span className="mx-0.5 h-4 w-px bg-border" />
+        ) : null}
+        {!isUserFlow
+          ? breakdowns.map(property => (
+              <BreakdownChip key={property} property={property} onRemove={() => removeBreakdown(property)} />
+            ))
+          : null}
+        {!isUserFlow ? (
+          <BreakdownBuilder
+            schema={globalSchema}
+            schemaError={globalSchemaError}
+            breakdowns={breakdowns}
+            onAdd={addBreakdown}
+            onRemove={removeBreakdown}
+            disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
+          />
+        ) : null}
       </div>
     </div>
   )

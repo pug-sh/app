@@ -7,9 +7,10 @@ import {
   VisualizationOptions_YAxisFormat,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
-import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
+import { DASHBOARD_TILE_VIEW_MODES, USER_FLOW_TILE_VIEW_MODES } from '../tile-settings'
 
 const ICON_PALETTE = ['', '📈', '📊', '📉', '🆕', '🎯', '⚡', '🚀', '✨', '🔥', '💡']
 
@@ -47,6 +48,8 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
   }
 
   const isInsight = tile.content.case === 'insight'
+  const isUserFlow = tile.content.case === 'insight' && tile.content.value.spec?.insightType === InsightType.USER_FLOW
+  const viewModeOptions = isUserFlow ? USER_FLOW_TILE_VIEW_MODES : DASHBOARD_TILE_VIEW_MODES
 
   return (
     <div className="space-y-4">
@@ -54,7 +57,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
         <Section label="View mode">
           <OptionChip
             label="view"
-            options={DASHBOARD_TILE_VIEW_MODES}
+            options={viewModeOptions}
             value={tile.viewMode}
             onChange={next => onPatch({ viewMode: next })}
           />
