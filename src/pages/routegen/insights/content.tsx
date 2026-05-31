@@ -1,4 +1,5 @@
 import { TrendingUp } from 'lucide-react'
+import { memo } from 'react'
 import type { AggregationType, Granularity, RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
@@ -16,7 +17,7 @@ import {
 } from './charts'
 import type { ViewMode } from './constants'
 
-export const InsightsContent = ({
+export const InsightsContent = memo(function InsightsContent({
   error,
   retry,
   unknownResultCase,
@@ -60,7 +61,7 @@ export const InsightsContent = ({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   compact?: boolean
-}) => {
+}) {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
@@ -240,4 +241,4 @@ export const InsightsContent = ({
   }
 
   return renderLoadingEmptyState()
-}
+})

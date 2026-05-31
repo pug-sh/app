@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -13,7 +14,7 @@ import {
 } from './common'
 import type { ChartPoint } from './types'
 
-export const AreaChart = ({
+export const AreaChart = memo(function AreaChart({
   data,
   seriesNames,
   seriesColors,
@@ -25,7 +26,7 @@ export const AreaChart = ({
   seriesColors: SeriesColor[]
   granularity: Granularity
   className?: string
-}) => {
+}) {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity)
 
   if (data.length === 0) return null
@@ -55,4 +56,4 @@ export const AreaChart = ({
       </ReAreaChart>
     </ChartContainer>
   )
-}
+})
