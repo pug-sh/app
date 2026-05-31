@@ -127,6 +127,40 @@ export type SankeyChartData = {
   links: { source: number; target: number; value: number; sourceName: string; targetName: string }[]
 }
 
+type SankeyLink = SankeyChartData['links'][number]
+
+// Recharts Sankey layout recurses through target nodes to assign depth and crashes on cycles
+// (common in user flows: page_view → click → page_view). Keep highest-value forward links first.
+const breakCyclesForSankey = (links: SankeyLink[]) => {
+  const adj = new Map<number, number[]>()
+  const kept: SankeyLink[] = []
+
+  const canReach = (from: number, to: number) => {
+    const visited = new Set<number>()
+    const stack = [from]
+    while (stack.length) {
+      const node = stack.pop()
+      if (node === undefined) continue
+      if (node === to) return true
+      if (visited.has(node)) continue
+      visited.add(node)
+      for (const next of adj.get(node) ?? []) stack.push(next)
+    }
+    return false
+  }
+
+  for (const link of [...links].sort((a, b) => b.value - a.value)) {
+    if (link.source === link.target) continue
+    if (canReach(link.target, link.source)) continue
+    kept.push(link)
+    const outgoing = adj.get(link.source)
+    if (outgoing) outgoing.push(link.target)
+    else adj.set(link.source, [link.target])
+  }
+
+  return kept
+}
+
 export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
   const nodeIndex = new Map<string, number>()
   const nodes = result.nodes.map((node, index) => {
@@ -134,20 +168,23 @@ export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
     return { name: node.label || node.id, color: '' }
   })
 
-  const links = result.links.flatMap(link => {
+  const rawLinks = result.links.flatMap(link => {
     const source = nodeIndex.get(link.source)
     const target = nodeIndex.get(link.target)
     if (source === undefined || target === undefined) return []
+    const value = Number(link.value)
+    if (!Number.isFinite(value) || value <= 0) return []
     return [
       {
         source,
         target,
-        value: Number(link.value),
+        value,
         sourceName: result.nodes[source]?.label || link.source,
         targetName: result.nodes[target]?.label || link.target,
       },
     ]
   })
 
+  const links = breakCyclesForSankey(rawLinks)
   return { nodes, links }
 }

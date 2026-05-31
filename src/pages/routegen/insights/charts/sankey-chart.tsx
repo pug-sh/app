@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Sankey, type SankeyLinkProps, type SankeyNodeProps, Tooltip } from 'recharts'
 import { UserFlowQuery_GroupBy, type UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer } from '@/components/ui/chart'
@@ -100,6 +100,8 @@ export const SankeyChart = ({
   )
 
   const SankeyNode = useMemo(() => createSankeyNode(chartWidth), [chartWidth])
+  const renderNode = useCallback((props: SankeyNodeProps) => <SankeyNode {...props} />, [SankeyNode])
+  const renderLink = useCallback((props: SankeyLinkProps) => <SankeyLink {...props} />, [])
 
   if (chartData.links.length === 0) return null
 
@@ -108,8 +110,8 @@ export const SankeyChart = ({
       <ChartContainer config={chartConfig} className={className}>
         <Sankey
           data={chartData}
-          node={props => <SankeyNode {...props} />}
-          link={props => <SankeyLink {...props} />}
+          node={renderNode}
+          link={renderLink}
           nodePadding={24}
           nodeWidth={12}
           margin={{ top: 16, right: 120, bottom: 16, left: 120 }}
