@@ -58,7 +58,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
 
   return (
     <div className="flex flex-col gap-3.5">
-      <section className="flex flex-col gap-3.5">
+      <section className="flex flex-col gap-1.5">
         <OverviewSectionHeader title="Activity" />
         <div className="flex flex-col gap-3.5">
           <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
@@ -142,7 +142,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       {showConversionSection ? (
-        <section className="flex flex-col gap-3.5">
+        <section className="flex flex-col gap-1.5">
           <OverviewSectionHeader title="Conversion" />
           <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
@@ -168,7 +168,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </section>
       ) : null}
 
-      <section className="flex flex-col gap-3.5">
+      <section className="flex flex-col gap-1.5">
         <OverviewSectionHeader title="Acquisition" />
         <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
           <BreakdownTile
@@ -190,12 +190,12 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </div>
       </section>
 
-      <section className="flex flex-col gap-3.5">
+      <section className="flex flex-col gap-1.5">
         <OverviewSectionHeader title="Schema" count={`${schema.events.length} kinds`} />
         <TopEventsBlock events={schema.events} />
       </section>
 
-      <div className="border-t border-border/60 pt-3.5 text-center">
+      <div className="border-t border-border/60 pt-1.5 text-center">
         <p className="text-xs text-muted-foreground">
           Want a view tailored to your team?{' '}
           <ProjectLink href="/dashboards" className="text-primary hover:underline underline-offset-4">
