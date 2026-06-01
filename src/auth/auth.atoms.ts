@@ -1,15 +1,17 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
+import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
+import { mapOAuthConnectError, oauthRedirectUri } from './oauth'
 
 export const signInAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
   const authRPC = get(authRPCAtom)
   try {
     const resp = await authRPC.signInWithEmail({ email, password })
-    set(jwtAtom, resp.token)
+    set(applySessionJwtAtom, resp.token)
     return { ok: true as const }
   } catch (error) {
     if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
@@ -22,6 +24,14 @@ export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
+
+const applySessionJwtAtom = atom(null, (get, set, token: string) => {
+  const prior = get(jwtDataAtom)?.customerId
+  set(jwtAtom, token)
+  const next = get(jwtDataAtom)?.customerId
+  if (prior && next && prior !== next) set(resetWorkspaceAtom)
+  set(meAtom, null)
+})
 
 export const fetchMeAtom = atom(null, async (get, set) => {
   const customersRPC = get(customersRPCAtom)
@@ -56,13 +66,9 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
 // — email isn't in the JWT and must be refetched for the new identity.
 export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }) => {
   const authRPC = get(authRPCAtom)
-  const prior = get(jwtDataAtom)?.customerId
   try {
     const resp = await authRPC.completeMagicLink({ token })
-    set(jwtAtom, resp.token)
-    const next = get(jwtDataAtom)?.customerId
-    if (prior && next && prior !== next) set(resetWorkspaceAtom)
-    set(meAtom, null)
+    set(applySessionJwtAtom, resp.token)
     return { ok: true as const }
   } catch (error) {
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
@@ -72,6 +78,49 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
     return { ok: false as const, error: error instanceof ConnectError ? error.message : 'Could not sign you in.' }
   }
 })
+
+export const beginGoogleOAuthAtom = atom(null, async get => {
+  const authRPC = get(authRPCAtom)
+  try {
+    const resp = await authRPC.beginOAuthSignIn({
+      provider: OAuthProvider.GOOGLE,
+      redirectUri: oauthRedirectUri(),
+    })
+    if (!resp.authorizationUrl) {
+      return { ok: false as const, error: 'Could not start Google sign-in. Try again.' }
+    }
+    window.location.assign(resp.authorizationUrl)
+    return { ok: true as const }
+  } catch (error) {
+    if (!(error instanceof ConnectError)) console.error('beginGoogleOAuth unexpected error', error)
+    return {
+      ok: false as const,
+      error: mapOAuthConnectError(error, 'Could not start Google sign-in. Try again.'),
+    }
+  }
+})
+
+export const completeGoogleOAuthAtom = atom(
+  null,
+  async (get, set, { code, state }: { code: string; state: string }) => {
+    const authRPC = get(authRPCAtom)
+    try {
+      const resp = await authRPC.completeOAuthSignIn({
+        provider: OAuthProvider.GOOGLE,
+        code,
+        state,
+      })
+      set(applySessionJwtAtom, resp.token)
+      return { ok: true as const }
+    } catch (error) {
+      if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
+      return {
+        ok: false as const,
+        error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
+      }
+    }
+  },
+)
 
 const authClockAtom = atom(Date.now())
 authClockAtom.onMount = setAtom => {

@@ -2,8 +2,8 @@
 // @generated from file public/auth/v1/auth.proto (package public.auth.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIigKF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJIjQKF1JlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABIhoKGFJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIxChhDb21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QSFQoFdG9rZW4YASABKAlCBrpIA8gBASIqChlDb21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlEg0KBXRva2VuGAEgASgJMsgCCgtBdXRoU2VydmljZRJkCg9TaWduSW5XaXRoRW1haWwSJi5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXF1ZXN0GicucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVzcG9uc2UiABJnChBSZXF1ZXN0TWFnaWNMaW5rEicucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QaKC5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVzcG9uc2UiABJqChFDb21wbGV0ZU1hZ2ljTGluaxIoLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBopLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2UiAEJAWj5naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3B1YmxpYy9hdXRoL3YxO2F1dGh2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIigKF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJIjQKF1JlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABIhoKGFJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIxChhDb21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QSFQoFdG9rZW4YASABKAlCBrpIA8gBASIqChlDb21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlEg0KBXRva2VuGAEgASgJInkKF0JlZ2luT0F1dGhTaWduSW5SZXF1ZXN0EjsKCHByb3ZpZGVyGAEgASgOMh0ucHVibGljLmF1dGgudjEuT0F1dGhQcm92aWRlckIKukgHggEEEAEgABIhCgxyZWRpcmVjdF91cmkYAiABKAlCC7pICMgBAXIDiAEBIkQKGEJlZ2luT0F1dGhTaWduSW5SZXNwb25zZRIZChFhdXRob3JpemF0aW9uX3VybBgBIAEoCRINCgVzdGF0ZRgCIAEoCSKGAQoaQ29tcGxldGVPQXV0aFNpZ25JblJlcXVlc3QSOwoIcHJvdmlkZXIYASABKA4yHS5wdWJsaWMuYXV0aC52MS5PQXV0aFByb3ZpZGVyQgq6SAeCAQQQASAAEhQKBGNvZGUYAiABKAlCBrpIA8gBARIVCgVzdGF0ZRgDIAEoCUIGukgDyAEBIiwKG0NvbXBsZXRlT0F1dGhTaWduSW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCSpMCg1PQXV0aFByb3ZpZGVyEh8KG09fQVVUSF9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhoKFk9fQVVUSF9QUk9WSURFUl9HT09HTEUQATKjBAoLQXV0aFNlcnZpY2USZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgASZwoQQmVnaW5PQXV0aFNpZ25JbhInLnB1YmxpYy5hdXRoLnYxLkJlZ2luT0F1dGhTaWduSW5SZXF1ZXN0GigucHVibGljLmF1dGgudjEuQmVnaW5PQXV0aFNpZ25JblJlc3BvbnNlIgAScAoTQ29tcGxldGVPQXV0aFNpZ25JbhIqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0GisucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -122,6 +122,117 @@ export const CompleteMagicLinkResponseSchema: GenMessage<CompleteMagicLinkRespon
   messageDesc(file_public_auth_v1_auth, 5);
 
 /**
+ * @generated from message public.auth.v1.BeginOAuthSignInRequest
+ */
+export type BeginOAuthSignInRequest = Message<"public.auth.v1.BeginOAuthSignInRequest"> & {
+  /**
+   * @generated from field: public.auth.v1.OAuthProvider provider = 1;
+   */
+  provider: OAuthProvider;
+
+  /**
+   * @generated from field: string redirect_uri = 2;
+   */
+  redirectUri: string;
+};
+
+/**
+ * Describes the message public.auth.v1.BeginOAuthSignInRequest.
+ * Use `create(BeginOAuthSignInRequestSchema)` to create a new message.
+ */
+export const BeginOAuthSignInRequestSchema: GenMessage<BeginOAuthSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 6);
+
+/**
+ * @generated from message public.auth.v1.BeginOAuthSignInResponse
+ */
+export type BeginOAuthSignInResponse = Message<"public.auth.v1.BeginOAuthSignInResponse"> & {
+  /**
+   * @generated from field: string authorization_url = 1;
+   */
+  authorizationUrl: string;
+
+  /**
+   * @generated from field: string state = 2;
+   */
+  state: string;
+};
+
+/**
+ * Describes the message public.auth.v1.BeginOAuthSignInResponse.
+ * Use `create(BeginOAuthSignInResponseSchema)` to create a new message.
+ */
+export const BeginOAuthSignInResponseSchema: GenMessage<BeginOAuthSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 7);
+
+/**
+ * @generated from message public.auth.v1.CompleteOAuthSignInRequest
+ */
+export type CompleteOAuthSignInRequest = Message<"public.auth.v1.CompleteOAuthSignInRequest"> & {
+  /**
+   * @generated from field: public.auth.v1.OAuthProvider provider = 1;
+   */
+  provider: OAuthProvider;
+
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
+
+  /**
+   * @generated from field: string state = 3;
+   */
+  state: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOAuthSignInRequest.
+ * Use `create(CompleteOAuthSignInRequestSchema)` to create a new message.
+ */
+export const CompleteOAuthSignInRequestSchema: GenMessage<CompleteOAuthSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 8);
+
+/**
+ * @generated from message public.auth.v1.CompleteOAuthSignInResponse
+ */
+export type CompleteOAuthSignInResponse = Message<"public.auth.v1.CompleteOAuthSignInResponse"> & {
+  /**
+   * session JWT — sign-in OR sign-up, decided server-side
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOAuthSignInResponse.
+ * Use `create(CompleteOAuthSignInResponseSchema)` to create a new message.
+ */
+export const CompleteOAuthSignInResponseSchema: GenMessage<CompleteOAuthSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 9);
+
+/**
+ * @generated from enum public.auth.v1.OAuthProvider
+ */
+export enum OAuthProvider {
+  /**
+   * @generated from enum value: O_AUTH_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: O_AUTH_PROVIDER_GOOGLE = 1;
+   */
+  GOOGLE = 1,
+}
+
+/**
+ * Describes the enum public.auth.v1.OAuthProvider.
+ */
+export const OAuthProviderSchema: GenEnum<OAuthProvider> = /*@__PURE__*/
+  enumDesc(file_public_auth_v1_auth, 0);
+
+/**
  * @generated from service public.auth.v1.AuthService
  */
 export const AuthService: GenService<{
@@ -148,6 +259,22 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof CompleteMagicLinkRequestSchema;
     output: typeof CompleteMagicLinkResponseSchema;
+  },
+  /**
+   * @generated from rpc public.auth.v1.AuthService.BeginOAuthSignIn
+   */
+  beginOAuthSignIn: {
+    methodKind: "unary";
+    input: typeof BeginOAuthSignInRequestSchema;
+    output: typeof BeginOAuthSignInResponseSchema;
+  },
+  /**
+   * @generated from rpc public.auth.v1.AuthService.CompleteOAuthSignIn
+   */
+  completeOAuthSignIn: {
+    methodKind: "unary";
+    input: typeof CompleteOAuthSignInRequestSchema;
+    output: typeof CompleteOAuthSignInResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_public_auth_v1_auth, 0);

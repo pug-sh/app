@@ -145,6 +145,8 @@ Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for cli
 
 - JWT in `sub` claim = customerID (not email)
 - Org + project auto-created on signup
+- Unauthenticated sign-in: magic link (`/magic-link?token=…`) or Google OAuth (`/oauth/callback?code=…&state=…`)
+- Google OAuth: `BeginOAuthSignIn` with `redirect_uri` from `oauthRedirectUri()` in `src/auth/oauth.ts`; hide the button when `VITE_OAUTH_GOOGLE_ENABLED=false`
 - Dashboard endpoints need JWT (handled by interceptor)
 - Project-scoped endpoints need JWT + `x-project-id` header
 - SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend
