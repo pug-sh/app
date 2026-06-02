@@ -9,18 +9,18 @@ Dashboard frontend for Pug — an analytics + communication platform (similar to
 ## Commands
 
 ```sh
-pnpm dev          # Start dev server (Vite)
-pnpm build        # Type-check + production build (tsc -b && vite build)
-pnpm generate     # Regenerate TypeScript proto types from backend protos
-pnpm format       # Biome formatter (format only)
-pnpm lint         # Biome check — format + lint + import organization (safe fixes)
+bun run dev       # Start dev server (Vite)
+bun run build     # Type-check + production build (tsc -b && vite build)
+bun run generate  # Regenerate TypeScript proto types from backend protos
+bun run format    # Biome formatter (format only)
+bun run lint      # Biome check — format + lint + import organization (safe fixes)
 ```
 
-There is no `pnpm test` script today.
+There is no test script today.
 
 ## Proto Code Generation
 
-Proto definitions live in `proto/` (symlink to the pug backend at `/Users/holu/workspace/go/src/github.com/fivebitsio/pug/proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `pnpm generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
+Proto definitions live in `proto/` (symlink to the pug backend at `/Users/holu/workspace/go/src/github.com/fivebitsio/pug/proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `bun run generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
 
 ## Architecture
 
@@ -67,7 +67,7 @@ Standard shadcn/ui with default Base UI primitives. Uses `render` prop for compo
 <SidebarMenuButton render={<Link href="/overview" />}>
 ```
 
-Update components: `pnpm dlx shadcn@latest add <component> --overwrite`
+Update components: `bunx shadcn@latest add <component> --overwrite`
 
 ### Design Aesthetic
 

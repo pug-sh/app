@@ -12,17 +12,16 @@ Dashboard frontend for **Pug** — an analytics + communication platform. Built 
 ## Getting Started
 
 ```sh
-pnpm install
-pnpm dev
+bun install
+bun run dev
 ```
 
 ## Commands
 
 ```sh
-pnpm dev          # Start dev server
-pnpm build        # Type-check + production build
-pnpm generate     # Regenerate TypeScript proto types from backend protos
-pnpm format       # Biome formatter
-pnpm lint         # Biome lint with safe fixes
-pnpm check        # Biome format + lint + import organization
+bun run dev       # Start dev server
+bun run build     # Type-check + production build
+bun run generate  # Regenerate TypeScript proto types from backend protos
+bun run format    # Biome formatter (format only)
+bun run lint      # Biome check — format + lint + import organization (safe fixes)
 ```

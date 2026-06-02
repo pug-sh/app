@@ -15,7 +15,7 @@ dist-ssr
 # Proto symlink (points to pug backend)
 proto
 
-# Generated proto code (regenerate with: pnpm generate)
+# Generated proto code (regenerate with: bun run generate)
 # src/api/genproto
 
 # Editor directories and files
