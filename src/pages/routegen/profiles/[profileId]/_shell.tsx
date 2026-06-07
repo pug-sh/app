@@ -5,6 +5,7 @@ import { useLocation } from 'wouter'
 import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
+import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -74,9 +75,6 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   const identity = resolveIdentity(profile)
   const firstSeen = tsToDate(profile.activity?.firstSeen)
   const createTime = tsToDate(profile.createTime)
-  const browser = [profile.activity?.browser, profile.activity?.browserVersion].filter(Boolean).join(' ')
-  const os = [profile.activity?.os, profile.activity?.osVersion].filter(Boolean).join(' ')
-  const platform = [browser, os].filter(Boolean).join(' · ')
 
   const base = `/profiles/${encodeURIComponent(profileId)}`
   // Tail = URL segment after `base`. '' for overview, '/events' / '/sessions/[id]' for sub-tabs.
@@ -140,7 +138,16 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
             <HoverSwap primary={lastSeenLive} secondary={formatDateTime(lastSeen)} />
           </Meta>
         )}
-        {platform && <Meta>{platform}</Meta>}
+        {(profile.activity?.browser || profile.activity?.os) && (
+          <Meta>
+            <PlatformLabel
+              browser={profile.activity?.browser}
+              browserVersion={profile.activity?.browserVersion}
+              os={profile.activity?.os}
+              osVersion={profile.activity?.osVersion}
+            />
+          </Meta>
+        )}
         {(profile.activity?.city || profile.activity?.country) && (
           <Meta>
             <LocationLabel city={profile.activity?.city} country={profile.activity?.country} />

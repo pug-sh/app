@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { LocationLabel } from '@/components/country-flag'
+import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventDetails } from '@/components/event-details'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
@@ -14,6 +14,7 @@ import { InlineEventProps } from '@/components/inline-event-props'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,10 +47,6 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const osVersion = structGet(event.autoProperties, '$osVersion')
   const browser = structGet(event.autoProperties, '$browser')
   const browserVersion = structGet(event.autoProperties, '$browserVersion')
-  const browserLabel = [browser, browserVersion].filter(Boolean).join(' ')
-  const osLabel = [os, osVersion].filter(Boolean).join(' ')
-  const platform = [browser, os].filter(Boolean).join(' · ')
-  const platformDetail = [browserLabel, osLabel].filter(Boolean).join(' · ')
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
 
@@ -81,8 +78,14 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             <div className="truncate">—</div>
           )}
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={platformDetail || undefined}>
-          <div className="truncate">{platform}</div>
+        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle">
+          <PlatformLabel
+            browser={browser}
+            browserVersion={browserVersion}
+            os={os}
+            osVersion={osVersion}
+            iconSize={14}
+          />
         </td>
         <td className="py-2.5 pr-2 align-middle">
           <InlineEventProps {...inlineResult} />

@@ -88,6 +88,15 @@ All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji)
 
 Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji — leave those as plain text unless explicitly moving them to the emoji system.
 
+### Platform icons — Devicon
+
+Browser, OS, and device labels on profiles and events use colored `-original` SVGs from [Devicon](https://github.com/devicons/devicon) (npm `devicon`).
+
+- **Assets:** `src/lib/devicon-assets.ts` — Vite `?url` imports from `devicon/icons/` for most platforms. Edge, iOS, and macOS use self-hosted SVGs in `public/devicon/` (not in devicon)
+- **Mapping:** `src/lib/devicon-map.ts` — string heuristics for `$browser`, `$os`, `$device` auto-properties
+- **Components:** `Devicon` (`src/components/devicon.tsx`), `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`)
+- **No CDN** — SVGs are bundled from `node_modules/devicon/icons/`
+
 Section divider header pattern:
 
 ```tsx

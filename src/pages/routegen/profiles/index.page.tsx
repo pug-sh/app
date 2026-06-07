@@ -1,30 +1,31 @@
 import { useAtomValue } from 'jotai'
-import { ContactRound, Laptop, Loader2, Monitor, Smartphone } from 'lucide-react'
+import { ContactRound, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { Profile } from '@/api/genproto/shared/profiles/v1/profiles_pb'
 import { insightsRPCAtom, profilesRPCAtom } from '@/api/rpc'
+import { LocationLabel } from '@/components/country-flag'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
-import { LocationLabel } from '@/components/country-flag'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformStackLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { compactNumber, isMobileOS } from '@/lib/format'
+import { compactNumber } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { ProfileAvatar } from './_avatar'
-import { getInitials, placeholderTone, resolveIdentity } from './_identity'
+import { resolveIdentity } from './_identity'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
 
@@ -35,8 +36,7 @@ const formatLocation = (profile: Profile) => {
   const city = activity.city || undefined
   const country = activity.country || undefined
   const region = activity.region || ''
-  const secondary =
-    region && region.toLowerCase() !== (city || '').toLowerCase() ? region : ''
+  const secondary = region && region.toLowerCase() !== (city || '').toLowerCase() ? region : ''
   return { secondary, city, country }
 }
 
@@ -46,25 +46,6 @@ const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key:
 
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
-
-const PlaceholderBadge = ({ value, className = 'rounded-md' }: { value: string; className?: string }) => {
-  const tone = placeholderTone(value)
-  return (
-    <span
-      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-[9px] font-semibold ${className}`}
-      style={{ backgroundColor: tone.bg, color: tone.fg }}
-    >
-      {getInitials(value)}
-    </span>
-  )
-}
-
-const MetaCell = ({ icon, value, fallback = '—' }: { icon?: React.ReactNode; value?: string; fallback?: string }) => (
-  <div className="flex items-center gap-2 min-w-0">
-    {icon}
-    <span className="truncate">{value || fallback}</span>
-  </div>
-)
 
 const ALLOWED_PROFILE_AUTO_PROPERTIES = new Set([
   '$browser',
@@ -245,14 +226,12 @@ const Profiles = () => {
             <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] border-collapse">
+            <table className="w-full min-w-[960px] border-collapse">
               <thead>
                 <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
-                  <th className="py-2 pr-3 text-left font-medium">Browser</th>
-                  <th className="py-2 pr-3 text-left font-medium">OS</th>
-                  <th className="py-2 pr-3 text-left font-medium">Device</th>
+                  <th className="py-2 pr-3 text-left font-medium">Platform</th>
                   <th className="py-2 pr-3 text-right font-medium">Pageviews</th>
                   <th className="py-2 pr-3 text-right font-medium">Events</th>
                   <th className="py-2 pr-3 text-right font-medium">Sessions</th>
@@ -266,10 +245,6 @@ const Profiles = () => {
                   const activity = profile.activity
                   const location = formatLocation(profile)
                   const identity = resolveIdentity(profile)
-                  const browserLabel = [activity?.browser, activity?.browserVersion].filter(Boolean).join(' ') || '—'
-                  const osLabel = [activity?.os, activity?.osVersion].filter(Boolean).join(' ') || '—'
-                  const isMobile =
-                    isMobileOS(activity?.os) || activity?.device?.toLowerCase().includes('mobile') === true
 
                   return (
                     <tr key={profile.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
@@ -305,41 +280,13 @@ const Profiles = () => {
                         </div>
                       </td>
                       <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={<PlaceholderBadge value={activity?.browser || 'Browser'} className="rounded-full" />}
-                          value={browserLabel}
-                        />
-                      </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={
-                            isMobile ? (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Smartphone className="h-3 w-3" />
-                              </span>
-                            ) : (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Laptop className="h-3 w-3" />
-                              </span>
-                            )
-                          }
-                          value={osLabel}
-                        />
-                      </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={
-                            isMobile ? (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Smartphone className="h-3 w-3" />
-                              </span>
-                            ) : (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Monitor className="h-3 w-3" />
-                              </span>
-                            )
-                          }
-                          value={activity?.device || (isMobile ? 'Mobile' : 'Desktop')}
+                        <PlatformStackLabel
+                          browser={activity?.browser}
+                          browserVersion={activity?.browserVersion}
+                          os={activity?.os}
+                          osVersion={activity?.osVersion}
+                          device={activity?.device}
+                          iconSize={16}
                         />
                       </td>
                       <td className="py-3 pr-3 text-right text-sm tabular-nums">
