@@ -69,6 +69,7 @@ const BreakdownTile = ({
           viewMode={viewMode}
           queryKeyPrefix={queryKeyPrefix}
           compact
+          lightMetrics
         />
       </div>
     </OverviewTileShell>

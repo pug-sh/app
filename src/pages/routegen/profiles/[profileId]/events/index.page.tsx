@@ -209,7 +209,7 @@ const UserActivity = () => {
             return (
               <div key={group.label} className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {group.label}
                   </span>
                   <div className="flex-1 h-px bg-border" />

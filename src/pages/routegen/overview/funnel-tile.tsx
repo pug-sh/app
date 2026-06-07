@@ -30,9 +30,9 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
   return (
     <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-background p-4">
       <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-        <h3 className="truncate text-sm font-medium">Auto funnel</h3>
+        <h3 className="truncate text-lg font-medium tracking-[-0.01em]">Auto funnel</h3>
       </div>
-      <div className="min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
         <DashboardInsightContent
           query={query}
           defaultTimeRange={TimeRangePreset.LAST_30_DAYS}
@@ -41,6 +41,7 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
           viewMode={DashboardTileViewMode.UNSPECIFIED}
           queryKeyPrefix="overview-funnel"
           compact
+          lightMetrics
         />
       </div>
       <p className="mt-2 shrink-0 text-[11px] text-muted-foreground/70">via {steps.join(' → ')}</p>

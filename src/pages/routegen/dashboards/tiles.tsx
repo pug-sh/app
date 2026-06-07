@@ -55,7 +55,9 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
           {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}
           <div className="min-w-0 flex-1">
             <h3
-              className={isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-sm font-medium'}
+              className={
+                isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base font-medium'
+              }
             >
               {tile.displayName}
             </h3>

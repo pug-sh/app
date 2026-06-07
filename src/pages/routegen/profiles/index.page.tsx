@@ -66,7 +66,7 @@ const PlaceholderBadge = ({ value, className = 'rounded-md' }: { value: string; 
   const tone = placeholderTone(value)
   return (
     <span
-      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-[9px] font-semibold ${className}`}
+      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-[9px] font-medium ${className}`}
       style={{ backgroundColor: tone.bg, color: tone.fg }}
     >
       {getInitials(value)}
@@ -256,7 +256,7 @@ const Profiles = () => {
       ) : (
         <>
           <div className="mt-4 mb-2 flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profiles</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profiles</span>
             <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
           </div>
           <div className="overflow-x-auto">

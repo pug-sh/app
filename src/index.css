@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource/apfel-grotezk/400.css";
+@import "@fontsource/apfel-grotezk/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,7 +34,7 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Apfel Grotezk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -60,11 +61,19 @@
   }
   body {
     @apply antialiased bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-size: 14px;
+    font-weight: 400;
     margin: 0;
   }
   html {
     @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 500;
   }
 }
 
@@ -73,7 +82,7 @@
   .markdown-body h1,
   .markdown-body h2,
   .markdown-body h3 {
-    @apply mb-2 font-semibold text-foreground;
+    @apply mb-2 font-medium text-foreground;
   }
 
   .markdown-body h1 {

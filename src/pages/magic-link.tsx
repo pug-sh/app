@@ -11,7 +11,7 @@ const Shell = ({ children }: { children: ReactNode }) => (
         <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
           <Bell className="w-4.5 h-4.5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Pug</span>
+        <span className="text-lg font-medium tracking-tight">Pug</span>
       </div>
       {children}
     </div>
@@ -43,7 +43,7 @@ const MagicLink = () => {
       <Shell>
         <div className="text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-semibold tracking-tight mb-1">Invalid link</h1>
+          <h1 className="text-lg font-medium tracking-tight mb-1">Invalid link</h1>
           <p className="text-sm text-muted-foreground">This link is missing its token. Request a new one.</p>
         </div>
       </Shell>
@@ -55,7 +55,7 @@ const MagicLink = () => {
       <Shell>
         <div className="text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-semibold tracking-tight mb-1">Couldn't sign you in</h1>
+          <h1 className="text-lg font-medium tracking-tight mb-1">Couldn't sign you in</h1>
           <p className="text-sm text-muted-foreground mb-6">{error}</p>
           <button
             type="button"

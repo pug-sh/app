@@ -19,7 +19,7 @@ export function OverviewTileShell({ title, footer, meta, children, contentClassN
       )}
     >
       <div className="mb-3 flex shrink-0 items-start justify-between gap-3">
-        <h3 className="truncate text-sm font-medium">{title}</h3>
+        <h3 className="truncate text-lg font-medium tracking-[-0.01em]">{title}</h3>
         {meta}
       </div>
       <div className={cn('relative min-h-0 flex-1', contentClassName)}>{children}</div>

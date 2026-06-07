@@ -133,6 +133,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
                     viewMode={DashboardTileViewMode.LINE}
                     queryKeyPrefix="overview-trend-active"
                     compact
+                    lightMetrics
                   />
                 </div>
               </OverviewTileShell>
@@ -161,6 +162,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
                   viewMode={DashboardTileViewMode.LINE}
                   queryKeyPrefix="overview-trend-conversion"
                   compact
+                  lightMetrics
                 />
               </div>
             </OverviewTileShell>

@@ -4,6 +4,8 @@ import { Bar, CartesianGrid, Cell, BarChart as ReBarChart, XAxis, YAxis } from '
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { cn } from '@/lib/utils'
+import { COMPACT_CHART_AXIS_CLASS } from './common'
 
 // All series in a single chart must share the same step skeleton (same names,
 // same order). The chart aligns by index across series and assumes that contract.
@@ -25,7 +27,17 @@ const countKey = (si: number) => `s${si}__count`
 const fromPrevKey = (si: number) => `s${si}__fromPrev`
 const dropOffKey = (si: number) => `s${si}__dropOff`
 
-export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[]; colorByStep?: boolean }) => {
+export const FunnelChart = ({
+  series,
+  colorByStep,
+  compact = false,
+  className,
+}: {
+  series: FunnelSeriesData[]
+  colorByStep?: boolean
+  compact?: boolean
+  className?: string
+}) => {
   const isMultiSeries = series.length > 1
   // Single series → per-step palette; multi-series → per-series color so series identity wins.
   const useStepColors = colorByStep ?? !isMultiSeries
@@ -79,8 +91,11 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
   if (series.length === 0 || stepNames.length === 0) return null
 
   return (
-    <div className="mt-4 p-4">
-      <ChartContainer config={chartConfig} className="h-64 w-full">
+    <div className={cn(compact ? 'flex h-full min-h-0 flex-col' : 'mt-4 p-4', className)}>
+      <ChartContainer
+        config={chartConfig}
+        className={cn(compact ? 'h-full min-h-[120px] w-full' : 'h-64 w-full', compact && COMPACT_CHART_AXIS_CLASS)}
+      >
         <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap="20%" barGap={2}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey={STEP_KEY} tickLine={false} axisLine={false} interval={0} />

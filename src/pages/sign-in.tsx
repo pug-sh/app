@@ -95,10 +95,10 @@ const SignIn = () => {
             <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
               <Bell className="w-5 h-5" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">Pug</span>
+            <span className="text-xl font-medium tracking-tight">Pug</span>
           </div>
           <div className="max-w-sm">
-            <p className="text-3xl font-semibold leading-tight tracking-tight">
+            <p className="text-3xl font-medium leading-tight tracking-tight">
               Analytics and
               <br />
               engagement, unified.
@@ -118,7 +118,7 @@ const SignIn = () => {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Bell className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Pug</span>
+            <span className="text-lg font-medium tracking-tight">Pug</span>
           </div>
 
           {magicLinkSent ? (
@@ -126,7 +126,7 @@ const SignIn = () => {
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <MailCheck className="w-5 h-5 text-primary" />
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight">Check your inbox</h1>
+              <h1 className="text-2xl font-medium tracking-tight">Check your inbox</h1>
               <p className="text-sm text-muted-foreground mt-1.5">
                 We sent a sign-in link to{' '}
                 <span className="font-medium text-foreground break-all">{magicLinkEmail}</span>. Click it to continue —
@@ -145,7 +145,7 @@ const SignIn = () => {
             </div>
           ) : (
             <>
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-2xl font-medium tracking-tight">
                 {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
               </h1>
               <p className="text-sm text-muted-foreground mt-1.5 mb-8">

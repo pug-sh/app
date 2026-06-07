@@ -146,7 +146,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
 
 const Section = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1.5">
-    <div className="font-semibold text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
     {children}
   </div>
 )

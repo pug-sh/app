@@ -19,7 +19,7 @@
     "@bufbuild/protovalidate": "^1.1.1",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
-    "@fontsource-variable/geist": "^5.2.8",
+    "@fontsource/apfel-grotezk": "^5.2.5",
     "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/vite": "^4.2.2",
     "class-variance-authority": "^0.7.1",

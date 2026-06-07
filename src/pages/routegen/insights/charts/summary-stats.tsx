@@ -20,6 +20,7 @@ export const SummaryStats = ({
   aggregations,
   compact = false,
   showSeriesNames = false,
+  lightNumbers = false,
 }: {
   series: string[]
   data: ChartPoint[]
@@ -27,7 +28,9 @@ export const SummaryStats = ({
   aggregations: AggregationType[]
   compact?: boolean
   showSeriesNames?: boolean
+  lightNumbers?: boolean
 }) => {
+  const inlineWeight = lightNumbers ? 'font-normal' : 'font-medium'
   return (
     <div
       className={cn(
@@ -77,7 +80,7 @@ export const SummaryStats = ({
           return (
             <div key={si} className="flex min-w-0 items-center gap-2">
               <span className="size-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
-              <span className="truncate text-sm font-medium tabular-nums text-foreground">
+              <span className={cn('truncate text-sm tabular-nums text-foreground', inlineWeight)}>
                 {compactNumber(headline)}
               </span>
               <span className="truncate text-xs text-muted-foreground">{breakdownDisplayName(name)}</span>
@@ -99,7 +102,8 @@ export const SummaryStats = ({
               )}
               <p
                 className={cn(
-                  'truncate font-semibold leading-tight tracking-tight tabular-nums text-foreground',
+                  'truncate leading-tight tracking-tight tabular-nums text-foreground',
+                  'font-medium',
                   compact ? 'text-lg' : 'text-[22px]',
                 )}
               >

@@ -69,6 +69,7 @@ export const DashboardInsightContent = ({
   queryKeyPrefix,
   compact = false,
   kpiMetadata,
+  lightMetrics = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -81,6 +82,7 @@ export const DashboardInsightContent = ({
   queryKeyPrefix: string
   compact?: boolean
   kpiMetadata?: string
+  lightMetrics?: boolean
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
@@ -229,6 +231,7 @@ export const DashboardInsightContent = ({
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
           metadata={kpiMetadata}
+          lightMetric={lightMetrics}
         />
       </div>
     )
@@ -262,6 +265,7 @@ export const DashboardInsightContent = ({
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         compact={compact}
+        lightNumbers={lightMetrics}
       />
     </div>
   )

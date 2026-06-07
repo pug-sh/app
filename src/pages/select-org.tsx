@@ -62,10 +62,10 @@ const SelectOrg = () => {
             <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
               <Bell className="w-5 h-5" />
             </div>
-            <span className="text-xl font-semibold tracking-tight">Pug</span>
+            <span className="text-xl font-medium tracking-tight">Pug</span>
           </div>
           <div className="max-w-sm">
-            <p className="text-3xl font-semibold leading-tight tracking-tight">
+            <p className="text-3xl font-medium leading-tight tracking-tight">
               Pick where to
               <br />
               get started.
@@ -85,14 +85,14 @@ const SelectOrg = () => {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Bell className="w-4.5 h-4.5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Pug</span>
+            <span className="text-lg font-medium tracking-tight">Pug</span>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">Choose an organization</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Choose an organization</h1>
           <p className="text-sm text-muted-foreground mt-1.5 mb-8">You belong to several. Pick one to continue.</p>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Organizations</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Organizations</span>
             <div className="flex-1 h-px bg-border" />
             <span className="text-[10px] text-muted-foreground">{orgs.length}</span>
           </div>

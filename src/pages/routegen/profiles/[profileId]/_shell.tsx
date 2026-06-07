@@ -37,7 +37,7 @@ const CopyButton = ({ value }: { value: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div>
-    <p className="text-2xl font-semibold tabular-nums">{value.toLocaleString()}</p>
+    <p className="text-2xl font-medium tabular-nums">{value.toLocaleString()}</p>
     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
   </div>
 )
@@ -89,7 +89,7 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-2">
             <StatusDot lastSeen={lastSeen} />
-            <span className="font-mono text-xl font-semibold">{profileId}</span>
+            <span className="font-mono text-xl font-medium">{profileId}</span>
           </div>
           {profile.externalId && (
             <div className="group flex items-center gap-2 text-xs text-muted-foreground">

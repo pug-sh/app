@@ -159,20 +159,20 @@ const AppSidebar = () => {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sm font-medium text-sidebar-accent-foreground">
                   <span>{projectInitial}</span>
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
                     {activeOrg?.displayName ?? 'Workspace'}
                   </span>
-                  <span className="truncate font-semibold">{activeProject?.displayName ?? 'Select project'}</span>
+                  <span className="truncate font-medium">{activeProject?.displayName ?? 'Select project'}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={8} className="p-1.5">
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                  <DropdownMenuLabel className="px-2 pb-1 text-[10px] font-medium uppercase tracking-[0.14em]">
                     {activeOrg?.displayName ?? 'Workspace'}
                   </DropdownMenuLabel>
                   {projects.map(proj => {

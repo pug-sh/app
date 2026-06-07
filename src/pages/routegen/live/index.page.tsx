@@ -52,7 +52,7 @@ type LiveStatusHeaderProps = {
 const LiveStatusHeader = ({ visitorCount, loading, lastUpdated, showRefreshSpinner }: LiveStatusHeaderProps) => (
   <div className="flex items-start justify-between gap-6">
     <div>
-      <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+      <h1 className="flex items-center gap-2.5 text-2xl font-medium tracking-tight">
         Live
         {!loading && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
@@ -233,7 +233,7 @@ const LiveVisitorsPage = () => {
               <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <LiveDot />
-                  <span className="text-sm font-semibold">{visitorCount} live</span>
+                  <span className="text-sm font-medium">{visitorCount} live</span>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">

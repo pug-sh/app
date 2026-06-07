@@ -14,6 +14,7 @@ type KpiTileProps = {
   compare?: KpiCompare
   formatValue: (value: number) => string
   metadata?: string
+  lightMetric?: boolean
 }
 
 // Sum all points across all series. KPI tiles aren't designed for multi-series
@@ -38,7 +39,8 @@ const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums',
+        'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
+        'font-medium',
         positive
           ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
           : 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
@@ -50,7 +52,7 @@ const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
   )
 }
 
-export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata }: KpiTileProps) => {
+export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, lightMetric }: KpiTileProps) => {
   const current = useMemo(() => summarize(currentSeries), [currentSeries])
   const prior = useMemo(() => (compare && 'series' in compare ? summarize(compare.series) : undefined), [compare])
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
@@ -88,7 +90,13 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata }:
 
   const summary = (
     <div className="space-y-2">
-      <div className={cn('text-3xl font-semibold tracking-tight tabular-nums', numberColor)}>
+      <div
+        className={cn(
+          'tracking-tight tabular-nums',
+          lightMetric ? 'text-4xl font-medium' : 'text-3xl font-bold',
+          numberColor,
+        )}
+      >
         {formatValue(current)}
       </div>
       {compareRow}
