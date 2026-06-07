@@ -5,7 +5,7 @@ import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
-import { mapOAuthConnectError, oauthRedirectUri } from './oauth'
+import { mapOAuthConnectError } from './oauth'
 
 export const signInAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
   const authRPC = get(authRPCAtom)
@@ -79,48 +79,23 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
   }
 })
 
-export const beginGoogleOAuthAtom = atom(null, async get => {
+export const completeGoogleOAuthAtom = atom(null, async (get, set, { credential }: { credential: string }) => {
   const authRPC = get(authRPCAtom)
   try {
-    const resp = await authRPC.beginOAuthSignIn({
+    const resp = await authRPC.completeOAuthSignIn({
       provider: OAuthProvider.GOOGLE,
-      redirectUri: oauthRedirectUri(),
+      credential,
     })
-    if (!resp.authorizationUrl) {
-      return { ok: false as const, error: 'Could not start Google sign-in. Try again.' }
-    }
-    window.location.assign(resp.authorizationUrl)
+    set(applySessionJwtAtom, resp.token)
     return { ok: true as const }
   } catch (error) {
-    if (!(error instanceof ConnectError)) console.error('beginGoogleOAuth unexpected error', error)
+    if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
     return {
       ok: false as const,
-      error: mapOAuthConnectError(error, 'Could not start Google sign-in. Try again.'),
+      error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
     }
   }
 })
-
-export const completeGoogleOAuthAtom = atom(
-  null,
-  async (get, set, { code, state }: { code: string; state: string }) => {
-    const authRPC = get(authRPCAtom)
-    try {
-      const resp = await authRPC.completeOAuthSignIn({
-        provider: OAuthProvider.GOOGLE,
-        code,
-        state,
-      })
-      set(applySessionJwtAtom, resp.token)
-      return { ok: true as const }
-    } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
-      return {
-        ok: false as const,
-        error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
-      }
-    }
-  },
-)
 
 const authClockAtom = atom(Date.now())
 authClockAtom.onMount = setAtom => {

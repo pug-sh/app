@@ -30,7 +30,6 @@ const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
-const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oauth-callback')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -173,11 +172,7 @@ const App = () => {
     <>
       <ThemeSync />
       <WorkspaceBootstrap />
-      {location === '/oauth/callback' ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <OAuthCallback />
-        </Suspense>
-      ) : location === '/magic-link' ? (
+      {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
           <MagicLink />
         </Suspense>
