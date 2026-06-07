@@ -9,6 +9,7 @@ import { insightsRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
+import { LocationLabel } from '@/components/country-flag'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
@@ -29,11 +30,14 @@ const normalizeProfileId = (profileId: string) => profileId.trim()
 
 const formatLocation = (profile: Profile) => {
   const activity = profile.activity
-  if (!activity) return { primary: '—', secondary: '' }
+  if (!activity) return { secondary: '', city: undefined, country: undefined }
 
-  const primary = [activity.city, activity.country].filter(Boolean).join(', ') || activity.country || '—'
-  const secondary = activity.region || ''
-  return { primary, secondary }
+  const city = activity.city || undefined
+  const country = activity.country || undefined
+  const region = activity.region || ''
+  const secondary =
+    region && region.toLowerCase() !== (city || '').toLowerCase() ? region : ''
+  return { secondary, city, country }
 }
 
 const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key: 'firstSeen' | 'lastSeen') => {
@@ -289,14 +293,15 @@ const Profiles = () => {
                         </div>
                       </td>
                       <td className="py-3 pr-3 text-sm">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <PlaceholderBadge value={activity?.country || location.primary} />
-                          <div className="min-w-0">
-                            <div className="truncate">{location.primary}</div>
-                            {location.secondary && (
-                              <div className="truncate text-[11px] text-muted-foreground">{location.secondary}</div>
-                            )}
-                          </div>
+                        <div className="min-w-0">
+                          {location.city || location.country ? (
+                            <LocationLabel city={location.city} country={location.country} flagSize={20} />
+                          ) : (
+                            '—'
+                          )}
+                          {location.secondary && (
+                            <div className="truncate text-[11px] text-muted-foreground">{location.secondary}</div>
+                          )}
                         </div>
                       </td>
                       <td className="py-3 pr-3 text-sm">

@@ -2,6 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'wouter'
+import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
 import ProjectLink from '@/components/project-link'
@@ -76,7 +77,6 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   const browser = [profile.activity?.browser, profile.activity?.browserVersion].filter(Boolean).join(' ')
   const os = [profile.activity?.os, profile.activity?.osVersion].filter(Boolean).join(' ')
   const platform = [browser, os].filter(Boolean).join(' · ')
-  const place = [profile.activity?.city, profile.activity?.country].filter(Boolean).join(', ')
 
   const base = `/profiles/${encodeURIComponent(profileId)}`
   // Tail = URL segment after `base`. '' for overview, '/events' / '/sessions/[id]' for sub-tabs.
@@ -141,7 +141,11 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
           </Meta>
         )}
         {platform && <Meta>{platform}</Meta>}
-        {place && <Meta>{place}</Meta>}
+        {(profile.activity?.city || profile.activity?.country) && (
+          <Meta>
+            <LocationLabel city={profile.activity?.city} country={profile.activity?.country} />
+          </Meta>
+        )}
       </div>
     </div>
   )

@@ -1,9 +1,10 @@
 import { useAtomValue } from 'jotai'
-import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
+import { Calendar, Clock, Monitor, Smartphone, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { LocationLabel } from '@/components/country-flag'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
@@ -126,11 +127,11 @@ const SessionSummary = ({
           </span>
         )}
         {(country || city) && (
-          <span className="flex items-center gap-1">
-            <Globe className="w-3 h-3" />
-            {[city, country].filter(Boolean).join(', ')}
-            {ip && <span className="opacity-50">({ip})</span>}
-          </span>
+          <LocationLabel
+            city={city}
+            country={country}
+            suffix={ip ? <span className="opacity-50">({ip})</span> : undefined}
+          />
         )}
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />

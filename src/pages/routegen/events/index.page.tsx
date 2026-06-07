@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { LocationLabel } from '@/components/country-flag'
 import { EventDetails } from '@/components/event-details'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
@@ -51,7 +52,6 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const platformDetail = [browserLabel, osLabel].filter(Boolean).join(' · ')
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
-  const location = [city, country].filter(Boolean).join(', ')
 
   return (
     <>
@@ -74,8 +74,12 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             {event.kind}
           </Badge>
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={location || undefined}>
-          <div className="truncate">{location}</div>
+        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle">
+          {city || country ? (
+            <LocationLabel city={city} country={country} flagSize={16} />
+          ) : (
+            <div className="truncate">—</div>
+          )}
         </td>
         <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle" title={platformDetail || undefined}>
           <div className="truncate">{platform}</div>
