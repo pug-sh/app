@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Monitor, Smartphone } from 'lucide-react'
+import { DetailTooltip } from '@/components/detail-tooltip'
 import { Devicon } from '@/components/devicon'
 import type { DeviconName } from '@/lib/devicon-map'
 import {
@@ -130,14 +131,11 @@ export const PlatformLabel = ({
   }
 
   return (
-    <span
-      className={cn('inline-flex min-w-0 items-center gap-1.5', className)}
-      title={detail !== primary ? detail : undefined}
-    >
+    <DetailTooltip detail={detail !== primary ? detail : undefined} className={className}>
       {browserIcon && <Devicon name={browserIcon} size={iconSize} />}
       {osIcon && <Devicon name={osIcon} size={iconSize} />}
       <span className="truncate">{primary}</span>
-    </span>
+    </DetailTooltip>
   )
 }
 
@@ -177,7 +175,7 @@ export const PlatformStackLabel = ({
   const showDeviceTypeIcon = !!(os || device)
 
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1.5', className)} title={detail || undefined}>
+    <DetailTooltip detail={detail} className={cn('items-center gap-1.5', className)}>
       {icons.map(icon => (
         <Devicon key={icon} name={icon} size={iconSize} />
       ))}
@@ -185,6 +183,6 @@ export const PlatformStackLabel = ({
         <DeviceTypeIcon className="shrink-0 text-muted-foreground" style={{ width: iconSize, height: iconSize }} />
       )}
       {icons.length === 0 && !showDeviceTypeIcon && <span className="truncate">{primary}</span>}
-    </span>
+    </DetailTooltip>
   )
 }

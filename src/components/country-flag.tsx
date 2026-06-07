@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { DetailTooltip } from '@/components/detail-tooltip'
 import { formatLocationLabel, formatLocationPrimary } from '@/lib/location'
 import { isCountryCode, twemojiFlagSrc } from '@/lib/twemoji'
 import { cn } from '@/lib/utils'
@@ -40,10 +41,10 @@ export const LocationLabel = ({ city, country, className, flagSize = 16, suffix 
   const title = fullLabel !== primary ? fullLabel : undefined
 
   return (
-    <span className={cn('inline-flex min-w-0 items-center gap-1.5', className)} title={title}>
+    <DetailTooltip detail={title} className={cn('items-center gap-1.5', className)}>
       <CountryFlag code={country} size={flagSize} />
       <span className="truncate">{primary}</span>
       {suffix}
-    </span>
+    </DetailTooltip>
   )
 }
