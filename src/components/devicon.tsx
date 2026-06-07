@@ -14,7 +14,7 @@ export const Devicon = ({ name, className, size = 16 }: DeviconProps) => (
     alt=""
     aria-hidden
     draggable={false}
-    className={cn('inline-block shrink-0', className)}
+    className={cn('inline-block shrink-0 saturate-[0.5] opacity-95', className)}
     style={{ width: size, height: size }}
   />
 )
