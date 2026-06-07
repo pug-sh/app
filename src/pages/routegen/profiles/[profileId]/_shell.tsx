@@ -22,10 +22,12 @@ const TABS = [
 ] as const
 
 const StatusDot = ({ lastSeen }: { lastSeen: Date | null }) => {
-  if (!lastSeen) return <span className="inline-block size-2 rounded-full bg-muted-foreground/30" />
+  if (!lastSeen) {
+    return <span className="inline-block size-2.5 rounded-full bg-muted-foreground/30 ring-2 ring-background" />
+  }
   const minsAgo = (Date.now() - lastSeen.getTime()) / 60_000
   const color = minsAgo < 5 ? 'bg-emerald-500' : minsAgo < 60 * 24 ? 'bg-amber-500' : 'bg-muted-foreground/30'
-  return <span className={cn('inline-block size-2 rounded-full', color)} />
+  return <span className={cn('inline-block size-2.5 rounded-full ring-2 ring-background', color)} />
 }
 
 const CopyButton = ({ value }: { value: string }) => (
@@ -90,7 +92,7 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
         <div className="flex min-w-0 items-start gap-3">
           <div className="relative shrink-0">
             <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
-            <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-background p-0.5">
+            <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>
           </div>
