@@ -21,30 +21,11 @@ import { formatRelative } from '@/hooks/use-relative-time'
 import { compactNumber, isMobileOS } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
+import { cn } from '@/lib/utils'
+import { ProfileAvatar } from './_avatar'
+import { getInitials, placeholderTone, resolveIdentity } from './_identity'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
-
-const getInitials = (value: string) =>
-  value
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase() ?? '')
-    .join('') || '?'
-
-const hashHue = (value: string) => {
-  let hash = 0
-  for (let i = 0; i < value.length; i++) hash = (hash * 31 + value.charCodeAt(i)) % 360
-  return hash
-}
-
-const placeholderTone = (value: string) => {
-  const hue = hashHue(value)
-  return {
-    bg: `oklch(0.78 0.12 ${hue})`,
-    fg: `oklch(0.28 0.06 ${hue})`,
-  }
-}
 
 const formatLocation = (profile: Profile) => {
   const activity = profile.activity
@@ -280,7 +261,7 @@ const Profiles = () => {
                   const profileId = normalizeProfileId(profile.id)
                   const activity = profile.activity
                   const location = formatLocation(profile)
-                  const userLabel = profile.externalId || profileId
+                  const identity = resolveIdentity(profile)
                   const browserLabel = [activity?.browser, activity?.browserVersion].filter(Boolean).join(' ') || '—'
                   const osLabel = [activity?.os, activity?.osVersion].filter(Boolean).join(' ') || '—'
                   const isMobile =
@@ -290,15 +271,20 @@ const Profiles = () => {
                     <tr key={profile.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
                       <td className="py-3 pr-3 text-sm">
                         <div className="flex items-center gap-3 min-w-0">
-                          <PlaceholderBadge value={userLabel} className="rounded-full" />
+                          <ProfileAvatar identity={identity} className="size-7 rounded-md text-[10px]" />
                           <div className="min-w-0">
                             <ProjectLink
-                              href={`/profiles/${encodeURIComponent(profileId)}/events`}
-                              className="block truncate font-medium text-foreground hover:text-primary"
+                              href={`/profiles/${encodeURIComponent(profileId)}`}
+                              className={cn(
+                                'block truncate font-medium text-foreground hover:text-primary',
+                                identity.isFallback && 'font-mono',
+                              )}
                             >
-                              {userLabel}
+                              {identity.name}
                             </ProjectLink>
-                            <div className="truncate text-[11px] text-muted-foreground font-mono">{profileId}</div>
+                            <div className="truncate text-[11px] text-muted-foreground">
+                              {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
+                            </div>
                           </div>
                         </div>
                       </td>

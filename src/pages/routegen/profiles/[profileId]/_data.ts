@@ -4,18 +4,32 @@ import { atomFamily } from 'jotai/utils'
 import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 
+// A profile URL can carry either an external/distinct id (events + activity links resolve
+// users by distinct id) or the internal profile id (the list links by it). Resolve by
+// external id first, then fall back to the internal id.
+//
 // `null` resolves to "profile not found" — the shell renders an explicit empty state for it.
 // Other RPC failures throw and bubble up to the router's error boundary.
+const isNotFound = (err: unknown) => err instanceof ConnectError && err.code === Code.NotFound
+
 export const profileFamilyAtom = atomFamily((profileId: string) =>
   atom(async get => {
     const rpc = get(profilesRPCAtom)
     const headers = get(projectHeaderAtom)
     if (!headers) return null
+
+    try {
+      const resp = await rpc.getByExternalId({ externalId: profileId }, { headers })
+      if (resp.profile) return resp.profile
+    } catch (err) {
+      if (!isNotFound(err)) throw err
+    }
+
     try {
       const resp = await rpc.get({ id: profileId }, { headers })
       return resp.profile ?? null
     } catch (err) {
-      if (err instanceof ConnectError && err.code === Code.NotFound) return null
+      if (isNotFound(err)) return null
       throw err
     }
   }),

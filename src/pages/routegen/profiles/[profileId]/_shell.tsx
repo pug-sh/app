@@ -8,6 +8,8 @@ import ProjectLink from '@/components/project-link'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { ProfileAvatar } from '../_avatar'
+import { resolveIdentity } from '../_identity'
 import { profileFamilyAtom } from './_data'
 
 const TABS = [
@@ -68,6 +70,7 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
     )
   }
 
+  const identity = resolveIdentity(profile)
   const firstSeen = tsToDate(profile.activity?.firstSeen)
   const createTime = tsToDate(profile.createTime)
   const browser = [profile.activity?.browser, profile.activity?.browserVersion].filter(Boolean).join(' ')
@@ -86,25 +89,34 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   const header = (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
-            <StatusDot lastSeen={lastSeen} />
-            <span className="font-mono text-xl font-medium">{profileId}</span>
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="relative shrink-0">
+            <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
+            <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-background p-0.5">
+              <StatusDot lastSeen={lastSeen} />
+            </span>
           </div>
-          {profile.externalId && (
-            <div className="group flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="text-muted-foreground/60">ext</span>
-              <span className="font-mono">{profile.externalId}</span>
-              <CopyButton value={profile.externalId} />
+          <div className="min-w-0 space-y-1">
+            <span className={cn('block truncate text-xl font-medium', identity.isFallback && 'font-mono')}>
+              {identity.name}
+            </span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {profile.externalId && profile.externalId !== identity.name && (
+                <span className="group flex items-center gap-1.5">
+                  <span className="text-muted-foreground/60">ext</span>
+                  <span className="font-mono">{profile.externalId}</span>
+                  <CopyButton value={profile.externalId} />
+                </span>
+              )}
+              {profile.id && profile.id !== identity.name && (
+                <span className="group flex items-center gap-1.5">
+                  <span className="text-muted-foreground/60">distinct</span>
+                  <span className="font-mono">{profile.id.slice(0, 12)}…</span>
+                  <CopyButton value={profile.id} />
+                </span>
+              )}
             </div>
-          )}
-          {profile.id && profile.id !== profileId && (
-            <div className="group flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="text-muted-foreground/60">id</span>
-              <span className="font-mono">{profile.id.slice(0, 12)}…</span>
-              <CopyButton value={profile.id} />
-            </div>
-          )}
+          </div>
         </div>
         <div className="flex shrink-0 gap-8 text-right">
           <Stat label="events" value={Number(profile.activity?.totalEvents ?? 0n)} />
@@ -135,7 +147,7 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
   )
 
   return (
-    <Page header={header} title={profileId}>
+    <Page header={header} title={identity.name}>
       <div className="-mt-2 mb-6 border-b border-border">
         <nav className="-mb-px flex gap-6">
           {TABS.map(tab => {
