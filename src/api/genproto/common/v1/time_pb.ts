@@ -2,40 +2,43 @@
 // @generated from file common/v1/time.proto (package common.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenEnum, GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { enumDesc, fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../buf/validate/validate_pb'
 
 /**
  * Describes the file common/v1/time.proto.
  */
-export const file_common_v1_time: GenFile = /*@__PURE__*/
-  fileDesc("ChRjb21tb24vdjEvdGltZS5wcm90bxIJY29tbW9uLnYxItIBCglUaW1lUmFuZ2USMAoEZnJvbRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBARIuCgJ0bxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBATpjukhgGl4KGXRpbWVfcmFuZ2UuZnJvbV9iZWZvcmVfdG8SLHRpbWVfcmFuZ2UuZnJvbSBtdXN0IGJlIGJlZm9yZSB0aW1lX3JhbmdlLnRvGhN0aGlzLmZyb20gPCB0aGlzLnRvKvkCCg9UaW1lUmFuZ2VQcmVzZXQSIQodVElNRV9SQU5HRV9QUkVTRVRfVU5TUEVDSUZJRUQQABIhCh1USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzFfSE9VUhABEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfNl9IT1VSUxACEiMKH1RJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMjRfSE9VUlMQAxIhCh1USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzdfREFZUxAEEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMTRfREFZUxAFEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMzBfREFZUxAGEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfOTBfREFZUxAHEiMKH1RJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMTgwX0RBWVMQCBIjCh9USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzM2NV9EQVlTEAlCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp]);
+export const file_common_v1_time: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'ChRjb21tb24vdjEvdGltZS5wcm90bxIJY29tbW9uLnYxItIBCglUaW1lUmFuZ2USMAoEZnJvbRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBARIuCgJ0bxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBrpIA8gBATpjukhgGl4KGXRpbWVfcmFuZ2UuZnJvbV9iZWZvcmVfdG8SLHRpbWVfcmFuZ2UuZnJvbSBtdXN0IGJlIGJlZm9yZSB0aW1lX3JhbmdlLnRvGhN0aGlzLmZyb20gPCB0aGlzLnRvKvkCCg9UaW1lUmFuZ2VQcmVzZXQSIQodVElNRV9SQU5HRV9QUkVTRVRfVU5TUEVDSUZJRUQQABIhCh1USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzFfSE9VUhABEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfNl9IT1VSUxACEiMKH1RJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMjRfSE9VUlMQAxIhCh1USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzdfREFZUxAEEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMTRfREFZUxAFEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMzBfREFZUxAGEiIKHlRJTUVfUkFOR0VfUFJFU0VUX0xBU1RfOTBfREFZUxAHEiMKH1RJTUVfUkFOR0VfUFJFU0VUX0xBU1RfMTgwX0RBWVMQCBIjCh9USU1FX1JBTkdFX1BSRVNFVF9MQVNUXzM2NV9EQVlTEAlCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH',
+    [file_buf_validate_validate, file_google_protobuf_timestamp],
+  )
 
 /**
  * @generated from message common.v1.TimeRange
  */
-export type TimeRange = Message<"common.v1.TimeRange"> & {
+export type TimeRange = Message<'common.v1.TimeRange'> & {
   /**
    * @generated from field: google.protobuf.Timestamp from = 1;
    */
-  from?: Timestamp | undefined;
+  from?: Timestamp | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp to = 2;
    */
-  to?: Timestamp | undefined;
-};
+  to?: Timestamp | undefined
+}
 
 /**
  * Describes the message common.v1.TimeRange.
  * Use `create(TimeRangeSchema)` to create a new message.
  */
-export const TimeRangeSchema: GenMessage<TimeRange> = /*@__PURE__*/
-  messageDesc(file_common_v1_time, 0);
+export const TimeRangeSchema: GenMessage<TimeRange> = /*@__PURE__*/ messageDesc(file_common_v1_time, 0)
 
 /**
  * @generated from enum common.v1.TimeRangePreset
@@ -95,6 +98,4 @@ export enum TimeRangePreset {
 /**
  * Describes the enum common.v1.TimeRangePreset.
  */
-export const TimeRangePresetSchema: GenEnum<TimeRangePreset> = /*@__PURE__*/
-  enumDesc(file_common_v1_time, 0);
-
+export const TimeRangePresetSchema: GenEnum<TimeRangePreset> = /*@__PURE__*/ enumDesc(file_common_v1_time, 0)

@@ -2,68 +2,73 @@
 // @generated from file common/events/v1/api_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/api_events.proto.
  */
-export const file_common_events_v1_api_events: GenFile = /*@__PURE__*/
-  fileDesc("CiFjb21tb24vZXZlbnRzL3YxL2FwaV9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiXwoXQXBpS2V5Q3JlYXRlZFByb3BlcnRpZXMSEgoKYXBpX2tleV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBXNjb3BlGAMgASgJOhOCtRgPYXBpX2tleV9jcmVhdGVkImAKF0FwaUtleVJldm9rZWRQcm9wZXJ0aWVzEhIKCmFwaV9rZXlfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIOCgZyZWFzb24YAyABKAk6E4K1GA9hcGlfa2V5X3Jldm9rZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_common_events_v1_options]);
+export const file_common_events_v1_api_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiFjb21tb24vZXZlbnRzL3YxL2FwaV9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiXwoXQXBpS2V5Q3JlYXRlZFByb3BlcnRpZXMSEgoKYXBpX2tleV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBXNjb3BlGAMgASgJOhOCtRgPYXBpX2tleV9jcmVhdGVkImAKF0FwaUtleVJldm9rZWRQcm9wZXJ0aWVzEhIKCmFwaV9rZXlfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIOCgZyZWFzb24YAyABKAk6E4K1GA9hcGlfa2V5X3Jldm9rZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
+    [file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.ApiKeyCreatedProperties
  */
-export type ApiKeyCreatedProperties = Message<"common.events.v1.ApiKeyCreatedProperties"> & {
+export type ApiKeyCreatedProperties = Message<'common.events.v1.ApiKeyCreatedProperties'> & {
   /**
    * @generated from field: string api_key_id = 1;
    */
-  apiKeyId: string;
+  apiKeyId: string
 
   /**
    * @generated from field: string name = 2;
    */
-  name: string;
+  name: string
 
   /**
    * @generated from field: string scope = 3;
    */
-  scope: string;
-};
+  scope: string
+}
 
 /**
  * Describes the message common.events.v1.ApiKeyCreatedProperties.
  * Use `create(ApiKeyCreatedPropertiesSchema)` to create a new message.
  */
-export const ApiKeyCreatedPropertiesSchema: GenMessage<ApiKeyCreatedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_api_events, 0);
+export const ApiKeyCreatedPropertiesSchema: GenMessage<ApiKeyCreatedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_api_events, 0)
 
 /**
  * @generated from message common.events.v1.ApiKeyRevokedProperties
  */
-export type ApiKeyRevokedProperties = Message<"common.events.v1.ApiKeyRevokedProperties"> & {
+export type ApiKeyRevokedProperties = Message<'common.events.v1.ApiKeyRevokedProperties'> & {
   /**
    * @generated from field: string api_key_id = 1;
    */
-  apiKeyId: string;
+  apiKeyId: string
 
   /**
    * @generated from field: string name = 2;
    */
-  name: string;
+  name: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.ApiKeyRevokedProperties.
  * Use `create(ApiKeyRevokedPropertiesSchema)` to create a new message.
  */
-export const ApiKeyRevokedPropertiesSchema: GenMessage<ApiKeyRevokedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_api_events, 1);
-
+export const ApiKeyRevokedPropertiesSchema: GenMessage<ApiKeyRevokedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_api_events, 1)

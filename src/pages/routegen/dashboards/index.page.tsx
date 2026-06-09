@@ -1,11 +1,12 @@
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { ArrowRight, Loader2, PanelsTopLeft, Plus, Search } from 'lucide-react'
+import { ArrowRight, Globe, Loader2, PanelsTopLeft, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import ProjectLink from '@/components/project-link'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { activeProjectAtom } from '@/data/workspace.atoms'
@@ -137,9 +138,17 @@ const Dashboards = () => {
                     <PanelsTopLeft className="size-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {dashboard.displayName || UNTITLED_DASHBOARD_NAME}
-                    </p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {dashboard.displayName || UNTITLED_DASHBOARD_NAME}
+                      </p>
+                      {dashboard.shareId ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          <Globe />
+                          Public
+                        </Badge>
+                      ) : null}
+                    </div>
                     <p className="mt-1 max-w-2xl truncate text-xs text-muted-foreground">
                       {dashboard.description || 'No description yet'}
                     </p>

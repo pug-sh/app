@@ -2,50 +2,55 @@
 // @generated from file workers/profiles/v1/profiles.proto (package workers.profiles.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { JsonObject, Message } from "@bufbuild/protobuf";
+import type { JsonObject, Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
 
 /**
  * Describes the file workers/profiles/v1/profiles.proto.
  */
-export const file_workers_profiles_v1_profiles: GenFile = /*@__PURE__*/
-  fileDesc("CiJ3b3JrZXJzL3Byb2ZpbGVzL3YxL3Byb2ZpbGVzLnByb3RvEhN3b3JrZXJzLnByb2ZpbGVzLnYxIpQBChNQcm9maWxlQWxpYXNNZXNzYWdlEhwKCGFsaWFzX2lkGAEgASgJQgq6SAfIAQFyAhABEh4KCnByb2ZpbGVfaWQYAiABKAlCCrpIB8gBAXICEAESHwoLZXh0ZXJuYWxfaWQYAyABKAlCCrpIB8gBAXICEAESHgoKcHJvamVjdF9pZBgEIAEoCUIKukgHyAEBcgIQASKOAgoUUHJvZmlsZVVwc2VydE1lc3NhZ2USHgoKcHJvZmlsZV9pZBgBIAEoCUIKukgHyAEBcgIQARIeCgpwcm9qZWN0X2lkGAIgASgJQgq6SAfIAQFyAhABEhMKC2V4dGVybmFsX2lkGAMgASgJEisKCnByb3BlcnRpZXMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhIKCmlzX2RlbGV0ZWQYBSABKAgSLwoLY3JlYXRlX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3VwZGF0ZV90aW1lGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEJPWk1naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvcHJvZmlsZXMvdjE7d29ya2VycHJvZmlsZXN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+export const file_workers_profiles_v1_profiles: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiJ3b3JrZXJzL3Byb2ZpbGVzL3YxL3Byb2ZpbGVzLnByb3RvEhN3b3JrZXJzLnByb2ZpbGVzLnYxIpQBChNQcm9maWxlQWxpYXNNZXNzYWdlEhwKCGFsaWFzX2lkGAEgASgJQgq6SAfIAQFyAhABEh4KCnByb2ZpbGVfaWQYAiABKAlCCrpIB8gBAXICEAESHwoLZXh0ZXJuYWxfaWQYAyABKAlCCrpIB8gBAXICEAESHgoKcHJvamVjdF9pZBgEIAEoCUIKukgHyAEBcgIQASKOAgoUUHJvZmlsZVVwc2VydE1lc3NhZ2USHgoKcHJvZmlsZV9pZBgBIAEoCUIKukgHyAEBcgIQARIeCgpwcm9qZWN0X2lkGAIgASgJQgq6SAfIAQFyAhABEhMKC2V4dGVybmFsX2lkGAMgASgJEisKCnByb3BlcnRpZXMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhIKCmlzX2RlbGV0ZWQYBSABKAgSLwoLY3JlYXRlX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3VwZGF0ZV90aW1lGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEJPWk1naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvcHJvZmlsZXMvdjE7d29ya2VycHJvZmlsZXN2MWIIZWRpdGlvbnNw6Ac',
+    [file_buf_validate_validate, file_google_protobuf_struct, file_google_protobuf_timestamp],
+  )
 
 /**
  * @generated from message workers.profiles.v1.ProfileAliasMessage
  */
-export type ProfileAliasMessage = Message<"workers.profiles.v1.ProfileAliasMessage"> & {
+export type ProfileAliasMessage = Message<'workers.profiles.v1.ProfileAliasMessage'> & {
   /**
    * @generated from field: string alias_id = 1;
    */
-  aliasId: string;
+  aliasId: string
 
   /**
    * @generated from field: string profile_id = 2;
    */
-  profileId: string;
+  profileId: string
 
   /**
    * @generated from field: string external_id = 3;
    */
-  externalId: string;
+  externalId: string
 
   /**
    * @generated from field: string project_id = 4;
    */
-  projectId: string;
-};
+  projectId: string
+}
 
 /**
  * Describes the message workers.profiles.v1.ProfileAliasMessage.
  * Use `create(ProfileAliasMessageSchema)` to create a new message.
  */
-export const ProfileAliasMessageSchema: GenMessage<ProfileAliasMessage> = /*@__PURE__*/
-  messageDesc(file_workers_profiles_v1_profiles, 0);
+export const ProfileAliasMessageSchema: GenMessage<ProfileAliasMessage> =
+  /*@__PURE__*/
+  messageDesc(file_workers_profiles_v1_profiles, 0)
 
 /**
  * ProfileUpsertMessage is published to profiles.upsert by the identify and
@@ -54,30 +59,30 @@ export const ProfileAliasMessageSchema: GenMessage<ProfileAliasMessage> = /*@__P
  *
  * @generated from message workers.profiles.v1.ProfileUpsertMessage
  */
-export type ProfileUpsertMessage = Message<"workers.profiles.v1.ProfileUpsertMessage"> & {
+export type ProfileUpsertMessage = Message<'workers.profiles.v1.ProfileUpsertMessage'> & {
   /**
    * @generated from field: string profile_id = 1;
    */
-  profileId: string;
+  profileId: string
 
   /**
    * @generated from field: string project_id = 2;
    */
-  projectId: string;
+  projectId: string
 
   /**
    * May be empty for anonymous profiles that have not been identified yet.
    *
    * @generated from field: string external_id = 3;
    */
-  externalId: string;
+  externalId: string
 
   /**
    * JSONB profile properties. Empty struct for deletes.
    *
    * @generated from field: google.protobuf.Struct properties = 4;
    */
-  properties?: JsonObject | undefined;
+  properties?: JsonObject | undefined
 
   /**
    * When true, this message represents a soft-delete in ClickHouse.
@@ -86,25 +91,25 @@ export type ProfileUpsertMessage = Message<"workers.profiles.v1.ProfileUpsertMes
    *
    * @generated from field: bool is_deleted = 5;
    */
-  isDeleted: boolean;
+  isDeleted: boolean
 
   /**
    * PostgreSQL row timestamps. Zero-valued for soft-delete messages.
    *
    * @generated from field: google.protobuf.Timestamp create_time = 6;
    */
-  createTime?: Timestamp | undefined;
+  createTime?: Timestamp | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp update_time = 7;
    */
-  updateTime?: Timestamp | undefined;
-};
+  updateTime?: Timestamp | undefined
+}
 
 /**
  * Describes the message workers.profiles.v1.ProfileUpsertMessage.
  * Use `create(ProfileUpsertMessageSchema)` to create a new message.
  */
-export const ProfileUpsertMessageSchema: GenMessage<ProfileUpsertMessage> = /*@__PURE__*/
-  messageDesc(file_workers_profiles_v1_profiles, 1);
-
+export const ProfileUpsertMessageSchema: GenMessage<ProfileUpsertMessage> =
+  /*@__PURE__*/
+  messageDesc(file_workers_profiles_v1_profiles, 1)

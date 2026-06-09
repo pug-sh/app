@@ -59,6 +59,18 @@ Do not move feature-specific helpers into `src/lib/` just because they are "pure
 
 Sign-in page is outside `routegen/` since it's unauthenticated.
 
+### Page Decomposition
+
+When a page file (`index.page.tsx`) grows too large, decompose it by extracting **components** and **pure helper modules** — not by wrapping every cluster of state in a custom hook. Keep the page's own `useState`/`useMemo`/`useCallback` inline. The Insights page is the reference: ~430 lines with ~30 inline hooks, split into `content.tsx` (component), `controls.tsx` (components), `helpers.ts` (pure fns), `constants.ts` — and zero custom state hooks.
+
+- **Components** — presentational chunks (`dashboard-header.tsx`, `dashboard-canvas.tsx`, `resume-banner.tsx`). Co-locate them next to `index.page.tsx`. A component may take the whole hook return as a prop, typed `ReturnType<typeof useThatHook>`, to avoid re-listing two dozen props.
+- **Pure helpers** — deterministic functions and constants (`controls-helpers.ts`, `draft-state.ts`). No React.
+
+Custom hooks (`use-*.ts`) are reserved for **reusable behavior**, not per-page state:
+
+- Cross-feature behavior lives in `src/hooks/` (`use-mobile`, `use-relative-time`, `use-debounced-query`, `use-event-filters`).
+- A feature-local hook is justified only for a genuinely cohesive, self-contained unit — a keyboard-shortcut binder (`use-editor-shortcuts.ts`) or a complex state machine (`use-dashboard-editor.ts`: edit mode, draft persistence, tile mutations). Do not split a single page into several thin state hooks (`use-page-data`, `use-page-controls`, `use-page-delete`) — fold that state back into the page.
+
 ### UI Components — shadcn/ui (default style)
 
 Standard shadcn/ui with default Base UI primitives. Uses `render` prop for composition (not `asChild`):

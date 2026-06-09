@@ -2,64 +2,69 @@
 // @generated from file common/events/v1/form_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/form_events.proto.
  */
-export const file_common_events_v1_form_events: GenFile = /*@__PURE__*/
-  fileDesc("CiJjb21tb24vZXZlbnRzL3YxL2Zvcm1fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIlEKE0Zvcm1TdGFydFByb3BlcnRpZXMSFwoHZm9ybV9pZBgBIAEoCUIGukgDyAEBEhEKCWZvcm1fbmFtZRgCIAEoCToOgrUYCmZvcm1fc3RhcnQiYwoURm9ybVN1Ym1pdFByb3BlcnRpZXMSFwoHZm9ybV9pZBgBIAEoCUIGukgDyAEBEhEKCWZvcm1fbmFtZRgCIAEoCRIOCgZhY3Rpb24YAyABKAk6D4K1GAtmb3JtX3N1Ym1pdEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_events_v1_options]);
+export const file_common_events_v1_form_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiJjb21tb24vZXZlbnRzL3YxL2Zvcm1fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIlEKE0Zvcm1TdGFydFByb3BlcnRpZXMSFwoHZm9ybV9pZBgBIAEoCUIGukgDyAEBEhEKCWZvcm1fbmFtZRgCIAEoCToOgrUYCmZvcm1fc3RhcnQiYwoURm9ybVN1Ym1pdFByb3BlcnRpZXMSFwoHZm9ybV9pZBgBIAEoCUIGukgDyAEBEhEKCWZvcm1fbmFtZRgCIAEoCRIOCgZhY3Rpb24YAyABKAk6D4K1GAtmb3JtX3N1Ym1pdEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH',
+    [file_buf_validate_validate, file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.FormStartProperties
  */
-export type FormStartProperties = Message<"common.events.v1.FormStartProperties"> & {
+export type FormStartProperties = Message<'common.events.v1.FormStartProperties'> & {
   /**
    * @generated from field: string form_id = 1;
    */
-  formId: string;
+  formId: string
 
   /**
    * @generated from field: string form_name = 2;
    */
-  formName: string;
-};
+  formName: string
+}
 
 /**
  * Describes the message common.events.v1.FormStartProperties.
  * Use `create(FormStartPropertiesSchema)` to create a new message.
  */
-export const FormStartPropertiesSchema: GenMessage<FormStartProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_form_events, 0);
+export const FormStartPropertiesSchema: GenMessage<FormStartProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_form_events, 0)
 
 /**
  * @generated from message common.events.v1.FormSubmitProperties
  */
-export type FormSubmitProperties = Message<"common.events.v1.FormSubmitProperties"> & {
+export type FormSubmitProperties = Message<'common.events.v1.FormSubmitProperties'> & {
   /**
    * @generated from field: string form_id = 1;
    */
-  formId: string;
+  formId: string
 
   /**
    * @generated from field: string form_name = 2;
    */
-  formName: string;
+  formName: string
 
   /**
    * @generated from field: string action = 3;
    */
-  action: string;
-};
+  action: string
+}
 
 /**
  * Describes the message common.events.v1.FormSubmitProperties.
  * Use `create(FormSubmitPropertiesSchema)` to create a new message.
  */
-export const FormSubmitPropertiesSchema: GenMessage<FormSubmitProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_form_events, 1);
-
+export const FormSubmitPropertiesSchema: GenMessage<FormSubmitProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_form_events, 1)

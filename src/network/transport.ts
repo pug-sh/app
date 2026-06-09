@@ -5,6 +5,7 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 import { atom, getDefaultStore } from 'jotai'
 import { toast } from 'sonner'
 import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
+import { file_public_dashboards_v1_dashboards } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { clearJwt, JWT_KEY, jwtAtom } from '@/auth/jwt.atoms'
 
@@ -12,7 +13,11 @@ import { clearJwt, JWT_KEY, jwtAtom } from '@/auth/jwt.atoms'
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references
 // common.v1.FilterOperator).
 const validator = createValidator({
-  registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights),
+  registry: createRegistry(
+    file_common_v1_filters,
+    file_shared_insights_v1_insights,
+    file_public_dashboards_v1_dashboards,
+  ),
 })
 
 const protovalidate: Interceptor = next => async req => {

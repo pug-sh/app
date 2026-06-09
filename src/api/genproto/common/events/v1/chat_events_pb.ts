@@ -2,816 +2,846 @@
 // @generated from file common/events/v1/chat_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import type { Duration } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_duration } from "@bufbuild/protobuf/wkt";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Duration } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_duration } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/chat_events.proto.
  */
-export const file_common_events_v1_chat_events: GenFile = /*@__PURE__*/
-  fileDesc("CiJjb21tb24vZXZlbnRzL3YxL2NoYXRfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIokBChVDaGF0Q3JlYXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAkSIgoRcGFydGljaXBhbnRfY291bnQYAyABKAVCB7pIBBoCKAA6EIK1GAxjaGF0X2NyZWF0ZWQiYwoUQ2hhdEpvaW5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAk6D4K1GAtjaGF0X2pvaW5lZCJvChJDaGF0TGVmdFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAkSDgoGcmVhc29uGAMgASgJOg2CtRgJY2hhdF9sZWZ0InUKFUNoYXREZWxldGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCRIOCgZyZWFzb24YAyABKAk6EIK1GAxjaGF0X2RlbGV0ZWQiZwoWQ2hhdEFyY2hpdmVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCToRgrUYDWNoYXRfYXJjaGl2ZWQiawoYQ2hhdFVuYXJjaGl2ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhkKEWNvbnZlcnNhdGlvbl90eXBlGAIgASgJOhOCtRgPY2hhdF91bmFyY2hpdmVkInwKGUNoYXRNZW1iZXJBZGRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESDAoEcm9sZRgDIAEoCToVgrUYEWNoYXRfbWVtYmVyX2FkZGVkIoIBChtDaGF0TWVtYmVyUmVtb3ZlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESDgoGcmVhc29uGAMgASgJOheCtRgTY2hhdF9tZW1iZXJfcmVtb3ZlZCKsAQofQ2hhdE1lbWJlclJvbGVDaGFuZ2VkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZCgltZW1iZXJfaWQYAiABKAlCBrpIA8gBARIVCg1wcmV2aW91c19yb2xlGAMgASgJEhgKCG5ld19yb2xlGAQgASgJQga6SAPIAQE6HIK1GBhjaGF0X21lbWJlcl9yb2xlX2NoYW5nZWQiiwIKGUNoYXRNZXNzYWdlU2VudFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIUCgxtZXNzYWdlX3R5cGUYBCABKAkSIAoPY2hhcmFjdGVyX2NvdW50GAUgASgFQge6SAQaAigAEiEKEGF0dGFjaG1lbnRfY291bnQYBiABKAVCB7pIBBoCKAASEQoJdGhyZWFkX2lkGAcgASgJEhkKEXBhcmVudF9tZXNzYWdlX2lkGAggASgJOhWCtRgRY2hhdF9tZXNzYWdlX3NlbnQikwIKHUNoYXRNZXNzYWdlUmVjZWl2ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEiAKD2NoYXJhY3Rlcl9jb3VudBgFIAEoBUIHukgEGgIoABIhChBhdHRhY2htZW50X2NvdW50GAYgASgFQge6SAQaAigAEhEKCXRocmVhZF9pZBgHIAEoCRIZChFwYXJlbnRfbWVzc2FnZV9pZBgIIAEoCToZgrUYFWNoYXRfbWVzc2FnZV9yZWNlaXZlZCKxAQobQ2hhdE1lc3NhZ2VGYWlsZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSFgoGcmVhc29uGAQgASgJQga6SAPIAQESEQoJdGhyZWFkX2lkGAUgASgJOheCtRgTY2hhdF9tZXNzYWdlX2ZhaWxlZCKVAQoZQ2hhdE1lc3NhZ2VSZWFkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEhkKEWNvbnZlcnNhdGlvbl90eXBlGAMgASgJEhEKCXRocmVhZF9pZBgEIAEoCToVgrUYEWNoYXRfbWVzc2FnZV9yZWFkIqsBChxDaGF0TWVzc2FnZURlbGV0ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSDgoGcmVhc29uGAQgASgJEhEKCXRocmVhZF9pZBgFIAEoCToYgrUYFGNoYXRfbWVzc2FnZV9kZWxldGVkIpkBChtDaGF0TWVzc2FnZUVkaXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIRCgl0aHJlYWRfaWQYBCABKAk6F4K1GBNjaGF0X21lc3NhZ2VfZWRpdGVkIpkBChtDaGF0TWVzc2FnZVBpbm5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIRCgl0aHJlYWRfaWQYBCABKAk6F4K1GBNjaGF0X21lc3NhZ2VfcGlubmVkIp0BCh1DaGF0TWVzc2FnZVVucGlubmVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEhkKEWNvbnZlcnNhdGlvbl90eXBlGAMgASgJEhEKCXRocmVhZF9pZBgEIAEoCToZgrUYFWNoYXRfbWVzc2FnZV91bnBpbm5lZCJyChtDaGF0VHlwaW5nU3RhcnRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAk6F4K1GBNjaGF0X3R5cGluZ19zdGFydGVkInIKG0NoYXRUeXBpbmdTdG9wcGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCToXgrUYE2NoYXRfdHlwaW5nX3N0b3BwZWQi3QEKIENoYXRBdHRhY2htZW50VXBsb2FkZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSHQoNYXR0YWNobWVudF9pZBgDIAEoCUIGukgDyAEBEhcKD2F0dGFjaG1lbnRfdHlwZRgEIAEoCRIbCgpzaXplX2J5dGVzGAUgASgDQge6SAQiAigAEhEKCXRocmVhZF9pZBgGIAEoCTocgrUYGGNoYXRfYXR0YWNobWVudF91cGxvYWRlZCLhAQoiQ2hhdEF0dGFjaG1lbnREb3dubG9hZGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEh0KDWF0dGFjaG1lbnRfaWQYAyABKAlCBrpIA8gBARIXCg9hdHRhY2htZW50X3R5cGUYBCABKAkSGwoKc2l6ZV9ieXRlcxgFIAEoA0IHukgEIgIoABIRCgl0aHJlYWRfaWQYBiABKAk6HoK1GBpjaGF0X2F0dGFjaG1lbnRfZG93bmxvYWRlZCJ/ChlDaGF0Q2FsbFN0YXJ0ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhcKB2NhbGxfaWQYAiABKAlCBrpIA8gBARIRCgljYWxsX3R5cGUYAyABKAk6FYK1GBFjaGF0X2NhbGxfc3RhcnRlZCJ9ChhDaGF0Q2FsbEpvaW5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBEhEKCWNhbGxfdHlwZRgDIAEoCToUgrUYEGNoYXRfY2FsbF9qb2luZWQisAEKFkNoYXRDYWxsTGVmdFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBEhEKCWNhbGxfdHlwZRgDIAEoCRI1CghkdXJhdGlvbhgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6EoK1GA5jaGF0X2NhbGxfbGVmdCJ3Ch5DaGF0Q2FsbFNjcmVlblNoYXJlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBOhuCtRgXY2hhdF9jYWxsX3NjcmVlbl9zaGFyZWQifwoiQ2hhdENhbGxSZWNvcmRpbmdTdGFydGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIXCgdjYWxsX2lkGAIgASgJQga6SAPIAQE6H4K1GBtjaGF0X2NhbGxfcmVjb3JkaW5nX3N0YXJ0ZWQiqgEKGUNoYXRNZW1iZXJNdXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESOgoNbXV0ZV9kdXJhdGlvbhgDIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6FYK1GBFjaGF0X21lbWJlcl9tdXRlZCJLChlDaGF0VXNlckJsb2NrZWRQcm9wZXJ0aWVzEhcKB3VzZXJfaWQYASABKAlCBrpIA8gBAToVgrUYEWNoYXRfdXNlcl9ibG9ja2VkIpgBChtDaGF0UmVhY3Rpb25BZGRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIYCghyZWFjdGlvbhgDIAEoCUIGukgDyAEBEhEKCXRocmVhZF9pZBgEIAEoCToXgrUYE2NoYXRfcmVhY3Rpb25fYWRkZWQinAEKHUNoYXRSZWFjdGlvblJlbW92ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGAoIcmVhY3Rpb24YAyABKAlCBrpIA8gBARIRCgl0aHJlYWRfaWQYBCABKAk6GYK1GBVjaGF0X3JlYWN0aW9uX3JlbW92ZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_duration, file_common_events_v1_options]);
+export const file_common_events_v1_chat_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiJjb21tb24vZXZlbnRzL3YxL2NoYXRfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIokBChVDaGF0Q3JlYXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAkSIgoRcGFydGljaXBhbnRfY291bnQYAyABKAVCB7pIBBoCKAA6EIK1GAxjaGF0X2NyZWF0ZWQiYwoUQ2hhdEpvaW5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAk6D4K1GAtjaGF0X2pvaW5lZCJvChJDaGF0TGVmdFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAkSDgoGcmVhc29uGAMgASgJOg2CtRgJY2hhdF9sZWZ0InUKFUNoYXREZWxldGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCRIOCgZyZWFzb24YAyABKAk6EIK1GAxjaGF0X2RlbGV0ZWQiZwoWQ2hhdEFyY2hpdmVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCToRgrUYDWNoYXRfYXJjaGl2ZWQiawoYQ2hhdFVuYXJjaGl2ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhkKEWNvbnZlcnNhdGlvbl90eXBlGAIgASgJOhOCtRgPY2hhdF91bmFyY2hpdmVkInwKGUNoYXRNZW1iZXJBZGRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESDAoEcm9sZRgDIAEoCToVgrUYEWNoYXRfbWVtYmVyX2FkZGVkIoIBChtDaGF0TWVtYmVyUmVtb3ZlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESDgoGcmVhc29uGAMgASgJOheCtRgTY2hhdF9tZW1iZXJfcmVtb3ZlZCKsAQofQ2hhdE1lbWJlclJvbGVDaGFuZ2VkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZCgltZW1iZXJfaWQYAiABKAlCBrpIA8gBARIVCg1wcmV2aW91c19yb2xlGAMgASgJEhgKCG5ld19yb2xlGAQgASgJQga6SAPIAQE6HIK1GBhjaGF0X21lbWJlcl9yb2xlX2NoYW5nZWQiiwIKGUNoYXRNZXNzYWdlU2VudFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIUCgxtZXNzYWdlX3R5cGUYBCABKAkSIAoPY2hhcmFjdGVyX2NvdW50GAUgASgFQge6SAQaAigAEiEKEGF0dGFjaG1lbnRfY291bnQYBiABKAVCB7pIBBoCKAASEQoJdGhyZWFkX2lkGAcgASgJEhkKEXBhcmVudF9tZXNzYWdlX2lkGAggASgJOhWCtRgRY2hhdF9tZXNzYWdlX3NlbnQikwIKHUNoYXRNZXNzYWdlUmVjZWl2ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEiAKD2NoYXJhY3Rlcl9jb3VudBgFIAEoBUIHukgEGgIoABIhChBhdHRhY2htZW50X2NvdW50GAYgASgFQge6SAQaAigAEhEKCXRocmVhZF9pZBgHIAEoCRIZChFwYXJlbnRfbWVzc2FnZV9pZBgIIAEoCToZgrUYFWNoYXRfbWVzc2FnZV9yZWNlaXZlZCKxAQobQ2hhdE1lc3NhZ2VGYWlsZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSFgoGcmVhc29uGAQgASgJQga6SAPIAQESEQoJdGhyZWFkX2lkGAUgASgJOheCtRgTY2hhdF9tZXNzYWdlX2ZhaWxlZCKVAQoZQ2hhdE1lc3NhZ2VSZWFkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEhkKEWNvbnZlcnNhdGlvbl90eXBlGAMgASgJEhEKCXRocmVhZF9pZBgEIAEoCToVgrUYEWNoYXRfbWVzc2FnZV9yZWFkIqsBChxDaGF0TWVzc2FnZURlbGV0ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGQoRY29udmVyc2F0aW9uX3R5cGUYAyABKAkSDgoGcmVhc29uGAQgASgJEhEKCXRocmVhZF9pZBgFIAEoCToYgrUYFGNoYXRfbWVzc2FnZV9kZWxldGVkIpkBChtDaGF0TWVzc2FnZUVkaXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIRCgl0aHJlYWRfaWQYBCABKAk6F4K1GBNjaGF0X21lc3NhZ2VfZWRpdGVkIpkBChtDaGF0TWVzc2FnZVBpbm5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIZChFjb252ZXJzYXRpb25fdHlwZRgDIAEoCRIRCgl0aHJlYWRfaWQYBCABKAk6F4K1GBNjaGF0X21lc3NhZ2VfcGlubmVkIp0BCh1DaGF0TWVzc2FnZVVucGlubmVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEhkKEWNvbnZlcnNhdGlvbl90eXBlGAMgASgJEhEKCXRocmVhZF9pZBgEIAEoCToZgrUYFWNoYXRfbWVzc2FnZV91bnBpbm5lZCJyChtDaGF0VHlwaW5nU3RhcnRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoRY29udmVyc2F0aW9uX3R5cGUYAiABKAk6F4K1GBNjaGF0X3R5cGluZ19zdGFydGVkInIKG0NoYXRUeXBpbmdTdG9wcGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIZChFjb252ZXJzYXRpb25fdHlwZRgCIAEoCToXgrUYE2NoYXRfdHlwaW5nX3N0b3BwZWQi3QEKIENoYXRBdHRhY2htZW50VXBsb2FkZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSHQoNYXR0YWNobWVudF9pZBgDIAEoCUIGukgDyAEBEhcKD2F0dGFjaG1lbnRfdHlwZRgEIAEoCRIbCgpzaXplX2J5dGVzGAUgASgDQge6SAQiAigAEhEKCXRocmVhZF9pZBgGIAEoCTocgrUYGGNoYXRfYXR0YWNobWVudF91cGxvYWRlZCLhAQoiQ2hhdEF0dGFjaG1lbnREb3dubG9hZGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARISCgptZXNzYWdlX2lkGAIgASgJEh0KDWF0dGFjaG1lbnRfaWQYAyABKAlCBrpIA8gBARIXCg9hdHRhY2htZW50X3R5cGUYBCABKAkSGwoKc2l6ZV9ieXRlcxgFIAEoA0IHukgEIgIoABIRCgl0aHJlYWRfaWQYBiABKAk6HoK1GBpjaGF0X2F0dGFjaG1lbnRfZG93bmxvYWRlZCJ/ChlDaGF0Q2FsbFN0YXJ0ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhcKB2NhbGxfaWQYAiABKAlCBrpIA8gBARIRCgljYWxsX3R5cGUYAyABKAk6FYK1GBFjaGF0X2NhbGxfc3RhcnRlZCJ9ChhDaGF0Q2FsbEpvaW5lZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBEhEKCWNhbGxfdHlwZRgDIAEoCToUgrUYEGNoYXRfY2FsbF9qb2luZWQisAEKFkNoYXRDYWxsTGVmdFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBEhEKCWNhbGxfdHlwZRgDIAEoCRI1CghkdXJhdGlvbhgEIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6EoK1GA5jaGF0X2NhbGxfbGVmdCJ3Ch5DaGF0Q2FsbFNjcmVlblNoYXJlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESFwoHY2FsbF9pZBgCIAEoCUIGukgDyAEBOhuCtRgXY2hhdF9jYWxsX3NjcmVlbl9zaGFyZWQifwoiQ2hhdENhbGxSZWNvcmRpbmdTdGFydGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARIXCgdjYWxsX2lkGAIgASgJQga6SAPIAQE6H4K1GBtjaGF0X2NhbGxfcmVjb3JkaW5nX3N0YXJ0ZWQiqgEKGUNoYXRNZW1iZXJNdXRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESGQoJbWVtYmVyX2lkGAIgASgJQga6SAPIAQESOgoNbXV0ZV9kdXJhdGlvbhgDIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6FYK1GBFjaGF0X21lbWJlcl9tdXRlZCJLChlDaGF0VXNlckJsb2NrZWRQcm9wZXJ0aWVzEhcKB3VzZXJfaWQYASABKAlCBrpIA8gBAToVgrUYEWNoYXRfdXNlcl9ibG9ja2VkIpgBChtDaGF0UmVhY3Rpb25BZGRlZFByb3BlcnRpZXMSHwoPY29udmVyc2F0aW9uX2lkGAEgASgJQga6SAPIAQESEgoKbWVzc2FnZV9pZBgCIAEoCRIYCghyZWFjdGlvbhgDIAEoCUIGukgDyAEBEhEKCXRocmVhZF9pZBgEIAEoCToXgrUYE2NoYXRfcmVhY3Rpb25fYWRkZWQinAEKHUNoYXRSZWFjdGlvblJlbW92ZWRQcm9wZXJ0aWVzEh8KD2NvbnZlcnNhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhIKCm1lc3NhZ2VfaWQYAiABKAkSGAoIcmVhY3Rpb24YAyABKAlCBrpIA8gBARIRCgl0aHJlYWRfaWQYBCABKAk6GYK1GBVjaGF0X3JlYWN0aW9uX3JlbW92ZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
+    [file_buf_validate_validate, file_google_protobuf_duration, file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.ChatCreatedProperties
  */
-export type ChatCreatedProperties = Message<"common.events.v1.ChatCreatedProperties"> & {
+export type ChatCreatedProperties = Message<'common.events.v1.ChatCreatedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: int32 participant_count = 3;
    */
-  participantCount: number;
-};
+  participantCount: number
+}
 
 /**
  * Describes the message common.events.v1.ChatCreatedProperties.
  * Use `create(ChatCreatedPropertiesSchema)` to create a new message.
  */
-export const ChatCreatedPropertiesSchema: GenMessage<ChatCreatedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 0);
+export const ChatCreatedPropertiesSchema: GenMessage<ChatCreatedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 0)
 
 /**
  * @generated from message common.events.v1.ChatJoinedProperties
  */
-export type ChatJoinedProperties = Message<"common.events.v1.ChatJoinedProperties"> & {
+export type ChatJoinedProperties = Message<'common.events.v1.ChatJoinedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
-};
+  conversationType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatJoinedProperties.
  * Use `create(ChatJoinedPropertiesSchema)` to create a new message.
  */
-export const ChatJoinedPropertiesSchema: GenMessage<ChatJoinedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 1);
+export const ChatJoinedPropertiesSchema: GenMessage<ChatJoinedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 1)
 
 /**
  * @generated from message common.events.v1.ChatLeftProperties
  */
-export type ChatLeftProperties = Message<"common.events.v1.ChatLeftProperties"> & {
+export type ChatLeftProperties = Message<'common.events.v1.ChatLeftProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.ChatLeftProperties.
  * Use `create(ChatLeftPropertiesSchema)` to create a new message.
  */
-export const ChatLeftPropertiesSchema: GenMessage<ChatLeftProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 2);
+export const ChatLeftPropertiesSchema: GenMessage<ChatLeftProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 2)
 
 /**
  * @generated from message common.events.v1.ChatDeletedProperties
  */
-export type ChatDeletedProperties = Message<"common.events.v1.ChatDeletedProperties"> & {
+export type ChatDeletedProperties = Message<'common.events.v1.ChatDeletedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.ChatDeletedProperties.
  * Use `create(ChatDeletedPropertiesSchema)` to create a new message.
  */
-export const ChatDeletedPropertiesSchema: GenMessage<ChatDeletedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 3);
+export const ChatDeletedPropertiesSchema: GenMessage<ChatDeletedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 3)
 
 /**
  * @generated from message common.events.v1.ChatArchivedProperties
  */
-export type ChatArchivedProperties = Message<"common.events.v1.ChatArchivedProperties"> & {
+export type ChatArchivedProperties = Message<'common.events.v1.ChatArchivedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
-};
+  conversationType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatArchivedProperties.
  * Use `create(ChatArchivedPropertiesSchema)` to create a new message.
  */
-export const ChatArchivedPropertiesSchema: GenMessage<ChatArchivedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 4);
+export const ChatArchivedPropertiesSchema: GenMessage<ChatArchivedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 4)
 
 /**
  * @generated from message common.events.v1.ChatUnarchivedProperties
  */
-export type ChatUnarchivedProperties = Message<"common.events.v1.ChatUnarchivedProperties"> & {
+export type ChatUnarchivedProperties = Message<'common.events.v1.ChatUnarchivedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
-};
+  conversationType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatUnarchivedProperties.
  * Use `create(ChatUnarchivedPropertiesSchema)` to create a new message.
  */
-export const ChatUnarchivedPropertiesSchema: GenMessage<ChatUnarchivedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 5);
+export const ChatUnarchivedPropertiesSchema: GenMessage<ChatUnarchivedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 5)
 
 /**
  * @generated from message common.events.v1.ChatMemberAddedProperties
  */
-export type ChatMemberAddedProperties = Message<"common.events.v1.ChatMemberAddedProperties"> & {
+export type ChatMemberAddedProperties = Message<'common.events.v1.ChatMemberAddedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string member_id = 2;
    */
-  memberId: string;
+  memberId: string
 
   /**
    * @generated from field: string role = 3;
    */
-  role: string;
-};
+  role: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMemberAddedProperties.
  * Use `create(ChatMemberAddedPropertiesSchema)` to create a new message.
  */
-export const ChatMemberAddedPropertiesSchema: GenMessage<ChatMemberAddedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 6);
+export const ChatMemberAddedPropertiesSchema: GenMessage<ChatMemberAddedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 6)
 
 /**
  * @generated from message common.events.v1.ChatMemberRemovedProperties
  */
-export type ChatMemberRemovedProperties = Message<"common.events.v1.ChatMemberRemovedProperties"> & {
+export type ChatMemberRemovedProperties = Message<'common.events.v1.ChatMemberRemovedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string member_id = 2;
    */
-  memberId: string;
+  memberId: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMemberRemovedProperties.
  * Use `create(ChatMemberRemovedPropertiesSchema)` to create a new message.
  */
-export const ChatMemberRemovedPropertiesSchema: GenMessage<ChatMemberRemovedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 7);
+export const ChatMemberRemovedPropertiesSchema: GenMessage<ChatMemberRemovedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 7)
 
 /**
  * @generated from message common.events.v1.ChatMemberRoleChangedProperties
  */
-export type ChatMemberRoleChangedProperties = Message<"common.events.v1.ChatMemberRoleChangedProperties"> & {
+export type ChatMemberRoleChangedProperties = Message<'common.events.v1.ChatMemberRoleChangedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string member_id = 2;
    */
-  memberId: string;
+  memberId: string
 
   /**
    * @generated from field: string previous_role = 3;
    */
-  previousRole: string;
+  previousRole: string
 
   /**
    * @generated from field: string new_role = 4;
    */
-  newRole: string;
-};
+  newRole: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMemberRoleChangedProperties.
  * Use `create(ChatMemberRoleChangedPropertiesSchema)` to create a new message.
  */
-export const ChatMemberRoleChangedPropertiesSchema: GenMessage<ChatMemberRoleChangedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 8);
+export const ChatMemberRoleChangedPropertiesSchema: GenMessage<ChatMemberRoleChangedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 8)
 
 /**
  * @generated from message common.events.v1.ChatMessageSentProperties
  */
-export type ChatMessageSentProperties = Message<"common.events.v1.ChatMessageSentProperties"> & {
+export type ChatMessageSentProperties = Message<'common.events.v1.ChatMessageSentProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string message_type = 4;
    */
-  messageType: string;
+  messageType: string
 
   /**
    * @generated from field: int32 character_count = 5;
    */
-  characterCount: number;
+  characterCount: number
 
   /**
    * @generated from field: int32 attachment_count = 6;
    */
-  attachmentCount: number;
+  attachmentCount: number
 
   /**
    * @generated from field: string thread_id = 7;
    */
-  threadId: string;
+  threadId: string
 
   /**
    * @generated from field: string parent_message_id = 8;
    */
-  parentMessageId: string;
-};
+  parentMessageId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageSentProperties.
  * Use `create(ChatMessageSentPropertiesSchema)` to create a new message.
  */
-export const ChatMessageSentPropertiesSchema: GenMessage<ChatMessageSentProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 9);
+export const ChatMessageSentPropertiesSchema: GenMessage<ChatMessageSentProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 9)
 
 /**
  * @generated from message common.events.v1.ChatMessageReceivedProperties
  */
-export type ChatMessageReceivedProperties = Message<"common.events.v1.ChatMessageReceivedProperties"> & {
+export type ChatMessageReceivedProperties = Message<'common.events.v1.ChatMessageReceivedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string message_type = 4;
    */
-  messageType: string;
+  messageType: string
 
   /**
    * @generated from field: int32 character_count = 5;
    */
-  characterCount: number;
+  characterCount: number
 
   /**
    * @generated from field: int32 attachment_count = 6;
    */
-  attachmentCount: number;
+  attachmentCount: number
 
   /**
    * @generated from field: string thread_id = 7;
    */
-  threadId: string;
+  threadId: string
 
   /**
    * @generated from field: string parent_message_id = 8;
    */
-  parentMessageId: string;
-};
+  parentMessageId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageReceivedProperties.
  * Use `create(ChatMessageReceivedPropertiesSchema)` to create a new message.
  */
-export const ChatMessageReceivedPropertiesSchema: GenMessage<ChatMessageReceivedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 10);
+export const ChatMessageReceivedPropertiesSchema: GenMessage<ChatMessageReceivedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 10)
 
 /**
  * @generated from message common.events.v1.ChatMessageFailedProperties
  */
-export type ChatMessageFailedProperties = Message<"common.events.v1.ChatMessageFailedProperties"> & {
+export type ChatMessageFailedProperties = Message<'common.events.v1.ChatMessageFailedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string reason = 4;
    */
-  reason: string;
+  reason: string
 
   /**
    * @generated from field: string thread_id = 5;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageFailedProperties.
  * Use `create(ChatMessageFailedPropertiesSchema)` to create a new message.
  */
-export const ChatMessageFailedPropertiesSchema: GenMessage<ChatMessageFailedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 11);
+export const ChatMessageFailedPropertiesSchema: GenMessage<ChatMessageFailedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 11)
 
 /**
  * @generated from message common.events.v1.ChatMessageReadProperties
  */
-export type ChatMessageReadProperties = Message<"common.events.v1.ChatMessageReadProperties"> & {
+export type ChatMessageReadProperties = Message<'common.events.v1.ChatMessageReadProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageReadProperties.
  * Use `create(ChatMessageReadPropertiesSchema)` to create a new message.
  */
-export const ChatMessageReadPropertiesSchema: GenMessage<ChatMessageReadProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 12);
+export const ChatMessageReadPropertiesSchema: GenMessage<ChatMessageReadProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 12)
 
 /**
  * @generated from message common.events.v1.ChatMessageDeletedProperties
  */
-export type ChatMessageDeletedProperties = Message<"common.events.v1.ChatMessageDeletedProperties"> & {
+export type ChatMessageDeletedProperties = Message<'common.events.v1.ChatMessageDeletedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string reason = 4;
    */
-  reason: string;
+  reason: string
 
   /**
    * @generated from field: string thread_id = 5;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageDeletedProperties.
  * Use `create(ChatMessageDeletedPropertiesSchema)` to create a new message.
  */
-export const ChatMessageDeletedPropertiesSchema: GenMessage<ChatMessageDeletedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 13);
+export const ChatMessageDeletedPropertiesSchema: GenMessage<ChatMessageDeletedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 13)
 
 /**
  * @generated from message common.events.v1.ChatMessageEditedProperties
  */
-export type ChatMessageEditedProperties = Message<"common.events.v1.ChatMessageEditedProperties"> & {
+export type ChatMessageEditedProperties = Message<'common.events.v1.ChatMessageEditedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageEditedProperties.
  * Use `create(ChatMessageEditedPropertiesSchema)` to create a new message.
  */
-export const ChatMessageEditedPropertiesSchema: GenMessage<ChatMessageEditedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 14);
+export const ChatMessageEditedPropertiesSchema: GenMessage<ChatMessageEditedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 14)
 
 /**
  * @generated from message common.events.v1.ChatMessagePinnedProperties
  */
-export type ChatMessagePinnedProperties = Message<"common.events.v1.ChatMessagePinnedProperties"> & {
+export type ChatMessagePinnedProperties = Message<'common.events.v1.ChatMessagePinnedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessagePinnedProperties.
  * Use `create(ChatMessagePinnedPropertiesSchema)` to create a new message.
  */
-export const ChatMessagePinnedPropertiesSchema: GenMessage<ChatMessagePinnedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 15);
+export const ChatMessagePinnedPropertiesSchema: GenMessage<ChatMessagePinnedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 15)
 
 /**
  * @generated from message common.events.v1.ChatMessageUnpinnedProperties
  */
-export type ChatMessageUnpinnedProperties = Message<"common.events.v1.ChatMessageUnpinnedProperties"> & {
+export type ChatMessageUnpinnedProperties = Message<'common.events.v1.ChatMessageUnpinnedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string conversation_type = 3;
    */
-  conversationType: string;
+  conversationType: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatMessageUnpinnedProperties.
  * Use `create(ChatMessageUnpinnedPropertiesSchema)` to create a new message.
  */
-export const ChatMessageUnpinnedPropertiesSchema: GenMessage<ChatMessageUnpinnedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 16);
+export const ChatMessageUnpinnedPropertiesSchema: GenMessage<ChatMessageUnpinnedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 16)
 
 /**
  * @generated from message common.events.v1.ChatTypingStartedProperties
  */
-export type ChatTypingStartedProperties = Message<"common.events.v1.ChatTypingStartedProperties"> & {
+export type ChatTypingStartedProperties = Message<'common.events.v1.ChatTypingStartedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
-};
+  conversationType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatTypingStartedProperties.
  * Use `create(ChatTypingStartedPropertiesSchema)` to create a new message.
  */
-export const ChatTypingStartedPropertiesSchema: GenMessage<ChatTypingStartedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 17);
+export const ChatTypingStartedPropertiesSchema: GenMessage<ChatTypingStartedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 17)
 
 /**
  * @generated from message common.events.v1.ChatTypingStoppedProperties
  */
-export type ChatTypingStoppedProperties = Message<"common.events.v1.ChatTypingStoppedProperties"> & {
+export type ChatTypingStoppedProperties = Message<'common.events.v1.ChatTypingStoppedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string conversation_type = 2;
    */
-  conversationType: string;
-};
+  conversationType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatTypingStoppedProperties.
  * Use `create(ChatTypingStoppedPropertiesSchema)` to create a new message.
  */
-export const ChatTypingStoppedPropertiesSchema: GenMessage<ChatTypingStoppedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 18);
+export const ChatTypingStoppedPropertiesSchema: GenMessage<ChatTypingStoppedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 18)
 
 /**
  * @generated from message common.events.v1.ChatAttachmentUploadedProperties
  */
-export type ChatAttachmentUploadedProperties = Message<"common.events.v1.ChatAttachmentUploadedProperties"> & {
+export type ChatAttachmentUploadedProperties = Message<'common.events.v1.ChatAttachmentUploadedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string attachment_id = 3;
    */
-  attachmentId: string;
+  attachmentId: string
 
   /**
    * @generated from field: string attachment_type = 4;
    */
-  attachmentType: string;
+  attachmentType: string
 
   /**
    * @generated from field: int64 size_bytes = 5;
    */
-  sizeBytes: bigint;
+  sizeBytes: bigint
 
   /**
    * @generated from field: string thread_id = 6;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatAttachmentUploadedProperties.
  * Use `create(ChatAttachmentUploadedPropertiesSchema)` to create a new message.
  */
-export const ChatAttachmentUploadedPropertiesSchema: GenMessage<ChatAttachmentUploadedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 19);
+export const ChatAttachmentUploadedPropertiesSchema: GenMessage<ChatAttachmentUploadedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 19)
 
 /**
  * @generated from message common.events.v1.ChatAttachmentDownloadedProperties
  */
-export type ChatAttachmentDownloadedProperties = Message<"common.events.v1.ChatAttachmentDownloadedProperties"> & {
+export type ChatAttachmentDownloadedProperties = Message<'common.events.v1.ChatAttachmentDownloadedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string attachment_id = 3;
    */
-  attachmentId: string;
+  attachmentId: string
 
   /**
    * @generated from field: string attachment_type = 4;
    */
-  attachmentType: string;
+  attachmentType: string
 
   /**
    * @generated from field: int64 size_bytes = 5;
    */
-  sizeBytes: bigint;
+  sizeBytes: bigint
 
   /**
    * @generated from field: string thread_id = 6;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatAttachmentDownloadedProperties.
  * Use `create(ChatAttachmentDownloadedPropertiesSchema)` to create a new message.
  */
-export const ChatAttachmentDownloadedPropertiesSchema: GenMessage<ChatAttachmentDownloadedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 20);
+export const ChatAttachmentDownloadedPropertiesSchema: GenMessage<ChatAttachmentDownloadedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 20)
 
 /**
  * @generated from message common.events.v1.ChatCallStartedProperties
  */
-export type ChatCallStartedProperties = Message<"common.events.v1.ChatCallStartedProperties"> & {
+export type ChatCallStartedProperties = Message<'common.events.v1.ChatCallStartedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string call_id = 2;
    */
-  callId: string;
+  callId: string
 
   /**
    * @generated from field: string call_type = 3;
    */
-  callType: string;
-};
+  callType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatCallStartedProperties.
  * Use `create(ChatCallStartedPropertiesSchema)` to create a new message.
  */
-export const ChatCallStartedPropertiesSchema: GenMessage<ChatCallStartedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 21);
+export const ChatCallStartedPropertiesSchema: GenMessage<ChatCallStartedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 21)
 
 /**
  * @generated from message common.events.v1.ChatCallJoinedProperties
  */
-export type ChatCallJoinedProperties = Message<"common.events.v1.ChatCallJoinedProperties"> & {
+export type ChatCallJoinedProperties = Message<'common.events.v1.ChatCallJoinedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string call_id = 2;
    */
-  callId: string;
+  callId: string
 
   /**
    * @generated from field: string call_type = 3;
    */
-  callType: string;
-};
+  callType: string
+}
 
 /**
  * Describes the message common.events.v1.ChatCallJoinedProperties.
  * Use `create(ChatCallJoinedPropertiesSchema)` to create a new message.
  */
-export const ChatCallJoinedPropertiesSchema: GenMessage<ChatCallJoinedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 22);
+export const ChatCallJoinedPropertiesSchema: GenMessage<ChatCallJoinedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 22)
 
 /**
  * @generated from message common.events.v1.ChatCallLeftProperties
  */
-export type ChatCallLeftProperties = Message<"common.events.v1.ChatCallLeftProperties"> & {
+export type ChatCallLeftProperties = Message<'common.events.v1.ChatCallLeftProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string call_id = 2;
    */
-  callId: string;
+  callId: string
 
   /**
    * @generated from field: string call_type = 3;
    */
-  callType: string;
+  callType: string
 
   /**
    * @generated from field: google.protobuf.Duration duration = 4;
    */
-  duration?: Duration | undefined;
-};
+  duration?: Duration | undefined
+}
 
 /**
  * Describes the message common.events.v1.ChatCallLeftProperties.
  * Use `create(ChatCallLeftPropertiesSchema)` to create a new message.
  */
-export const ChatCallLeftPropertiesSchema: GenMessage<ChatCallLeftProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 23);
+export const ChatCallLeftPropertiesSchema: GenMessage<ChatCallLeftProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 23)
 
 /**
  * @generated from message common.events.v1.ChatCallScreenSharedProperties
  */
-export type ChatCallScreenSharedProperties = Message<"common.events.v1.ChatCallScreenSharedProperties"> & {
+export type ChatCallScreenSharedProperties = Message<'common.events.v1.ChatCallScreenSharedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string call_id = 2;
    */
-  callId: string;
-};
+  callId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatCallScreenSharedProperties.
  * Use `create(ChatCallScreenSharedPropertiesSchema)` to create a new message.
  */
-export const ChatCallScreenSharedPropertiesSchema: GenMessage<ChatCallScreenSharedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 24);
+export const ChatCallScreenSharedPropertiesSchema: GenMessage<ChatCallScreenSharedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 24)
 
 /**
  * @generated from message common.events.v1.ChatCallRecordingStartedProperties
  */
-export type ChatCallRecordingStartedProperties = Message<"common.events.v1.ChatCallRecordingStartedProperties"> & {
+export type ChatCallRecordingStartedProperties = Message<'common.events.v1.ChatCallRecordingStartedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string call_id = 2;
    */
-  callId: string;
-};
+  callId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatCallRecordingStartedProperties.
  * Use `create(ChatCallRecordingStartedPropertiesSchema)` to create a new message.
  */
-export const ChatCallRecordingStartedPropertiesSchema: GenMessage<ChatCallRecordingStartedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 25);
+export const ChatCallRecordingStartedPropertiesSchema: GenMessage<ChatCallRecordingStartedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 25)
 
 /**
  * mute_duration is optional — populate when the mute is time-bounded
@@ -819,48 +849,50 @@ export const ChatCallRecordingStartedPropertiesSchema: GenMessage<ChatCallRecord
  *
  * @generated from message common.events.v1.ChatMemberMutedProperties
  */
-export type ChatMemberMutedProperties = Message<"common.events.v1.ChatMemberMutedProperties"> & {
+export type ChatMemberMutedProperties = Message<'common.events.v1.ChatMemberMutedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string member_id = 2;
    */
-  memberId: string;
+  memberId: string
 
   /**
    * @generated from field: google.protobuf.Duration mute_duration = 3;
    */
-  muteDuration?: Duration | undefined;
-};
+  muteDuration?: Duration | undefined
+}
 
 /**
  * Describes the message common.events.v1.ChatMemberMutedProperties.
  * Use `create(ChatMemberMutedPropertiesSchema)` to create a new message.
  */
-export const ChatMemberMutedPropertiesSchema: GenMessage<ChatMemberMutedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 26);
+export const ChatMemberMutedPropertiesSchema: GenMessage<ChatMemberMutedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 26)
 
 /**
  * User-level block (not conversation-scoped), so no conversation_id.
  *
  * @generated from message common.events.v1.ChatUserBlockedProperties
  */
-export type ChatUserBlockedProperties = Message<"common.events.v1.ChatUserBlockedProperties"> & {
+export type ChatUserBlockedProperties = Message<'common.events.v1.ChatUserBlockedProperties'> & {
   /**
    * @generated from field: string user_id = 1;
    */
-  userId: string;
-};
+  userId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatUserBlockedProperties.
  * Use `create(ChatUserBlockedPropertiesSchema)` to create a new message.
  */
-export const ChatUserBlockedPropertiesSchema: GenMessage<ChatUserBlockedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 27);
+export const ChatUserBlockedPropertiesSchema: GenMessage<ChatUserBlockedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 27)
 
 /**
  * `reaction` is the literal reaction value (emoji, shortcode, sticker id),
@@ -869,34 +901,35 @@ export const ChatUserBlockedPropertiesSchema: GenMessage<ChatUserBlockedProperti
  *
  * @generated from message common.events.v1.ChatReactionAddedProperties
  */
-export type ChatReactionAddedProperties = Message<"common.events.v1.ChatReactionAddedProperties"> & {
+export type ChatReactionAddedProperties = Message<'common.events.v1.ChatReactionAddedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string reaction = 3;
    */
-  reaction: string;
+  reaction: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatReactionAddedProperties.
  * Use `create(ChatReactionAddedPropertiesSchema)` to create a new message.
  */
-export const ChatReactionAddedPropertiesSchema: GenMessage<ChatReactionAddedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 28);
+export const ChatReactionAddedPropertiesSchema: GenMessage<ChatReactionAddedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 28)
 
 /**
  * `reaction` is the literal reaction value (emoji, shortcode, sticker id),
@@ -904,32 +937,32 @@ export const ChatReactionAddedPropertiesSchema: GenMessage<ChatReactionAddedProp
  *
  * @generated from message common.events.v1.ChatReactionRemovedProperties
  */
-export type ChatReactionRemovedProperties = Message<"common.events.v1.ChatReactionRemovedProperties"> & {
+export type ChatReactionRemovedProperties = Message<'common.events.v1.ChatReactionRemovedProperties'> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string;
+  conversationId: string
 
   /**
    * @generated from field: string message_id = 2;
    */
-  messageId: string;
+  messageId: string
 
   /**
    * @generated from field: string reaction = 3;
    */
-  reaction: string;
+  reaction: string
 
   /**
    * @generated from field: string thread_id = 4;
    */
-  threadId: string;
-};
+  threadId: string
+}
 
 /**
  * Describes the message common.events.v1.ChatReactionRemovedProperties.
  * Use `create(ChatReactionRemovedPropertiesSchema)` to create a new message.
  */
-export const ChatReactionRemovedPropertiesSchema: GenMessage<ChatReactionRemovedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_chat_events, 29);
-
+export const ChatReactionRemovedPropertiesSchema: GenMessage<ChatReactionRemovedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_chat_events, 29)

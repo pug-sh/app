@@ -7,12 +7,14 @@ import { OrgEmailProvidersService } from './genproto/dashboard/orgemailproviders
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectsService } from './genproto/dashboard/projects/v1/projects_pb'
 import { AuthService } from './genproto/public/auth/v1/auth_pb'
+import { SharedDashboardsService } from './genproto/public/dashboards/v1/dashboards_pb'
 import { ActivityService } from './genproto/shared/activity/v1/activity_pb'
 import { InsightsService } from './genproto/shared/insights/v1/insights_pb'
 import { ProfilesService } from './genproto/shared/profiles/v1/profiles_pb'
 
-// Public
+// Public (unauthenticated)
 export const authRPCAtom = atom(get => createClient(AuthService, get(transportAtom)))
+export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboardsService, get(transportAtom)))
 
 // Dashboard — org-scoped (JWT auth)
 export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))

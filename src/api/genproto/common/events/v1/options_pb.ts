@@ -2,16 +2,20 @@
 // @generated from file common/events/v1/options.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenEnum, GenExtension, GenFile } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, extDesc, fileDesc } from "@bufbuild/protobuf/codegenv2";
-import type { FieldOptions, MessageOptions } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_descriptor } from "@bufbuild/protobuf/wkt";
+import type { GenEnum, GenExtension, GenFile } from '@bufbuild/protobuf/codegenv2'
+import { enumDesc, extDesc, fileDesc } from '@bufbuild/protobuf/codegenv2'
+import type { FieldOptions, MessageOptions } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_descriptor } from '@bufbuild/protobuf/wkt'
 
 /**
  * Describes the file common/events/v1/options.proto.
  */
-export const file_common_events_v1_options: GenFile = /*@__PURE__*/
-  fileDesc("Ch5jb21tb24vZXZlbnRzL3YxL29wdGlvbnMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEqiQEKCFBsYXRmb3JtEhgKFFBMQVRGT1JNX1VOU1BFQ0lGSUVEEAASEAoMUExBVEZPUk1fV0VCEAESEAoMUExBVEZPUk1fSU9TEAISFAoQUExBVEZPUk1fQU5EUk9JRBADEhQKEFBMQVRGT1JNX0RFU0tUT1AQBBITCg9QTEFURk9STV9TRVJWRVIQBTo1CgRraW5kEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNCGAyABKAlSBGtpbmQ6MQoDcGlpEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjRhgMgASgIUgNwaWk6WwoJcGxhdGZvcm1zEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNKGAyADKA4yGi5jb21tb24uZXZlbnRzLnYxLlBsYXRmb3JtUglwbGF0Zm9ybXNCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_google_protobuf_descriptor]);
+export const file_common_events_v1_options: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Ch5jb21tb24vZXZlbnRzL3YxL29wdGlvbnMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEqiQEKCFBsYXRmb3JtEhgKFFBMQVRGT1JNX1VOU1BFQ0lGSUVEEAASEAoMUExBVEZPUk1fV0VCEAESEAoMUExBVEZPUk1fSU9TEAISFAoQUExBVEZPUk1fQU5EUk9JRBADEhQKEFBMQVRGT1JNX0RFU0tUT1AQBBITCg9QTEFURk9STV9TRVJWRVIQBTo1CgRraW5kEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNCGAyABKAlSBGtpbmQ6MQoDcGlpEh0uZ29vZ2xlLnByb3RvYnVmLkZpZWxkT3B0aW9ucxjRhgMgASgIUgNwaWk6WwoJcGxhdGZvcm1zEh8uZ29vZ2xlLnByb3RvYnVmLk1lc3NhZ2VPcHRpb25zGNKGAyADKA4yGi5jb21tb24uZXZlbnRzLnYxLlBsYXRmb3JtUglwbGF0Zm9ybXNCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
+    [file_google_protobuf_descriptor],
+  )
 
 /**
  * Platform identifies the client/runtime an event is intended for.
@@ -74,24 +78,21 @@ export enum Platform {
 /**
  * Describes the enum common.events.v1.Platform.
  */
-export const PlatformSchema: GenEnum<Platform> = /*@__PURE__*/
-  enumDesc(file_common_events_v1_options, 0);
+export const PlatformSchema: GenEnum<Platform> = /*@__PURE__*/ enumDesc(file_common_events_v1_options, 0)
 
 /**
  * @generated from extension: string kind = 50000;
  */
-export const kind: GenExtension<MessageOptions, string> = /*@__PURE__*/
-  extDesc(file_common_events_v1_options, 0);
+export const kind: GenExtension<MessageOptions, string> = /*@__PURE__*/ extDesc(file_common_events_v1_options, 0)
 
 /**
  * @generated from extension: bool pii = 50001;
  */
-export const pii: GenExtension<FieldOptions, boolean> = /*@__PURE__*/
-  extDesc(file_common_events_v1_options, 1);
+export const pii: GenExtension<FieldOptions, boolean> = /*@__PURE__*/ extDesc(file_common_events_v1_options, 1)
 
 /**
  * @generated from extension: repeated common.events.v1.Platform platforms = 50002;
  */
-export const platforms: GenExtension<MessageOptions, Platform[]> = /*@__PURE__*/
-  extDesc(file_common_events_v1_options, 2);
-
+export const platforms: GenExtension<MessageOptions, Platform[]> =
+  /*@__PURE__*/
+  extDesc(file_common_events_v1_options, 2)

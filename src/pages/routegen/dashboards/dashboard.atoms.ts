@@ -1,7 +1,10 @@
 import { create } from '@bufbuild/protobuf'
 import { atom } from 'jotai'
 import type { Dashboard, DashboardsServiceUpsertRequest } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { DashboardsServiceDeleteRequestSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  DashboardsServiceDeleteRequestSchema,
+  DashboardsServiceUpdateRequestSchema,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { dashboardsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 
@@ -74,6 +77,32 @@ export const fetchDashboardAtom = atom(null, async (get, _set, id: string) => {
   const resp = await dashboardsRPC.get({ id }, { headers })
   return resp.dashboard ?? null
 })
+
+// Toggle public sharing. The backend mints/clears Dashboard.shareId based on
+// isPublic. Sends the current saved metadata (update overwrites it), never an
+// unsaved draft — the caller passes the server-fetched dashboard.
+export const setDashboardVisibilityAtom = atom(
+  null,
+  async (get, _set, input: { dashboard: Dashboard; isPublic: boolean }) => {
+    const headers = get(projectHeaderAtom)
+    if (!headers) throw new Error('No active project')
+
+    const dashboardsRPC = get(dashboardsRPCAtom)
+    const resp = await dashboardsRPC.update(
+      create(DashboardsServiceUpdateRequestSchema, {
+        id: input.dashboard.id,
+        displayName: input.dashboard.displayName,
+        description: input.dashboard.description,
+        defaultTimeRange: input.dashboard.defaultTimeRange,
+        defaultGranularity: input.dashboard.defaultGranularity,
+        isPublic: input.isPublic,
+      }),
+      { headers },
+    )
+    if (!resp.dashboard) throw new Error('Update returned no dashboard')
+    return resp.dashboard
+  },
+)
 
 export const upsertDashboardAtom = atom(null, async (get, _set, input: DashboardsServiceUpsertRequest) => {
   const headers = get(projectHeaderAtom)

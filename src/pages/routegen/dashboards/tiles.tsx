@@ -29,7 +29,7 @@ type TileContentProps = {
   onPatch?: (patch: Partial<DashboardTile>) => void
 }
 
-const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
+export const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
@@ -63,7 +63,7 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
   )
 }
 
-const DashboardMarkdownTile = ({ tile, editing, onPatch }: TileContentProps) => {
+export const DashboardMarkdownTile = ({ tile, editing, onPatch }: TileContentProps) => {
   if (tile.content.case !== 'markdown') return null
 
   const html = sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(tile.content.value.body)))

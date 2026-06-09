@@ -2,18 +2,22 @@
 // @generated from file common/v1/property_value.proto (package common.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../buf/validate/validate_pb'
 
 /**
  * Describes the file common/v1/property_value.proto.
  */
-export const file_common_v1_property_value: GenFile = /*@__PURE__*/
-  fileDesc("Ch5jb21tb24vdjEvcHJvcGVydHlfdmFsdWUucHJvdG8SCWNvbW1vbi52MSLEAQoNUHJvcGVydHlWYWx1ZRIgCgxzdHJpbmdfdmFsdWUYASABKAlCCLpIBXIDGIAISAASEwoJaW50X3ZhbHVlGAIgASgDSAASHwoMZG91YmxlX3ZhbHVlGAMgASgBQge6SAQSAkABSAASFAoKYm9vbF92YWx1ZRgEIAEoCEgAEjUKD3RpbWVzdGFtcF92YWx1ZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAEIOCgV2YWx1ZRIFukgCCAFCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp]);
+export const file_common_v1_property_value: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Ch5jb21tb24vdjEvcHJvcGVydHlfdmFsdWUucHJvdG8SCWNvbW1vbi52MSLEAQoNUHJvcGVydHlWYWx1ZRIgCgxzdHJpbmdfdmFsdWUYASABKAlCCLpIBXIDGIAISAASEwoJaW50X3ZhbHVlGAIgASgDSAASHwoMZG91YmxlX3ZhbHVlGAMgASgBQge6SAQSAkABSAASFAoKYm9vbF92YWx1ZRgEIAEoCEgAEjUKD3RpbWVzdGFtcF92YWx1ZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAEIOCgV2YWx1ZRIFukgCCAFCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH',
+    [file_buf_validate_validate, file_google_protobuf_timestamp],
+  )
 
 /**
  * PropertyValue is the typed value of an event property.
@@ -27,65 +31,71 @@ export const file_common_v1_property_value: GenFile = /*@__PURE__*/
  *
  * @generated from message common.v1.PropertyValue
  */
-export type PropertyValue = Message<"common.v1.PropertyValue"> & {
+export type PropertyValue = Message<'common.v1.PropertyValue'> & {
   /**
    * @generated from oneof common.v1.PropertyValue.value
    */
-  value: {
-    /**
-     * Cap property string values at 1024 Unicode codepoints. Large blobs
-     * (logs, raw payloads, serialized JSON) should be hashed or referenced
-     * upstream rather than embedded as a property value. Note: max_len
-     * counts codepoints, not bytes — multi-byte UTF-8 (emoji, CJK) can
-     * exceed 1 KiB on the wire at this limit. Switch to max_bytes if a
-     * hard byte cap is required. Values exceeding the limit are rejected
-     * at the validate interceptor with CodeInvalidArgument (not truncated).
-     *
-     * Empty-string note: the filter expression cannot distinguish a
-     * custom_properties value of "" from an absent key — both project to ''
-     * in propertyExpr (filters.go), so EQUALS '' and IS_NOT_SET match
-     * identically. If the empty case is meaningful, encode it differently
-     * (e.g. a sentinel value) on the producer side.
-     *
-     * @generated from field: string string_value = 1;
-     */
-    value: string;
-    case: "stringValue";
-  } | {
-    /**
-     * @generated from field: int64 int_value = 2;
-     */
-    value: bigint;
-    case: "intValue";
-  } | {
-    /**
-     * @generated from field: double double_value = 3;
-     */
-    value: number;
-    case: "doubleValue";
-  } | {
-    /**
-     * @generated from field: bool bool_value = 4;
-     */
-    value: boolean;
-    case: "boolValue";
-  } | {
-    /**
-     * Stored as a DateTime64(3) Variant slot. Sub-millisecond precision is
-     * truncated by ClickHouse on insert to match the slot's precision; no
-     * Go-side truncation is performed in the worker.
-     *
-     * @generated from field: google.protobuf.Timestamp timestamp_value = 5;
-     */
-    value: Timestamp;
-    case: "timestampValue";
-  } | { case: undefined; value?: undefined };
-};
+  value:
+    | {
+        /**
+         * Cap property string values at 1024 Unicode codepoints. Large blobs
+         * (logs, raw payloads, serialized JSON) should be hashed or referenced
+         * upstream rather than embedded as a property value. Note: max_len
+         * counts codepoints, not bytes — multi-byte UTF-8 (emoji, CJK) can
+         * exceed 1 KiB on the wire at this limit. Switch to max_bytes if a
+         * hard byte cap is required. Values exceeding the limit are rejected
+         * at the validate interceptor with CodeInvalidArgument (not truncated).
+         *
+         * Empty-string note: the filter expression cannot distinguish a
+         * custom_properties value of "" from an absent key — both project to ''
+         * in propertyExpr (filters.go), so EQUALS '' and IS_NOT_SET match
+         * identically. If the empty case is meaningful, encode it differently
+         * (e.g. a sentinel value) on the producer side.
+         *
+         * @generated from field: string string_value = 1;
+         */
+        value: string
+        case: 'stringValue'
+      }
+    | {
+        /**
+         * @generated from field: int64 int_value = 2;
+         */
+        value: bigint
+        case: 'intValue'
+      }
+    | {
+        /**
+         * @generated from field: double double_value = 3;
+         */
+        value: number
+        case: 'doubleValue'
+      }
+    | {
+        /**
+         * @generated from field: bool bool_value = 4;
+         */
+        value: boolean
+        case: 'boolValue'
+      }
+    | {
+        /**
+         * Stored as a DateTime64(3) Variant slot. Sub-millisecond precision is
+         * truncated by ClickHouse on insert to match the slot's precision; no
+         * Go-side truncation is performed in the worker.
+         *
+         * @generated from field: google.protobuf.Timestamp timestamp_value = 5;
+         */
+        value: Timestamp
+        case: 'timestampValue'
+      }
+    | { case: undefined; value?: undefined }
+}
 
 /**
  * Describes the message common.v1.PropertyValue.
  * Use `create(PropertyValueSchema)` to create a new message.
  */
-export const PropertyValueSchema: GenMessage<PropertyValue> = /*@__PURE__*/
-  messageDesc(file_common_v1_property_value, 0);
-
+export const PropertyValueSchema: GenMessage<PropertyValue> =
+  /*@__PURE__*/
+  messageDesc(file_common_v1_property_value, 0)

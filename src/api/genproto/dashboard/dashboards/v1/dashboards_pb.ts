@@ -2,206 +2,224 @@
 // @generated from file dashboard/dashboards/v1/dashboards.proto (package dashboard.dashboards.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import type { TimeRange, TimeRangePreset } from "../../../common/v1/time_pb";
-import { file_common_v1_time } from "../../../common/v1/time_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Granularity, InsightQuerySpec, QueryResponse } from "../../../shared/insights/v1/insights_pb";
-import { file_shared_insights_v1_insights } from "../../../shared/insights/v1/insights_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenEnum, GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import type { TimeRange, TimeRangePreset } from '../../../common/v1/time_pb'
+import { file_common_v1_time } from '../../../common/v1/time_pb'
+import type { Granularity, InsightQuerySpec, QueryResponse } from '../../../shared/insights/v1/insights_pb'
+import { file_shared_insights_v1_insights } from '../../../shared/insights/v1/insights_pb'
 
 /**
  * Describes the file dashboard/dashboards/v1/dashboards.proto.
  */
-export const file_dashboard_dashboards_v1_dashboards: GenFile = /*@__PURE__*/
-  fileDesc("CihkYXNoYm9hcmQvZGFzaGJvYXJkcy92MS9kYXNoYm9hcmRzLnByb3RvEhdkYXNoYm9hcmQuZGFzaGJvYXJkcy52MSL5AgoJRGFzaGJvYXJkEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi8KC2NyZWF0ZV90aW1lGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoFdGlsZXMYByADKAsyJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlEkAKEmRlZmF1bHRfdGltZV9yYW5nZRgIIAEoDjIaLmNvbW1vbi52MS5UaW1lUmFuZ2VQcmVzZXRCCLpIBYIBAhABEkYKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYCSABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABIvAFCg1EYXNoYm9hcmRUaWxlEgoKAmlkGAEgASgJEhQKDGRhc2hib2FyZF9pZBgCIAEoCRIeCgxkaXNwbGF5X25hbWUYAyABKAlCCLpIBXIDGJYBEh0KC2Rlc2NyaXB0aW9uGAQgASgJQgi6SAVyAxjQDxI+CgdpbnNpZ2h0GAUgASgLMisuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuSW5zaWdodFRpbGVDb250ZW50SAASQAoIbWFya2Rvd24YBiABKAsyLC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5NYXJrZG93blRpbGVDb250ZW50SAASNwoIcG9zaXRpb24YDyABKAsyJS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5HcmlkUG9zaXRpb24SLwoLY3JlYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3VwZGF0ZV90aW1lGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJLCgl2aWV3X21vZGUYCiABKA4yLi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlVmlld01vZGVCCLpIBYIBAhABEkEKB2NvbXBhcmUYCyABKA4yJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5Db21wYXJlUGVyaW9kQgi6SAWCAQIQARJECgp0aHJlc2hvbGRzGAwgAygLMiYuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGhyZXNob2xkUnVsZUIIukgFkgECEAUSMwoGaGVhZGVyGA0gASgLMiMuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGlsZUhlYWRlchJECg12aXN1YWxpemF0aW9uGA4gASgLMi0uZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVmlzdWFsaXphdGlvbk9wdGlvbnNCEAoHY29udGVudBIFukgCCAEiUAoSSW5zaWdodFRpbGVDb250ZW50EjoKBHNwZWMYASABKAsyJC5zaGFyZWQuaW5zaWdodHMudjEuSW5zaWdodFF1ZXJ5U3BlY0IGukgDyAEBIjAKE01hcmtkb3duVGlsZUNvbnRlbnQSGQoEYm9keRgBIAEoCUILukgIcgYQARigjQYiggMKDVRocmVzaG9sZFJ1bGUSUAoIb3BlcmF0b3IYASABKA4yLy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaHJlc2hvbGRSdWxlLk9wZXJhdG9yQg26SArIAQGCAQQQASAAEg0KBXZhbHVlGAIgASgBEkgKBHRvbmUYAyABKA4yKy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaHJlc2hvbGRSdWxlLlRvbmVCDbpICsgBAYIBBBABIAAiagoIT3BlcmF0b3ISGAoUT1BFUkFUT1JfVU5TUEVDSUZJRUQQABIPCgtPUEVSQVRPUl9MVBABEhAKDE9QRVJBVE9SX0xURRACEg8KC09QRVJBVE9SX0dUEAMSEAoMT1BFUkFUT1JfR1RFEAQiWgoEVG9uZRIUChBUT05FX1VOU1BFQ0lGSUVEEAASDQoJVE9ORV9HT09EEAESDQoJVE9ORV9XQVJOEAISDAoIVE9ORV9CQUQQAxIQCgxUT05FX05FVVRSQUwQBCKRAQoKVGlsZUhlYWRlchIVCgRpY29uGAEgASgJQge6SARyAhgIEkQKDGFjY2VudF9jb2xvchgCIAEoCUIuukgrcilSAFIEYmx1ZVIFZ3JlZW5SA3JlZFIFYW1iZXJSBnB1cnBsZVIEZ3JheRISCgpoaWRlX3RpdGxlGAMgASgIEhIKCmJvcmRlcmxlc3MYBCABKAgigwQKFFZpc3VhbGl6YXRpb25PcHRpb25zEloKDXlfYXhpc19mb3JtYXQYASABKA4yOS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5WaXN1YWxpemF0aW9uT3B0aW9ucy5ZQXhpc0Zvcm1hdEIIukgFggECEAESEQoJbG9nX3NjYWxlGAIgASgIEhMKC2hpZGVfbGVnZW5kGAMgASgIEhUKDXplcm9fYmFzZWxpbmUYBCABKAgSFgoOaGlkZV9zcGFya2xpbmUYBSABKAgimwEKC1lBeGlzRm9ybWF0Eh0KGVlfQVhJU19GT1JNQVRfVU5TUEVDSUZJRUQQABIYChRZX0FYSVNfRk9STUFUX05VTUJFUhABEhkKFVlfQVhJU19GT1JNQVRfUEVSQ0VOVBACEh0KGVlfQVhJU19GT1JNQVRfRFVSQVRJT05fTVMQAxIZChVZX0FYSVNfRk9STUFUX0NPTVBBQ1QQBDqZAbpIlQEakgEKNnZpc3VhbGl6YXRpb25fb3B0aW9ucy5sb2dfc2NhbGVfZXhjbHVkZXNfemVyb19iYXNlbGluZRIvbG9nX3NjYWxlIGNhbm5vdCBiZSBjb21iaW5lZCB3aXRoIHplcm9fYmFzZWxpbmUaJyEodGhpcy5sb2dfc2NhbGUgJiYgdGhpcy56ZXJvX2Jhc2VsaW5lKSLPAQoMR3JpZFBvc2l0aW9uEhIKAXgYASABKAVCB7pIBBoCKAASEgoBeRgCIAEoBUIHukgEGgIoABIUCgF3GAMgASgFQgm6SAYaBBhIKAESFQoBaBgEIAEoBUIKukgHGgUYoAYoATpqukhnGmUKFmdyaWRfcG9zaXRpb24uY29tcGxldGUSL3Bvc2l0aW9uIHJlcXVpcmVzIGJvdGggdyAoMS4uNzIpIGFuZCBoICgxLi44MDApGhpoYXModGhpcy53KSAmJiBoYXModGhpcy5oKSLsAQoeRGFzaGJvYXJkc1NlcnZpY2VDcmVhdGVSZXF1ZXN0EiEKDGRpc3BsYXlfbmFtZRgBIAEoCUILukgIyAEBcgMYlgESHQoLZGVzY3JpcHRpb24YAiABKAlCCLpIBXIDGNAPEkAKEmRlZmF1bHRfdGltZV9yYW5nZRgDIAEoDjIaLmNvbW1vbi52MS5UaW1lUmFuZ2VQcmVzZXRCCLpIBYIBAhABEkYKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYBCABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABIlgKH0Rhc2hib2FyZHNTZXJ2aWNlQ3JlYXRlUmVzcG9uc2USNQoJZGFzaGJvYXJkGAEgASgLMiIuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkIjQKHkRhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVxdWVzdBISCgJpZBgBIAEoCUIGukgDyAEBIiEKH0Rhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVzcG9uc2UiMQobRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiVQocRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXNwb25zZRI1CglkYXNoYm9hcmQYASABKAsyIi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmQiHgocRGFzaGJvYXJkc1NlcnZpY2VMaXN0UmVxdWVzdCJXCh1EYXNoYm9hcmRzU2VydmljZUxpc3RSZXNwb25zZRI2CgpkYXNoYm9hcmRzGAEgAygLMiIuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkIoACCh5EYXNoYm9hcmRzU2VydmljZVVwZGF0ZVJlcXVlc3QSEgoCaWQYASABKAlCBrpIA8gBARIhCgxkaXNwbGF5X25hbWUYAiABKAlCC7pICMgBAXIDGJYBEh0KC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQDxJAChJkZWZhdWx0X3RpbWVfcmFuZ2UYBCABKA4yGi5jb21tb24udjEuVGltZVJhbmdlUHJlc2V0Qgi6SAWCAQIQARJGChNkZWZhdWx0X2dyYW51bGFyaXR5GAUgASgOMh8uc2hhcmVkLmluc2lnaHRzLnYxLkdyYW51bGFyaXR5Qgi6SAWCAQIQASJYCh9EYXNoYm9hcmRzU2VydmljZVVwZGF0ZVJlc3BvbnNlEjUKCWRhc2hib2FyZBgBIAEoCzIiLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZCLGAgoeRGFzaGJvYXJkc1NlcnZpY2VVcHNlcnRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQESIQoMZGlzcGxheV9uYW1lGAIgASgJQgu6SAjIAQFyAxiWARIdCgtkZXNjcmlwdGlvbhgDIAEoCUIIukgFcgMY0A8SQAoSZGVmYXVsdF90aW1lX3JhbmdlGAQgASgOMhouY29tbW9uLnYxLlRpbWVSYW5nZVByZXNldEIIukgFggECEAESRgoTZGVmYXVsdF9ncmFudWxhcml0eRgFIAEoDjIfLnNoYXJlZC5pbnNpZ2h0cy52MS5HcmFudWxhcml0eUIIukgFggECEAESRAoFdGlsZXMYBiADKAsyKy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlSW5wdXRCCLpIBZIBAhBkIv0EChJEYXNoYm9hcmRUaWxlSW5wdXQSCgoCaWQYASABKAkSHgoMZGlzcGxheV9uYW1lGAIgASgJQgi6SAVyAxiWARIdCgtkZXNjcmlwdGlvbhgDIAEoCUIIukgFcgMY0A8SPgoHaW5zaWdodBgEIAEoCzIrLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkluc2lnaHRUaWxlQ29udGVudEgAEkAKCG1hcmtkb3duGAUgASgLMiwuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuTWFya2Rvd25UaWxlQ29udGVudEgAEjcKCHBvc2l0aW9uGAwgASgLMiUuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuR3JpZFBvc2l0aW9uEksKCXZpZXdfbW9kZRgHIAEoDjIuLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZFRpbGVWaWV3TW9kZUIIukgFggECEAESQQoHY29tcGFyZRgIIAEoDjImLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkNvbXBhcmVQZXJpb2RCCLpIBYIBAhABEkQKCnRocmVzaG9sZHMYCSADKAsyJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaHJlc2hvbGRSdWxlQgi6SAWSAQIQBRIzCgZoZWFkZXIYCiABKAsyIy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaWxlSGVhZGVyEkQKDXZpc3VhbGl6YXRpb24YCyABKAsyLS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5WaXN1YWxpemF0aW9uT3B0aW9uc0IQCgdjb250ZW50EgW6SAIIASJYCh9EYXNoYm9hcmRzU2VydmljZVVwc2VydFJlc3BvbnNlEjUKCWRhc2hib2FyZBgBIAEoCzIiLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZCLaAgomRGFzaGJvYXJkc1NlcnZpY2VRdWVyeURhc2hib2FyZFJlcXVlc3QSHAoMZGFzaGJvYXJkX2lkGAEgASgJQga6SAPIAQESKAoKdGltZV9yYW5nZRgCIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPgoLZ3JhbnVsYXJpdHkYAyABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABOqcBukijARqgAQoxcXVlcnlfZGFzaGJvYXJkX3JlcXVlc3QudmFsaWRfdGltZV9yYW5nZV9vdmVycmlkZRIndGltZV9yYW5nZSBvdmVycmlkZSBtdXN0IGhhdmUgZnJvbSA8IHRvGkIhaGFzKHRoaXMudGltZV9yYW5nZSkgfHwgdGhpcy50aW1lX3JhbmdlLmZyb20gPCB0aGlzLnRpbWVfcmFuZ2UudG8ihAQKDFJlbmRlcmVkVGlsZRI8CgR0aWxlGAEgASgLMiYuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkVGlsZUIGukgDyAEBEjMKBnJlc3VsdBgCIAEoCzIhLnNoYXJlZC5pbnNpZ2h0cy52MS5RdWVyeVJlc3BvbnNlSAASIAoNZXJyb3JfbWVzc2FnZRgDIAEoCUIHukgEcgIQAUgAOtMCukjPAhqiAQomcmVuZGVyZWRfdGlsZS5pbnNpZ2h0X3JlcXVpcmVzX291dGNvbWUSMGluc2lnaHQgdGlsZSBtdXN0IGhhdmUgYSByZXN1bHQgb3IgZXJyb3JfbWVzc2FnZRpGIWhhcyh0aGlzLnRpbGUuaW5zaWdodCkgfHwgaGFzKHRoaXMucmVzdWx0KSB8fCBoYXModGhpcy5lcnJvcl9tZXNzYWdlKRqnAQohcmVuZGVyZWRfdGlsZS5tYXJrZG93bl9ub19vdXRjb21lEjVtYXJrZG93biB0aWxlIG11c3Qgbm90IGhhdmUgYSByZXN1bHQgb3IgZXJyb3JfbWVzc2FnZRpLIWhhcyh0aGlzLnRpbGUubWFya2Rvd24pIHx8ICghaGFzKHRoaXMucmVzdWx0KSAmJiAhaGFzKHRoaXMuZXJyb3JfbWVzc2FnZSkpQgkKB291dGNvbWUi2AIKEVJlbmRlcmVkRGFzaGJvYXJkEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI2ChJkZWZhdWx0X3RpbWVfcmFuZ2UYBCABKA4yGi5jb21tb24udjEuVGltZVJhbmdlUHJlc2V0EjwKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYBSABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHkSLwoLY3JlYXRlX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3VwZGF0ZV90aW1lGAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBI0CgV0aWxlcxgIIAMoCzIlLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLlJlbmRlcmVkVGlsZSJoCidEYXNoYm9hcmRzU2VydmljZVF1ZXJ5RGFzaGJvYXJkUmVzcG9uc2USPQoJZGFzaGJvYXJkGAEgASgLMiouZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuUmVuZGVyZWREYXNoYm9hcmQqxgIKFURhc2hib2FyZFRpbGVWaWV3TW9kZRIoCiREQVNIQk9BUkRfVElMRV9WSUVXX01PREVfVU5TUEVDSUZJRUQQABIhCh1EQVNIQk9BUkRfVElMRV9WSUVXX01PREVfTElORRABEiEKHURBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9BUkVBEAISKAokREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX0JBUl9HUk9VUEVEEAMSKAokREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX0JBUl9TVEFDS0VEEAQSIgoeREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX1RBQkxFEAUSIAocREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX0tQSRAGEiMKH0RBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9TQU5LRVkQBypJCg1Db21wYXJlUGVyaW9kEh4KGkNPTVBBUkVfUEVSSU9EX1VOU1BFQ0lGSUVEEAASGAoUQ09NUEFSRV9QRVJJT0RfUFJJT1IQATKWBwoRRGFzaGJvYXJkc1NlcnZpY2USfQoGQ3JlYXRlEjcuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VDcmVhdGVSZXF1ZXN0GjguZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VDcmVhdGVSZXNwb25zZSIAEn0KBkRlbGV0ZRI3LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVxdWVzdBo4LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVzcG9uc2UiABJ0CgNHZXQSNC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZUdldFJlcXVlc3QaNS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZUdldFJlc3BvbnNlIgASdwoETGlzdBI1LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlTGlzdFJlcXVlc3QaNi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZUxpc3RSZXNwb25zZSIAEn0KBlVwZGF0ZRI3LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlVXBkYXRlUmVxdWVzdBo4LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlVXBkYXRlUmVzcG9uc2UiABJ9CgZVcHNlcnQSNy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZVVwc2VydFJlcXVlc3QaOC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZVVwc2VydFJlc3BvbnNlIgASlQEKDlF1ZXJ5RGFzaGJvYXJkEj8uZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VRdWVyeURhc2hib2FyZFJlcXVlc3QaQC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZVF1ZXJ5RGFzaGJvYXJkUmVzcG9uc2UiAEJPWk1naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9kYXNoYm9hcmRzL3YxO2Rhc2hib2FyZHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_time, file_google_protobuf_timestamp, file_shared_insights_v1_insights]);
+export const file_dashboard_dashboards_v1_dashboards: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CihkYXNoYm9hcmQvZGFzaGJvYXJkcy92MS9kYXNoYm9hcmRzLnByb3RvEhdkYXNoYm9hcmQuZGFzaGJvYXJkcy52MSKLAwoJRGFzaGJvYXJkEgoKAmlkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSFAoMZGlzcGxheV9uYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi8KC2NyZWF0ZV90aW1lGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNQoFdGlsZXMYByADKAsyJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlEkAKEmRlZmF1bHRfdGltZV9yYW5nZRgIIAEoDjIaLmNvbW1vbi52MS5UaW1lUmFuZ2VQcmVzZXRCCLpIBYIBAhABEkYKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYCSABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABEhAKCHNoYXJlX2lkGAogASgJIvAFCg1EYXNoYm9hcmRUaWxlEgoKAmlkGAEgASgJEhQKDGRhc2hib2FyZF9pZBgCIAEoCRIeCgxkaXNwbGF5X25hbWUYAyABKAlCCLpIBXIDGJYBEh0KC2Rlc2NyaXB0aW9uGAQgASgJQgi6SAVyAxjQDxI+CgdpbnNpZ2h0GAUgASgLMisuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuSW5zaWdodFRpbGVDb250ZW50SAASQAoIbWFya2Rvd24YBiABKAsyLC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5NYXJrZG93blRpbGVDb250ZW50SAASNwoIcG9zaXRpb24YDyABKAsyJS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5HcmlkUG9zaXRpb24SLwoLY3JlYXRlX3RpbWUYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi8KC3VwZGF0ZV90aW1lGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJLCgl2aWV3X21vZGUYCiABKA4yLi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlVmlld01vZGVCCLpIBYIBAhABEkEKB2NvbXBhcmUYCyABKA4yJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5Db21wYXJlUGVyaW9kQgi6SAWCAQIQARJECgp0aHJlc2hvbGRzGAwgAygLMiYuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGhyZXNob2xkUnVsZUIIukgFkgECEAUSMwoGaGVhZGVyGA0gASgLMiMuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGlsZUhlYWRlchJECg12aXN1YWxpemF0aW9uGA4gASgLMi0uZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVmlzdWFsaXphdGlvbk9wdGlvbnNCEAoHY29udGVudBIFukgCCAEiUAoSSW5zaWdodFRpbGVDb250ZW50EjoKBHNwZWMYASABKAsyJC5zaGFyZWQuaW5zaWdodHMudjEuSW5zaWdodFF1ZXJ5U3BlY0IGukgDyAEBIjAKE01hcmtkb3duVGlsZUNvbnRlbnQSGQoEYm9keRgBIAEoCUILukgIcgYQARigjQYiggMKDVRocmVzaG9sZFJ1bGUSUAoIb3BlcmF0b3IYASABKA4yLy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaHJlc2hvbGRSdWxlLk9wZXJhdG9yQg26SArIAQGCAQQQASAAEg0KBXZhbHVlGAIgASgBEkgKBHRvbmUYAyABKA4yKy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5UaHJlc2hvbGRSdWxlLlRvbmVCDbpICsgBAYIBBBABIAAiagoIT3BlcmF0b3ISGAoUT1BFUkFUT1JfVU5TUEVDSUZJRUQQABIPCgtPUEVSQVRPUl9MVBABEhAKDE9QRVJBVE9SX0xURRACEg8KC09QRVJBVE9SX0dUEAMSEAoMT1BFUkFUT1JfR1RFEAQiWgoEVG9uZRIUChBUT05FX1VOU1BFQ0lGSUVEEAASDQoJVE9ORV9HT09EEAESDQoJVE9ORV9XQVJOEAISDAoIVE9ORV9CQUQQAxIQCgxUT05FX05FVVRSQUwQBCKRAQoKVGlsZUhlYWRlchIVCgRpY29uGAEgASgJQge6SARyAhgIEkQKDGFjY2VudF9jb2xvchgCIAEoCUIuukgrcilSAFIEYmx1ZVIFZ3JlZW5SA3JlZFIFYW1iZXJSBnB1cnBsZVIEZ3JheRISCgpoaWRlX3RpdGxlGAMgASgIEhIKCmJvcmRlcmxlc3MYBCABKAgigwQKFFZpc3VhbGl6YXRpb25PcHRpb25zEloKDXlfYXhpc19mb3JtYXQYASABKA4yOS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5WaXN1YWxpemF0aW9uT3B0aW9ucy5ZQXhpc0Zvcm1hdEIIukgFggECEAESEQoJbG9nX3NjYWxlGAIgASgIEhMKC2hpZGVfbGVnZW5kGAMgASgIEhUKDXplcm9fYmFzZWxpbmUYBCABKAgSFgoOaGlkZV9zcGFya2xpbmUYBSABKAgimwEKC1lBeGlzRm9ybWF0Eh0KGVlfQVhJU19GT1JNQVRfVU5TUEVDSUZJRUQQABIYChRZX0FYSVNfRk9STUFUX05VTUJFUhABEhkKFVlfQVhJU19GT1JNQVRfUEVSQ0VOVBACEh0KGVlfQVhJU19GT1JNQVRfRFVSQVRJT05fTVMQAxIZChVZX0FYSVNfRk9STUFUX0NPTVBBQ1QQBDqZAbpIlQEakgEKNnZpc3VhbGl6YXRpb25fb3B0aW9ucy5sb2dfc2NhbGVfZXhjbHVkZXNfemVyb19iYXNlbGluZRIvbG9nX3NjYWxlIGNhbm5vdCBiZSBjb21iaW5lZCB3aXRoIHplcm9fYmFzZWxpbmUaJyEodGhpcy5sb2dfc2NhbGUgJiYgdGhpcy56ZXJvX2Jhc2VsaW5lKSLPAQoMR3JpZFBvc2l0aW9uEhIKAXgYASABKAVCB7pIBBoCKAASEgoBeRgCIAEoBUIHukgEGgIoABIUCgF3GAMgASgFQgm6SAYaBBhIKAESFQoBaBgEIAEoBUIKukgHGgUYoAYoATpqukhnGmUKFmdyaWRfcG9zaXRpb24uY29tcGxldGUSL3Bvc2l0aW9uIHJlcXVpcmVzIGJvdGggdyAoMS4uNzIpIGFuZCBoICgxLi44MDApGhpoYXModGhpcy53KSAmJiBoYXModGhpcy5oKSLsAQoeRGFzaGJvYXJkc1NlcnZpY2VDcmVhdGVSZXF1ZXN0EiEKDGRpc3BsYXlfbmFtZRgBIAEoCUILukgIyAEBcgMYlgESHQoLZGVzY3JpcHRpb24YAiABKAlCCLpIBXIDGNAPEkAKEmRlZmF1bHRfdGltZV9yYW5nZRgDIAEoDjIaLmNvbW1vbi52MS5UaW1lUmFuZ2VQcmVzZXRCCLpIBYIBAhABEkYKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYBCABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABIlgKH0Rhc2hib2FyZHNTZXJ2aWNlQ3JlYXRlUmVzcG9uc2USNQoJZGFzaGJvYXJkGAEgASgLMiIuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkIjQKHkRhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVxdWVzdBISCgJpZBgBIAEoCUIGukgDyAEBIiEKH0Rhc2hib2FyZHNTZXJ2aWNlRGVsZXRlUmVzcG9uc2UiMQobRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiVQocRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXNwb25zZRI1CglkYXNoYm9hcmQYASABKAsyIi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmQiHgocRGFzaGJvYXJkc1NlcnZpY2VMaXN0UmVxdWVzdCJXCh1EYXNoYm9hcmRzU2VydmljZUxpc3RSZXNwb25zZRI2CgpkYXNoYm9hcmRzGAEgAygLMiIuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkIpMCCh5EYXNoYm9hcmRzU2VydmljZVVwZGF0ZVJlcXVlc3QSEgoCaWQYASABKAlCBrpIA8gBARIhCgxkaXNwbGF5X25hbWUYAiABKAlCC7pICMgBAXIDGJYBEh0KC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQDxJAChJkZWZhdWx0X3RpbWVfcmFuZ2UYBCABKA4yGi5jb21tb24udjEuVGltZVJhbmdlUHJlc2V0Qgi6SAWCAQIQARJGChNkZWZhdWx0X2dyYW51bGFyaXR5GAUgASgOMh8uc2hhcmVkLmluc2lnaHRzLnYxLkdyYW51bGFyaXR5Qgi6SAWCAQIQARIRCglpc19wdWJsaWMYBiABKAgiWAofRGFzaGJvYXJkc1NlcnZpY2VVcGRhdGVSZXNwb25zZRI1CglkYXNoYm9hcmQYASABKAsyIi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmQixgIKHkRhc2hib2FyZHNTZXJ2aWNlVXBzZXJ0UmVxdWVzdBISCgJpZBgBIAEoCUIGukgDyAEBEiEKDGRpc3BsYXlfbmFtZRgCIAEoCUILukgIyAEBcgMYlgESHQoLZGVzY3JpcHRpb24YAyABKAlCCLpIBXIDGNAPEkAKEmRlZmF1bHRfdGltZV9yYW5nZRgEIAEoDjIaLmNvbW1vbi52MS5UaW1lUmFuZ2VQcmVzZXRCCLpIBYIBAhABEkYKE2RlZmF1bHRfZ3JhbnVsYXJpdHkYBSABKA4yHy5zaGFyZWQuaW5zaWdodHMudjEuR3JhbnVsYXJpdHlCCLpIBYIBAhABEkQKBXRpbGVzGAYgAygLMisuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkVGlsZUlucHV0Qgi6SAWSAQIQZCL9BAoSRGFzaGJvYXJkVGlsZUlucHV0EgoKAmlkGAEgASgJEh4KDGRpc3BsYXlfbmFtZRgCIAEoCUIIukgFcgMYlgESHQoLZGVzY3JpcHRpb24YAyABKAlCCLpIBXIDGNAPEj4KB2luc2lnaHQYBCABKAsyKy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5JbnNpZ2h0VGlsZUNvbnRlbnRIABJACghtYXJrZG93bhgFIAEoCzIsLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLk1hcmtkb3duVGlsZUNvbnRlbnRIABI3Cghwb3NpdGlvbhgMIAEoCzIlLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkdyaWRQb3NpdGlvbhJLCgl2aWV3X21vZGUYByABKA4yLi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRUaWxlVmlld01vZGVCCLpIBYIBAhABEkEKB2NvbXBhcmUYCCABKA4yJi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5Db21wYXJlUGVyaW9kQgi6SAWCAQIQARJECgp0aHJlc2hvbGRzGAkgAygLMiYuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGhyZXNob2xkUnVsZUIIukgFkgECEAUSMwoGaGVhZGVyGAogASgLMiMuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVGlsZUhlYWRlchJECg12aXN1YWxpemF0aW9uGAsgASgLMi0uZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuVmlzdWFsaXphdGlvbk9wdGlvbnNCEAoHY29udGVudBIFukgCCAEiWAofRGFzaGJvYXJkc1NlcnZpY2VVcHNlcnRSZXNwb25zZRI1CglkYXNoYm9hcmQYASABKAsyIi5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmQi2gIKJkRhc2hib2FyZHNTZXJ2aWNlUXVlcnlEYXNoYm9hcmRSZXF1ZXN0EhwKDGRhc2hib2FyZF9pZBgBIAEoCUIGukgDyAEBEigKCnRpbWVfcmFuZ2UYAiABKAsyFC5jb21tb24udjEuVGltZVJhbmdlEj4KC2dyYW51bGFyaXR5GAMgASgOMh8uc2hhcmVkLmluc2lnaHRzLnYxLkdyYW51bGFyaXR5Qgi6SAWCAQIQATqnAbpIowEaoAEKMXF1ZXJ5X2Rhc2hib2FyZF9yZXF1ZXN0LnZhbGlkX3RpbWVfcmFuZ2Vfb3ZlcnJpZGUSJ3RpbWVfcmFuZ2Ugb3ZlcnJpZGUgbXVzdCBoYXZlIGZyb20gPCB0bxpCIWhhcyh0aGlzLnRpbWVfcmFuZ2UpIHx8IHRoaXMudGltZV9yYW5nZS5mcm9tIDwgdGhpcy50aW1lX3JhbmdlLnRvIoQECgxSZW5kZXJlZFRpbGUSPAoEdGlsZRgBIAEoCzImLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZFRpbGVCBrpIA8gBARIzCgZyZXN1bHQYAiABKAsyIS5zaGFyZWQuaW5zaWdodHMudjEuUXVlcnlSZXNwb25zZUgAEiAKDWVycm9yX21lc3NhZ2UYAyABKAlCB7pIBHICEAFIADrTArpIzwIaogEKJnJlbmRlcmVkX3RpbGUuaW5zaWdodF9yZXF1aXJlc19vdXRjb21lEjBpbnNpZ2h0IHRpbGUgbXVzdCBoYXZlIGEgcmVzdWx0IG9yIGVycm9yX21lc3NhZ2UaRiFoYXModGhpcy50aWxlLmluc2lnaHQpIHx8IGhhcyh0aGlzLnJlc3VsdCkgfHwgaGFzKHRoaXMuZXJyb3JfbWVzc2FnZSkapwEKIXJlbmRlcmVkX3RpbGUubWFya2Rvd25fbm9fb3V0Y29tZRI1bWFya2Rvd24gdGlsZSBtdXN0IG5vdCBoYXZlIGEgcmVzdWx0IG9yIGVycm9yX21lc3NhZ2UaSyFoYXModGhpcy50aWxlLm1hcmtkb3duKSB8fCAoIWhhcyh0aGlzLnJlc3VsdCkgJiYgIWhhcyh0aGlzLmVycm9yX21lc3NhZ2UpKUIJCgdvdXRjb21lItgCChFSZW5kZXJlZERhc2hib2FyZBIKCgJpZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSNgoSZGVmYXVsdF90aW1lX3JhbmdlGAQgASgOMhouY29tbW9uLnYxLlRpbWVSYW5nZVByZXNldBI8ChNkZWZhdWx0X2dyYW51bGFyaXR5GAUgASgOMh8uc2hhcmVkLmluc2lnaHRzLnYxLkdyYW51bGFyaXR5Ei8KC2NyZWF0ZV90aW1lGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIvCgt1cGRhdGVfdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoFdGlsZXMYCCADKAsyJS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5SZW5kZXJlZFRpbGUiaAonRGFzaGJvYXJkc1NlcnZpY2VRdWVyeURhc2hib2FyZFJlc3BvbnNlEj0KCWRhc2hib2FyZBgBIAEoCzIqLmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLlJlbmRlcmVkRGFzaGJvYXJkKsYCChVEYXNoYm9hcmRUaWxlVmlld01vZGUSKAokREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX1VOU1BFQ0lGSUVEEAASIQodREFTSEJPQVJEX1RJTEVfVklFV19NT0RFX0xJTkUQARIhCh1EQVNIQk9BUkRfVElMRV9WSUVXX01PREVfQVJFQRACEigKJERBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9CQVJfR1JPVVBFRBADEigKJERBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9CQVJfU1RBQ0tFRBAEEiIKHkRBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9UQUJMRRAFEiAKHERBU0hCT0FSRF9USUxFX1ZJRVdfTU9ERV9LUEkQBhIjCh9EQVNIQk9BUkRfVElMRV9WSUVXX01PREVfU0FOS0VZEAcqSQoNQ29tcGFyZVBlcmlvZBIeChpDT01QQVJFX1BFUklPRF9VTlNQRUNJRklFRBAAEhgKFENPTVBBUkVfUEVSSU9EX1BSSU9SEAEylgcKEURhc2hib2FyZHNTZXJ2aWNlEn0KBkNyZWF0ZRI3LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlQ3JlYXRlUmVxdWVzdBo4LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlQ3JlYXRlUmVzcG9uc2UiABJ9CgZEZWxldGUSNy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZURlbGV0ZVJlcXVlc3QaOC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZURlbGV0ZVJlc3BvbnNlIgASdAoDR2V0EjQuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXF1ZXN0GjUuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VHZXRSZXNwb25zZSIAEncKBExpc3QSNS5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZUxpc3RSZXF1ZXN0GjYuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VMaXN0UmVzcG9uc2UiABJ9CgZVcGRhdGUSNy5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZVVwZGF0ZVJlcXVlc3QaOC5kYXNoYm9hcmQuZGFzaGJvYXJkcy52MS5EYXNoYm9hcmRzU2VydmljZVVwZGF0ZVJlc3BvbnNlIgASfQoGVXBzZXJ0EjcuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VVcHNlcnRSZXF1ZXN0GjguZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VVcHNlcnRSZXNwb25zZSIAEpUBCg5RdWVyeURhc2hib2FyZBI/LmRhc2hib2FyZC5kYXNoYm9hcmRzLnYxLkRhc2hib2FyZHNTZXJ2aWNlUXVlcnlEYXNoYm9hcmRSZXF1ZXN0GkAuZGFzaGJvYXJkLmRhc2hib2FyZHMudjEuRGFzaGJvYXJkc1NlcnZpY2VRdWVyeURhc2hib2FyZFJlc3BvbnNlIgBCT1pNZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvZGFzaGJvYXJkcy92MTtkYXNoYm9hcmRzdjFiCGVkaXRpb25zcOgH',
+    [file_buf_validate_validate, file_common_v1_time, file_google_protobuf_timestamp, file_shared_insights_v1_insights],
+  )
 
 /**
  * @generated from message dashboard.dashboards.v1.Dashboard
  */
-export type Dashboard = Message<"dashboard.dashboards.v1.Dashboard"> & {
+export type Dashboard = Message<'dashboard.dashboards.v1.Dashboard'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string project_id = 2;
    */
-  projectId: string;
+  projectId: string
 
   /**
    * @generated from field: string display_name = 3;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 4;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from field: google.protobuf.Timestamp create_time = 5;
    */
-  createTime?: Timestamp | undefined;
+  createTime?: Timestamp | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp update_time = 6;
    */
-  updateTime?: Timestamp | undefined;
+  updateTime?: Timestamp | undefined
 
   /**
    * @generated from field: repeated dashboard.dashboards.v1.DashboardTile tiles = 7;
    */
-  tiles: DashboardTile[];
+  tiles: DashboardTile[]
 
   /**
    * Dashboard-level time window applied to every insight tile at render time.
    *
    * @generated from field: common.v1.TimeRangePreset default_time_range = 8;
    */
-  defaultTimeRange: TimeRangePreset;
+  defaultTimeRange: TimeRangePreset
 
   /**
    * @generated from field: shared.insights.v1.Granularity default_granularity = 9;
    */
-  defaultGranularity: Granularity;
-};
+  defaultGranularity: Granularity
+
+  /**
+   * share_id is the public share token. Empty when the dashboard is private.
+   *
+   * @generated from field: string share_id = 10;
+   */
+  shareId: string
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.Dashboard.
  * Use `create(DashboardSchema)` to create a new message.
  */
-export const DashboardSchema: GenMessage<Dashboard> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 0);
+export const DashboardSchema: GenMessage<Dashboard> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 0)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardTile
  */
-export type DashboardTile = Message<"dashboard.dashboards.v1.DashboardTile"> & {
+export type DashboardTile = Message<'dashboard.dashboards.v1.DashboardTile'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string dashboard_id = 2;
    */
-  dashboardId: string;
+  dashboardId: string
 
   /**
    * @generated from field: string display_name = 3;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 4;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from oneof dashboard.dashboards.v1.DashboardTile.content
    */
-  content: {
-    /**
-     * @generated from field: dashboard.dashboards.v1.InsightTileContent insight = 5;
-     */
-    value: InsightTileContent;
-    case: "insight";
-  } | {
-    /**
-     * @generated from field: dashboard.dashboards.v1.MarkdownTileContent markdown = 6;
-     */
-    value: MarkdownTileContent;
-    case: "markdown";
-  } | { case: undefined; value?: undefined };
+  content:
+    | {
+        /**
+         * @generated from field: dashboard.dashboards.v1.InsightTileContent insight = 5;
+         */
+        value: InsightTileContent
+        case: 'insight'
+      }
+    | {
+        /**
+         * @generated from field: dashboard.dashboards.v1.MarkdownTileContent markdown = 6;
+         */
+        value: MarkdownTileContent
+        case: 'markdown'
+      }
+    | { case: undefined; value?: undefined }
 
   /**
    * The tile's placement on the uniform dashboard grid.
    *
    * @generated from field: dashboard.dashboards.v1.GridPosition position = 15;
    */
-  position?: GridPosition | undefined;
+  position?: GridPosition | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp create_time = 8;
    */
-  createTime?: Timestamp | undefined;
+  createTime?: Timestamp | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp update_time = 9;
    */
-  updateTime?: Timestamp | undefined;
+  updateTime?: Timestamp | undefined
 
   /**
    * @generated from field: dashboard.dashboards.v1.DashboardTileViewMode view_mode = 10;
    */
-  viewMode: DashboardTileViewMode;
+  viewMode: DashboardTileViewMode
 
   /**
    * @generated from field: dashboard.dashboards.v1.ComparePeriod compare = 11;
    */
-  compare: ComparePeriod;
+  compare: ComparePeriod
 
   /**
    * @generated from field: repeated dashboard.dashboards.v1.ThresholdRule thresholds = 12;
    */
-  thresholds: ThresholdRule[];
+  thresholds: ThresholdRule[]
 
   /**
    * @generated from field: dashboard.dashboards.v1.TileHeader header = 13;
    */
-  header?: TileHeader | undefined;
+  header?: TileHeader | undefined
 
   /**
    * @generated from field: dashboard.dashboards.v1.VisualizationOptions visualization = 14;
    */
-  visualization?: VisualizationOptions | undefined;
-};
+  visualization?: VisualizationOptions | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardTile.
  * Use `create(DashboardTileSchema)` to create a new message.
  */
-export const DashboardTileSchema: GenMessage<DashboardTile> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 1);
+export const DashboardTileSchema: GenMessage<DashboardTile> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 1)
 
 /**
  * @generated from message dashboard.dashboards.v1.InsightTileContent
  */
-export type InsightTileContent = Message<"dashboard.dashboards.v1.InsightTileContent"> & {
+export type InsightTileContent = Message<'dashboard.dashboards.v1.InsightTileContent'> & {
   /**
    * @generated from field: shared.insights.v1.InsightQuerySpec spec = 1;
    */
-  spec?: InsightQuerySpec | undefined;
-};
+  spec?: InsightQuerySpec | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.InsightTileContent.
  * Use `create(InsightTileContentSchema)` to create a new message.
  */
-export const InsightTileContentSchema: GenMessage<InsightTileContent> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 2);
+export const InsightTileContentSchema: GenMessage<InsightTileContent> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 2)
 
 /**
  * @generated from message dashboard.dashboards.v1.MarkdownTileContent
  */
-export type MarkdownTileContent = Message<"dashboard.dashboards.v1.MarkdownTileContent"> & {
+export type MarkdownTileContent = Message<'dashboard.dashboards.v1.MarkdownTileContent'> & {
   /**
    * @generated from field: string body = 1;
    */
-  body: string;
-};
+  body: string
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.MarkdownTileContent.
  * Use `create(MarkdownTileContentSchema)` to create a new message.
  */
-export const MarkdownTileContentSchema: GenMessage<MarkdownTileContent> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 3);
+export const MarkdownTileContentSchema: GenMessage<MarkdownTileContent> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 3)
 
 /**
  * ThresholdRule colors a KPI value based on a comparison against `value`.
@@ -209,32 +227,33 @@ export const MarkdownTileContentSchema: GenMessage<MarkdownTileContent> = /*@__P
  *
  * @generated from message dashboard.dashboards.v1.ThresholdRule
  */
-export type ThresholdRule = Message<"dashboard.dashboards.v1.ThresholdRule"> & {
+export type ThresholdRule = Message<'dashboard.dashboards.v1.ThresholdRule'> & {
   /**
    * operator and tone are required so an UNSPECIFIED rule (which would match
    * every value or apply no tone) can't be persisted as a wire-valid no-op.
    *
    * @generated from field: dashboard.dashboards.v1.ThresholdRule.Operator operator = 1;
    */
-  operator: ThresholdRule_Operator;
+  operator: ThresholdRule_Operator
 
   /**
    * @generated from field: double value = 2;
    */
-  value: number;
+  value: number
 
   /**
    * @generated from field: dashboard.dashboards.v1.ThresholdRule.Tone tone = 3;
    */
-  tone: ThresholdRule_Tone;
-};
+  tone: ThresholdRule_Tone
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.ThresholdRule.
  * Use `create(ThresholdRuleSchema)` to create a new message.
  */
-export const ThresholdRuleSchema: GenMessage<ThresholdRule> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 4);
+export const ThresholdRuleSchema: GenMessage<ThresholdRule> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 4)
 
 /**
  * @generated from enum dashboard.dashboards.v1.ThresholdRule.Operator
@@ -269,8 +288,9 @@ export enum ThresholdRule_Operator {
 /**
  * Describes the enum dashboard.dashboards.v1.ThresholdRule.Operator.
  */
-export const ThresholdRule_OperatorSchema: GenEnum<ThresholdRule_Operator> = /*@__PURE__*/
-  enumDesc(file_dashboard_dashboards_v1_dashboards, 4, 0);
+export const ThresholdRule_OperatorSchema: GenEnum<ThresholdRule_Operator> =
+  /*@__PURE__*/
+  enumDesc(file_dashboard_dashboards_v1_dashboards, 4, 0)
 
 /**
  * @generated from enum dashboard.dashboards.v1.ThresholdRule.Tone
@@ -305,15 +325,16 @@ export enum ThresholdRule_Tone {
 /**
  * Describes the enum dashboard.dashboards.v1.ThresholdRule.Tone.
  */
-export const ThresholdRule_ToneSchema: GenEnum<ThresholdRule_Tone> = /*@__PURE__*/
-  enumDesc(file_dashboard_dashboards_v1_dashboards, 4, 1);
+export const ThresholdRule_ToneSchema: GenEnum<ThresholdRule_Tone> =
+  /*@__PURE__*/
+  enumDesc(file_dashboard_dashboards_v1_dashboards, 4, 1)
 
 /**
  * TileHeader customizes the tile's header rendering. All fields are optional.
  *
  * @generated from message dashboard.dashboards.v1.TileHeader
  */
-export type TileHeader = Message<"dashboard.dashboards.v1.TileHeader"> & {
+export type TileHeader = Message<'dashboard.dashboards.v1.TileHeader'> & {
   /**
    * Short label rendered in the tile header — typically a single grapheme
    * cluster (one emoji or character). Capped at 8 bytes, so multi-codepoint
@@ -322,19 +343,19 @@ export type TileHeader = Message<"dashboard.dashboards.v1.TileHeader"> & {
    *
    * @generated from field: string icon = 1;
    */
-  icon: string;
+  icon: string
 
   /**
    * Semantic accent token. Empty means "no accent".
    *
    * @generated from field: string accent_color = 2;
    */
-  accentColor: string;
+  accentColor: string
 
   /**
    * @generated from field: bool hide_title = 3;
    */
-  hideTitle: boolean;
+  hideTitle: boolean
 
   /**
    * When true, the tile renders without its border and background (a transparent
@@ -343,58 +364,60 @@ export type TileHeader = Message<"dashboard.dashboards.v1.TileHeader"> & {
    *
    * @generated from field: bool borderless = 4;
    */
-  borderless: boolean;
-};
+  borderless: boolean
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.TileHeader.
  * Use `create(TileHeaderSchema)` to create a new message.
  */
-export const TileHeaderSchema: GenMessage<TileHeader> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 5);
+export const TileHeaderSchema: GenMessage<TileHeader> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 5)
 
 /**
  * VisualizationOptions tunes chart rendering. All fields apply client-side only.
  *
  * @generated from message dashboard.dashboards.v1.VisualizationOptions
  */
-export type VisualizationOptions = Message<"dashboard.dashboards.v1.VisualizationOptions"> & {
+export type VisualizationOptions = Message<'dashboard.dashboards.v1.VisualizationOptions'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.VisualizationOptions.YAxisFormat y_axis_format = 1;
    */
-  yAxisFormat: VisualizationOptions_YAxisFormat;
+  yAxisFormat: VisualizationOptions_YAxisFormat
 
   /**
    * @generated from field: bool log_scale = 2;
    */
-  logScale: boolean;
+  logScale: boolean
 
   /**
    * @generated from field: bool hide_legend = 3;
    */
-  hideLegend: boolean;
+  hideLegend: boolean
 
   /**
    * force Y axis to start at zero
    *
    * @generated from field: bool zero_baseline = 4;
    */
-  zeroBaseline: boolean;
+  zeroBaseline: boolean
 
   /**
    * KPI tiles only: hide the trend sparkline, leaving just the value + delta.
    *
    * @generated from field: bool hide_sparkline = 5;
    */
-  hideSparkline: boolean;
-};
+  hideSparkline: boolean
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.VisualizationOptions.
  * Use `create(VisualizationOptionsSchema)` to create a new message.
  */
-export const VisualizationOptionsSchema: GenMessage<VisualizationOptions> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 6);
+export const VisualizationOptionsSchema: GenMessage<VisualizationOptions> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 6)
 
 /**
  * @generated from enum dashboard.dashboards.v1.VisualizationOptions.YAxisFormat
@@ -433,8 +456,9 @@ export enum VisualizationOptions_YAxisFormat {
 /**
  * Describes the enum dashboard.dashboards.v1.VisualizationOptions.YAxisFormat.
  */
-export const VisualizationOptions_YAxisFormatSchema: GenEnum<VisualizationOptions_YAxisFormat> = /*@__PURE__*/
-  enumDesc(file_dashboard_dashboards_v1_dashboards, 6, 0);
+export const VisualizationOptions_YAxisFormatSchema: GenEnum<VisualizationOptions_YAxisFormat> =
+  /*@__PURE__*/
+  enumDesc(file_dashboard_dashboards_v1_dashboards, 6, 0)
 
 /**
  * GridPosition is the single source of truth for a tile's placement on the
@@ -444,273 +468,290 @@ export const VisualizationOptions_YAxisFormatSchema: GenEnum<VisualizationOption
  *
  * @generated from message dashboard.dashboards.v1.GridPosition
  */
-export type GridPosition = Message<"dashboard.dashboards.v1.GridPosition"> & {
+export type GridPosition = Message<'dashboard.dashboards.v1.GridPosition'> & {
   /**
    * @generated from field: int32 x = 1;
    */
-  x: number;
+  x: number
 
   /**
    * @generated from field: int32 y = 2;
    */
-  y: number;
+  y: number
 
   /**
    * @generated from field: int32 w = 3;
    */
-  w: number;
+  w: number
 
   /**
    * @generated from field: int32 h = 4;
    */
-  h: number;
-};
+  h: number
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.GridPosition.
  * Use `create(GridPositionSchema)` to create a new message.
  */
-export const GridPositionSchema: GenMessage<GridPosition> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 7);
+export const GridPositionSchema: GenMessage<GridPosition> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 7)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceCreateRequest
  */
-export type DashboardsServiceCreateRequest = Message<"dashboard.dashboards.v1.DashboardsServiceCreateRequest"> & {
+export type DashboardsServiceCreateRequest = Message<'dashboard.dashboards.v1.DashboardsServiceCreateRequest'> & {
   /**
    * @generated from field: string display_name = 1;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 2;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from field: common.v1.TimeRangePreset default_time_range = 3;
    */
-  defaultTimeRange: TimeRangePreset;
+  defaultTimeRange: TimeRangePreset
 
   /**
    * @generated from field: shared.insights.v1.Granularity default_granularity = 4;
    */
-  defaultGranularity: Granularity;
-};
+  defaultGranularity: Granularity
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceCreateRequest.
  * Use `create(DashboardsServiceCreateRequestSchema)` to create a new message.
  */
-export const DashboardsServiceCreateRequestSchema: GenMessage<DashboardsServiceCreateRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 8);
+export const DashboardsServiceCreateRequestSchema: GenMessage<DashboardsServiceCreateRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 8)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceCreateResponse
  */
-export type DashboardsServiceCreateResponse = Message<"dashboard.dashboards.v1.DashboardsServiceCreateResponse"> & {
+export type DashboardsServiceCreateResponse = Message<'dashboard.dashboards.v1.DashboardsServiceCreateResponse'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.Dashboard dashboard = 1;
    */
-  dashboard?: Dashboard | undefined;
-};
+  dashboard?: Dashboard | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceCreateResponse.
  * Use `create(DashboardsServiceCreateResponseSchema)` to create a new message.
  */
-export const DashboardsServiceCreateResponseSchema: GenMessage<DashboardsServiceCreateResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 9);
+export const DashboardsServiceCreateResponseSchema: GenMessage<DashboardsServiceCreateResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 9)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceDeleteRequest
  */
-export type DashboardsServiceDeleteRequest = Message<"dashboard.dashboards.v1.DashboardsServiceDeleteRequest"> & {
+export type DashboardsServiceDeleteRequest = Message<'dashboard.dashboards.v1.DashboardsServiceDeleteRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
-};
+  id: string
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceDeleteRequest.
  * Use `create(DashboardsServiceDeleteRequestSchema)` to create a new message.
  */
-export const DashboardsServiceDeleteRequestSchema: GenMessage<DashboardsServiceDeleteRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 10);
+export const DashboardsServiceDeleteRequestSchema: GenMessage<DashboardsServiceDeleteRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 10)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceDeleteResponse
  */
-export type DashboardsServiceDeleteResponse = Message<"dashboard.dashboards.v1.DashboardsServiceDeleteResponse"> & {
-};
+export type DashboardsServiceDeleteResponse = Message<'dashboard.dashboards.v1.DashboardsServiceDeleteResponse'> & {}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceDeleteResponse.
  * Use `create(DashboardsServiceDeleteResponseSchema)` to create a new message.
  */
-export const DashboardsServiceDeleteResponseSchema: GenMessage<DashboardsServiceDeleteResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 11);
+export const DashboardsServiceDeleteResponseSchema: GenMessage<DashboardsServiceDeleteResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 11)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceGetRequest
  */
-export type DashboardsServiceGetRequest = Message<"dashboard.dashboards.v1.DashboardsServiceGetRequest"> & {
+export type DashboardsServiceGetRequest = Message<'dashboard.dashboards.v1.DashboardsServiceGetRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
-};
+  id: string
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceGetRequest.
  * Use `create(DashboardsServiceGetRequestSchema)` to create a new message.
  */
-export const DashboardsServiceGetRequestSchema: GenMessage<DashboardsServiceGetRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 12);
+export const DashboardsServiceGetRequestSchema: GenMessage<DashboardsServiceGetRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 12)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceGetResponse
  */
-export type DashboardsServiceGetResponse = Message<"dashboard.dashboards.v1.DashboardsServiceGetResponse"> & {
+export type DashboardsServiceGetResponse = Message<'dashboard.dashboards.v1.DashboardsServiceGetResponse'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.Dashboard dashboard = 1;
    */
-  dashboard?: Dashboard | undefined;
-};
+  dashboard?: Dashboard | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceGetResponse.
  * Use `create(DashboardsServiceGetResponseSchema)` to create a new message.
  */
-export const DashboardsServiceGetResponseSchema: GenMessage<DashboardsServiceGetResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 13);
+export const DashboardsServiceGetResponseSchema: GenMessage<DashboardsServiceGetResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 13)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceListRequest
  */
-export type DashboardsServiceListRequest = Message<"dashboard.dashboards.v1.DashboardsServiceListRequest"> & {
-};
+export type DashboardsServiceListRequest = Message<'dashboard.dashboards.v1.DashboardsServiceListRequest'> & {}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceListRequest.
  * Use `create(DashboardsServiceListRequestSchema)` to create a new message.
  */
-export const DashboardsServiceListRequestSchema: GenMessage<DashboardsServiceListRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 14);
+export const DashboardsServiceListRequestSchema: GenMessage<DashboardsServiceListRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 14)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceListResponse
  */
-export type DashboardsServiceListResponse = Message<"dashboard.dashboards.v1.DashboardsServiceListResponse"> & {
+export type DashboardsServiceListResponse = Message<'dashboard.dashboards.v1.DashboardsServiceListResponse'> & {
   /**
    * @generated from field: repeated dashboard.dashboards.v1.Dashboard dashboards = 1;
    */
-  dashboards: Dashboard[];
-};
+  dashboards: Dashboard[]
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceListResponse.
  * Use `create(DashboardsServiceListResponseSchema)` to create a new message.
  */
-export const DashboardsServiceListResponseSchema: GenMessage<DashboardsServiceListResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 15);
+export const DashboardsServiceListResponseSchema: GenMessage<DashboardsServiceListResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 15)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceUpdateRequest
  */
-export type DashboardsServiceUpdateRequest = Message<"dashboard.dashboards.v1.DashboardsServiceUpdateRequest"> & {
+export type DashboardsServiceUpdateRequest = Message<'dashboard.dashboards.v1.DashboardsServiceUpdateRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string display_name = 2;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 3;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from field: common.v1.TimeRangePreset default_time_range = 4;
    */
-  defaultTimeRange: TimeRangePreset;
+  defaultTimeRange: TimeRangePreset
 
   /**
    * @generated from field: shared.insights.v1.Granularity default_granularity = 5;
    */
-  defaultGranularity: Granularity;
-};
+  defaultGranularity: Granularity
+
+  /**
+   * Toggles public sharing for this dashboard.
+   *
+   * @generated from field: bool is_public = 6;
+   */
+  isPublic: boolean
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceUpdateRequest.
  * Use `create(DashboardsServiceUpdateRequestSchema)` to create a new message.
  */
-export const DashboardsServiceUpdateRequestSchema: GenMessage<DashboardsServiceUpdateRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 16);
+export const DashboardsServiceUpdateRequestSchema: GenMessage<DashboardsServiceUpdateRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 16)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceUpdateResponse
  */
-export type DashboardsServiceUpdateResponse = Message<"dashboard.dashboards.v1.DashboardsServiceUpdateResponse"> & {
+export type DashboardsServiceUpdateResponse = Message<'dashboard.dashboards.v1.DashboardsServiceUpdateResponse'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.Dashboard dashboard = 1;
    */
-  dashboard?: Dashboard | undefined;
-};
+  dashboard?: Dashboard | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceUpdateResponse.
  * Use `create(DashboardsServiceUpdateResponseSchema)` to create a new message.
  */
-export const DashboardsServiceUpdateResponseSchema: GenMessage<DashboardsServiceUpdateResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 17);
+export const DashboardsServiceUpdateResponseSchema: GenMessage<DashboardsServiceUpdateResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 17)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceUpsertRequest
  */
-export type DashboardsServiceUpsertRequest = Message<"dashboard.dashboards.v1.DashboardsServiceUpsertRequest"> & {
+export type DashboardsServiceUpsertRequest = Message<'dashboard.dashboards.v1.DashboardsServiceUpsertRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string display_name = 2;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 3;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from field: common.v1.TimeRangePreset default_time_range = 4;
    */
-  defaultTimeRange: TimeRangePreset;
+  defaultTimeRange: TimeRangePreset
 
   /**
    * @generated from field: shared.insights.v1.Granularity default_granularity = 5;
    */
-  defaultGranularity: Granularity;
+  defaultGranularity: Granularity
 
   /**
    * @generated from field: repeated dashboard.dashboards.v1.DashboardTileInput tiles = 6;
    */
-  tiles: DashboardTileInput[];
-};
+  tiles: DashboardTileInput[]
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceUpsertRequest.
  * Use `create(DashboardsServiceUpsertRequestSchema)` to create a new message.
  */
-export const DashboardsServiceUpsertRequestSchema: GenMessage<DashboardsServiceUpsertRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 18);
+export const DashboardsServiceUpsertRequestSchema: GenMessage<DashboardsServiceUpsertRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 18)
 
 /**
  * DashboardTileInput is the same shape as DashboardTile minus server-assigned
@@ -724,228 +765,242 @@ export const DashboardsServiceUpsertRequestSchema: GenMessage<DashboardsServiceU
  *
  * @generated from message dashboard.dashboards.v1.DashboardTileInput
  */
-export type DashboardTileInput = Message<"dashboard.dashboards.v1.DashboardTileInput"> & {
+export type DashboardTileInput = Message<'dashboard.dashboards.v1.DashboardTileInput'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string display_name = 2;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 3;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from oneof dashboard.dashboards.v1.DashboardTileInput.content
    */
-  content: {
-    /**
-     * @generated from field: dashboard.dashboards.v1.InsightTileContent insight = 4;
-     */
-    value: InsightTileContent;
-    case: "insight";
-  } | {
-    /**
-     * @generated from field: dashboard.dashboards.v1.MarkdownTileContent markdown = 5;
-     */
-    value: MarkdownTileContent;
-    case: "markdown";
-  } | { case: undefined; value?: undefined };
+  content:
+    | {
+        /**
+         * @generated from field: dashboard.dashboards.v1.InsightTileContent insight = 4;
+         */
+        value: InsightTileContent
+        case: 'insight'
+      }
+    | {
+        /**
+         * @generated from field: dashboard.dashboards.v1.MarkdownTileContent markdown = 5;
+         */
+        value: MarkdownTileContent
+        case: 'markdown'
+      }
+    | { case: undefined; value?: undefined }
 
   /**
    * The tile's placement on the uniform dashboard grid.
    *
    * @generated from field: dashboard.dashboards.v1.GridPosition position = 12;
    */
-  position?: GridPosition | undefined;
+  position?: GridPosition | undefined
 
   /**
    * @generated from field: dashboard.dashboards.v1.DashboardTileViewMode view_mode = 7;
    */
-  viewMode: DashboardTileViewMode;
+  viewMode: DashboardTileViewMode
 
   /**
    * @generated from field: dashboard.dashboards.v1.ComparePeriod compare = 8;
    */
-  compare: ComparePeriod;
+  compare: ComparePeriod
 
   /**
    * @generated from field: repeated dashboard.dashboards.v1.ThresholdRule thresholds = 9;
    */
-  thresholds: ThresholdRule[];
+  thresholds: ThresholdRule[]
 
   /**
    * @generated from field: dashboard.dashboards.v1.TileHeader header = 10;
    */
-  header?: TileHeader | undefined;
+  header?: TileHeader | undefined
 
   /**
    * @generated from field: dashboard.dashboards.v1.VisualizationOptions visualization = 11;
    */
-  visualization?: VisualizationOptions | undefined;
-};
+  visualization?: VisualizationOptions | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardTileInput.
  * Use `create(DashboardTileInputSchema)` to create a new message.
  */
-export const DashboardTileInputSchema: GenMessage<DashboardTileInput> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 19);
+export const DashboardTileInputSchema: GenMessage<DashboardTileInput> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 19)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceUpsertResponse
  */
-export type DashboardsServiceUpsertResponse = Message<"dashboard.dashboards.v1.DashboardsServiceUpsertResponse"> & {
+export type DashboardsServiceUpsertResponse = Message<'dashboard.dashboards.v1.DashboardsServiceUpsertResponse'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.Dashboard dashboard = 1;
    */
-  dashboard?: Dashboard | undefined;
-};
+  dashboard?: Dashboard | undefined
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceUpsertResponse.
  * Use `create(DashboardsServiceUpsertResponseSchema)` to create a new message.
  */
-export const DashboardsServiceUpsertResponseSchema: GenMessage<DashboardsServiceUpsertResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 20);
+export const DashboardsServiceUpsertResponseSchema: GenMessage<DashboardsServiceUpsertResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 20)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceQueryDashboardRequest
  */
-export type DashboardsServiceQueryDashboardRequest = Message<"dashboard.dashboards.v1.DashboardsServiceQueryDashboardRequest"> & {
-  /**
-   * @generated from field: string dashboard_id = 1;
-   */
-  dashboardId: string;
+export type DashboardsServiceQueryDashboardRequest =
+  Message<'dashboard.dashboards.v1.DashboardsServiceQueryDashboardRequest'> & {
+    /**
+     * @generated from field: string dashboard_id = 1;
+     */
+    dashboardId: string
 
-  /**
-   * Optional view-time overrides of the dashboard's default window/granularity,
-   * applied uniformly to every insight tile.
-   *
-   * @generated from field: common.v1.TimeRange time_range = 2;
-   */
-  timeRange?: TimeRange | undefined;
+    /**
+     * Optional view-time overrides of the dashboard's default window/granularity,
+     * applied uniformly to every insight tile.
+     *
+     * @generated from field: common.v1.TimeRange time_range = 2;
+     */
+    timeRange?: TimeRange | undefined
 
-  /**
-   * @generated from field: shared.insights.v1.Granularity granularity = 3;
-   */
-  granularity: Granularity;
-};
+    /**
+     * @generated from field: shared.insights.v1.Granularity granularity = 3;
+     */
+    granularity: Granularity
+  }
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceQueryDashboardRequest.
  * Use `create(DashboardsServiceQueryDashboardRequestSchema)` to create a new message.
  */
-export const DashboardsServiceQueryDashboardRequestSchema: GenMessage<DashboardsServiceQueryDashboardRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 21);
+export const DashboardsServiceQueryDashboardRequestSchema: GenMessage<DashboardsServiceQueryDashboardRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 21)
 
 /**
  * @generated from message dashboard.dashboards.v1.RenderedTile
  */
-export type RenderedTile = Message<"dashboard.dashboards.v1.RenderedTile"> & {
+export type RenderedTile = Message<'dashboard.dashboards.v1.RenderedTile'> & {
   /**
    * @generated from field: dashboard.dashboards.v1.DashboardTile tile = 1;
    */
-  tile?: DashboardTile | undefined;
+  tile?: DashboardTile | undefined
 
   /**
    * @generated from oneof dashboard.dashboards.v1.RenderedTile.outcome
    */
-  outcome: {
-    /**
-     * @generated from field: shared.insights.v1.QueryResponse result = 2;
-     */
-    value: QueryResponse;
-    case: "result";
-  } | {
-    /**
-     * @generated from field: string error_message = 3;
-     */
-    value: string;
-    case: "errorMessage";
-  } | { case: undefined; value?: undefined };
-};
+  outcome:
+    | {
+        /**
+         * @generated from field: shared.insights.v1.QueryResponse result = 2;
+         */
+        value: QueryResponse
+        case: 'result'
+      }
+    | {
+        /**
+         * @generated from field: string error_message = 3;
+         */
+        value: string
+        case: 'errorMessage'
+      }
+    | { case: undefined; value?: undefined }
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.RenderedTile.
  * Use `create(RenderedTileSchema)` to create a new message.
  */
-export const RenderedTileSchema: GenMessage<RenderedTile> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 22);
+export const RenderedTileSchema: GenMessage<RenderedTile> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 22)
 
 /**
  * @generated from message dashboard.dashboards.v1.RenderedDashboard
  */
-export type RenderedDashboard = Message<"dashboard.dashboards.v1.RenderedDashboard"> & {
+export type RenderedDashboard = Message<'dashboard.dashboards.v1.RenderedDashboard'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string display_name = 2;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string description = 3;
    */
-  description: string;
+  description: string
 
   /**
    * @generated from field: common.v1.TimeRangePreset default_time_range = 4;
    */
-  defaultTimeRange: TimeRangePreset;
+  defaultTimeRange: TimeRangePreset
 
   /**
    * @generated from field: shared.insights.v1.Granularity default_granularity = 5;
    */
-  defaultGranularity: Granularity;
+  defaultGranularity: Granularity
 
   /**
    * @generated from field: google.protobuf.Timestamp create_time = 6;
    */
-  createTime?: Timestamp | undefined;
+  createTime?: Timestamp | undefined
 
   /**
    * @generated from field: google.protobuf.Timestamp update_time = 7;
    */
-  updateTime?: Timestamp | undefined;
+  updateTime?: Timestamp | undefined
 
   /**
    * @generated from field: repeated dashboard.dashboards.v1.RenderedTile tiles = 8;
    */
-  tiles: RenderedTile[];
-};
+  tiles: RenderedTile[]
+}
 
 /**
  * Describes the message dashboard.dashboards.v1.RenderedDashboard.
  * Use `create(RenderedDashboardSchema)` to create a new message.
  */
-export const RenderedDashboardSchema: GenMessage<RenderedDashboard> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 23);
+export const RenderedDashboardSchema: GenMessage<RenderedDashboard> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 23)
 
 /**
  * @generated from message dashboard.dashboards.v1.DashboardsServiceQueryDashboardResponse
  */
-export type DashboardsServiceQueryDashboardResponse = Message<"dashboard.dashboards.v1.DashboardsServiceQueryDashboardResponse"> & {
-  /**
-   * @generated from field: dashboard.dashboards.v1.RenderedDashboard dashboard = 1;
-   */
-  dashboard?: RenderedDashboard | undefined;
-};
+export type DashboardsServiceQueryDashboardResponse =
+  Message<'dashboard.dashboards.v1.DashboardsServiceQueryDashboardResponse'> & {
+    /**
+     * @generated from field: dashboard.dashboards.v1.RenderedDashboard dashboard = 1;
+     */
+    dashboard?: RenderedDashboard | undefined
+  }
 
 /**
  * Describes the message dashboard.dashboards.v1.DashboardsServiceQueryDashboardResponse.
  * Use `create(DashboardsServiceQueryDashboardResponseSchema)` to create a new message.
  */
-export const DashboardsServiceQueryDashboardResponseSchema: GenMessage<DashboardsServiceQueryDashboardResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_dashboards_v1_dashboards, 24);
+export const DashboardsServiceQueryDashboardResponseSchema: GenMessage<DashboardsServiceQueryDashboardResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_dashboards_v1_dashboards, 24)
 
 /**
  * @generated from enum dashboard.dashboards.v1.DashboardTileViewMode
@@ -998,8 +1053,9 @@ export enum DashboardTileViewMode {
 /**
  * Describes the enum dashboard.dashboards.v1.DashboardTileViewMode.
  */
-export const DashboardTileViewModeSchema: GenEnum<DashboardTileViewMode> = /*@__PURE__*/
-  enumDesc(file_dashboard_dashboards_v1_dashboards, 0);
+export const DashboardTileViewModeSchema: GenEnum<DashboardTileViewMode> =
+  /*@__PURE__*/
+  enumDesc(file_dashboard_dashboards_v1_dashboards, 0)
 
 /**
  * ComparePeriod selects an automatic comparison window for KPI / trend tiles.
@@ -1027,8 +1083,9 @@ export enum ComparePeriod {
 /**
  * Describes the enum dashboard.dashboards.v1.ComparePeriod.
  */
-export const ComparePeriodSchema: GenEnum<ComparePeriod> = /*@__PURE__*/
-  enumDesc(file_dashboard_dashboards_v1_dashboards, 1);
+export const ComparePeriodSchema: GenEnum<ComparePeriod> =
+  /*@__PURE__*/
+  enumDesc(file_dashboard_dashboards_v1_dashboards, 1)
 
 /**
  * @generated from service dashboard.dashboards.v1.DashboardsService
@@ -1038,42 +1095,42 @@ export const DashboardsService: GenService<{
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.Create
    */
   create: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceCreateRequestSchema;
-    output: typeof DashboardsServiceCreateResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceCreateRequestSchema
+    output: typeof DashboardsServiceCreateResponseSchema
+  }
   /**
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.Delete
    */
   delete: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceDeleteRequestSchema;
-    output: typeof DashboardsServiceDeleteResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceDeleteRequestSchema
+    output: typeof DashboardsServiceDeleteResponseSchema
+  }
   /**
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.Get
    */
   get: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceGetRequestSchema;
-    output: typeof DashboardsServiceGetResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceGetRequestSchema
+    output: typeof DashboardsServiceGetResponseSchema
+  }
   /**
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.List
    */
   list: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceListRequestSchema;
-    output: typeof DashboardsServiceListResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceListRequestSchema
+    output: typeof DashboardsServiceListResponseSchema
+  }
   /**
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.Update
    */
   update: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceUpdateRequestSchema;
-    output: typeof DashboardsServiceUpdateResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceUpdateRequestSchema
+    output: typeof DashboardsServiceUpdateResponseSchema
+  }
   /**
    * Upsert is the only mutation path for dashboard tiles. It applies an atomic
    * edit: dashboard metadata is replaced and the tile set is reconciled in a
@@ -1090,18 +1147,16 @@ export const DashboardsService: GenService<{
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.Upsert
    */
   upsert: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceUpsertRequestSchema;
-    output: typeof DashboardsServiceUpsertResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DashboardsServiceUpsertRequestSchema
+    output: typeof DashboardsServiceUpsertResponseSchema
+  }
   /**
    * @generated from rpc dashboard.dashboards.v1.DashboardsService.QueryDashboard
    */
   queryDashboard: {
-    methodKind: "unary";
-    input: typeof DashboardsServiceQueryDashboardRequestSchema;
-    output: typeof DashboardsServiceQueryDashboardResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_dashboard_dashboards_v1_dashboards, 0);
-
+    methodKind: 'unary'
+    input: typeof DashboardsServiceQueryDashboardRequestSchema
+    output: typeof DashboardsServiceQueryDashboardResponseSchema
+  }
+}> = /*@__PURE__*/ serviceDesc(file_dashboard_dashboards_v1_dashboards, 0)

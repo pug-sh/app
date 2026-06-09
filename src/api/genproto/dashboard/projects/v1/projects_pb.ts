@@ -2,251 +2,262 @@
 // @generated from file dashboard/projects/v1/projects.proto (package dashboard.projects.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
 
 /**
  * Describes the file dashboard/projects/v1/projects.proto.
  */
-export const file_dashboard_projects_v1_projects: GenFile = /*@__PURE__*/
-  fileDesc("CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IkoKDUNyZWF0ZVJlcXVlc3QSIQoMZGlzcGxheV9uYW1lGAEgASgJQgu6SAjIAQFyAxiWARIWCgZvcmdfaWQYAiABKAlCBrpIA8gBASJBCg5DcmVhdGVSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiDwoNRGVsZXRlUmVxdWVzdCIQCg5EZWxldGVSZXNwb25zZSIMCgpHZXRSZXF1ZXN0Ij4KC0dldFJlc3BvbnNlEi8KB3Byb2plY3QYASABKAsyHi5kYXNoYm9hcmQucHJvamVjdHMudjEuUHJvamVjdCKGAQoHUHJvamVjdBIUCgxkaXNwbGF5X25hbWUYASABKAkSGAoQZmNtX3NlcnZpY2VfanNvbhgCIAEoCRIKCgJpZBgDIAEoCRIOCgZvcmdfaWQYBCABKAkSFwoPcHJpdmF0ZV9hcGlfa2V5GAUgASgJEhYKDnB1YmxpY19hcGlfa2V5GAYgASgJIj0KGFVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBIhCgxkaXNwbGF5X25hbWUYASABKAlCC7pICMgBAXIDGJYBIkwKGVVwZGF0ZURpc3BsYXlOYW1lUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IjcKG1VwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBIYChBmY21fc2VydmljZV9qc29uGAEgASgJIh4KHFVwZGF0ZUZDTVNlcnZpY2VKU09OUmVzcG9uc2Uy8AQKD1Byb2plY3RzU2VydmljZRJdCghCYXRjaEdldBImLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlcXVlc3QaJy5kYXNoYm9hcmQucHJvamVjdHMudjEuQmF0Y2hHZXRSZXNwb25zZSIAElcKBkNyZWF0ZRIkLmRhc2hib2FyZC5wcm9qZWN0cy52MS5DcmVhdGVSZXF1ZXN0GiUuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlc3BvbnNlIgASVwoGRGVsZXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkRlbGV0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVzcG9uc2UiABJOCgNHZXQSIS5kYXNoYm9hcmQucHJvamVjdHMudjEuR2V0UmVxdWVzdBoiLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXNwb25zZSIAEngKEVVwZGF0ZURpc3BsYXlOYW1lEi8uZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBowLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVEaXNwbGF5TmFtZVJlc3BvbnNlIgASgQEKFFVwZGF0ZUZDTVNlcnZpY2VKU09OEjIuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBozLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVGQ01TZXJ2aWNlSlNPTlJlc3BvbnNlIgBCS1pJZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvcHJvamVjdHMvdjE7cHJvamVjdHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+export const file_dashboard_projects_v1_projects: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IkoKDUNyZWF0ZVJlcXVlc3QSIQoMZGlzcGxheV9uYW1lGAEgASgJQgu6SAjIAQFyAxiWARIWCgZvcmdfaWQYAiABKAlCBrpIA8gBASJBCg5DcmVhdGVSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiDwoNRGVsZXRlUmVxdWVzdCIQCg5EZWxldGVSZXNwb25zZSIMCgpHZXRSZXF1ZXN0Ij4KC0dldFJlc3BvbnNlEi8KB3Byb2plY3QYASABKAsyHi5kYXNoYm9hcmQucHJvamVjdHMudjEuUHJvamVjdCKGAQoHUHJvamVjdBIUCgxkaXNwbGF5X25hbWUYASABKAkSGAoQZmNtX3NlcnZpY2VfanNvbhgCIAEoCRIKCgJpZBgDIAEoCRIOCgZvcmdfaWQYBCABKAkSFwoPcHJpdmF0ZV9hcGlfa2V5GAUgASgJEhYKDnB1YmxpY19hcGlfa2V5GAYgASgJIj0KGFVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBIhCgxkaXNwbGF5X25hbWUYASABKAlCC7pICMgBAXIDGJYBIkwKGVVwZGF0ZURpc3BsYXlOYW1lUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IjcKG1VwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBIYChBmY21fc2VydmljZV9qc29uGAEgASgJIh4KHFVwZGF0ZUZDTVNlcnZpY2VKU09OUmVzcG9uc2Uy8AQKD1Byb2plY3RzU2VydmljZRJdCghCYXRjaEdldBImLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlcXVlc3QaJy5kYXNoYm9hcmQucHJvamVjdHMudjEuQmF0Y2hHZXRSZXNwb25zZSIAElcKBkNyZWF0ZRIkLmRhc2hib2FyZC5wcm9qZWN0cy52MS5DcmVhdGVSZXF1ZXN0GiUuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlc3BvbnNlIgASVwoGRGVsZXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkRlbGV0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVzcG9uc2UiABJOCgNHZXQSIS5kYXNoYm9hcmQucHJvamVjdHMudjEuR2V0UmVxdWVzdBoiLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXNwb25zZSIAEngKEVVwZGF0ZURpc3BsYXlOYW1lEi8uZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBowLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVEaXNwbGF5TmFtZVJlc3BvbnNlIgASgQEKFFVwZGF0ZUZDTVNlcnZpY2VKU09OEjIuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBozLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVGQ01TZXJ2aWNlSlNPTlJlc3BvbnNlIgBCS1pJZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvcHJvamVjdHMvdjE7cHJvamVjdHN2MWIIZWRpdGlvbnNw6Ac',
+    [file_buf_validate_validate],
+  )
 
 /**
  * @generated from message dashboard.projects.v1.BatchGetRequest
  */
-export type BatchGetRequest = Message<"dashboard.projects.v1.BatchGetRequest"> & {
+export type BatchGetRequest = Message<'dashboard.projects.v1.BatchGetRequest'> & {
   /**
    * @generated from field: string org_id = 1;
    */
-  orgId: string;
-};
+  orgId: string
+}
 
 /**
  * Describes the message dashboard.projects.v1.BatchGetRequest.
  * Use `create(BatchGetRequestSchema)` to create a new message.
  */
-export const BatchGetRequestSchema: GenMessage<BatchGetRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 0);
+export const BatchGetRequestSchema: GenMessage<BatchGetRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 0)
 
 /**
  * @generated from message dashboard.projects.v1.BatchGetResponse
  */
-export type BatchGetResponse = Message<"dashboard.projects.v1.BatchGetResponse"> & {
+export type BatchGetResponse = Message<'dashboard.projects.v1.BatchGetResponse'> & {
   /**
    * @generated from field: repeated dashboard.projects.v1.Project projects = 1;
    */
-  projects: Project[];
-};
+  projects: Project[]
+}
 
 /**
  * Describes the message dashboard.projects.v1.BatchGetResponse.
  * Use `create(BatchGetResponseSchema)` to create a new message.
  */
-export const BatchGetResponseSchema: GenMessage<BatchGetResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 1);
+export const BatchGetResponseSchema: GenMessage<BatchGetResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 1)
 
 /**
  * @generated from message dashboard.projects.v1.CreateRequest
  */
-export type CreateRequest = Message<"dashboard.projects.v1.CreateRequest"> & {
+export type CreateRequest = Message<'dashboard.projects.v1.CreateRequest'> & {
   /**
    * @generated from field: string display_name = 1;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string org_id = 2;
    */
-  orgId: string;
-};
+  orgId: string
+}
 
 /**
  * Describes the message dashboard.projects.v1.CreateRequest.
  * Use `create(CreateRequestSchema)` to create a new message.
  */
-export const CreateRequestSchema: GenMessage<CreateRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 2);
+export const CreateRequestSchema: GenMessage<CreateRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 2)
 
 /**
  * @generated from message dashboard.projects.v1.CreateResponse
  */
-export type CreateResponse = Message<"dashboard.projects.v1.CreateResponse"> & {
+export type CreateResponse = Message<'dashboard.projects.v1.CreateResponse'> & {
   /**
    * @generated from field: dashboard.projects.v1.Project project = 1;
    */
-  project?: Project | undefined;
-};
+  project?: Project | undefined
+}
 
 /**
  * Describes the message dashboard.projects.v1.CreateResponse.
  * Use `create(CreateResponseSchema)` to create a new message.
  */
-export const CreateResponseSchema: GenMessage<CreateResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 3);
+export const CreateResponseSchema: GenMessage<CreateResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 3)
 
 /**
  * @generated from message dashboard.projects.v1.DeleteRequest
  */
-export type DeleteRequest = Message<"dashboard.projects.v1.DeleteRequest"> & {
-};
+export type DeleteRequest = Message<'dashboard.projects.v1.DeleteRequest'> & {}
 
 /**
  * Describes the message dashboard.projects.v1.DeleteRequest.
  * Use `create(DeleteRequestSchema)` to create a new message.
  */
-export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 4);
+export const DeleteRequestSchema: GenMessage<DeleteRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 4)
 
 /**
  * @generated from message dashboard.projects.v1.DeleteResponse
  */
-export type DeleteResponse = Message<"dashboard.projects.v1.DeleteResponse"> & {
-};
+export type DeleteResponse = Message<'dashboard.projects.v1.DeleteResponse'> & {}
 
 /**
  * Describes the message dashboard.projects.v1.DeleteResponse.
  * Use `create(DeleteResponseSchema)` to create a new message.
  */
-export const DeleteResponseSchema: GenMessage<DeleteResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 5);
+export const DeleteResponseSchema: GenMessage<DeleteResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 5)
 
 /**
  * @generated from message dashboard.projects.v1.GetRequest
  */
-export type GetRequest = Message<"dashboard.projects.v1.GetRequest"> & {
-};
+export type GetRequest = Message<'dashboard.projects.v1.GetRequest'> & {}
 
 /**
  * Describes the message dashboard.projects.v1.GetRequest.
  * Use `create(GetRequestSchema)` to create a new message.
  */
-export const GetRequestSchema: GenMessage<GetRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 6);
+export const GetRequestSchema: GenMessage<GetRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 6)
 
 /**
  * @generated from message dashboard.projects.v1.GetResponse
  */
-export type GetResponse = Message<"dashboard.projects.v1.GetResponse"> & {
+export type GetResponse = Message<'dashboard.projects.v1.GetResponse'> & {
   /**
    * @generated from field: dashboard.projects.v1.Project project = 1;
    */
-  project?: Project | undefined;
-};
+  project?: Project | undefined
+}
 
 /**
  * Describes the message dashboard.projects.v1.GetResponse.
  * Use `create(GetResponseSchema)` to create a new message.
  */
-export const GetResponseSchema: GenMessage<GetResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 7);
+export const GetResponseSchema: GenMessage<GetResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 7)
 
 /**
  * @generated from message dashboard.projects.v1.Project
  */
-export type Project = Message<"dashboard.projects.v1.Project"> & {
+export type Project = Message<'dashboard.projects.v1.Project'> & {
   /**
    * @generated from field: string display_name = 1;
    */
-  displayName: string;
+  displayName: string
 
   /**
    * @generated from field: string fcm_service_json = 2;
    */
-  fcmServiceJson: string;
+  fcmServiceJson: string
 
   /**
    * @generated from field: string id = 3;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string org_id = 4;
    */
-  orgId: string;
+  orgId: string
 
   /**
    * @generated from field: string private_api_key = 5;
    */
-  privateApiKey: string;
+  privateApiKey: string
 
   /**
    * @generated from field: string public_api_key = 6;
    */
-  publicApiKey: string;
-};
+  publicApiKey: string
+}
 
 /**
  * Describes the message dashboard.projects.v1.Project.
  * Use `create(ProjectSchema)` to create a new message.
  */
-export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 8);
+export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/ messageDesc(file_dashboard_projects_v1_projects, 8)
 
 /**
  * @generated from message dashboard.projects.v1.UpdateDisplayNameRequest
  */
-export type UpdateDisplayNameRequest = Message<"dashboard.projects.v1.UpdateDisplayNameRequest"> & {
+export type UpdateDisplayNameRequest = Message<'dashboard.projects.v1.UpdateDisplayNameRequest'> & {
   /**
    * @generated from field: string display_name = 1;
    */
-  displayName: string;
-};
+  displayName: string
+}
 
 /**
  * Describes the message dashboard.projects.v1.UpdateDisplayNameRequest.
  * Use `create(UpdateDisplayNameRequestSchema)` to create a new message.
  */
-export const UpdateDisplayNameRequestSchema: GenMessage<UpdateDisplayNameRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 9);
+export const UpdateDisplayNameRequestSchema: GenMessage<UpdateDisplayNameRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 9)
 
 /**
  * @generated from message dashboard.projects.v1.UpdateDisplayNameResponse
  */
-export type UpdateDisplayNameResponse = Message<"dashboard.projects.v1.UpdateDisplayNameResponse"> & {
+export type UpdateDisplayNameResponse = Message<'dashboard.projects.v1.UpdateDisplayNameResponse'> & {
   /**
    * @generated from field: dashboard.projects.v1.Project project = 1;
    */
-  project?: Project | undefined;
-};
+  project?: Project | undefined
+}
 
 /**
  * Describes the message dashboard.projects.v1.UpdateDisplayNameResponse.
  * Use `create(UpdateDisplayNameResponseSchema)` to create a new message.
  */
-export const UpdateDisplayNameResponseSchema: GenMessage<UpdateDisplayNameResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 10);
+export const UpdateDisplayNameResponseSchema: GenMessage<UpdateDisplayNameResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 10)
 
 /**
  * @generated from message dashboard.projects.v1.UpdateFCMServiceJSONRequest
  */
-export type UpdateFCMServiceJSONRequest = Message<"dashboard.projects.v1.UpdateFCMServiceJSONRequest"> & {
+export type UpdateFCMServiceJSONRequest = Message<'dashboard.projects.v1.UpdateFCMServiceJSONRequest'> & {
   /**
    * @generated from field: string fcm_service_json = 1;
    */
-  fcmServiceJson: string;
-};
+  fcmServiceJson: string
+}
 
 /**
  * Describes the message dashboard.projects.v1.UpdateFCMServiceJSONRequest.
  * Use `create(UpdateFCMServiceJSONRequestSchema)` to create a new message.
  */
-export const UpdateFCMServiceJSONRequestSchema: GenMessage<UpdateFCMServiceJSONRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 11);
+export const UpdateFCMServiceJSONRequestSchema: GenMessage<UpdateFCMServiceJSONRequest> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 11)
 
 /**
  * @generated from message dashboard.projects.v1.UpdateFCMServiceJSONResponse
  */
-export type UpdateFCMServiceJSONResponse = Message<"dashboard.projects.v1.UpdateFCMServiceJSONResponse"> & {
-};
+export type UpdateFCMServiceJSONResponse = Message<'dashboard.projects.v1.UpdateFCMServiceJSONResponse'> & {}
 
 /**
  * Describes the message dashboard.projects.v1.UpdateFCMServiceJSONResponse.
  * Use `create(UpdateFCMServiceJSONResponseSchema)` to create a new message.
  */
-export const UpdateFCMServiceJSONResponseSchema: GenMessage<UpdateFCMServiceJSONResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 12);
+export const UpdateFCMServiceJSONResponseSchema: GenMessage<UpdateFCMServiceJSONResponse> =
+  /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 12)
 
 /**
  * @generated from service dashboard.projects.v1.ProjectsService
@@ -256,50 +267,48 @@ export const ProjectsService: GenService<{
    * @generated from rpc dashboard.projects.v1.ProjectsService.BatchGet
    */
   batchGet: {
-    methodKind: "unary";
-    input: typeof BatchGetRequestSchema;
-    output: typeof BatchGetResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof BatchGetRequestSchema
+    output: typeof BatchGetResponseSchema
+  }
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.Create
    */
   create: {
-    methodKind: "unary";
-    input: typeof CreateRequestSchema;
-    output: typeof CreateResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof CreateRequestSchema
+    output: typeof CreateResponseSchema
+  }
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.Delete
    */
   delete: {
-    methodKind: "unary";
-    input: typeof DeleteRequestSchema;
-    output: typeof DeleteResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof DeleteRequestSchema
+    output: typeof DeleteResponseSchema
+  }
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.Get
    */
   get: {
-    methodKind: "unary";
-    input: typeof GetRequestSchema;
-    output: typeof GetResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetRequestSchema
+    output: typeof GetResponseSchema
+  }
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.UpdateDisplayName
    */
   updateDisplayName: {
-    methodKind: "unary";
-    input: typeof UpdateDisplayNameRequestSchema;
-    output: typeof UpdateDisplayNameResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof UpdateDisplayNameRequestSchema
+    output: typeof UpdateDisplayNameResponseSchema
+  }
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.UpdateFCMServiceJSON
    */
   updateFCMServiceJSON: {
-    methodKind: "unary";
-    input: typeof UpdateFCMServiceJSONRequestSchema;
-    output: typeof UpdateFCMServiceJSONResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_dashboard_projects_v1_projects, 0);
-
+    methodKind: 'unary'
+    input: typeof UpdateFCMServiceJSONRequestSchema
+    output: typeof UpdateFCMServiceJSONResponseSchema
+  }
+}> = /*@__PURE__*/ serviceDesc(file_dashboard_projects_v1_projects, 0)

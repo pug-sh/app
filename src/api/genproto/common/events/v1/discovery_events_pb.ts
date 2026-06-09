@@ -2,167 +2,176 @@
 // @generated from file common/events/v1/discovery_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/discovery_events.proto.
  */
-export const file_common_events_v1_discovery_events: GenFile = /*@__PURE__*/
-  fileDesc("Cidjb21tb24vZXZlbnRzL3YxL2Rpc2NvdmVyeV9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiNQoQU2VhcmNoUHJvcGVydGllcxIVCgVxdWVyeRgBIAEoCUIGukgDyAEBOgqCtRgGc2VhcmNoIoQBCh1TZWFyY2hSZXN1bHRDbGlja2VkUHJvcGVydGllcxIVCgVxdWVyeRgBIAEoCUIGukgDyAEBEhkKCXJlc3VsdF9pZBgCIAEoCUIGukgDyAEBEhYKBWluZGV4GAMgASgFQge6SAQaAigAOhmCtRgVc2VhcmNoX3Jlc3VsdF9jbGlja2VkIpcBCh5SZWNvbW1lbmRhdGlvblZpZXdlZFByb3BlcnRpZXMSIQoRcmVjb21tZW5kYXRpb25faWQYASABKAlCBrpIA8gBARIPCgdpdGVtX2lkGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIWCgVpbmRleBgEIAEoBUIHukgEGgIoADoZgrUYFXJlY29tbWVuZGF0aW9uX3ZpZXdlZCKhAQofUmVjb21tZW5kYXRpb25DbGlja2VkUHJvcGVydGllcxIhChFyZWNvbW1lbmRhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhcKB2l0ZW1faWQYAiABKAlCBrpIA8gBARIOCgZzb3VyY2UYAyABKAkSFgoFaW5kZXgYBCABKAVCB7pIBBoCKAA6GoK1GBZyZWNvbW1lbmRhdGlvbl9jbGlja2VkIlEKF0ZpbHRlckFwcGxpZWRQcm9wZXJ0aWVzEhMKA2tleRgBIAEoCUIGukgDyAEBEg0KBXZhbHVlGAIgASgJOhKCtRgOZmlsdGVyX2FwcGxpZWQiUQoVU29ydENoYW5nZWRQcm9wZXJ0aWVzEhMKA2tleRgBIAEoCUIGukgDyAEBEhEKCWRpcmVjdGlvbhgCIAEoCToQgrUYDHNvcnRfY2hhbmdlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_events_v1_options]);
+export const file_common_events_v1_discovery_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'Cidjb21tb24vZXZlbnRzL3YxL2Rpc2NvdmVyeV9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiNQoQU2VhcmNoUHJvcGVydGllcxIVCgVxdWVyeRgBIAEoCUIGukgDyAEBOgqCtRgGc2VhcmNoIoQBCh1TZWFyY2hSZXN1bHRDbGlja2VkUHJvcGVydGllcxIVCgVxdWVyeRgBIAEoCUIGukgDyAEBEhkKCXJlc3VsdF9pZBgCIAEoCUIGukgDyAEBEhYKBWluZGV4GAMgASgFQge6SAQaAigAOhmCtRgVc2VhcmNoX3Jlc3VsdF9jbGlja2VkIpcBCh5SZWNvbW1lbmRhdGlvblZpZXdlZFByb3BlcnRpZXMSIQoRcmVjb21tZW5kYXRpb25faWQYASABKAlCBrpIA8gBARIPCgdpdGVtX2lkGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIWCgVpbmRleBgEIAEoBUIHukgEGgIoADoZgrUYFXJlY29tbWVuZGF0aW9uX3ZpZXdlZCKhAQofUmVjb21tZW5kYXRpb25DbGlja2VkUHJvcGVydGllcxIhChFyZWNvbW1lbmRhdGlvbl9pZBgBIAEoCUIGukgDyAEBEhcKB2l0ZW1faWQYAiABKAlCBrpIA8gBARIOCgZzb3VyY2UYAyABKAkSFgoFaW5kZXgYBCABKAVCB7pIBBoCKAA6GoK1GBZyZWNvbW1lbmRhdGlvbl9jbGlja2VkIlEKF0ZpbHRlckFwcGxpZWRQcm9wZXJ0aWVzEhMKA2tleRgBIAEoCUIGukgDyAEBEg0KBXZhbHVlGAIgASgJOhKCtRgOZmlsdGVyX2FwcGxpZWQiUQoVU29ydENoYW5nZWRQcm9wZXJ0aWVzEhMKA2tleRgBIAEoCUIGukgDyAEBEhEKCWRpcmVjdGlvbhgCIAEoCToQgrUYDHNvcnRfY2hhbmdlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH',
+    [file_buf_validate_validate, file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.SearchProperties
  */
-export type SearchProperties = Message<"common.events.v1.SearchProperties"> & {
+export type SearchProperties = Message<'common.events.v1.SearchProperties'> & {
   /**
    * @generated from field: string query = 1;
    */
-  query: string;
-};
+  query: string
+}
 
 /**
  * Describes the message common.events.v1.SearchProperties.
  * Use `create(SearchPropertiesSchema)` to create a new message.
  */
-export const SearchPropertiesSchema: GenMessage<SearchProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 0);
+export const SearchPropertiesSchema: GenMessage<SearchProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 0)
 
 /**
  * @generated from message common.events.v1.SearchResultClickedProperties
  */
-export type SearchResultClickedProperties = Message<"common.events.v1.SearchResultClickedProperties"> & {
+export type SearchResultClickedProperties = Message<'common.events.v1.SearchResultClickedProperties'> & {
   /**
    * @generated from field: string query = 1;
    */
-  query: string;
+  query: string
 
   /**
    * @generated from field: string result_id = 2;
    */
-  resultId: string;
+  resultId: string
 
   /**
    * @generated from field: int32 index = 3;
    */
-  index: number;
-};
+  index: number
+}
 
 /**
  * Describes the message common.events.v1.SearchResultClickedProperties.
  * Use `create(SearchResultClickedPropertiesSchema)` to create a new message.
  */
-export const SearchResultClickedPropertiesSchema: GenMessage<SearchResultClickedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 1);
+export const SearchResultClickedPropertiesSchema: GenMessage<SearchResultClickedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 1)
 
 /**
  * @generated from message common.events.v1.RecommendationViewedProperties
  */
-export type RecommendationViewedProperties = Message<"common.events.v1.RecommendationViewedProperties"> & {
+export type RecommendationViewedProperties = Message<'common.events.v1.RecommendationViewedProperties'> & {
   /**
    * @generated from field: string recommendation_id = 1;
    */
-  recommendationId: string;
+  recommendationId: string
 
   /**
    * @generated from field: string item_id = 2;
    */
-  itemId: string;
+  itemId: string
 
   /**
    * @generated from field: string source = 3;
    */
-  source: string;
+  source: string
 
   /**
    * @generated from field: int32 index = 4;
    */
-  index: number;
-};
+  index: number
+}
 
 /**
  * Describes the message common.events.v1.RecommendationViewedProperties.
  * Use `create(RecommendationViewedPropertiesSchema)` to create a new message.
  */
-export const RecommendationViewedPropertiesSchema: GenMessage<RecommendationViewedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 2);
+export const RecommendationViewedPropertiesSchema: GenMessage<RecommendationViewedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 2)
 
 /**
  * @generated from message common.events.v1.RecommendationClickedProperties
  */
-export type RecommendationClickedProperties = Message<"common.events.v1.RecommendationClickedProperties"> & {
+export type RecommendationClickedProperties = Message<'common.events.v1.RecommendationClickedProperties'> & {
   /**
    * @generated from field: string recommendation_id = 1;
    */
-  recommendationId: string;
+  recommendationId: string
 
   /**
    * @generated from field: string item_id = 2;
    */
-  itemId: string;
+  itemId: string
 
   /**
    * @generated from field: string source = 3;
    */
-  source: string;
+  source: string
 
   /**
    * @generated from field: int32 index = 4;
    */
-  index: number;
-};
+  index: number
+}
 
 /**
  * Describes the message common.events.v1.RecommendationClickedProperties.
  * Use `create(RecommendationClickedPropertiesSchema)` to create a new message.
  */
-export const RecommendationClickedPropertiesSchema: GenMessage<RecommendationClickedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 3);
+export const RecommendationClickedPropertiesSchema: GenMessage<RecommendationClickedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 3)
 
 /**
  * @generated from message common.events.v1.FilterAppliedProperties
  */
-export type FilterAppliedProperties = Message<"common.events.v1.FilterAppliedProperties"> & {
+export type FilterAppliedProperties = Message<'common.events.v1.FilterAppliedProperties'> & {
   /**
    * @generated from field: string key = 1;
    */
-  key: string;
+  key: string
 
   /**
    * @generated from field: string value = 2;
    */
-  value: string;
-};
+  value: string
+}
 
 /**
  * Describes the message common.events.v1.FilterAppliedProperties.
  * Use `create(FilterAppliedPropertiesSchema)` to create a new message.
  */
-export const FilterAppliedPropertiesSchema: GenMessage<FilterAppliedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 4);
+export const FilterAppliedPropertiesSchema: GenMessage<FilterAppliedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 4)
 
 /**
  * @generated from message common.events.v1.SortChangedProperties
  */
-export type SortChangedProperties = Message<"common.events.v1.SortChangedProperties"> & {
+export type SortChangedProperties = Message<'common.events.v1.SortChangedProperties'> & {
   /**
    * @generated from field: string key = 1;
    */
-  key: string;
+  key: string
 
   /**
    * @generated from field: string direction = 2;
    */
-  direction: string;
-};
+  direction: string
+}
 
 /**
  * Describes the message common.events.v1.SortChangedProperties.
  * Use `create(SortChangedPropertiesSchema)` to create a new message.
  */
-export const SortChangedPropertiesSchema: GenMessage<SortChangedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_discovery_events, 5);
-
+export const SortChangedPropertiesSchema: GenMessage<SortChangedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_discovery_events, 5)

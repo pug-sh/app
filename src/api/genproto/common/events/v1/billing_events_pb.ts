@@ -2,189 +2,199 @@
 // @generated from file common/events/v1/billing_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/billing_events.proto.
  */
-export const file_common_events_v1_billing_events: GenFile = /*@__PURE__*/
-  fileDesc("CiVjb21tb24vZXZlbnRzL3YxL2JpbGxpbmdfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIrABCh1TdWJzY3JpcHRpb25TdGFydGVkUHJvcGVydGllcxIfCg9zdWJzY3JpcHRpb25faWQYASABKAlCBrpIA8gBARIPCgdwbGFuX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kOhiCtRgUc3Vic2NyaXB0aW9uX3N0YXJ0ZWQiiQEKHVN1YnNjcmlwdGlvbkNoYW5nZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEhgKEHByZXZpb3VzX3BsYW5faWQYAiABKAkSEwoLbmV3X3BsYW5faWQYAyABKAk6GIK1GBRzdWJzY3JpcHRpb25fY2hhbmdlZCJ9Ch5TdWJzY3JpcHRpb25DYW5jZWxlZFByb3BlcnRpZXMSHwoPc3Vic2NyaXB0aW9uX2lkGAEgASgJQga6SAPIAQESDwoHcGxhbl9pZBgCIAEoCRIOCgZyZWFzb24YAyABKAk6GYK1GBVzdWJzY3JpcHRpb25fY2FuY2VsZWQisAEKHVN1YnNjcmlwdGlvblJlbmV3ZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSHgoGYW1vdW50GAMgASgBQg66SAsSCSEAAAAAAAAAABIjCghjdXJyZW5jeRgEIAEoCUIRukgOcgwyCl5bQS1aXXszfSQ6GIK1GBRzdWJzY3JpcHRpb25fcmVuZXdlZCJ5ChxTdWJzY3JpcHRpb25QYXVzZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSDgoGcmVhc29uGAMgASgJOheCtRgTc3Vic2NyaXB0aW9uX3BhdXNlZCJ7Ch1TdWJzY3JpcHRpb25SZXN1bWVkUHJvcGVydGllcxIfCg9zdWJzY3JpcHRpb25faWQYASABKAlCBrpIA8gBARIPCgdwbGFuX2lkGAIgASgJEg4KBnJlYXNvbhgDIAEoCToYgrUYFHN1YnNjcmlwdGlvbl9yZXN1bWVkIokBCiJTdWJzY3JpcHRpb25UcmlhbFdpbGxFbmRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSEAoIdHJpYWxfaWQYAyABKAk6H4K1GBtzdWJzY3JpcHRpb25fdHJpYWxfd2lsbF9lbmQiowEKFUludm9pY2VQYWlkUHJvcGVydGllcxIaCgppbnZvaWNlX2lkGAEgASgJQga6SAPIAQESFwoPc3Vic2NyaXB0aW9uX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kOhCCtRgMaW52b2ljZV9wYWlkIrcBChdJbnZvaWNlRmFpbGVkUHJvcGVydGllcxIaCgppbnZvaWNlX2lkGAEgASgJQga6SAPIAQESFwoPc3Vic2NyaXB0aW9uX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kEg4KBnJlYXNvbhgFIAEoCToSgrUYDmludm9pY2VfZmFpbGVkIrkBChpQYXltZW50U3VjY2VlZGVkUHJvcGVydGllcxISCgpwYXltZW50X2lkGAEgASgJEhIKCmludm9pY2VfaWQYAiABKAkSFwoPc3Vic2NyaXB0aW9uX2lkGAMgASgJEh4KBmFtb3VudBgEIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBSABKAlCEbpIDnIMMgpeW0EtWl17M30kOhWCtRgRcGF5bWVudF9zdWNjZWVkZWQiwwEKF1BheW1lbnRGYWlsZWRQcm9wZXJ0aWVzEhIKCnBheW1lbnRfaWQYASABKAkSEgoKaW52b2ljZV9pZBgCIAEoCRIXCg9zdWJzY3JpcHRpb25faWQYAyABKAkSHgoGYW1vdW50GAQgASgBQg66SAsSCSEAAAAAAAAAABIjCghjdXJyZW5jeRgFIAEoCUIRukgOcgwyCl5bQS1aXXszfSQSDgoGcmVhc29uGAYgASgJOhKCtRgOcGF5bWVudF9mYWlsZWQicAocUGF5bWVudE1ldGhvZEFkZGVkUHJvcGVydGllcxIZChFwYXltZW50X21ldGhvZF9pZBgBIAEoCRIbChNwYXltZW50X21ldGhvZF90eXBlGAIgASgJOhiCtRgUcGF5bWVudF9tZXRob2RfYWRkZWQidAoeUGF5bWVudE1ldGhvZFJlbW92ZWRQcm9wZXJ0aWVzEhkKEXBheW1lbnRfbWV0aG9kX2lkGAEgASgJEhsKE3BheW1lbnRfbWV0aG9kX3R5cGUYAiABKAk6GoK1GBZwYXltZW50X21ldGhvZF9yZW1vdmVkIk4KFlRyaWFsU3RhcnRlZFByb3BlcnRpZXMSEAoIdHJpYWxfaWQYASABKAkSDwoHcGxhbl9pZBgCIAEoCToRgrUYDXRyaWFsX3N0YXJ0ZWQiawoYVHJpYWxDb252ZXJ0ZWRQcm9wZXJ0aWVzEhAKCHRyaWFsX2lkGAEgASgJEhcKD3N1YnNjcmlwdGlvbl9pZBgCIAEoCRIPCgdwbGFuX2lkGAMgASgJOhOCtRgPdHJpYWxfY29udmVydGVkIq0BChZSZWZ1bmRGYWlsZWRQcm9wZXJ0aWVzEhgKCG9yZGVyX2lkGAEgASgJQga6SAPIAQESEQoJcmVmdW5kX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kEg4KBnJlYXNvbhgFIAEoCToRgrUYDXJlZnVuZF9mYWlsZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_events_v1_options]);
+export const file_common_events_v1_billing_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiVjb21tb24vZXZlbnRzL3YxL2JpbGxpbmdfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIrABCh1TdWJzY3JpcHRpb25TdGFydGVkUHJvcGVydGllcxIfCg9zdWJzY3JpcHRpb25faWQYASABKAlCBrpIA8gBARIPCgdwbGFuX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kOhiCtRgUc3Vic2NyaXB0aW9uX3N0YXJ0ZWQiiQEKHVN1YnNjcmlwdGlvbkNoYW5nZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEhgKEHByZXZpb3VzX3BsYW5faWQYAiABKAkSEwoLbmV3X3BsYW5faWQYAyABKAk6GIK1GBRzdWJzY3JpcHRpb25fY2hhbmdlZCJ9Ch5TdWJzY3JpcHRpb25DYW5jZWxlZFByb3BlcnRpZXMSHwoPc3Vic2NyaXB0aW9uX2lkGAEgASgJQga6SAPIAQESDwoHcGxhbl9pZBgCIAEoCRIOCgZyZWFzb24YAyABKAk6GYK1GBVzdWJzY3JpcHRpb25fY2FuY2VsZWQisAEKHVN1YnNjcmlwdGlvblJlbmV3ZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSHgoGYW1vdW50GAMgASgBQg66SAsSCSEAAAAAAAAAABIjCghjdXJyZW5jeRgEIAEoCUIRukgOcgwyCl5bQS1aXXszfSQ6GIK1GBRzdWJzY3JpcHRpb25fcmVuZXdlZCJ5ChxTdWJzY3JpcHRpb25QYXVzZWRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSDgoGcmVhc29uGAMgASgJOheCtRgTc3Vic2NyaXB0aW9uX3BhdXNlZCJ7Ch1TdWJzY3JpcHRpb25SZXN1bWVkUHJvcGVydGllcxIfCg9zdWJzY3JpcHRpb25faWQYASABKAlCBrpIA8gBARIPCgdwbGFuX2lkGAIgASgJEg4KBnJlYXNvbhgDIAEoCToYgrUYFHN1YnNjcmlwdGlvbl9yZXN1bWVkIokBCiJTdWJzY3JpcHRpb25UcmlhbFdpbGxFbmRQcm9wZXJ0aWVzEh8KD3N1YnNjcmlwdGlvbl9pZBgBIAEoCUIGukgDyAEBEg8KB3BsYW5faWQYAiABKAkSEAoIdHJpYWxfaWQYAyABKAk6H4K1GBtzdWJzY3JpcHRpb25fdHJpYWxfd2lsbF9lbmQiowEKFUludm9pY2VQYWlkUHJvcGVydGllcxIaCgppbnZvaWNlX2lkGAEgASgJQga6SAPIAQESFwoPc3Vic2NyaXB0aW9uX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kOhCCtRgMaW52b2ljZV9wYWlkIrcBChdJbnZvaWNlRmFpbGVkUHJvcGVydGllcxIaCgppbnZvaWNlX2lkGAEgASgJQga6SAPIAQESFwoPc3Vic2NyaXB0aW9uX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kEg4KBnJlYXNvbhgFIAEoCToSgrUYDmludm9pY2VfZmFpbGVkIrkBChpQYXltZW50U3VjY2VlZGVkUHJvcGVydGllcxISCgpwYXltZW50X2lkGAEgASgJEhIKCmludm9pY2VfaWQYAiABKAkSFwoPc3Vic2NyaXB0aW9uX2lkGAMgASgJEh4KBmFtb3VudBgEIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBSABKAlCEbpIDnIMMgpeW0EtWl17M30kOhWCtRgRcGF5bWVudF9zdWNjZWVkZWQiwwEKF1BheW1lbnRGYWlsZWRQcm9wZXJ0aWVzEhIKCnBheW1lbnRfaWQYASABKAkSEgoKaW52b2ljZV9pZBgCIAEoCRIXCg9zdWJzY3JpcHRpb25faWQYAyABKAkSHgoGYW1vdW50GAQgASgBQg66SAsSCSEAAAAAAAAAABIjCghjdXJyZW5jeRgFIAEoCUIRukgOcgwyCl5bQS1aXXszfSQSDgoGcmVhc29uGAYgASgJOhKCtRgOcGF5bWVudF9mYWlsZWQicAocUGF5bWVudE1ldGhvZEFkZGVkUHJvcGVydGllcxIZChFwYXltZW50X21ldGhvZF9pZBgBIAEoCRIbChNwYXltZW50X21ldGhvZF90eXBlGAIgASgJOhiCtRgUcGF5bWVudF9tZXRob2RfYWRkZWQidAoeUGF5bWVudE1ldGhvZFJlbW92ZWRQcm9wZXJ0aWVzEhkKEXBheW1lbnRfbWV0aG9kX2lkGAEgASgJEhsKE3BheW1lbnRfbWV0aG9kX3R5cGUYAiABKAk6GoK1GBZwYXltZW50X21ldGhvZF9yZW1vdmVkIk4KFlRyaWFsU3RhcnRlZFByb3BlcnRpZXMSEAoIdHJpYWxfaWQYASABKAkSDwoHcGxhbl9pZBgCIAEoCToRgrUYDXRyaWFsX3N0YXJ0ZWQiawoYVHJpYWxDb252ZXJ0ZWRQcm9wZXJ0aWVzEhAKCHRyaWFsX2lkGAEgASgJEhcKD3N1YnNjcmlwdGlvbl9pZBgCIAEoCRIPCgdwbGFuX2lkGAMgASgJOhOCtRgPdHJpYWxfY29udmVydGVkIq0BChZSZWZ1bmRGYWlsZWRQcm9wZXJ0aWVzEhgKCG9yZGVyX2lkGAEgASgJQga6SAPIAQESEQoJcmVmdW5kX2lkGAIgASgJEh4KBmFtb3VudBgDIAEoAUIOukgLEgkhAAAAAAAAAAASIwoIY3VycmVuY3kYBCABKAlCEbpIDnIMMgpeW0EtWl17M30kEg4KBnJlYXNvbhgFIAEoCToRgrUYDXJlZnVuZF9mYWlsZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
+    [file_buf_validate_validate, file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.SubscriptionStartedProperties
  */
-export type SubscriptionStartedProperties = Message<"common.events.v1.SubscriptionStartedProperties"> & {
+export type SubscriptionStartedProperties = Message<'common.events.v1.SubscriptionStartedProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: double amount = 3;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 4;
    */
-  currency: string;
-};
+  currency: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionStartedProperties.
  * Use `create(SubscriptionStartedPropertiesSchema)` to create a new message.
  */
-export const SubscriptionStartedPropertiesSchema: GenMessage<SubscriptionStartedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 0);
+export const SubscriptionStartedPropertiesSchema: GenMessage<SubscriptionStartedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 0)
 
 /**
  * @generated from message common.events.v1.SubscriptionChangedProperties
  */
-export type SubscriptionChangedProperties = Message<"common.events.v1.SubscriptionChangedProperties"> & {
+export type SubscriptionChangedProperties = Message<'common.events.v1.SubscriptionChangedProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string previous_plan_id = 2;
    */
-  previousPlanId: string;
+  previousPlanId: string
 
   /**
    * @generated from field: string new_plan_id = 3;
    */
-  newPlanId: string;
-};
+  newPlanId: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionChangedProperties.
  * Use `create(SubscriptionChangedPropertiesSchema)` to create a new message.
  */
-export const SubscriptionChangedPropertiesSchema: GenMessage<SubscriptionChangedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 1);
+export const SubscriptionChangedPropertiesSchema: GenMessage<SubscriptionChangedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 1)
 
 /**
  * @generated from message common.events.v1.SubscriptionCanceledProperties
  */
-export type SubscriptionCanceledProperties = Message<"common.events.v1.SubscriptionCanceledProperties"> & {
+export type SubscriptionCanceledProperties = Message<'common.events.v1.SubscriptionCanceledProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionCanceledProperties.
  * Use `create(SubscriptionCanceledPropertiesSchema)` to create a new message.
  */
-export const SubscriptionCanceledPropertiesSchema: GenMessage<SubscriptionCanceledProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 2);
+export const SubscriptionCanceledPropertiesSchema: GenMessage<SubscriptionCanceledProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 2)
 
 /**
  * @generated from message common.events.v1.SubscriptionRenewedProperties
  */
-export type SubscriptionRenewedProperties = Message<"common.events.v1.SubscriptionRenewedProperties"> & {
+export type SubscriptionRenewedProperties = Message<'common.events.v1.SubscriptionRenewedProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: double amount = 3;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 4;
    */
-  currency: string;
-};
+  currency: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionRenewedProperties.
  * Use `create(SubscriptionRenewedPropertiesSchema)` to create a new message.
  */
-export const SubscriptionRenewedPropertiesSchema: GenMessage<SubscriptionRenewedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 3);
+export const SubscriptionRenewedPropertiesSchema: GenMessage<SubscriptionRenewedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 3)
 
 /**
  * @generated from message common.events.v1.SubscriptionPausedProperties
  */
-export type SubscriptionPausedProperties = Message<"common.events.v1.SubscriptionPausedProperties"> & {
+export type SubscriptionPausedProperties = Message<'common.events.v1.SubscriptionPausedProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionPausedProperties.
  * Use `create(SubscriptionPausedPropertiesSchema)` to create a new message.
  */
-export const SubscriptionPausedPropertiesSchema: GenMessage<SubscriptionPausedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 4);
+export const SubscriptionPausedPropertiesSchema: GenMessage<SubscriptionPausedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 4)
 
 /**
  * @generated from message common.events.v1.SubscriptionResumedProperties
  */
-export type SubscriptionResumedProperties = Message<"common.events.v1.SubscriptionResumedProperties"> & {
+export type SubscriptionResumedProperties = Message<'common.events.v1.SubscriptionResumedProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionResumedProperties.
  * Use `create(SubscriptionResumedPropertiesSchema)` to create a new message.
  */
-export const SubscriptionResumedPropertiesSchema: GenMessage<SubscriptionResumedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 5);
+export const SubscriptionResumedPropertiesSchema: GenMessage<SubscriptionResumedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 5)
 
 /**
  * Fired in advance of a trial converting (e.g. 3 days before). Useful for
@@ -192,305 +202,314 @@ export const SubscriptionResumedPropertiesSchema: GenMessage<SubscriptionResumed
  *
  * @generated from message common.events.v1.SubscriptionTrialWillEndProperties
  */
-export type SubscriptionTrialWillEndProperties = Message<"common.events.v1.SubscriptionTrialWillEndProperties"> & {
+export type SubscriptionTrialWillEndProperties = Message<'common.events.v1.SubscriptionTrialWillEndProperties'> & {
   /**
    * @generated from field: string subscription_id = 1;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
+  planId: string
 
   /**
    * @generated from field: string trial_id = 3;
    */
-  trialId: string;
-};
+  trialId: string
+}
 
 /**
  * Describes the message common.events.v1.SubscriptionTrialWillEndProperties.
  * Use `create(SubscriptionTrialWillEndPropertiesSchema)` to create a new message.
  */
-export const SubscriptionTrialWillEndPropertiesSchema: GenMessage<SubscriptionTrialWillEndProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 6);
+export const SubscriptionTrialWillEndPropertiesSchema: GenMessage<SubscriptionTrialWillEndProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 6)
 
 /**
  * @generated from message common.events.v1.InvoicePaidProperties
  */
-export type InvoicePaidProperties = Message<"common.events.v1.InvoicePaidProperties"> & {
+export type InvoicePaidProperties = Message<'common.events.v1.InvoicePaidProperties'> & {
   /**
    * @generated from field: string invoice_id = 1;
    */
-  invoiceId: string;
+  invoiceId: string
 
   /**
    * @generated from field: string subscription_id = 2;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: double amount = 3;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 4;
    */
-  currency: string;
-};
+  currency: string
+}
 
 /**
  * Describes the message common.events.v1.InvoicePaidProperties.
  * Use `create(InvoicePaidPropertiesSchema)` to create a new message.
  */
-export const InvoicePaidPropertiesSchema: GenMessage<InvoicePaidProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 7);
+export const InvoicePaidPropertiesSchema: GenMessage<InvoicePaidProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 7)
 
 /**
  * @generated from message common.events.v1.InvoiceFailedProperties
  */
-export type InvoiceFailedProperties = Message<"common.events.v1.InvoiceFailedProperties"> & {
+export type InvoiceFailedProperties = Message<'common.events.v1.InvoiceFailedProperties'> & {
   /**
    * @generated from field: string invoice_id = 1;
    */
-  invoiceId: string;
+  invoiceId: string
 
   /**
    * @generated from field: string subscription_id = 2;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: double amount = 3;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 4;
    */
-  currency: string;
+  currency: string
 
   /**
    * @generated from field: string reason = 5;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.InvoiceFailedProperties.
  * Use `create(InvoiceFailedPropertiesSchema)` to create a new message.
  */
-export const InvoiceFailedPropertiesSchema: GenMessage<InvoiceFailedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 8);
+export const InvoiceFailedPropertiesSchema: GenMessage<InvoiceFailedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 8)
 
 /**
  * @generated from message common.events.v1.PaymentSucceededProperties
  */
-export type PaymentSucceededProperties = Message<"common.events.v1.PaymentSucceededProperties"> & {
+export type PaymentSucceededProperties = Message<'common.events.v1.PaymentSucceededProperties'> & {
   /**
    * @generated from field: string payment_id = 1;
    */
-  paymentId: string;
+  paymentId: string
 
   /**
    * @generated from field: string invoice_id = 2;
    */
-  invoiceId: string;
+  invoiceId: string
 
   /**
    * @generated from field: string subscription_id = 3;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: double amount = 4;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 5;
    */
-  currency: string;
-};
+  currency: string
+}
 
 /**
  * Describes the message common.events.v1.PaymentSucceededProperties.
  * Use `create(PaymentSucceededPropertiesSchema)` to create a new message.
  */
-export const PaymentSucceededPropertiesSchema: GenMessage<PaymentSucceededProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 9);
+export const PaymentSucceededPropertiesSchema: GenMessage<PaymentSucceededProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 9)
 
 /**
  * @generated from message common.events.v1.PaymentFailedProperties
  */
-export type PaymentFailedProperties = Message<"common.events.v1.PaymentFailedProperties"> & {
+export type PaymentFailedProperties = Message<'common.events.v1.PaymentFailedProperties'> & {
   /**
    * @generated from field: string payment_id = 1;
    */
-  paymentId: string;
+  paymentId: string
 
   /**
    * @generated from field: string invoice_id = 2;
    */
-  invoiceId: string;
+  invoiceId: string
 
   /**
    * @generated from field: string subscription_id = 3;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: double amount = 4;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 5;
    */
-  currency: string;
+  currency: string
 
   /**
    * @generated from field: string reason = 6;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.PaymentFailedProperties.
  * Use `create(PaymentFailedPropertiesSchema)` to create a new message.
  */
-export const PaymentFailedPropertiesSchema: GenMessage<PaymentFailedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 10);
+export const PaymentFailedPropertiesSchema: GenMessage<PaymentFailedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 10)
 
 /**
  * @generated from message common.events.v1.PaymentMethodAddedProperties
  */
-export type PaymentMethodAddedProperties = Message<"common.events.v1.PaymentMethodAddedProperties"> & {
+export type PaymentMethodAddedProperties = Message<'common.events.v1.PaymentMethodAddedProperties'> & {
   /**
    * @generated from field: string payment_method_id = 1;
    */
-  paymentMethodId: string;
+  paymentMethodId: string
 
   /**
    * @generated from field: string payment_method_type = 2;
    */
-  paymentMethodType: string;
-};
+  paymentMethodType: string
+}
 
 /**
  * Describes the message common.events.v1.PaymentMethodAddedProperties.
  * Use `create(PaymentMethodAddedPropertiesSchema)` to create a new message.
  */
-export const PaymentMethodAddedPropertiesSchema: GenMessage<PaymentMethodAddedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 11);
+export const PaymentMethodAddedPropertiesSchema: GenMessage<PaymentMethodAddedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 11)
 
 /**
  * @generated from message common.events.v1.PaymentMethodRemovedProperties
  */
-export type PaymentMethodRemovedProperties = Message<"common.events.v1.PaymentMethodRemovedProperties"> & {
+export type PaymentMethodRemovedProperties = Message<'common.events.v1.PaymentMethodRemovedProperties'> & {
   /**
    * @generated from field: string payment_method_id = 1;
    */
-  paymentMethodId: string;
+  paymentMethodId: string
 
   /**
    * @generated from field: string payment_method_type = 2;
    */
-  paymentMethodType: string;
-};
+  paymentMethodType: string
+}
 
 /**
  * Describes the message common.events.v1.PaymentMethodRemovedProperties.
  * Use `create(PaymentMethodRemovedPropertiesSchema)` to create a new message.
  */
-export const PaymentMethodRemovedPropertiesSchema: GenMessage<PaymentMethodRemovedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 12);
+export const PaymentMethodRemovedPropertiesSchema: GenMessage<PaymentMethodRemovedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 12)
 
 /**
  * @generated from message common.events.v1.TrialStartedProperties
  */
-export type TrialStartedProperties = Message<"common.events.v1.TrialStartedProperties"> & {
+export type TrialStartedProperties = Message<'common.events.v1.TrialStartedProperties'> & {
   /**
    * @generated from field: string trial_id = 1;
    */
-  trialId: string;
+  trialId: string
 
   /**
    * @generated from field: string plan_id = 2;
    */
-  planId: string;
-};
+  planId: string
+}
 
 /**
  * Describes the message common.events.v1.TrialStartedProperties.
  * Use `create(TrialStartedPropertiesSchema)` to create a new message.
  */
-export const TrialStartedPropertiesSchema: GenMessage<TrialStartedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 13);
+export const TrialStartedPropertiesSchema: GenMessage<TrialStartedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 13)
 
 /**
  * @generated from message common.events.v1.TrialConvertedProperties
  */
-export type TrialConvertedProperties = Message<"common.events.v1.TrialConvertedProperties"> & {
+export type TrialConvertedProperties = Message<'common.events.v1.TrialConvertedProperties'> & {
   /**
    * @generated from field: string trial_id = 1;
    */
-  trialId: string;
+  trialId: string
 
   /**
    * @generated from field: string subscription_id = 2;
    */
-  subscriptionId: string;
+  subscriptionId: string
 
   /**
    * @generated from field: string plan_id = 3;
    */
-  planId: string;
-};
+  planId: string
+}
 
 /**
  * Describes the message common.events.v1.TrialConvertedProperties.
  * Use `create(TrialConvertedPropertiesSchema)` to create a new message.
  */
-export const TrialConvertedPropertiesSchema: GenMessage<TrialConvertedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 14);
+export const TrialConvertedPropertiesSchema: GenMessage<TrialConvertedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 14)
 
 /**
  * @generated from message common.events.v1.RefundFailedProperties
  */
-export type RefundFailedProperties = Message<"common.events.v1.RefundFailedProperties"> & {
+export type RefundFailedProperties = Message<'common.events.v1.RefundFailedProperties'> & {
   /**
    * @generated from field: string order_id = 1;
    */
-  orderId: string;
+  orderId: string
 
   /**
    * @generated from field: string refund_id = 2;
    */
-  refundId: string;
+  refundId: string
 
   /**
    * @generated from field: double amount = 3;
    */
-  amount: number;
+  amount: number
 
   /**
    * @generated from field: string currency = 4;
    */
-  currency: string;
+  currency: string
 
   /**
    * @generated from field: string reason = 5;
    */
-  reason: string;
-};
+  reason: string
+}
 
 /**
  * Describes the message common.events.v1.RefundFailedProperties.
  * Use `create(RefundFailedPropertiesSchema)` to create a new message.
  */
-export const RefundFailedPropertiesSchema: GenMessage<RefundFailedProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_billing_events, 15);
-
+export const RefundFailedPropertiesSchema: GenMessage<RefundFailedProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_billing_events, 15)

@@ -4,7 +4,9 @@
   "license": "AGPL-3.0-or-later",
   "version": "0.0.0",
   "type": "module",
-  "trustedDependencies": ["@bufbuild/buf"],
+  "trustedDependencies": [
+    "@bufbuild/buf"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

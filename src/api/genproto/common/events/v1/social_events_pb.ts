@@ -2,27 +2,30 @@
 // @generated from file common/events/v1/social_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_common_events_v1_options } from "./options_pb";
-import type { Message } from "@bufbuild/protobuf";
+import type { Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_common_events_v1_options } from './options_pb'
 
 /**
  * Describes the file common/events/v1/social_events.proto.
  */
-export const file_common_events_v1_social_events: GenFile = /*@__PURE__*/
-  fileDesc("CiRjb21tb24vZXZlbnRzL3YxL3NvY2lhbF9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiHAoPU2hhcmVQcm9wZXJ0aWVzOgmCtRgFc2hhcmVCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_common_events_v1_options]);
+export const file_common_events_v1_social_events: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiRjb21tb24vZXZlbnRzL3YxL3NvY2lhbF9ldmVudHMucHJvdG8SEGNvbW1vbi5ldmVudHMudjEiHAoPU2hhcmVQcm9wZXJ0aWVzOgmCtRgFc2hhcmVCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
+    [file_common_events_v1_options],
+  )
 
 /**
  * @generated from message common.events.v1.ShareProperties
  */
-export type ShareProperties = Message<"common.events.v1.ShareProperties"> & {
-};
+export type ShareProperties = Message<'common.events.v1.ShareProperties'> & {}
 
 /**
  * Describes the message common.events.v1.ShareProperties.
  * Use `create(SharePropertiesSchema)` to create a new message.
  */
-export const SharePropertiesSchema: GenMessage<ShareProperties> = /*@__PURE__*/
-  messageDesc(file_common_events_v1_social_events, 0);
-
+export const SharePropertiesSchema: GenMessage<ShareProperties> =
+  /*@__PURE__*/
+  messageDesc(file_common_events_v1_social_events, 0)

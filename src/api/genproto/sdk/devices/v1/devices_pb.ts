@@ -2,262 +2,277 @@
 // @generated from file sdk/devices/v1/devices.proto (package sdk.devices.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import { file_google_protobuf_struct } from "@bufbuild/protobuf/wkt";
-import type { JsonObject, Message } from "@bufbuild/protobuf";
+import type { JsonObject, Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
+import { file_google_protobuf_struct } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
 
 /**
  * Describes the file sdk/devices/v1/devices.proto.
  */
-export const file_sdk_devices_v1_devices: GenFile = /*@__PURE__*/
-  fileDesc("ChxzZGsvZGV2aWNlcy92MS9kZXZpY2VzLnByb3RvEg5zZGsuZGV2aWNlcy52MSKDAwoQU3Vic2NyaWJlUmVxdWVzdBIdCglkZXZpY2VfaWQYASABKAlCCrpIB8gBAXICGCQSLQoIcGxhdGZvcm0YAiABKAlCG7pIGMgBAXITUgdhbmRyb2lkUgNpb3NSA3dlYhIlChNwcm9maWxlX2V4dGVybmFsX2lkGAMgASgJQgi6SAVyAxj/ARIbCgpwcm9maWxlX2lkGAQgASgJQge6SARyAhgUEhUKBXRva2VuGAUgASgJQga6SAPIAQESKwoKcHJvcGVydGllcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3Q6mAG6SJQBGpEBChlwcm9maWxlX2lkX29yX2V4dGVybmFsX2lkEjthdCBtb3N0IG9uZSBvZiBwcm9maWxlX2lkIG9yIHByb2ZpbGVfZXh0ZXJuYWxfaWQgbWF5IGJlIHNldBo3dGhpcy5wcm9maWxlX2lkID09ICcnIHx8IHRoaXMucHJvZmlsZV9leHRlcm5hbF9pZCA9PSAnJyITChFTdWJzY3JpYmVSZXNwb25zZSJZChNVcGRhdGVTdGF0dXNSZXF1ZXN0EhYKAmlkGAEgASgJQgq6SAfIAQFyAhgkEioKBnN0YXR1cxgCIAEoCUIaukgXyAEBchJSBmFjdGl2ZVIIaW5hY3RpdmUiFgoUVXBkYXRlU3RhdHVzUmVzcG9uc2UiQwoSVXBkYXRlVG9rZW5SZXF1ZXN0EhYKAmlkGAEgASgJQgq6SAfIAQFyAhgkEhUKBXRva2VuGAIgASgJQga6SAPIAQEiFQoTVXBkYXRlVG9rZW5SZXNwb25zZSKZAgoWRGV2aWNlT3BlcmF0aW9uTWVzc2FnZRIdCglkZXZpY2VfaWQYASABKAlCCrpIB8gBAXICGCQSGgoKcHJvamVjdF9pZBgCIAEoCUIGukgDyAEBEjUKCXN1YnNjcmliZRgKIAEoCzIgLnNkay5kZXZpY2VzLnYxLlN1YnNjcmliZVBheWxvYWRIABI8Cg11cGRhdGVfc3RhdHVzGAsgASgLMiMuc2RrLmRldmljZXMudjEuVXBkYXRlU3RhdHVzUGF5bG9hZEgAEjoKDHVwZGF0ZV90b2tlbhgMIAEoCzIiLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUGF5bG9hZEgAQhMKEW9wZXJhdGlvbl9wYXlsb2FkIrYBChBTdWJzY3JpYmVQYXlsb2FkEi0KCHBsYXRmb3JtGAEgASgJQhu6SBjIAQFyE1IHYW5kcm9pZFIDaW9zUgN3ZWISGwoTcHJvZmlsZV9leHRlcm5hbF9pZBgCIAEoCRISCgpwcm9maWxlX2lkGAMgASgJEhUKBXRva2VuGAQgASgJQga6SAPIAQESKwoKcHJvcGVydGllcxgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QiQQoTVXBkYXRlU3RhdHVzUGF5bG9hZBIqCgZzdGF0dXMYASABKAlCGrpIF8gBAXISUgZhY3RpdmVSCGluYWN0aXZlIisKElVwZGF0ZVRva2VuUGF5bG9hZBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBMpsCCg5EZXZpY2VzU2VydmljZRJSCglTdWJzY3JpYmUSIC5zZGsuZGV2aWNlcy52MS5TdWJzY3JpYmVSZXF1ZXN0GiEuc2RrLmRldmljZXMudjEuU3Vic2NyaWJlUmVzcG9uc2UiABJbCgxVcGRhdGVTdGF0dXMSIy5zZGsuZGV2aWNlcy52MS5VcGRhdGVTdGF0dXNSZXF1ZXN0GiQuc2RrLmRldmljZXMudjEuVXBkYXRlU3RhdHVzUmVzcG9uc2UiABJYCgtVcGRhdGVUb2tlbhIiLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUmVxdWVzdBojLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUmVzcG9uc2UiAEJDWkFnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3Nkay9kZXZpY2VzL3YxO2RldmljZXN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_struct]);
+export const file_sdk_devices_v1_devices: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'ChxzZGsvZGV2aWNlcy92MS9kZXZpY2VzLnByb3RvEg5zZGsuZGV2aWNlcy52MSKDAwoQU3Vic2NyaWJlUmVxdWVzdBIdCglkZXZpY2VfaWQYASABKAlCCrpIB8gBAXICGCQSLQoIcGxhdGZvcm0YAiABKAlCG7pIGMgBAXITUgdhbmRyb2lkUgNpb3NSA3dlYhIlChNwcm9maWxlX2V4dGVybmFsX2lkGAMgASgJQgi6SAVyAxj/ARIbCgpwcm9maWxlX2lkGAQgASgJQge6SARyAhgUEhUKBXRva2VuGAUgASgJQga6SAPIAQESKwoKcHJvcGVydGllcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3Q6mAG6SJQBGpEBChlwcm9maWxlX2lkX29yX2V4dGVybmFsX2lkEjthdCBtb3N0IG9uZSBvZiBwcm9maWxlX2lkIG9yIHByb2ZpbGVfZXh0ZXJuYWxfaWQgbWF5IGJlIHNldBo3dGhpcy5wcm9maWxlX2lkID09ICcnIHx8IHRoaXMucHJvZmlsZV9leHRlcm5hbF9pZCA9PSAnJyITChFTdWJzY3JpYmVSZXNwb25zZSJZChNVcGRhdGVTdGF0dXNSZXF1ZXN0EhYKAmlkGAEgASgJQgq6SAfIAQFyAhgkEioKBnN0YXR1cxgCIAEoCUIaukgXyAEBchJSBmFjdGl2ZVIIaW5hY3RpdmUiFgoUVXBkYXRlU3RhdHVzUmVzcG9uc2UiQwoSVXBkYXRlVG9rZW5SZXF1ZXN0EhYKAmlkGAEgASgJQgq6SAfIAQFyAhgkEhUKBXRva2VuGAIgASgJQga6SAPIAQEiFQoTVXBkYXRlVG9rZW5SZXNwb25zZSKZAgoWRGV2aWNlT3BlcmF0aW9uTWVzc2FnZRIdCglkZXZpY2VfaWQYASABKAlCCrpIB8gBAXICGCQSGgoKcHJvamVjdF9pZBgCIAEoCUIGukgDyAEBEjUKCXN1YnNjcmliZRgKIAEoCzIgLnNkay5kZXZpY2VzLnYxLlN1YnNjcmliZVBheWxvYWRIABI8Cg11cGRhdGVfc3RhdHVzGAsgASgLMiMuc2RrLmRldmljZXMudjEuVXBkYXRlU3RhdHVzUGF5bG9hZEgAEjoKDHVwZGF0ZV90b2tlbhgMIAEoCzIiLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUGF5bG9hZEgAQhMKEW9wZXJhdGlvbl9wYXlsb2FkIrYBChBTdWJzY3JpYmVQYXlsb2FkEi0KCHBsYXRmb3JtGAEgASgJQhu6SBjIAQFyE1IHYW5kcm9pZFIDaW9zUgN3ZWISGwoTcHJvZmlsZV9leHRlcm5hbF9pZBgCIAEoCRISCgpwcm9maWxlX2lkGAMgASgJEhUKBXRva2VuGAQgASgJQga6SAPIAQESKwoKcHJvcGVydGllcxgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QiQQoTVXBkYXRlU3RhdHVzUGF5bG9hZBIqCgZzdGF0dXMYASABKAlCGrpIF8gBAXISUgZhY3RpdmVSCGluYWN0aXZlIisKElVwZGF0ZVRva2VuUGF5bG9hZBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBMpsCCg5EZXZpY2VzU2VydmljZRJSCglTdWJzY3JpYmUSIC5zZGsuZGV2aWNlcy52MS5TdWJzY3JpYmVSZXF1ZXN0GiEuc2RrLmRldmljZXMudjEuU3Vic2NyaWJlUmVzcG9uc2UiABJbCgxVcGRhdGVTdGF0dXMSIy5zZGsuZGV2aWNlcy52MS5VcGRhdGVTdGF0dXNSZXF1ZXN0GiQuc2RrLmRldmljZXMudjEuVXBkYXRlU3RhdHVzUmVzcG9uc2UiABJYCgtVcGRhdGVUb2tlbhIiLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUmVxdWVzdBojLnNkay5kZXZpY2VzLnYxLlVwZGF0ZVRva2VuUmVzcG9uc2UiAEJDWkFnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3Nkay9kZXZpY2VzL3YxO2RldmljZXN2MWIIZWRpdGlvbnNw6Ac',
+    [file_buf_validate_validate, file_google_protobuf_struct],
+  )
 
 /**
  * @generated from message sdk.devices.v1.SubscribeRequest
  */
-export type SubscribeRequest = Message<"sdk.devices.v1.SubscribeRequest"> & {
+export type SubscribeRequest = Message<'sdk.devices.v1.SubscribeRequest'> & {
   /**
    * @generated from field: string device_id = 1;
    */
-  deviceId: string;
+  deviceId: string
 
   /**
    * @generated from field: string platform = 2;
    */
-  platform: string;
+  platform: string
 
   /**
    * Optional — when provided, links the device to a profile.
    *
    * @generated from field: string profile_external_id = 3;
    */
-  profileExternalId: string;
+  profileExternalId: string
 
   /**
    * Optional — alternative to profile_external_id for linking.
    *
    * @generated from field: string profile_id = 4;
    */
-  profileId: string;
+  profileId: string
 
   /**
    * @generated from field: string token = 5;
    */
-  token: string;
+  token: string
 
   /**
    * @generated from field: google.protobuf.Struct properties = 6;
    */
-  properties?: JsonObject | undefined;
-};
+  properties?: JsonObject | undefined
+}
 
 /**
  * Describes the message sdk.devices.v1.SubscribeRequest.
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
-export const SubscribeRequestSchema: GenMessage<SubscribeRequest> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 0);
+export const SubscribeRequestSchema: GenMessage<SubscribeRequest> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 0)
 
 /**
  * @generated from message sdk.devices.v1.SubscribeResponse
  */
-export type SubscribeResponse = Message<"sdk.devices.v1.SubscribeResponse"> & {
-};
+export type SubscribeResponse = Message<'sdk.devices.v1.SubscribeResponse'> & {}
 
 /**
  * Describes the message sdk.devices.v1.SubscribeResponse.
  * Use `create(SubscribeResponseSchema)` to create a new message.
  */
-export const SubscribeResponseSchema: GenMessage<SubscribeResponse> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 1);
+export const SubscribeResponseSchema: GenMessage<SubscribeResponse> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 1)
 
 /**
  * @generated from message sdk.devices.v1.UpdateStatusRequest
  */
-export type UpdateStatusRequest = Message<"sdk.devices.v1.UpdateStatusRequest"> & {
+export type UpdateStatusRequest = Message<'sdk.devices.v1.UpdateStatusRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string status = 2;
    */
-  status: string;
-};
+  status: string
+}
 
 /**
  * Describes the message sdk.devices.v1.UpdateStatusRequest.
  * Use `create(UpdateStatusRequestSchema)` to create a new message.
  */
-export const UpdateStatusRequestSchema: GenMessage<UpdateStatusRequest> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 2);
+export const UpdateStatusRequestSchema: GenMessage<UpdateStatusRequest> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 2)
 
 /**
  * @generated from message sdk.devices.v1.UpdateStatusResponse
  */
-export type UpdateStatusResponse = Message<"sdk.devices.v1.UpdateStatusResponse"> & {
-};
+export type UpdateStatusResponse = Message<'sdk.devices.v1.UpdateStatusResponse'> & {}
 
 /**
  * Describes the message sdk.devices.v1.UpdateStatusResponse.
  * Use `create(UpdateStatusResponseSchema)` to create a new message.
  */
-export const UpdateStatusResponseSchema: GenMessage<UpdateStatusResponse> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 3);
+export const UpdateStatusResponseSchema: GenMessage<UpdateStatusResponse> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 3)
 
 /**
  * @generated from message sdk.devices.v1.UpdateTokenRequest
  */
-export type UpdateTokenRequest = Message<"sdk.devices.v1.UpdateTokenRequest"> & {
+export type UpdateTokenRequest = Message<'sdk.devices.v1.UpdateTokenRequest'> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string;
+  id: string
 
   /**
    * @generated from field: string token = 2;
    */
-  token: string;
-};
+  token: string
+}
 
 /**
  * Describes the message sdk.devices.v1.UpdateTokenRequest.
  * Use `create(UpdateTokenRequestSchema)` to create a new message.
  */
-export const UpdateTokenRequestSchema: GenMessage<UpdateTokenRequest> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 4);
+export const UpdateTokenRequestSchema: GenMessage<UpdateTokenRequest> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 4)
 
 /**
  * @generated from message sdk.devices.v1.UpdateTokenResponse
  */
-export type UpdateTokenResponse = Message<"sdk.devices.v1.UpdateTokenResponse"> & {
-};
+export type UpdateTokenResponse = Message<'sdk.devices.v1.UpdateTokenResponse'> & {}
 
 /**
  * Describes the message sdk.devices.v1.UpdateTokenResponse.
  * Use `create(UpdateTokenResponseSchema)` to create a new message.
  */
-export const UpdateTokenResponseSchema: GenMessage<UpdateTokenResponse> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 5);
+export const UpdateTokenResponseSchema: GenMessage<UpdateTokenResponse> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 5)
 
 /**
  * @generated from message sdk.devices.v1.DeviceOperationMessage
  */
-export type DeviceOperationMessage = Message<"sdk.devices.v1.DeviceOperationMessage"> & {
+export type DeviceOperationMessage = Message<'sdk.devices.v1.DeviceOperationMessage'> & {
   /**
    * @generated from field: string device_id = 1;
    */
-  deviceId: string;
+  deviceId: string
 
   /**
    * @generated from field: string project_id = 2;
    */
-  projectId: string;
+  projectId: string
 
   /**
    * @generated from oneof sdk.devices.v1.DeviceOperationMessage.operation_payload
    */
-  operationPayload: {
-    /**
-     * @generated from field: sdk.devices.v1.SubscribePayload subscribe = 10;
-     */
-    value: SubscribePayload;
-    case: "subscribe";
-  } | {
-    /**
-     * @generated from field: sdk.devices.v1.UpdateStatusPayload update_status = 11;
-     */
-    value: UpdateStatusPayload;
-    case: "updateStatus";
-  } | {
-    /**
-     * @generated from field: sdk.devices.v1.UpdateTokenPayload update_token = 12;
-     */
-    value: UpdateTokenPayload;
-    case: "updateToken";
-  } | { case: undefined; value?: undefined };
-};
+  operationPayload:
+    | {
+        /**
+         * @generated from field: sdk.devices.v1.SubscribePayload subscribe = 10;
+         */
+        value: SubscribePayload
+        case: 'subscribe'
+      }
+    | {
+        /**
+         * @generated from field: sdk.devices.v1.UpdateStatusPayload update_status = 11;
+         */
+        value: UpdateStatusPayload
+        case: 'updateStatus'
+      }
+    | {
+        /**
+         * @generated from field: sdk.devices.v1.UpdateTokenPayload update_token = 12;
+         */
+        value: UpdateTokenPayload
+        case: 'updateToken'
+      }
+    | { case: undefined; value?: undefined }
+}
 
 /**
  * Describes the message sdk.devices.v1.DeviceOperationMessage.
  * Use `create(DeviceOperationMessageSchema)` to create a new message.
  */
-export const DeviceOperationMessageSchema: GenMessage<DeviceOperationMessage> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 6);
+export const DeviceOperationMessageSchema: GenMessage<DeviceOperationMessage> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 6)
 
 /**
  * @generated from message sdk.devices.v1.SubscribePayload
  */
-export type SubscribePayload = Message<"sdk.devices.v1.SubscribePayload"> & {
+export type SubscribePayload = Message<'sdk.devices.v1.SubscribePayload'> & {
   /**
    * @generated from field: string platform = 1;
    */
-  platform: string;
+  platform: string
 
   /**
    * @generated from field: string profile_external_id = 2;
    */
-  profileExternalId: string;
+  profileExternalId: string
 
   /**
    * @generated from field: string profile_id = 3;
    */
-  profileId: string;
+  profileId: string
 
   /**
    * @generated from field: string token = 4;
    */
-  token: string;
+  token: string
 
   /**
    * @generated from field: google.protobuf.Struct properties = 5;
    */
-  properties?: JsonObject | undefined;
-};
+  properties?: JsonObject | undefined
+}
 
 /**
  * Describes the message sdk.devices.v1.SubscribePayload.
  * Use `create(SubscribePayloadSchema)` to create a new message.
  */
-export const SubscribePayloadSchema: GenMessage<SubscribePayload> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 7);
+export const SubscribePayloadSchema: GenMessage<SubscribePayload> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 7)
 
 /**
  * @generated from message sdk.devices.v1.UpdateStatusPayload
  */
-export type UpdateStatusPayload = Message<"sdk.devices.v1.UpdateStatusPayload"> & {
+export type UpdateStatusPayload = Message<'sdk.devices.v1.UpdateStatusPayload'> & {
   /**
    * @generated from field: string status = 1;
    */
-  status: string;
-};
+  status: string
+}
 
 /**
  * Describes the message sdk.devices.v1.UpdateStatusPayload.
  * Use `create(UpdateStatusPayloadSchema)` to create a new message.
  */
-export const UpdateStatusPayloadSchema: GenMessage<UpdateStatusPayload> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 8);
+export const UpdateStatusPayloadSchema: GenMessage<UpdateStatusPayload> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 8)
 
 /**
  * @generated from message sdk.devices.v1.UpdateTokenPayload
  */
-export type UpdateTokenPayload = Message<"sdk.devices.v1.UpdateTokenPayload"> & {
+export type UpdateTokenPayload = Message<'sdk.devices.v1.UpdateTokenPayload'> & {
   /**
    * @generated from field: string token = 1;
    */
-  token: string;
-};
+  token: string
+}
 
 /**
  * Describes the message sdk.devices.v1.UpdateTokenPayload.
  * Use `create(UpdateTokenPayloadSchema)` to create a new message.
  */
-export const UpdateTokenPayloadSchema: GenMessage<UpdateTokenPayload> = /*@__PURE__*/
-  messageDesc(file_sdk_devices_v1_devices, 9);
+export const UpdateTokenPayloadSchema: GenMessage<UpdateTokenPayload> =
+  /*@__PURE__*/
+  messageDesc(file_sdk_devices_v1_devices, 9)
 
 /**
  * @generated from service sdk.devices.v1.DevicesService
@@ -267,26 +282,24 @@ export const DevicesService: GenService<{
    * @generated from rpc sdk.devices.v1.DevicesService.Subscribe
    */
   subscribe: {
-    methodKind: "unary";
-    input: typeof SubscribeRequestSchema;
-    output: typeof SubscribeResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof SubscribeRequestSchema
+    output: typeof SubscribeResponseSchema
+  }
   /**
    * @generated from rpc sdk.devices.v1.DevicesService.UpdateStatus
    */
   updateStatus: {
-    methodKind: "unary";
-    input: typeof UpdateStatusRequestSchema;
-    output: typeof UpdateStatusResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof UpdateStatusRequestSchema
+    output: typeof UpdateStatusResponseSchema
+  }
   /**
    * @generated from rpc sdk.devices.v1.DevicesService.UpdateToken
    */
   updateToken: {
-    methodKind: "unary";
-    input: typeof UpdateTokenRequestSchema;
-    output: typeof UpdateTokenResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_sdk_devices_v1_devices, 0);
-
+    methodKind: 'unary'
+    input: typeof UpdateTokenRequestSchema
+    output: typeof UpdateTokenResponseSchema
+  }
+}> = /*@__PURE__*/ serviceDesc(file_sdk_devices_v1_devices, 0)

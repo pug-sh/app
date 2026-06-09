@@ -2,7 +2,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
-import { useLocation } from 'wouter'
+import { Route, useLocation } from 'wouter'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
+const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -175,6 +176,10 @@ const App = () => {
       {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
           <MagicLink />
+        </Suspense>
+      ) : location.startsWith('/shared/') ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <Route path="/shared/:shareId" component={SharedDashboard} />
         </Suspense>
       ) : !authenticated ? (
         <Suspense fallback={<LoadingSpinner />}>

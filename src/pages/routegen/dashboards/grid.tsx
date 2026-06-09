@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -93,6 +93,7 @@ export const DashboardGrid = ({
   onLayoutsChange,
   globalTimeRange,
   globalGranularity,
+  renderTile,
 }: {
   tiles: DashboardTile[]
   mode?: DashboardMode
@@ -106,6 +107,9 @@ export const DashboardGrid = ({
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
+  // Override how each tile's body renders. Defaults to the editable DashboardTileBody;
+  // the public/read-only viewer passes a body that renders pre-computed results.
+  renderTile?: (tile: DashboardTile) => ReactNode
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const editable = mode === 'edit'
@@ -177,14 +181,18 @@ export const DashboardGrid = ({
                 highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
               ].join(' ')}
             >
-              <DashboardTileBody
-                tile={tile}
-                editing={editable}
-                onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
-                globalTimeRange={globalTimeRange}
-                globalGranularity={globalGranularity}
-                onDuplicate={editable ? onDuplicateTile : undefined}
-              />
+              {renderTile ? (
+                renderTile(tile)
+              ) : (
+                <DashboardTileBody
+                  tile={tile}
+                  editing={editable}
+                  onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
+                  globalTimeRange={globalTimeRange}
+                  globalGranularity={globalGranularity}
+                  onDuplicate={editable ? onDuplicateTile : undefined}
+                />
+              )}
             </div>
           </div>
         ))}

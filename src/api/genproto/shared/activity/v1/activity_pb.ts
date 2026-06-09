@@ -2,375 +2,399 @@
 // @generated from file shared/activity/v1/activity.proto (package shared.activity.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
-import type { GetFilterSchemaRequestSchema, GetFilterSchemaResponseSchema, PropertySource } from "../../../common/v1/filter_schema_pb";
-import { file_common_v1_filter_schema } from "../../../common/v1/filter_schema_pb";
-import type { EventFilter, PropertyFilter } from "../../../common/v1/filters_pb";
-import { file_common_v1_filters } from "../../../common/v1/filters_pb";
-import type { TimeRange } from "../../../common/v1/time_pb";
-import { file_common_v1_time } from "../../../common/v1/time_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { JsonObject, Message } from "@bufbuild/protobuf";
+import type { JsonObject, Message } from '@bufbuild/protobuf'
+import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
+import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
+import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import type {
+  GetFilterSchemaRequestSchema,
+  GetFilterSchemaResponseSchema,
+  PropertySource,
+} from '../../../common/v1/filter_schema_pb'
+import { file_common_v1_filter_schema } from '../../../common/v1/filter_schema_pb'
+import type { EventFilter, PropertyFilter } from '../../../common/v1/filters_pb'
+import { file_common_v1_filters } from '../../../common/v1/filters_pb'
+import type { TimeRange } from '../../../common/v1/time_pb'
+import { file_common_v1_time } from '../../../common/v1/time_pb'
 
 /**
  * Describes the file shared/activity/v1/activity.proto.
  */
-export const file_shared_activity_v1_activity: GenFile = /*@__PURE__*/
-  fileDesc("CiFzaGFyZWQvYWN0aXZpdHkvdjEvYWN0aXZpdHkucHJvdG8SEnNoYXJlZC5hY3Rpdml0eS52MSLlAwoWR2V0QWN0aXZpdHlGZWVkUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMjrLAbpIxwEaxAEKJ2FjdGl2aXR5X2ZlZWQuZXZlbnRzX25vbl9lbXB0eV9pbl9tdWx0aRJFZWFjaCBldmVudCBmaWx0ZXIgbXVzdCBzcGVjaWZ5IGEga2luZCBvciBhdCBsZWFzdCBvbmUgcHJvcGVydHkgZmlsdGVyGlJ0aGlzLmV2ZW50cy5zaXplKCkgPD0gMXx8IHRoaXMuZXZlbnRzLmFsbChlLCBlLmtpbmQgIT0gJycgfHwgZS5maWx0ZXJzLnNpemUoKSA+IDApIu4BCg1BY3Rpdml0eUV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEgwKBGtpbmQYAiABKAkSEwoLZGlzdGluY3RfaWQYAyABKAkSLgoKb2NjdXJfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKc2Vzc2lvbl9pZBgFIAEoCRIwCg9hdXRvX3Byb3BlcnRpZXMYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjIKEWN1c3RvbV9wcm9wZXJ0aWVzGAcgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCJlChdHZXRBY3Rpdml0eUZlZWRSZXNwb25zZRIxCgZldmVudHMYASADKAsyIS5zaGFyZWQuYWN0aXZpdHkudjEuQWN0aXZpdHlFdmVudBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAki3wMKF0dldEV2ZW50RXhwbG9yZXJSZXF1ZXN0EhMKC2Rpc3RpbmN0X2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMjrMAbpIyAEaxQEKKGV2ZW50X2V4cGxvcmVyLmV2ZW50c19ub25fZW1wdHlfaW5fbXVsdGkSRWVhY2ggZXZlbnQgZmlsdGVyIG11c3Qgc3BlY2lmeSBhIGtpbmQgb3IgYXQgbGVhc3Qgb25lIHByb3BlcnR5IGZpbHRlchpSdGhpcy5ldmVudHMuc2l6ZSgpIDw9IDF8fCB0aGlzLmV2ZW50cy5hbGwoZSwgZS5raW5kICE9ICcnIHx8IGUuZmlsdGVycy5zaXplKCkgPiAwKSJmChhHZXRFdmVudEV4cGxvcmVyUmVzcG9uc2USMQoGZXZlbnRzGAEgAygLMiEuc2hhcmVkLmFjdGl2aXR5LnYxLkFjdGl2aXR5RXZlbnQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIsgBChhHZXRQcm9wZXJ0eVZhbHVlc1JlcXVlc3QSRgoMcHJvcGVydHlfa2V5GAEgASgJQjC6SC3IAQFyKDImXlwkP1thLXpBLVowLTlfLV0rKFwuW2EtekEtWjAtOV8tXSspKiQSNgoGc291cmNlGAIgASgOMhkuY29tbW9uLnYxLlByb3BlcnR5U291cmNlQgu6SAjIAQGCAQIQARIsCgpldmVudF9raW5kGAMgASgJQhi6SBVyEzIRXlthLXpBLVowLTlfLi1dKiQiKwoZR2V0UHJvcGVydHlWYWx1ZXNSZXNwb25zZRIOCgZ2YWx1ZXMYASADKAkiYgoZR2V0QWN0aXZpdHlIZWF0bWFwUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEigKCnRpbWVfcmFuZ2UYAiABKAsyFC5jb21tb24udjEuVGltZVJhbmdlIikKCkhlYXRtYXBEYXkSDAoEZGF0ZRgBIAEoCRINCgVjb3VudBgCIAEoAyJKChpHZXRBY3Rpdml0eUhlYXRtYXBSZXNwb25zZRIsCgRkYXlzGAEgAygLMh4uc2hhcmVkLmFjdGl2aXR5LnYxLkhlYXRtYXBEYXkiNQoWR2V0UHJvZmlsZVN0YXRzUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBIogCCgxQcm9maWxlU3RhdHMSLgoKZmlyc3Rfc2VlbhgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgx0b3RhbF9ldmVudHMYAyABKAMSDwoHYnJvd3NlchgEIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YBSABKAkSCgoCb3MYBiABKAkSEgoKb3NfdmVyc2lvbhgHIAEoCRIOCgZkZXZpY2UYCCABKAkSDwoHY291bnRyeRgJIAEoCRIMCgRjaXR5GAogASgJEgoKAmlwGAsgASgJIqgBChdHZXRQcm9maWxlU3RhdHNSZXNwb25zZRIvCgVzdGF0cxgBIAEoCzIgLnNoYXJlZC5hY3Rpdml0eS52MS5Qcm9maWxlU3RhdHMSLwoHaGVhdG1hcBgCIAMoCzIeLnNoYXJlZC5hY3Rpdml0eS52MS5IZWF0bWFwRGF5EisKCnByb3BlcnRpZXMYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0MpkFCg9BY3Rpdml0eVNlcnZpY2USagoPR2V0QWN0aXZpdHlGZWVkEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5RmVlZFJlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlGZWVkUmVzcG9uc2USbQoQR2V0RXZlbnRFeHBsb3JlchIrLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVxdWVzdBosLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVzcG9uc2USWAoPR2V0RmlsdGVyU2NoZW1hEiEuY29tbW9uLnYxLkdldEZpbHRlclNjaGVtYVJlcXVlc3QaIi5jb21tb24udjEuR2V0RmlsdGVyU2NoZW1hUmVzcG9uc2UScAoRR2V0UHJvcGVydHlWYWx1ZXMSLC5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvcGVydHlWYWx1ZXNSZXF1ZXN0Gi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb3BlcnR5VmFsdWVzUmVzcG9uc2UScwoSR2V0QWN0aXZpdHlIZWF0bWFwEi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5SGVhdG1hcFJlcXVlc3QaLi5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlIZWF0bWFwUmVzcG9uc2USagoPR2V0UHJvZmlsZVN0YXRzEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb2ZpbGVTdGF0c1JlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvZmlsZVN0YXRzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zaGFyZWQvYWN0aXZpdHkvdjE7YWN0aXZpdHl2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_filter_schema, file_common_v1_filters, file_common_v1_time, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+export const file_shared_activity_v1_activity: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiFzaGFyZWQvYWN0aXZpdHkvdjEvYWN0aXZpdHkucHJvdG8SEnNoYXJlZC5hY3Rpdml0eS52MSLlAwoWR2V0QWN0aXZpdHlGZWVkUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMjrLAbpIxwEaxAEKJ2FjdGl2aXR5X2ZlZWQuZXZlbnRzX25vbl9lbXB0eV9pbl9tdWx0aRJFZWFjaCBldmVudCBmaWx0ZXIgbXVzdCBzcGVjaWZ5IGEga2luZCBvciBhdCBsZWFzdCBvbmUgcHJvcGVydHkgZmlsdGVyGlJ0aGlzLmV2ZW50cy5zaXplKCkgPD0gMXx8IHRoaXMuZXZlbnRzLmFsbChlLCBlLmtpbmQgIT0gJycgfHwgZS5maWx0ZXJzLnNpemUoKSA+IDApIu4BCg1BY3Rpdml0eUV2ZW50EhAKCGV2ZW50X2lkGAEgASgJEgwKBGtpbmQYAiABKAkSEwoLZGlzdGluY3RfaWQYAyABKAkSLgoKb2NjdXJfdGltZRgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKc2Vzc2lvbl9pZBgFIAEoCRIwCg9hdXRvX3Byb3BlcnRpZXMYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjIKEWN1c3RvbV9wcm9wZXJ0aWVzGAcgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCJlChdHZXRBY3Rpdml0eUZlZWRSZXNwb25zZRIxCgZldmVudHMYASADKAsyIS5zaGFyZWQuYWN0aXZpdHkudjEuQWN0aXZpdHlFdmVudBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAki3wMKF0dldEV2ZW50RXhwbG9yZXJSZXF1ZXN0EhMKC2Rpc3RpbmN0X2lkGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMjrMAbpIyAEaxQEKKGV2ZW50X2V4cGxvcmVyLmV2ZW50c19ub25fZW1wdHlfaW5fbXVsdGkSRWVhY2ggZXZlbnQgZmlsdGVyIG11c3Qgc3BlY2lmeSBhIGtpbmQgb3IgYXQgbGVhc3Qgb25lIHByb3BlcnR5IGZpbHRlchpSdGhpcy5ldmVudHMuc2l6ZSgpIDw9IDF8fCB0aGlzLmV2ZW50cy5hbGwoZSwgZS5raW5kICE9ICcnIHx8IGUuZmlsdGVycy5zaXplKCkgPiAwKSJmChhHZXRFdmVudEV4cGxvcmVyUmVzcG9uc2USMQoGZXZlbnRzGAEgAygLMiEuc2hhcmVkLmFjdGl2aXR5LnYxLkFjdGl2aXR5RXZlbnQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIsgBChhHZXRQcm9wZXJ0eVZhbHVlc1JlcXVlc3QSRgoMcHJvcGVydHlfa2V5GAEgASgJQjC6SC3IAQFyKDImXlwkP1thLXpBLVowLTlfLV0rKFwuW2EtekEtWjAtOV8tXSspKiQSNgoGc291cmNlGAIgASgOMhkuY29tbW9uLnYxLlByb3BlcnR5U291cmNlQgu6SAjIAQGCAQIQARIsCgpldmVudF9raW5kGAMgASgJQhi6SBVyEzIRXlthLXpBLVowLTlfLi1dKiQiKwoZR2V0UHJvcGVydHlWYWx1ZXNSZXNwb25zZRIOCgZ2YWx1ZXMYASADKAkiYgoZR2V0QWN0aXZpdHlIZWF0bWFwUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEigKCnRpbWVfcmFuZ2UYAiABKAsyFC5jb21tb24udjEuVGltZVJhbmdlIikKCkhlYXRtYXBEYXkSDAoEZGF0ZRgBIAEoCRINCgVjb3VudBgCIAEoAyJKChpHZXRBY3Rpdml0eUhlYXRtYXBSZXNwb25zZRIsCgRkYXlzGAEgAygLMh4uc2hhcmVkLmFjdGl2aXR5LnYxLkhlYXRtYXBEYXkiNQoWR2V0UHJvZmlsZVN0YXRzUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBIogCCgxQcm9maWxlU3RhdHMSLgoKZmlyc3Rfc2VlbhgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgx0b3RhbF9ldmVudHMYAyABKAMSDwoHYnJvd3NlchgEIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YBSABKAkSCgoCb3MYBiABKAkSEgoKb3NfdmVyc2lvbhgHIAEoCRIOCgZkZXZpY2UYCCABKAkSDwoHY291bnRyeRgJIAEoCRIMCgRjaXR5GAogASgJEgoKAmlwGAsgASgJIqgBChdHZXRQcm9maWxlU3RhdHNSZXNwb25zZRIvCgVzdGF0cxgBIAEoCzIgLnNoYXJlZC5hY3Rpdml0eS52MS5Qcm9maWxlU3RhdHMSLwoHaGVhdG1hcBgCIAMoCzIeLnNoYXJlZC5hY3Rpdml0eS52MS5IZWF0bWFwRGF5EisKCnByb3BlcnRpZXMYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0MpkFCg9BY3Rpdml0eVNlcnZpY2USagoPR2V0QWN0aXZpdHlGZWVkEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5RmVlZFJlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlGZWVkUmVzcG9uc2USbQoQR2V0RXZlbnRFeHBsb3JlchIrLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVxdWVzdBosLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVzcG9uc2USWAoPR2V0RmlsdGVyU2NoZW1hEiEuY29tbW9uLnYxLkdldEZpbHRlclNjaGVtYVJlcXVlc3QaIi5jb21tb24udjEuR2V0RmlsdGVyU2NoZW1hUmVzcG9uc2UScAoRR2V0UHJvcGVydHlWYWx1ZXMSLC5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvcGVydHlWYWx1ZXNSZXF1ZXN0Gi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb3BlcnR5VmFsdWVzUmVzcG9uc2UScwoSR2V0QWN0aXZpdHlIZWF0bWFwEi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5SGVhdG1hcFJlcXVlc3QaLi5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlIZWF0bWFwUmVzcG9uc2USagoPR2V0UHJvZmlsZVN0YXRzEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb2ZpbGVTdGF0c1JlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvZmlsZVN0YXRzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zaGFyZWQvYWN0aXZpdHkvdjE7YWN0aXZpdHl2MWIIZWRpdGlvbnNw6Ac',
+    [
+      file_buf_validate_validate,
+      file_common_v1_filter_schema,
+      file_common_v1_filters,
+      file_common_v1_time,
+      file_google_protobuf_struct,
+      file_google_protobuf_timestamp,
+    ],
+  )
 
 /**
  * @generated from message shared.activity.v1.GetActivityFeedRequest
  */
-export type GetActivityFeedRequest = Message<"shared.activity.v1.GetActivityFeedRequest"> & {
+export type GetActivityFeedRequest = Message<'shared.activity.v1.GetActivityFeedRequest'> & {
   /**
    * Required. The profile ID to fetch events for.
    *
    * @generated from field: string distinct_id = 1;
    */
-  distinctId: string;
+  distinctId: string
 
   /**
    * Optional. Filter by session. Empty means all sessions.
    *
    * @generated from field: string session_id = 2;
    */
-  sessionId: string;
+  sessionId: string
 
   /**
    * Optional. Restrict to events within this time window.
    *
    * @generated from field: common.v1.TimeRange time_range = 3;
    */
-  timeRange?: TimeRange | undefined;
+  timeRange?: TimeRange | undefined
 
   /**
    * Optional. Filter by event properties (auto or custom).
    *
    * @generated from field: repeated common.v1.PropertyFilter property_filters = 4;
    */
-  propertyFilters: PropertyFilter[];
+  propertyFilters: PropertyFilter[]
 
   /**
    * 0 means server default (100). Max 1000.
    *
    * @generated from field: int32 page_size = 5;
    */
-  pageSize: number;
+  pageSize: number
 
   /**
    * Opaque cursor from a previous response's next_page_token. Empty for the first page.
    *
    * @generated from field: string page_token = 6;
    */
-  pageToken: string;
+  pageToken: string
 
   /**
    * Optional. Filter by multiple event types with per-event property filters.
    *
    * @generated from field: repeated common.v1.EventFilter events = 7;
    */
-  events: EventFilter[];
-};
+  events: EventFilter[]
+}
 
 /**
  * Describes the message shared.activity.v1.GetActivityFeedRequest.
  * Use `create(GetActivityFeedRequestSchema)` to create a new message.
  */
-export const GetActivityFeedRequestSchema: GenMessage<GetActivityFeedRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 0);
+export const GetActivityFeedRequestSchema: GenMessage<GetActivityFeedRequest> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 0)
 
 /**
  * @generated from message shared.activity.v1.ActivityEvent
  */
-export type ActivityEvent = Message<"shared.activity.v1.ActivityEvent"> & {
+export type ActivityEvent = Message<'shared.activity.v1.ActivityEvent'> & {
   /**
    * @generated from field: string event_id = 1;
    */
-  eventId: string;
+  eventId: string
 
   /**
    * @generated from field: string kind = 2;
    */
-  kind: string;
+  kind: string
 
   /**
    * @generated from field: string distinct_id = 3;
    */
-  distinctId: string;
+  distinctId: string
 
   /**
    * @generated from field: google.protobuf.Timestamp occur_time = 4;
    */
-  occurTime?: Timestamp | undefined;
+  occurTime?: Timestamp | undefined
 
   /**
    * May be empty if no session was active.
    *
    * @generated from field: string session_id = 5;
    */
-  sessionId: string;
+  sessionId: string
 
   /**
    * System-enriched properties (geo, user-agent, etc.).
    *
    * @generated from field: google.protobuf.Struct auto_properties = 6;
    */
-  autoProperties?: JsonObject | undefined;
+  autoProperties?: JsonObject | undefined
 
   /**
    * Client-supplied custom properties.
    *
    * @generated from field: google.protobuf.Struct custom_properties = 7;
    */
-  customProperties?: JsonObject | undefined;
-};
+  customProperties?: JsonObject | undefined
+}
 
 /**
  * Describes the message shared.activity.v1.ActivityEvent.
  * Use `create(ActivityEventSchema)` to create a new message.
  */
-export const ActivityEventSchema: GenMessage<ActivityEvent> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 1);
+export const ActivityEventSchema: GenMessage<ActivityEvent> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 1)
 
 /**
  * @generated from message shared.activity.v1.GetActivityFeedResponse
  */
-export type GetActivityFeedResponse = Message<"shared.activity.v1.GetActivityFeedResponse"> & {
+export type GetActivityFeedResponse = Message<'shared.activity.v1.GetActivityFeedResponse'> & {
   /**
    * @generated from field: repeated shared.activity.v1.ActivityEvent events = 1;
    */
-  events: ActivityEvent[];
+  events: ActivityEvent[]
 
   /**
    * Empty when there are no more pages.
    *
    * @generated from field: string next_page_token = 2;
    */
-  nextPageToken: string;
-};
+  nextPageToken: string
+}
 
 /**
  * Describes the message shared.activity.v1.GetActivityFeedResponse.
  * Use `create(GetActivityFeedResponseSchema)` to create a new message.
  */
-export const GetActivityFeedResponseSchema: GenMessage<GetActivityFeedResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 2);
+export const GetActivityFeedResponseSchema: GenMessage<GetActivityFeedResponse> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 2)
 
 /**
  * @generated from message shared.activity.v1.GetEventExplorerRequest
  */
-export type GetEventExplorerRequest = Message<"shared.activity.v1.GetEventExplorerRequest"> & {
+export type GetEventExplorerRequest = Message<'shared.activity.v1.GetEventExplorerRequest'> & {
   /**
    * Optional. Filter to a specific user. Empty means all users.
    *
    * @generated from field: string distinct_id = 1;
    */
-  distinctId: string;
+  distinctId: string
 
   /**
    * Optional. Filter by session. Empty means all sessions.
    *
    * @generated from field: string session_id = 2;
    */
-  sessionId: string;
+  sessionId: string
 
   /**
    * Optional. Restrict to events within this time window.
    *
    * @generated from field: common.v1.TimeRange time_range = 3;
    */
-  timeRange?: TimeRange | undefined;
+  timeRange?: TimeRange | undefined
 
   /**
    * Optional. Filter by event properties (auto or custom).
    *
    * @generated from field: repeated common.v1.PropertyFilter property_filters = 4;
    */
-  propertyFilters: PropertyFilter[];
+  propertyFilters: PropertyFilter[]
 
   /**
    * 0 means server default (100). Max 1000.
    *
    * @generated from field: int32 page_size = 5;
    */
-  pageSize: number;
+  pageSize: number
 
   /**
    * Opaque cursor from a previous response's next_page_token. Empty for the first page.
    *
    * @generated from field: string page_token = 6;
    */
-  pageToken: string;
+  pageToken: string
 
   /**
    * Optional. Filter by multiple event types with per-event property filters.
    *
    * @generated from field: repeated common.v1.EventFilter events = 7;
    */
-  events: EventFilter[];
-};
+  events: EventFilter[]
+}
 
 /**
  * Describes the message shared.activity.v1.GetEventExplorerRequest.
  * Use `create(GetEventExplorerRequestSchema)` to create a new message.
  */
-export const GetEventExplorerRequestSchema: GenMessage<GetEventExplorerRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 3);
+export const GetEventExplorerRequestSchema: GenMessage<GetEventExplorerRequest> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 3)
 
 /**
  * @generated from message shared.activity.v1.GetEventExplorerResponse
  */
-export type GetEventExplorerResponse = Message<"shared.activity.v1.GetEventExplorerResponse"> & {
+export type GetEventExplorerResponse = Message<'shared.activity.v1.GetEventExplorerResponse'> & {
   /**
    * @generated from field: repeated shared.activity.v1.ActivityEvent events = 1;
    */
-  events: ActivityEvent[];
+  events: ActivityEvent[]
 
   /**
    * Empty when there are no more pages.
    *
    * @generated from field: string next_page_token = 2;
    */
-  nextPageToken: string;
-};
+  nextPageToken: string
+}
 
 /**
  * Describes the message shared.activity.v1.GetEventExplorerResponse.
  * Use `create(GetEventExplorerResponseSchema)` to create a new message.
  */
-export const GetEventExplorerResponseSchema: GenMessage<GetEventExplorerResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 4);
+export const GetEventExplorerResponseSchema: GenMessage<GetEventExplorerResponse> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 4)
 
 /**
  * @generated from message shared.activity.v1.GetPropertyValuesRequest
  */
-export type GetPropertyValuesRequest = Message<"shared.activity.v1.GetPropertyValuesRequest"> & {
+export type GetPropertyValuesRequest = Message<'shared.activity.v1.GetPropertyValuesRequest'> & {
   /**
    * @generated from field: string property_key = 1;
    */
-  propertyKey: string;
+  propertyKey: string
 
   /**
    * @generated from field: common.v1.PropertySource source = 2;
    */
-  source: PropertySource;
+  source: PropertySource
 
   /**
    * @generated from field: string event_kind = 3;
    */
-  eventKind: string;
-};
+  eventKind: string
+}
 
 /**
  * Describes the message shared.activity.v1.GetPropertyValuesRequest.
  * Use `create(GetPropertyValuesRequestSchema)` to create a new message.
  */
-export const GetPropertyValuesRequestSchema: GenMessage<GetPropertyValuesRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 5);
+export const GetPropertyValuesRequestSchema: GenMessage<GetPropertyValuesRequest> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 5)
 
 /**
  * @generated from message shared.activity.v1.GetPropertyValuesResponse
  */
-export type GetPropertyValuesResponse = Message<"shared.activity.v1.GetPropertyValuesResponse"> & {
+export type GetPropertyValuesResponse = Message<'shared.activity.v1.GetPropertyValuesResponse'> & {
   /**
    * @generated from field: repeated string values = 1;
    */
-  values: string[];
-};
+  values: string[]
+}
 
 /**
  * Describes the message shared.activity.v1.GetPropertyValuesResponse.
  * Use `create(GetPropertyValuesResponseSchema)` to create a new message.
  */
-export const GetPropertyValuesResponseSchema: GenMessage<GetPropertyValuesResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 6);
+export const GetPropertyValuesResponseSchema: GenMessage<GetPropertyValuesResponse> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 6)
 
 /**
  * @generated from message shared.activity.v1.GetActivityHeatmapRequest
  */
-export type GetActivityHeatmapRequest = Message<"shared.activity.v1.GetActivityHeatmapRequest"> & {
+export type GetActivityHeatmapRequest = Message<'shared.activity.v1.GetActivityHeatmapRequest'> & {
   /**
    * @generated from field: string distinct_id = 1;
    */
-  distinctId: string;
+  distinctId: string
 
   /**
    * Optional. Defaults to the last 60 days when omitted.
    *
    * @generated from field: common.v1.TimeRange time_range = 2;
    */
-  timeRange?: TimeRange | undefined;
-};
+  timeRange?: TimeRange | undefined
+}
 
 /**
  * Describes the message shared.activity.v1.GetActivityHeatmapRequest.
  * Use `create(GetActivityHeatmapRequestSchema)` to create a new message.
  */
-export const GetActivityHeatmapRequestSchema: GenMessage<GetActivityHeatmapRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 7);
+export const GetActivityHeatmapRequestSchema: GenMessage<GetActivityHeatmapRequest> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 7)
 
 /**
  * HeatmapDay holds the event count for a single calendar day.
  *
  * @generated from message shared.activity.v1.HeatmapDay
  */
-export type HeatmapDay = Message<"shared.activity.v1.HeatmapDay"> & {
+export type HeatmapDay = Message<'shared.activity.v1.HeatmapDay'> & {
   /**
    * Date in YYYY-MM-DD format (UTC).
    *
    * @generated from field: string date = 1;
    */
-  date: string;
+  date: string
 
   /**
    * @generated from field: int64 count = 2;
    */
-  count: bigint;
-};
+  count: bigint
+}
 
 /**
  * Describes the message shared.activity.v1.HeatmapDay.
  * Use `create(HeatmapDaySchema)` to create a new message.
  */
-export const HeatmapDaySchema: GenMessage<HeatmapDay> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 8);
+export const HeatmapDaySchema: GenMessage<HeatmapDay> = /*@__PURE__*/ messageDesc(file_shared_activity_v1_activity, 8)
 
 /**
  * @generated from message shared.activity.v1.GetActivityHeatmapResponse
  */
-export type GetActivityHeatmapResponse = Message<"shared.activity.v1.GetActivityHeatmapResponse"> & {
+export type GetActivityHeatmapResponse = Message<'shared.activity.v1.GetActivityHeatmapResponse'> & {
   /**
    * @generated from field: repeated shared.activity.v1.HeatmapDay days = 1;
    */
-  days: HeatmapDay[];
-};
+  days: HeatmapDay[]
+}
 
 /**
  * Describes the message shared.activity.v1.GetActivityHeatmapResponse.
  * Use `create(GetActivityHeatmapResponseSchema)` to create a new message.
  */
-export const GetActivityHeatmapResponseSchema: GenMessage<GetActivityHeatmapResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 9);
+export const GetActivityHeatmapResponseSchema: GenMessage<GetActivityHeatmapResponse> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 9)
 
 /**
  * @generated from message shared.activity.v1.GetProfileStatsRequest
  */
-export type GetProfileStatsRequest = Message<"shared.activity.v1.GetProfileStatsRequest"> & {
+export type GetProfileStatsRequest = Message<'shared.activity.v1.GetProfileStatsRequest'> & {
   /**
    * @generated from field: string distinct_id = 1;
    */
-  distinctId: string;
-};
+  distinctId: string
+}
 
 /**
  * Describes the message shared.activity.v1.GetProfileStatsRequest.
  * Use `create(GetProfileStatsRequestSchema)` to create a new message.
  */
-export const GetProfileStatsRequestSchema: GenMessage<GetProfileStatsRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 10);
+export const GetProfileStatsRequestSchema: GenMessage<GetProfileStatsRequest> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 10)
 
 /**
  * ProfileStats holds aggregate event statistics and device/location context
@@ -378,109 +402,110 @@ export const GetProfileStatsRequestSchema: GenMessage<GetProfileStatsRequest> = 
  *
  * @generated from message shared.activity.v1.ProfileStats
  */
-export type ProfileStats = Message<"shared.activity.v1.ProfileStats"> & {
+export type ProfileStats = Message<'shared.activity.v1.ProfileStats'> & {
   /**
    * Timestamp of the earliest event recorded for this profile.
    *
    * @generated from field: google.protobuf.Timestamp first_seen = 1;
    */
-  firstSeen?: Timestamp | undefined;
+  firstSeen?: Timestamp | undefined
 
   /**
    * Timestamp of the most recent event recorded for this profile.
    *
    * @generated from field: google.protobuf.Timestamp last_seen = 2;
    */
-  lastSeen?: Timestamp | undefined;
+  lastSeen?: Timestamp | undefined
 
   /**
    * Total number of events recorded for this profile.
    *
    * @generated from field: int64 total_events = 3;
    */
-  totalEvents: bigint;
+  totalEvents: bigint
 
   /**
    * Browser name from the latest event (e.g. "Chrome"). Empty if unavailable.
    *
    * @generated from field: string browser = 4;
    */
-  browser: string;
+  browser: string
 
   /**
    * Major browser version from the latest event (e.g. "124"). Empty if unavailable.
    *
    * @generated from field: string browser_version = 5;
    */
-  browserVersion: string;
+  browserVersion: string
 
   /**
    * OS name from the latest event (e.g. "Mac OS X"). Empty if unavailable.
    *
    * @generated from field: string os = 6;
    */
-  os: string;
+  os: string
 
   /**
    * Major OS version from the latest event (e.g. "14"). Empty if unavailable.
    *
    * @generated from field: string os_version = 7;
    */
-  osVersion: string;
+  osVersion: string
 
   /**
    * Device model from the latest event (e.g. "iPhone"). Empty for desktop browsers.
    *
    * @generated from field: string device = 8;
    */
-  device: string;
+  device: string
 
   /**
    * Country name from the latest event (e.g. "United States"). Empty if unavailable.
    *
    * @generated from field: string country = 9;
    */
-  country: string;
+  country: string
 
   /**
    * City name from the latest event (e.g. "San Francisco"). Empty if unavailable.
    *
    * @generated from field: string city = 10;
    */
-  city: string;
+  city: string
 
   /**
    * IP address from the latest event. Empty if unavailable.
    *
    * @generated from field: string ip = 11;
    */
-  ip: string;
-};
+  ip: string
+}
 
 /**
  * Describes the message shared.activity.v1.ProfileStats.
  * Use `create(ProfileStatsSchema)` to create a new message.
  */
-export const ProfileStatsSchema: GenMessage<ProfileStats> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 11);
+export const ProfileStatsSchema: GenMessage<ProfileStats> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 11)
 
 /**
  * @generated from message shared.activity.v1.GetProfileStatsResponse
  */
-export type GetProfileStatsResponse = Message<"shared.activity.v1.GetProfileStatsResponse"> & {
+export type GetProfileStatsResponse = Message<'shared.activity.v1.GetProfileStatsResponse'> & {
   /**
    * Not set when the profile has no recorded events in ClickHouse.
    *
    * @generated from field: shared.activity.v1.ProfileStats stats = 1;
    */
-  stats?: ProfileStats | undefined;
+  stats?: ProfileStats | undefined
 
   /**
    * Per-day event counts for the last 60 days.
    *
    * @generated from field: repeated shared.activity.v1.HeatmapDay heatmap = 2;
    */
-  heatmap: HeatmapDay[];
+  heatmap: HeatmapDay[]
 
   /**
    * Profile properties set via identify() calls. Includes both auto-properties
@@ -488,15 +513,16 @@ export type GetProfileStatsResponse = Message<"shared.activity.v1.GetProfileStat
    *
    * @generated from field: google.protobuf.Struct properties = 3;
    */
-  properties?: JsonObject | undefined;
-};
+  properties?: JsonObject | undefined
+}
 
 /**
  * Describes the message shared.activity.v1.GetProfileStatsResponse.
  * Use `create(GetProfileStatsResponseSchema)` to create a new message.
  */
-export const GetProfileStatsResponseSchema: GenMessage<GetProfileStatsResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 12);
+export const GetProfileStatsResponseSchema: GenMessage<GetProfileStatsResponse> =
+  /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 12)
 
 /**
  * ActivityService provides paginated access to raw event data and aggregated activity insights for user profiles.
@@ -511,10 +537,10 @@ export const ActivityService: GenService<{
    * @generated from rpc shared.activity.v1.ActivityService.GetActivityFeed
    */
   getActivityFeed: {
-    methodKind: "unary";
-    input: typeof GetActivityFeedRequestSchema;
-    output: typeof GetActivityFeedResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetActivityFeedRequestSchema
+    output: typeof GetActivityFeedResponseSchema
+  }
   /**
    * GetEventExplorer returns a paginated, filterable list of events across all users
    * in a project. Does not resolve aliases.
@@ -522,10 +548,10 @@ export const ActivityService: GenService<{
    * @generated from rpc shared.activity.v1.ActivityService.GetEventExplorer
    */
   getEventExplorer: {
-    methodKind: "unary";
-    input: typeof GetEventExplorerRequestSchema;
-    output: typeof GetEventExplorerResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetEventExplorerRequestSchema
+    output: typeof GetEventExplorerResponseSchema
+  }
   /**
    * GetFilterSchema returns event names, property keys, and profile property keys for filter UIs.
    * The filter-schema concept is service-agnostic; both shared.activity and
@@ -537,20 +563,20 @@ export const ActivityService: GenService<{
    * @generated from rpc shared.activity.v1.ActivityService.GetFilterSchema
    */
   getFilterSchema: {
-    methodKind: "unary";
-    input: typeof GetFilterSchemaRequestSchema;
-    output: typeof GetFilterSchemaResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetFilterSchemaRequestSchema
+    output: typeof GetFilterSchemaResponseSchema
+  }
   /**
    * GetPropertyValues returns distinct values for a given property key.
    *
    * @generated from rpc shared.activity.v1.ActivityService.GetPropertyValues
    */
   getPropertyValues: {
-    methodKind: "unary";
-    input: typeof GetPropertyValuesRequestSchema;
-    output: typeof GetPropertyValuesResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetPropertyValuesRequestSchema
+    output: typeof GetPropertyValuesResponseSchema
+  }
   /**
    * GetActivityHeatmap returns per-day event counts for a user profile over a time window.
    * Defaults to the last 60 days when no time_range is provided.
@@ -558,10 +584,10 @@ export const ActivityService: GenService<{
    * @generated from rpc shared.activity.v1.ActivityService.GetActivityHeatmap
    */
   getActivityHeatmap: {
-    methodKind: "unary";
-    input: typeof GetActivityHeatmapRequestSchema;
-    output: typeof GetActivityHeatmapResponseSchema;
-  },
+    methodKind: 'unary'
+    input: typeof GetActivityHeatmapRequestSchema
+    output: typeof GetActivityHeatmapResponseSchema
+  }
   /**
    * GetProfileStats returns aggregate statistics, device/browser/location context from the
    * latest event, per-day heatmap data (last 60 days), and profile properties for a profile.
@@ -570,10 +596,8 @@ export const ActivityService: GenService<{
    * @generated from rpc shared.activity.v1.ActivityService.GetProfileStats
    */
   getProfileStats: {
-    methodKind: "unary";
-    input: typeof GetProfileStatsRequestSchema;
-    output: typeof GetProfileStatsResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_shared_activity_v1_activity, 0);
-
+    methodKind: 'unary'
+    input: typeof GetProfileStatsRequestSchema
+    output: typeof GetProfileStatsResponseSchema
+  }
+}> = /*@__PURE__*/ serviceDesc(file_shared_activity_v1_activity, 0)
