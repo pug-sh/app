@@ -1,14 +1,18 @@
 import { Facehash } from 'facehash'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { useAtomValue } from 'jotai'
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import maplibregl, {
+  type ExpressionSpecification,
+  type LayerSpecification,
+  type PaddingOptions,
+  type StyleSpecification,
+} from 'maplibre-gl'
+import themeLayers from 'protomaps-themes-base'
+import { useEffect, useMemo, useRef } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { MapContainer, useMap } from 'react-leaflet'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { buildVisitorMapMarkers, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map-markers'
 import { formatCountryName } from '@/lib/live-visitors'
+import { ensurePmtilesProtocol, INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
 
 type Props = {
   visitors: ActivityEvent[]
@@ -22,128 +26,43 @@ type Props = {
   }
 }
 
-const CARTO_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-const CARTO_LIGHT = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-const CARTO_DARK_FILTER = 'brightness(1.55) contrast(0.82) saturate(0.85)'
+const BASEMAP_SOURCE = 'protomaps'
+const PMTILES_URL = `pmtiles://${typeof window !== 'undefined' ? window.location.origin : ''}/basemap.pmtiles`
+const ATTRIBUTION =
+  '<a href="https://protomaps.com">Protomaps</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
 
-const WORLD_BOUNDS = L.latLngBounds([-85, -180], [85, 180])
-const INITIAL_VIEW_BOUNDS = L.latLngBounds([-55, -180], [75, 180])
-const INITIAL_VIEW_CENTER: L.LatLngExpression = [10, 0]
+ensurePmtilesProtocol()
 
-const subscribeDark = (onStoreChange: () => void) => {
-  const mq = window.matchMedia('(prefers-color-scheme: dark)')
-  const handler = () => onStoreChange()
-  mq.addEventListener('change', handler)
-  const obs = new MutationObserver(handler)
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-  return () => {
-    mq.removeEventListener('change', handler)
-    obs.disconnect()
-  }
-}
+// protomaps-themes-base renders dual-line labels (preferred language on top, the local-script
+// name on a second line — e.g. "Moscow\nМосква"). We want English only, so rewrite every label
+// layer's text-field to name:en, falling back to the local name when a feature has no English tag.
+const ENGLISH_NAME: ExpressionSpecification = ['coalesce', ['get', 'name:en'], ['get', 'name']]
 
-const getResolvedDark = (theme: Theme) => {
-  if (theme === 'dark') return true
-  if (theme === 'light') return false
-  return document.documentElement.classList.contains('dark')
-}
+const englishLabels = (layers: LayerSpecification[]) =>
+  layers.map((layer) => {
+    if (layer.type !== 'symbol' || !layer.layout?.['text-field']) return layer
+    return { ...layer, layout: { ...layer.layout, 'text-field': ENGLISH_NAME } }
+  })
 
-const useResolvedDark = () => {
-  const theme = useAtomValue(themeAtom)
-  return useSyncExternalStore(
-    subscribeDark,
-    () => getResolvedDark(theme),
-    () => false,
-  )
-}
+const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
+  version: 8,
+  glyphs: `${window.location.origin}/fonts/{fontstack}/{range}.pbf`,
+  sources: {
+    [BASEMAP_SOURCE]: {
+      type: 'vector',
+      url: PMTILES_URL,
+      attribution: ATTRIBUTION,
+    },
+  },
+  layers: englishLabels(themeLayers(BASEMAP_SOURCE, dark ? 'dark' : 'light', 'en')),
+})
 
-const BasemapLayer = ({ dark }: { dark: boolean }) => {
-  const map = useMap()
-
-  useEffect(() => {
-    const layer = L.tileLayer(dark ? CARTO_DARK : CARTO_LIGHT, {
-      noWrap: true,
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    })
-    layer.addTo(map)
-    return () => {
-      layer.remove()
-    }
-  }, [dark, map])
-
-  return null
-}
-
-const resolvePadding = (padding: Props['viewportPadding']) => ({
+const resolvePadding = (padding: Props['viewportPadding']): PaddingOptions => ({
   left: padding?.left ?? 0,
   right: padding?.right ?? 0,
   top: padding?.top ?? 0,
   bottom: padding?.bottom ?? 0,
 })
-
-const MapLayout = ({ enabled, viewportPadding }: { enabled: boolean; viewportPadding?: Props['viewportPadding'] }) => {
-  const map = useMap()
-
-  const fit = useCallback(() => {
-    map.invalidateSize({ pan: false })
-    if (!enabled) return
-    const padding = resolvePadding(viewportPadding)
-    const coverZoom = map.getBoundsZoom(
-      INITIAL_VIEW_BOUNDS,
-      true,
-      L.point(padding.left + padding.right, padding.top + padding.bottom),
-    )
-    map.setView(INITIAL_VIEW_CENTER, coverZoom, { animate: false })
-  }, [enabled, map, viewportPadding])
-
-  useEffect(() => {
-    map.setMaxBounds(WORLD_BOUNDS)
-    map.options.worldCopyJump = false
-
-    fit()
-    const raf = requestAnimationFrame(fit)
-
-    const container = map.getContainer()
-    const observer = new ResizeObserver(() => fit())
-    observer.observe(container)
-    window.addEventListener('resize', fit)
-
-    return () => {
-      cancelAnimationFrame(raf)
-      observer.disconnect()
-      window.removeEventListener('resize', fit)
-    }
-  }, [fit, map])
-
-  return null
-}
-
-const MapFocus = ({
-  markers,
-  selectedDistinctId,
-  viewportPadding,
-}: {
-  markers: VisitorMapMarker[]
-  selectedDistinctId: string | null
-  viewportPadding?: Props['viewportPadding']
-}) => {
-  const map = useMap()
-
-  useEffect(() => {
-    const target = selectedDistinctId ? markers.find(m => m.distinctId === selectedDistinctId) : null
-    if (!target) return
-    const padding = resolvePadding(viewportPadding)
-    map.flyToBounds(L.latLngBounds([target.lat, target.lng], [target.lat, target.lng]), {
-      maxZoom: Math.max(map.getZoom(), 4),
-      paddingTopLeft: [padding.left, padding.top],
-      paddingBottomRight: [padding.right, padding.bottom],
-      duration: 0.7,
-    })
-  }, [selectedDistinctId, markers, map, viewportPadding])
-
-  return null
-}
 
 const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
   const country = formatCountryName(marker.iso)
@@ -177,6 +96,55 @@ const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
   )
 }
 
+const MarkerView = ({
+  marker,
+  selected,
+  onSelect,
+}: {
+  marker: VisitorMapMarker
+  selected: boolean
+  onSelect?: (distinctId: string) => void
+}) => {
+  const locationLabel = marker.region
+    ? `${marker.region}, ${formatCountryName(marker.iso)}`
+    : formatCountryName(marker.iso)
+
+  return (
+    <div className="group/marker relative">
+      <button
+        type="button"
+        aria-label={`Visitor from ${locationLabel}`}
+        title={locationLabel}
+        onClick={() => onSelect?.(marker.distinctId)}
+        className="block cursor-pointer border-0 bg-transparent p-0"
+      >
+        <span
+          className={`relative block rounded-full ring-2 shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
+            selected ? 'scale-110 ring-emerald-500 shadow-emerald-500/50' : 'ring-white/90 shadow-black/10'
+          }`}
+        >
+          <Facehash
+            name={marker.distinctId}
+            size={32}
+            showInitial={false}
+            intensity3d="dramatic"
+            interactive={false}
+            colors={LIVE_AVATAR_COLORS}
+            className="block rounded-full"
+          />
+        </span>
+      </button>
+      <div
+        className={`absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 rounded-xl border border-border/70 bg-background/90 p-3 shadow-[0_12px_32px_rgb(0_0_0/18%)] backdrop-blur-md transition-opacity ${
+          selected ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover/marker:opacity-100'
+        }`}
+      >
+        <MarkerPopover marker={marker} />
+      </div>
+    </div>
+  )
+}
+
 const markerSignature = (marker: VisitorMapMarker) =>
   [
     marker.iso,
@@ -189,195 +157,165 @@ const markerSignature = (marker: VisitorMapMarker) =>
     marker.lng.toFixed(6),
   ].join('|')
 
-const AvatarMarkerLayer = ({
-  markers,
-  selectedDistinctId,
-  onSelectVisitor,
-}: {
-  markers: VisitorMapMarker[]
-  selectedDistinctId: string | null
-  onSelectVisitor?: (distinctId: string) => void
-}) => {
-  const map = useMap()
-  const onSelectRef = useRef(onSelectVisitor)
+type MarkerEntry = {
+  marker: maplibregl.Marker
+  root: Root
+  data: VisitorMapMarker
+  signature: string
+}
+
+const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, viewportPadding }: Props) => {
+  const dark = useResolvedDark()
+  const markers = useMemo(() => buildVisitorMapMarkers(visitors), [visitors])
+
+  const { containerRef, mapRef, ready } = useMaplibreMap({
+    style: buildBasemapStyle(dark),
+    center: [0, 10],
+    zoom: 2,
+    minZoom: 1,
+    maxZoom: 8,
+    renderWorldCopies: false,
+    dragRotate: false,
+    pitchWithRotate: false,
+    attributionControl: { compact: true },
+  })
+
+  const entriesRef = useRef(new Map<string, MarkerEntry>())
   const selectedRef = useRef(selectedDistinctId)
-  const entriesRef = useRef<
-    Map<
-      string,
-      {
-        marker: L.Marker
-        root: Root
-        popupRoot: Root
-        data: VisitorMapMarker
-        signature: string
-      }
-    >
-  >(new Map())
+  const onSelectRef = useRef(onSelectVisitor)
+  const paddingRef = useRef(resolvePadding(viewportPadding))
+  paddingRef.current = resolvePadding(viewportPadding)
 
   useEffect(() => {
     onSelectRef.current = onSelectVisitor
   }, [onSelectVisitor])
 
+  // Theme swap — restyle the basemap; DOM markers persist across setStyle.
   useEffect(() => {
-    const entries = entriesRef.current
-    selectedRef.current = selectedDistinctId
+    const map = mapRef.current
+    if (!map || !ready) return
+    map.setStyle(buildBasemapStyle(dark))
+  }, [dark, ready, mapRef])
 
-    for (const entry of entries.values()) {
-      const selected = entry.data.distinctId === selectedDistinctId
-      renderMarker(entry.root, entry.data, selected, onSelectRef)
-      if (selected) entry.marker.openPopup()
-      else entry.marker.closePopup()
+  // Keep basemap/tile load failures (e.g. a missing or invalid /basemap.pmtiles) non-fatal —
+  // the visitor markers still render over a blank background instead of crashing the map.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    const onError = (e: maplibregl.ErrorEvent) => console.warn('[live-map] basemap error:', e.error?.message ?? e.error)
+    map.on('error', onError)
+    return () => {
+      map.off('error', onError)
     }
-  }, [selectedDistinctId])
+  }, [ready, mapRef])
 
+  // Initial world fit (only when not focused on a visitor); refit on container resize.
   useEffect(() => {
+    const map = mapRef.current
+    const el = containerRef.current
+    if (!map || !ready || !el) return
+
+    // No maxBounds: constraining to the full world extent is degenerate and crashes MapLibre's
+    // _calcMatrices (null transform matrix). World copies are off so the world doesn't repeat;
+    // the initial fitBounds frames the single copy and minZoom keeps it filling the viewport.
+    const fit = () => {
+      map.resize()
+      if (selectedRef.current) return
+      map.fitBounds(INITIAL_VIEW_BOUNDS, { padding: paddingRef.current, animate: false })
+    }
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [ready, mapRef, containerRef])
+
+  // Fly to the selected visitor.
+  useEffect(() => {
+    selectedRef.current = selectedDistinctId
+    const map = mapRef.current
+    if (!map || !ready) return
+
+    for (const entry of entriesRef.current.values()) {
+      entry.root.render(
+        <MarkerView
+          marker={entry.data}
+          selected={entry.data.distinctId === selectedDistinctId}
+          onSelect={onSelectRef.current}
+        />,
+      )
+      entry.marker.getElement().style.zIndex = entry.data.distinctId === selectedDistinctId ? '20' : ''
+    }
+
+    if (!selectedDistinctId) return
+    const target = entriesRef.current.get(selectedDistinctId)
+    if (!target) return
+    map.flyTo({
+      center: [target.data.lng, target.data.lat],
+      zoom: Math.max(map.getZoom(), 4),
+      padding: paddingRef.current,
+      duration: 700,
+      essential: true,
+    })
+  }, [selectedDistinctId, ready, mapRef])
+
+  // Reconcile markers in place as the visitor set changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+
     const entries = entriesRef.current
     const nextIds = new Set<string>()
 
-    for (const markerData of markers) {
-      nextIds.add(markerData.distinctId)
-      const selected = markerData.distinctId === selectedRef.current
-      const existing = entries.get(markerData.distinctId)
+    for (const data of markers) {
+      nextIds.add(data.distinctId)
+      const selected = data.distinctId === selectedRef.current
+      const existing = entries.get(data.distinctId)
 
       if (existing) {
-        const nextSignature = markerSignature(markerData)
-        const moved = existing.data.lat !== markerData.lat || existing.data.lng !== markerData.lng
-        existing.data = markerData
-        if (moved) existing.marker.setLatLng([markerData.lat, markerData.lng])
-        if (existing.signature !== nextSignature) {
-          existing.popupRoot.render(<MarkerPopover marker={markerData} />)
-          renderMarker(existing.root, markerData, selected, onSelectRef)
-          existing.signature = nextSignature
+        const nextSignature = markerSignature(data)
+        if (existing.data.lat !== data.lat || existing.data.lng !== data.lng) {
+          existing.marker.setLngLat([data.lng, data.lat])
         }
-        if (selected) existing.marker.openPopup()
+        if (existing.signature !== nextSignature) {
+          existing.data = data
+          existing.signature = nextSignature
+          existing.root.render(<MarkerView marker={data} selected={selected} onSelect={onSelectRef.current} />)
+        } else {
+          existing.data = data
+        }
         continue
       }
 
-      const signature = markerSignature(markerData)
-      const markerEl = document.createElement('div')
-      const root = createRoot(markerEl)
-      renderMarker(root, markerData, selected, onSelectRef)
-
-      const icon = L.divIcon({
-        className: 'live-visitor-marker',
-        html: markerEl,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      })
-      const marker = L.marker([markerData.lat, markerData.lng], { icon })
-      const popupEl = document.createElement('div')
-      const popupRoot = createRoot(popupEl)
-      popupRoot.render(<MarkerPopover marker={markerData} />)
-      marker.bindPopup(popupEl, {
-        closeButton: false,
-        className: 'live-visitor-popup',
-        offset: [0, -14],
-        autoPan: false,
-      })
-
-      const entry = { marker, root, popupRoot, data: markerData, signature }
-      marker.on('mouseover focus', () => marker.openPopup())
-      marker.on('mouseout blur', () => {
-        if (entry.data.distinctId !== selectedRef.current) marker.closePopup()
-      })
-      marker.addTo(map)
-      if (selected) marker.openPopup()
-      entries.set(markerData.distinctId, entry)
+      const el = document.createElement('div')
+      el.className = 'live-visitor-marker'
+      const root = createRoot(el)
+      root.render(<MarkerView marker={data} selected={selected} onSelect={onSelectRef.current} />)
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([data.lng, data.lat]).addTo(map)
+      if (selected) marker.getElement().style.zIndex = '20'
+      entries.set(data.distinctId, { marker, root, data, signature: markerSignature(data) })
     }
 
     for (const [id, entry] of entries) {
       if (nextIds.has(id)) continue
       entry.root.unmount()
-      entry.popupRoot.unmount()
       entry.marker.remove()
       entries.delete(id)
     }
-  }, [map, markers])
+  }, [markers, ready, mapRef])
 
+  // Final teardown.
   useEffect(() => {
     const entries = entriesRef.current
     return () => {
       for (const entry of entries.values()) {
         entry.root.unmount()
-        entry.popupRoot.unmount()
         entry.marker.remove()
       }
       entries.clear()
     }
   }, [])
 
-  return null
-}
-
-const renderMarker = (
-  root: Root,
-  marker: VisitorMapMarker,
-  selected: boolean,
-  onSelectRef: React.RefObject<((distinctId: string) => void) | undefined>,
-) => {
-  const locationLabel = marker.region
-    ? `${marker.region}, ${formatCountryName(marker.iso)}`
-    : formatCountryName(marker.iso)
-  root.render(
-    <button
-      type="button"
-      aria-label={`Visitor from ${locationLabel}`}
-      title={locationLabel}
-      onClick={() => onSelectRef.current?.(marker.distinctId)}
-      className="group/marker block cursor-pointer border-0 bg-transparent p-0"
-    >
-      <span
-        className={`relative block rounded-full ring-2 shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
-          selected ? 'z-20 scale-110 ring-emerald-500 shadow-emerald-500/50' : 'z-10 ring-white/90 shadow-black/10'
-        }`}
-      >
-        <Facehash
-          name={marker.distinctId}
-          size={32}
-          showInitial={false}
-          intensity3d="dramatic"
-          interactive={false}
-          colors={LIVE_AVATAR_COLORS}
-          className="block rounded-full"
-        />
-      </span>
-    </button>,
-  )
-}
-
-const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, viewportPadding }: Props) => {
-  const dark = useResolvedDark()
-  const markers = useMemo(() => buildVisitorMapMarkers(visitors), [visitors])
-  const hasFocus = Boolean(selectedDistinctId)
-  const mapStyle = {
-    '--live-map-tile-filter': dark ? CARTO_DARK_FILTER : 'none',
-  } as CSSProperties
-
-  return (
-    <MapContainer
-      center={[20, 0]}
-      zoom={2}
-      minZoom={1}
-      maxZoom={8}
-      zoomSnap={0.05}
-      zoomDelta={0.5}
-      maxBounds={WORLD_BOUNDS}
-      maxBoundsViscosity={1}
-      zoomControl={false}
-      scrollWheelZoom
-      className="absolute inset-0 z-0 h-full w-full"
-      style={mapStyle}
-    >
-      <BasemapLayer dark={dark} />
-      <MapLayout enabled={!hasFocus} viewportPadding={viewportPadding} />
-      <MapFocus markers={markers} selectedDistinctId={selectedDistinctId ?? null} viewportPadding={viewportPadding} />
-      <AvatarMarkerLayer
-        markers={markers}
-        selectedDistinctId={selectedDistinctId ?? null}
-        onSelectVisitor={onSelectVisitor}
-      />
-    </MapContainer>
-  )
+  return <div ref={containerRef} className="absolute inset-0 z-0 h-full w-full" />
 }
 
 export default LiveVisitorMap

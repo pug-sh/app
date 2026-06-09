@@ -2,6 +2,7 @@ import { Component, type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { TooltipProvider } from './components/ui/tooltip'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import './index.css'
 
 const checkBrowserStorage = () => {
