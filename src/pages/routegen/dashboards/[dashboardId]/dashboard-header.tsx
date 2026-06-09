@@ -94,7 +94,7 @@ export const DashboardHeader = ({
         {!editing ? <ShareControl shareId={shareId} sharing={sharing} onTogglePublic={onTogglePublic} /> : null}
         {!editing ? (
           <Button size="sm" variant="outline" onClick={onEdit}>
-            <Edit3 className="size-4" />
+            <Edit3 className="size-3" />
             Edit
           </Button>
         ) : null}
