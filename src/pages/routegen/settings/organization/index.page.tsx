@@ -22,7 +22,6 @@ import {
 } from '@/data/workspace.atoms'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
-import EmailProviderSection from './email-provider-section'
 
 const orgSchema = z.object({
   displayName: z.string().min(1, 'Organization name is required').max(150, 'Name must be at most 150 characters'),
@@ -335,8 +334,6 @@ const Organization = () => {
           </div>
         </section>
       )}
-
-      <EmailProviderSection />
     </div>
   )
 }
