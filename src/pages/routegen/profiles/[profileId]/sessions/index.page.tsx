@@ -15,7 +15,6 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { structGet } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
-import ProfileShell from '../_shell'
 
 type SessionRow = {
   sessionId: string
@@ -68,11 +67,7 @@ const ProfileSessions = () => {
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
-  return (
-    <ProfileShell profileId={profileId}>
-      <SessionsBody profileId={profileId} />
-    </ProfileShell>
-  )
+  return <SessionsBody profileId={profileId} />
 }
 
 const SessionsBody = ({ profileId }: { profileId: string }) => {

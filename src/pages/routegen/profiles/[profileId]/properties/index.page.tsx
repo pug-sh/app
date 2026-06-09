@@ -6,7 +6,6 @@ import { useParams } from 'wouter'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { profileFamilyAtom } from '../_data'
-import ProfileShell from '../_shell'
 
 type Entry = { key: string; value: JsonValue; type: string; display: string }
 
@@ -38,11 +37,7 @@ const ProfileProperties = () => {
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
-  return (
-    <ProfileShell profileId={profileId}>
-      <PropertiesBody profileId={profileId} />
-    </ProfileShell>
-  )
+  return <PropertiesBody profileId={profileId} />
 }
 
 const PropertiesBody = ({ profileId }: { profileId: string }) => {

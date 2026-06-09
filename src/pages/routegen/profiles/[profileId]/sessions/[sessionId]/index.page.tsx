@@ -15,7 +15,6 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
-import ProfileShell from '../../_shell'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -211,7 +210,7 @@ const SessionView = () => {
   if (!project) return <NoProject title="Session" icon={Timer} />
 
   return (
-    <ProfileShell profileId={profileId}>
+    <>
       {loading ? (
         <LoadingSpinner />
       ) : error ? (
@@ -255,7 +254,7 @@ const SessionView = () => {
           <p className="text-xs">This session has no recorded events</p>
         </div>
       )}
-    </ProfileShell>
+    </>
   )
 }
 
