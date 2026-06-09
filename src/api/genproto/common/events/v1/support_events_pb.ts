@@ -2,212 +2,201 @@
 // @generated from file common/events/v1/support_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/support_events.proto.
  */
-export const file_common_events_v1_support_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiVjb21tb24vZXZlbnRzL3YxL3N1cHBvcnRfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxInMKG0ZlZWRiYWNrU3VibWl0dGVkUHJvcGVydGllcxITCgtmZWVkYmFja19pZBgBIAEoCRIQCghjYXRlZ29yeRgCIAEoCRIVCgdjb21tZW50GAMgASgJQgSItRgBOhaCtRgSZmVlZGJhY2tfc3VibWl0dGVkIlwKFk5wc1N1Ym1pdHRlZFByb3BlcnRpZXMSGAoFc2NvcmUYASABKAVCCbpIBhoEGAooABIVCgdjb21tZW50GAIgASgJQgSItRgBOhGCtRgNbnBzX3N1Ym1pdHRlZCJIChdTdXJ2ZXlTdGFydGVkUHJvcGVydGllcxIZCglzdXJ2ZXlfaWQYASABKAlCBrpIA8gBAToSgrUYDnN1cnZleV9zdGFydGVkIm0KGVN1cnZleUNvbXBsZXRlZFByb3BlcnRpZXMSGQoJc3VydmV5X2lkGAEgASgJQga6SAPIAQESHwoOcXVlc3Rpb25fY291bnQYAiABKAVCB7pIBBoCKAA6FIK1GBBzdXJ2ZXlfY29tcGxldGVkInsKHlN1cHBvcnRUaWNrZXRDcmVhdGVkUHJvcGVydGllcxIZCgl0aWNrZXRfaWQYASABKAlCBrpIA8gBARIQCghjYXRlZ29yeRgCIAEoCRIQCghwcmlvcml0eRgDIAEoCToagrUYFnN1cHBvcnRfdGlja2V0X2NyZWF0ZWQicwofU3VwcG9ydFRpY2tldFJlc29sdmVkUHJvcGVydGllcxIZCgl0aWNrZXRfaWQYASABKAlCBrpIA8gBARIYCgpyZXNvbHV0aW9uGAIgASgJQgSItRgBOhuCtRgXc3VwcG9ydF90aWNrZXRfcmVzb2x2ZWQibgocU3VwcG9ydENoYXRTdGFydGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARITCgV0b3BpYxgCIAEoCUIEiLUYAToYgrUYFHN1cHBvcnRfY2hhdF9zdGFydGVkInsKG0hlbHBBcnRpY2xlVmlld2VkUHJvcGVydGllcxIaCgphcnRpY2xlX2lkGAEgASgJQga6SAPIAQESFQoNYXJ0aWNsZV90aXRsZRgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCToXgrUYE2hlbHBfYXJ0aWNsZV92aWV3ZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
-    [file_buf_validate_validate, file_common_events_v1_options],
-  )
+export const file_common_events_v1_support_events: GenFile = /*@__PURE__*/
+  fileDesc("CiVjb21tb24vZXZlbnRzL3YxL3N1cHBvcnRfZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxInMKG0ZlZWRiYWNrU3VibWl0dGVkUHJvcGVydGllcxITCgtmZWVkYmFja19pZBgBIAEoCRIQCghjYXRlZ29yeRgCIAEoCRIVCgdjb21tZW50GAMgASgJQgSItRgBOhaCtRgSZmVlZGJhY2tfc3VibWl0dGVkIlwKFk5wc1N1Ym1pdHRlZFByb3BlcnRpZXMSGAoFc2NvcmUYASABKAVCCbpIBhoEGAooABIVCgdjb21tZW50GAIgASgJQgSItRgBOhGCtRgNbnBzX3N1Ym1pdHRlZCJIChdTdXJ2ZXlTdGFydGVkUHJvcGVydGllcxIZCglzdXJ2ZXlfaWQYASABKAlCBrpIA8gBAToSgrUYDnN1cnZleV9zdGFydGVkIm0KGVN1cnZleUNvbXBsZXRlZFByb3BlcnRpZXMSGQoJc3VydmV5X2lkGAEgASgJQga6SAPIAQESHwoOcXVlc3Rpb25fY291bnQYAiABKAVCB7pIBBoCKAA6FIK1GBBzdXJ2ZXlfY29tcGxldGVkInsKHlN1cHBvcnRUaWNrZXRDcmVhdGVkUHJvcGVydGllcxIZCgl0aWNrZXRfaWQYASABKAlCBrpIA8gBARIQCghjYXRlZ29yeRgCIAEoCRIQCghwcmlvcml0eRgDIAEoCToagrUYFnN1cHBvcnRfdGlja2V0X2NyZWF0ZWQicwofU3VwcG9ydFRpY2tldFJlc29sdmVkUHJvcGVydGllcxIZCgl0aWNrZXRfaWQYASABKAlCBrpIA8gBARIYCgpyZXNvbHV0aW9uGAIgASgJQgSItRgBOhuCtRgXc3VwcG9ydF90aWNrZXRfcmVzb2x2ZWQibgocU3VwcG9ydENoYXRTdGFydGVkUHJvcGVydGllcxIfCg9jb252ZXJzYXRpb25faWQYASABKAlCBrpIA8gBARITCgV0b3BpYxgCIAEoCUIEiLUYAToYgrUYFHN1cHBvcnRfY2hhdF9zdGFydGVkInsKG0hlbHBBcnRpY2xlVmlld2VkUHJvcGVydGllcxIaCgphcnRpY2xlX2lkGAEgASgJQga6SAPIAQESFQoNYXJ0aWNsZV90aXRsZRgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCToXgrUYE2hlbHBfYXJ0aWNsZV92aWV3ZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_events_v1_options]);
 
 /**
  * @generated from message common.events.v1.FeedbackSubmittedProperties
  */
-export type FeedbackSubmittedProperties = Message<'common.events.v1.FeedbackSubmittedProperties'> & {
+export type FeedbackSubmittedProperties = Message<"common.events.v1.FeedbackSubmittedProperties"> & {
   /**
    * @generated from field: string feedback_id = 1;
    */
-  feedbackId: string
+  feedbackId: string;
 
   /**
    * @generated from field: string category = 2;
    */
-  category: string
+  category: string;
 
   /**
    * @generated from field: string comment = 3;
    */
-  comment: string
-}
+  comment: string;
+};
 
 /**
  * Describes the message common.events.v1.FeedbackSubmittedProperties.
  * Use `create(FeedbackSubmittedPropertiesSchema)` to create a new message.
  */
-export const FeedbackSubmittedPropertiesSchema: GenMessage<FeedbackSubmittedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 0)
+export const FeedbackSubmittedPropertiesSchema: GenMessage<FeedbackSubmittedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 0);
 
 /**
  * @generated from message common.events.v1.NpsSubmittedProperties
  */
-export type NpsSubmittedProperties = Message<'common.events.v1.NpsSubmittedProperties'> & {
+export type NpsSubmittedProperties = Message<"common.events.v1.NpsSubmittedProperties"> & {
   /**
    * @generated from field: int32 score = 1;
    */
-  score: number
+  score: number;
 
   /**
    * @generated from field: string comment = 2;
    */
-  comment: string
-}
+  comment: string;
+};
 
 /**
  * Describes the message common.events.v1.NpsSubmittedProperties.
  * Use `create(NpsSubmittedPropertiesSchema)` to create a new message.
  */
-export const NpsSubmittedPropertiesSchema: GenMessage<NpsSubmittedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 1)
+export const NpsSubmittedPropertiesSchema: GenMessage<NpsSubmittedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 1);
 
 /**
  * @generated from message common.events.v1.SurveyStartedProperties
  */
-export type SurveyStartedProperties = Message<'common.events.v1.SurveyStartedProperties'> & {
+export type SurveyStartedProperties = Message<"common.events.v1.SurveyStartedProperties"> & {
   /**
    * @generated from field: string survey_id = 1;
    */
-  surveyId: string
-}
+  surveyId: string;
+};
 
 /**
  * Describes the message common.events.v1.SurveyStartedProperties.
  * Use `create(SurveyStartedPropertiesSchema)` to create a new message.
  */
-export const SurveyStartedPropertiesSchema: GenMessage<SurveyStartedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 2)
+export const SurveyStartedPropertiesSchema: GenMessage<SurveyStartedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 2);
 
 /**
  * @generated from message common.events.v1.SurveyCompletedProperties
  */
-export type SurveyCompletedProperties = Message<'common.events.v1.SurveyCompletedProperties'> & {
+export type SurveyCompletedProperties = Message<"common.events.v1.SurveyCompletedProperties"> & {
   /**
    * @generated from field: string survey_id = 1;
    */
-  surveyId: string
+  surveyId: string;
 
   /**
    * @generated from field: int32 question_count = 2;
    */
-  questionCount: number
-}
+  questionCount: number;
+};
 
 /**
  * Describes the message common.events.v1.SurveyCompletedProperties.
  * Use `create(SurveyCompletedPropertiesSchema)` to create a new message.
  */
-export const SurveyCompletedPropertiesSchema: GenMessage<SurveyCompletedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 3)
+export const SurveyCompletedPropertiesSchema: GenMessage<SurveyCompletedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 3);
 
 /**
  * @generated from message common.events.v1.SupportTicketCreatedProperties
  */
-export type SupportTicketCreatedProperties = Message<'common.events.v1.SupportTicketCreatedProperties'> & {
+export type SupportTicketCreatedProperties = Message<"common.events.v1.SupportTicketCreatedProperties"> & {
   /**
    * @generated from field: string ticket_id = 1;
    */
-  ticketId: string
+  ticketId: string;
 
   /**
    * @generated from field: string category = 2;
    */
-  category: string
+  category: string;
 
   /**
    * @generated from field: string priority = 3;
    */
-  priority: string
-}
+  priority: string;
+};
 
 /**
  * Describes the message common.events.v1.SupportTicketCreatedProperties.
  * Use `create(SupportTicketCreatedPropertiesSchema)` to create a new message.
  */
-export const SupportTicketCreatedPropertiesSchema: GenMessage<SupportTicketCreatedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 4)
+export const SupportTicketCreatedPropertiesSchema: GenMessage<SupportTicketCreatedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 4);
 
 /**
  * @generated from message common.events.v1.SupportTicketResolvedProperties
  */
-export type SupportTicketResolvedProperties = Message<'common.events.v1.SupportTicketResolvedProperties'> & {
+export type SupportTicketResolvedProperties = Message<"common.events.v1.SupportTicketResolvedProperties"> & {
   /**
    * @generated from field: string ticket_id = 1;
    */
-  ticketId: string
+  ticketId: string;
 
   /**
    * @generated from field: string resolution = 2;
    */
-  resolution: string
-}
+  resolution: string;
+};
 
 /**
  * Describes the message common.events.v1.SupportTicketResolvedProperties.
  * Use `create(SupportTicketResolvedPropertiesSchema)` to create a new message.
  */
-export const SupportTicketResolvedPropertiesSchema: GenMessage<SupportTicketResolvedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 5)
+export const SupportTicketResolvedPropertiesSchema: GenMessage<SupportTicketResolvedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 5);
 
 /**
  * @generated from message common.events.v1.SupportChatStartedProperties
  */
-export type SupportChatStartedProperties = Message<'common.events.v1.SupportChatStartedProperties'> & {
+export type SupportChatStartedProperties = Message<"common.events.v1.SupportChatStartedProperties"> & {
   /**
    * @generated from field: string conversation_id = 1;
    */
-  conversationId: string
+  conversationId: string;
 
   /**
    * @generated from field: string topic = 2;
    */
-  topic: string
-}
+  topic: string;
+};
 
 /**
  * Describes the message common.events.v1.SupportChatStartedProperties.
  * Use `create(SupportChatStartedPropertiesSchema)` to create a new message.
  */
-export const SupportChatStartedPropertiesSchema: GenMessage<SupportChatStartedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 6)
+export const SupportChatStartedPropertiesSchema: GenMessage<SupportChatStartedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 6);
 
 /**
  * @generated from message common.events.v1.HelpArticleViewedProperties
  */
-export type HelpArticleViewedProperties = Message<'common.events.v1.HelpArticleViewedProperties'> & {
+export type HelpArticleViewedProperties = Message<"common.events.v1.HelpArticleViewedProperties"> & {
   /**
    * @generated from field: string article_id = 1;
    */
-  articleId: string
+  articleId: string;
 
   /**
    * @generated from field: string article_title = 2;
    */
-  articleTitle: string
+  articleTitle: string;
 
   /**
    * @generated from field: string category = 3;
    */
-  category: string
-}
+  category: string;
+};
 
 /**
  * Describes the message common.events.v1.HelpArticleViewedProperties.
  * Use `create(HelpArticleViewedPropertiesSchema)` to create a new message.
  */
-export const HelpArticleViewedPropertiesSchema: GenMessage<HelpArticleViewedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_support_events, 7)
+export const HelpArticleViewedPropertiesSchema: GenMessage<HelpArticleViewedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_support_events, 7);
+

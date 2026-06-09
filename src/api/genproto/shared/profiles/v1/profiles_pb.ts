@@ -2,321 +2,317 @@
 // @generated from file shared/profiles/v1/profiles.proto (package shared.profiles.v1, edition 2023)
 /* eslint-disable */
 
-import type { JsonObject, Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
-import { file_google_protobuf_struct, file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import type { LogicalOperator, PropertyFilter } from '../../../common/v1/filters_pb'
-import { file_common_v1_filters } from '../../../common/v1/filters_pb'
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { LogicalOperator, PropertyFilter } from "../../../common/v1/filters_pb";
+import { file_common_v1_filters } from "../../../common/v1/filters_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file shared/profiles/v1/profiles.proto.
  */
-export const file_shared_profiles_v1_profiles: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiEAoORGVsZXRlUmVzcG9uc2UiNQoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBIkcKF0dldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlEiwKB3Byb2ZpbGUYASABKAsyGy5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZSIgCgpHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiOwoLR2V0UmVzcG9uc2USLAoHcHJvZmlsZRgBIAEoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlInEKC0ZpbHRlckdyb3VwEjQKB2ZpbHRlcnMYASADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAggBEiwKCG9wZXJhdG9yGAIgASgOMhouY29tbW9uLnYxLkxvZ2ljYWxPcGVyYXRvciKVAQoLTGlzdFJlcXVlc3QSEgoKcGFnZV90b2tlbhgBIAEoCRI2Cg1maWx0ZXJfZ3JvdXBzGAIgAygLMh8uc2hhcmVkLnByb2ZpbGVzLnYxLkZpbHRlckdyb3VwEjoKFmZpbHRlcl9ncm91cHNfb3BlcmF0b3IYAyABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSK7AgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCSKLAgoHUHJvZmlsZRIvCgtjcmVhdGVfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXh0ZXJuYWxfaWQYAiABKAkSCgoCaWQYAyABKAkSKwoKcHJvcGVydGllcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKcHJvamVjdF9pZBgFIAEoCRIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPAoIYWN0aXZpdHkYByABKAsyKi5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZUFjdGl2aXR5U3VtbWFyeTLrAgoPUHJvZmlsZXNTZXJ2aWNlEkgKA0dldBIeLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXF1ZXN0Gh8uc2hhcmVkLnByb2ZpbGVzLnYxLkdldFJlc3BvbnNlIgASbAoPR2V0QnlFeHRlcm5hbElkEiouc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlcXVlc3QaKy5zaGFyZWQucHJvZmlsZXMudjEuR2V0QnlFeHRlcm5hbElkUmVzcG9uc2UiABJNCgRMaXN0Eh8uc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXF1ZXN0GiAuc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXNwb25zZSIAMAESUQoGRGVsZXRlEiEuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlcXVlc3QaIi5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlUmVzcG9uc2UiAEJIWkZnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3NoYXJlZC9wcm9maWxlcy92MTtwcm9maWxlc3YxYghlZGl0aW9uc3DoBw',
-    [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp],
-  )
+export const file_shared_profiles_v1_profiles: GenFile = /*@__PURE__*/
+  fileDesc("CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiEAoORGVsZXRlUmVzcG9uc2UiNQoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBIkcKF0dldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlEiwKB3Byb2ZpbGUYASABKAsyGy5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZSIgCgpHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiOwoLR2V0UmVzcG9uc2USLAoHcHJvZmlsZRgBIAEoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlInEKC0ZpbHRlckdyb3VwEjQKB2ZpbHRlcnMYASADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAggBEiwKCG9wZXJhdG9yGAIgASgOMhouY29tbW9uLnYxLkxvZ2ljYWxPcGVyYXRvciKVAQoLTGlzdFJlcXVlc3QSEgoKcGFnZV90b2tlbhgBIAEoCRI2Cg1maWx0ZXJfZ3JvdXBzGAIgAygLMh8uc2hhcmVkLnByb2ZpbGVzLnYxLkZpbHRlckdyb3VwEjoKFmZpbHRlcl9ncm91cHNfb3BlcmF0b3IYAyABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSK7AgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCSKLAgoHUHJvZmlsZRIvCgtjcmVhdGVfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXh0ZXJuYWxfaWQYAiABKAkSCgoCaWQYAyABKAkSKwoKcHJvcGVydGllcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKcHJvamVjdF9pZBgFIAEoCRIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPAoIYWN0aXZpdHkYByABKAsyKi5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZUFjdGl2aXR5U3VtbWFyeTLrAgoPUHJvZmlsZXNTZXJ2aWNlEkgKA0dldBIeLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXF1ZXN0Gh8uc2hhcmVkLnByb2ZpbGVzLnYxLkdldFJlc3BvbnNlIgASbAoPR2V0QnlFeHRlcm5hbElkEiouc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlcXVlc3QaKy5zaGFyZWQucHJvZmlsZXMudjEuR2V0QnlFeHRlcm5hbElkUmVzcG9uc2UiABJNCgRMaXN0Eh8uc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXF1ZXN0GiAuc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXNwb25zZSIAMAESUQoGRGVsZXRlEiEuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlcXVlc3QaIi5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlUmVzcG9uc2UiAEJIWkZnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3NoYXJlZC9wcm9maWxlcy92MTtwcm9maWxlc3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message shared.profiles.v1.DeleteRequest
  */
-export type DeleteRequest = Message<'shared.profiles.v1.DeleteRequest'> & {
+export type DeleteRequest = Message<"shared.profiles.v1.DeleteRequest"> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string
-}
+  id: string;
+};
 
 /**
  * Describes the message shared.profiles.v1.DeleteRequest.
  * Use `create(DeleteRequestSchema)` to create a new message.
  */
-export const DeleteRequestSchema: GenMessage<DeleteRequest> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 0)
+export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 0);
 
 /**
  * @generated from message shared.profiles.v1.DeleteResponse
  */
-export type DeleteResponse = Message<'shared.profiles.v1.DeleteResponse'> & {}
+export type DeleteResponse = Message<"shared.profiles.v1.DeleteResponse"> & {
+};
 
 /**
  * Describes the message shared.profiles.v1.DeleteResponse.
  * Use `create(DeleteResponseSchema)` to create a new message.
  */
-export const DeleteResponseSchema: GenMessage<DeleteResponse> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 1)
+export const DeleteResponseSchema: GenMessage<DeleteResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 1);
 
 /**
  * @generated from message shared.profiles.v1.GetByExternalIdRequest
  */
-export type GetByExternalIdRequest = Message<'shared.profiles.v1.GetByExternalIdRequest'> & {
+export type GetByExternalIdRequest = Message<"shared.profiles.v1.GetByExternalIdRequest"> & {
   /**
    * @generated from field: string external_id = 1;
    */
-  externalId: string
-}
+  externalId: string;
+};
 
 /**
  * Describes the message shared.profiles.v1.GetByExternalIdRequest.
  * Use `create(GetByExternalIdRequestSchema)` to create a new message.
  */
-export const GetByExternalIdRequestSchema: GenMessage<GetByExternalIdRequest> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 2)
+export const GetByExternalIdRequestSchema: GenMessage<GetByExternalIdRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 2);
 
 /**
  * @generated from message shared.profiles.v1.GetByExternalIdResponse
  */
-export type GetByExternalIdResponse = Message<'shared.profiles.v1.GetByExternalIdResponse'> & {
+export type GetByExternalIdResponse = Message<"shared.profiles.v1.GetByExternalIdResponse"> & {
   /**
    * @generated from field: shared.profiles.v1.Profile profile = 1;
    */
-  profile?: Profile | undefined
-}
+  profile?: Profile | undefined;
+};
 
 /**
  * Describes the message shared.profiles.v1.GetByExternalIdResponse.
  * Use `create(GetByExternalIdResponseSchema)` to create a new message.
  */
-export const GetByExternalIdResponseSchema: GenMessage<GetByExternalIdResponse> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 3)
+export const GetByExternalIdResponseSchema: GenMessage<GetByExternalIdResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 3);
 
 /**
  * @generated from message shared.profiles.v1.GetRequest
  */
-export type GetRequest = Message<'shared.profiles.v1.GetRequest'> & {
+export type GetRequest = Message<"shared.profiles.v1.GetRequest"> & {
   /**
    * @generated from field: string id = 1;
    */
-  id: string
-}
+  id: string;
+};
 
 /**
  * Describes the message shared.profiles.v1.GetRequest.
  * Use `create(GetRequestSchema)` to create a new message.
  */
-export const GetRequestSchema: GenMessage<GetRequest> = /*@__PURE__*/ messageDesc(file_shared_profiles_v1_profiles, 4)
+export const GetRequestSchema: GenMessage<GetRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 4);
 
 /**
  * @generated from message shared.profiles.v1.GetResponse
  */
-export type GetResponse = Message<'shared.profiles.v1.GetResponse'> & {
+export type GetResponse = Message<"shared.profiles.v1.GetResponse"> & {
   /**
    * @generated from field: shared.profiles.v1.Profile profile = 1;
    */
-  profile?: Profile | undefined
-}
+  profile?: Profile | undefined;
+};
 
 /**
  * Describes the message shared.profiles.v1.GetResponse.
  * Use `create(GetResponseSchema)` to create a new message.
  */
-export const GetResponseSchema: GenMessage<GetResponse> = /*@__PURE__*/ messageDesc(file_shared_profiles_v1_profiles, 5)
+export const GetResponseSchema: GenMessage<GetResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 5);
 
 /**
  * @generated from message shared.profiles.v1.FilterGroup
  */
-export type FilterGroup = Message<'shared.profiles.v1.FilterGroup'> & {
+export type FilterGroup = Message<"shared.profiles.v1.FilterGroup"> & {
   /**
    * @generated from field: repeated common.v1.PropertyFilter filters = 1;
    */
-  filters: PropertyFilter[]
+  filters: PropertyFilter[];
 
   /**
    * @generated from field: common.v1.LogicalOperator operator = 2;
    */
-  operator: LogicalOperator
-}
+  operator: LogicalOperator;
+};
 
 /**
  * Describes the message shared.profiles.v1.FilterGroup.
  * Use `create(FilterGroupSchema)` to create a new message.
  */
-export const FilterGroupSchema: GenMessage<FilterGroup> = /*@__PURE__*/ messageDesc(file_shared_profiles_v1_profiles, 6)
+export const FilterGroupSchema: GenMessage<FilterGroup> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 6);
 
 /**
  * @generated from message shared.profiles.v1.ListRequest
  */
-export type ListRequest = Message<'shared.profiles.v1.ListRequest'> & {
+export type ListRequest = Message<"shared.profiles.v1.ListRequest"> & {
   /**
    * Opaque cursor from a previous response's next_page_token. Empty for the first page.
    *
    * @generated from field: string page_token = 1;
    */
-  pageToken: string
+  pageToken: string;
 
   /**
    * @generated from field: repeated shared.profiles.v1.FilterGroup filter_groups = 2;
    */
-  filterGroups: FilterGroup[]
+  filterGroups: FilterGroup[];
 
   /**
    * @generated from field: common.v1.LogicalOperator filter_groups_operator = 3;
    */
-  filterGroupsOperator: LogicalOperator
-}
+  filterGroupsOperator: LogicalOperator;
+};
 
 /**
  * Describes the message shared.profiles.v1.ListRequest.
  * Use `create(ListRequestSchema)` to create a new message.
  */
-export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/ messageDesc(file_shared_profiles_v1_profiles, 7)
+export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 7);
 
 /**
  * @generated from message shared.profiles.v1.ListResponse
  */
-export type ListResponse = Message<'shared.profiles.v1.ListResponse'> & {
+export type ListResponse = Message<"shared.profiles.v1.ListResponse"> & {
   /**
    * @generated from field: repeated shared.profiles.v1.Profile profiles = 1;
    */
-  profiles: Profile[]
+  profiles: Profile[];
 
   /**
    * Empty when there are no more pages.
    *
    * @generated from field: string next_page_token = 2;
    */
-  nextPageToken: string
-}
+  nextPageToken: string;
+};
 
 /**
  * Describes the message shared.profiles.v1.ListResponse.
  * Use `create(ListResponseSchema)` to create a new message.
  */
-export const ListResponseSchema: GenMessage<ListResponse> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 8)
+export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 8);
 
 /**
  * @generated from message shared.profiles.v1.ProfileActivitySummary
  */
-export type ProfileActivitySummary = Message<'shared.profiles.v1.ProfileActivitySummary'> & {
+export type ProfileActivitySummary = Message<"shared.profiles.v1.ProfileActivitySummary"> & {
   /**
    * @generated from field: google.protobuf.Timestamp first_seen = 1;
    */
-  firstSeen?: Timestamp | undefined
+  firstSeen?: Timestamp | undefined;
 
   /**
    * @generated from field: google.protobuf.Timestamp last_seen = 2;
    */
-  lastSeen?: Timestamp | undefined
+  lastSeen?: Timestamp | undefined;
 
   /**
    * @generated from field: int64 total_events = 3;
    */
-  totalEvents: bigint
+  totalEvents: bigint;
 
   /**
    * @generated from field: int64 pageviews = 4;
    */
-  pageviews: bigint
+  pageviews: bigint;
 
   /**
    * @generated from field: int64 sessions = 5;
    */
-  sessions: bigint
+  sessions: bigint;
 
   /**
    * @generated from field: string browser = 6;
    */
-  browser: string
+  browser: string;
 
   /**
    * @generated from field: string browser_version = 7;
    */
-  browserVersion: string
+  browserVersion: string;
 
   /**
    * @generated from field: string os = 8;
    */
-  os: string
+  os: string;
 
   /**
    * @generated from field: string os_version = 9;
    */
-  osVersion: string
+  osVersion: string;
 
   /**
    * @generated from field: string device = 10;
    */
-  device: string
+  device: string;
 
   /**
    * @generated from field: string country = 11;
    */
-  country: string
+  country: string;
 
   /**
    * @generated from field: string region = 12;
    */
-  region: string
+  region: string;
 
   /**
    * @generated from field: string city = 13;
    */
-  city: string
-}
+  city: string;
+};
 
 /**
  * Describes the message shared.profiles.v1.ProfileActivitySummary.
  * Use `create(ProfileActivitySummarySchema)` to create a new message.
  */
-export const ProfileActivitySummarySchema: GenMessage<ProfileActivitySummary> =
-  /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 9)
+export const ProfileActivitySummarySchema: GenMessage<ProfileActivitySummary> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 9);
 
 /**
  * @generated from message shared.profiles.v1.Profile
  */
-export type Profile = Message<'shared.profiles.v1.Profile'> & {
+export type Profile = Message<"shared.profiles.v1.Profile"> & {
   /**
    * @generated from field: google.protobuf.Timestamp create_time = 1;
    */
-  createTime?: Timestamp | undefined
+  createTime?: Timestamp | undefined;
 
   /**
    * @generated from field: string external_id = 2;
    */
-  externalId: string
+  externalId: string;
 
   /**
    * @generated from field: string id = 3;
    */
-  id: string
+  id: string;
 
   /**
    * @generated from field: google.protobuf.Struct properties = 4;
    */
-  properties?: JsonObject | undefined
+  properties?: JsonObject | undefined;
 
   /**
    * @generated from field: string project_id = 5;
    */
-  projectId: string
+  projectId: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp update_time = 6;
    */
-  updateTime?: Timestamp | undefined
+  updateTime?: Timestamp | undefined;
 
   /**
    * @generated from field: shared.profiles.v1.ProfileActivitySummary activity = 7;
    */
-  activity?: ProfileActivitySummary | undefined
-}
+  activity?: ProfileActivitySummary | undefined;
+};
 
 /**
  * Describes the message shared.profiles.v1.Profile.
  * Use `create(ProfileSchema)` to create a new message.
  */
-export const ProfileSchema: GenMessage<Profile> = /*@__PURE__*/ messageDesc(file_shared_profiles_v1_profiles, 10)
+export const ProfileSchema: GenMessage<Profile> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 10);
 
 /**
  * @generated from service shared.profiles.v1.ProfilesService
@@ -326,32 +322,34 @@ export const ProfilesService: GenService<{
    * @generated from rpc shared.profiles.v1.ProfilesService.Get
    */
   get: {
-    methodKind: 'unary'
-    input: typeof GetRequestSchema
-    output: typeof GetResponseSchema
-  }
+    methodKind: "unary";
+    input: typeof GetRequestSchema;
+    output: typeof GetResponseSchema;
+  },
   /**
    * @generated from rpc shared.profiles.v1.ProfilesService.GetByExternalId
    */
   getByExternalId: {
-    methodKind: 'unary'
-    input: typeof GetByExternalIdRequestSchema
-    output: typeof GetByExternalIdResponseSchema
-  }
+    methodKind: "unary";
+    input: typeof GetByExternalIdRequestSchema;
+    output: typeof GetByExternalIdResponseSchema;
+  },
   /**
    * @generated from rpc shared.profiles.v1.ProfilesService.List
    */
   list: {
-    methodKind: 'server_streaming'
-    input: typeof ListRequestSchema
-    output: typeof ListResponseSchema
-  }
+    methodKind: "server_streaming";
+    input: typeof ListRequestSchema;
+    output: typeof ListResponseSchema;
+  },
   /**
    * @generated from rpc shared.profiles.v1.ProfilesService.Delete
    */
   delete: {
-    methodKind: 'unary'
-    input: typeof DeleteRequestSchema
-    output: typeof DeleteResponseSchema
-  }
-}> = /*@__PURE__*/ serviceDesc(file_shared_profiles_v1_profiles, 0)
+    methodKind: "unary";
+    input: typeof DeleteRequestSchema;
+    output: typeof DeleteResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_shared_profiles_v1_profiles, 0);
+

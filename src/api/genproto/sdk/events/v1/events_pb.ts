@@ -2,129 +2,125 @@
 // @generated from file sdk/events/v1/events.proto (package sdk.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
-import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import type { PropertyValue } from '../../../common/v1/property_value_pb'
-import { file_common_v1_property_value } from '../../../common/v1/property_value_pb'
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { PropertyValue } from "../../../common/v1/property_value_pb";
+import { file_common_v1_property_value } from "../../../common/v1/property_value_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file sdk/events/v1/events.proto.
  */
-export const file_sdk_events_v1_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSJFChJCYXRjaENyZWF0ZVJlcXVlc3QSLwoGZXZlbnRzGAEgAygLMhQuc2RrLmV2ZW50cy52MS5FdmVudEIJukgGkgEDEOgHIicKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0itQYKBUV2ZW50Eh0KCGV2ZW50X2lkGAEgASgJQgu6SAjIAQFyA7ABARJBCg9hdXRvX3Byb3BlcnRpZXMYAiADKAsyKC5zZGsuZXZlbnRzLnYxLkV2ZW50LkF1dG9Qcm9wZXJ0aWVzRW50cnkSRQoRY3VzdG9tX3Byb3BlcnRpZXMYAyADKAsyKi5zZGsuZXZlbnRzLnYxLkV2ZW50LkN1c3RvbVByb3BlcnRpZXNFbnRyeRIbCgtkaXN0aW5jdF9pZBgEIAEoCUIGukgDyAEBEikKBGtpbmQYBSABKAlCG7pIGMgBAXITMhFeW2EtekEtWjAtOV8uLV0rJBI2CgpvY2N1cl90aW1lGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEh8KCnNlc3Npb25faWQYByABKAlCC7pICMgBAXIDsAEBGk8KE0F1dG9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBGlEKFUN1c3RvbVByb3BlcnRpZXNFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5jb21tb24udjEuUHJvcGVydHlWYWx1ZToCOAE6vQK6SLkCGoMBCiNldmVudC5hdXRvX3Byb3BlcnRpZXNfZG9sbGFyX3ByZWZpeBIoYXV0b19wcm9wZXJ0aWVzIGtleXMgbXVzdCBzdGFydCB3aXRoICckJxoydGhpcy5hdXRvX3Byb3BlcnRpZXMuYWxsKGtleSwga2V5LnN0YXJ0c1dpdGgoJyQnKSkasAEKKGV2ZW50LmN1c3RvbV9wcm9wZXJ0aWVzX25vX2RvbGxhcl9wcmVmaXgSTWN1c3RvbV9wcm9wZXJ0aWVzIGtleXMgbXVzdCBub3Qgc3RhcnQgd2l0aCAnJCcgKHJlc2VydmVkIGZvciBhdXRvLXByb3BlcnRpZXMpGjV0aGlzLmN1c3RvbV9wcm9wZXJ0aWVzLmFsbChrZXksICFrZXkuc3RhcnRzV2l0aCgnJCcpKSJSCgpFdmVudEJhdGNoEiQKBmV2ZW50cxgBIAMoCzIULnNkay5ldmVudHMudjEuRXZlbnQSHgoKcHJvamVjdF9pZBgCIAEoCUIKukgHyAEBcgIQATJlCg1FdmVudHNTZXJ2aWNlElQKC0JhdGNoQ3JlYXRlEiEuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlcXVlc3QaIi5zZGsuZXZlbnRzLnYxLkJhdGNoQ3JlYXRlUmVzcG9uc2VCQVo/Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zZGsvZXZlbnRzL3YxO2V2ZW50c3YxYghlZGl0aW9uc3DoBw',
-    [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp],
-  )
+export const file_sdk_events_v1_events: GenFile = /*@__PURE__*/
+  fileDesc("ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSJFChJCYXRjaENyZWF0ZVJlcXVlc3QSLwoGZXZlbnRzGAEgAygLMhQuc2RrLmV2ZW50cy52MS5FdmVudEIJukgGkgEDEOgHIicKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0itQYKBUV2ZW50Eh0KCGV2ZW50X2lkGAEgASgJQgu6SAjIAQFyA7ABARJBCg9hdXRvX3Byb3BlcnRpZXMYAiADKAsyKC5zZGsuZXZlbnRzLnYxLkV2ZW50LkF1dG9Qcm9wZXJ0aWVzRW50cnkSRQoRY3VzdG9tX3Byb3BlcnRpZXMYAyADKAsyKi5zZGsuZXZlbnRzLnYxLkV2ZW50LkN1c3RvbVByb3BlcnRpZXNFbnRyeRIbCgtkaXN0aW5jdF9pZBgEIAEoCUIGukgDyAEBEikKBGtpbmQYBSABKAlCG7pIGMgBAXITMhFeW2EtekEtWjAtOV8uLV0rJBI2CgpvY2N1cl90aW1lGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEh8KCnNlc3Npb25faWQYByABKAlCC7pICMgBAXIDsAEBGk8KE0F1dG9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBGlEKFUN1c3RvbVByb3BlcnRpZXNFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5jb21tb24udjEuUHJvcGVydHlWYWx1ZToCOAE6vQK6SLkCGoMBCiNldmVudC5hdXRvX3Byb3BlcnRpZXNfZG9sbGFyX3ByZWZpeBIoYXV0b19wcm9wZXJ0aWVzIGtleXMgbXVzdCBzdGFydCB3aXRoICckJxoydGhpcy5hdXRvX3Byb3BlcnRpZXMuYWxsKGtleSwga2V5LnN0YXJ0c1dpdGgoJyQnKSkasAEKKGV2ZW50LmN1c3RvbV9wcm9wZXJ0aWVzX25vX2RvbGxhcl9wcmVmaXgSTWN1c3RvbV9wcm9wZXJ0aWVzIGtleXMgbXVzdCBub3Qgc3RhcnQgd2l0aCAnJCcgKHJlc2VydmVkIGZvciBhdXRvLXByb3BlcnRpZXMpGjV0aGlzLmN1c3RvbV9wcm9wZXJ0aWVzLmFsbChrZXksICFrZXkuc3RhcnRzV2l0aCgnJCcpKSJSCgpFdmVudEJhdGNoEiQKBmV2ZW50cxgBIAMoCzIULnNkay5ldmVudHMudjEuRXZlbnQSHgoKcHJvamVjdF9pZBgCIAEoCUIKukgHyAEBcgIQATJlCg1FdmVudHNTZXJ2aWNlElQKC0JhdGNoQ3JlYXRlEiEuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlcXVlc3QaIi5zZGsuZXZlbnRzLnYxLkJhdGNoQ3JlYXRlUmVzcG9uc2VCQVo/Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zZGsvZXZlbnRzL3YxO2V2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message sdk.events.v1.BatchCreateRequest
  */
-export type BatchCreateRequest = Message<'sdk.events.v1.BatchCreateRequest'> & {
+export type BatchCreateRequest = Message<"sdk.events.v1.BatchCreateRequest"> & {
   /**
    * @generated from field: repeated sdk.events.v1.Event events = 1;
    */
-  events: Event[]
-}
+  events: Event[];
+};
 
 /**
  * Describes the message sdk.events.v1.BatchCreateRequest.
  * Use `create(BatchCreateRequestSchema)` to create a new message.
  */
-export const BatchCreateRequestSchema: GenMessage<BatchCreateRequest> =
-  /*@__PURE__*/
-  messageDesc(file_sdk_events_v1_events, 0)
+export const BatchCreateRequestSchema: GenMessage<BatchCreateRequest> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 0);
 
 /**
  * @generated from message sdk.events.v1.BatchCreateResponse
  */
-export type BatchCreateResponse = Message<'sdk.events.v1.BatchCreateResponse'> & {
+export type BatchCreateResponse = Message<"sdk.events.v1.BatchCreateResponse"> & {
   /**
    * @generated from field: uint32 accepted = 1;
    */
-  accepted: number
-}
+  accepted: number;
+};
 
 /**
  * Describes the message sdk.events.v1.BatchCreateResponse.
  * Use `create(BatchCreateResponseSchema)` to create a new message.
  */
-export const BatchCreateResponseSchema: GenMessage<BatchCreateResponse> =
-  /*@__PURE__*/
-  messageDesc(file_sdk_events_v1_events, 1)
+export const BatchCreateResponseSchema: GenMessage<BatchCreateResponse> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 1);
 
 /**
  * @generated from message sdk.events.v1.Event
  */
-export type Event = Message<'sdk.events.v1.Event'> & {
+export type Event = Message<"sdk.events.v1.Event"> & {
   /**
    * @generated from field: string event_id = 1;
    */
-  eventId: string
+  eventId: string;
 
   /**
    * @generated from field: map<string, common.v1.PropertyValue> auto_properties = 2;
    */
-  autoProperties: { [key: string]: PropertyValue }
+  autoProperties: { [key: string]: PropertyValue };
 
   /**
    * @generated from field: map<string, common.v1.PropertyValue> custom_properties = 3;
    */
-  customProperties: { [key: string]: PropertyValue }
+  customProperties: { [key: string]: PropertyValue };
 
   /**
    * @generated from field: string distinct_id = 4;
    */
-  distinctId: string
+  distinctId: string;
 
   /**
    * Same character set as common.v1.EventFilter.kind (filters.proto); + requires non-empty at ingest.
    *
    * @generated from field: string kind = 5;
    */
-  kind: string
+  kind: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp occur_time = 6;
    */
-  occurTime?: Timestamp | undefined
+  occurTime?: Timestamp | undefined;
 
   /**
    * @generated from field: string session_id = 7;
    */
-  sessionId: string
-}
+  sessionId: string;
+};
 
 /**
  * Describes the message sdk.events.v1.Event.
  * Use `create(EventSchema)` to create a new message.
  */
-export const EventSchema: GenMessage<Event> = /*@__PURE__*/ messageDesc(file_sdk_events_v1_events, 2)
+export const EventSchema: GenMessage<Event> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 2);
 
 /**
  * @generated from message sdk.events.v1.EventBatch
  */
-export type EventBatch = Message<'sdk.events.v1.EventBatch'> & {
+export type EventBatch = Message<"sdk.events.v1.EventBatch"> & {
   /**
    * @generated from field: repeated sdk.events.v1.Event events = 1;
    */
-  events: Event[]
+  events: Event[];
 
   /**
    * @generated from field: string project_id = 2;
    */
-  projectId: string
-}
+  projectId: string;
+};
 
 /**
  * Describes the message sdk.events.v1.EventBatch.
  * Use `create(EventBatchSchema)` to create a new message.
  */
-export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/ messageDesc(file_sdk_events_v1_events, 3)
+export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 3);
 
 /**
  * @generated from service sdk.events.v1.EventsService
@@ -134,8 +130,10 @@ export const EventsService: GenService<{
    * @generated from rpc sdk.events.v1.EventsService.BatchCreate
    */
   batchCreate: {
-    methodKind: 'unary'
-    input: typeof BatchCreateRequestSchema
-    output: typeof BatchCreateResponseSchema
-  }
-}> = /*@__PURE__*/ serviceDesc(file_sdk_events_v1_events, 0)
+    methodKind: "unary";
+    input: typeof BatchCreateRequestSchema;
+    output: typeof BatchCreateResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_sdk_events_v1_events, 0);
+

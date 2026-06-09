@@ -2,32 +2,28 @@
 // @generated from file sdk/profiles/v1/profiles.proto (package sdk.profiles.v1, edition 2023)
 /* eslint-disable */
 
-import type { JsonObject, Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_google_protobuf_struct } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_google_protobuf_struct } from "@bufbuild/protobuf/wkt";
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file sdk/profiles/v1/profiles.proto.
  */
-export const file_sdk_profiles_v1_profiles: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSKeAQoPSWRlbnRpZnlSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCgxhbm9ueW1vdXNfaWQYAyABKAlCE7pIEHIOGP8BMgleJHxeYW5vbi0SGgoJZGV2aWNlX2lkGAQgASgJQge6SARyAhgkIhIKEElkZW50aWZ5UmVzcG9uc2UiqwEKFlByb2ZpbGVJZGVudGlmeU1lc3NhZ2USHwoLZXh0ZXJuYWxfaWQYASABKAlCCrpIB8gBAXICEAESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeCgpwcm9qZWN0X2lkGAMgASgJQgq6SAfIAQFyAhABEhQKDGFub255bW91c19pZBgEIAEoCRIRCglkZXZpY2VfaWQYBSABKAkyZQoSUHJvZmlsZXNTREtTZXJ2aWNlEk8KCElkZW50aWZ5EiAuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVxdWVzdBohLnNkay5wcm9maWxlcy52MS5JZGVudGlmeVJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL3Byb2ZpbGVzL3YxO3Nka3Byb2ZpbGVzdjFiCGVkaXRpb25zcOgH',
-    [file_buf_validate_validate, file_google_protobuf_struct],
-  )
+export const file_sdk_profiles_v1_profiles: GenFile = /*@__PURE__*/
+  fileDesc("Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSKeAQoPSWRlbnRpZnlSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCgxhbm9ueW1vdXNfaWQYAyABKAlCE7pIEHIOGP8BMgleJHxeYW5vbi0SGgoJZGV2aWNlX2lkGAQgASgJQge6SARyAhgkIhIKEElkZW50aWZ5UmVzcG9uc2UiqwEKFlByb2ZpbGVJZGVudGlmeU1lc3NhZ2USHwoLZXh0ZXJuYWxfaWQYASABKAlCCrpIB8gBAXICEAESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeCgpwcm9qZWN0X2lkGAMgASgJQgq6SAfIAQFyAhABEhQKDGFub255bW91c19pZBgEIAEoCRIRCglkZXZpY2VfaWQYBSABKAkyZQoSUHJvZmlsZXNTREtTZXJ2aWNlEk8KCElkZW50aWZ5EiAuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVxdWVzdBohLnNkay5wcm9maWxlcy52MS5JZGVudGlmeVJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL3Byb2ZpbGVzL3YxO3Nka3Byb2ZpbGVzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_struct]);
 
 /**
  * @generated from message sdk.profiles.v1.IdentifyRequest
  */
-export type IdentifyRequest = Message<'sdk.profiles.v1.IdentifyRequest'> & {
+export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
   /**
    * Stable user identifier (e.g. email, database ID).
    *
    * @generated from field: string external_id = 1;
    */
-  externalId: string
+  externalId: string;
 
   /**
    * Profile properties — shallow-merged into existing properties. On key conflict,
@@ -35,7 +31,7 @@ export type IdentifyRequest = Message<'sdk.profiles.v1.IdentifyRequest'> & {
    *
    * @generated from field: google.protobuf.Struct traits = 2;
    */
-  traits?: JsonObject | undefined
+  traits?: JsonObject | undefined;
 
   /**
    * The SDK-generated anonymous ID. The SDK should send this on first identify
@@ -43,7 +39,7 @@ export type IdentifyRequest = Message<'sdk.profiles.v1.IdentifyRequest'> & {
    *
    * @generated from field: string anonymous_id = 3;
    */
-  anonymousId: string
+  anonymousId: string;
 
   /**
    * The device to assign to this profile. The SDK should send this on first
@@ -52,29 +48,28 @@ export type IdentifyRequest = Message<'sdk.profiles.v1.IdentifyRequest'> & {
    *
    * @generated from field: string device_id = 4;
    */
-  deviceId: string
-}
+  deviceId: string;
+};
 
 /**
  * Describes the message sdk.profiles.v1.IdentifyRequest.
  * Use `create(IdentifyRequestSchema)` to create a new message.
  */
-export const IdentifyRequestSchema: GenMessage<IdentifyRequest> =
-  /*@__PURE__*/
-  messageDesc(file_sdk_profiles_v1_profiles, 0)
+export const IdentifyRequestSchema: GenMessage<IdentifyRequest> = /*@__PURE__*/
+  messageDesc(file_sdk_profiles_v1_profiles, 0);
 
 /**
  * @generated from message sdk.profiles.v1.IdentifyResponse
  */
-export type IdentifyResponse = Message<'sdk.profiles.v1.IdentifyResponse'> & {}
+export type IdentifyResponse = Message<"sdk.profiles.v1.IdentifyResponse"> & {
+};
 
 /**
  * Describes the message sdk.profiles.v1.IdentifyResponse.
  * Use `create(IdentifyResponseSchema)` to create a new message.
  */
-export const IdentifyResponseSchema: GenMessage<IdentifyResponse> =
-  /*@__PURE__*/
-  messageDesc(file_sdk_profiles_v1_profiles, 1)
+export const IdentifyResponseSchema: GenMessage<IdentifyResponse> = /*@__PURE__*/
+  messageDesc(file_sdk_profiles_v1_profiles, 1);
 
 /**
  * ProfileIdentifyMessage is the internal NATS envelope for the identify worker.
@@ -82,40 +77,39 @@ export const IdentifyResponseSchema: GenMessage<IdentifyResponse> =
  *
  * @generated from message sdk.profiles.v1.ProfileIdentifyMessage
  */
-export type ProfileIdentifyMessage = Message<'sdk.profiles.v1.ProfileIdentifyMessage'> & {
+export type ProfileIdentifyMessage = Message<"sdk.profiles.v1.ProfileIdentifyMessage"> & {
   /**
    * @generated from field: string external_id = 1;
    */
-  externalId: string
+  externalId: string;
 
   /**
    * @generated from field: google.protobuf.Struct traits = 2;
    */
-  traits?: JsonObject | undefined
+  traits?: JsonObject | undefined;
 
   /**
    * @generated from field: string project_id = 3;
    */
-  projectId: string
+  projectId: string;
 
   /**
    * @generated from field: string anonymous_id = 4;
    */
-  anonymousId: string
+  anonymousId: string;
 
   /**
    * @generated from field: string device_id = 5;
    */
-  deviceId: string
-}
+  deviceId: string;
+};
 
 /**
  * Describes the message sdk.profiles.v1.ProfileIdentifyMessage.
  * Use `create(ProfileIdentifyMessageSchema)` to create a new message.
  */
-export const ProfileIdentifyMessageSchema: GenMessage<ProfileIdentifyMessage> =
-  /*@__PURE__*/
-  messageDesc(file_sdk_profiles_v1_profiles, 2)
+export const ProfileIdentifyMessageSchema: GenMessage<ProfileIdentifyMessage> = /*@__PURE__*/
+  messageDesc(file_sdk_profiles_v1_profiles, 2);
 
 /**
  * @generated from service sdk.profiles.v1.ProfilesSDKService
@@ -129,8 +123,10 @@ export const ProfilesSDKService: GenService<{
    * @generated from rpc sdk.profiles.v1.ProfilesSDKService.Identify
    */
   identify: {
-    methodKind: 'unary'
-    input: typeof IdentifyRequestSchema
-    output: typeof IdentifyResponseSchema
-  }
-}> = /*@__PURE__*/ serviceDesc(file_sdk_profiles_v1_profiles, 0)
+    methodKind: "unary";
+    input: typeof IdentifyRequestSchema;
+    output: typeof IdentifyResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_sdk_profiles_v1_profiles, 0);
+

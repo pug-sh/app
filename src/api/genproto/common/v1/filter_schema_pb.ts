@@ -2,67 +2,64 @@
 // @generated from file common/v1/filter_schema.proto (package common.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenEnum, GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { enumDesc, fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
-import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../buf/validate/validate_pb'
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../buf/validate/validate_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/v1/filter_schema.proto.
  */
-export const file_common_v1_filter_schema: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Ch1jb21tb24vdjEvZmlsdGVyX3NjaGVtYS5wcm90bxIJY29tbW9uLnYxIl4KDUV2ZW50TmFtZU1ldGESDAoEbmFtZRgBIAEoCRINCgVjb3VudBgCIAEoBBIwCgxsYXN0X3NlZW5fYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpIBCg9Qcm9wZXJ0eUtleU1ldGESDAoEbmFtZRgBIAEoCRINCgVjb3VudBgCIAEoBBIwCgxsYXN0X3NlZW5fYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKCnZhbHVlX3R5cGUYBCABKA4yHC5jb21tb24udjEuUHJvcGVydHlWYWx1ZVR5cGUijAEKFkdldEZpbHRlclNjaGVtYVJlcXVlc3QSLAoKZXZlbnRfa2luZBgBIAEoCUIYukgVchMyEV5bYS16QS1aMC05Xy4tXSokEkQKDWFsbG93ZWRfdHlwZXMYAiADKA4yHC5jb21tb24udjEuUHJvcGVydHlWYWx1ZVR5cGVCD7pIDJIBCSIHggEEEAEgACLwAQoXR2V0RmlsdGVyU2NoZW1hUmVzcG9uc2USKAoGZXZlbnRzGAEgAygLMhguY29tbW9uLnYxLkV2ZW50TmFtZU1ldGESNgoSYXV0b19wcm9wZXJ0eV9rZXlzGAIgAygLMhouY29tbW9uLnYxLlByb3BlcnR5S2V5TWV0YRI4ChRjdXN0b21fcHJvcGVydHlfa2V5cxgDIAMoCzIaLmNvbW1vbi52MS5Qcm9wZXJ0eUtleU1ldGESOQoVcHJvZmlsZV9wcm9wZXJ0eV9rZXlzGAQgAygLMhouY29tbW9uLnYxLlByb3BlcnR5S2V5TWV0YSqEAQoOUHJvcGVydHlTb3VyY2USHwobUFJPUEVSVFlfU09VUkNFX1VOU1BFQ0lGSUVEEAASGAoUUFJPUEVSVFlfU09VUkNFX0FVVE8QARIaChZQUk9QRVJUWV9TT1VSQ0VfQ1VTVE9NEAISGwoXUFJPUEVSVFlfU09VUkNFX1BST0ZJTEUQAyr6AQoRUHJvcGVydHlWYWx1ZVR5cGUSIwofUFJPUEVSVFlfVkFMVUVfVFlQRV9VTlNQRUNJRklFRBAAEh4KGlBST1BFUlRZX1ZBTFVFX1RZUEVfU1RSSU5HEAESHwobUFJPUEVSVFlfVkFMVUVfVFlQRV9JTlRFR0VSEAISHQoZUFJPUEVSVFlfVkFMVUVfVFlQRV9GTE9BVBADEh8KG1BST1BFUlRZX1ZBTFVFX1RZUEVfQk9PTEVBThAEEiAKHFBST1BFUlRZX1ZBTFVFX1RZUEVfREFURVRJTUUQBRIdChlQUk9QRVJUWV9WQUxVRV9UWVBFX09USEVSEAZCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH',
-    [file_buf_validate_validate, file_google_protobuf_timestamp],
-  )
+export const file_common_v1_filter_schema: GenFile = /*@__PURE__*/
+  fileDesc("Ch1jb21tb24vdjEvZmlsdGVyX3NjaGVtYS5wcm90bxIJY29tbW9uLnYxIl4KDUV2ZW50TmFtZU1ldGESDAoEbmFtZRgBIAEoCRINCgVjb3VudBgCIAEoBBIwCgxsYXN0X3NlZW5fYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpIBCg9Qcm9wZXJ0eUtleU1ldGESDAoEbmFtZRgBIAEoCRINCgVjb3VudBgCIAEoBBIwCgxsYXN0X3NlZW5fYXQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKCnZhbHVlX3R5cGUYBCABKA4yHC5jb21tb24udjEuUHJvcGVydHlWYWx1ZVR5cGUijAEKFkdldEZpbHRlclNjaGVtYVJlcXVlc3QSLAoKZXZlbnRfa2luZBgBIAEoCUIYukgVchMyEV5bYS16QS1aMC05Xy4tXSokEkQKDWFsbG93ZWRfdHlwZXMYAiADKA4yHC5jb21tb24udjEuUHJvcGVydHlWYWx1ZVR5cGVCD7pIDJIBCSIHggEEEAEgACLwAQoXR2V0RmlsdGVyU2NoZW1hUmVzcG9uc2USKAoGZXZlbnRzGAEgAygLMhguY29tbW9uLnYxLkV2ZW50TmFtZU1ldGESNgoSYXV0b19wcm9wZXJ0eV9rZXlzGAIgAygLMhouY29tbW9uLnYxLlByb3BlcnR5S2V5TWV0YRI4ChRjdXN0b21fcHJvcGVydHlfa2V5cxgDIAMoCzIaLmNvbW1vbi52MS5Qcm9wZXJ0eUtleU1ldGESOQoVcHJvZmlsZV9wcm9wZXJ0eV9rZXlzGAQgAygLMhouY29tbW9uLnYxLlByb3BlcnR5S2V5TWV0YSqEAQoOUHJvcGVydHlTb3VyY2USHwobUFJPUEVSVFlfU09VUkNFX1VOU1BFQ0lGSUVEEAASGAoUUFJPUEVSVFlfU09VUkNFX0FVVE8QARIaChZQUk9QRVJUWV9TT1VSQ0VfQ1VTVE9NEAISGwoXUFJPUEVSVFlfU09VUkNFX1BST0ZJTEUQAyr6AQoRUHJvcGVydHlWYWx1ZVR5cGUSIwofUFJPUEVSVFlfVkFMVUVfVFlQRV9VTlNQRUNJRklFRBAAEh4KGlBST1BFUlRZX1ZBTFVFX1RZUEVfU1RSSU5HEAESHwobUFJPUEVSVFlfVkFMVUVfVFlQRV9JTlRFR0VSEAISHQoZUFJPUEVSVFlfVkFMVUVfVFlQRV9GTE9BVBADEh8KG1BST1BFUlRZX1ZBTFVFX1RZUEVfQk9PTEVBThAEEiAKHFBST1BFUlRZX1ZBTFVFX1RZUEVfREFURVRJTUUQBRIdChlQUk9QRVJUWV9WQUxVRV9UWVBFX09USEVSEAZCPVo7Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vdjE7Y29tbW9udjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message common.v1.EventNameMeta
  */
-export type EventNameMeta = Message<'common.v1.EventNameMeta'> & {
+export type EventNameMeta = Message<"common.v1.EventNameMeta"> & {
   /**
    * @generated from field: string name = 1;
    */
-  name: string
+  name: string;
 
   /**
    * @generated from field: uint64 count = 2;
    */
-  count: bigint
+  count: bigint;
 
   /**
    * @generated from field: google.protobuf.Timestamp last_seen_at = 3;
    */
-  lastSeenAt?: Timestamp | undefined
-}
+  lastSeenAt?: Timestamp | undefined;
+};
 
 /**
  * Describes the message common.v1.EventNameMeta.
  * Use `create(EventNameMetaSchema)` to create a new message.
  */
-export const EventNameMetaSchema: GenMessage<EventNameMeta> = /*@__PURE__*/ messageDesc(file_common_v1_filter_schema, 0)
+export const EventNameMetaSchema: GenMessage<EventNameMeta> = /*@__PURE__*/
+  messageDesc(file_common_v1_filter_schema, 0);
 
 /**
  * @generated from message common.v1.PropertyKeyMeta
  */
-export type PropertyKeyMeta = Message<'common.v1.PropertyKeyMeta'> & {
+export type PropertyKeyMeta = Message<"common.v1.PropertyKeyMeta"> & {
   /**
    * @generated from field: string name = 1;
    */
-  name: string
+  name: string;
 
   /**
    * @generated from field: uint64 count = 2;
    */
-  count: bigint
+  count: bigint;
 
   /**
    * @generated from field: google.protobuf.Timestamp last_seen_at = 3;
    */
-  lastSeenAt?: Timestamp | undefined
+  lastSeenAt?: Timestamp | undefined;
 
   /**
    * The value_type observed at the earliest last_seen for this key
@@ -72,16 +69,15 @@ export type PropertyKeyMeta = Message<'common.v1.PropertyKeyMeta'> & {
    *
    * @generated from field: common.v1.PropertyValueType value_type = 4;
    */
-  valueType: PropertyValueType
-}
+  valueType: PropertyValueType;
+};
 
 /**
  * Describes the message common.v1.PropertyKeyMeta.
  * Use `create(PropertyKeyMetaSchema)` to create a new message.
  */
-export const PropertyKeyMetaSchema: GenMessage<PropertyKeyMeta> =
-  /*@__PURE__*/
-  messageDesc(file_common_v1_filter_schema, 1)
+export const PropertyKeyMetaSchema: GenMessage<PropertyKeyMeta> = /*@__PURE__*/
+  messageDesc(file_common_v1_filter_schema, 1);
 
 /**
  * GetFilterSchemaRequest is shared by every service that exposes a
@@ -91,60 +87,58 @@ export const PropertyKeyMetaSchema: GenMessage<PropertyKeyMeta> =
  *
  * @generated from message common.v1.GetFilterSchemaRequest
  */
-export type GetFilterSchemaRequest = Message<'common.v1.GetFilterSchemaRequest'> & {
+export type GetFilterSchemaRequest = Message<"common.v1.GetFilterSchemaRequest"> & {
   /**
    * @generated from field: string event_kind = 1;
    */
-  eventKind: string
+  eventKind: string;
 
   /**
    * @generated from field: repeated common.v1.PropertyValueType allowed_types = 2;
    */
-  allowedTypes: PropertyValueType[]
-}
+  allowedTypes: PropertyValueType[];
+};
 
 /**
  * Describes the message common.v1.GetFilterSchemaRequest.
  * Use `create(GetFilterSchemaRequestSchema)` to create a new message.
  */
-export const GetFilterSchemaRequestSchema: GenMessage<GetFilterSchemaRequest> =
-  /*@__PURE__*/
-  messageDesc(file_common_v1_filter_schema, 2)
+export const GetFilterSchemaRequestSchema: GenMessage<GetFilterSchemaRequest> = /*@__PURE__*/
+  messageDesc(file_common_v1_filter_schema, 2);
 
 /**
  * GetFilterSchemaResponse mirrors the shared request shape — same reason.
  *
  * @generated from message common.v1.GetFilterSchemaResponse
  */
-export type GetFilterSchemaResponse = Message<'common.v1.GetFilterSchemaResponse'> & {
+export type GetFilterSchemaResponse = Message<"common.v1.GetFilterSchemaResponse"> & {
   /**
    * @generated from field: repeated common.v1.EventNameMeta events = 1;
    */
-  events: EventNameMeta[]
+  events: EventNameMeta[];
 
   /**
    * @generated from field: repeated common.v1.PropertyKeyMeta auto_property_keys = 2;
    */
-  autoPropertyKeys: PropertyKeyMeta[]
+  autoPropertyKeys: PropertyKeyMeta[];
 
   /**
    * @generated from field: repeated common.v1.PropertyKeyMeta custom_property_keys = 3;
    */
-  customPropertyKeys: PropertyKeyMeta[]
+  customPropertyKeys: PropertyKeyMeta[];
 
   /**
    * @generated from field: repeated common.v1.PropertyKeyMeta profile_property_keys = 4;
    */
-  profilePropertyKeys: PropertyKeyMeta[]
-}
+  profilePropertyKeys: PropertyKeyMeta[];
+};
 
 /**
  * Describes the message common.v1.GetFilterSchemaResponse.
  * Use `create(GetFilterSchemaResponseSchema)` to create a new message.
  */
-export const GetFilterSchemaResponseSchema: GenMessage<GetFilterSchemaResponse> =
-  /*@__PURE__*/
-  messageDesc(file_common_v1_filter_schema, 3)
+export const GetFilterSchemaResponseSchema: GenMessage<GetFilterSchemaResponse> = /*@__PURE__*/
+  messageDesc(file_common_v1_filter_schema, 3);
 
 /**
  * @generated from enum common.v1.PropertySource
@@ -174,7 +168,8 @@ export enum PropertySource {
 /**
  * Describes the enum common.v1.PropertySource.
  */
-export const PropertySourceSchema: GenEnum<PropertySource> = /*@__PURE__*/ enumDesc(file_common_v1_filter_schema, 0)
+export const PropertySourceSchema: GenEnum<PropertySource> = /*@__PURE__*/
+  enumDesc(file_common_v1_filter_schema, 0);
 
 /**
  * PropertyValueType enumerates the storage-side variant types a property key
@@ -230,6 +225,6 @@ export enum PropertyValueType {
 /**
  * Describes the enum common.v1.PropertyValueType.
  */
-export const PropertyValueTypeSchema: GenEnum<PropertyValueType> =
-  /*@__PURE__*/
-  enumDesc(file_common_v1_filter_schema, 1)
+export const PropertyValueTypeSchema: GenEnum<PropertyValueType> = /*@__PURE__*/
+  enumDesc(file_common_v1_filter_schema, 1);
+

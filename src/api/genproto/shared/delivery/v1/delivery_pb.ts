@@ -2,284 +2,275 @@
 // @generated from file shared/delivery/v1/delivery.proto (package shared.delivery.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenEnum, GenFile, GenMessage, GenService } from '@bufbuild/protobuf/codegenv2'
-import { enumDesc, fileDesc, messageDesc, serviceDesc } from '@bufbuild/protobuf/codegenv2'
-import type { Timestamp } from '@bufbuild/protobuf/wkt'
-import { file_google_protobuf_timestamp } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file shared/delivery/v1/delivery.proto.
  */
-export const file_shared_delivery_v1_delivery: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiFzaGFyZWQvZGVsaXZlcnkvdjEvZGVsaXZlcnkucHJvdG8SEnNoYXJlZC5kZWxpdmVyeS52MSJPChNCYXRjaERlbGl2ZXJ5RXZlbnRzEjgKBmV2ZW50cxgBIAMoCzIoLnNoYXJlZC5kZWxpdmVyeS52MS5EZWxpdmVyeUV2ZW50TWVzc2FnZSKkAQoVQmF0Y2hNdWx0aWNhc3RNZXNzYWdlEgwKBGJvZHkYASABKAkSEwoLY2FtcGFpZ25faWQYAiABKAkSDQoFaW1hZ2UYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCRI2Cg1kZXZpY2VfdG9rZW5zGAUgAygLMh8uc2hhcmVkLmRlbGl2ZXJ5LnYxLkRldmljZVRva2VuEg0KBXRpdGxlGAYgASgJIhUKE0JhdGNoVW5pY2FzdE1lc3NhZ2UitgEKDURlbGl2ZXJ5RXZlbnQSEwoLZXZlbnRfY291bnQYASABKAQSMQoKZXZlbnRfdHlwZRgCIAEoDjIdLnNoYXJlZC5kZWxpdmVyeS52MS5FdmVudFR5cGUSLgoIcGxhdGZvcm0YAyABKA4yHC5zaGFyZWQuZGVsaXZlcnkudjEuUGxhdGZvcm0SLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCL5AgoURGVsaXZlcnlFdmVudE1lc3NhZ2USEwoLY2FtcGFpZ25faWQYASABKAkSMwoPZXZlbnRfdGltZXN0YW1wGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCgpldmVudF90eXBlGAMgASgOMh0uc2hhcmVkLmRlbGl2ZXJ5LnYxLkV2ZW50VHlwZRJICghtZXRhZGF0YRgEIAMoCzI2LnNoYXJlZC5kZWxpdmVyeS52MS5EZWxpdmVyeUV2ZW50TWVzc2FnZS5NZXRhZGF0YUVudHJ5EhIKCm1lc3NhZ2VfaWQYBSABKAkSLgoIcGxhdGZvcm0YBiABKA4yHC5zaGFyZWQuZGVsaXZlcnkudjEuUGxhdGZvcm0SEgoKcHJvamVjdF9pZBgHIAEoCRIRCglkZXZpY2VfaWQYCCABKAkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIvkCChJSZWNvcmRFdmVudFJlcXVlc3QSGwoLY2FtcGFpZ25faWQYASABKAlCBrpIA8gBARIzCg9ldmVudF90aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjEKCmV2ZW50X3R5cGUYAyABKA4yHS5zaGFyZWQuZGVsaXZlcnkudjEuRXZlbnRUeXBlEkYKCG1ldGFkYXRhGAQgAygLMjQuc2hhcmVkLmRlbGl2ZXJ5LnYxLlJlY29yZEV2ZW50UmVxdWVzdC5NZXRhZGF0YUVudHJ5EhoKCm1lc3NhZ2VfaWQYBSABKAlCBrpIA8gBARIuCghwbGF0Zm9ybRgGIAEoDjIcLnNoYXJlZC5kZWxpdmVyeS52MS5QbGF0Zm9ybRIZCglkZXZpY2VfaWQYByABKAlCBrpIA8gBARovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiagoTUmVjb3JkRXZlbnRSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEhsKE3JldHJ5X2FmdGVyX3NlY29uZHMYAiABKAUSFAoMc2hvdWxkX3JldHJ5GAMgASgIEg8KB3N1Y2Nlc3MYBCABKAgiLwoLRGV2aWNlVG9rZW4SEQoJZGV2aWNlX2lkGAEgASgJEg0KBXRva2VuGAIgASgJKp4BCglFdmVudFR5cGUSGgoWRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEhYKEkVWRU5UX1RZUEVfQ0xJQ0tFRBABEhgKFEVWRU5UX1RZUEVfRElTTUlTU0VEEAISFQoRRVZFTlRfVFlQRV9GQUlMRUQQAxIXChNFVkVOVF9UWVBFX1JFQ0VJVkVEEAQSEwoPRVZFTlRfVFlQRV9TRU5UEAUqTAoIUGxhdGZvcm0SGAoUUExBVEZPUk1fVU5TUEVDSUZJRUQQABIUChBQTEFURk9STV9BTkRST0lEEAESEAoMUExBVEZPUk1fSU9TEAIycQoPRGVsaXZlcnlTZXJ2aWNlEl4KC1JlY29yZEV2ZW50EiYuc2hhcmVkLmRlbGl2ZXJ5LnYxLlJlY29yZEV2ZW50UmVxdWVzdBonLnNoYXJlZC5kZWxpdmVyeS52MS5SZWNvcmRFdmVudFJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2hhcmVkL2RlbGl2ZXJ5L3YxO2RlbGl2ZXJ5djFiCGVkaXRpb25zcOgH',
-    [file_buf_validate_validate, file_google_protobuf_timestamp],
-  )
+export const file_shared_delivery_v1_delivery: GenFile = /*@__PURE__*/
+  fileDesc("CiFzaGFyZWQvZGVsaXZlcnkvdjEvZGVsaXZlcnkucHJvdG8SEnNoYXJlZC5kZWxpdmVyeS52MSJPChNCYXRjaERlbGl2ZXJ5RXZlbnRzEjgKBmV2ZW50cxgBIAMoCzIoLnNoYXJlZC5kZWxpdmVyeS52MS5EZWxpdmVyeUV2ZW50TWVzc2FnZSKkAQoVQmF0Y2hNdWx0aWNhc3RNZXNzYWdlEgwKBGJvZHkYASABKAkSEwoLY2FtcGFpZ25faWQYAiABKAkSDQoFaW1hZ2UYAyABKAkSEgoKcHJvamVjdF9pZBgEIAEoCRI2Cg1kZXZpY2VfdG9rZW5zGAUgAygLMh8uc2hhcmVkLmRlbGl2ZXJ5LnYxLkRldmljZVRva2VuEg0KBXRpdGxlGAYgASgJIhUKE0JhdGNoVW5pY2FzdE1lc3NhZ2UitgEKDURlbGl2ZXJ5RXZlbnQSEwoLZXZlbnRfY291bnQYASABKAQSMQoKZXZlbnRfdHlwZRgCIAEoDjIdLnNoYXJlZC5kZWxpdmVyeS52MS5FdmVudFR5cGUSLgoIcGxhdGZvcm0YAyABKA4yHC5zaGFyZWQuZGVsaXZlcnkudjEuUGxhdGZvcm0SLQoJdGltZXN0YW1wGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCL5AgoURGVsaXZlcnlFdmVudE1lc3NhZ2USEwoLY2FtcGFpZ25faWQYASABKAkSMwoPZXZlbnRfdGltZXN0YW1wGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCgpldmVudF90eXBlGAMgASgOMh0uc2hhcmVkLmRlbGl2ZXJ5LnYxLkV2ZW50VHlwZRJICghtZXRhZGF0YRgEIAMoCzI2LnNoYXJlZC5kZWxpdmVyeS52MS5EZWxpdmVyeUV2ZW50TWVzc2FnZS5NZXRhZGF0YUVudHJ5EhIKCm1lc3NhZ2VfaWQYBSABKAkSLgoIcGxhdGZvcm0YBiABKA4yHC5zaGFyZWQuZGVsaXZlcnkudjEuUGxhdGZvcm0SEgoKcHJvamVjdF9pZBgHIAEoCRIRCglkZXZpY2VfaWQYCCABKAkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIvkCChJSZWNvcmRFdmVudFJlcXVlc3QSGwoLY2FtcGFpZ25faWQYASABKAlCBrpIA8gBARIzCg9ldmVudF90aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjEKCmV2ZW50X3R5cGUYAyABKA4yHS5zaGFyZWQuZGVsaXZlcnkudjEuRXZlbnRUeXBlEkYKCG1ldGFkYXRhGAQgAygLMjQuc2hhcmVkLmRlbGl2ZXJ5LnYxLlJlY29yZEV2ZW50UmVxdWVzdC5NZXRhZGF0YUVudHJ5EhoKCm1lc3NhZ2VfaWQYBSABKAlCBrpIA8gBARIuCghwbGF0Zm9ybRgGIAEoDjIcLnNoYXJlZC5kZWxpdmVyeS52MS5QbGF0Zm9ybRIZCglkZXZpY2VfaWQYByABKAlCBrpIA8gBARovCg1NZXRhZGF0YUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiagoTUmVjb3JkRXZlbnRSZXNwb25zZRIPCgdtZXNzYWdlGAEgASgJEhsKE3JldHJ5X2FmdGVyX3NlY29uZHMYAiABKAUSFAoMc2hvdWxkX3JldHJ5GAMgASgIEg8KB3N1Y2Nlc3MYBCABKAgiLwoLRGV2aWNlVG9rZW4SEQoJZGV2aWNlX2lkGAEgASgJEg0KBXRva2VuGAIgASgJKp4BCglFdmVudFR5cGUSGgoWRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEhYKEkVWRU5UX1RZUEVfQ0xJQ0tFRBABEhgKFEVWRU5UX1RZUEVfRElTTUlTU0VEEAISFQoRRVZFTlRfVFlQRV9GQUlMRUQQAxIXChNFVkVOVF9UWVBFX1JFQ0VJVkVEEAQSEwoPRVZFTlRfVFlQRV9TRU5UEAUqTAoIUGxhdGZvcm0SGAoUUExBVEZPUk1fVU5TUEVDSUZJRUQQABIUChBQTEFURk9STV9BTkRST0lEEAESEAoMUExBVEZPUk1fSU9TEAIycQoPRGVsaXZlcnlTZXJ2aWNlEl4KC1JlY29yZEV2ZW50EiYuc2hhcmVkLmRlbGl2ZXJ5LnYxLlJlY29yZEV2ZW50UmVxdWVzdBonLnNoYXJlZC5kZWxpdmVyeS52MS5SZWNvcmRFdmVudFJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2hhcmVkL2RlbGl2ZXJ5L3YxO2RlbGl2ZXJ5djFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message shared.delivery.v1.BatchDeliveryEvents
  */
-export type BatchDeliveryEvents = Message<'shared.delivery.v1.BatchDeliveryEvents'> & {
+export type BatchDeliveryEvents = Message<"shared.delivery.v1.BatchDeliveryEvents"> & {
   /**
    * @generated from field: repeated shared.delivery.v1.DeliveryEventMessage events = 1;
    */
-  events: DeliveryEventMessage[]
-}
+  events: DeliveryEventMessage[];
+};
 
 /**
  * Describes the message shared.delivery.v1.BatchDeliveryEvents.
  * Use `create(BatchDeliveryEventsSchema)` to create a new message.
  */
-export const BatchDeliveryEventsSchema: GenMessage<BatchDeliveryEvents> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 0)
+export const BatchDeliveryEventsSchema: GenMessage<BatchDeliveryEvents> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 0);
 
 /**
  * @generated from message shared.delivery.v1.BatchMulticastMessage
  */
-export type BatchMulticastMessage = Message<'shared.delivery.v1.BatchMulticastMessage'> & {
+export type BatchMulticastMessage = Message<"shared.delivery.v1.BatchMulticastMessage"> & {
   /**
    * @generated from field: string body = 1;
    */
-  body: string
+  body: string;
 
   /**
    * @generated from field: string campaign_id = 2;
    */
-  campaignId: string
+  campaignId: string;
 
   /**
    * @generated from field: string image = 3;
    */
-  image: string
+  image: string;
 
   /**
    * @generated from field: string project_id = 4;
    */
-  projectId: string
+  projectId: string;
 
   /**
    * @generated from field: repeated shared.delivery.v1.DeviceToken device_tokens = 5;
    */
-  deviceTokens: DeviceToken[]
+  deviceTokens: DeviceToken[];
 
   /**
    * @generated from field: string title = 6;
    */
-  title: string
-}
+  title: string;
+};
 
 /**
  * Describes the message shared.delivery.v1.BatchMulticastMessage.
  * Use `create(BatchMulticastMessageSchema)` to create a new message.
  */
-export const BatchMulticastMessageSchema: GenMessage<BatchMulticastMessage> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 1)
+export const BatchMulticastMessageSchema: GenMessage<BatchMulticastMessage> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 1);
 
 /**
  * @generated from message shared.delivery.v1.BatchUnicastMessage
  */
-export type BatchUnicastMessage = Message<'shared.delivery.v1.BatchUnicastMessage'> & {}
+export type BatchUnicastMessage = Message<"shared.delivery.v1.BatchUnicastMessage"> & {
+};
 
 /**
  * Describes the message shared.delivery.v1.BatchUnicastMessage.
  * Use `create(BatchUnicastMessageSchema)` to create a new message.
  */
-export const BatchUnicastMessageSchema: GenMessage<BatchUnicastMessage> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 2)
+export const BatchUnicastMessageSchema: GenMessage<BatchUnicastMessage> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 2);
 
 /**
  * @generated from message shared.delivery.v1.DeliveryEvent
  */
-export type DeliveryEvent = Message<'shared.delivery.v1.DeliveryEvent'> & {
+export type DeliveryEvent = Message<"shared.delivery.v1.DeliveryEvent"> & {
   /**
    * @generated from field: uint64 event_count = 1;
    */
-  eventCount: bigint
+  eventCount: bigint;
 
   /**
    * @generated from field: shared.delivery.v1.EventType event_type = 2;
    */
-  eventType: EventType
+  eventType: EventType;
 
   /**
    * @generated from field: shared.delivery.v1.Platform platform = 3;
    */
-  platform: Platform
+  platform: Platform;
 
   /**
    * @generated from field: google.protobuf.Timestamp timestamp = 4;
    */
-  timestamp?: Timestamp | undefined
-}
+  timestamp?: Timestamp | undefined;
+};
 
 /**
  * Describes the message shared.delivery.v1.DeliveryEvent.
  * Use `create(DeliveryEventSchema)` to create a new message.
  */
-export const DeliveryEventSchema: GenMessage<DeliveryEvent> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 3)
+export const DeliveryEventSchema: GenMessage<DeliveryEvent> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 3);
 
 /**
  * @generated from message shared.delivery.v1.DeliveryEventMessage
  */
-export type DeliveryEventMessage = Message<'shared.delivery.v1.DeliveryEventMessage'> & {
+export type DeliveryEventMessage = Message<"shared.delivery.v1.DeliveryEventMessage"> & {
   /**
    * @generated from field: string campaign_id = 1;
    */
-  campaignId: string
+  campaignId: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp event_timestamp = 2;
    */
-  eventTimestamp?: Timestamp | undefined
+  eventTimestamp?: Timestamp | undefined;
 
   /**
    * @generated from field: shared.delivery.v1.EventType event_type = 3;
    */
-  eventType: EventType
+  eventType: EventType;
 
   /**
    * @generated from field: map<string, string> metadata = 4;
    */
-  metadata: { [key: string]: string }
+  metadata: { [key: string]: string };
 
   /**
    * @generated from field: string message_id = 5;
    */
-  messageId: string
+  messageId: string;
 
   /**
    * @generated from field: shared.delivery.v1.Platform platform = 6;
    */
-  platform: Platform
+  platform: Platform;
 
   /**
    * @generated from field: string project_id = 7;
    */
-  projectId: string
+  projectId: string;
 
   /**
    * @generated from field: string device_id = 8;
    */
-  deviceId: string
-}
+  deviceId: string;
+};
 
 /**
  * Describes the message shared.delivery.v1.DeliveryEventMessage.
  * Use `create(DeliveryEventMessageSchema)` to create a new message.
  */
-export const DeliveryEventMessageSchema: GenMessage<DeliveryEventMessage> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 4)
+export const DeliveryEventMessageSchema: GenMessage<DeliveryEventMessage> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 4);
 
 /**
  * @generated from message shared.delivery.v1.RecordEventRequest
  */
-export type RecordEventRequest = Message<'shared.delivery.v1.RecordEventRequest'> & {
+export type RecordEventRequest = Message<"shared.delivery.v1.RecordEventRequest"> & {
   /**
    * @generated from field: string campaign_id = 1;
    */
-  campaignId: string
+  campaignId: string;
 
   /**
    * @generated from field: google.protobuf.Timestamp event_timestamp = 2;
    */
-  eventTimestamp?: Timestamp | undefined
+  eventTimestamp?: Timestamp | undefined;
 
   /**
    * @generated from field: shared.delivery.v1.EventType event_type = 3;
    */
-  eventType: EventType
+  eventType: EventType;
 
   /**
    * @generated from field: map<string, string> metadata = 4;
    */
-  metadata: { [key: string]: string }
+  metadata: { [key: string]: string };
 
   /**
    * @generated from field: string message_id = 5;
    */
-  messageId: string
+  messageId: string;
 
   /**
    * @generated from field: shared.delivery.v1.Platform platform = 6;
    */
-  platform: Platform
+  platform: Platform;
 
   /**
    * @generated from field: string device_id = 7;
    */
-  deviceId: string
-}
+  deviceId: string;
+};
 
 /**
  * Describes the message shared.delivery.v1.RecordEventRequest.
  * Use `create(RecordEventRequestSchema)` to create a new message.
  */
-export const RecordEventRequestSchema: GenMessage<RecordEventRequest> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 5)
+export const RecordEventRequestSchema: GenMessage<RecordEventRequest> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 5);
 
 /**
  * @generated from message shared.delivery.v1.RecordEventResponse
  */
-export type RecordEventResponse = Message<'shared.delivery.v1.RecordEventResponse'> & {
+export type RecordEventResponse = Message<"shared.delivery.v1.RecordEventResponse"> & {
   /**
    * @generated from field: string message = 1;
    */
-  message: string
+  message: string;
 
   /**
    * @generated from field: int32 retry_after_seconds = 2;
    */
-  retryAfterSeconds: number
+  retryAfterSeconds: number;
 
   /**
    * @generated from field: bool should_retry = 3;
    */
-  shouldRetry: boolean
+  shouldRetry: boolean;
 
   /**
    * @generated from field: bool success = 4;
    */
-  success: boolean
-}
+  success: boolean;
+};
 
 /**
  * Describes the message shared.delivery.v1.RecordEventResponse.
  * Use `create(RecordEventResponseSchema)` to create a new message.
  */
-export const RecordEventResponseSchema: GenMessage<RecordEventResponse> =
-  /*@__PURE__*/
-  messageDesc(file_shared_delivery_v1_delivery, 6)
+export const RecordEventResponseSchema: GenMessage<RecordEventResponse> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 6);
 
 /**
  * @generated from message shared.delivery.v1.DeviceToken
  */
-export type DeviceToken = Message<'shared.delivery.v1.DeviceToken'> & {
+export type DeviceToken = Message<"shared.delivery.v1.DeviceToken"> & {
   /**
    * @generated from field: string device_id = 1;
    */
-  deviceId: string
+  deviceId: string;
 
   /**
    * @generated from field: string token = 2;
    */
-  token: string
-}
+  token: string;
+};
 
 /**
  * Describes the message shared.delivery.v1.DeviceToken.
  * Use `create(DeviceTokenSchema)` to create a new message.
  */
-export const DeviceTokenSchema: GenMessage<DeviceToken> = /*@__PURE__*/ messageDesc(file_shared_delivery_v1_delivery, 7)
+export const DeviceTokenSchema: GenMessage<DeviceToken> = /*@__PURE__*/
+  messageDesc(file_shared_delivery_v1_delivery, 7);
 
 /**
  * @generated from enum shared.delivery.v1.EventType
@@ -319,7 +310,8 @@ export enum EventType {
 /**
  * Describes the enum shared.delivery.v1.EventType.
  */
-export const EventTypeSchema: GenEnum<EventType> = /*@__PURE__*/ enumDesc(file_shared_delivery_v1_delivery, 0)
+export const EventTypeSchema: GenEnum<EventType> = /*@__PURE__*/
+  enumDesc(file_shared_delivery_v1_delivery, 0);
 
 /**
  * @generated from enum shared.delivery.v1.Platform
@@ -344,7 +336,8 @@ export enum Platform {
 /**
  * Describes the enum shared.delivery.v1.Platform.
  */
-export const PlatformSchema: GenEnum<Platform> = /*@__PURE__*/ enumDesc(file_shared_delivery_v1_delivery, 1)
+export const PlatformSchema: GenEnum<Platform> = /*@__PURE__*/
+  enumDesc(file_shared_delivery_v1_delivery, 1);
 
 /**
  * @generated from service shared.delivery.v1.DeliveryService
@@ -354,8 +347,10 @@ export const DeliveryService: GenService<{
    * @generated from rpc shared.delivery.v1.DeliveryService.RecordEvent
    */
   recordEvent: {
-    methodKind: 'unary'
-    input: typeof RecordEventRequestSchema
-    output: typeof RecordEventResponseSchema
-  }
-}> = /*@__PURE__*/ serviceDesc(file_shared_delivery_v1_delivery, 0)
+    methodKind: "unary";
+    input: typeof RecordEventRequestSchema;
+    output: typeof RecordEventResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_shared_delivery_v1_delivery, 0);
+

@@ -2,21 +2,17 @@
 // @generated from file common/events/v1/navigation_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/navigation_events.proto.
  */
-export const file_common_events_v1_navigation_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Cihjb21tb24vZXZlbnRzL3YxL25hdmlnYXRpb25fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIigKElBhZ2VWaWV3UHJvcGVydGllczoSgrUYCXBhZ2Vfdmlld5K1GAEBImAKFFNjcmVlblZpZXdQcm9wZXJ0aWVzEhsKC3NjcmVlbl9uYW1lGAEgASgJQga6SAPIAQESFAoMc2NyZWVuX2NsYXNzGAIgASgJOhWCtRgLc2NyZWVuX3ZpZXeStRgCAgMibQoPQ2xpY2tQcm9wZXJ0aWVzEg0KBWNsYXNzGAEgASgJEgoKAmlkGAIgASgJEgsKA3RhZxgDIAEoCRIMCgR0ZXh0GAQgASgJEgkKAXgYBSABKAUSCQoBeRgGIAEoBToOgrUYBWNsaWNrkrUYAQEibwoTUmFnZUNsaWNrUHJvcGVydGllcxIcCgtjbGlja19jb3VudBgBIAEoBUIHukgEGgIoAhIPCgdlbGVtZW50GAIgASgJEgkKAXgYAyABKAUSCQoBeRgEIAEoBToTgrUYCnJhZ2VfY2xpY2uStRgBASJfChNEZWFkQ2xpY2tQcm9wZXJ0aWVzEg8KB2VsZW1lbnQYASABKAkSDAoEdGV4dBgCIAEoCRIJCgF4GAMgASgFEgkKAXkYBCABKAU6E4K1GApkZWFkX2NsaWNrkrUYAQEiXAoQU2Nyb2xsUHJvcGVydGllcxIaCgdwZXJjZW50GAEgASgFQgm6SAYaBBhkKAASGQoIc2Nyb2xsX3kYAiABKAVCB7pIBBoCKAA6EYK1GAZzY3JvbGyStRgDAQIDQkpaSGdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vY29tbW9uL2V2ZW50cy92MTtjb21tb25ldmVudHN2MWIIZWRpdGlvbnNw6Ac',
-    [file_buf_validate_validate, file_common_events_v1_options],
-  )
+export const file_common_events_v1_navigation_events: GenFile = /*@__PURE__*/
+  fileDesc("Cihjb21tb24vZXZlbnRzL3YxL25hdmlnYXRpb25fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIigKElBhZ2VWaWV3UHJvcGVydGllczoSgrUYCXBhZ2Vfdmlld5K1GAEBImAKFFNjcmVlblZpZXdQcm9wZXJ0aWVzEhsKC3NjcmVlbl9uYW1lGAEgASgJQga6SAPIAQESFAoMc2NyZWVuX2NsYXNzGAIgASgJOhWCtRgLc2NyZWVuX3ZpZXeStRgCAgMibQoPQ2xpY2tQcm9wZXJ0aWVzEg0KBWNsYXNzGAEgASgJEgoKAmlkGAIgASgJEgsKA3RhZxgDIAEoCRIMCgR0ZXh0GAQgASgJEgkKAXgYBSABKAUSCQoBeRgGIAEoBToOgrUYBWNsaWNrkrUYAQEibwoTUmFnZUNsaWNrUHJvcGVydGllcxIcCgtjbGlja19jb3VudBgBIAEoBUIHukgEGgIoAhIPCgdlbGVtZW50GAIgASgJEgkKAXgYAyABKAUSCQoBeRgEIAEoBToTgrUYCnJhZ2VfY2xpY2uStRgBASJfChNEZWFkQ2xpY2tQcm9wZXJ0aWVzEg8KB2VsZW1lbnQYASABKAkSDAoEdGV4dBgCIAEoCRIJCgF4GAMgASgFEgkKAXkYBCABKAU6E4K1GApkZWFkX2NsaWNrkrUYAQEiXAoQU2Nyb2xsUHJvcGVydGllcxIaCgdwZXJjZW50GAEgASgFQgm6SAYaBBhkKAASGQoIc2Nyb2xsX3kYAiABKAVCB7pIBBoCKAA6EYK1GAZzY3JvbGyStRgDAQIDQkpaSGdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vY29tbW9uL2V2ZW50cy92MTtjb21tb25ldmVudHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_events_v1_options]);
 
 /**
  * Web page navigation. Use screen_view for native mobile screens.
@@ -29,15 +25,15 @@ export const file_common_events_v1_navigation_events: GenFile =
  *
  * @generated from message common.events.v1.PageViewProperties
  */
-export type PageViewProperties = Message<'common.events.v1.PageViewProperties'> & {}
+export type PageViewProperties = Message<"common.events.v1.PageViewProperties"> & {
+};
 
 /**
  * Describes the message common.events.v1.PageViewProperties.
  * Use `create(PageViewPropertiesSchema)` to create a new message.
  */
-export const PageViewPropertiesSchema: GenMessage<PageViewProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 0)
+export const PageViewPropertiesSchema: GenMessage<PageViewProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 0);
 
 /**
  * Native mobile screen navigation. Use page_view for web pages.
@@ -47,25 +43,24 @@ export const PageViewPropertiesSchema: GenMessage<PageViewProperties> =
  *
  * @generated from message common.events.v1.ScreenViewProperties
  */
-export type ScreenViewProperties = Message<'common.events.v1.ScreenViewProperties'> & {
+export type ScreenViewProperties = Message<"common.events.v1.ScreenViewProperties"> & {
   /**
    * @generated from field: string screen_name = 1;
    */
-  screenName: string
+  screenName: string;
 
   /**
    * @generated from field: string screen_class = 2;
    */
-  screenClass: string
-}
+  screenClass: string;
+};
 
 /**
  * Describes the message common.events.v1.ScreenViewProperties.
  * Use `create(ScreenViewPropertiesSchema)` to create a new message.
  */
-export const ScreenViewPropertiesSchema: GenMessage<ScreenViewProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 1)
+export const ScreenViewPropertiesSchema: GenMessage<ScreenViewProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 1);
 
 /**
  * A normal user click. Decomposed element fields (class/id/tag/text) match
@@ -75,45 +70,44 @@ export const ScreenViewPropertiesSchema: GenMessage<ScreenViewProperties> =
  *
  * @generated from message common.events.v1.ClickProperties
  */
-export type ClickProperties = Message<'common.events.v1.ClickProperties'> & {
+export type ClickProperties = Message<"common.events.v1.ClickProperties"> & {
   /**
    * @generated from field: string class = 1;
    */
-  class: string
+  class: string;
 
   /**
    * @generated from field: string id = 2;
    */
-  id: string
+  id: string;
 
   /**
    * @generated from field: string tag = 3;
    */
-  tag: string
+  tag: string;
 
   /**
    * @generated from field: string text = 4;
    */
-  text: string
+  text: string;
 
   /**
    * @generated from field: int32 x = 5;
    */
-  x: number
+  x: number;
 
   /**
    * @generated from field: int32 y = 6;
    */
-  y: number
-}
+  y: number;
+};
 
 /**
  * Describes the message common.events.v1.ClickProperties.
  * Use `create(ClickPropertiesSchema)` to create a new message.
  */
-export const ClickPropertiesSchema: GenMessage<ClickProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 2)
+export const ClickPropertiesSchema: GenMessage<ClickProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 2);
 
 /**
  * Multiple rapid clicks on the same target, typically detected by
@@ -122,35 +116,34 @@ export const ClickPropertiesSchema: GenMessage<ClickProperties> =
  *
  * @generated from message common.events.v1.RageClickProperties
  */
-export type RageClickProperties = Message<'common.events.v1.RageClickProperties'> & {
+export type RageClickProperties = Message<"common.events.v1.RageClickProperties"> & {
   /**
    * @generated from field: int32 click_count = 1;
    */
-  clickCount: number
+  clickCount: number;
 
   /**
    * @generated from field: string element = 2;
    */
-  element: string
+  element: string;
 
   /**
    * @generated from field: int32 x = 3;
    */
-  x: number
+  x: number;
 
   /**
    * @generated from field: int32 y = 4;
    */
-  y: number
-}
+  y: number;
+};
 
 /**
  * Describes the message common.events.v1.RageClickProperties.
  * Use `create(RageClickPropertiesSchema)` to create a new message.
  */
-export const RageClickPropertiesSchema: GenMessage<RageClickProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 3)
+export const RageClickPropertiesSchema: GenMessage<RageClickProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 3);
 
 /**
  * A click on an element that produced no observable response.
@@ -158,55 +151,54 @@ export const RageClickPropertiesSchema: GenMessage<RageClickProperties> =
  *
  * @generated from message common.events.v1.DeadClickProperties
  */
-export type DeadClickProperties = Message<'common.events.v1.DeadClickProperties'> & {
+export type DeadClickProperties = Message<"common.events.v1.DeadClickProperties"> & {
   /**
    * @generated from field: string element = 1;
    */
-  element: string
+  element: string;
 
   /**
    * @generated from field: string text = 2;
    */
-  text: string
+  text: string;
 
   /**
    * @generated from field: int32 x = 3;
    */
-  x: number
+  x: number;
 
   /**
    * @generated from field: int32 y = 4;
    */
-  y: number
-}
+  y: number;
+};
 
 /**
  * Describes the message common.events.v1.DeadClickProperties.
  * Use `create(DeadClickPropertiesSchema)` to create a new message.
  */
-export const DeadClickPropertiesSchema: GenMessage<DeadClickProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 4)
+export const DeadClickPropertiesSchema: GenMessage<DeadClickProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 4);
 
 /**
  * @generated from message common.events.v1.ScrollProperties
  */
-export type ScrollProperties = Message<'common.events.v1.ScrollProperties'> & {
+export type ScrollProperties = Message<"common.events.v1.ScrollProperties"> & {
   /**
    * @generated from field: int32 percent = 1;
    */
-  percent: number
+  percent: number;
 
   /**
    * @generated from field: int32 scroll_y = 2;
    */
-  scrollY: number
-}
+  scrollY: number;
+};
 
 /**
  * Describes the message common.events.v1.ScrollProperties.
  * Use `create(ScrollPropertiesSchema)` to create a new message.
  */
-export const ScrollPropertiesSchema: GenMessage<ScrollProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_navigation_events, 5)
+export const ScrollPropertiesSchema: GenMessage<ScrollProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_navigation_events, 5);
+

@@ -2,21 +2,17 @@
 // @generated from file common/events/v1/error_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/error_events.proto.
  */
-export const file_common_events_v1_error_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiNjb21tb24vZXZlbnRzL3YxL2Vycm9yX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSKaAQoXRXJyb3JPY2N1cnJlZFByb3BlcnRpZXMSGgoKZXJyb3JfY29kZRgBIAEoCUIGukgDyAEBEhUKB21lc3NhZ2UYAiABKAlCBIi1GAESEAoIc2V2ZXJpdHkYAyABKAkSEQoJdW5oYW5kbGVkGAQgASgIEhMKBXN0YWNrGAUgASgJQgSItRgBOhKCtRgOZXJyb3Jfb2NjdXJyZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw',
-    [file_buf_validate_validate, file_common_events_v1_options],
-  )
+export const file_common_events_v1_error_events: GenFile = /*@__PURE__*/
+  fileDesc("CiNjb21tb24vZXZlbnRzL3YxL2Vycm9yX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSKaAQoXRXJyb3JPY2N1cnJlZFByb3BlcnRpZXMSGgoKZXJyb3JfY29kZRgBIAEoCUIGukgDyAEBEhUKB21lc3NhZ2UYAiABKAlCBIi1GAESEAoIc2V2ZXJpdHkYAyABKAkSEQoJdW5oYW5kbGVkGAQgASgIEhMKBXN0YWNrGAUgASgJQgSItRgBOhKCtRgOZXJyb3Jfb2NjdXJyZWRCSlpIZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9jb21tb24vZXZlbnRzL3YxO2NvbW1vbmV2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_events_v1_options]);
 
 /**
  * Common severity values: "info", "warning", "error", "fatal".
@@ -25,37 +21,37 @@ export const file_common_events_v1_error_events: GenFile =
  *
  * @generated from message common.events.v1.ErrorOccurredProperties
  */
-export type ErrorOccurredProperties = Message<'common.events.v1.ErrorOccurredProperties'> & {
+export type ErrorOccurredProperties = Message<"common.events.v1.ErrorOccurredProperties"> & {
   /**
    * @generated from field: string error_code = 1;
    */
-  errorCode: string
+  errorCode: string;
 
   /**
    * @generated from field: string message = 2;
    */
-  message: string
+  message: string;
 
   /**
    * @generated from field: string severity = 3;
    */
-  severity: string
+  severity: string;
 
   /**
    * @generated from field: bool unhandled = 4;
    */
-  unhandled: boolean
+  unhandled: boolean;
 
   /**
    * @generated from field: string stack = 5;
    */
-  stack: string
-}
+  stack: string;
+};
 
 /**
  * Describes the message common.events.v1.ErrorOccurredProperties.
  * Use `create(ErrorOccurredPropertiesSchema)` to create a new message.
  */
-export const ErrorOccurredPropertiesSchema: GenMessage<ErrorOccurredProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_error_events, 0)
+export const ErrorOccurredPropertiesSchema: GenMessage<ErrorOccurredProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_error_events, 0);
+

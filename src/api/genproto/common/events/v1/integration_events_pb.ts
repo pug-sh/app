@@ -2,69 +2,64 @@
 // @generated from file common/events/v1/integration_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/integration_events.proto.
  */
-export const file_common_events_v1_integration_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Ciljb21tb24vZXZlbnRzL3YxL2ludGVncmF0aW9uX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSJ1Ch5JbnRlZ3JhdGlvbkNvbm5lY3RlZFByb3BlcnRpZXMSFgoOaW50ZWdyYXRpb25faWQYASABKAkSIAoQaW50ZWdyYXRpb25fdHlwZRgCIAEoCUIGukgDyAEBOhmCtRgVaW50ZWdyYXRpb25fY29ubmVjdGVkIosBCiFJbnRlZ3JhdGlvbkRpc2Nvbm5lY3RlZFByb3BlcnRpZXMSFgoOaW50ZWdyYXRpb25faWQYASABKAkSIAoQaW50ZWdyYXRpb25fdHlwZRgCIAEoCUIGukgDyAEBEg4KBnJlYXNvbhgDIAEoCTocgrUYGGludGVncmF0aW9uX2Rpc2Nvbm5lY3RlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH',
-    [file_buf_validate_validate, file_common_events_v1_options],
-  )
+export const file_common_events_v1_integration_events: GenFile = /*@__PURE__*/
+  fileDesc("Ciljb21tb24vZXZlbnRzL3YxL2ludGVncmF0aW9uX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSJ1Ch5JbnRlZ3JhdGlvbkNvbm5lY3RlZFByb3BlcnRpZXMSFgoOaW50ZWdyYXRpb25faWQYASABKAkSIAoQaW50ZWdyYXRpb25fdHlwZRgCIAEoCUIGukgDyAEBOhmCtRgVaW50ZWdyYXRpb25fY29ubmVjdGVkIosBCiFJbnRlZ3JhdGlvbkRpc2Nvbm5lY3RlZFByb3BlcnRpZXMSFgoOaW50ZWdyYXRpb25faWQYASABKAkSIAoQaW50ZWdyYXRpb25fdHlwZRgCIAEoCUIGukgDyAEBEg4KBnJlYXNvbhgDIAEoCTocgrUYGGludGVncmF0aW9uX2Rpc2Nvbm5lY3RlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_events_v1_options]);
 
 /**
  * @generated from message common.events.v1.IntegrationConnectedProperties
  */
-export type IntegrationConnectedProperties = Message<'common.events.v1.IntegrationConnectedProperties'> & {
+export type IntegrationConnectedProperties = Message<"common.events.v1.IntegrationConnectedProperties"> & {
   /**
    * @generated from field: string integration_id = 1;
    */
-  integrationId: string
+  integrationId: string;
 
   /**
    * @generated from field: string integration_type = 2;
    */
-  integrationType: string
-}
+  integrationType: string;
+};
 
 /**
  * Describes the message common.events.v1.IntegrationConnectedProperties.
  * Use `create(IntegrationConnectedPropertiesSchema)` to create a new message.
  */
-export const IntegrationConnectedPropertiesSchema: GenMessage<IntegrationConnectedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_integration_events, 0)
+export const IntegrationConnectedPropertiesSchema: GenMessage<IntegrationConnectedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_integration_events, 0);
 
 /**
  * @generated from message common.events.v1.IntegrationDisconnectedProperties
  */
-export type IntegrationDisconnectedProperties = Message<'common.events.v1.IntegrationDisconnectedProperties'> & {
+export type IntegrationDisconnectedProperties = Message<"common.events.v1.IntegrationDisconnectedProperties"> & {
   /**
    * @generated from field: string integration_id = 1;
    */
-  integrationId: string
+  integrationId: string;
 
   /**
    * @generated from field: string integration_type = 2;
    */
-  integrationType: string
+  integrationType: string;
 
   /**
    * @generated from field: string reason = 3;
    */
-  reason: string
-}
+  reason: string;
+};
 
 /**
  * Describes the message common.events.v1.IntegrationDisconnectedProperties.
  * Use `create(IntegrationDisconnectedPropertiesSchema)` to create a new message.
  */
-export const IntegrationDisconnectedPropertiesSchema: GenMessage<IntegrationDisconnectedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_integration_events, 1)
+export const IntegrationDisconnectedPropertiesSchema: GenMessage<IntegrationDisconnectedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_integration_events, 1);
+

@@ -2,240 +2,227 @@
 // @generated from file common/events/v1/media_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import type { Duration } from '@bufbuild/protobuf/wkt'
-import { file_google_protobuf_duration } from '@bufbuild/protobuf/wkt'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { Duration } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_duration } from "@bufbuild/protobuf/wkt";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/media_events.proto.
  */
-export const file_common_events_v1_media_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'CiNjb21tb24vZXZlbnRzL3YxL21lZGlhX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSJFChZWaWRlb1N0YXJ0ZWRQcm9wZXJ0aWVzEhgKCHZpZGVvX2lkGAEgASgJQga6SAPIAQE6EYK1GA12aWRlb19zdGFydGVkInYKE1ZpZGVvUGxheVByb3BlcnRpZXMSGAoIdmlkZW9faWQYASABKAlCBrpIA8gBARI1Cghwb3NpdGlvbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6DoK1GAp2aWRlb19wbGF5IngKFFZpZGVvUGF1c2VQcm9wZXJ0aWVzEhgKCHZpZGVvX2lkGAEgASgJQga6SAPIAQESNQoIcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAOg+CtRgLdmlkZW9fcGF1c2UiuQEKFVZpZGVvU2Vla2VkUHJvcGVydGllcxIYCgh2aWRlb19pZBgBIAEoCUIGukgDyAEBEjoKDWZyb21fcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAEjgKC3RvX3Bvc2l0aW9uGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgi6SAWqAQIyADoQgrUYDHZpZGVvX3NlZWtlZCJJChhWaWRlb0NvbXBsZXRlZFByb3BlcnRpZXMSGAoIdmlkZW9faWQYASABKAlCBrpIA8gBAToTgrUYD3ZpZGVvX2NvbXBsZXRlZCJFChZBdWRpb1N0YXJ0ZWRQcm9wZXJ0aWVzEhgKCGF1ZGlvX2lkGAEgASgJQga6SAPIAQE6EYK1GA1hdWRpb19zdGFydGVkInYKE0F1ZGlvUGxheVByb3BlcnRpZXMSGAoIYXVkaW9faWQYASABKAlCBrpIA8gBARI1Cghwb3NpdGlvbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6DoK1GAphdWRpb19wbGF5IngKFEF1ZGlvUGF1c2VQcm9wZXJ0aWVzEhgKCGF1ZGlvX2lkGAEgASgJQga6SAPIAQESNQoIcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAOg+CtRgLYXVkaW9fcGF1c2UiuQEKFUF1ZGlvU2Vla2VkUHJvcGVydGllcxIYCghhdWRpb19pZBgBIAEoCUIGukgDyAEBEjoKDWZyb21fcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAEjgKC3RvX3Bvc2l0aW9uGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgi6SAWqAQIyADoQgrUYDGF1ZGlvX3NlZWtlZCJJChhBdWRpb0NvbXBsZXRlZFByb3BlcnRpZXMSGAoIYXVkaW9faWQYASABKAlCBrpIA8gBAToTgrUYD2F1ZGlvX2NvbXBsZXRlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH',
-    [file_buf_validate_validate, file_google_protobuf_duration, file_common_events_v1_options],
-  )
+export const file_common_events_v1_media_events: GenFile = /*@__PURE__*/
+  fileDesc("CiNjb21tb24vZXZlbnRzL3YxL21lZGlhX2V2ZW50cy5wcm90bxIQY29tbW9uLmV2ZW50cy52MSJFChZWaWRlb1N0YXJ0ZWRQcm9wZXJ0aWVzEhgKCHZpZGVvX2lkGAEgASgJQga6SAPIAQE6EYK1GA12aWRlb19zdGFydGVkInYKE1ZpZGVvUGxheVByb3BlcnRpZXMSGAoIdmlkZW9faWQYASABKAlCBrpIA8gBARI1Cghwb3NpdGlvbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6DoK1GAp2aWRlb19wbGF5IngKFFZpZGVvUGF1c2VQcm9wZXJ0aWVzEhgKCHZpZGVvX2lkGAEgASgJQga6SAPIAQESNQoIcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAOg+CtRgLdmlkZW9fcGF1c2UiuQEKFVZpZGVvU2Vla2VkUHJvcGVydGllcxIYCgh2aWRlb19pZBgBIAEoCUIGukgDyAEBEjoKDWZyb21fcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAEjgKC3RvX3Bvc2l0aW9uGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgi6SAWqAQIyADoQgrUYDHZpZGVvX3NlZWtlZCJJChhWaWRlb0NvbXBsZXRlZFByb3BlcnRpZXMSGAoIdmlkZW9faWQYASABKAlCBrpIA8gBAToTgrUYD3ZpZGVvX2NvbXBsZXRlZCJFChZBdWRpb1N0YXJ0ZWRQcm9wZXJ0aWVzEhgKCGF1ZGlvX2lkGAEgASgJQga6SAPIAQE6EYK1GA1hdWRpb19zdGFydGVkInYKE0F1ZGlvUGxheVByb3BlcnRpZXMSGAoIYXVkaW9faWQYASABKAlCBrpIA8gBARI1Cghwb3NpdGlvbhgCIAEoCzIZLmdvb2dsZS5wcm90b2J1Zi5EdXJhdGlvbkIIukgFqgECMgA6DoK1GAphdWRpb19wbGF5IngKFEF1ZGlvUGF1c2VQcm9wZXJ0aWVzEhgKCGF1ZGlvX2lkGAEgASgJQga6SAPIAQESNQoIcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAOg+CtRgLYXVkaW9fcGF1c2UiuQEKFUF1ZGlvU2Vla2VkUHJvcGVydGllcxIYCghhdWRpb19pZBgBIAEoCUIGukgDyAEBEjoKDWZyb21fcG9zaXRpb24YAiABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb25CCLpIBaoBAjIAEjgKC3RvX3Bvc2l0aW9uGAMgASgLMhkuZ29vZ2xlLnByb3RvYnVmLkR1cmF0aW9uQgi6SAWqAQIyADoQgrUYDGF1ZGlvX3NlZWtlZCJJChhBdWRpb0NvbXBsZXRlZFByb3BlcnRpZXMSGAoIYXVkaW9faWQYASABKAlCBrpIA8gBAToTgrUYD2F1ZGlvX2NvbXBsZXRlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_duration, file_common_events_v1_options]);
 
 /**
  * @generated from message common.events.v1.VideoStartedProperties
  */
-export type VideoStartedProperties = Message<'common.events.v1.VideoStartedProperties'> & {
+export type VideoStartedProperties = Message<"common.events.v1.VideoStartedProperties"> & {
   /**
    * @generated from field: string video_id = 1;
    */
-  videoId: string
-}
+  videoId: string;
+};
 
 /**
  * Describes the message common.events.v1.VideoStartedProperties.
  * Use `create(VideoStartedPropertiesSchema)` to create a new message.
  */
-export const VideoStartedPropertiesSchema: GenMessage<VideoStartedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 0)
+export const VideoStartedPropertiesSchema: GenMessage<VideoStartedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 0);
 
 /**
  * @generated from message common.events.v1.VideoPlayProperties
  */
-export type VideoPlayProperties = Message<'common.events.v1.VideoPlayProperties'> & {
+export type VideoPlayProperties = Message<"common.events.v1.VideoPlayProperties"> & {
   /**
    * @generated from field: string video_id = 1;
    */
-  videoId: string
+  videoId: string;
 
   /**
    * @generated from field: google.protobuf.Duration position = 2;
    */
-  position?: Duration | undefined
-}
+  position?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.VideoPlayProperties.
  * Use `create(VideoPlayPropertiesSchema)` to create a new message.
  */
-export const VideoPlayPropertiesSchema: GenMessage<VideoPlayProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 1)
+export const VideoPlayPropertiesSchema: GenMessage<VideoPlayProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 1);
 
 /**
  * @generated from message common.events.v1.VideoPauseProperties
  */
-export type VideoPauseProperties = Message<'common.events.v1.VideoPauseProperties'> & {
+export type VideoPauseProperties = Message<"common.events.v1.VideoPauseProperties"> & {
   /**
    * @generated from field: string video_id = 1;
    */
-  videoId: string
+  videoId: string;
 
   /**
    * @generated from field: google.protobuf.Duration position = 2;
    */
-  position?: Duration | undefined
-}
+  position?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.VideoPauseProperties.
  * Use `create(VideoPausePropertiesSchema)` to create a new message.
  */
-export const VideoPausePropertiesSchema: GenMessage<VideoPauseProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 2)
+export const VideoPausePropertiesSchema: GenMessage<VideoPauseProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 2);
 
 /**
  * @generated from message common.events.v1.VideoSeekedProperties
  */
-export type VideoSeekedProperties = Message<'common.events.v1.VideoSeekedProperties'> & {
+export type VideoSeekedProperties = Message<"common.events.v1.VideoSeekedProperties"> & {
   /**
    * @generated from field: string video_id = 1;
    */
-  videoId: string
+  videoId: string;
 
   /**
    * @generated from field: google.protobuf.Duration from_position = 2;
    */
-  fromPosition?: Duration | undefined
+  fromPosition?: Duration | undefined;
 
   /**
    * @generated from field: google.protobuf.Duration to_position = 3;
    */
-  toPosition?: Duration | undefined
-}
+  toPosition?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.VideoSeekedProperties.
  * Use `create(VideoSeekedPropertiesSchema)` to create a new message.
  */
-export const VideoSeekedPropertiesSchema: GenMessage<VideoSeekedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 3)
+export const VideoSeekedPropertiesSchema: GenMessage<VideoSeekedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 3);
 
 /**
  * @generated from message common.events.v1.VideoCompletedProperties
  */
-export type VideoCompletedProperties = Message<'common.events.v1.VideoCompletedProperties'> & {
+export type VideoCompletedProperties = Message<"common.events.v1.VideoCompletedProperties"> & {
   /**
    * @generated from field: string video_id = 1;
    */
-  videoId: string
-}
+  videoId: string;
+};
 
 /**
  * Describes the message common.events.v1.VideoCompletedProperties.
  * Use `create(VideoCompletedPropertiesSchema)` to create a new message.
  */
-export const VideoCompletedPropertiesSchema: GenMessage<VideoCompletedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 4)
+export const VideoCompletedPropertiesSchema: GenMessage<VideoCompletedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 4);
 
 /**
  * @generated from message common.events.v1.AudioStartedProperties
  */
-export type AudioStartedProperties = Message<'common.events.v1.AudioStartedProperties'> & {
+export type AudioStartedProperties = Message<"common.events.v1.AudioStartedProperties"> & {
   /**
    * @generated from field: string audio_id = 1;
    */
-  audioId: string
-}
+  audioId: string;
+};
 
 /**
  * Describes the message common.events.v1.AudioStartedProperties.
  * Use `create(AudioStartedPropertiesSchema)` to create a new message.
  */
-export const AudioStartedPropertiesSchema: GenMessage<AudioStartedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 5)
+export const AudioStartedPropertiesSchema: GenMessage<AudioStartedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 5);
 
 /**
  * @generated from message common.events.v1.AudioPlayProperties
  */
-export type AudioPlayProperties = Message<'common.events.v1.AudioPlayProperties'> & {
+export type AudioPlayProperties = Message<"common.events.v1.AudioPlayProperties"> & {
   /**
    * @generated from field: string audio_id = 1;
    */
-  audioId: string
+  audioId: string;
 
   /**
    * @generated from field: google.protobuf.Duration position = 2;
    */
-  position?: Duration | undefined
-}
+  position?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.AudioPlayProperties.
  * Use `create(AudioPlayPropertiesSchema)` to create a new message.
  */
-export const AudioPlayPropertiesSchema: GenMessage<AudioPlayProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 6)
+export const AudioPlayPropertiesSchema: GenMessage<AudioPlayProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 6);
 
 /**
  * @generated from message common.events.v1.AudioPauseProperties
  */
-export type AudioPauseProperties = Message<'common.events.v1.AudioPauseProperties'> & {
+export type AudioPauseProperties = Message<"common.events.v1.AudioPauseProperties"> & {
   /**
    * @generated from field: string audio_id = 1;
    */
-  audioId: string
+  audioId: string;
 
   /**
    * @generated from field: google.protobuf.Duration position = 2;
    */
-  position?: Duration | undefined
-}
+  position?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.AudioPauseProperties.
  * Use `create(AudioPausePropertiesSchema)` to create a new message.
  */
-export const AudioPausePropertiesSchema: GenMessage<AudioPauseProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 7)
+export const AudioPausePropertiesSchema: GenMessage<AudioPauseProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 7);
 
 /**
  * @generated from message common.events.v1.AudioSeekedProperties
  */
-export type AudioSeekedProperties = Message<'common.events.v1.AudioSeekedProperties'> & {
+export type AudioSeekedProperties = Message<"common.events.v1.AudioSeekedProperties"> & {
   /**
    * @generated from field: string audio_id = 1;
    */
-  audioId: string
+  audioId: string;
 
   /**
    * @generated from field: google.protobuf.Duration from_position = 2;
    */
-  fromPosition?: Duration | undefined
+  fromPosition?: Duration | undefined;
 
   /**
    * @generated from field: google.protobuf.Duration to_position = 3;
    */
-  toPosition?: Duration | undefined
-}
+  toPosition?: Duration | undefined;
+};
 
 /**
  * Describes the message common.events.v1.AudioSeekedProperties.
  * Use `create(AudioSeekedPropertiesSchema)` to create a new message.
  */
-export const AudioSeekedPropertiesSchema: GenMessage<AudioSeekedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 8)
+export const AudioSeekedPropertiesSchema: GenMessage<AudioSeekedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 8);
 
 /**
  * @generated from message common.events.v1.AudioCompletedProperties
  */
-export type AudioCompletedProperties = Message<'common.events.v1.AudioCompletedProperties'> & {
+export type AudioCompletedProperties = Message<"common.events.v1.AudioCompletedProperties"> & {
   /**
    * @generated from field: string audio_id = 1;
    */
-  audioId: string
-}
+  audioId: string;
+};
 
 /**
  * Describes the message common.events.v1.AudioCompletedProperties.
  * Use `create(AudioCompletedPropertiesSchema)` to create a new message.
  */
-export const AudioCompletedPropertiesSchema: GenMessage<AudioCompletedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_media_events, 9)
+export const AudioCompletedPropertiesSchema: GenMessage<AudioCompletedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_media_events, 9);
+

@@ -2,103 +2,98 @@
 // @generated from file common/events/v1/invitation_events.proto (package common.events.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_common_events_v1_options } from './options_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_common_events_v1_options } from "./options_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file common/events/v1/invitation_events.proto.
  */
-export const file_common_events_v1_invitation_events: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Cihjb21tb24vZXZlbnRzL3YxL2ludml0YXRpb25fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIqMBChRJbnZpdGVTZW50UHJvcGVydGllcxIRCglpbnZpdGVfaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEhIKCmludml0ZXJfaWQYAyABKAkSEgoKaW52aXRlZV9pZBgEIAEoCRIbCg1pbnZpdGVlX2VtYWlsGAUgASgJQgSItRgBEgwKBHJvbGUYBiABKAk6D4K1GAtpbnZpdGVfc2VudCKrAQoYSW52aXRlQWNjZXB0ZWRQcm9wZXJ0aWVzEhEKCWludml0ZV9pZBgBIAEoCRIUCgx3b3Jrc3BhY2VfaWQYAiABKAkSEgoKaW52aXRlcl9pZBgDIAEoCRISCgppbnZpdGVlX2lkGAQgASgJEhsKDWludml0ZWVfZW1haWwYBSABKAlCBIi1GAESDAoEcm9sZRgGIAEoCToTgrUYD2ludml0ZV9hY2NlcHRlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH',
-    [file_common_events_v1_options],
-  )
+export const file_common_events_v1_invitation_events: GenFile = /*@__PURE__*/
+  fileDesc("Cihjb21tb24vZXZlbnRzL3YxL2ludml0YXRpb25fZXZlbnRzLnByb3RvEhBjb21tb24uZXZlbnRzLnYxIqMBChRJbnZpdGVTZW50UHJvcGVydGllcxIRCglpbnZpdGVfaWQYASABKAkSFAoMd29ya3NwYWNlX2lkGAIgASgJEhIKCmludml0ZXJfaWQYAyABKAkSEgoKaW52aXRlZV9pZBgEIAEoCRIbCg1pbnZpdGVlX2VtYWlsGAUgASgJQgSItRgBEgwKBHJvbGUYBiABKAk6D4K1GAtpbnZpdGVfc2VudCKrAQoYSW52aXRlQWNjZXB0ZWRQcm9wZXJ0aWVzEhEKCWludml0ZV9pZBgBIAEoCRIUCgx3b3Jrc3BhY2VfaWQYAiABKAkSEgoKaW52aXRlcl9pZBgDIAEoCRISCgppbnZpdGVlX2lkGAQgASgJEhsKDWludml0ZWVfZW1haWwYBSABKAlCBIi1GAESDAoEcm9sZRgGIAEoCToTgrUYD2ludml0ZV9hY2NlcHRlZEJKWkhnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2NvbW1vbi9ldmVudHMvdjE7Y29tbW9uZXZlbnRzdjFiCGVkaXRpb25zcOgH", [file_common_events_v1_options]);
 
 /**
  * @generated from message common.events.v1.InviteSentProperties
  */
-export type InviteSentProperties = Message<'common.events.v1.InviteSentProperties'> & {
+export type InviteSentProperties = Message<"common.events.v1.InviteSentProperties"> & {
   /**
    * @generated from field: string invite_id = 1;
    */
-  inviteId: string
+  inviteId: string;
 
   /**
    * @generated from field: string workspace_id = 2;
    */
-  workspaceId: string
+  workspaceId: string;
 
   /**
    * @generated from field: string inviter_id = 3;
    */
-  inviterId: string
+  inviterId: string;
 
   /**
    * @generated from field: string invitee_id = 4;
    */
-  inviteeId: string
+  inviteeId: string;
 
   /**
    * @generated from field: string invitee_email = 5;
    */
-  inviteeEmail: string
+  inviteeEmail: string;
 
   /**
    * @generated from field: string role = 6;
    */
-  role: string
-}
+  role: string;
+};
 
 /**
  * Describes the message common.events.v1.InviteSentProperties.
  * Use `create(InviteSentPropertiesSchema)` to create a new message.
  */
-export const InviteSentPropertiesSchema: GenMessage<InviteSentProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_invitation_events, 0)
+export const InviteSentPropertiesSchema: GenMessage<InviteSentProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_invitation_events, 0);
 
 /**
  * @generated from message common.events.v1.InviteAcceptedProperties
  */
-export type InviteAcceptedProperties = Message<'common.events.v1.InviteAcceptedProperties'> & {
+export type InviteAcceptedProperties = Message<"common.events.v1.InviteAcceptedProperties"> & {
   /**
    * @generated from field: string invite_id = 1;
    */
-  inviteId: string
+  inviteId: string;
 
   /**
    * @generated from field: string workspace_id = 2;
    */
-  workspaceId: string
+  workspaceId: string;
 
   /**
    * @generated from field: string inviter_id = 3;
    */
-  inviterId: string
+  inviterId: string;
 
   /**
    * @generated from field: string invitee_id = 4;
    */
-  inviteeId: string
+  inviteeId: string;
 
   /**
    * @generated from field: string invitee_email = 5;
    */
-  inviteeEmail: string
+  inviteeEmail: string;
 
   /**
    * @generated from field: string role = 6;
    */
-  role: string
-}
+  role: string;
+};
 
 /**
  * Describes the message common.events.v1.InviteAcceptedProperties.
  * Use `create(InviteAcceptedPropertiesSchema)` to create a new message.
  */
-export const InviteAcceptedPropertiesSchema: GenMessage<InviteAcceptedProperties> =
-  /*@__PURE__*/
-  messageDesc(file_common_events_v1_invitation_events, 1)
+export const InviteAcceptedPropertiesSchema: GenMessage<InviteAcceptedProperties> = /*@__PURE__*/
+  messageDesc(file_common_events_v1_invitation_events, 1);
+

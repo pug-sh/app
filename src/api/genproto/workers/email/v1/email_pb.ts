@@ -2,99 +2,92 @@
 // @generated from file workers/email/v1/email.proto (package workers.email.v1, edition 2023)
 /* eslint-disable */
 
-import type { Message } from '@bufbuild/protobuf'
-import type { GenFile, GenMessage } from '@bufbuild/protobuf/codegenv2'
-import { fileDesc, messageDesc } from '@bufbuild/protobuf/codegenv2'
-import { file_buf_validate_validate } from '../../../buf/validate/validate_pb'
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file workers/email/v1/email.proto.
  */
-export const file_workers_email_v1_email: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    'Chx3b3JrZXJzL2VtYWlsL3YxL2VtYWlsLnByb3RvEhB3b3JrZXJzLmVtYWlsLnYxIp0BCghFbWFpbEpvYhJFChFvcmdfbWVtYmVyX2ludml0ZRgDIAEoCzIoLndvcmtlcnMuZW1haWwudjEuT3JnTWVtYmVySW52aXRlUGF5bG9hZEgAEjgKCm1hZ2ljX2xpbmsYBSABKAsyIi53b3JrZXJzLmVtYWlsLnYxLk1hZ2ljTGlua1BheWxvYWRIAEIQCgdwYXlsb2FkEgW6SAIIASJpChZPcmdNZW1iZXJJbnZpdGVQYXlsb2FkEhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEh0KDWludml0YXRpb25faWQYAiABKAlCBrpIA8gBARIVCgV0b2tlbhgDIAEoCUIGukgDyAEBIkQKEE1hZ2ljTGlua1BheWxvYWQSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAESFQoFdG9rZW4YAiABKAlCBrpIA8gBAUJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvZW1haWwvdjE7ZW1haWx3b3JrZXJ2MWIIZWRpdGlvbnNw6Ac',
-    [file_buf_validate_validate],
-  )
+export const file_workers_email_v1_email: GenFile = /*@__PURE__*/
+  fileDesc("Chx3b3JrZXJzL2VtYWlsL3YxL2VtYWlsLnByb3RvEhB3b3JrZXJzLmVtYWlsLnYxIp0BCghFbWFpbEpvYhJFChFvcmdfbWVtYmVyX2ludml0ZRgDIAEoCzIoLndvcmtlcnMuZW1haWwudjEuT3JnTWVtYmVySW52aXRlUGF5bG9hZEgAEjgKCm1hZ2ljX2xpbmsYBSABKAsyIi53b3JrZXJzLmVtYWlsLnYxLk1hZ2ljTGlua1BheWxvYWRIAEIQCgdwYXlsb2FkEgW6SAIIASJpChZPcmdNZW1iZXJJbnZpdGVQYXlsb2FkEhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEh0KDWludml0YXRpb25faWQYAiABKAlCBrpIA8gBARIVCgV0b2tlbhgDIAEoCUIGukgDyAEBIkQKEE1hZ2ljTGlua1BheWxvYWQSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAESFQoFdG9rZW4YAiABKAlCBrpIA8gBAUJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvZW1haWwvdjE7ZW1haWx3b3JrZXJ2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
 
 /**
  * @generated from message workers.email.v1.EmailJob
  */
-export type EmailJob = Message<'workers.email.v1.EmailJob'> & {
+export type EmailJob = Message<"workers.email.v1.EmailJob"> & {
   /**
    * @generated from oneof workers.email.v1.EmailJob.payload
    */
-  payload:
-    | {
-        /**
-         * @generated from field: workers.email.v1.OrgMemberInvitePayload org_member_invite = 3;
-         */
-        value: OrgMemberInvitePayload
-        case: 'orgMemberInvite'
-      }
-    | {
-        /**
-         * @generated from field: workers.email.v1.MagicLinkPayload magic_link = 5;
-         */
-        value: MagicLinkPayload
-        case: 'magicLink'
-      }
-    | { case: undefined; value?: undefined }
-}
+  payload: {
+    /**
+     * @generated from field: workers.email.v1.OrgMemberInvitePayload org_member_invite = 3;
+     */
+    value: OrgMemberInvitePayload;
+    case: "orgMemberInvite";
+  } | {
+    /**
+     * @generated from field: workers.email.v1.MagicLinkPayload magic_link = 5;
+     */
+    value: MagicLinkPayload;
+    case: "magicLink";
+  } | { case: undefined; value?: undefined };
+};
 
 /**
  * Describes the message workers.email.v1.EmailJob.
  * Use `create(EmailJobSchema)` to create a new message.
  */
-export const EmailJobSchema: GenMessage<EmailJob> = /*@__PURE__*/ messageDesc(file_workers_email_v1_email, 0)
+export const EmailJobSchema: GenMessage<EmailJob> = /*@__PURE__*/
+  messageDesc(file_workers_email_v1_email, 0);
 
 /**
  * @generated from message workers.email.v1.OrgMemberInvitePayload
  */
-export type OrgMemberInvitePayload = Message<'workers.email.v1.OrgMemberInvitePayload'> & {
+export type OrgMemberInvitePayload = Message<"workers.email.v1.OrgMemberInvitePayload"> & {
   /**
    * @generated from field: string email = 1;
    */
-  email: string
+  email: string;
 
   /**
    * @generated from field: string invitation_id = 2;
    */
-  invitationId: string
+  invitationId: string;
 
   /**
    * @generated from field: string token = 3;
    */
-  token: string
-}
+  token: string;
+};
 
 /**
  * Describes the message workers.email.v1.OrgMemberInvitePayload.
  * Use `create(OrgMemberInvitePayloadSchema)` to create a new message.
  */
-export const OrgMemberInvitePayloadSchema: GenMessage<OrgMemberInvitePayload> =
-  /*@__PURE__*/
-  messageDesc(file_workers_email_v1_email, 1)
+export const OrgMemberInvitePayloadSchema: GenMessage<OrgMemberInvitePayload> = /*@__PURE__*/
+  messageDesc(file_workers_email_v1_email, 1);
 
 /**
  * @generated from message workers.email.v1.MagicLinkPayload
  */
-export type MagicLinkPayload = Message<'workers.email.v1.MagicLinkPayload'> & {
+export type MagicLinkPayload = Message<"workers.email.v1.MagicLinkPayload"> & {
   /**
    * @generated from field: string email = 1;
    */
-  email: string
+  email: string;
 
   /**
    * @generated from field: string token = 2;
    */
-  token: string
-}
+  token: string;
+};
 
 /**
  * Describes the message workers.email.v1.MagicLinkPayload.
  * Use `create(MagicLinkPayloadSchema)` to create a new message.
  */
-export const MagicLinkPayloadSchema: GenMessage<MagicLinkPayload> =
-  /*@__PURE__*/
-  messageDesc(file_workers_email_v1_email, 2)
+export const MagicLinkPayloadSchema: GenMessage<MagicLinkPayload> = /*@__PURE__*/
+  messageDesc(file_workers_email_v1_email, 2);
+
