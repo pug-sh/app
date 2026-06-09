@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { Facehash } from 'facehash'
 import { useAtomValue } from 'jotai'
-import { Laptop, Loader2, Monitor, Radio, Smartphone, Users, X } from 'lucide-react'
+import { Globe, Laptop, Loader2, Monitor, Radio, Smartphone, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
@@ -40,35 +40,6 @@ const LiveDot = () => (
     <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
     <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
   </span>
-)
-
-type LiveStatusHeaderProps = {
-  visitorCount: number
-  loading: boolean
-  lastUpdated: Date | null
-  showRefreshSpinner?: boolean
-}
-
-const LiveStatusHeader = ({ visitorCount, loading, lastUpdated, showRefreshSpinner }: LiveStatusHeaderProps) => (
-  <div className="flex items-start justify-between gap-6">
-    <div>
-      <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-        Live
-        {!loading && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <LiveDot />
-            <span>{visitorCount}</span>
-            <span className="hidden sm:inline">online</span>
-          </span>
-        )}
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">Visitors active in the last 5 minutes</p>
-    </div>
-    <div className="flex shrink-0 items-center gap-3">
-      {showRefreshSpinner && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
-      {lastUpdated && <span className="text-xs text-muted-foreground">Updated {formatRelative(lastUpdated)}</span>}
-    </div>
-  </div>
 )
 
 type VisitorRowProps = {
@@ -193,6 +164,8 @@ const LiveVisitorsPage = () => {
     () => allVisitors.find(v => v.distinctId === selectedDistinctId) ?? null,
     [allVisitors, selectedDistinctId],
   )
+  const selectedPage = selectedVisitor ? formatPagePath(structGet(selectedVisitor.autoProperties, '$url')) : null
+  const isRefreshing = loading && events.length > 0
 
   if (!project) return <NoProject title="Live" icon={Radio} />
 
@@ -220,40 +193,50 @@ const LiveVisitorsPage = () => {
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
             />
 
-            <div className="absolute top-4 right-4 z-10 max-w-md rounded-xl bg-background/85 px-4 py-3 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
-              <LiveStatusHeader
-                visitorCount={visitorCount}
-                loading={loading}
-                lastUpdated={lastUpdated}
-                showRefreshSpinner={loading && events.length > 0}
-              />
-            </div>
-
-            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/65 shadow-xl ring-1 ring-border/40 backdrop-blur-md">
-              <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <LiveDot />
-                  <span className="text-sm font-semibold">{visitorCount} live</span>
+            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[22rem] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md">
+              {/* Live count + freshness — the single source of "is this still ticking" */}
+              <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="flex items-center gap-2 text-sm font-semibold">
+                    <LiveDot />
+                    {visitorCount}
+                  </span>
+                  <span className="text-sm text-muted-foreground">live now</span>
                 </div>
-                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Monitor className="size-3" />
-                    <span>{devices.desktop}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Smartphone className="size-3" />
-                    <span>{devices.mobile}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Users className="size-3" />
-                    <span>{countryCount}</span>
-                  </span>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  {isRefreshing && <Loader2 className="size-3 animate-spin" />}
+                  {lastUpdated && (
+                    <HoverSwap
+                      primary={`Updated ${formatRelative(lastUpdated)}`}
+                      secondary={formatDateTime(lastUpdated)}
+                    />
+                  )}
                 </div>
               </div>
 
+              {/* Composition strip — at-a-glance device + geo mix */}
+              {visitorCount > 0 && (
+                <div className="flex items-center gap-4 border-y border-border/30 bg-muted/20 px-4 py-1.5 text-[11px] text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <Monitor className="size-3" />
+                    {devices.desktop} desktop
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Smartphone className="size-3" />
+                    {devices.mobile} mobile
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Globe className="size-3" />
+                    {countryCount} {countryCount === 1 ? 'country' : 'countries'}
+                  </span>
+                </div>
+              )}
+
               {selectedVisitor && (
-                <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-muted/20 px-4 py-2">
-                  <span className="truncate text-[11px] text-muted-foreground">Focused on selected visitor</span>
+                <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
+                  <span className="truncate text-[11px] text-muted-foreground">
+                    Focused on <span className="font-medium text-foreground">{selectedPage}</span>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setSelectedDistinctId(null)}
@@ -265,7 +248,7 @@ const LiveVisitorsPage = () => {
               )}
 
               {allVisitors.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center px-4 py-6 text-center text-sm text-muted-foreground">
+                <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
                   No active visitors right now.
                 </div>
               ) : (
