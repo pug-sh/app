@@ -44,3 +44,6 @@ pr-review.md
 .env.development
 .env.production
 .env
+
+# Self-hosted map basemap — fetched on demand via `bun run fetch:basemap` (too large to commit)
+/public/basemap.pmtiles
