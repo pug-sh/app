@@ -44,46 +44,51 @@ export type ClusterMapMarker = {
 
 export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'cluster' } & ClusterMapMarker)
 
+// Scatter radius (degrees) around a group's centroid. Deliberately small — crowded groups
+// collapse into a cluster badge, so the scatter only needs to fan out a handful of faces.
+// Large radii used to fling markers into neighbouring countries or the sea. Bigger countries
+// (inland centroids) tolerate a little more; coastal/small ones stay tight.
 const COUNTRY_SPREAD_DEG: Record<string, number> = {
-  AR: 12,
-  AU: 20,
-  BR: 14,
-  CA: 22,
-  CN: 16,
-  DZ: 10,
-  EG: 6,
-  ID: 12,
-  IN: 10,
-  IR: 8,
-  KZ: 14,
-  LY: 8,
-  MX: 10,
-  MN: 8,
-  RU: 25,
-  SA: 10,
-  US: 18,
+  RU: 6,
+  CA: 5,
+  US: 4,
+  AU: 4,
+  BR: 4,
+  CN: 4,
+  KZ: 4,
+  AR: 3,
+  DZ: 3,
+  ID: 3,
+  IN: 3,
+  MN: 3,
+  MX: 3,
+  IR: 2.5,
+  LY: 2.5,
+  SA: 2.5,
+  EG: 2,
 }
 
 const REGION_SPREAD_DEG: Record<string, number> = {
-  US: 4,
-  CA: 8,
-  AU: 8,
-  GB: 3,
-  DE: 3,
-  IN: 4,
-  BR: 5,
-  MX: 4,
+  CA: 2,
+  AU: 2,
+  US: 1.5,
+  BR: 1.5,
+  IN: 1.2,
+  MX: 1.2,
+  GB: 0.8,
+  DE: 0.8,
 }
 
 const spreadFor = (iso: string, hasRegion: boolean) => {
-  const base = (hasRegion ? REGION_SPREAD_DEG[iso] : COUNTRY_SPREAD_DEG[iso]) ?? (hasRegion ? 3 : 5)
-  return base
+  return (hasRegion ? REGION_SPREAD_DEG[iso] : COUNTRY_SPREAD_DEG[iso]) ?? (hasRegion ? 0.8 : 2.5)
 }
 
 const scatterLatLng = (distinctId: string, groupKey: string, spread: number): [number, number] => {
   const h = stringHash(`${distinctId}:${groupKey}`)
   const angle = ((h & 0xffff) / 0xffff) * 2 * Math.PI
-  const r = Math.sqrt(((h >>> 16) & 0xffff) / 0xffff)
+  // Linear (not sqrt) radius biases points toward the centroid, keeping faces near their
+  // country/region rather than pushed out to the edge of the disc.
+  const r = ((h >>> 16) & 0xffff) / 0xffff
   return [Math.cos(angle) * r * spread, Math.sin(angle) * r * spread * 0.7]
 }
 

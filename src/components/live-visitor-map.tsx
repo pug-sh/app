@@ -6,7 +6,7 @@ import maplibregl, {
   type StyleSpecification,
 } from 'maplibre-gl'
 import themeLayers from 'protomaps-themes-base'
-import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
@@ -123,7 +123,6 @@ const MarkerView = ({
   const locationLabel = marker.region
     ? `${marker.region}, ${formatCountryName(marker.iso)}`
     : formatCountryName(marker.iso)
-  const ringColor = getSeriesColor(marker.kind).dot
 
   return (
     <div className="group/marker relative">
@@ -135,9 +134,8 @@ const MarkerView = ({
         className="block cursor-pointer border-0 bg-transparent p-0"
       >
         <span
-          style={selected ? undefined : ({ '--tw-ring-color': ringColor } as CSSProperties)}
-          className={`relative block rounded-full ring-2 shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
-            selected ? 'scale-110 ring-emerald-500 shadow-emerald-500/50' : 'shadow-black/10'
+          className={`relative block rounded-full shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
+            selected ? 'scale-110 shadow-emerald-500/50' : 'shadow-black/10'
           }`}
         >
           <Facehash
