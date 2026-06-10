@@ -1,5 +1,5 @@
 import { create, equals } from '@bufbuild/protobuf'
-import { useAtom, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -8,7 +8,9 @@ import {
   type DashboardTile,
   GridPositionSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { activeProjectAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
+import { fetchFilterSchemaAtom, filterSchemaAtom } from '../../events/filter-schema.atoms'
 import { pendingEditDashboardIdAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import {
   appendDraftTile,
@@ -21,6 +23,7 @@ import {
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
 import type { DashboardLayouts } from '../grid'
+import { buildTemplateContext, type TemplateContext } from '../templates'
 import { buildUpsertRequest } from '../upsert-dashboard'
 import { useEditorShortcuts } from '../use-editor-shortcuts'
 
@@ -50,6 +53,20 @@ export const useDashboardEditor = ({
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
   const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
+
+  // Resolve the project's events so suggested templates can seed real,
+  // project-specific events (and gate tiles like Revenue). activeProjectAtom
+  // starts null and resolves asynchronously, so the fetch is keyed on it — a
+  // one-shot mount guard would latch before the project arrived and never fetch,
+  // leaving every suggested template seeding an empty tile. Fetch only when the
+  // project is known and the schema isn't already loaded.
+  const activeProject = useAtomValue(activeProjectAtom)
+  const fetchFilterSchema = useSetAtom(fetchFilterSchemaAtom)
+  const filterSchema = useAtomValue(filterSchemaAtom)
+  useEffect(() => {
+    if (activeProject && !filterSchema) fetchFilterSchema()
+  }, [activeProject, filterSchema, fetchFilterSchema])
+  const templateContext = useMemo(() => buildTemplateContext(filterSchema), [filterSchema])
 
   const patchDraftMeta = useCallback(
     (patch: DashboardMetaPatch) => {
@@ -228,16 +245,16 @@ export const useDashboardEditor = ({
   }, [duplicateTile, selectedTile])
 
   const handleSelectTemplate = useCallback(
-    (template: { build: () => Parameters<typeof appendDraftTile>[1] }) => {
+    (template: { build: (ctx: TemplateContext) => Parameters<typeof appendDraftTile>[1] }) => {
       if (!storedDraft) return
-      const tileInput = template.build()
+      const tileInput = template.build(templateContext)
       const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
       const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
       setStoredDraft({ ...storedDraft, draft: nextDraft })
       setShowPicker(false)
       if (newId) focusNewTile(newId)
     },
-    [focusNewTile, setStoredDraft, storedDraft],
+    [focusNewTile, setStoredDraft, storedDraft, templateContext],
   )
 
   const handleEscapeDeselect = useCallback(() => {
@@ -289,5 +306,6 @@ export const useDashboardEditor = ({
     duplicateTile,
     duplicateSelectedTile,
     handleSelectTemplate,
+    templateContext,
   }
 }

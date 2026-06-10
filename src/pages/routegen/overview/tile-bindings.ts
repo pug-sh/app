@@ -11,9 +11,19 @@ const CONVERSION_CANDIDATES = [
   'conversion',
   'subscription_started',
 ] as const
+// Monetization events that carry a numeric `amount` property (see the well-known
+// event schemas — all use `amount`). Ordered most-direct-revenue first.
+const REVENUE_CANDIDATES = [
+  'purchase',
+  'payment_succeeded',
+  'subscription_started',
+  'subscription_renewed',
+  'invoice_paid',
+] as const
 
 type SigninKind = (typeof SIGNIN_CANDIDATES)[number]
 type ConversionKind = (typeof CONVERSION_CANDIDATES)[number]
+type RevenueKind = (typeof REVENUE_CANDIDATES)[number]
 
 export type Bindings = Readonly<{
   // The most-active event kind. Drives "active users", "event volume",
@@ -23,6 +33,8 @@ export type Bindings = Readonly<{
   // matched, in which case dependent tiles should hide themselves.
   signinLike: SigninKind | null
   conversionLike: ConversionKind | null
+  // First monetization event present; drives the revenue tile (sum of `amount`).
+  revenueLike: RevenueKind | null
 }>
 
 // Number(b.count - a.count): EventNameMeta.count is bigint (uint64). Doing the
@@ -44,6 +56,7 @@ export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
     primary: sorted[0].name,
     signinLike: findFirst(SIGNIN_CANDIDATES, available),
     conversionLike: findFirst(CONVERSION_CANDIDATES, available),
+    revenueLike: findFirst(REVENUE_CANDIDATES, available),
   }
 }
 

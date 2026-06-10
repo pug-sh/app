@@ -56,6 +56,7 @@ export const DashboardCanvas = ({
     patchSelectedTile,
     removeSelectedTile,
     duplicateSelectedTile,
+    templateContext,
   } = editor
 
   const tileCount = effectiveDashboard?.tiles.length ?? 0
@@ -105,9 +106,13 @@ export const DashboardCanvas = ({
             ) : null}
             {mode === 'edit' ? (
               tileCount === 0 ? (
-                <InlineTemplatePicker onSelect={handleSelectTemplate} />
+                <InlineTemplatePicker onSelect={handleSelectTemplate} context={templateContext} />
               ) : showPicker ? (
-                <InlineTemplatePicker onSelect={handleSelectTemplate} onCancel={() => setShowPicker(false)} />
+                <InlineTemplatePicker
+                  onSelect={handleSelectTemplate}
+                  onCancel={() => setShowPicker(false)}
+                  context={templateContext}
+                />
               ) : (
                 <button
                   type="button"
