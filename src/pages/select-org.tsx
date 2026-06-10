@@ -52,14 +52,9 @@ const SelectOrg = () => {
     <div className="min-h-screen flex">
       {/* Left — branding panel (copied from sign-in.tsx) */}
       <div className="hidden lg:flex lg:w-[45%] bg-primary relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 -left-20 w-80 h-80 rounded-full bg-white/5" />
-          <div className="absolute bottom-1/4 right-0 w-96 h-96 rounded-full bg-white/3" />
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 rounded-full bg-white/4" />
-        </div>
         <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
               <Bell className="w-5 h-5" />
             </div>
             <span className="text-xl font-medium tracking-tight">Pug</span>

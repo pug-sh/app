@@ -13,7 +13,8 @@
   font-style: normal;
   font-display: swap;
   font-weight: 400;
-  src: url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
     url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff) format("woff");
 }
 @font-face {
@@ -21,7 +22,8 @@
   font-style: normal;
   font-display: swap;
   font-weight: 500;
-  src: url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff2) format("woff2"),
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff2) format("woff2"),
     url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff) format("woff");
 }
 @font-face {
@@ -29,7 +31,8 @@
   font-style: normal;
   font-display: swap;
   font-weight: 600;
-  src: url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff2) format("woff2"),
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff2) format("woff2"),
     url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff) format("woff");
 }
 @font-face {
@@ -37,7 +40,8 @@
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2) format("woff2"),
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2) format("woff2"),
     url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff) format("woff");
 }
 
@@ -198,11 +202,13 @@
   --ring: oklch(0.55 0.18 265);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.7 0.15 70);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* charts — hued to match the semantic palette (blue/green/amber/magenta/red),
+     tuned a touch darker than dark mode so each series reads on the light bg */
+  --chart-1: oklch(0.55 0.18 265);
+  --chart-2: oklch(0.6 0.17 145);
+  --chart-3: oklch(0.7 0.15 70);
+  --chart-4: oklch(0.55 0.16 330);
+  --chart-5: oklch(0.58 0.2 25);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);

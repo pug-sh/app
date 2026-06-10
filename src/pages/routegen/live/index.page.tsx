@@ -220,7 +220,7 @@ const LiveVisitorsPage = () => {
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
             />
 
-            <div className="absolute top-4 right-4 z-10 max-w-md rounded-xl bg-background/85 px-4 py-3 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
+            <div className="absolute top-4 right-4 z-10 max-w-md rounded-lg border border-border bg-background px-4 py-3 shadow-sm">
               <LiveStatusHeader
                 visitorCount={visitorCount}
                 loading={loading}
@@ -229,7 +229,7 @@ const LiveVisitorsPage = () => {
               />
             </div>
 
-            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/65 shadow-xl ring-1 ring-border/40 backdrop-blur-md">
+            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <LiveDot />

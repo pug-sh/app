@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, FileText, Hash, LineChart, ListOrdered, Sparkles, Trophy } from 'lucide-react'
+import { BarChart3, FileText, Hash, LineChart, ListOrdered, Repeat, Trophy } from 'lucide-react'
 import {
   ComparePeriod,
   type DashboardTileInput,
@@ -92,7 +92,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     group: 'suggested',
     displayName: 'Day-7 retention',
     description: 'Cohort retention curve.',
-    icon: Sparkles,
+    icon: Repeat,
     build: () =>
       create(DashboardTileInputSchema, {
         displayName: 'Retention',

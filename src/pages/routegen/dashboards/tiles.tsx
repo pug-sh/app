@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
 import { TileHeaderEdit } from './tile-header-edit'
+import { TILE_ICONS } from './tile-icons'
 
 const escapeMarkdownHTML = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -32,7 +33,7 @@ type TileContentProps = {
 const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
-  const icon = tile.header?.icon ?? ''
+  const TileIcon = TILE_ICONS[tile.header?.icon ?? '']
   const borderless = tile.header?.borderless === true
   const isKpi = tile.viewMode === DashboardTileViewMode.KPI
 
@@ -52,7 +53,7 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
         <TileHeaderEdit tile={tile} onPatch={onPatch} />
       ) : hideTitle ? null : (
         <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
-          {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}
+          {TileIcon ? <TileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" /> : null}
           <div className="min-w-0 flex-1">
             <h3
               className={

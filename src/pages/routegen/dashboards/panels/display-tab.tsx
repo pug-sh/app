@@ -9,9 +9,8 @@ import {
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
+import { TILE_ICON_KEYS, TILE_ICONS } from '../tile-icons'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
-
-const ICON_PALETTE = ['', '📈', '📊', '📉', '🆕', '🎯', '⚡', '🚀', '✨', '🔥', '💡']
 
 type DisplayTabProps = {
   tile: DashboardTile
@@ -76,20 +75,34 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
 
       <Section label="Icon">
         <div className="flex flex-wrap gap-1.5">
-          {ICON_PALETTE.map(icon => {
-            const selected = (tile.header?.icon ?? '') === icon
+          <button
+            type="button"
+            className={[
+              'flex h-7 w-7 items-center justify-center rounded-md border text-xs text-muted-foreground transition-colors',
+              (tile.header?.icon ?? '') === '' ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/60',
+            ].join(' ')}
+            onClick={() => setHeader({ icon: '' })}
+            aria-label="Clear icon"
+          >
+            ∅
+          </button>
+          {TILE_ICON_KEYS.map(key => {
+            const Icon = TILE_ICONS[key]
+            const selected = (tile.header?.icon ?? '') === key
             return (
               <button
-                key={icon || 'none'}
+                key={key}
                 type="button"
                 className={[
-                  'flex h-7 w-7 items-center justify-center rounded-md border text-base transition-colors',
-                  selected ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/60',
+                  'flex h-7 w-7 items-center justify-center rounded-md border transition-colors',
+                  selected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:bg-muted/60',
                 ].join(' ')}
-                onClick={() => setHeader({ icon })}
-                aria-label={icon ? `Set icon ${icon}` : 'Clear icon'}
+                onClick={() => setHeader({ icon: key })}
+                aria-label={`Set icon ${key}`}
               >
-                {icon || '∅'}
+                <Icon className="size-4" />
               </button>
             )
           })}
