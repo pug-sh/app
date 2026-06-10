@@ -19,15 +19,30 @@ export const LIVE_AVATAR_COLORS = [
 
 export type VisitorMapMarker = {
   distinctId: string
+  groupKey: string
   iso: string
   region?: string
   city?: string
   page: string
+  kind: string
   browser?: string
   device: string
   lat: number
   lng: number
 }
+
+// A cluster collapses a crowded country/region group into one badge until it's expanded.
+export type ClusterMapMarker = {
+  groupKey: string
+  iso: string
+  region?: string
+  count: number
+  topKind: string
+  lat: number
+  lng: number
+}
+
+export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'cluster' } & ClusterMapMarker)
 
 const COUNTRY_SPREAD_DEG: Record<string, number> = {
   AR: 12,
@@ -73,6 +88,7 @@ const scatterLatLng = (distinctId: string, groupKey: string, spread: number): [n
 }
 
 type VisitorGroup = {
+  key: string
   iso: string
   region?: string
   visitors: ActivityEvent[]
@@ -93,42 +109,89 @@ const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
     const countryCentroid = COUNTRY_CENTROIDS[iso]
     if (!regionCentroid && !countryCentroid) continue
 
-    const groupKey = region ? `${iso}|${region.toUpperCase()}` : iso
-    const existing = groups.get(groupKey)
+    const key = region ? `${iso}|${region.toUpperCase()}` : iso
+    const existing = groups.get(key)
     if (existing) {
       existing.visitors.push(v)
       continue
     }
 
     const [baseLng, baseLat] = regionCentroid ?? countryCentroid!
-    groups.set(groupKey, { iso, region, visitors: [v], baseLng, baseLat })
+    groups.set(key, { key, iso, region, visitors: [v], baseLng, baseLat })
   }
 
   return [...groups.values()]
 }
 
-export const buildVisitorMapMarkers = (visitors: ActivityEvent[]): VisitorMapMarker[] => {
-  const result: VisitorMapMarker[] = []
+const visitorMarker = (v: ActivityEvent, group: VisitorGroup, spread: number): VisitorMapMarker => {
+  const auto = v.autoProperties
+  const [dLng, dLat] = scatterLatLng(v.distinctId, group.key, spread)
+  return {
+    distinctId: v.distinctId,
+    groupKey: group.key,
+    iso: group.iso,
+    region: group.region,
+    city: structGet(auto, '$city'),
+    page: formatPagePath(structGet(auto, '$url')),
+    kind: v.kind || 'event',
+    browser: structGet(auto, '$browser'),
+    device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
+    lng: group.baseLng + dLng,
+    lat: group.baseLat + dLat,
+  }
+}
 
-  for (const group of buildGroups(visitors)) {
-    const spread = spreadFor(group.iso, Boolean(group.region))
-    const groupKey = group.region ? `${group.iso}:${group.region}` : group.iso
-    for (const v of group.visitors) {
-      const auto = v.autoProperties
-      const [dLng, dLat] = scatterLatLng(v.distinctId, groupKey, spread)
-      result.push({
-        distinctId: v.distinctId,
-        iso: group.iso,
-        region: group.region,
-        city: structGet(auto, '$city'),
-        page: formatPagePath(structGet(auto, '$url')),
-        browser: structGet(auto, '$browser'),
-        device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
-        lng: group.baseLng + dLng,
-        lat: group.baseLat + dLat,
-      })
+const topKind = (visitors: ActivityEvent[]): string => {
+  const counts = new Map<string, number>()
+  for (const v of visitors) {
+    const kind = v.kind || 'event'
+    counts.set(kind, (counts.get(kind) ?? 0) + 1)
+  }
+  let best = 'event'
+  let bestCount = -1
+  for (const [kind, count] of counts) {
+    if (count > bestCount) {
+      best = kind
+      bestCount = count
     }
   }
+  return best
+}
 
-  return result
+// Flat visitor markers (no clustering) — kept for callers that always want individual faces.
+export const buildVisitorMapMarkers = (visitors: ActivityEvent[]): VisitorMapMarker[] =>
+  buildGroups(visitors).flatMap(group => {
+    const spread = spreadFor(group.iso, Boolean(group.region))
+    return group.visitors.map(v => visitorMarker(v, group, spread))
+  })
+
+// Cluster crowded groups into a single badge; groups at/under the threshold (or explicitly
+// expanded) render their individual faces. Returns a mixed list the map renders directly.
+export const buildMapEntries = (
+  visitors: ActivityEvent[],
+  { threshold = 6, expanded }: { threshold?: number; expanded?: ReadonlySet<string> } = {},
+): MapEntry[] => {
+  const entries: MapEntry[] = []
+
+  for (const group of buildGroups(visitors)) {
+    const clustered = group.visitors.length > threshold && !expanded?.has(group.key)
+    if (clustered) {
+      entries.push({
+        type: 'cluster',
+        groupKey: group.key,
+        iso: group.iso,
+        region: group.region,
+        count: group.visitors.length,
+        topKind: topKind(group.visitors),
+        lng: group.baseLng,
+        lat: group.baseLat,
+      })
+      continue
+    }
+
+    const spread = spreadFor(group.iso, Boolean(group.region))
+    for (const v of group.visitors) entries.push({ type: 'visitor', ...visitorMarker(v, group, spread) })
+  }
+
+  return entries
 }

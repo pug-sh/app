@@ -6,11 +6,19 @@ import maplibregl, {
   type StyleSpecification,
 } from 'maplibre-gl'
 import themeLayers from 'protomaps-themes-base'
-import { useEffect, useMemo, useRef } from 'react'
+import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
-import { buildVisitorMapMarkers, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map-markers'
+import { getSeriesColor } from '@/lib/event-colors'
+import {
+  buildMapEntries,
+  buildVisitorMapMarkers,
+  type ClusterMapMarker,
+  LIVE_AVATAR_COLORS,
+  type MapEntry,
+  type VisitorMapMarker,
+} from '@/lib/live-map-markers'
 import { formatCountryName } from '@/lib/live-visitors'
 import { ensurePmtilesProtocol, INITIAL_VIEW_BOUNDS, mapAssetsOrigin } from '@/lib/maplibre'
 
@@ -30,6 +38,8 @@ const BASEMAP_SOURCE = 'protomaps'
 const PMTILES_URL = `pmtiles://${mapAssetsOrigin()}/basemap.pmtiles`
 const ATTRIBUTION =
   '<a href="https://protomaps.com">Protomaps</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+
+const FADE_MS = 280
 
 ensurePmtilesProtocol()
 
@@ -67,11 +77,16 @@ const resolvePadding = (padding: Props['viewportPadding']): PaddingOptions => ({
 const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
   const country = formatCountryName(marker.iso)
   const location = [marker.city, marker.region, country].filter(Boolean).join(', ')
+  const color = getSeriesColor(marker.kind).dot
 
   return (
     <div className="w-56 text-xs">
       <div className="mb-2">
-        <div className="truncate text-sm font-semibold text-foreground">{marker.page}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <span className="truncate font-medium text-foreground">{marker.kind}</span>
+        </div>
+        {marker.page && marker.page !== '—' && <div className="truncate text-muted-foreground">{marker.page}</div>}
         <div className="truncate text-muted-foreground">{location || country}</div>
       </div>
       <div className="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-muted-foreground">
@@ -108,6 +123,7 @@ const MarkerView = ({
   const locationLabel = marker.region
     ? `${marker.region}, ${formatCountryName(marker.iso)}`
     : formatCountryName(marker.iso)
+  const ringColor = getSeriesColor(marker.kind).dot
 
   return (
     <div className="group/marker relative">
@@ -119,8 +135,9 @@ const MarkerView = ({
         className="block cursor-pointer border-0 bg-transparent p-0"
       >
         <span
+          style={selected ? undefined : ({ '--tw-ring-color': ringColor } as CSSProperties)}
           className={`relative block rounded-full ring-2 shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
-            selected ? 'scale-110 ring-emerald-500 shadow-emerald-500/50' : 'ring-white/90 shadow-black/10'
+            selected ? 'scale-110 ring-emerald-500 shadow-emerald-500/50' : 'shadow-black/10'
           }`}
         >
           <Facehash
@@ -145,28 +162,65 @@ const MarkerView = ({
   )
 }
 
-const markerSignature = (marker: VisitorMapMarker) =>
-  [
-    marker.iso,
-    marker.region ?? '',
-    marker.city ?? '',
-    marker.page,
-    marker.browser ?? '',
-    marker.device,
-    marker.lat.toFixed(6),
-    marker.lng.toFixed(6),
-  ].join('|')
+const ClusterView = ({ cluster, onExpand }: { cluster: ClusterMapMarker; onExpand: () => void }) => {
+  const color = getSeriesColor(cluster.topKind).dot
+  const place = cluster.region ? `${cluster.region}, ${formatCountryName(cluster.iso)}` : formatCountryName(cluster.iso)
+  const size = cluster.count >= 50 ? 48 : cluster.count >= 20 ? 42 : 36
 
-type MarkerEntry = {
+  return (
+    <button
+      type="button"
+      onClick={onExpand}
+      title={`${cluster.count} visitors · ${place}`}
+      aria-label={`${cluster.count} visitors near ${place}. Expand.`}
+      style={{ width: size, height: size, borderColor: color }}
+      className="flex cursor-pointer items-center justify-center rounded-full border-2 bg-background/90 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-transform hover:scale-110"
+    >
+      {cluster.count}
+    </button>
+  )
+}
+
+type Entry = {
   marker: maplibregl.Marker
   root: Root
-  data: VisitorMapMarker
+  data: MapEntry
   signature: string
+}
+
+const entryId = (entry: MapEntry) => (entry.type === 'cluster' ? `cluster:${entry.groupKey}` : entry.distinctId)
+
+const entrySignature = (entry: MapEntry, selectedId: string | null) => {
+  if (entry.type === 'cluster')
+    return `c|${entry.count}|${entry.topKind}|${entry.lat.toFixed(4)}|${entry.lng.toFixed(4)}`
+  return [
+    'v',
+    entry.distinctId === selectedId ? 'sel' : '',
+    entry.kind,
+    entry.iso,
+    entry.region ?? '',
+    entry.city ?? '',
+    entry.page,
+    entry.browser ?? '',
+    entry.device,
+    entry.lat.toFixed(6),
+    entry.lng.toFixed(6),
+  ].join('|')
 }
 
 const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, viewportPadding }: Props) => {
   const dark = useResolvedDark()
-  const markers = useMemo(() => buildVisitorMapMarkers(visitors), [visitors])
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
+
+  // Coordinates + group for every visitor regardless of clustering — used to fly to a selection
+  // and to auto-expand the cluster that contains it.
+  const visitorIndex = useMemo(() => {
+    const index = new Map<string, VisitorMapMarker>()
+    for (const m of buildVisitorMapMarkers(visitors)) index.set(m.distinctId, m)
+    return index
+  }, [visitors])
+
+  const entries = useMemo(() => buildMapEntries(visitors, { expanded }), [visitors, expanded])
 
   const { containerRef, mapRef, ready } = useMaplibreMap({
     style: buildBasemapStyle(dark),
@@ -180,7 +234,7 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
     attributionControl: { compact: true },
   })
 
-  const entriesRef = useRef(new Map<string, MarkerEntry>())
+  const entriesRef = useRef(new Map<string, Entry>())
   const selectedRef = useRef(selectedDistinctId)
   const onSelectRef = useRef(onSelectVisitor)
   const paddingRef = useRef(resolvePadding(viewportPadding))
@@ -189,6 +243,27 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
   useEffect(() => {
     onSelectRef.current = onSelectVisitor
   }, [onSelectVisitor])
+
+  const expandGroup = useCallback((groupKey: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      next.add(groupKey)
+      return next
+    })
+  }, [])
+
+  const renderEntry = useCallback(
+    (root: Root, entry: MapEntry, selectedId: string | null) => {
+      if (entry.type === 'cluster') {
+        root.render(<ClusterView cluster={entry} onExpand={() => expandGroup(entry.groupKey)} />)
+        return
+      }
+      root.render(
+        <MarkerView marker={entry} selected={entry.distinctId === selectedId} onSelect={onSelectRef.current} />,
+      )
+    },
+    [expandGroup],
+  )
 
   // Theme swap — restyle the basemap; DOM markers persist across setStyle.
   useEffect(() => {
@@ -215,9 +290,6 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
     const el = containerRef.current
     if (!map || !ready || !el) return
 
-    // No maxBounds: constraining to the full world extent is degenerate and crashes MapLibre's
-    // _calcMatrices (null transform matrix). World copies are off so the world doesn't repeat;
-    // the initial fitBounds frames the single copy and minZoom keeps it filling the viewport.
     const fit = () => {
       map.resize()
       if (selectedRef.current) return
@@ -229,89 +301,108 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
     return () => observer.disconnect()
   }, [ready, mapRef, containerRef])
 
-  // Fly to the selected visitor.
+  // Fly to the selected visitor, expanding its cluster so the face is visible.
   useEffect(() => {
     selectedRef.current = selectedDistinctId
     const map = mapRef.current
     if (!map || !ready) return
 
     for (const entry of entriesRef.current.values()) {
-      entry.root.render(
-        <MarkerView
-          marker={entry.data}
-          selected={entry.data.distinctId === selectedDistinctId}
-          onSelect={onSelectRef.current}
-        />,
-      )
-      entry.marker.getElement().style.zIndex = entry.data.distinctId === selectedDistinctId ? '20' : ''
+      if (entry.data.type === 'visitor') {
+        entry.marker.getElement().style.zIndex = entry.data.distinctId === selectedDistinctId ? '20' : ''
+      }
     }
 
     if (!selectedDistinctId) return
-    const target = entriesRef.current.get(selectedDistinctId)
+    const target = visitorIndex.get(selectedDistinctId)
     if (!target) return
+    if (!expanded.has(target.groupKey)) expandGroup(target.groupKey)
     map.flyTo({
-      center: [target.data.lng, target.data.lat],
+      center: [target.lng, target.lat],
       zoom: Math.max(map.getZoom(), 4),
       padding: paddingRef.current,
       duration: 700,
       essential: true,
     })
-  }, [selectedDistinctId, ready, mapRef])
+  }, [selectedDistinctId, ready, mapRef, visitorIndex, expanded, expandGroup])
 
-  // Reconcile markers in place as the visitor set changes.
+  // Reconcile map entries (visitors + clusters) in place, fading arrivals in and departures out.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
-    const entries = entriesRef.current
+    const live = entriesRef.current
     const nextIds = new Set<string>()
 
-    for (const data of markers) {
-      nextIds.add(data.distinctId)
-      const selected = data.distinctId === selectedRef.current
-      const existing = entries.get(data.distinctId)
+    for (const data of entries) {
+      const id = entryId(data)
+      nextIds.add(id)
+      const signature = entrySignature(data, selectedRef.current)
+      const existing = live.get(id)
 
       if (existing) {
-        const nextSignature = markerSignature(data)
         if (existing.data.lat !== data.lat || existing.data.lng !== data.lng) {
           existing.marker.setLngLat([data.lng, data.lat])
         }
-        if (existing.signature !== nextSignature) {
+        if (existing.signature !== signature) {
           existing.data = data
-          existing.signature = nextSignature
-          existing.root.render(<MarkerView marker={data} selected={selected} onSelect={onSelectRef.current} />)
-        } else {
-          existing.data = data
+          existing.signature = signature
+          renderEntry(existing.root, data, selectedRef.current)
         }
         continue
       }
 
       const el = document.createElement('div')
       el.className = 'live-visitor-marker'
+      el.style.opacity = '0'
+      el.style.transition = `opacity ${FADE_MS}ms ease`
       const root = createRoot(el)
-      root.render(<MarkerView marker={data} selected={selected} onSelect={onSelectRef.current} />)
+      renderEntry(root, data, selectedRef.current)
       const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([data.lng, data.lat]).addTo(map)
-      if (selected) marker.getElement().style.zIndex = '20'
-      entries.set(data.distinctId, { marker, root, data, signature: markerSignature(data) })
+      if (data.type === 'visitor' && data.distinctId === selectedRef.current) el.style.zIndex = '20'
+      requestAnimationFrame(() => {
+        el.style.opacity = '1'
+      })
+      live.set(id, { marker, root, data, signature })
     }
 
-    for (const [id, entry] of entries) {
+    for (const [id, entry] of live) {
       if (nextIds.has(id)) continue
-      entry.root.unmount()
-      entry.marker.remove()
-      entries.delete(id)
+      live.delete(id)
+      const el = entry.marker.getElement()
+      el.style.opacity = '0'
+      window.setTimeout(() => {
+        entry.root.unmount()
+        entry.marker.remove()
+      }, FADE_MS)
     }
-  }, [markers, ready, mapRef])
+  }, [entries, ready, mapRef, renderEntry])
+
+  // Drop expanded groups that no longer exist so the set can't grow unbounded.
+  useEffect(() => {
+    setExpanded(prev => {
+      if (!prev.size) return prev
+      const groups = new Set<string>()
+      for (const m of visitorIndex.values()) groups.add(m.groupKey)
+      let changed = false
+      const next = new Set<string>()
+      for (const key of prev) {
+        if (groups.has(key)) next.add(key)
+        else changed = true
+      }
+      return changed ? next : prev
+    })
+  }, [visitorIndex])
 
   // Final teardown.
   useEffect(() => {
-    const entries = entriesRef.current
+    const live = entriesRef.current
     return () => {
-      for (const entry of entries.values()) {
+      for (const entry of live.values()) {
         entry.root.unmount()
         entry.marker.remove()
       }
-      entries.clear()
+      live.clear()
     }
   }, [])
 

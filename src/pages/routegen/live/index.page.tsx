@@ -1,32 +1,29 @@
-import { create } from '@bufbuild/protobuf'
-import { Facehash } from 'facehash'
 import { useAtomValue } from 'jotai'
-import { Globe, Laptop, Loader2, Monitor, Radio, Smartphone, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
-import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
+import { ChevronDown, ChevronUp, Loader2, Radio, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
-import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LiveVisitorMap from '@/components/live-visitor-map'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { LIVE_AVATAR_COLORS } from '@/lib/live-map-markers'
+import { getSeriesColor } from '@/lib/event-colors'
 import {
   countryBreakdown,
   dedupeVisitors,
+  describeEvent,
   deviceBreakdown,
-  formatCountryName,
-  formatPagePath,
+  groupEventsByVisitor,
   isMobileVisitor,
-  LIVE_PAGE_SIZE,
-  LIVE_POLL_MS,
-  liveTimeRange,
+  LIVE_WINDOW_OPTIONS,
+  latestKindCounts,
 } from '@/lib/live-visitors'
 import { structGet } from '@/lib/struct'
-import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { formatDateTime } from '@/lib/timestamp'
+import LiveFilterBar, { type DeviceFilter } from './live-filter-bar'
+import { useLiveEvents } from './use-live-events'
+import VisitorRow from './visitor-row'
 
 const LIVE_MAP_VIEWPORT_PADDING = {
   left: 16,
@@ -42,132 +39,85 @@ const LiveDot = () => (
   </span>
 )
 
-type VisitorRowProps = {
-  visitor: ActivityEvent
-  selected: boolean
-  onClick: () => void
-}
+const windowLabel = (ms: number) => LIVE_WINDOW_OPTIONS.find(o => o.ms === ms)?.label ?? '5m'
 
-const VisitorRow = ({ visitor, selected, onClick }: VisitorRowProps) => {
-  const lastSeen = tsToDate(visitor.occurTime)
+const matchesSearch = (visitor: ActivityEvent, query: string) => {
   const auto = visitor.autoProperties
-  const page = formatPagePath(structGet(auto, '$url'))
-  const country = structGet(auto, '$country')
-  const city = structGet(auto, '$city')
-  const region = structGet(auto, '$region')
-  const browser = structGet(auto, '$browser')
-  const device = structGet(auto, '$device')
-  const mobile = isMobileVisitor(auto)
-  const DeviceIcon = mobile ? Smartphone : device ? Laptop : Monitor
-  const locality = [city, region].filter(Boolean).join(', ')
-  const countryName = country ? formatCountryName(country) : null
-
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`group flex w-full gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
-          selected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50'
-        }`}
-      >
-        <Facehash
-          name={visitor.distinctId}
-          size={36}
-          showInitial={false}
-          intensity3d="dramatic"
-          interactive={false}
-          colors={LIVE_AVATAR_COLORS}
-          className="shrink-0 rounded-full ring-1 ring-border/40"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-sm font-medium">{page}</span>
-            {lastSeen && (
-              <span className="shrink-0 text-[10px] text-muted-foreground">
-                <HoverSwap primary={formatRelative(lastSeen)} secondary={formatDateTime(lastSeen)} />
-              </span>
-            )}
-          </div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {locality ? (
-              <>
-                {locality}
-                {countryName && <span className="text-muted-foreground/60"> · {countryName}</span>}
-              </>
-            ) : (
-              countryName || '—'
-            )}
-          </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
-            {browser && <span className="truncate">{browser}</span>}
-            {browser && <span className="text-muted-foreground/30">·</span>}
-            <span className="inline-flex items-center gap-1">
-              <DeviceIcon className="size-3 shrink-0" />
-              {device || (mobile ? 'Mobile' : 'Desktop')}
-            </span>
-          </div>
-        </div>
-      </button>
-    </li>
-  )
+  const { kind, detail } = describeEvent(visitor)
+  const haystack = [kind, detail, structGet(auto, '$city'), structGet(auto, '$region'), structGet(auto, '$country')]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return haystack.includes(query)
 }
 
 const LiveVisitorsPage = () => {
   const project = useAtomValue(activeProjectAtom)
-  const headers = useAtomValue(projectHeaderAtom)
-  const activityRPC = useAtomValue(activityRPCAtom)
-  const [events, setEvents] = useState<ActivityEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const { events, loading, error, lastUpdated, windowMs, setWindowMs, arrivals, reload } = useLiveEvents()
+
   const [selectedDistinctId, setSelectedDistinctId] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useState(false)
 
-  const load = useCallback(async () => {
-    if (!headers) return
-    setError(null)
-    try {
-      const range = liveTimeRange()
-      const resp = await activityRPC.getEventExplorer(
-        {
-          timeRange: create(TimeRangeSchema, toProtoTimeRange(range)),
-          pageSize: LIVE_PAGE_SIZE,
-          pageToken: '',
-          events: [create(EventFilterSchema, { kind: 'page_view' })],
-        },
-        { headers },
-      )
-      setEvents(resp.events)
-      setLastUpdated(new Date())
-    } catch (err) {
-      console.error('activity.getEventExplorer failed:', err)
-      setError('Failed to load live visitors')
-    } finally {
-      setLoading(false)
-    }
-  }, [activityRPC, headers])
-
-  useEffect(() => {
-    if (!project) return
-    setLoading(true)
-    load()
-    const id = window.setInterval(load, LIVE_POLL_MS)
-    return () => window.clearInterval(id)
-  }, [load, project])
+  // Filters
+  const [selectedKinds, setSelectedKinds] = useState<ReadonlySet<string>>(() => new Set())
+  const [device, setDevice] = useState<DeviceFilter>('all')
+  const [country, setCountry] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const allVisitors = useMemo(() => dedupeVisitors(events), [events])
-  const visitorCount = allVisitors.length
-  const countryCount = useMemo(() => countryBreakdown(allVisitors).length, [allVisitors])
+  const journeys = useMemo(() => groupEventsByVisitor(events), [events])
+  const kindCounts = useMemo(() => latestKindCounts(allVisitors), [allVisitors])
+  const countries = useMemo(() => countryBreakdown(allVisitors), [allVisitors])
   const devices = useMemo(() => deviceBreakdown(allVisitors), [allVisitors])
 
+  const query = search.trim().toLowerCase()
+  const filtered = useMemo(() => {
+    return allVisitors.filter(v => {
+      if (selectedKinds.size > 0 && !selectedKinds.has(v.kind || 'event')) return false
+      const auto = v.autoProperties
+      const mobile = isMobileVisitor(auto)
+      if (device === 'mobile' && !mobile) return false
+      if (device === 'desktop' && mobile) return false
+      if (country && structGet(auto, '$country')?.toUpperCase() !== country.toUpperCase()) return false
+      if (query && !matchesSearch(v, query)) return false
+      return true
+    })
+  }, [allVisitors, selectedKinds, device, country, query])
+
+  const hasActiveFilters = selectedKinds.size > 0 || device !== 'all' || country !== null || query !== ''
+
+  const clearAll = () => {
+    setSelectedKinds(new Set())
+    setDevice('all')
+    setCountry(null)
+    setSearch('')
+  }
+
+  const toggleKind = (kind: string) =>
+    setSelectedKinds(prev => {
+      const next = new Set(prev)
+      if (next.has(kind)) next.delete(kind)
+      else next.add(kind)
+      return next
+    })
+
+  // Selection persists across polls. Snapshot the last-seen event so the focus bar can keep
+  // showing a visitor that has since dropped out of the window.
   const selectedVisitor = useMemo(
     () => allVisitors.find(v => v.distinctId === selectedDistinctId) ?? null,
     [allVisitors, selectedDistinctId],
   )
-  const selectedPage = selectedVisitor ? formatPagePath(structGet(selectedVisitor.autoProperties, '$url')) : null
-  const isRefreshing = loading && events.length > 0
+  const selectedSnapshot = useRef<{ kind: string; detail: string } | null>(null)
+  useEffect(() => {
+    if (selectedVisitor) selectedSnapshot.current = describeEvent(selectedVisitor)
+  }, [selectedVisitor])
+  const selectedLeft = selectedDistinctId !== null && !selectedVisitor
+
+  const select = (id: string) => setSelectedDistinctId(prev => (prev === id ? null : id))
 
   if (!project) return <NoProject title="Live" icon={Radio} />
+
+  const focus = selectedVisitor ? describeEvent(selectedVisitor) : selectedSnapshot.current
 
   return (
     <>
@@ -180,94 +130,127 @@ const LiveVisitorsPage = () => {
         ) : error && events.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={load}>
+            <Button variant="outline" size="sm" onClick={reload}>
               Retry
             </Button>
           </div>
         ) : (
           <>
             <LiveVisitorMap
-              visitors={allVisitors}
+              visitors={filtered}
               selectedDistinctId={selectedDistinctId}
               viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
-              onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
+              onSelectVisitor={select}
             />
 
-            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[22rem] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md">
+            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[26rem] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md">
               {/* Live count + freshness — the single source of "is this still ticking" */}
               <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
                 <div className="flex items-baseline gap-2">
                   <span className="flex items-center gap-2 text-sm font-semibold">
                     <LiveDot />
-                    {visitorCount}
+                    {filtered.length}
+                    {hasActiveFilters && allVisitors.length !== filtered.length && (
+                      <span className="font-normal text-muted-foreground"> / {allVisitors.length}</span>
+                    )}
                   </span>
                   <span className="text-sm text-muted-foreground">live now</span>
+                  {arrivals > 0 && (
+                    <span className="text-[11px] font-medium text-emerald-500 tabular-nums">+{arrivals}</span>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  {isRefreshing && <Loader2 className="size-3 animate-spin" />}
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  {loading && events.length > 0 && <Loader2 className="size-3 animate-spin" />}
                   {lastUpdated && (
                     <HoverSwap
                       primary={`Updated ${formatRelative(lastUpdated)}`}
                       secondary={formatDateTime(lastUpdated)}
                     />
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setCollapsed(c => !c)}
+                    aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+                    className="text-muted-foreground/70 hover:text-foreground"
+                  >
+                    {collapsed ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  </button>
                 </div>
               </div>
 
-              {/* Composition strip — at-a-glance device + geo mix */}
-              {visitorCount > 0 && (
-                <div className="flex items-center gap-4 border-y border-border/30 bg-muted/20 px-4 py-1.5 text-[11px] text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <Monitor className="size-3" />
-                    {devices.desktop} desktop
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Smartphone className="size-3" />
-                    {devices.mobile} mobile
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <Globe className="size-3" />
-                    {countryCount} {countryCount === 1 ? 'country' : 'countries'}
-                  </span>
-                </div>
-              )}
+              {!collapsed && (
+                <>
+                  <LiveFilterBar
+                    windowMs={windowMs}
+                    onWindowChange={setWindowMs}
+                    search={search}
+                    onSearchChange={setSearch}
+                    kinds={kindCounts}
+                    selectedKinds={selectedKinds}
+                    onToggleKind={toggleKind}
+                    onClearKinds={() => setSelectedKinds(new Set())}
+                    device={device}
+                    onDeviceChange={setDevice}
+                    devices={devices}
+                    countries={countries}
+                    selectedCountry={country}
+                    onCountryChange={setCountry}
+                    hasActiveFilters={hasActiveFilters}
+                    onClearAll={clearAll}
+                  />
 
-              {selectedVisitor && (
-                <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
-                  <span className="truncate text-[11px] text-muted-foreground">
-                    Focused on <span className="font-medium text-foreground">{selectedPage}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDistinctId(null)}
-                    className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="size-3" /> Reset
-                  </button>
-                </div>
-              )}
+                  {selectedDistinctId && focus && (
+                    <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
+                      <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span
+                          className="size-1.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: getSeriesColor(focus.kind).dot }}
+                        />
+                        <span className="truncate">
+                          {selectedLeft ? 'Left · last did ' : 'Focused on '}
+                          <span className="font-medium text-foreground">{focus.kind}</span>
+                          {focus.detail && <span className="text-muted-foreground"> {focus.detail}</span>}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDistinctId(null)}
+                        className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="size-3" /> Reset
+                      </button>
+                    </div>
+                  )}
 
-              {allVisitors.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
-                  No active visitors right now.
-                </div>
-              ) : (
-                <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-                  {allVisitors.map(visitor => (
-                    <VisitorRow
-                      key={visitor.distinctId}
-                      visitor={visitor}
-                      selected={visitor.distinctId === selectedDistinctId}
-                      onClick={() =>
-                        setSelectedDistinctId(prev => (prev === visitor.distinctId ? null : visitor.distinctId))
-                      }
-                    />
-                  ))}
-                </ul>
-              )}
+                  {allVisitors.length === 0 ? (
+                    <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
+                      No activity in the last {windowLabel(windowMs)}.
+                    </div>
+                  ) : filtered.length === 0 ? (
+                    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground">
+                      No visitors match these filters.
+                      <button type="button" onClick={clearAll} className="text-xs text-primary hover:underline">
+                        Clear filters
+                      </button>
+                    </div>
+                  ) : (
+                    <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
+                      {filtered.map(visitor => (
+                        <VisitorRow
+                          key={visitor.distinctId}
+                          visitor={visitor}
+                          journey={journeys.get(visitor.distinctId) ?? []}
+                          selected={visitor.distinctId === selectedDistinctId}
+                          onClick={() => select(visitor.distinctId)}
+                        />
+                      ))}
+                    </ul>
+                  )}
 
-              {error && events.length > 0 && (
-                <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>
+                  {error && events.length > 0 && (
+                    <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>
+                  )}
+                </>
               )}
             </aside>
           </>
