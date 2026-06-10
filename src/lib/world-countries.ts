@@ -3,6 +3,13 @@ import { feature } from 'topojson-client'
 import type { Topology } from 'topojson-specification'
 // world-atlas ships countries-110m as a TopoJSON whose feature ids are UN M49 numeric codes.
 import countries110m from 'world-atlas/countries-110m.json'
+import indiaPovPatch from '@/lib/data/india-pov-countries-patch.json'
+
+// India point-of-view: world-atlas ships the de-facto worldview, where Pakistan-administered
+// Kashmir and Aksai Chin sit outside India. Official Indian maps show all of Jammu & Kashmir as
+// India, so we swap in patched IN/PK/CN geometries generated from Natural Earth's India-POV
+// dataset by scripts/build-india-pov-data.ts (keyed by M49 code).
+const POV_GEOMETRIES = indiaPovPatch as unknown as Record<string, Geometry>
 
 // UN M49 numeric → ISO 3166-1 alpha-2. world-atlas keys countries by the numeric code, while our
 // activity data is alpha-2 uppercase, so we join through this table.
@@ -292,7 +299,10 @@ const splitRing = (ring: Position[]): Position[][] => {
       const latC = interpLat(lon1, lat1, lon2, lat2, edge)
       cur.push([edge, latC])
       chains.push(cur)
-      cur = [[-edge, latC], [lon2, lat2]]
+      cur = [
+        [-edge, latC],
+        [lon2, lat2],
+      ]
     } else {
       cur.push([lon2, lat2])
     }
@@ -305,7 +315,7 @@ const splitRing = (ring: Position[]): Position[][] => {
   const last = chains.pop() as Position[]
   chains.push([...last.slice(0, -1), ...first])
 
-  return chains.map((chain) => {
+  return chains.map(chain => {
     const closed = [...chain]
     const a = closed[0]
     const b = closed[closed.length - 1]
@@ -318,7 +328,7 @@ const cutPolygon = (polygon: Position[][]): Position[][][] => {
   if (!polygon.some(ringCrosses)) return [polygon]
   // A crossing polygon with holes is unsupported (none exist in 110m) — keep it intact.
   if (polygon.length > 1) return [polygon]
-  return splitRing(polygon[0]).map((piece) => [piece])
+  return splitRing(polygon[0]).map(piece => [piece])
 }
 
 const ringInRange = (ring: Position[]) => {
@@ -339,7 +349,7 @@ const cutAntimeridian = (geom: Geometry): Geometry => {
   for (const polygon of polygons) out.push(...cutPolygon(polygon))
   const cut: Geometry = { type: 'MultiPolygon', coordinates: out }
   // Pole-wrapping rings (Antarctica) fail validation — fall back to the original, off-screen anyway.
-  return out.every((poly) => poly.every(ringInRange)) ? cut : geom
+  return out.every(poly => poly.every(ringInRange)) ? cut : geom
 }
 
 // Convert the TopoJSON to GeoJSON once at module load. Each feature gets a numeric `id` (the M49
@@ -355,7 +365,7 @@ export const WORLD_COUNTRIES: FeatureCollection<Geometry> = {
     return {
       ...f,
       id: Number(m49),
-      geometry: cutAntimeridian(f.geometry),
+      geometry: cutAntimeridian(POV_GEOMETRIES[m49] ?? f.geometry),
       properties: { ...f.properties, alpha2 },
     }
   }),
