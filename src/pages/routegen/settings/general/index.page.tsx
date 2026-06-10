@@ -72,8 +72,13 @@ const General = () => {
       clearTimeout(savedProjectTimer.current)
       savedProjectTimer.current = setTimeout(() => setSavedProject(false), 2000)
     } catch (err) {
-      // The strict UpdateMeta path can reject a well-formed-but-unknown zone — land it on the field.
-      if (err instanceof ConnectError && err.code === Code.InvalidArgument) {
+      // updateMeta sends both fields, so an InvalidArgument could be about either. Only
+      // pin it to the timezone field when the server error actually names the zone (the
+      // strict path rejecting a well-formed-but-unknown zone); otherwise surface the real
+      // server message via toast rather than mislabeling it.
+      const isTimezoneRejection =
+        err instanceof ConnectError && err.code === Code.InvalidArgument && /timezone/i.test(err.message)
+      if (isTimezoneRejection) {
         projectForm.setError('reportingTimezone', { message: 'This timezone was rejected by the server' })
       } else {
         toastRPCError(err, 'Failed to save project')

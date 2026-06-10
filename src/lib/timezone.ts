@@ -5,17 +5,20 @@ import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 export const browserTimezone = () => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''
-  } catch {
+  } catch (err) {
+    // Distinguish a real Intl failure from the expected legacy-engine case; '' = UTC.
+    console.warn('browserTimezone: could not resolve browser zone, defaulting to UTC', err)
     return ''
   }
 }
 
-// Full IANA list for the settings picker, newest-API-first with a small fallback.
-// Empty array → caller degrades to a free-text input.
+// Full IANA list for the settings picker. Empty array on engines without
+// Intl.supportedValuesOf → caller degrades to a free-text input.
 export const supportedTimezones = () => {
   try {
     return Intl.supportedValuesOf('timeZone')
-  } catch {
+  } catch (err) {
+    console.warn('supportedTimezones: Intl.supportedValuesOf unavailable, falling back to free-text input', err)
     return []
   }
 }

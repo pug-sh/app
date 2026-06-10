@@ -165,6 +165,8 @@ const Insights = () => {
     granularity,
     propFilters,
     breakdowns,
+    // The query's floored `from` depends on the project zone, so a zone change must refetch.
+    reportingTimeZone,
   })
 
   // Remote query execution.
