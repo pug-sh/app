@@ -19,6 +19,7 @@ export const buildChartData = (
   data: ChartPoint[],
   seriesNames: string[],
   granularity: Granularity,
+  timeZone: string,
 ): InsightsDatum[] => {
   let warned = false
   return data.map(point => {
@@ -33,8 +34,8 @@ export const buildChartData = (
     }
 
     const row: InsightsDatum = {
-      axisLabel: formatAxisDate(point.date, granularity),
-      tooltipLabel: formatTooltipDate(point.date, granularity),
+      axisLabel: formatAxisDate(point.date, granularity, timeZone),
+      tooltipLabel: formatTooltipDate(point.date, granularity, timeZone),
     }
 
     seriesNames.forEach((_, si) => {
@@ -55,10 +56,14 @@ export const useChartPrep = (
   seriesNames: string[],
   seriesColors: SeriesColor[],
   granularity: Granularity,
+  timeZone: string,
   stacked?: boolean,
 ) => ({
   chartConfig: useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors]),
-  chartData: useMemo(() => buildChartData(data, seriesNames, granularity), [data, seriesNames, granularity]),
+  chartData: useMemo(
+    () => buildChartData(data, seriesNames, granularity, timeZone),
+    [data, seriesNames, granularity, timeZone],
+  ),
   yMax: useMemo(() => computeYMax(data, stacked), [data, stacked]),
 })
 

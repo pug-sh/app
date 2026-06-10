@@ -3,6 +3,7 @@ import { atom } from 'jotai'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
+import { browserTimezone } from '@/lib/timezone'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
 
 export const signInAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
@@ -58,7 +59,9 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
   const authRPC = get(authRPCAtom)
   const prior = get(jwtDataAtom)?.customerId
   try {
-    const resp = await authRPC.completeMagicLink({ token })
+    // Seed the auto-created default project's reporting zone from the browser.
+    // Malformed/empty values are coerced to UTC server-side; correct later in settings.
+    const resp = await authRPC.completeMagicLink({ token, timezone: browserTimezone() })
     set(jwtAtom, resp.token)
     const next = get(jwtDataAtom)?.customerId
     if (prior && next && prior !== next) set(resetWorkspaceAtom)

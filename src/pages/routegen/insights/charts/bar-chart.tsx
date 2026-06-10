@@ -10,6 +10,7 @@ export const BarChart = ({
   seriesNames,
   seriesColors,
   granularity,
+  timeZone,
   stacked,
   className = 'h-70 w-full',
 }: {
@@ -17,10 +18,11 @@ export const BarChart = ({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  timeZone: string
   stacked: boolean
   className?: string
 }) => {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, stacked)
+  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone, stacked)
 
   if (data.length === 0) return null
 

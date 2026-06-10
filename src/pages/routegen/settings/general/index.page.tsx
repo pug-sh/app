@@ -1,7 +1,8 @@
+import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtom, useAtomValue } from 'jotai'
 import { Loader2, Lock, Save } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { projectsRPCAtom } from '@/api/rpc'
@@ -11,10 +12,17 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
+import { browserTimezone } from '@/lib/timezone'
 import SettingsLayout from '../settings-layout'
+import { TimezonePicker } from './timezone-picker'
 
 const projectSchema = z.object({
   displayName: z.string().min(1, 'Project name is required').max(150, 'Name must be at most 150 characters'),
+  // Mirror the proto charset so a malformed value surfaces before the RPC; '' = UTC.
+  reportingTimezone: z
+    .string()
+    .max(64, 'Timezone must be at most 64 characters')
+    .regex(/^[A-Za-z0-9_+/-]*$/, 'Invalid timezone'),
 })
 type ProjectFormData = z.infer<typeof projectSchema>
 
@@ -27,31 +35,49 @@ const General = () => {
   const [savedProject, setSavedProject] = useState(false)
   const savedProjectTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // Browser zone surfaced as a convenience entry in the picker, not the stored value.
+  const detectedTimezone = useMemo(() => browserTimezone(), [])
+
+  // Pre-fill from the project's stored zone ('' = UTC).
+  const storedTimezone = project?.reportingTimezone ?? ''
+
   const projectForm = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
-    defaultValues: { displayName: project?.displayName ?? '' },
+    defaultValues: { displayName: project?.displayName ?? '', reportingTimezone: storedTimezone },
   })
 
   useEffect(() => {
     if (project?.displayName !== undefined) {
-      projectForm.reset({ displayName: project.displayName })
+      projectForm.reset({ displayName: project.displayName, reportingTimezone: storedTimezone })
     }
-  }, [project, projectForm])
+  }, [project, storedTimezone, projectForm])
 
-  const handleRenameProject = async (data: ProjectFormData) => {
+  const reportingTimezone = projectForm.watch('reportingTimezone')
+
+  const handleSaveProject = async (data: ProjectFormData) => {
     if (!projectHeaders) {
-      console.warn('handleRenameProject called without project headers')
+      console.warn('handleSaveProject called without project headers')
       return
     }
     setSavingProject(true)
     try {
-      await projectsRPC.updateDisplayName({ displayName: data.displayName }, { headers: projectHeaders })
-      setProject({ ...project!, displayName: data.displayName })
+      // UpdateMeta is a full replace — always send reportingTimezone or a rename would
+      // clear the stored zone to UTC.
+      await projectsRPC.updateMeta(
+        { displayName: data.displayName, reportingTimezone: data.reportingTimezone },
+        { headers: projectHeaders },
+      )
+      setProject({ ...project!, displayName: data.displayName, reportingTimezone: data.reportingTimezone })
       setSavedProject(true)
       clearTimeout(savedProjectTimer.current)
       savedProjectTimer.current = setTimeout(() => setSavedProject(false), 2000)
     } catch (err) {
-      toastRPCError(err, 'Failed to rename project')
+      // The strict UpdateMeta path can reject a well-formed-but-unknown zone — land it on the field.
+      if (err instanceof ConnectError && err.code === Code.InvalidArgument) {
+        projectForm.setError('reportingTimezone', { message: 'This timezone was rejected by the server' })
+      } else {
+        toastRPCError(err, 'Failed to save project')
+      }
     } finally {
       setSavingProject(false)
     }
@@ -70,8 +96,8 @@ const General = () => {
 
         {project && projectHeaders && (
           <section>
-            <SectionHeader title="Project name" description="Rename this project" />
-            <form onSubmit={projectForm.handleSubmit(handleRenameProject)} className="space-y-3">
+            <SectionHeader title="Project" description="Project name and reporting timezone" />
+            <form onSubmit={projectForm.handleSubmit(handleSaveProject)} className="space-y-4">
               <Field data-invalid={!!projectForm.formState.errors.displayName}>
                 <FieldLabel htmlFor="project-name">Project Name</FieldLabel>
                 <Input
@@ -84,6 +110,25 @@ const General = () => {
                   <FieldError errors={[projectForm.formState.errors.displayName]} />
                 )}
               </Field>
+
+              <Field data-invalid={!!projectForm.formState.errors.reportingTimezone}>
+                <FieldLabel htmlFor="project-timezone">Reporting Timezone</FieldLabel>
+                <TimezonePicker
+                  value={reportingTimezone}
+                  detected={detectedTimezone}
+                  onChange={value =>
+                    projectForm.setValue('reportingTimezone', value, { shouldDirty: true, shouldValidate: true })
+                  }
+                  invalid={!!projectForm.formState.errors.reportingTimezone}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Controls how days, weeks, and months are grouped in insights and dashboards.
+                </p>
+                {projectForm.formState.errors.reportingTimezone && (
+                  <FieldError errors={[projectForm.formState.errors.reportingTimezone]} />
+                )}
+              </Field>
+
               <div className="flex items-center gap-2">
                 <Button
                   type="submit"

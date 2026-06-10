@@ -10,15 +10,17 @@ export const AreaChart = ({
   seriesNames,
   seriesColors,
   granularity,
+  timeZone,
   className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  timeZone: string
   className?: string
 }) => {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity)
+  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
 
   if (data.length === 0) return null
 
