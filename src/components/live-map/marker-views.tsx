@@ -1,7 +1,7 @@
 import { Facehash } from 'facehash'
 
 import { getSeriesColor } from '@/lib/event-colors'
-import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map-markers'
+import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map/markers'
 import { formatCountryName } from '@/lib/live-visitors'
 
 const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {

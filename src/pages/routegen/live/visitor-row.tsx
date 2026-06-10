@@ -4,7 +4,7 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import HoverSwap from '@/components/hover-swap'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
-import { LIVE_AVATAR_COLORS } from '@/lib/live-map-markers'
+import { LIVE_AVATAR_COLORS } from '@/lib/live-map/markers'
 import { describeEvent, formatCountryName, isMobileVisitor, visitorLocalTime } from '@/lib/live-visitors'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
