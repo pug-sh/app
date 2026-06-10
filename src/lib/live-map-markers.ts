@@ -49,23 +49,23 @@ export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'clus
 // Large radii used to fling markers into neighbouring countries or the sea. Bigger countries
 // (inland centroids) tolerate a little more; coastal/small ones stay tight.
 const COUNTRY_SPREAD_DEG: Record<string, number> = {
-  RU: 6,
-  CA: 5,
-  US: 4,
-  AU: 4,
-  BR: 4,
-  CN: 4,
-  KZ: 4,
-  AR: 3,
-  DZ: 3,
-  ID: 3,
-  IN: 3,
-  MN: 3,
-  MX: 3,
-  IR: 2.5,
-  LY: 2.5,
-  SA: 2.5,
-  EG: 2,
+  RU: 4,
+  CA: 3.5,
+  US: 3,
+  AU: 3,
+  BR: 3,
+  CN: 3,
+  KZ: 3,
+  AR: 2.5,
+  DZ: 2.5,
+  ID: 2.5,
+  IN: 2.5,
+  MN: 2.5,
+  MX: 2.5,
+  IR: 2,
+  LY: 2,
+  SA: 2,
+  EG: 1.8,
 }
 
 const REGION_SPREAD_DEG: Record<string, number> = {
@@ -130,7 +130,9 @@ const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
 
 const visitorMarker = (v: ActivityEvent, group: VisitorGroup, spread: number): VisitorMapMarker => {
   const auto = v.autoProperties
-  const [dLng, dLat] = scatterLatLng(v.distinctId, group.key, spread)
+  // A lone visitor sits exactly on the centroid — scatter only exists to separate overlapping
+  // faces, so jittering a solo marker just pushes it off its (best-known) location for no reason.
+  const [dLng, dLat] = group.visitors.length > 1 ? scatterLatLng(v.distinctId, group.key, spread) : [0, 0]
   return {
     distinctId: v.distinctId,
     groupKey: group.key,
