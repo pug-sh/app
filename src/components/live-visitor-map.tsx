@@ -12,7 +12,7 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { buildVisitorMapMarkers, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map-markers'
 import { formatCountryName } from '@/lib/live-visitors'
-import { ensurePmtilesProtocol, INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
+import { ensurePmtilesProtocol, INITIAL_VIEW_BOUNDS, mapAssetsOrigin } from '@/lib/maplibre'
 
 type Props = {
   visitors: ActivityEvent[]
@@ -27,7 +27,7 @@ type Props = {
 }
 
 const BASEMAP_SOURCE = 'protomaps'
-const PMTILES_URL = `pmtiles://${typeof window !== 'undefined' ? window.location.origin : ''}/basemap.pmtiles`
+const PMTILES_URL = `pmtiles://${mapAssetsOrigin()}/basemap.pmtiles`
 const ATTRIBUTION =
   '<a href="https://protomaps.com">Protomaps</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
 
@@ -39,14 +39,14 @@ ensurePmtilesProtocol()
 const ENGLISH_NAME: ExpressionSpecification = ['coalesce', ['get', 'name:en'], ['get', 'name']]
 
 const englishLabels = (layers: LayerSpecification[]) =>
-  layers.map((layer) => {
+  layers.map(layer => {
     if (layer.type !== 'symbol' || !layer.layout?.['text-field']) return layer
     return { ...layer, layout: { ...layer.layout, 'text-field': ENGLISH_NAME } }
   })
 
 const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
   version: 8,
-  glyphs: `${window.location.origin}/fonts/{fontstack}/{range}.pbf`,
+  glyphs: `${mapAssetsOrigin()}/fonts/{fontstack}/{range}.pbf`,
   sources: {
     [BASEMAP_SOURCE]: {
       type: 'vector',

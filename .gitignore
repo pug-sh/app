@@ -45,5 +45,6 @@ pr-review.md
 .env.production
 .env
 
-# Self-hosted map basemap — fetched on demand via `bun run fetch:basemap` (too large to commit)
+# Self-hosted map assets — fetched on demand via `bun run fetch:map-assets` (basemap too large to commit)
 /public/basemap.pmtiles
+/public/fonts/

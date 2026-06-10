@@ -9,6 +9,14 @@ export const ensurePmtilesProtocol = () => {
   protocolRegistered = true
 }
 
+// Base URL for self-hosted map assets (basemap PMTiles + glyph fonts). The basemap is ~500MB —
+// too large for our static host — so production serves both from an object store (Cloudflare R2)
+// via VITE_MAP_ASSETS_URL. Unset (local dev) falls back to the app origin, served from /public.
+// The R2 bucket must allow CORS from the app origin and honour Range requests for the PMTiles.
+const ASSETS_BASE = (import.meta.env.VITE_MAP_ASSETS_URL ?? '').trim().replace(/\/+$/, '')
+
+export const mapAssetsOrigin = () => ASSETS_BASE || (typeof window === 'undefined' ? '' : window.location.origin)
+
 // maxBounds for the live map — clamp panning to the world (web-mercator usable range).
 export const WORLD_BOUNDS: LngLatBoundsLike = [
   [-180, -85],
