@@ -38,6 +38,7 @@ import {
   getPageDescription,
   INSIGHT_TYPE_VALUES,
   INSIGHT_TYPES,
+  isIncompleteNumericAggregation,
   NUMERIC_AGGREGATIONS,
   VIEW_MODES,
   type ViewMode,
@@ -148,11 +149,7 @@ const Insights = () => {
   const hasIncompleteNumericAggregation = useMemo(
     () =>
       insightType === InsightType.TRENDS &&
-      validEntries.some(
-        entry =>
-          NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
-          !(entry.aggregationProperty ?? '').trim(),
-      ),
+      validEntries.some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty)),
     [insightType, validEntries],
   )
 

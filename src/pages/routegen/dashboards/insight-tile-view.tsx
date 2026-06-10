@@ -12,7 +12,7 @@ import {
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { getSeriesColor } from '@/lib/event-colors'
-import { NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
@@ -129,11 +129,7 @@ export const InsightTileView = ({
   )
   const hasIncompleteNumericAggregation = useMemo(
     () =>
-      (spec?.events ?? []).some(
-        entry =>
-          NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
-          !(entry.aggregationProperty ?? '').trim(),
-      ),
+      (spec?.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty)),
     [spec?.events],
   )
 

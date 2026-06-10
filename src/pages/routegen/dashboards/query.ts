@@ -16,7 +16,7 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
-import { NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
@@ -95,6 +95,14 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
     return spec.insightType
   }
   return InsightType.TRENDS
+}
+
+// True when a TRENDS spec has an event whose numeric aggregation (Sum/Avg/Min/Max)
+// is missing the property it needs to resolve. Mirrors the Insights page guard so
+// the tile doesn't fire an incomplete query.
+export const specHasIncompleteNumericAggregation = (spec?: InsightQuerySpec) => {
+  if (spec?.insightType !== InsightType.TRENDS) return false
+  return (spec.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty))
 }
 
 export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorState => {

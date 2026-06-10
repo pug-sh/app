@@ -14,7 +14,7 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
-import { getInitialGranularity, getProtoRange } from './query'
+import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
 
 export { formatYAxisValue } from './insight-tile-view'
 
@@ -90,7 +90,14 @@ export const DashboardInsightContent = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
+    {
+      enabled:
+        !!effectiveQuery &&
+        !!headers &&
+        (effectiveQuery?.spec?.events.length ?? 0) > 0 &&
+        !specHasIncompleteNumericAggregation(effectiveQuery?.spec),
+      debounceMs: 0,
+    },
   )
 
   const comparisonQuery = useMemo(
