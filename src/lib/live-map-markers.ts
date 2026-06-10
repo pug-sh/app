@@ -27,11 +27,17 @@ export type VisitorMapMarker = {
   kind: string
   browser?: string
   device: string
+  // lat/lng is the visitor's resolved point (GeoIP coords, else region/country centroid); offset is
+  // the scatter the map scales down by zoom so coincident faces hold a constant pixel separation and
+  // converge on the point as you zoom in.
   lat: number
   lng: number
+  offsetLat: number
+  offsetLng: number
 }
 
-// A cluster collapses a crowded country/region group into one badge until it's expanded.
+// A cluster collapses a crowded country/region group into one count badge while zoomed out; zooming
+// past the map's decluster threshold breaks it back into individual faces.
 export type ClusterMapMarker = {
   groupKey: string
   iso: string
@@ -44,61 +50,59 @@ export type ClusterMapMarker = {
 
 export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'cluster' } & ClusterMapMarker)
 
-// Scatter radius (degrees) around a group's centroid. Deliberately small — crowded groups
-// collapse into a cluster badge, so the scatter only needs to fan out a handful of faces.
-// Large radii used to fling markers into neighbouring countries or the sea. Bigger countries
-// (inland centroids) tolerate a little more; coastal/small ones stay tight.
-const COUNTRY_SPREAD_DEG: Record<string, number> = {
-  RU: 4,
-  CA: 3.5,
-  US: 3,
-  AU: 3,
-  BR: 3,
-  CN: 3,
-  KZ: 3,
-  AR: 2.5,
-  DZ: 2.5,
-  ID: 2.5,
-  IN: 2.5,
-  MN: 2.5,
-  MX: 2.5,
-  IR: 2,
-  LY: 2,
-  SA: 2,
-  EG: 1.8,
+// Visitors who share a point (everyone in a city gets the same GeoIP coords) are fanned out with a
+// sunflower layout: even ~1-cell spacing between neighbours at any count, with no random collisions.
+// Offsets are in abstract "cells" — the map converts a cell to degrees per zoom so the on-screen gap
+// stays constant. The whole group is rotated by a hash so different places don't all face the same way.
+const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
+
+const sunflowerOffset = (i: number, n: number, seed: string): [number, number] => {
+  if (n <= 1) return [0, 0]
+  const rot = ((stringHash(seed) & 0xffff) / 0xffff) * 2 * Math.PI
+  const r = Math.sqrt(i + 0.5)
+  const theta = i * GOLDEN_ANGLE + rot
+  // 0.8 squishes latitude so the fan reads as a circle on the Mercator projection.
+  return [Math.cos(theta) * r, Math.sin(theta) * r * 0.8]
 }
 
-const REGION_SPREAD_DEG: Record<string, number> = {
-  CA: 2,
-  AU: 2,
-  US: 1.5,
-  BR: 1.5,
-  IN: 1.2,
-  MX: 1.2,
-  GB: 0.8,
-  DE: 0.8,
-}
-
-const spreadFor = (iso: string, hasRegion: boolean) => {
-  return (hasRegion ? REGION_SPREAD_DEG[iso] : COUNTRY_SPREAD_DEG[iso]) ?? (hasRegion ? 0.8 : 2.5)
-}
-
-const scatterLatLng = (distinctId: string, groupKey: string, spread: number): [number, number] => {
-  const h = stringHash(`${distinctId}:${groupKey}`)
-  const angle = ((h & 0xffff) / 0xffff) * 2 * Math.PI
-  // Linear (not sqrt) radius biases points toward the centroid, keeping faces near their
-  // country/region rather than pushed out to the edge of the disc.
-  const r = ((h >>> 16) & 0xffff) / 0xffff
-  return [Math.cos(angle) * r * spread, Math.sin(angle) * r * spread * 0.7]
+type Placed = {
+  event: ActivityEvent
+  lng: number
+  lat: number
+  exact: boolean
 }
 
 type VisitorGroup = {
   key: string
   iso: string
   region?: string
-  visitors: ActivityEvent[]
-  baseLng: number
-  baseLat: number
+  members: Placed[]
+}
+
+// Resolve a visitor to a real point: exact GeoIP coordinates when present, else the region
+// centroid, else the country centroid. (0,0) is GeoIP's "unknown" sentinel — treat it as absent.
+const placeVisitor = (event: ActivityEvent, iso: string, region: string | undefined): Placed | null => {
+  const auto = event.autoProperties
+  const lat = Number.parseFloat(structGet(auto, '$latitude') ?? '')
+  const lng = Number.parseFloat(structGet(auto, '$longitude') ?? '')
+  const hasCoords =
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 &&
+    Math.abs(lng) <= 180 &&
+    (lat !== 0 || lng !== 0)
+  if (hasCoords) return { event, lng, lat, exact: true }
+
+  const centroid = (region ? resolveRegionCentroid(iso, region) : null) ?? COUNTRY_CENTROIDS[iso]
+  if (!centroid) return null
+  return { event, lng: centroid[0], lat: centroid[1], exact: false }
+}
+
+// Cluster by city (then region, then country) so faces in the same place collapse together.
+const groupKeyFor = (iso: string, region: string | undefined, city: string | undefined) => {
+  if (city) return `${iso}|${(region ?? '').toUpperCase()}|${city.toUpperCase()}`
+  if (region) return `${iso}|${region.toUpperCase()}`
+  return iso
 }
 
 const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
@@ -108,31 +112,36 @@ const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
     const country = structGet(v.autoProperties, '$country')
     if (!country) continue
     const iso = country.toUpperCase()
-    const regionRaw = structGet(v.autoProperties, '$region')
-    const region = regionRaw?.trim() || undefined
-    const regionCentroid = region ? resolveRegionCentroid(iso, region) : null
-    const countryCentroid = COUNTRY_CENTROIDS[iso]
-    if (!regionCentroid && !countryCentroid) continue
+    const region = structGet(v.autoProperties, '$region')?.trim() || undefined
+    const city = structGet(v.autoProperties, '$city')?.trim() || undefined
 
-    const key = region ? `${iso}|${region.toUpperCase()}` : iso
+    const placed = placeVisitor(v, iso, region)
+    if (!placed) continue
+
+    const key = groupKeyFor(iso, region, city)
     const existing = groups.get(key)
-    if (existing) {
-      existing.visitors.push(v)
-      continue
-    }
-
-    const [baseLng, baseLat] = regionCentroid ?? countryCentroid!
-    groups.set(key, { key, iso, region, visitors: [v], baseLng, baseLat })
+    if (existing) existing.members.push(placed)
+    else groups.set(key, { key, iso, region, members: [placed] })
   }
 
   return [...groups.values()]
 }
 
-const visitorMarker = (v: ActivityEvent, group: VisitorGroup, spread: number): VisitorMapMarker => {
+const centroidOf = (members: Placed[]): [number, number] => {
+  let lng = 0
+  let lat = 0
+  for (const m of members) {
+    lng += m.lng
+    lat += m.lat
+  }
+  return [lng / members.length, lat / members.length]
+}
+
+const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): VisitorMapMarker => {
+  const v = placed.event
   const auto = v.autoProperties
-  // A lone visitor sits exactly on the centroid — scatter only exists to separate overlapping
-  // faces, so jittering a solo marker just pushes it off its (best-known) location for no reason.
-  const [dLng, dLat] = group.visitors.length > 1 ? scatterLatLng(v.distinctId, group.key, spread) : [0, 0]
+  // Fan out faces that share a point; a solo visitor stays exactly where they are.
+  const [dLng, dLat] = sunflowerOffset(index, group.members.length, group.key)
   return {
     distinctId: v.distinctId,
     groupKey: group.key,
@@ -143,15 +152,17 @@ const visitorMarker = (v: ActivityEvent, group: VisitorGroup, spread: number): V
     kind: v.kind || 'event',
     browser: structGet(auto, '$browser'),
     device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
-    lng: group.baseLng + dLng,
-    lat: group.baseLat + dLat,
+    lng: placed.lng,
+    lat: placed.lat,
+    offsetLng: dLng,
+    offsetLat: dLat,
   }
 }
 
-const topKind = (visitors: ActivityEvent[]): string => {
+const topKind = (members: Placed[]): string => {
   const counts = new Map<string, number>()
-  for (const v of visitors) {
-    const kind = v.kind || 'event'
+  for (const m of members) {
+    const kind = m.event.kind || 'event'
     counts.set(kind, (counts.get(kind) ?? 0) + 1)
   }
   let best = 'event'
@@ -167,37 +178,34 @@ const topKind = (visitors: ActivityEvent[]): string => {
 
 // Flat visitor markers (no clustering) — kept for callers that always want individual faces.
 export const buildVisitorMapMarkers = (visitors: ActivityEvent[]): VisitorMapMarker[] =>
-  buildGroups(visitors).flatMap(group => {
-    const spread = spreadFor(group.iso, Boolean(group.region))
-    return group.visitors.map(v => visitorMarker(v, group, spread))
-  })
+  buildGroups(visitors).flatMap(group => group.members.map((m, i) => visitorMarker(m, group, i)))
 
 // Cluster crowded groups into a single badge; groups at/under the threshold (or explicitly
 // expanded) render their individual faces. Returns a mixed list the map renders directly.
 export const buildMapEntries = (
   visitors: ActivityEvent[],
-  { threshold = 6, expanded }: { threshold?: number; expanded?: ReadonlySet<string> } = {},
+  { threshold = 6 }: { threshold?: number } = {},
 ): MapEntry[] => {
   const entries: MapEntry[] = []
 
   for (const group of buildGroups(visitors)) {
-    const clustered = group.visitors.length > threshold && !expanded?.has(group.key)
+    const clustered = group.members.length > threshold
     if (clustered) {
+      const [lng, lat] = centroidOf(group.members)
       entries.push({
         type: 'cluster',
         groupKey: group.key,
         iso: group.iso,
         region: group.region,
-        count: group.visitors.length,
-        topKind: topKind(group.visitors),
-        lng: group.baseLng,
-        lat: group.baseLat,
+        count: group.members.length,
+        topKind: topKind(group.members),
+        lng,
+        lat,
       })
       continue
     }
 
-    const spread = spreadFor(group.iso, Boolean(group.region))
-    for (const v of group.visitors) entries.push({ type: 'visitor', ...visitorMarker(v, group, spread) })
+    group.members.forEach((m, i) => entries.push({ type: 'visitor', ...visitorMarker(m, group, i) }))
   }
 
   return entries
