@@ -1,8 +1,9 @@
+import type { FeatureCollection, Geometry } from 'geojson'
 import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
-import { ALPHA2_TO_M49, WORLD_COUNTRIES } from '@/lib/world-countries'
+import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
 
 type Props = {
   countries: { iso: string; count: number }[]
@@ -53,13 +54,26 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
   const counts = useMemo(() => new Map(countries.map(({ iso, count }) => [iso.toUpperCase(), count])), [countries])
   countsRef.current = counts
 
-  // One-time: source, layers, and hover handlers (added on first load).
+  // Country shapes resolve asynchronously (the India-POV patch is fetched from the map-assets
+  // origin); source and layers are added once they land.
+  const [worldCountries, setWorldCountries] = useState<FeatureCollection<Geometry> | null>(null)
+  useEffect(() => {
+    let active = true
+    loadWorldCountries().then(fc => {
+      if (active) setWorldCountries(fc)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // One-time: source, layers, and hover handlers (added once the map and the shapes are ready).
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !ready) return
+    if (!map || !ready || !worldCountries) return
 
     const { primary, mutedForeground, border } = resolveThemeColors()
-    map.addSource(SOURCE, { type: 'geojson', data: WORLD_COUNTRIES })
+    map.addSource(SOURCE, { type: 'geojson', data: worldCountries })
     map.addLayer({
       id: FILL_LAYER,
       type: 'fill',
@@ -100,12 +114,12 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
       map.off('mousemove', FILL_LAYER, onMove)
       map.off('mouseleave', FILL_LAYER, onLeave)
     }
-  }, [ready, mapRef])
+  }, [ready, mapRef, worldCountries])
 
   // Data-driven feature state — recompute on every countries change.
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !ready) return
+    if (!map || !ready || !map.getSource(SOURCE)) return
 
     map.removeFeatureState({ source: SOURCE })
     if (counts.size === 0) return
@@ -118,16 +132,16 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
       if (id === undefined) continue
       map.setFeatureState({ source: SOURCE, id }, { hasData: true, opacity: opacityForValue(count, min, max) })
     }
-  }, [counts, ready, mapRef])
+  }, [counts, ready, mapRef, worldCountries])
 
   // Theme swap — re-resolve token colors into the paint properties (opacities are data-driven).
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !ready) return
+    if (!map || !ready || !map.getLayer(FILL_LAYER)) return
     const { primary, mutedForeground, border } = resolveThemeColors()
     map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(primary, mutedForeground))
     map.setPaintProperty(LINE_LAYER, 'line-color', border)
-  }, [dark, ready, mapRef])
+  }, [dark, ready, mapRef, worldCountries])
 
   // Keep the canvas sized to the container.
   useEffect(() => {

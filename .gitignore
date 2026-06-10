@@ -45,6 +45,7 @@ pr-review.md
 .env.production
 .env
 
-# Self-hosted map assets — fetched on demand via `bun run fetch:map-assets` (basemap too large to commit)
-/public/basemap.pmtiles
-/public/fonts/
+# Self-hosted map assets — built by the pug-maps repo; wire into public/ via `bun run sync:app` there
+/public/basemap*.pmtiles
+/public/fonts
+/public/pov
