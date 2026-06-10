@@ -44,8 +44,3 @@ pr-review.md
 .env.development
 .env.production
 .env
-
-# Self-hosted map assets — built by the pug-maps repo; wire into public/ via `bun run sync:app` there
-/public/basemap*.pmtiles
-/public/fonts
-/public/pov
