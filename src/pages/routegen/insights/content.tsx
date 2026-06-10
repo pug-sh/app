@@ -37,6 +37,10 @@ export const InsightsContent = ({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  logScale,
+  zeroBaseline,
+  hideLegend,
+  yTickFormatter,
   compact = false,
 }: {
   error: string | null
@@ -59,6 +63,10 @@ export const InsightsContent = ({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  logScale?: boolean
+  zeroBaseline?: boolean
+  hideLegend?: boolean
+  yTickFormatter?: (value: number) => string
   compact?: boolean
 }) => {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
@@ -109,6 +117,9 @@ export const InsightsContent = ({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          logScale={logScale}
+          zeroBaseline={zeroBaseline}
+          yTickFormatter={yTickFormatter}
           className={chartClassName}
         />
       )
@@ -119,6 +130,9 @@ export const InsightsContent = ({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          logScale={logScale}
+          zeroBaseline={zeroBaseline}
+          yTickFormatter={yTickFormatter}
           className={chartClassName}
         />
       )
@@ -133,6 +147,9 @@ export const InsightsContent = ({
         seriesColors={seriesColors}
         granularity={granularity}
         stacked={viewMode === 'bar-stacked'}
+        logScale={logScale}
+        zeroBaseline={zeroBaseline}
+        yTickFormatter={yTickFormatter}
         className={chartClassName}
       />
     )
@@ -226,13 +243,15 @@ export const InsightsContent = ({
   if (chartData.length > 0) {
     return (
       <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
-        <SummaryStats
-          series={seriesNames}
-          data={chartData}
-          seriesColors={seriesColors}
-          aggregations={seriesAggregations}
-          compact={compact}
-        />
+        {hideLegend ? null : (
+          <SummaryStats
+            series={seriesNames}
+            data={chartData}
+            seriesColors={seriesColors}
+            aggregations={seriesAggregations}
+            compact={compact}
+          />
+        )}
         <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
       </div>
     )

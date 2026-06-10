@@ -78,6 +78,14 @@ export const InsightTileView = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
+  // A configured Y-axis format drives the chart axis ticks; Plain/unspecified is
+  // left undefined so charts keep their compact default.
+  const yAxisFormat = tile?.visualization?.yAxisFormat
+  const yTickFormatter = useMemo(() => {
+    if (yAxisFormat === undefined || yAxisFormat === VisualizationOptions_YAxisFormat.UNSPECIFIED) return undefined
+    return formatYAxisValue(yAxisFormat)
+  }, [yAxisFormat])
+
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
@@ -172,6 +180,10 @@ export const InsightTileView = ({
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        logScale={tile?.visualization?.logScale}
+        zeroBaseline={tile?.visualization?.zeroBaseline}
+        hideLegend={tile?.visualization?.hideLegend}
+        yTickFormatter={yTickFormatter}
         compact={compact}
       />
     </div>

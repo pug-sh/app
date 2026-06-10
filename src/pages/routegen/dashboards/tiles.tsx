@@ -46,9 +46,10 @@ export const TileShell = ({ tile, editing, onPatch, children }: TileContentProps
         <div className={`absolute top-0 left-0 h-full w-[3px] ${accentStripClass(accent)}`} aria-hidden />
       ) : null}
       {editing && onPatch ? (
-        // Edit mode always shows the grip + inline rename, even when the title is
-        // hidden in view mode — you still need a way to move and name the tile.
-        <TileHeaderEdit tile={tile} onPatch={onPatch} />
+        // Edit mode keeps the grip so the tile stays draggable. When the title is
+        // hidden in view mode, collapse to just the grip so the editor reflects
+        // that state — renaming stays available from the config panel header.
+        <TileHeaderEdit tile={tile} onPatch={onPatch} hideTitle={hideTitle} />
       ) : hideTitle ? null : (
         <div className="mb-3 flex min-w-0 shrink-0 items-start gap-2 pr-8">
           {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}

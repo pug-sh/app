@@ -2,14 +2,15 @@ import { create } from '@bufbuild/protobuf'
 import type { ReactNode } from 'react'
 import {
   type DashboardTile,
-  DashboardTileViewMode,
   TileHeaderSchema,
   VisualizationOptions_YAxisFormat,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
+import { tileOptionApplicability } from './option-applicability'
 
 const ICON_PALETTE = ['', '📈', '📊', '📉', '🆕', '🎯', '⚡', '🚀', '✨', '🔥', '💡']
 
@@ -46,11 +47,11 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
     })
   }
 
-  const isInsight = tile.content.case === 'insight'
+  const { showViewMode, showKpiOptions } = tileOptionApplicability(tile)
 
   return (
     <div className="space-y-4">
-      {isInsight ? (
+      {showViewMode ? (
         <Section label="View mode">
           <OptionChip
             label="view"
@@ -61,16 +62,16 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
         </Section>
       ) : null}
 
-      {isInsight && tile.viewMode === DashboardTileViewMode.KPI ? (
+      {showKpiOptions ? (
         <Section label="KPI">
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2 text-xs">
+            <Checkbox
+              id="tile-hide-sparkline"
               checked={tile.visualization?.hideSparkline === true}
-              onChange={e => setViz({ hideSparkline: e.target.checked })}
+              onCheckedChange={checked => setViz({ hideSparkline: checked === true })}
             />
-            Hide sparkline
-          </label>
+            <label htmlFor="tile-hide-sparkline">Hide sparkline</label>
+          </div>
         </Section>
       ) : null}
 
@@ -120,25 +121,25 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
       </Section>
 
       <Section label="Header">
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 text-xs">
+          <Checkbox
+            id="tile-hide-title"
             checked={tile.header?.hideTitle === true}
-            onChange={e => setHeader({ hideTitle: e.target.checked })}
+            onCheckedChange={checked => setHeader({ hideTitle: checked === true })}
           />
-          Hide title
-        </label>
+          <label htmlFor="tile-hide-title">Hide title</label>
+        </div>
       </Section>
 
       <Section label="Surface">
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 text-xs">
+          <Checkbox
+            id="tile-borderless"
             checked={tile.header?.borderless === true}
-            onChange={e => setHeader({ borderless: e.target.checked })}
+            onCheckedChange={checked => setHeader({ borderless: checked === true })}
           />
-          Borderless
-        </label>
+          <label htmlFor="tile-borderless">Borderless</label>
+        </div>
       </Section>
     </div>
   )

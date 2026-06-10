@@ -10,12 +10,18 @@ export const LineChart = ({
   seriesNames,
   seriesColors,
   granularity,
+  logScale,
+  zeroBaseline,
+  yTickFormatter,
   className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  logScale?: boolean
+  zeroBaseline?: boolean
+  yTickFormatter?: (value: number) => string
   className?: string
 }) => {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity)
@@ -27,7 +33,7 @@ export const LineChart = ({
       <ReLineChart data={chartData} margin={SHARED_MARGIN}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax)} />
+        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
         <ChartTooltip
           cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}

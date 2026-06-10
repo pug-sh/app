@@ -11,6 +11,9 @@ export const BarChart = ({
   seriesColors,
   granularity,
   stacked,
+  logScale,
+  zeroBaseline,
+  yTickFormatter,
   className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
@@ -18,6 +21,9 @@ export const BarChart = ({
   seriesColors: SeriesColor[]
   granularity: Granularity
   stacked: boolean
+  logScale?: boolean
+  zeroBaseline?: boolean
+  yTickFormatter?: (value: number) => string
   className?: string
 }) => {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, stacked)
@@ -35,7 +41,7 @@ export const BarChart = ({
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax)} />
+        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
         <ChartTooltip
           cursor={{ fill: 'transparent' }}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
