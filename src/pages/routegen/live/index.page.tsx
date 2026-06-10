@@ -123,11 +123,14 @@ const LiveVisitorsPage = () => {
     <>
       <span className="sr-only">Live</span>
       <div className="absolute inset-0 overflow-hidden bg-muted/10">
-        {loading && events.length === 0 ? (
+        {/* Full-screen states only before the first response. After that the map stays mounted
+            across window changes and polls — unmounting it would rebuild the MapLibre instance
+            (style, tiles, world fit) from scratch. */}
+        {!lastUpdated && !error ? (
           <div className="flex h-full items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
-        ) : error && events.length === 0 ? (
+        ) : !lastUpdated && error ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">{error}</p>
             <Button variant="outline" size="sm" onClick={reload}>
@@ -160,7 +163,7 @@ const LiveVisitorsPage = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                  {loading && events.length > 0 && <Loader2 className="size-3 animate-spin" />}
+                  {loading && <Loader2 className="size-3 animate-spin" />}
                   {lastUpdated && (
                     <HoverSwap
                       primary={`Updated ${formatRelative(lastUpdated)}`}
@@ -247,9 +250,7 @@ const LiveVisitorsPage = () => {
                     </ul>
                   )}
 
-                  {error && events.length > 0 && (
-                    <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>
-                  )}
+                  {error && <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>}
                 </>
               )}
             </aside>
