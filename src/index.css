@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource/apfel-grotezk/400.css";
 @import "@fontsource/apfel-grotezk/700.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
 
 @custom-variant dark (&:is(.dark *));
 

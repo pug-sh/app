@@ -11,6 +11,7 @@
         "@connectrpc/connect": "^2.1.1",
         "@connectrpc/connect-web": "^2.1.1",
         "@fontsource/apfel-grotezk": "^5.2.5",
+        "@fontsource/jetbrains-mono": "^5.2.8",
         "@hookform/resolvers": "^5.2.2",
         "@tailwindcss/vite": "^4.2.2",
         "class-variance-authority": "^0.7.1",
@@ -190,6 +191,8 @@
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
     "@fontsource/apfel-grotezk": ["@fontsource/apfel-grotezk@5.2.5", "", {}, "sha512-fmLCeQ9TooC+FHpdabW3n2C+Hz6oIdGGkjDFvhE+tqWBEAsaXOBlT5EZUK9CpdR/20jM9hy43Agp8d+N2nhxxw=="],
+
+    "@fontsource/jetbrains-mono": ["@fontsource/jetbrains-mono@5.2.8", "", {}, "sha512-6w8/SG4kqvIMu7xd7wt6x3idn1Qux3p9N62s6G3rfldOUYHpWcc2FKrqf+Vo44jRvqWj2oAtTHrZXEP23oSKwQ=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 
