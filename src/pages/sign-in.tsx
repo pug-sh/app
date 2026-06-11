@@ -161,13 +161,7 @@ const SignIn = () => {
 
               {googleOAuthEnabled && (
                 <>
-                  <GoogleSignInButton
-                    disabled={authBusy}
-                    onBegin={() => setError('')}
-                    onError={message => {
-                      setError(message)
-                    }}
-                  />
+                  <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
                   <div className="flex items-center gap-3 my-4">
                     <div className="flex-1 h-px bg-border" />
                     <span className="text-xs text-muted-foreground">or continue with email</span>

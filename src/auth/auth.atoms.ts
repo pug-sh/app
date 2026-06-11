@@ -25,6 +25,11 @@ export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
 
+// Applies a freshly issued session JWT — sign-in, magic link, and OAuth all funnel here.
+// The token alone decides identity (the server ignores any caller session), so capture the
+// prior customer before overwriting: if the new token is for a different account, drop the
+// previous session's remembered org so it can't leak across the switch. Always clear meAtom —
+// email isn't in the JWT and must be refetched for the new identity.
 const applySessionJwtAtom = atom(null, (get, set, token: string) => {
   const prior = get(jwtDataAtom)?.customerId
   set(jwtAtom, token)
@@ -59,11 +64,8 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
   }
 })
 
-// Completing a magic link returns a session JWT. The token alone decides identity
-// (the server ignores any caller session), so capture the prior identity before
-// overwriting the JWT: if the link is for a different account, drop the previous
-// session's remembered org so it can't leak across the switch. Always clear meAtom
-// — email isn't in the JWT and must be refetched for the new identity.
+// Magic-link sign-in or sign-up; session handling (identity switch, workspace reset, meAtom
+// reset) is delegated to applySessionJwtAtom.
 export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }) => {
   const authRPC = get(authRPCAtom)
   try {

@@ -35,6 +35,7 @@ export const GoogleSignInButton = ({
 
   const handleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) {
+      console.error('Google sign-in returned no credential')
       onError('Google sign-in could not be completed. Try again.')
       return
     }
@@ -65,7 +66,10 @@ export const GoogleSignInButton = ({
     <div ref={containerRef} className="min-h-10 w-full">
       <GoogleLogin
         onSuccess={handleSuccess}
-        onError={() => onError('Google sign-in failed. Try again.')}
+        onError={() => {
+          console.error('Google Identity Services reported a sign-in error')
+          onError('Google sign-in failed. Try again.')
+        }}
         click_listener={onBegin}
         theme="outline"
         size="large"
