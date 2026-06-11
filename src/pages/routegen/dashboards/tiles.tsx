@@ -1,14 +1,17 @@
 import { create } from '@bufbuild/protobuf'
 import { Copy, MoreHorizontal, TrendingUp } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, type RefObject, useRef } from 'react'
 import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { fmtDate, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
+import { getProtoRange } from './query'
+import { ShareTileButton } from './share-tile-button'
 import { TileHeaderEdit } from './tile-header-edit'
 
 const escapeMarkdownHTML = (value: string) =>
@@ -29,7 +32,13 @@ type TileContentProps = {
   onPatch?: (patch: Partial<DashboardTile>) => void
 }
 
-export const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
+export const TileShell = ({
+  tile,
+  editing,
+  onPatch,
+  children,
+  bodyRef,
+}: TileContentProps & { children: ReactNode; bodyRef?: RefObject<HTMLDivElement | null> }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
@@ -59,7 +68,9 @@ export const TileShell = ({ tile, editing, onPatch, children }: TileContentProps
           </div>
         </div>
       )}
-      <div className="min-h-0 flex-1 overflow-hidden pt-0.5">{children}</div>
+      <div ref={bodyRef} className="min-h-0 flex-1 overflow-hidden pt-0.5">
+        {children}
+      </div>
     </div>
   )
 }
@@ -85,15 +96,17 @@ const DashboardInsightTile = ({
   onPatch,
   globalTimeRange,
   globalGranularity,
+  bodyRef,
 }: TileContentProps & {
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
+  bodyRef?: RefObject<HTMLDivElement | null>
 }) => {
   const spec = tile.content.case === 'insight' ? tile.content.value.spec : undefined
   const query = spec ? create(QueryRequestSchema, { spec }) : undefined
 
   return (
-    <TileShell tile={tile} editing={editing} onPatch={onPatch}>
+    <TileShell tile={tile} editing={editing} onPatch={onPatch} bodyRef={bodyRef}>
       <DashboardInsightContent
         tile={tile}
         query={query}
@@ -105,6 +118,16 @@ const DashboardInsightTile = ({
       />
     </TileShell>
   )
+}
+
+// Build the "May 13 – Jun 12" time-range label shown in the shared card's corner,
+// mirroring how the insight content resolves its effective range: the global
+// override wins, else the tile's embedded spec, else defaults.
+const formatTileMeta = (tile: DashboardTile, globalTimeRange?: TimeRange) => {
+  if (tile.content.case !== 'insight') return ''
+  const query = create(QueryRequestSchema, { spec: tile.content.value.spec })
+  const range = globalTimeRange ?? resolveDashboardTimeRangePreset(undefined, getProtoRange(query.timeRange))
+  return `${fmtDate(range.from)} – ${fmtDate(range.to)}`
 }
 
 export const DashboardTileBody = ({
@@ -121,45 +144,56 @@ export const DashboardTileBody = ({
   onDuplicate?: (tile: DashboardTile) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
-}) => (
-  <div className="group relative h-full min-h-0">
-    <div className="h-full min-h-0">
-      {tile.content.case === 'markdown' ? (
-        <DashboardMarkdownTile tile={tile} editing={editing} onPatch={onPatch} />
-      ) : (
-        <DashboardInsightTile
-          tile={tile}
-          editing={editing}
-          onPatch={onPatch}
-          globalTimeRange={globalTimeRange}
-          globalGranularity={globalGranularity}
-        />
-      )}
+}) => {
+  // Points at just the chart region so the share button snapshots the chart as-is,
+  // then draws its own card chrome (editable title + time range) around it.
+  const chartRef = useRef<HTMLDivElement>(null)
+  const canShare = !editing && tile.content.case === 'insight'
+
+  return (
+    <div className="group relative h-full min-h-0">
+      <div className="h-full min-h-0">
+        {tile.content.case === 'markdown' ? (
+          <DashboardMarkdownTile tile={tile} editing={editing} onPatch={onPatch} />
+        ) : (
+          <DashboardInsightTile
+            tile={tile}
+            editing={editing}
+            onPatch={onPatch}
+            globalTimeRange={globalTimeRange}
+            globalGranularity={globalGranularity}
+            bodyRef={chartRef}
+          />
+        )}
+      </div>
+      {canShare ? (
+        <ShareTileButton tile={tile} targetRef={chartRef} meta={formatTileMeta(tile, globalTimeRange)} />
+      ) : null}
+      {onDuplicate ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className="absolute top-4 right-4 z-20 opacity-0 transition-opacity group-hover:opacity-100 data-[popup-open]:opacity-100"
+                onMouseDown={event => event.stopPropagation()}
+              />
+            }
+          >
+            <MoreHorizontal className="size-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-32">
+            <DropdownMenuItem onClick={() => onDuplicate(tile)}>
+              <Copy className="size-4" />
+              Duplicate
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
-    {onDuplicate ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="absolute top-4 right-4 z-20 opacity-0 transition-opacity group-hover:opacity-100 data-[popup-open]:opacity-100"
-              onMouseDown={event => event.stopPropagation()}
-            />
-          }
-        >
-          <MoreHorizontal className="size-3.5" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onClick={() => onDuplicate(tile)}>
-            <Copy className="size-4" />
-            Duplicate
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ) : null}
-  </div>
-)
+  )
+}
 
 export const DashboardEmptyState = ({ title, description }: { title: string; description: string }) => (
   <div className="flex flex-col items-center justify-center py-16 text-center">
