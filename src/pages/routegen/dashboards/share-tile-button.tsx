@@ -1,4 +1,4 @@
-import { Check, Copy, Download, ImageOff, Loader2, Share2 } from 'lucide-react'
+import { Check, Copy, Download, ImageOff, Loader2, Share } from 'lucide-react'
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -170,7 +170,7 @@ export const ShareTileButton = ({
           />
         }
       >
-        <Share2 className="size-3.5" />
+        <Share className="size-4" />
       </PopoverTrigger>
 
       <PopoverContent align="end" className="w-80">

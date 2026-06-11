@@ -1,4 +1,4 @@
-import { Check, Copy, Globe, Loader2, Share2 } from 'lucide-react'
+import { Check, Copy, Globe, Loader2, Share } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -47,7 +47,7 @@ export const ShareControl = ({
   return (
     <Popover>
       <PopoverTrigger render={<Button size="sm" variant={isPublic ? 'secondary' : 'outline'} />}>
-        {isPublic ? <Globe className="size-4 text-primary" /> : <Share2 className="size-4" />}
+        {isPublic ? <Globe className="size-4 text-primary" /> : <Share className="size-3" />}
         {isPublic ? 'Public' : 'Share'}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">
