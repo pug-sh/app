@@ -30,6 +30,7 @@ export const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
   { label: 'Funnel', value: InsightType.FUNNEL },
   { label: 'Retention', value: InsightType.RETENTION },
+  { label: 'Top K', value: InsightType.TOP_K },
 ] as const
 
 export const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
@@ -50,5 +51,6 @@ export const EMPTY_ARRAY: never[] = []
 export const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
+  if (insightType === InsightType.TOP_K) return 'Rank top events, property values, or users'
   return 'Analyze step-by-step conversion'
 }

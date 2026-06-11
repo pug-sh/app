@@ -104,7 +104,7 @@ const RowAggregationPicker = memo(
   },
 )
 
-const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
+export const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
   if (!schema) return null
   return {
     ...schema,

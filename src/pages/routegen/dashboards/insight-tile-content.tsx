@@ -25,6 +25,7 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
+import { topKSpecIncompleteReason } from '../insights/top-k'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
@@ -122,6 +123,12 @@ export const DashboardInsightContent = ({
     projectId,
     query: effectiveQuery,
   })
+  // Top-k specs carry no events, so they are runnable as soon as the ranking
+  // config is complete; everything else needs at least one event.
+  const isTopK = effectiveQuery?.spec?.insightType === InsightType.TOP_K
+  const topKIncomplete = isTopK ? topKSpecIncompleteReason(effectiveQuery?.spec) : null
+  const queryReady = isTopK ? !topKIncomplete : (effectiveQuery?.spec?.events.length ?? 0) > 0
+
   const { data, error, retry } = useDebouncedQuery(
     queryKey,
     async () => {
@@ -129,7 +136,7 @@ export const DashboardInsightContent = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && (effectiveQuery?.spec?.events.length ?? 0) > 0, debounceMs: 0 },
+    { enabled: !!effectiveQuery && !!headers && queryReady, debounceMs: 0 },
   )
 
   const comparisonQuery = useMemo(
@@ -156,6 +163,7 @@ export const DashboardInsightContent = ({
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
+  const topKRows = useMemo(() => (result.case === 'topK' ? result.value.rows : []), [result])
   const chartData = useMemo(() => buildChartData(trendSeries), [trendSeries])
   const kindOrder = useMemo(
     () => (effectiveQuery?.spec?.events ?? []).map(entry => entry.event?.kind ?? ''),
@@ -209,8 +217,9 @@ export const DashboardInsightContent = ({
 
   // KPI tiles short-circuit the chart pipeline. Compare-vs-prior issues a second
   // query with a time range shifted back by the window's length; the delta is
-  // computed inside KpiTile.
-  if (tile && resolvedViewMode === DashboardTileViewMode.KPI) {
+  // computed inside KpiTile. Top-k results are not series-shaped, so they always
+  // render through the ranked list regardless of view mode.
+  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK) {
     const compareLabel = comparisonQuery ? formatComparePeriodLabel(effectiveTimeRange) : undefined
     const compare: KpiCompare | undefined = !comparisonQuery
       ? undefined
@@ -236,7 +245,7 @@ export const DashboardInsightContent = ({
       <InsightsContent
         error={error}
         retry={retry}
-        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention'].includes(result.case)}
+        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention', 'topK'].includes(result.case)}
         resultCase={result.case}
         resultSeriesCount={
           result.case === 'trends' || result.case === 'funnel' || result.case === 'retention'
@@ -258,6 +267,11 @@ export const DashboardInsightContent = ({
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        isTopK={isTopK}
+        topKRows={topKRows}
+        topKDimension={effectiveQuery?.spec?.topK?.dimension || undefined}
+        topKMetric={effectiveQuery?.spec?.topK?.metric || undefined}
+        topKIncompleteReason={topKIncomplete}
         compact={compact}
       />
     </div>

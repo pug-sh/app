@@ -5,8 +5,9 @@ import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
+import { normalizeTopKState, type TopKState } from '@/pages/routegen/insights/top-k'
 
-const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION]
+const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION, InsightType.TOP_K]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [
   AggregationType.TOTAL,
@@ -41,6 +42,7 @@ const GRANULARITY_PARAM = 'gr'
 const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
+const TOP_K_PARAM = 'tk'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -246,7 +248,11 @@ export const readFilterQueryParams = (search = window.location.search) => {
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
 
-  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, parseWarning }
+  const rawTopK = parseJSONParam(params.get(TOP_K_PARAM))
+  const topK =
+    rawTopK && typeof rawTopK === 'object' ? normalizeTopKState(rawTopK as Record<string, unknown>) : undefined
+
+  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, topK, parseWarning }
 }
 
 export const writeFilterQueryParams = (
@@ -257,6 +263,7 @@ export const writeFilterQueryParams = (
     granularity?: Granularity
     timeRange?: TimeRange
     breakdowns?: string[]
+    topK?: TopKState
   },
 ) => {
   const url = new URL(window.location.href)
@@ -270,6 +277,7 @@ export const writeFilterQueryParams = (
   setJSONParam(BREAKDOWNS_PARAM, opts?.breakdowns ?? [])
 
   setOrDelete(url, INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
+  setOrDelete(url, TOP_K_PARAM, opts?.topK ? JSON.stringify(opts.topK) : undefined)
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)

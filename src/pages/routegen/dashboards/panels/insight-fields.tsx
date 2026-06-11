@@ -7,6 +7,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { EventFilterEntry, EventFiltersController } from '@/hooks/use-event-filters'
 import type { FilterStateController } from '@/hooks/use-filter-state'
 import { getSeriesColor } from '@/lib/event-colors'
+import type { TopKState } from '../../insights/top-k'
+import { TopKControls } from '../../insights/top-k-controls'
 
 export type InsightFieldsProps = {
   insightType: InsightType
@@ -19,6 +21,8 @@ export type InsightFieldsProps = {
   breakdowns: string[]
   addBreakdown: (property: string) => void
   removeBreakdown: (property: string) => void
+  topK?: TopKState
+  onTopKChange?: (next: TopKState) => void
   renderRowExtra?: (
     entry: EventFilterEntry,
     rowSchema: GetFilterSchemaResponse | null,
@@ -37,26 +41,38 @@ export const InsightFields = ({
   breakdowns,
   addBreakdown,
   removeBreakdown,
+  topK,
+  onTopKChange,
   renderRowExtra,
 }: InsightFieldsProps) => {
   const isRetention = insightType === InsightType.RETENTION
+  const isTopK = insightType === InsightType.TOP_K
   const { propFilters, addFilter, updateFilter, removeFilter } = filterState
+
+  let maxEvents: number | undefined
+  if (isRetention) maxEvents = 2
+  if (isTopK) maxEvents = 1
 
   return (
     <div className="space-y-3">
+      {isTopK && topK && onTopKChange ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <TopKControls topK={topK} onChange={onTopKChange} schema={globalSchema} schemaError={globalSchemaError} />
+        </div>
+      ) : null}
       <div className="space-y-1">
         <EventFilterBar
           filtersAtom={eventFilters.filtersAtom}
           events={schema?.events}
           schema={schema}
           schemaError={schemaError}
-          showLetters
+          showLetters={!isTopK}
           seriesColors={eventFilters.entries.map((entry, index) =>
             getSeriesColor(entry.kind || `step ${index + 1}`, index),
           )}
           getEventColor={eventName => getSeriesColor(eventName).dot}
           renderRowExtra={renderRowExtra}
-          maxEvents={isRetention ? 2 : undefined}
+          maxEvents={maxEvents}
         />
         {isRetention ? (
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -71,6 +87,20 @@ export const InsightFields = ({
             <span>Retention supports up to 2 events.</span>
           </div>
         ) : null}
+        {isTopK ? (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Tooltip>
+              <TooltipTrigger className="inline-flex cursor-help items-center">
+                <CircleHelp className="h-3.5 w-3.5" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                Optionally scope the ranking to a single event (with per-event filters). Without a scope, all events
+                participate.
+              </TooltipContent>
+            </Tooltip>
+            <span>Event scope is optional.</span>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -83,18 +113,23 @@ export const InsightFields = ({
           />
         ))}
         <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-        {propFilters.length > 0 || breakdowns.length > 0 ? <span className="mx-0.5 h-4 w-px bg-border" /> : null}
-        {breakdowns.map(property => (
-          <BreakdownChip key={property} property={property} onRemove={() => removeBreakdown(property)} />
-        ))}
-        <BreakdownBuilder
-          schema={globalSchema}
-          schemaError={globalSchemaError}
-          breakdowns={breakdowns}
-          onAdd={addBreakdown}
-          onRemove={removeBreakdown}
-          disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
-        />
+        {/* Breakdowns are rejected for top-k specs — the dimension is the breakdown. */}
+        {!isTopK && (
+          <>
+            {propFilters.length > 0 || breakdowns.length > 0 ? <span className="mx-0.5 h-4 w-px bg-border" /> : null}
+            {breakdowns.map(property => (
+              <BreakdownChip key={property} property={property} onRemove={() => removeBreakdown(property)} />
+            ))}
+            <BreakdownBuilder
+              schema={globalSchema}
+              schemaError={globalSchemaError}
+              breakdowns={breakdowns}
+              onAdd={addBreakdown}
+              onRemove={removeBreakdown}
+              disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
+            />
+          </>
+        )}
       </div>
     </div>
   )

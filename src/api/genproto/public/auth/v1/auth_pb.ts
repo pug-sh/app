@@ -2,8 +2,8 @@
 // @generated from file public/auth/v1/auth.proto (package public.auth.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIigKF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJIjQKF1JlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABIhoKGFJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIxChhDb21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QSFQoFdG9rZW4YASABKAlCBrpIA8gBASIqChlDb21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlEg0KBXRva2VuGAEgASgJMsgCCgtBdXRoU2VydmljZRJkCg9TaWduSW5XaXRoRW1haWwSJi5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXF1ZXN0GicucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVzcG9uc2UiABJnChBSZXF1ZXN0TWFnaWNMaW5rEicucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QaKC5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVzcG9uc2UiABJqChFDb21wbGV0ZU1hZ2ljTGluaxIoLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBopLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2UiAEJAWj5naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3B1YmxpYy9hdXRoL3YxO2F1dGh2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIigKF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJIjQKF1JlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABIhoKGFJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIxChhDb21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QSFQoFdG9rZW4YASABKAlCBrpIA8gBASIqChlDb21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlEg0KBXRva2VuGAEgASgJInUKGkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0EjsKCHByb3ZpZGVyGAEgASgOMh0ucHVibGljLmF1dGgudjEuT0F1dGhQcm92aWRlckIKukgHggEEEAEgABIaCgpjcmVkZW50aWFsGAIgASgJQga6SAPIAQEiLAobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJKkwKDU9BdXRoUHJvdmlkZXISHwobT19BVVRIX1BST1ZJREVSX1VOU1BFQ0lGSUVEEAASGgoWT19BVVRIX1BST1ZJREVSX0dPT0dMRRABMroDCgtBdXRoU2VydmljZRJkCg9TaWduSW5XaXRoRW1haWwSJi5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXF1ZXN0GicucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVzcG9uc2UiABJnChBSZXF1ZXN0TWFnaWNMaW5rEicucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QaKC5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVzcG9uc2UiABJqChFDb21wbGV0ZU1hZ2ljTGluaxIoLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBopLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2UiABJwChNDb21wbGV0ZU9BdXRoU2lnbkluEioucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlcXVlc3QaKy5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVzcG9uc2UiAEJAWj5naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3B1YmxpYy9hdXRoL3YxO2F1dGh2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -122,6 +122,70 @@ export const CompleteMagicLinkResponseSchema: GenMessage<CompleteMagicLinkRespon
   messageDesc(file_public_auth_v1_auth, 5);
 
 /**
+ * @generated from message public.auth.v1.CompleteOAuthSignInRequest
+ */
+export type CompleteOAuthSignInRequest = Message<"public.auth.v1.CompleteOAuthSignInRequest"> & {
+  /**
+   * @generated from field: public.auth.v1.OAuthProvider provider = 1;
+   */
+  provider: OAuthProvider;
+
+  /**
+   * Google id_token JWT from @react-oauth/google GoogleLogin onSuccess credential.
+   *
+   * @generated from field: string credential = 2;
+   */
+  credential: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOAuthSignInRequest.
+ * Use `create(CompleteOAuthSignInRequestSchema)` to create a new message.
+ */
+export const CompleteOAuthSignInRequestSchema: GenMessage<CompleteOAuthSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 6);
+
+/**
+ * @generated from message public.auth.v1.CompleteOAuthSignInResponse
+ */
+export type CompleteOAuthSignInResponse = Message<"public.auth.v1.CompleteOAuthSignInResponse"> & {
+  /**
+   * session JWT — sign-in OR sign-up, decided server-side
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOAuthSignInResponse.
+ * Use `create(CompleteOAuthSignInResponseSchema)` to create a new message.
+ */
+export const CompleteOAuthSignInResponseSchema: GenMessage<CompleteOAuthSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 7);
+
+/**
+ * @generated from enum public.auth.v1.OAuthProvider
+ */
+export enum OAuthProvider {
+  /**
+   * @generated from enum value: O_AUTH_PROVIDER_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: O_AUTH_PROVIDER_GOOGLE = 1;
+   */
+  GOOGLE = 1,
+}
+
+/**
+ * Describes the enum public.auth.v1.OAuthProvider.
+ */
+export const OAuthProviderSchema: GenEnum<OAuthProvider> = /*@__PURE__*/
+  enumDesc(file_public_auth_v1_auth, 0);
+
+/**
  * @generated from service public.auth.v1.AuthService
  */
 export const AuthService: GenService<{
@@ -148,6 +212,14 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof CompleteMagicLinkRequestSchema;
     output: typeof CompleteMagicLinkResponseSchema;
+  },
+  /**
+   * @generated from rpc public.auth.v1.AuthService.CompleteOAuthSignIn
+   */
+  completeOAuthSignIn: {
+    methodKind: "unary";
+    input: typeof CompleteOAuthSignInRequestSchema;
+    output: typeof CompleteOAuthSignInResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_public_auth_v1_auth, 0);
