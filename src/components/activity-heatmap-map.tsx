@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { WorldMap, type CountryContext } from 'react-svg-worldmap'
+import { type CountryContext, WorldMap } from 'react-svg-worldmap'
 
 const MAP_HEIGHT_RATIO = 3 / 4
 
