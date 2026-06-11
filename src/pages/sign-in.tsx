@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { Bell, Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { GoogleSignInButton } from '@/auth/google-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -19,6 +20,7 @@ type AuthFormData = z.infer<typeof authSchema>
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
+  const googleOAuthEnabled = useAtomValue(googleOAuthEnabledAtom)
   // Magic link is the primary path — the backend creates the account on first use,
   // so it covers both returning and brand-new users. Password sign-in is opt-in for
   // people who set a password via the in-app SetPassword flow.
@@ -81,6 +83,8 @@ const SignIn = () => {
     authForm.clearErrors()
   }
 
+  const authBusy = loading || magicLinkLoading
+
   return (
     <div className="min-h-screen flex">
       {/* Left — branding panel */}
@@ -102,7 +106,7 @@ const SignIn = () => {
               Manage campaigns, track delivery, and understand your users — all from one dashboard.
             </p>
           </div>
-          <p className="text-xs opacity-40">Pug — by Fivebits</p>
+          <p className="text-xs opacity-40">Pug — by tshoka</p>
         </div>
       </div>
 
@@ -149,6 +153,17 @@ const SignIn = () => {
                   : 'Enter the password you set for your account'}
               </p>
 
+              {googleOAuthEnabled && (
+                <>
+                  <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or continue with email</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                </>
+              )}
+
               <form
                 onSubmit={e => {
                   e.preventDefault()
@@ -180,7 +195,7 @@ const SignIn = () => {
                       <button
                         type="button"
                         onClick={handleMagicLink}
-                        disabled={loading || magicLinkLoading}
+                        disabled={authBusy}
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
                       >
                         Forgot?
@@ -211,26 +226,39 @@ const SignIn = () => {
 
                 {error && <p className="text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
 
-                <Button type="submit" className="w-full" disabled={loading || magicLinkLoading}>
+                <Button type="submit" className="w-full" disabled={authBusy}>
                   {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}
                   {mode === 'link' ? 'Email me a sign-in link' : 'Sign in'}
                 </Button>
               </form>
 
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground">or</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
-                disabled={loading || magicLinkLoading}
-              >
-                {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
-              </Button>
+              {googleOAuthEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
+                  disabled={authBusy}
+                  className="text-primary font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
+                >
+                  {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                </button>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 my-4">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
+                    disabled={authBusy}
+                  >
+                    {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                  </Button>
+                </>
+              )}
             </>
           )}
         </div>
