@@ -30,10 +30,7 @@ export const resolveCountryBreakdownKey = (query?: QueryRequest): string | null 
   return match?.property ?? null
 }
 
-export const resolveActivityMapCountryKey = (
-  query?: QueryRequest,
-  schema?: GetFilterSchemaResponse,
-): string =>
+export const resolveActivityMapCountryKey = (query?: QueryRequest, schema?: GetFilterSchemaResponse): string =>
   resolveCountryBreakdownKey(query) ?? (schema ? resolveCountryPropertyKey(schema) : null) ?? COUNTRY_PROPERTY
 
 export const isCountryBreakdownQuery = (query?: QueryRequest) => resolveCountryBreakdownKey(query) !== null

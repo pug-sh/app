@@ -74,7 +74,7 @@ const SelectOrg = () => {
               You belong to several organizations. Choose one to continue, or create a new one.
             </p>
           </div>
-          <p className="text-xs opacity-40">Pug — by Fivebits</p>
+          <p className="text-xs opacity-40">Pug — by tshoka</p>
         </div>
       </div>
 
