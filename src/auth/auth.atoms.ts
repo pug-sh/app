@@ -1,27 +1,52 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
+import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { jwtAtom, jwtDataAtom } from './jwt.atoms'
+import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
 
-export const signInAtom = atom(null, async (get, set, { email, password }: { email: string; password: string }) => {
-  const authRPC = get(authRPCAtom)
-  try {
-    const resp = await authRPC.signInWithEmail({ email, password })
-    set(jwtAtom, resp.token)
-    return { ok: true as const }
-  } catch (error) {
-    if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
-    const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
-    return { ok: false as const, error: msg }
-  }
-})
+// Result shape shared by every auth write atom: `error` is present iff the call failed.
+export type AuthResult = { ok: true } | { ok: false; error: string }
+
+// Build-time gate for the Google sign-in button (driven by VITE_GOOGLE_CLIENT_ID), exposed as
+// an atom so config reads flow through the store like the rest of auth state.
+export const googleOAuthEnabledAtom = atom(() => isGoogleOAuthEnabled())
+
+export const signInAtom = atom(
+  null,
+  async (get, set, { email, password }: { email: string; password: string }): Promise<AuthResult> => {
+    const authRPC = get(authRPCAtom)
+    try {
+      const resp = await authRPC.signInWithEmail({ email, password })
+      set(applySessionJwtAtom, resp.token)
+      return { ok: true }
+    } catch (error) {
+      if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
+      const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
+      return { ok: false, error: msg }
+    }
+  },
+)
 
 export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
+
+// Applies a freshly issued session JWT — password sign-in, magic link, and OAuth all funnel here.
+// The token alone decides identity (the server ignores any caller session), so capture the
+// prior customer before overwriting: if the new token is for a different account, drop the
+// previous session's remembered org so it can't leak across the switch. Always clear meAtom —
+// email isn't in the JWT and must be refetched for the new identity.
+const applySessionJwtAtom = atom(null, (get, set, token: string) => {
+  const prior = get(jwtDataAtom)?.customerId
+  set(jwtAtom, token)
+  const next = get(jwtDataAtom)?.customerId
+  if (prior && next && prior !== next) set(resetWorkspaceAtom)
+  set(meAtom, null)
+})
 
 export const fetchMeAtom = atom(null, async (get, set) => {
   const customersRPC = get(customersRPCAtom)
@@ -37,41 +62,55 @@ export const fetchMeAtom = atom(null, async (get, set) => {
   }
 })
 
-export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { email: string }) => {
+export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { email: string }): Promise<AuthResult> => {
   const authRPC = get(authRPCAtom)
   try {
     await authRPC.requestMagicLink({ email })
-    return { ok: true as const }
+    return { ok: true }
   } catch (error) {
     if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
     const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
-    return { ok: false as const, error: msg }
+    return { ok: false, error: msg }
   }
 })
 
-// Completing a magic link returns a session JWT. The token alone decides identity
-// (the server ignores any caller session), so capture the prior identity before
-// overwriting the JWT: if the link is for a different account, drop the previous
-// session's remembered org so it can't leak across the switch. Always clear meAtom
-// — email isn't in the JWT and must be refetched for the new identity.
-export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }) => {
+// Magic-link sign-in or sign-up; session handling (identity switch, workspace reset, meAtom
+// reset) is delegated to applySessionJwtAtom.
+export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }): Promise<AuthResult> => {
   const authRPC = get(authRPCAtom)
-  const prior = get(jwtDataAtom)?.customerId
   try {
     const resp = await authRPC.completeMagicLink({ token })
-    set(jwtAtom, resp.token)
-    const next = get(jwtDataAtom)?.customerId
-    if (prior && next && prior !== next) set(resetWorkspaceAtom)
-    set(meAtom, null)
-    return { ok: true as const }
+    set(applySessionJwtAtom, resp.token)
+    return { ok: true }
   } catch (error) {
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
-      return { ok: false as const, error: 'This link is invalid or has expired. Request a new one.' }
+      return { ok: false, error: 'This link is invalid or has expired. Request a new one.' }
     }
     if (!(error instanceof ConnectError)) console.error('completeMagicLink unexpected error', error)
-    return { ok: false as const, error: error instanceof ConnectError ? error.message : 'Could not sign you in.' }
+    return { ok: false, error: error instanceof ConnectError ? error.message : 'Could not sign you in.' }
   }
 })
+
+export const completeGoogleOAuthAtom = atom(
+  null,
+  async (get, set, { credential }: { credential: string }): Promise<AuthResult> => {
+    const authRPC = get(authRPCAtom)
+    try {
+      const resp = await authRPC.completeOAuthSignIn({
+        provider: OAuthProvider.GOOGLE,
+        credential,
+      })
+      set(applySessionJwtAtom, resp.token)
+      return { ok: true }
+    } catch (error) {
+      if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
+      return {
+        ok: false,
+        error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
+      }
+    }
+  },
+)
 
 const authClockAtom = atom(Date.now())
 authClockAtom.onMount = setAtom => {
