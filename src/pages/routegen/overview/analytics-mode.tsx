@@ -192,7 +192,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       <section>
-        <SectionHeader title="Top events" count={`${schema.events.length} kinds`} />
+        <SectionHeader title="Top events" />
         <OverviewTileShell title="Most frequent events" footer="across all events" className="h-[420px]">
           <DashboardInsightContent
             query={buildTopEventsQuery()}
