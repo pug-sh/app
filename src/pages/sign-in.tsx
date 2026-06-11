@@ -1,12 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { Bell, Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { GoogleSignInButton } from '@/auth/google-sign-in-button'
-import { isGoogleOAuthEnabled } from '@/auth/oauth'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -21,7 +20,7 @@ type AuthFormData = z.infer<typeof authSchema>
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
-  const googleOAuthEnabled = isGoogleOAuthEnabled()
+  const googleOAuthEnabled = useAtomValue(googleOAuthEnabledAtom)
   // Magic link is the primary path — the backend creates the account on first use,
   // so it covers both returning and brand-new users. Password sign-in is opt-in for
   // people who set a password via the in-app SetPassword flow.
