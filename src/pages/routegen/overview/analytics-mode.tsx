@@ -57,9 +57,9 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   const conversionKind = bindings.conversionLike ?? funnelSteps[funnelSteps.length - 1]
 
   return (
-    <div className="flex flex-col gap-3.5">
-      <section className="flex flex-col gap-1.5">
-        <OverviewSectionHeader title="Activity" />
+    <div className="flex flex-col gap-9">
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader title="Activity" description="Who's showing up and how engaged they are." />
         <div className="flex flex-col gap-3.5">
           <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
             <KpiTile
@@ -143,8 +143,8 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       {showConversionSection ? (
-        <section className="flex flex-col gap-1.5">
-          <OverviewSectionHeader title="Conversion" />
+        <section className="flex flex-col gap-4">
+          <OverviewSectionHeader title="Conversion" description="How users move toward your key outcome." />
           <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
             <OverviewTileShell
@@ -170,8 +170,8 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </section>
       ) : null}
 
-      <section className="flex flex-col gap-1.5">
-        <OverviewSectionHeader title="Acquisition" />
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader title="Acquisition" description="Where your users are coming from." />
         <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
           <BreakdownTile
             title="Platform breakdown"
@@ -192,8 +192,12 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </div>
       </section>
 
-      <section className="flex flex-col gap-1.5">
-        <OverviewSectionHeader title="Schema" count={`${schema.events.length} kinds`} />
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader
+          title="Schema"
+          description="Every event kind Pug is currently tracking."
+          count={`${schema.events.length} kinds`}
+        />
         <TopEventsBlock events={schema.events} />
       </section>
 
