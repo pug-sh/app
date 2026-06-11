@@ -5,8 +5,6 @@ export function googleClientId() {
 }
 
 export function isGoogleOAuthEnabled() {
-  const flag = import.meta.env.VITE_OAUTH_GOOGLE_ENABLED
-  if (flag === 'false' || flag === '0') return false
   return googleClientId().length > 0
 }
 
