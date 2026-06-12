@@ -7,6 +7,7 @@ import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -22,7 +23,8 @@ type SessionRow = {
   startedAt: Date
   endedAt: Date
   events: number
-  device: string
+  browser?: string
+  os?: string
 }
 
 const groupSessions = (events: ActivityEvent[]) => {
@@ -46,7 +48,8 @@ const groupSessions = (events: ActivityEvent[]) => {
       startedAt,
       endedAt,
       events: evs.length,
-      device: [browser, os].filter(Boolean).join(' · '),
+      browser,
+      os,
     })
   }
   return rows
@@ -177,7 +180,9 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
               {formatDuration(r.endedAt.getTime() - r.startedAt.getTime())}
             </td>
             <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">{r.events}</td>
-            <td className="py-2.5 pr-4 text-xs text-muted-foreground">{r.device || '—'}</td>
+            <td className="py-2.5 pr-4 text-xs text-muted-foreground">
+              <PlatformLabel browser={r.browser} os={r.os} iconSize={14} />
+            </td>
           </tr>
         ))}
       </tbody>
