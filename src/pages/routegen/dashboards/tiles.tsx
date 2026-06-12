@@ -5,6 +5,7 @@ import snarkdown from 'snarkdown'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { accentStripClass } from './accent-palette'
@@ -51,7 +52,7 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
         <TileHeaderEdit tile={tile} onPatch={onPatch} />
       ) : hideTitle ? null : (
         <div className="mb-3 flex min-w-0 shrink-0 items-start gap-2 pr-8">
-          {icon ? <span className="shrink-0 text-base leading-none">{icon}</span> : null}
+          {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold">{tile.displayName}</h3>
             {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}

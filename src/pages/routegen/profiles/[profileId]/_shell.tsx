@@ -2,8 +2,10 @@ import { useAtomValue } from 'jotai'
 import { Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation, useParams } from 'wouter'
+import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
+import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -20,10 +22,12 @@ const TABS = [
 ] as const
 
 const StatusDot = ({ lastSeen }: { lastSeen: Date | null }) => {
-  if (!lastSeen) return <span className="inline-block size-2 rounded-full bg-muted-foreground/30" />
+  if (!lastSeen) {
+    return <span className="inline-block size-2.5 rounded-full bg-muted-foreground/30 ring-2 ring-background" />
+  }
   const minsAgo = (Date.now() - lastSeen.getTime()) / 60_000
   const color = minsAgo < 5 ? 'bg-emerald-500' : minsAgo < 60 * 24 ? 'bg-amber-500' : 'bg-muted-foreground/30'
-  return <span className={cn('inline-block size-2 rounded-full', color)} />
+  return <span className={cn('inline-block size-2.5 rounded-full ring-2 ring-background', color)} />
 }
 
 const CopyButton = ({ value }: { value: string }) => (
@@ -74,10 +78,6 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
   const identity = resolveIdentity(profile)
   const firstSeen = tsToDate(profile.activity?.firstSeen)
   const createTime = tsToDate(profile.createTime)
-  const browser = [profile.activity?.browser, profile.activity?.browserVersion].filter(Boolean).join(' ')
-  const os = [profile.activity?.os, profile.activity?.osVersion].filter(Boolean).join(' ')
-  const platform = [browser, os].filter(Boolean).join(' · ')
-  const place = [profile.activity?.city, profile.activity?.country].filter(Boolean).join(', ')
 
   const base = `/profiles/${encodeURIComponent(profileId)}`
   // Tail = URL segment after `base`. '' for overview, '/events' / '/sessions/[id]' for sub-tabs.
@@ -93,7 +93,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
         <div className="flex min-w-0 items-start gap-3">
           <div className="relative shrink-0">
             <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
-            <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-background p-0.5">
+            <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>
           </div>
@@ -141,8 +141,25 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
             <HoverSwap primary={lastSeenLive} secondary={formatDateTime(lastSeen)} />
           </Meta>
         )}
-        {platform && <Meta>{platform}</Meta>}
-        {place && <Meta>{place}</Meta>}
+        {(profile.activity?.browser || profile.activity?.os) && (
+          <Meta>
+            <PlatformLabel
+              browser={profile.activity?.browser}
+              browserVersion={profile.activity?.browserVersion}
+              os={profile.activity?.os}
+              osVersion={profile.activity?.osVersion}
+            />
+          </Meta>
+        )}
+        {(profile.activity?.city || profile.activity?.country) && (
+          <Meta>
+            <LocationLabel
+              city={profile.activity?.city}
+              region={profile.activity?.region}
+              country={profile.activity?.country}
+            />
+          </Meta>
+        )}
       </div>
     </div>
   )
