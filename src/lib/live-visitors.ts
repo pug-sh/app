@@ -2,6 +2,8 @@ import type { JsonObject } from '@bufbuild/protobuf'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { structGet } from '@/lib/struct'
 
+export { formatCountryName } from '@/lib/location'
+
 export const LIVE_WINDOW_MS = 5 * 60 * 1000
 export const LIVE_POLL_MS = 10_000
 export const LIVE_PAGE_SIZE = 1000
@@ -25,18 +27,6 @@ export const dedupeVisitors = (events: ActivityEvent[]): ActivityEvent[] => {
     out.push(event)
   }
   return out
-}
-
-const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
-
-export const formatCountryName = (code: string | undefined): string => {
-  if (!code) return '—'
-  if (code.length !== 2) return code
-  try {
-    return regionNames.of(code.toUpperCase()) ?? code
-  } catch {
-    return code
-  }
 }
 
 export const countryBreakdown = (visitors: ActivityEvent[]): CountryCount[] => {
