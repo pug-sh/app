@@ -6,13 +6,13 @@ import {
   VisualizationOptions_YAxisFormat,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
+import { TILE_ICON_PALETTE } from '../tile-icons'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
-
-const ICON_PALETTE = ['', '📈', '📊', '📉', '🆕', '🎯', '⚡', '🚀', '✨', '🔥', '💡']
 
 type DisplayTabProps = {
   tile: DashboardTile
@@ -77,20 +77,20 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
 
       <Section label="Icon">
         <div className="flex flex-wrap gap-1.5">
-          {ICON_PALETTE.map(icon => {
+          {TILE_ICON_PALETTE.map(icon => {
             const selected = (tile.header?.icon ?? '') === icon
             return (
               <button
                 key={icon || 'none'}
                 type="button"
                 className={[
-                  'flex h-7 w-7 items-center justify-center rounded-md border text-base transition-colors',
+                  'flex h-7 w-7 items-center justify-center rounded-md border transition-colors',
                   selected ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/60',
                 ].join(' ')}
                 onClick={() => setHeader({ icon })}
                 aria-label={icon ? `Set icon ${icon}` : 'Clear icon'}
               >
-                {icon || '∅'}
+                {icon ? <TwemojiIcon emoji={icon} size={14} /> : '∅'}
               </button>
             )
           })}
