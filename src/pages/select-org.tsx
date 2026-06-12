@@ -75,7 +75,10 @@ const SelectOrg = () => {
             </p>
           </div>
           <p className="text-xs opacity-40">
-            Pug — by <a href="https://tshoka.com">tshoka</a>
+            Pug — by{' '}
+            <a href="https://tshoka.com" className="underline-offset-2 hover:underline">
+              tshoka
+            </a>
           </p>
         </div>
       </div>

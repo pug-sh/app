@@ -248,9 +248,7 @@ const Profiles = () => {
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
                   <th className="py-2 pr-3 text-left font-medium">Platform</th>
-                  <th className="py-2 pr-3 text-right font-medium">Pageviews</th>
-                  <th className="py-2 pr-3 text-right font-medium">Events</th>
-                  <th className="py-2 pr-3 text-right font-medium">Sessions</th>
+                  <th className="py-2 pr-3 text-left font-medium">Activity</th>
                   <th className="py-2 pl-6 pr-3 text-left font-medium whitespace-nowrap">Last Seen</th>
                   <th className="py-2 pl-4 text-left font-medium whitespace-nowrap">First Seen</th>
                 </tr>
@@ -287,7 +285,7 @@ const Profiles = () => {
                           </div>
                         </DetailTooltip>
                       </td>
-                      <td className="py-3 pr-3 text-sm">
+                      <td className="py-3 pr-3 text-sm text-muted-foreground">
                         <div className="min-w-0">
                           {location.city || location.country ? (
                             <LocationLabel
@@ -304,7 +302,7 @@ const Profiles = () => {
                           )}
                         </div>
                       </td>
-                      <td className="py-3 pr-3 text-sm">
+                      <td className="py-3 pr-3 text-sm text-muted-foreground">
                         <PlatformStackLabel
                           browser={activity?.browser}
                           browserVersion={activity?.browserVersion}
@@ -314,14 +312,17 @@ const Profiles = () => {
                           iconSize={16}
                         />
                       </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.pageviews ?? 0)}
-                      </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.totalEvents ?? 0)}
-                      </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.sessions ?? 0)}
+                      <td className="py-3 pr-3 text-sm text-muted-foreground whitespace-nowrap">
+                        <span className="tabular-nums text-foreground">{compactNumber(activity?.pageviews ?? 0)}</span>{' '}
+                        views
+                        <span className="mx-1.5 text-muted-foreground/40">·</span>
+                        <span className="tabular-nums text-foreground">
+                          {compactNumber(activity?.totalEvents ?? 0)}
+                        </span>{' '}
+                        events
+                        <span className="mx-1.5 text-muted-foreground/40">·</span>
+                        <span className="tabular-nums text-foreground">{compactNumber(activity?.sessions ?? 0)}</span>{' '}
+                        sessions
                       </td>
                       <td className="py-3 pl-6 pr-3 text-sm text-muted-foreground whitespace-nowrap">
                         {formatSeen(activity, 'lastSeen')}
