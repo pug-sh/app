@@ -10,7 +10,7 @@ const ALL_NAMES: DeviconName[] = [
   'debian-original',
   'edge',
   'fedora-original',
-  'firefox-original',
+  'firefox',
   'ios',
   'linux-original',
   'macos',

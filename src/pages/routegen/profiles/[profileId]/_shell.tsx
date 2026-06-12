@@ -152,7 +152,11 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
         )}
         {(profile.activity?.city || profile.activity?.country) && (
           <Meta>
-            <LocationLabel city={profile.activity?.city} country={profile.activity?.country} />
+            <LocationLabel
+              city={profile.activity?.city}
+              region={profile.activity?.region}
+              country={profile.activity?.country}
+            />
           </Meta>
         )}
       </div>

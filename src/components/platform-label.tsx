@@ -1,22 +1,60 @@
-import { Monitor, Smartphone } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { DetailTooltip } from '@/components/detail-tooltip'
+import { DetailTooltip, TooltipInline, TooltipInlineItem, tooltipPanelContent } from '@/components/detail-tooltip'
 import { Devicon } from '@/components/devicon'
-import type { DeviconName } from '@/lib/devicon-map'
 import {
   formatBrowserLabel,
   formatDeviceLabel,
   formatOsLabel,
-  formatPlatformDetail,
   formatPlatformPrimary,
-  formatPlatformStackDetail,
-  formatPlatformStackPrimary,
-  isMobileDevice,
   resolveBrowserDevicon,
   resolveDeviceDevicon,
   resolveOsDevicon,
 } from '@/lib/devicon-map'
 import { cn } from '@/lib/utils'
+
+type PlatformTooltipProps = {
+  browser?: string
+  browserVersion?: string
+  os?: string
+  osVersion?: string
+  device?: string
+}
+
+// Bespoke platform tooltip: a single inline spec line, ordered browser → device →
+// OS (each with icon + mono version), separated by hairline dividers. Falls back
+// to a neutral glyph when a brand icon isn't known.
+export const PlatformTooltip = ({ browser, browserVersion, os, osVersion, device }: PlatformTooltipProps) => {
+  const browserIcon = resolveBrowserDevicon(browser)
+  const osIcon = resolveOsDevicon(os)
+  const items: ReactNode[] = []
+
+  if (browser?.trim()) {
+    items.push(
+      <TooltipInlineItem
+        key="browser"
+        icon={browserIcon ? <Devicon name={browserIcon} size={16} /> : undefined}
+        label={browser}
+        version={browserVersion}
+      />,
+    )
+  }
+  if (device?.trim()) {
+    items.push(<TooltipInlineItem key="device" label={<span className="text-muted-foreground">{device}</span>} />)
+  }
+  if (os?.trim()) {
+    items.push(
+      <TooltipInlineItem
+        key="os"
+        icon={osIcon ? <Devicon name={osIcon} size={16} /> : undefined}
+        label={os}
+        version={osVersion}
+      />,
+    )
+  }
+
+  if (!items.length) return null
+  return <TooltipInline items={items} />
+}
 
 type BrowserLabelProps = {
   browser?: string
@@ -116,18 +154,21 @@ export const PlatformLabel = ({
   iconSize = 14,
 }: PlatformLabelProps) => {
   const primary = formatPlatformPrimary(browser, os)
-  const detail = formatPlatformDetail(browser, browserVersion, os, osVersion)
-  const browserIcon = resolveBrowserDevicon(browser)
-  const osIcon = resolveOsDevicon(os)
+  // Single icon in the trigger — prefer the browser, fall back to the OS so an
+  // OS-only row still shows a glyph. The full browser + OS breakdown is in the tooltip.
+  const icon = resolveBrowserDevicon(browser) ?? resolveOsDevicon(os)
 
   if (!primary) {
     return typeof fallback === 'string' ? <span className={className}>{fallback}</span> : fallback
   }
 
   return (
-    <DetailTooltip detail={detail !== primary ? detail : undefined} className={className}>
-      {browserIcon && <Devicon name={browserIcon} size={iconSize} />}
-      {osIcon && <Devicon name={osIcon} size={iconSize} />}
+    <DetailTooltip
+      detail={<PlatformTooltip browser={browser} browserVersion={browserVersion} os={os} osVersion={osVersion} />}
+      contentClassName={tooltipPanelContent}
+      className={cn('items-center gap-1.5', className)}
+    >
+      {icon && <Devicon name={icon} size={iconSize} />}
       <span className="truncate">{primary}</span>
     </DetailTooltip>
   )
@@ -154,34 +195,37 @@ export const PlatformStackLabel = ({
   fallback = '—',
   iconSize = 16,
 }: PlatformStackLabelProps) => {
-  const primary = formatPlatformStackPrimary({ browser, os, device })
-  const detail = formatPlatformStackDetail({ browser, browserVersion, os, osVersion, device })
+  // Line 1 is the browser carrying its single icon; line 2 is the OS as plain
+  // text. When there's no browser, the OS leads line 1 and line 2 is dropped.
+  const browserName = browser?.trim()
+  const osName = os?.trim()
+  const icon = resolveBrowserDevicon(browser) ?? resolveOsDevicon(os)
+  const primary = browserName || osName || formatDeviceLabel(device, os)
+  const secondary = browserName ? osName : undefined
 
   if (!primary) {
     return typeof fallback === 'string' ? <span className={className}>{fallback}</span> : fallback
   }
 
-  const browserIcon = resolveBrowserDevicon(browser)
-  const osIcon = resolveOsDevicon(os)
-  const icons = [...new Set([browserIcon, osIcon].filter((icon): icon is DeviconName => !!icon))]
-
-  // The browser/OS devicons already convey the platform; only fall back to a
-  // generic device-type glyph when neither resolved, so we don't render e.g. a
-  // Windows icon next to a redundant Monitor.
-  const showDeviceTypeIcon = icons.length === 0 && !!(os || device)
-  const DeviceTypeIcon = isMobileDevice(device, os) ? Smartphone : Monitor
-  const hasVisual = icons.length > 0 || showDeviceTypeIcon
-
   return (
-    <DetailTooltip detail={detail} className={cn('items-center gap-1.5', className)}>
-      {icons.map(icon => (
-        <Devicon key={icon} name={icon} size={iconSize} />
-      ))}
-      {showDeviceTypeIcon && (
-        <DeviceTypeIcon className="shrink-0 text-muted-foreground" style={{ width: iconSize, height: iconSize }} />
-      )}
-      {/* Keep an accessible name for the icon-only row; show visible text only when no icon rendered. */}
-      {hasVisual ? <span className="sr-only">{detail || primary}</span> : <span className="truncate">{primary}</span>}
+    <DetailTooltip
+      detail={
+        <PlatformTooltip
+          browser={browser}
+          browserVersion={browserVersion}
+          os={os}
+          osVersion={osVersion}
+          device={device}
+        />
+      }
+      contentClassName={tooltipPanelContent}
+      className={cn('flex-col items-start gap-0.5', className)}
+    >
+      <span className="flex max-w-full items-center gap-1.5">
+        {icon && <Devicon name={icon} size={iconSize} />}
+        <span className="truncate">{primary}</span>
+      </span>
+      {secondary && <span className="max-w-full truncate text-[11px] text-muted-foreground">{secondary}</span>}
     </DetailTooltip>
   )
 }

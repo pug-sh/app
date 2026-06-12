@@ -6,7 +6,7 @@ export type DeviconName =
   | 'debian-original'
   | 'edge'
   | 'fedora-original'
-  | 'firefox-original'
+  | 'firefox'
   | 'ios'
   | 'linux-original'
   | 'macos'
@@ -35,7 +35,7 @@ export const resolveBrowserDevicon = (browser?: string) => {
   if (matchToken(browser, ['edge', 'edg'])) return 'edge'
   if (matchToken(browser, ['chrome', 'chromium', 'crios'])) return 'chrome-original'
   if (matchToken(browser, ['safari'])) return 'safari-original'
-  if (matchToken(browser, ['firefox', 'fxios'])) return 'firefox-original'
+  if (matchToken(browser, ['firefox', 'fxios'])) return 'firefox'
   if (matchToken(browser, ['opera', 'opr'])) return 'opera-original'
   // Brave ships no devicon and is Chromium-based, so reuse the Chrome glyph.
   if (matchToken(browser, ['brave'])) return 'chrome-original'

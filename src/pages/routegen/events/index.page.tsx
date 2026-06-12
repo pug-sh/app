@@ -49,6 +49,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const browserVersion = structGet(event.autoProperties, '$browserVersion')
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
+  const region = structGet(event.autoProperties, '$region')
 
   return (
     <>
@@ -73,7 +74,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         </td>
         <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle">
           {city || country ? (
-            <LocationLabel city={city} country={country} flagSize={16} />
+            <LocationLabel city={city} region={region} country={country} flagSize={16} />
           ) : (
             <div className="truncate">—</div>
           )}

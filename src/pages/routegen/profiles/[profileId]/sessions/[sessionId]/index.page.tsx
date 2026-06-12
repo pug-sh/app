@@ -5,9 +5,11 @@ import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
+import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import { Devicon } from '@/components/devicon'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformTooltip } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
@@ -56,6 +58,7 @@ const SessionSummary = ({
   const device = structGet(firstAuto, '$device')
   const country = structGet(firstAuto, '$country')
   const city = structGet(firstAuto, '$city')
+  const region = structGet(firstAuto, '$region')
   const ip = structGet(firstAuto, '$ip')
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
@@ -119,7 +122,19 @@ const SessionSummary = ({
           </span>
         )}
         {(browser || os || device) && (
-          <span className="flex min-w-0 items-center gap-1.5">
+          <DetailTooltip
+            detail={
+              <PlatformTooltip
+                browser={browser}
+                browserVersion={browserVersion}
+                os={os}
+                osVersion={osVersion}
+                device={device}
+              />
+            }
+            contentClassName={tooltipPanelContent}
+            className="min-w-0 items-center gap-1.5"
+          >
             {browserIcon && <Devicon name={browserIcon} size={14} />}
             {osIcon && <Devicon name={osIcon} size={14} />}
             {deviceIcon && <Devicon name={deviceIcon} size={14} />}
@@ -130,11 +145,12 @@ const SessionSummary = ({
             ]
               .filter(Boolean)
               .join(' / ')}
-          </span>
+          </DetailTooltip>
         )}
         {(country || city) && (
           <LocationLabel
             city={city}
+            region={region}
             country={country}
             suffix={ip ? <span className="opacity-50">({ip})</span> : undefined}
           />

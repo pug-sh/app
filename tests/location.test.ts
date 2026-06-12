@@ -22,18 +22,26 @@ describe('formatCountryName', () => {
 })
 
 describe('formatLocationLabel', () => {
-  it('joins city and resolved country name', () => {
-    expect(formatLocationLabel('Berlin', 'de')).toBe('Berlin, Germany')
+  it('joins city, region, and resolved country name', () => {
+    expect(formatLocationLabel('San Francisco', 'California', 'us')).toBe('San Francisco, California, United States')
+    expect(formatLocationLabel('Berlin', 'Bavaria', 'de')).toBe('Berlin, Bavaria, Germany')
   })
 
-  it('shows only the present part', () => {
-    expect(formatLocationLabel('Berlin', undefined)).toBe('Berlin')
-    expect(formatLocationLabel(undefined, 'fr')).toBe('France')
-    expect(formatLocationLabel('Berlin', '')).toBe('Berlin')
+  it('drops a region that just repeats the city (case-insensitive)', () => {
+    expect(formatLocationLabel('Berlin', 'Berlin', 'de')).toBe('Berlin, Germany')
+    expect(formatLocationLabel('Paris', 'PARIS', 'fr')).toBe('Paris, France')
   })
 
-  it('is empty when neither city nor country is present', () => {
-    expect(formatLocationLabel(undefined, undefined)).toBe('')
+  it('omits absent parts', () => {
+    expect(formatLocationLabel('Berlin', undefined, 'de')).toBe('Berlin, Germany')
+    expect(formatLocationLabel('Berlin', 'Bavaria', undefined)).toBe('Berlin, Bavaria')
+    expect(formatLocationLabel(undefined, 'California', 'us')).toBe('California, United States')
+    expect(formatLocationLabel(undefined, undefined, 'fr')).toBe('France')
+    expect(formatLocationLabel('Berlin', undefined, undefined)).toBe('Berlin')
+  })
+
+  it('is empty when nothing is present', () => {
+    expect(formatLocationLabel(undefined, undefined, undefined)).toBe('')
   })
 })
 

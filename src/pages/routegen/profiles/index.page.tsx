@@ -7,6 +7,7 @@ import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { Profile } from '@/api/genproto/shared/profiles/v1/profiles_pb'
 import { insightsRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
+import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
@@ -26,18 +27,19 @@ import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { ProfileAvatar } from './_avatar'
 import { resolveIdentity } from './_identity'
+import { PropertiesTooltip } from './_properties-tooltip'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
 
 const formatLocation = (profile: Profile) => {
   const activity = profile.activity
-  if (!activity) return { secondary: '', city: undefined, country: undefined }
+  if (!activity) return { secondary: '', city: undefined, country: undefined, region: undefined }
 
   const city = activity.city || undefined
   const country = activity.country || undefined
   const region = activity.region || ''
   const secondary = region && region.toLowerCase() !== (city || '').toLowerCase() ? region : ''
-  return { secondary, city, country }
+  return { secondary, city, country, region: region || undefined }
 }
 
 const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key: 'firstSeen' | 'lastSeen') => {
@@ -249,7 +251,11 @@ const Profiles = () => {
                   return (
                     <tr key={profile.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
                       <td className="py-3 pr-3 text-sm">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <DetailTooltip
+                          detail={<PropertiesTooltip properties={profile.properties} />}
+                          contentClassName={tooltipPanelContent}
+                          className="items-center gap-3"
+                        >
                           <ProfileAvatar identity={identity} className="size-7 rounded-md text-[10px]" />
                           <div className="min-w-0">
                             <ProjectLink
@@ -265,12 +271,17 @@ const Profiles = () => {
                               {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
                             </div>
                           </div>
-                        </div>
+                        </DetailTooltip>
                       </td>
                       <td className="py-3 pr-3 text-sm">
                         <div className="min-w-0">
                           {location.city || location.country ? (
-                            <LocationLabel city={location.city} country={location.country} flagSize={20} />
+                            <LocationLabel
+                              city={location.city}
+                              region={location.region}
+                              country={location.country}
+                              flagSize={20}
+                            />
                           ) : (
                             '—'
                           )}

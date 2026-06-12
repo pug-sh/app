@@ -12,10 +12,11 @@ export const formatCountryName = (code: string | undefined) => {
 
 const countryDisplay = (country?: string) => (country ? formatCountryName(country) : '')
 
-/** Full location string — use for tooltips and detail views. */
-export const formatLocationLabel = (city?: string, country?: string) => {
-  if (!city && !country) return ''
-  return [city, countryDisplay(country)].filter(Boolean).join(', ')
+/** Full location string (city, region, country) — for tooltips and detail views. */
+export const formatLocationLabel = (city?: string, region?: string, country?: string) => {
+  const regionPart =
+    region?.trim() && region.trim().toLowerCase() !== (city ?? '').trim().toLowerCase() ? region : undefined
+  return [city, regionPart, countryDisplay(country)].filter(Boolean).join(', ')
 }
 
 /** Compact table/chip label: city when present, otherwise country name. */
