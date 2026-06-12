@@ -5,12 +5,12 @@ import snarkdown from 'snarkdown'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
 import { TileHeaderEdit } from './tile-header-edit'
-import { TILE_ICONS } from './tile-icons'
 
 const escapeMarkdownHTML = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -33,7 +33,7 @@ type TileContentProps = {
 const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { children: ReactNode }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
-  const TileIcon = TILE_ICONS[tile.header?.icon ?? '']
+  const icon = tile.header?.icon ?? ''
   const borderless = tile.header?.borderless === true
   const isKpi = tile.viewMode === DashboardTileViewMode.KPI
 
@@ -53,7 +53,7 @@ const TileShell = ({ tile, editing, onPatch, children }: TileContentProps & { ch
         <TileHeaderEdit tile={tile} onPatch={onPatch} />
       ) : hideTitle ? null : (
         <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
-          {TileIcon ? <TileIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" /> : null}
+          {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
           <div className="min-w-0 flex-1">
             <h3
               className={

@@ -1,39 +1,45 @@
 import { useAtomValue } from 'jotai'
-import { ContactRound, Laptop, Loader2, Monitor, Smartphone } from 'lucide-react'
+import { ContactRound, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { Profile } from '@/api/genproto/shared/profiles/v1/profiles_pb'
 import { insightsRPCAtom, profilesRPCAtom } from '@/api/rpc'
+import { LocationLabel } from '@/components/country-flag'
+import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformStackLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { compactNumber, isMobileOS } from '@/lib/format'
+import { compactNumber } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { ProfileAvatar } from './_avatar'
-import { getInitials, placeholderTone, resolveIdentity } from './_identity'
+import { resolveIdentity } from './_identity'
+import { PropertiesTooltip } from './_properties-tooltip'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
 
 const formatLocation = (profile: Profile) => {
   const activity = profile.activity
-  if (!activity) return { primary: '—', secondary: '' }
+  if (!activity) return { secondary: '', city: undefined, country: undefined, region: undefined }
 
-  const primary = [activity.city, activity.country].filter(Boolean).join(', ') || activity.country || '—'
-  const secondary = activity.region || ''
-  return { primary, secondary }
+  const city = activity.city || undefined
+  const country = activity.country || undefined
+  const region = activity.region || ''
+  const secondary = region && region.toLowerCase() !== (city || '').toLowerCase() ? region : ''
+  return { secondary, city, country, region: region || undefined }
 }
 
 const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key: 'firstSeen' | 'lastSeen') => {
@@ -42,25 +48,6 @@ const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key:
 
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
-
-const PlaceholderBadge = ({ value, className = 'rounded-md' }: { value: string; className?: string }) => {
-  const tone = placeholderTone(value)
-  return (
-    <span
-      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center text-[9px] font-medium ${className}`}
-      style={{ backgroundColor: tone.bg, color: tone.fg }}
-    >
-      {getInitials(value)}
-    </span>
-  )
-}
-
-const MetaCell = ({ icon, value, fallback = '—' }: { icon?: React.ReactNode; value?: string; fallback?: string }) => (
-  <div className="flex items-center gap-2 min-w-0">
-    {icon}
-    <span className="truncate">{value || fallback}</span>
-  </div>
-)
 
 const ALLOWED_PROFILE_AUTO_PROPERTIES = new Set([
   '$browser',
@@ -87,6 +74,17 @@ const Profiles = () => {
   const [schema, setSchema] = useState<GetFilterSchemaResponse | null>(null)
   const [schemaError, setSchemaError] = useState<string | null>(null)
   const latestProfilesRequestRef = useRef(0)
+
+  // Measure the sticky filter bar so the sticky table header can sit just below it.
+  const filterRef = useRef<HTMLDivElement>(null)
+  const [filterH, setFilterH] = useState(0)
+  useEffect(() => {
+    const el = filterRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setFilterH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     if (initialFilterState.parseWarning) {
@@ -204,7 +202,10 @@ const Profiles = () => {
 
   return (
     <Page title="Profiles" description="Browse profiles collected for this project">
-      <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
+      <div
+        ref={filterRef}
+        className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50"
+      >
         <div className="flex items-center gap-2 flex-wrap">
           {propFilters.map((filter, idx) => (
             <FilterChip
@@ -240,18 +241,14 @@ const Profiles = () => {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profiles</span>
             <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] border-collapse">
-              <thead>
+          <div className="overflow-x-clip">
+            <table className="w-full min-w-[960px] border-collapse">
+              <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
                 <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
-                  <th className="py-2 pr-3 text-left font-medium">Browser</th>
-                  <th className="py-2 pr-3 text-left font-medium">OS</th>
-                  <th className="py-2 pr-3 text-left font-medium">Device</th>
-                  <th className="py-2 pr-3 text-right font-medium">Pageviews</th>
-                  <th className="py-2 pr-3 text-right font-medium">Events</th>
-                  <th className="py-2 pr-3 text-right font-medium">Sessions</th>
+                  <th className="py-2 pr-3 text-left font-medium">Platform</th>
+                  <th className="py-2 pr-3 text-left font-medium">Activity</th>
                   <th className="py-2 pl-6 pr-3 text-left font-medium whitespace-nowrap">Last Seen</th>
                   <th className="py-2 pl-4 text-left font-medium whitespace-nowrap">First Seen</th>
                 </tr>
@@ -262,15 +259,15 @@ const Profiles = () => {
                   const activity = profile.activity
                   const location = formatLocation(profile)
                   const identity = resolveIdentity(profile)
-                  const browserLabel = [activity?.browser, activity?.browserVersion].filter(Boolean).join(' ') || '—'
-                  const osLabel = [activity?.os, activity?.osVersion].filter(Boolean).join(' ') || '—'
-                  const isMobile =
-                    isMobileOS(activity?.os) || activity?.device?.toLowerCase().includes('mobile') === true
 
                   return (
                     <tr key={profile.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
                       <td className="py-3 pr-3 text-sm">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <DetailTooltip
+                          detail={<PropertiesTooltip properties={profile.properties} />}
+                          contentClassName={tooltipPanelContent}
+                          className="items-center gap-3"
+                        >
                           <ProfileAvatar identity={identity} className="size-7 rounded-md text-[10px]" />
                           <div className="min-w-0">
                             <ProjectLink
@@ -286,65 +283,46 @@ const Profiles = () => {
                               {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
                             </div>
                           </div>
+                        </DetailTooltip>
+                      </td>
+                      <td className="py-3 pr-3 text-sm text-muted-foreground">
+                        <div className="min-w-0">
+                          {location.city || location.country ? (
+                            <LocationLabel
+                              city={location.city}
+                              region={location.region}
+                              country={location.country}
+                              flagSize={20}
+                            />
+                          ) : (
+                            '—'
+                          )}
+                          {location.secondary && (
+                            <div className="truncate text-[11px] text-muted-foreground">{location.secondary}</div>
+                          )}
                         </div>
                       </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <PlaceholderBadge value={activity?.country || location.primary} />
-                          <div className="min-w-0">
-                            <div className="truncate">{location.primary}</div>
-                            {location.secondary && (
-                              <div className="truncate text-[11px] text-muted-foreground">{location.secondary}</div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={<PlaceholderBadge value={activity?.browser || 'Browser'} className="rounded-full" />}
-                          value={browserLabel}
+                      <td className="py-3 pr-3 text-sm text-muted-foreground">
+                        <PlatformStackLabel
+                          browser={activity?.browser}
+                          browserVersion={activity?.browserVersion}
+                          os={activity?.os}
+                          osVersion={activity?.osVersion}
+                          device={activity?.device}
+                          iconSize={16}
                         />
                       </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={
-                            isMobile ? (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Smartphone className="h-3 w-3" />
-                              </span>
-                            ) : (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Laptop className="h-3 w-3" />
-                              </span>
-                            )
-                          }
-                          value={osLabel}
-                        />
-                      </td>
-                      <td className="py-3 pr-3 text-sm">
-                        <MetaCell
-                          icon={
-                            isMobile ? (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Smartphone className="h-3 w-3" />
-                              </span>
-                            ) : (
-                              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-                                <Monitor className="h-3 w-3" />
-                              </span>
-                            )
-                          }
-                          value={activity?.device || (isMobile ? 'Mobile' : 'Desktop')}
-                        />
-                      </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.pageviews ?? 0)}
-                      </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.totalEvents ?? 0)}
-                      </td>
-                      <td className="py-3 pr-3 text-right text-sm tabular-nums">
-                        {compactNumber(activity?.sessions ?? 0)}
+                      <td className="py-3 pr-3 text-sm text-muted-foreground whitespace-nowrap">
+                        <span className="tabular-nums text-foreground">{compactNumber(activity?.pageviews ?? 0)}</span>{' '}
+                        views
+                        <span className="mx-1.5 text-muted-foreground/40">·</span>
+                        <span className="tabular-nums text-foreground">
+                          {compactNumber(activity?.totalEvents ?? 0)}
+                        </span>{' '}
+                        events
+                        <span className="mx-1.5 text-muted-foreground/40">·</span>
+                        <span className="tabular-nums text-foreground">{compactNumber(activity?.sessions ?? 0)}</span>{' '}
+                        sessions
                       </td>
                       <td className="py-3 pl-6 pr-3 text-sm text-muted-foreground whitespace-nowrap">
                         {formatSeen(activity, 'lastSeen')}

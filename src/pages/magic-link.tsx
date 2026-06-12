@@ -2,8 +2,8 @@ import { useSetAtom } from 'jotai'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
-import { AuthShell } from '@/auth/auth-shell'
 import { completeMagicLinkAtom } from '@/auth/auth.atoms'
+import { AuthShell } from '@/auth/auth-shell'
 
 const MagicLink = () => {
   const token = new URLSearchParams(window.location.search).get('token') ?? ''

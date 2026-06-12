@@ -52,8 +52,8 @@ const hashHue = (value: string) => {
 export const placeholderTone = (value: string) => {
   const hue = hashHue(value)
   return {
-    bg: `oklch(0.78 0.12 ${hue})`,
-    fg: `oklch(0.28 0.06 ${hue})`,
+    bg: `oklch(0.78 0.06 ${hue})`,
+    fg: `oklch(0.28 0.03 ${hue})`,
   }
 }
 
