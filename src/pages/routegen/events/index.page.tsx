@@ -72,14 +72,14 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             {event.kind}
           </Badge>
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle">
+        <td className="pt-[0.8rem] pb-[0.45rem] pr-2 text-xs text-muted-foreground align-middle">
           {city || country ? (
             <LocationLabel city={city} region={region} country={country} flagSize={16} />
           ) : (
             <div className="truncate">—</div>
           )}
         </td>
-        <td className="py-2.5 pr-2 text-xs text-muted-foreground align-middle">
+        <td className="pt-[0.8rem] pb-[0.45rem] pr-2 text-xs text-muted-foreground align-middle">
           <PlatformLabel
             browser={browser}
             browserVersion={browserVersion}
