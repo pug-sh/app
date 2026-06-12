@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
 import { Monitor, Smartphone } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { DetailTooltip } from '@/components/detail-tooltip'
 import { Devicon } from '@/components/devicon'
 import type { DeviconName } from '@/lib/devicon-map'
@@ -80,13 +80,7 @@ type DeviceLabelProps = {
   iconSize?: number
 }
 
-export const DeviceLabel = ({
-  device,
-  os,
-  className,
-  fallback = '—',
-  iconSize = 16,
-}: DeviceLabelProps) => {
+export const DeviceLabel = ({ device, os, className, fallback = '—', iconSize = 16 }: DeviceLabelProps) => {
   const label = formatDeviceLabel(device, os)
   const icon = resolveDeviceDevicon(device, os)
 
@@ -160,8 +154,8 @@ export const PlatformStackLabel = ({
   fallback = '—',
   iconSize = 16,
 }: PlatformStackLabelProps) => {
-  const primary = formatPlatformStackPrimary(browser, browserVersion, os, osVersion, device)
-  const detail = formatPlatformStackDetail(browser, browserVersion, os, osVersion, device)
+  const primary = formatPlatformStackPrimary({ browser, os, device })
+  const detail = formatPlatformStackDetail({ browser, browserVersion, os, osVersion, device })
 
   if (!primary) {
     return typeof fallback === 'string' ? <span className={className}>{fallback}</span> : fallback
@@ -170,9 +164,13 @@ export const PlatformStackLabel = ({
   const browserIcon = resolveBrowserDevicon(browser)
   const osIcon = resolveOsDevicon(os)
   const icons = [...new Set([browserIcon, osIcon].filter((icon): icon is DeviconName => !!icon))]
-  const mobile = isMobileDevice(device, os)
-  const DeviceTypeIcon = mobile ? Smartphone : Monitor
-  const showDeviceTypeIcon = !!(os || device)
+
+  // The browser/OS devicons already convey the platform; only fall back to a
+  // generic device-type glyph when neither resolved, so we don't render e.g. a
+  // Windows icon next to a redundant Monitor.
+  const showDeviceTypeIcon = icons.length === 0 && !!(os || device)
+  const DeviceTypeIcon = isMobileDevice(device, os) ? Smartphone : Monitor
+  const hasVisual = icons.length > 0 || showDeviceTypeIcon
 
   return (
     <DetailTooltip detail={detail} className={cn('items-center gap-1.5', className)}>
@@ -182,7 +180,8 @@ export const PlatformStackLabel = ({
       {showDeviceTypeIcon && (
         <DeviceTypeIcon className="shrink-0 text-muted-foreground" style={{ width: iconSize, height: iconSize }} />
       )}
-      {icons.length === 0 && !showDeviceTypeIcon && <span className="truncate">{primary}</span>}
+      {/* Keep an accessible name for the icon-only row; show visible text only when no icon rendered. */}
+      {hasVisual ? <span className="sr-only">{detail || primary}</span> : <span className="truncate">{primary}</span>}
     </DetailTooltip>
   )
 }

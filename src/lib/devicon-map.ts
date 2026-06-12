@@ -30,11 +30,14 @@ export const resolveAppleDevicon = (os?: string) => {
 export const resolveBrowserDevicon = (browser?: string) => {
   if (!browser?.trim()) return null
 
+  // Edge must be checked before Chrome: the Edge UA token set includes Chrome,
+  // so a Chrome match would otherwise shadow Edge.
   if (matchToken(browser, ['edge', 'edg'])) return 'edge'
   if (matchToken(browser, ['chrome', 'chromium', 'crios'])) return 'chrome-original'
   if (matchToken(browser, ['safari'])) return 'safari-original'
   if (matchToken(browser, ['firefox', 'fxios'])) return 'firefox-original'
   if (matchToken(browser, ['opera', 'opr'])) return 'opera-original'
+  // Brave ships no devicon and is Chromium-based, so reuse the Chrome glyph.
   if (matchToken(browser, ['brave'])) return 'chrome-original'
 
   return null
@@ -66,7 +69,9 @@ export const resolveDeviceDevicon = (device?: string, os?: string) => {
     isMobileOS(os)
 
   if (mobile) {
-    const apple = resolveAppleDevicon(os)
+    // An iPad/iPhone device token should resolve to the Apple icon even when the
+    // OS string is absent or generic; only then fall back to Android.
+    const apple = resolveAppleDevicon(os) ?? resolveAppleDevicon(device)
     if (apple) return apple
     return 'android-original'
   }
@@ -105,13 +110,15 @@ export const isMobileDevice = (device?: string, os?: string) => {
 
 const isGenericDeviceLabel = (label: string) => label === 'Mobile' || label === 'Desktop'
 
-export const formatPlatformStackPrimary = (
-  browser?: string,
-  _browserVersion?: string,
-  os?: string,
-  _osVersion?: string,
-  device?: string,
-) => {
+type PlatformParts = {
+  browser?: string
+  browserVersion?: string
+  os?: string
+  osVersion?: string
+  device?: string
+}
+
+export const formatPlatformStackPrimary = ({ browser, os, device }: PlatformParts) => {
   const deviceName = device?.trim()
   if (deviceName && !isGenericDeviceLabel(deviceName)) return deviceName
 
@@ -125,17 +132,7 @@ export const formatPlatformStackPrimary = (
   return fallbackDevice || ''
 }
 
-export const formatPlatformStackDetail = (
-  browser?: string,
-  browserVersion?: string,
-  os?: string,
-  osVersion?: string,
-  device?: string,
-) =>
-  [
-    formatBrowserLabel(browser, browserVersion),
-    formatOsLabel(os, osVersion),
-    formatDeviceLabel(device, os),
-  ]
+export const formatPlatformStackDetail = ({ browser, browserVersion, os, osVersion, device }: PlatformParts) =>
+  [formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion), formatDeviceLabel(device, os)]
     .filter(Boolean)
     .join(' · ')

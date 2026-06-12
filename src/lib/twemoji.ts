@@ -4,9 +4,11 @@ const TWEMOJI_BASE = '/twemoji/'
 
 export const TILE_ICON_EMOJIS = ['📈', '📊', '📉', '🆕', '🎯', '⚡', '🚀', '✨', '🔥', '💡'] as const
 
+export type TileEmoji = (typeof TILE_ICON_EMOJIS)[number]
+
 const BUNDLED_TWEMOJI = new Set<string>(TILE_ICON_EMOJIS)
 
-export const usesTwemoji = (emoji: string) => BUNDLED_TWEMOJI.has(emoji)
+export const usesTwemoji = (emoji: string): emoji is TileEmoji => BUNDLED_TWEMOJI.has(emoji)
 
 export const twemojiSrc = (emoji: string) => {
   const codePoint = twemoji.convert.toCodePoint(emoji)

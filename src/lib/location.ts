@@ -10,11 +10,7 @@ export const formatCountryName = (code: string | undefined) => {
   }
 }
 
-const countryDisplay = (country?: string) => {
-  if (!country) return ''
-  const name = formatCountryName(country)
-  return name !== '—' ? name : country
-}
+const countryDisplay = (country?: string) => (country ? formatCountryName(country) : '')
 
 /** Full location string — use for tooltips and detail views. */
 export const formatLocationLabel = (city?: string, country?: string) => {

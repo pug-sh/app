@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { twemojiSrc, usesTwemoji } from '@/lib/twemoji'
 import { cn } from '@/lib/utils'
 
@@ -8,7 +9,8 @@ type TwemojiIconProps = {
 }
 
 export const TwemojiIcon = ({ emoji, className, size = 16 }: TwemojiIconProps) => {
-  if (!emoji || !usesTwemoji(emoji)) return null
+  const [failed, setFailed] = useState(false)
+  if (!emoji || !usesTwemoji(emoji) || failed) return null
 
   return (
     <img
@@ -16,6 +18,7 @@ export const TwemojiIcon = ({ emoji, className, size = 16 }: TwemojiIconProps) =
       alt=""
       aria-hidden
       draggable={false}
+      onError={() => setFailed(true)}
       className={cn('inline-block shrink-0', className)}
       style={{ width: size, height: size }}
     />

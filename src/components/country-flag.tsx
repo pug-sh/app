@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { DetailTooltip } from '@/components/detail-tooltip'
 import { formatLocationLabel, formatLocationPrimary } from '@/lib/location'
 import { isCountryCode, twemojiFlagSrc } from '@/lib/twemoji'
@@ -11,7 +11,8 @@ type CountryFlagProps = {
 }
 
 export const CountryFlag = ({ code, className, size = 16 }: CountryFlagProps) => {
-  if (!isCountryCode(code)) return null
+  const [failed, setFailed] = useState(false)
+  if (!isCountryCode(code) || failed) return null
 
   return (
     <img
@@ -19,6 +20,7 @@ export const CountryFlag = ({ code, className, size = 16 }: CountryFlagProps) =>
       alt=""
       aria-hidden
       draggable={false}
+      onError={() => setFailed(true)}
       className={cn('inline-block shrink-0', className)}
       style={{ width: size, height: Math.round(size * 0.75) }}
     />

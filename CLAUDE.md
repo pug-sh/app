@@ -82,9 +82,9 @@ Light and minimal. This is a deliberate design direction — do not add visual o
 
 All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji) (currently v14.0.2), self-hosted under `public/twemoji/`. Do not render native Unicode emoji in JSX and do not load Twemoji from a CDN.
 
-- **Tile icons:** `TwemojiIcon` (`src/components/twemoji-icon.tsx`), palette in `src/pages/routegen/dashboards/tile-icons.ts`, SVGs in `public/twemoji/`
+- **Tile icons:** `TwemojiIcon` (`src/components/twemoji-icon.tsx`); the editable palette is `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts` (wrapped with a "no icon" entry in `src/pages/routegen/dashboards/tile-icons.ts`), SVGs in `public/twemoji/`
 - **Country flags:** `CountryFlag` / `LocationLabel` (`src/components/country-flag.tsx`), SVGs in `public/twemoji/flags/`, resolved via `twemojiFlagSrc()` in `src/lib/twemoji.ts`
-- **Adding emoji:** download the SVG from the Twemoji repo, place it in `public/twemoji/` (or `flags/` for ISO flags), add the character to the bundled set in `src/lib/twemoji.ts`, render through the shared components
+- **Adding emoji:** download the SVG from the Twemoji repo and name it after the emoji's lowercase, hyphen-joined Unicode codepoint(s) — matching `twemoji.convert.toCodePoint` — e.g. `1f4c8.svg` for a tile or `1f1ee-1f1f3.svg` for a flag; place it in `public/twemoji/` (or `public/twemoji/flags/` for ISO flags), add the character to `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts`, and render through the shared components. A mis-named file 404s silently, since the `<img>` is `aria-hidden`.
 
 Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji — leave those as plain text unless explicitly moving them to the emoji system.
 
