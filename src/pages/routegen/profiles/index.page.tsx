@@ -75,6 +75,17 @@ const Profiles = () => {
   const [schemaError, setSchemaError] = useState<string | null>(null)
   const latestProfilesRequestRef = useRef(0)
 
+  // Measure the sticky filter bar so the sticky table header can sit just below it.
+  const filterRef = useRef<HTMLDivElement>(null)
+  const [filterH, setFilterH] = useState(0)
+  useEffect(() => {
+    const el = filterRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setFilterH(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   useEffect(() => {
     if (initialFilterState.parseWarning) {
       toast.warning(initialFilterState.parseWarning, { id: 'profiles-filter-parse-warning' })
@@ -191,7 +202,10 @@ const Profiles = () => {
 
   return (
     <Page title="Profiles" description="Browse profiles collected for this project">
-      <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
+      <div
+        ref={filterRef}
+        className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50"
+      >
         <div className="flex items-center gap-2 flex-wrap">
           {propFilters.map((filter, idx) => (
             <FilterChip
@@ -227,9 +241,9 @@ const Profiles = () => {
             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profiles</span>
             <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-clip">
             <table className="w-full min-w-[960px] border-collapse">
-              <thead>
+              <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
                 <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
