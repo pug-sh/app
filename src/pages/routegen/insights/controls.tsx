@@ -7,6 +7,7 @@ import { type GetFilterSchemaResponse, PropertyValueType } from '@/api/genproto/
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { PropertyPickerList } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { EntryId, EventFilterEntry } from '@/hooks/use-event-filters'
 import { cn } from '@/lib/utils'
 import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
@@ -20,6 +21,7 @@ export const OptionChip = <T extends string | number>({
   value,
   onChange,
   stableWidth = false,
+  isOptionDisabled,
 }: {
   label: string
   icon?: LucideIcon
@@ -27,6 +29,8 @@ export const OptionChip = <T extends string | number>({
   value: T
   onChange: (v: T) => void
   stableWidth?: boolean
+  // Returns a disabled-reason (shown as a tooltip) for an option, or null when enabled.
+  isOptionDisabled?: (value: T) => string | null
 }) => {
   const [open, setOpen] = useState(false)
   const current = options.find(o => o.value === value)
@@ -48,26 +52,43 @@ export const OptionChip = <T extends string | number>({
       <PopoverContent align="start" className={cn(stableWidth ? 'w-(--anchor-width)' : 'w-auto', 'p-1')}>
         <div className="flex flex-col gap-0.5">
           {options.map(opt => {
+            const disabledReason = isOptionDisabled?.(opt.value) ?? null
+            const disabled = disabledReason !== null
             let optionClassName = 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             if (opt.value === value) {
               optionClassName = 'bg-muted text-foreground font-medium'
             }
-            return (
+            if (disabled) {
+              optionClassName = 'text-muted-foreground/40'
+            }
+            const button = (
               <button
                 key={String(opt.value)}
                 type="button"
+                aria-disabled={disabled}
                 onClick={() => {
+                  if (disabled) return
                   onChange(opt.value)
                   setOpen(false)
                 }}
                 className={cn(
-                  'px-3 py-1.5 text-xs text-left rounded-md transition-colors cursor-pointer',
+                  'px-3 py-1.5 text-xs text-left rounded-md transition-colors',
+                  disabled ? 'cursor-not-allowed' : 'cursor-pointer',
                   stableWidth && 'w-full whitespace-nowrap',
                   optionClassName,
                 )}
               >
                 {opt.label}
               </button>
+            )
+            if (!disabled) return button
+            return (
+              <Tooltip key={String(opt.value)}>
+                <TooltipTrigger render={button} />
+                <TooltipContent side="right" className="text-xs">
+                  {disabledReason}
+                </TooltipContent>
+              </Tooltip>
             )
           })}
         </div>
