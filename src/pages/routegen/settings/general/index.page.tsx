@@ -60,8 +60,9 @@ const General = () => {
     }
     setSavingProject(true)
     try {
-      // UpdateMeta is a full replace — always send reportingTimezone or a rename would
-      // clear the stored zone to UTC.
+      // UpdateMeta is a partial update (omitted fields stay unchanged); this form owns both
+      // fields, so it sends both. A present empty reportingTimezone ('') resets the zone to
+      // UTC — distinct from omitting it.
       await projectsRPC.updateMeta(
         { displayName: data.displayName, reportingTimezone: data.reportingTimezone },
         { headers: projectHeaders },
