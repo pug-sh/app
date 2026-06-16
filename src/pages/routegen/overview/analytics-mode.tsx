@@ -11,7 +11,6 @@ import {
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import ProjectLink from '@/components/project-link'
-import SectionHeader from '@/components/section-header'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { ActivityMapTile } from './activity-map-tile'
 import BreakdownTile from './breakdown-tile'
@@ -19,6 +18,7 @@ import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
 import KpiTile from './kpi-tile'
 import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
+import OverviewSectionHeader from './overview-section-header'
 import { OverviewTileShell } from './overview-tile-shell'
 import { composeFunnelSteps } from './tile-bindings'
 import TopEventsBlock from './top-events-block'
@@ -57,83 +57,95 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   const conversionKind = bindings.conversionLike ?? funnelSteps[funnelSteps.length - 1]
 
   return (
-    <div className="space-y-10">
-      <section>
-        <SectionHeader title="Activity" />
-        <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2 lg:grid-cols-4">
-          <KpiTile
-            title="Active users"
-            via={bindings.primary}
-            query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
-            globalTimeRange={globalTimeRange}
-            globalGranularity={globalGranularity}
-            queryKeyPrefix="overview-kpi-active"
-          />
-          <KpiTile
-            title="Event volume"
-            via={bindings.primary}
-            query={buildTrendsQuery(bindings.primary, AggregationType.TOTAL)}
-            globalTimeRange={globalTimeRange}
-            globalGranularity={globalGranularity}
-            queryKeyPrefix="overview-kpi-volume"
-          />
-          {bindings.signinLike ? (
+    <div className="flex flex-col gap-9">
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader title="Activity" description="Who's showing up and how engaged they are." />
+        <div className="flex flex-col gap-3.5">
+          <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
             <KpiTile
-              title="New signups"
-              via={bindings.signinLike}
-              query={buildTrendsQuery(bindings.signinLike, AggregationType.UNIQUE_USERS)}
+              title="Active users"
+              via={bindings.primary}
+              query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
-              queryKeyPrefix="overview-kpi-signups"
+              queryKeyPrefix="overview-kpi-active"
             />
-          ) : null}
-          {bindings.conversionLike ? (
             <KpiTile
-              title="Conversions"
-              via={bindings.conversionLike}
-              query={buildTrendsQuery(bindings.conversionLike, AggregationType.TOTAL)}
+              title="Event volume"
+              via={bindings.primary}
+              query={buildTrendsQuery(bindings.primary, AggregationType.TOTAL)}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
-              queryKeyPrefix="overview-kpi-conversions"
+              queryKeyPrefix="overview-kpi-volume"
             />
-          ) : null}
-        </div>
-
-        <div className="mt-[18px] grid min-h-0 grid-cols-1 gap-[18px] lg:h-[360px] lg:grid-cols-2">
-          <div className="h-[360px] min-h-0 overflow-hidden lg:h-full">
-            <ActivityMapTile
-              schema={schema}
-              primary={bindings.primary}
+            <KpiTile
+              title="Events per user"
+              via={bindings.primary}
+              query={buildTrendsQuery(bindings.primary, AggregationType.PER_USER_AVG)}
               globalTimeRange={globalTimeRange}
               globalGranularity={globalGranularity}
+              queryKeyPrefix="overview-kpi-avg-per-user"
             />
+            {bindings.signinLike ? (
+              <KpiTile
+                title="New signups"
+                via={bindings.signinLike}
+                query={buildTrendsQuery(bindings.signinLike, AggregationType.UNIQUE_USERS)}
+                globalTimeRange={globalTimeRange}
+                globalGranularity={globalGranularity}
+                queryKeyPrefix="overview-kpi-signups"
+              />
+            ) : null}
+            {bindings.conversionLike ? (
+              <KpiTile
+                title="Conversions"
+                via={bindings.conversionLike}
+                query={buildTrendsQuery(bindings.conversionLike, AggregationType.TOTAL)}
+                globalTimeRange={globalTimeRange}
+                globalGranularity={globalGranularity}
+                queryKeyPrefix="overview-kpi-conversions"
+              />
+            ) : null}
           </div>
-          <div className="min-h-0 overflow-hidden lg:h-full">
-            <OverviewTileShell
-              title="Active users trend"
-              footer={`via ${bindings.primary}`}
-              contentClassName="flex flex-col"
-              className="h-[360px] lg:h-full"
-            >
-              <div className="min-h-0 flex-1">
-                <DashboardInsightContent
-                  query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
-                  defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
-                  timeRangeOverride={globalTimeRange}
-                  granularityOverride={globalGranularity}
-                  viewMode={DashboardTileViewMode.LINE}
-                  queryKeyPrefix="overview-trend-active"
-                />
-              </div>
-            </OverviewTileShell>
+
+          <div className="grid min-h-0 grid-cols-1 gap-3.5 lg:h-[440px] lg:grid-cols-5">
+            <div className="h-[440px] min-h-0 overflow-hidden lg:col-span-2 lg:h-full">
+              <ActivityMapTile
+                schema={schema}
+                primary={bindings.primary}
+                globalTimeRange={globalTimeRange}
+                globalGranularity={globalGranularity}
+              />
+            </div>
+            <div className="min-h-0 overflow-hidden lg:col-span-3 lg:h-full">
+              <OverviewTileShell
+                title="Active users trend"
+                footer={`via ${bindings.primary}`}
+                contentClassName="flex flex-col"
+                className="h-[440px] lg:h-full"
+              >
+                <div className="min-h-0 flex-1">
+                  <DashboardInsightContent
+                    query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
+                    defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+                    timeRangeOverride={globalTimeRange}
+                    granularityOverride={globalGranularity}
+                    viewMode={DashboardTileViewMode.LINE}
+                    queryKeyPrefix="overview-trend-active"
+                    compact
+                    lightMetrics
+                  />
+                </div>
+              </OverviewTileShell>
+            </div>
           </div>
         </div>
       </section>
 
       {showConversionSection ? (
-        <section>
-          <SectionHeader title="Conversion" />
-          <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+        <section className="flex flex-col gap-4">
+          <OverviewSectionHeader title="Conversion" description="How users move toward your key outcome." />
+          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
             <FunnelTile bindings={bindings} globalTimeRange={globalTimeRange} globalGranularity={globalGranularity} />
             <OverviewTileShell
               title="Conversion trend"
@@ -149,6 +161,8 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
                   granularityOverride={globalGranularity}
                   viewMode={DashboardTileViewMode.LINE}
                   queryKeyPrefix="overview-trend-conversion"
+                  compact
+                  lightMetrics
                 />
               </div>
             </OverviewTileShell>
@@ -156,9 +170,9 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </section>
       ) : null}
 
-      <section>
-        <SectionHeader title="Acquisition" />
-        <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-2">
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader title="Acquisition" description="Where your users are coming from." />
+        <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
           <BreakdownTile
             title="Platform breakdown"
             eventKind={bindings.primary}
@@ -178,12 +192,16 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         </div>
       </section>
 
-      <section>
-        <SectionHeader title="Schema" count={`${schema.events.length} kinds`} />
+      <section className="flex flex-col gap-4">
+        <OverviewSectionHeader
+          title="Schema"
+          description="Every event kind Pug is currently tracking."
+          count={`${schema.events.length} kinds`}
+        />
         <TopEventsBlock events={schema.events} />
       </section>
 
-      <div className="border-t border-border/60 pt-6 text-center">
+      <div className="border-t border-border/60 pt-1.5 text-center">
         <p className="text-xs text-muted-foreground">
           Want a view tailored to your team?{' '}
           <ProjectLink href="/dashboards" className="text-primary hover:underline underline-offset-4">

@@ -78,11 +78,30 @@ Light and minimal. This is a deliberate design direction — do not add visual o
 - **No modals for simple actions** — inline editing, inline create forms, confirmation via button state (not confirm dialogs)
 - **No external CDN dependencies** for UI assets — bundle or self-host everything
 
+### Emoji — Twemoji only
+
+All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji) (currently v14.0.2), self-hosted under `public/twemoji/`. Do not render native Unicode emoji in JSX and do not load Twemoji from a CDN.
+
+- **Tile icons:** `TwemojiIcon` (`src/components/twemoji-icon.tsx`); the editable palette is `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts` (wrapped with a "no icon" entry in `src/pages/routegen/dashboards/tile-icons.ts`), SVGs in `public/twemoji/`
+- **Country flags:** `CountryFlag` / `LocationLabel` (`src/components/country-flag.tsx`), SVGs in `public/twemoji/flags/`, resolved via `twemojiFlagSrc()` in `src/lib/twemoji.ts`
+- **Adding emoji:** download the SVG from the Twemoji repo and name it after the emoji's lowercase, hyphen-joined Unicode codepoint(s) — matching `twemoji.convert.toCodePoint` — e.g. `1f4c8.svg` for a tile or `1f1ee-1f1f3.svg` for a flag; place it in `public/twemoji/` (or `public/twemoji/flags/` for ISO flags), add the character to `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts`, and render through the shared components. A mis-named file 404s silently, since the `<img>` is `aria-hidden`.
+
+Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji — leave those as plain text unless explicitly moving them to the emoji system.
+
+### Platform icons — Devicon
+
+Browser, OS, and device labels on profiles and events use colored `-original` SVGs from [Devicon](https://github.com/devicons/devicon) (npm `devicon`).
+
+- **Assets:** `src/lib/devicon-assets.ts` — Vite `?url` imports from `devicon/icons/` for most platforms. Edge, iOS, and macOS use self-hosted SVGs in `public/devicon/` (not in devicon)
+- **Mapping:** `src/lib/devicon-map.ts` — string heuristics for `$browser`, `$os`, `$device` auto-properties
+- **Components:** `Devicon` (`src/components/devicon.tsx`), `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`)
+- **No CDN** — SVGs are bundled from `node_modules/devicon/icons/`
+
 Section divider header pattern:
 
 ```tsx
 <div className='flex items-center gap-2 mb-2'>
-  <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Section Title</span>
+  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>Section Title</span>
   <div className='flex-1 h-px bg-border' />
   <span className='text-[10px] text-muted-foreground'>count</span>
 </div>

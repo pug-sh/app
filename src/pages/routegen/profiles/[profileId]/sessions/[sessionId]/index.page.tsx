@@ -1,18 +1,22 @@
 import { useAtomValue } from 'jotai'
-import { Calendar, Clock, Globe, Monitor, Smartphone, Timer } from 'lucide-react'
+import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { LocationLabel } from '@/components/country-flag'
+import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
+import { Devicon } from '@/components/devicon'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformTooltip } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { resolveBrowserDevicon, resolveDeviceDevicon, resolveOsDevicon } from '@/lib/devicon-map'
 import { getSeriesColor } from '@/lib/event-colors'
-import { isMobileOS } from '@/lib/format'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
 import ProfileShell from '../../_shell'
@@ -54,10 +58,14 @@ const SessionSummary = ({
   const device = structGet(firstAuto, '$device')
   const country = structGet(firstAuto, '$country')
   const city = structGet(firstAuto, '$city')
+  const region = structGet(firstAuto, '$region')
   const ip = structGet(firstAuto, '$ip')
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
   const exitEvent = events.length > 0 ? events[0].kind : null
+  const browserIcon = resolveBrowserDevicon(browser)
+  const osIcon = resolveOsDevicon(os)
+  const deviceIcon = !browser && !os ? resolveDeviceDevicon(device, os) : null
 
   return (
     <div className="mb-5 pb-4 border-b border-border space-y-4">
@@ -88,11 +96,11 @@ const SessionSummary = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Duration</p>
-          <p className="text-sm font-semibold tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
+          <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Events</p>
-          <p className="text-sm font-semibold tabular-nums">{events.length}</p>
+          <p className="text-sm font-medium tabular-nums">{events.length}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Entry</p>
@@ -113,9 +121,23 @@ const SessionSummary = ({
             {endTime && ` — ${formatClock(endTime)}`}
           </span>
         )}
-        {(browser || os) && (
-          <span className="flex items-center gap-1">
-            {isMobileOS(os) ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
+        {(browser || os || device) && (
+          <DetailTooltip
+            detail={
+              <PlatformTooltip
+                browser={browser}
+                browserVersion={browserVersion}
+                os={os}
+                osVersion={osVersion}
+                device={device}
+              />
+            }
+            contentClassName={tooltipPanelContent}
+            className="min-w-0 items-center gap-1.5"
+          >
+            {browserIcon && <Devicon name={browserIcon} size={14} />}
+            {osIcon && <Devicon name={osIcon} size={14} />}
+            {deviceIcon && <Devicon name={deviceIcon} size={14} />}
             {[
               browser && browserVersion ? `${browser} ${browserVersion}` : browser,
               os && osVersion ? `${os} ${osVersion}` : os,
@@ -123,14 +145,15 @@ const SessionSummary = ({
             ]
               .filter(Boolean)
               .join(' / ')}
-          </span>
+          </DetailTooltip>
         )}
         {(country || city) && (
-          <span className="flex items-center gap-1">
-            <Globe className="w-3 h-3" />
-            {[city, country].filter(Boolean).join(', ')}
-            {ip && <span className="opacity-50">({ip})</span>}
-          </span>
+          <LocationLabel
+            city={city}
+            region={region}
+            country={country}
+            suffix={ip ? <span className="opacity-50">({ip})</span> : undefined}
+          />
         )}
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />

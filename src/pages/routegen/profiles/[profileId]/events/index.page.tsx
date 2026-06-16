@@ -10,6 +10,7 @@ import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-fi
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
+import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { Button } from '@/components/ui/button'
@@ -44,7 +45,8 @@ type SessionLane = {
   firstIdx: number
   lastIdx: number
   column: number
-  platform: string
+  browser?: string
+  os?: string
 }
 
 const LANE_W = 80
@@ -66,8 +68,9 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
       col++
     }
     const auto = events[range.first].autoProperties
-    const platform = [structGet(auto, '$browser'), structGet(auto, '$os')].filter(Boolean).join(' / ')
-    lanes.push({ sessionId: sid, firstIdx: range.first, lastIdx: range.last, column: col, platform })
+    const browser = structGet(auto, '$browser')
+    const os = structGet(auto, '$os')
+    lanes.push({ sessionId: sid, firstIdx: range.first, lastIdx: range.last, column: col, browser, os })
   }
   return lanes
 }
@@ -209,7 +212,7 @@ const UserActivity = () => {
             return (
               <div key={group.label} className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {group.label}
                   </span>
                   <div className="flex-1 h-px bg-border" />
@@ -272,10 +275,13 @@ const UserActivity = () => {
                                     >
                                       {lane.sessionId.slice(0, 8)}
                                     </ProjectLink>
-                                    {lane.platform && (
-                                      <span className="text-[9px] text-muted-foreground/60 whitespace-nowrap">
-                                        {lane.platform}
-                                      </span>
+                                    {(lane.browser || lane.os) && (
+                                      <PlatformLabel
+                                        browser={lane.browser}
+                                        os={lane.os}
+                                        iconSize={12}
+                                        className="text-[9px] text-muted-foreground/60"
+                                      />
                                     )}
                                   </div>
                                 )}

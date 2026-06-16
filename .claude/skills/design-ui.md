@@ -61,7 +61,7 @@ Pug's UI should feel like a well-made tool, not a marketing site. Every element 
 
 ```tsx
 <div className='flex items-center gap-2 mb-2'>
-  <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Section Title</span>
+  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>Section Title</span>
   <div className='flex-1 h-px bg-border' />
   <span className='text-[10px] text-muted-foreground'>count</span>
 </div>

@@ -68,6 +68,8 @@ const BreakdownTile = ({
           granularityOverride={globalGranularity}
           viewMode={viewMode}
           queryKeyPrefix={queryKeyPrefix}
+          compact
+          lightMetrics
         />
       </div>
     </OverviewTileShell>

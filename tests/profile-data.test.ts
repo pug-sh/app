@@ -1,5 +1,5 @@
-import { Code, ConnectError } from '@connectrpc/connect'
 import { expect, mock, test } from 'bun:test'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { atom, createStore } from 'jotai'
 
 const headers = { 'x-project-id': 'project-1' }

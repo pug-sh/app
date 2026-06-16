@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 export const TileSectionHeader = ({ title }: { title: string }) => (
   <div className="mb-2 flex items-center gap-2">
-    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</span>
+    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
     <div className="h-px flex-1 bg-border" />
   </div>
 )
