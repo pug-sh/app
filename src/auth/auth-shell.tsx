@@ -8,7 +8,7 @@ export const AuthShell = ({ children }: { children: ReactNode }) => (
         <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
           <Bell className="w-4.5 h-4.5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Pug</span>
+        <span className="text-lg font-medium tracking-tight">Pug</span>
       </div>
       {children}
     </div>

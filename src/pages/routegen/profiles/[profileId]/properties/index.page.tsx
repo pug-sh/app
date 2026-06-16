@@ -72,7 +72,7 @@ const PropertiesBody = ({ profileId }: { profileId: string }) => {
 const PropertiesSection = ({ title, entries }: { title: string; entries: Entry[] }) => (
   <section>
     <div className="flex items-center gap-2 mb-2">
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
+      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
       <div className="flex-1 h-px bg-border" />
       <span className="text-[10px] text-muted-foreground">{entries.length}</span>
     </div>
