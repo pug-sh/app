@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { autoGranularity, clampGranularity, granularityDisabledReason } from '@/lib/granularity'
 import { GRANULARITIES } from '../insights/constants'
 import { OptionChip } from '../insights/controls'
 import AnalyticsMode from './analytics-mode'
@@ -22,18 +23,7 @@ import {
 } from './overview.atoms'
 import SetupMode from './setup-mode'
 
-const DAY_MS = 24 * 60 * 60 * 1000
-
 const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
-
-const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
-  if (!range) return Granularity.UNSPECIFIED
-  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
-  if (durationMs <= DAY_MS) return Granularity.HOUR
-  if (durationMs <= 90 * DAY_MS) return Granularity.DAY
-  if (durationMs <= 365 * DAY_MS) return Granularity.WEEK
-  return Granularity.MONTH
-}
 
 const Overview = () => {
   const project = useAtomValue(activeProjectAtom)
@@ -59,18 +49,25 @@ const Overview = () => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
 
+  // An explicit granularity that no longer fits a widened range would be rejected by the
+  // backend — bump it to the finest that still fits (Auto stays Auto).
+  const handleGlobalTimeRangeChange = (range: TimeRange | undefined) => {
+    setGlobalTimeRange(range)
+    setGlobalGranularity(g => clampGranularity(g, range))
+  }
+
   if (!project) return <NoProject title="Overview" icon={LayoutDashboard} />
 
   const hasEvents = (schema?.events.length ?? 0) > 0
   const effectiveGranularity =
-    globalGranularity === Granularity.UNSPECIFIED ? getAutoGlobalGranularity(globalTimeRange) : globalGranularity
+    globalGranularity === Granularity.UNSPECIFIED ? autoGranularity(globalTimeRange) : globalGranularity
   const tileGranularityOverride = effectiveGranularity === Granularity.UNSPECIFIED ? undefined : effectiveGranularity
 
   const pageActions = hasEvents ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <DateRangePicker
         value={globalTimeRange}
-        onChange={setGlobalTimeRange}
+        onChange={handleGlobalTimeRangeChange}
         presets={INSIGHTS_PRESETS}
         allowUnset
         unsetLabel="Select time"
@@ -81,6 +78,7 @@ const Overview = () => {
         options={GLOBAL_GRANULARITIES}
         value={globalGranularity}
         onChange={setGlobalGranularity}
+        isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
       />
       <ProjectLink href="/dashboards" className="ml-1 text-xs text-primary hover:underline underline-offset-4">
         Build your own →

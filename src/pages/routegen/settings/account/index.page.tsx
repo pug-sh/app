@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { toastRPCError } from '@/lib/rpc-error'
-import SettingsLayout from '../settings-layout'
 
 // max 72 mirrors the proto string.max_bytes (bcrypt's limit). The protovalidate
 // interceptor is the byte-accurate safety net for multi-byte input.
@@ -73,67 +72,63 @@ const Account = () => {
   }
 
   return (
-    <SettingsLayout>
-      <div className="space-y-8 max-w-2xl">
-        <section>
-          <SectionHeader title="Account" description="Your account email" />
-          <p className="text-sm font-mono text-muted-foreground">{me?.email ?? '—'}</p>
-        </section>
+    <div className="space-y-8 max-w-2xl">
+      <section>
+        <SectionHeader title="Account" description="Your account email" />
+        <p className="text-sm font-mono text-muted-foreground">{me?.email ?? '—'}</p>
+      </section>
 
-        <section>
-          <SectionHeader title="Password" description="Set a password to sign in without a magic link" />
-          <form onSubmit={passwordForm.handleSubmit(handleSetPassword)} className="space-y-3">
-            <Field data-invalid={!!passwordForm.formState.errors.password}>
-              <FieldLabel htmlFor="new-password">New password</FieldLabel>
-              <div className="relative">
-                <Input
-                  {...passwordForm.register('password')}
-                  id="new-password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="pr-9"
-                  placeholder="••••••••"
-                  aria-invalid={!!passwordForm.formState.errors.password}
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {passwordForm.formState.errors.password && (
-                <FieldError errors={[passwordForm.formState.errors.password]} />
-              )}
-            </Field>
-
-            <Field data-invalid={!!passwordForm.formState.errors.confirm}>
-              <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
+      <section>
+        <SectionHeader title="Password" description="Set a password to sign in without a magic link" />
+        <form onSubmit={passwordForm.handleSubmit(handleSetPassword)} className="space-y-3">
+          <Field data-invalid={!!passwordForm.formState.errors.password}>
+            <FieldLabel htmlFor="new-password">New password</FieldLabel>
+            <div className="relative">
               <Input
-                {...passwordForm.register('confirm')}
-                id="confirm-password"
-                type="password"
+                {...passwordForm.register('password')}
+                id="new-password"
+                type={showPassword ? 'text' : 'password'}
+                className="pr-9"
                 placeholder="••••••••"
-                aria-invalid={!!passwordForm.formState.errors.confirm}
+                aria-invalid={!!passwordForm.formState.errors.password}
                 autoComplete="new-password"
               />
-              {passwordForm.formState.errors.confirm && <FieldError errors={[passwordForm.formState.errors.confirm]} />}
-            </Field>
-
-            <div className="flex items-center gap-2">
-              <Button type="submit" variant="outline" size="sm" disabled={saving || !passwordForm.formState.isDirty}>
-                {saving ? <Loader2 className="animate-spin" /> : <Lock className="w-4 h-4" />}
-                Set password
-              </Button>
-              {saved && <span className="text-xs text-green-600 animate-in fade-in">Password updated</span>}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          </form>
-        </section>
-      </div>
-    </SettingsLayout>
+            {passwordForm.formState.errors.password && <FieldError errors={[passwordForm.formState.errors.password]} />}
+          </Field>
+
+          <Field data-invalid={!!passwordForm.formState.errors.confirm}>
+            <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
+            <Input
+              {...passwordForm.register('confirm')}
+              id="confirm-password"
+              type="password"
+              placeholder="••••••••"
+              aria-invalid={!!passwordForm.formState.errors.confirm}
+              autoComplete="new-password"
+            />
+            {passwordForm.formState.errors.confirm && <FieldError errors={[passwordForm.formState.errors.confirm]} />}
+          </Field>
+
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="outline" size="sm" disabled={saving || !passwordForm.formState.isDirty}>
+              {saving ? <Loader2 className="animate-spin" /> : <Lock className="w-4 h-4" />}
+              Set password
+            </Button>
+            {saved && <span className="text-xs text-green-600 animate-in fade-in">Password updated</span>}
+          </div>
+        </form>
+      </section>
+    </div>
   )
 }
 
