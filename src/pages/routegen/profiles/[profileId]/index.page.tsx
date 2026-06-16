@@ -22,7 +22,7 @@ import { profileFamilyAtom, profileStatsFamilyAtom } from './_data'
 
 const SectionHeader = ({ title, right }: { title: string; right?: React.ReactNode }) => (
   <div className="flex items-center gap-2 mb-2">
-    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</span>
+    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
     <div className="flex-1 h-px bg-border" />
     {right && <span className="text-[10px] text-muted-foreground">{right}</span>}
   </div>

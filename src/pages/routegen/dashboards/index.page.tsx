@@ -146,7 +146,7 @@ const Dashboards = () => {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground md:justify-end">
-                  <span className="font-mono tabular-nums">{formatTileCount(dashboard.tiles.length)}</span>
+                  <span className="tabular-nums">{formatTileCount(dashboard.tiles.length)}</span>
                   <span>Updated {formatDashboardTime(dashboard.updateTime)}</span>
                   <span className="hidden lg:inline">Created {formatDashboardTime(dashboard.createTime)}</span>
                   <ArrowRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />

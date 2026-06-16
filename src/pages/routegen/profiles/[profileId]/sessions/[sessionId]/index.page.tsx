@@ -95,11 +95,11 @@ const SessionSummary = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Duration</p>
-          <p className="text-sm font-semibold tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
+          <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Events</p>
-          <p className="text-sm font-semibold tabular-nums">{events.length}</p>
+          <p className="text-sm font-medium tabular-nums">{events.length}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground mb-0.5">Entry</p>

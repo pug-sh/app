@@ -15,6 +15,10 @@ type ChartContextProps = {
 
 const ChartContext = React.createContext<ChartContextProps | null>(null)
 
+// Layout transitions (e.g. sidebar collapse ~200ms) emit many ResizeObserver updates;
+// debounce keeps charts responsive while redrawing once the container size settles.
+const CHART_RESIZE_DEBOUNCE_MS = 250
+
 const useChart = () => {
   const context = React.useContext(ChartContext)
   if (!context) {
@@ -50,7 +54,9 @@ export const ChartContainer = React.forwardRef<
         }
         {...props}
       >
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        <RechartsPrimitive.ResponsiveContainer debounce={CHART_RESIZE_DEBOUNCE_MS}>
+          {children}
+        </RechartsPrimitive.ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   )
@@ -107,8 +113,8 @@ export const ChartTooltipContent = React.forwardRef<
                 formatter(value, datum.name as string | undefined, datum, index, datum.payload)
               ) : (
                 <>
-                  <span className="text-muted-foreground">{defaultName}</span>
-                  <span className="ml-auto font-mono tabular-nums text-foreground">
+                  <span className="truncate text-muted-foreground">{defaultName}</span>
+                  <span className="ml-auto font-medium tabular-nums text-foreground">
                     {typeof value === 'number' ? value.toLocaleString() : String(value ?? '')}
                   </span>
                 </>
