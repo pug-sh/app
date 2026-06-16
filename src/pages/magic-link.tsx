@@ -30,7 +30,7 @@ const MagicLink = () => {
       <AuthShell>
         <div className="text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-semibold tracking-tight mb-1">Invalid link</h1>
+          <h1 className="text-lg font-medium tracking-tight mb-1">Invalid link</h1>
           <p className="text-sm text-muted-foreground">This link is missing its token. Request a new one.</p>
         </div>
       </AuthShell>
@@ -42,7 +42,7 @@ const MagicLink = () => {
       <AuthShell>
         <div className="text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-semibold tracking-tight mb-1">Couldn't sign you in</h1>
+          <h1 className="text-lg font-medium tracking-tight mb-1">Couldn't sign you in</h1>
           <p className="text-sm text-muted-foreground mb-6">{error}</p>
           <button
             type="button"

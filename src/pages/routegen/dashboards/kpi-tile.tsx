@@ -1,6 +1,8 @@
+import { TrendingDown, TrendingUp } from 'lucide-react'
 import { useId, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { cn } from '@/lib/utils'
 import { accentTextClass, toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
@@ -11,6 +13,8 @@ type KpiTileProps = {
   currentSeries: TrendSeries[]
   compare?: KpiCompare
   formatValue: (value: number) => string
+  metadata?: string
+  lightMetric?: boolean
 }
 
 // Sum all points across all series. KPI tiles aren't designed for multi-series
@@ -22,23 +26,39 @@ const summarize = (series: TrendSeries[]): number => {
   return series.reduce((seriesAcc, s) => seriesAcc + s.points.reduce((pointAcc, p) => pointAcc + p.value, 0), 0)
 }
 
-const formatDelta = (current: number, prior: number): string | null => {
+const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
   if (!Number.isFinite(current)) return null
   const pct = ((current - prior) / Math.abs(prior)) * 100
-  const sign = pct >= 0 ? '+' : ''
-  return `${sign}${pct.toFixed(1)}%`
+  return { pct, label: `${Math.abs(pct).toFixed(1)}%` }
 }
 
-export const KpiTile = ({ tile, currentSeries, compare, formatValue }: KpiTileProps) => {
+const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
+  const positive = pct >= 0
+  const Icon = positive ? TrendingUp : TrendingDown
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
+        'font-medium',
+        positive
+          ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+          : 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+      )}
+    >
+      <Icon className="size-3" strokeWidth={2.5} aria-hidden />
+      {label}
+    </span>
+  )
+}
+
+export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, lightMetric }: KpiTileProps) => {
   const current = useMemo(() => summarize(currentSeries), [currentSeries])
   const prior = useMemo(() => (compare && 'series' in compare ? summarize(compare.series) : undefined), [compare])
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
 
   const numberColor = tone === null ? accentTextClass(tile.header?.accentColor ?? '') : toneTextClass(tone)
   const delta = prior !== undefined ? formatDelta(current, prior) : null
-  const deltaClass =
-    delta === null ? 'text-muted-foreground' : delta.startsWith('+') ? 'text-emerald-500' : 'text-red-500'
 
   const sparkPoints = useMemo(() => currentSeries[0]?.points ?? [], [currentSeries])
   const showSparkline = tile.visualization?.hideSparkline !== true && sparkPoints.length >= 2
@@ -52,21 +72,39 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue }: KpiTilePr
         ? 'text-emerald-500'
         : 'text-red-500'
 
+  const contextParts = [compare && 'series' in compare ? compare.label : null, metadata].filter(Boolean)
+
+  const compareRow =
+    compare && 'error' in compare ? (
+      <div className="text-xs text-muted-foreground">Compare unavailable · {compare.label}</div>
+    ) : delta !== null && compare && 'series' in compare ? (
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <DeltaBadge pct={delta.pct} label={delta.label} />
+        {contextParts.length > 0 ? (
+          <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
+        ) : null}
+      </div>
+    ) : contextParts.length > 0 ? (
+      <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
+    ) : null
+
   const summary = (
-    <div className="space-y-1">
-      <div className={`text-3xl font-semibold tracking-tight tabular-nums ${numberColor}`}>{formatValue(current)}</div>
-      {compare && 'error' in compare ? (
-        <div className="text-muted-foreground text-xs">Compare unavailable · {compare.label}</div>
-      ) : delta !== null && compare && 'series' in compare ? (
-        <div className={`text-xs ${deltaClass}`}>
-          {delta} {compare.label}
-        </div>
-      ) : null}
+    <div className="space-y-2">
+      <div
+        className={cn(
+          'tracking-tight tabular-nums',
+          lightMetric ? 'text-4xl font-medium' : 'text-3xl font-bold',
+          numberColor,
+        )}
+      >
+        {formatValue(current)}
+      </div>
+      {compareRow}
     </div>
   )
 
-  // No sparkline → center the value + delta as a clean stat. With a sparkline →
-  // value + delta on top and the area chart anchored to the bottom, filling the tile.
+  // No sparkline → stack value + delta from the top. With a sparkline → value +
+  // delta on top and the area chart anchored to the bottom, filling the tile.
   if (!showSparkline) {
     return <div className="flex h-full min-h-0 flex-col justify-center">{summary}</div>
   }

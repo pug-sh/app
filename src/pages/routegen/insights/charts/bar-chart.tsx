@@ -1,11 +1,20 @@
+import { memo } from 'react'
 import { Bar, CartesianGrid, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import type { SeriesColor } from '@/lib/event-colors'
-import { formatTooltipLabel, SHARED_MARGIN, SHARED_X_AXIS, sharedYAxis, useChartPrep } from './common'
+import { cn } from '@/lib/utils'
+import {
+  COMPACT_CHART_AXIS_CLASS,
+  formatTooltipLabel,
+  SHARED_MARGIN,
+  SHARED_X_AXIS,
+  sharedYAxis,
+  useChartPrep,
+} from './common'
 import type { ChartPoint } from './types'
 
-export const BarChart = ({
+export const BarChart = memo(function BarChart({
   data,
   seriesNames,
   seriesColors,
@@ -25,13 +34,13 @@ export const BarChart = ({
   zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   className?: string
-}) => {
+}) {
   const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, stacked)
 
   if (data.length === 0) return null
 
   return (
-    <ChartContainer config={chartConfig} className={className}>
+    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
       <ReBarChart
         key={stacked ? 'stacked' : 'grouped'}
         data={chartData}
@@ -61,4 +70,4 @@ export const BarChart = ({
       </ReBarChart>
     </ChartContainer>
   )
-}
+})

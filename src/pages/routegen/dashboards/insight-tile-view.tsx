@@ -61,6 +61,8 @@ export const InsightTileView = ({
   onRetry,
   compare,
   compact = false,
+  kpiMetadata,
+  lightMetrics = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -74,6 +76,8 @@ export const InsightTileView = ({
   // Live KPI compare only; the public render has no comparison and passes undefined.
   compare?: KpiCompare
   compact?: boolean
+  kpiMetadata?: string
+  lightMetrics?: boolean
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -144,6 +148,8 @@ export const InsightTileView = ({
           currentSeries={trendSeries}
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
+          metadata={kpiMetadata}
+          lightMetric={lightMetrics}
         />
       </div>
     )
@@ -181,6 +187,7 @@ export const InsightTileView = ({
         hideLegend={tile?.visualization?.hideLegend}
         yTickFormatter={yTickFormatter}
         compact={compact}
+        lightNumbers={lightMetrics}
       />
     </div>
   )

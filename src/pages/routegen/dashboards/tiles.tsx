@@ -2,7 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { Copy, MoreHorizontal, TrendingUp } from 'lucide-react'
 import { type ReactNode, type RefObject, useRef } from 'react'
 import snarkdown from 'snarkdown'
-import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { TwemojiIcon } from '@/components/twemoji-icon'
@@ -44,6 +44,7 @@ export const TileShell = ({
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
   const borderless = tile.header?.borderless === true
+  const isKpi = tile.viewMode === DashboardTileViewMode.KPI
 
   return (
     <div
@@ -61,10 +62,16 @@ export const TileShell = ({
         // that state — renaming stays available from the config panel header.
         <TileHeaderEdit tile={tile} onPatch={onPatch} hideTitle={hideTitle} />
       ) : hideTitle ? null : (
-        <div className="mb-3 flex min-w-0 shrink-0 items-start gap-2 pr-8">
+        <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
           {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold">{tile.displayName}</h3>
+            <h3
+              className={
+                isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base font-medium'
+              }
+            >
+              {tile.displayName}
+            </h3>
             {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
           </div>
         </div>

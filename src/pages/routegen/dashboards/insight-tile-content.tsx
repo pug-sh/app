@@ -30,6 +30,8 @@ export const DashboardInsightContent = ({
   granularityOverride,
   queryKeyPrefix,
   compact = false,
+  kpiMetadata,
+  lightMetrics = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -41,6 +43,8 @@ export const DashboardInsightContent = ({
   granularityOverride?: Granularity
   queryKeyPrefix: string
   compact?: boolean
+  kpiMetadata?: string
+  lightMetrics?: boolean
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
@@ -143,6 +147,8 @@ export const DashboardInsightContent = ({
       onRetry={retry}
       compare={compare}
       compact={compact}
+      kpiMetadata={kpiMetadata}
+      lightMetrics={lightMetrics}
     />
   )
 }

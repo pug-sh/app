@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, DollarSign, FileText, Hash, LineChart, ListOrdered, Sparkles, Trophy } from 'lucide-react'
+import { BarChart3, DollarSign, FileText, Hash, LineChart, ListOrdered, Repeat, Trophy } from 'lucide-react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import {
@@ -153,7 +153,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     group: 'suggested',
     displayName: 'Day-7 retention',
     description: 'Cohort retention curve.',
-    icon: Sparkles,
+    icon: Repeat,
     // Retention of the most-active event; user can add a distinct return event.
     build: ({ bindings }) =>
       create(DashboardTileInputSchema, {

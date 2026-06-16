@@ -1,4 +1,5 @@
 import { TrendingUp } from 'lucide-react'
+import { memo } from 'react'
 import type { AggregationType, Granularity, RetentionSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
@@ -16,7 +17,7 @@ import {
 } from './charts'
 import type { ViewMode } from './constants'
 
-export const InsightsContent = ({
+export const InsightsContent = memo(function InsightsContent({
   error,
   retry,
   unknownResultCase,
@@ -42,6 +43,7 @@ export const InsightsContent = ({
   hideLegend,
   yTickFormatter,
   compact = false,
+  lightNumbers = false,
 }: {
   error: string | null
   retry: () => void
@@ -68,7 +70,8 @@ export const InsightsContent = ({
   hideLegend?: boolean
   yTickFormatter?: (value: number) => string
   compact?: boolean
-}) => {
+  lightNumbers?: boolean
+}) {
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
@@ -158,15 +161,22 @@ export const InsightsContent = ({
   const renderFunnelContent = () => {
     if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
     if (!hasFunnelData) return renderNoEvents()
-    if (breakdowns.length > 0) {
-      return (
+
+    const funnelBody =
+      breakdowns.length > 0 ? (
         <>
           <FunnelBreakdownView series={funnelSeriesData} />
           {renderTruncationNotice(funnelSeriesData.length)}
         </>
+      ) : (
+        <FunnelChart series={funnelSeriesData} compact={compact} />
       )
+
+    if (compact) {
+      return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
     }
-    return <FunnelChart series={funnelSeriesData} />
+
+    return funnelBody
   }
 
   const renderRetentionContent = () => {
@@ -179,7 +189,7 @@ export const InsightsContent = ({
             return (
               <div key={retentionLabels[si] ?? si}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {retentionLabels[si]}
                   </span>
                   <div className="flex-1 h-px bg-border" />
@@ -250,6 +260,8 @@ export const InsightsContent = ({
             seriesColors={seriesColors}
             aggregations={seriesAggregations}
             compact={compact}
+            showSeriesNames={breakdowns.length > 0}
+            lightNumbers={lightNumbers}
           />
         )}
         <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
@@ -258,4 +270,4 @@ export const InsightsContent = ({
   }
 
   return renderLoadingEmptyState()
-}
+})
