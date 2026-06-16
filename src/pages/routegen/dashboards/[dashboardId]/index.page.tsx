@@ -423,10 +423,10 @@ const DashboardDetail = () => {
               onChange={next => patchDraftMeta({ displayName: next })}
               placeholder={UNTITLED_DASHBOARD_NAME}
               autoFocus={autoFocusName}
-              className="min-h-12 flex-1 text-3xl font-semibold tracking-tight outline-hidden"
+              className="min-h-12 flex-1 text-3xl font-medium tracking-tight outline-hidden"
             />
           ) : (
-            <h1 className="min-h-12 text-3xl font-semibold tracking-tight">
+            <h1 className="min-h-12 text-3xl font-medium tracking-tight">
               {dashboard?.displayName || UNTITLED_DASHBOARD_NAME}
             </h1>
           )}

@@ -238,7 +238,7 @@ const Profiles = () => {
       ) : (
         <>
           <div className="mt-4 mb-2 flex items-center justify-between gap-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profiles</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profiles</span>
             <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
           </div>
           <div className="overflow-x-clip">

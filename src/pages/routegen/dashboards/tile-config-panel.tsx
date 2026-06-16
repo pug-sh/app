@@ -49,11 +49,11 @@ export const TileConfigPanel = ({
               value={tile.displayName}
               onChange={next => onPatch({ displayName: next })}
               placeholder="Untitled tile"
-              className="font-semibold text-sm outline-hidden"
+              className="font-medium text-sm outline-hidden"
             />
           </div>
         ) : (
-          <div className="min-w-0 flex-1 truncate font-semibold text-sm">Tile settings</div>
+          <div className="min-w-0 flex-1 truncate font-medium text-sm">Tile settings</div>
         )}
         <div className="flex shrink-0 items-center gap-1">
           <Button size="icon-xs" variant="ghost" onClick={onToggleCollapse} aria-label="Collapse panel">
