@@ -24,7 +24,6 @@ import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../../events/filter-schema.atoms'
-import ProfileShell from '../_shell'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -169,7 +168,7 @@ const UserActivity = () => {
   if (!project) return <NoProject title="User Activity" icon={Activity} />
 
   return (
-    <ProfileShell profileId={profileId ?? ''}>
+    <>
       {loading && events.length === 0 ? (
         <LoadingSpinner />
       ) : error && events.length === 0 ? (
@@ -328,7 +327,7 @@ const UserActivity = () => {
           <p className="text-xs">No activity for this user</p>
         </div>
       )}
-    </ProfileShell>
+    </>
   )
 }
 
