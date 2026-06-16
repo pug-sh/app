@@ -4,6 +4,8 @@ import { Bar, CartesianGrid, Cell, BarChart as ReBarChart, XAxis, YAxis } from '
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { cn } from '@/lib/utils'
+import { COMPACT_CHART_AXIS_CLASS } from './common'
 
 // All series in a single chart must share the same step skeleton (same names,
 // same order). The chart aligns by index across series and assumes that contract.
@@ -25,7 +27,17 @@ const countKey = (si: number) => `s${si}__count`
 const fromPrevKey = (si: number) => `s${si}__fromPrev`
 const dropOffKey = (si: number) => `s${si}__dropOff`
 
-export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[]; colorByStep?: boolean }) => {
+export const FunnelChart = ({
+  series,
+  colorByStep,
+  compact = false,
+  className,
+}: {
+  series: FunnelSeriesData[]
+  colorByStep?: boolean
+  compact?: boolean
+  className?: string
+}) => {
   const isMultiSeries = series.length > 1
   // Single series → per-step palette; multi-series → per-series color so series identity wins.
   const useStepColors = colorByStep ?? !isMultiSeries
@@ -79,8 +91,11 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
   if (series.length === 0 || stepNames.length === 0) return null
 
   return (
-    <div className="mt-4 p-4">
-      <ChartContainer config={chartConfig} className="h-64 w-full">
+    <div className={cn(compact ? 'flex h-full min-h-0 flex-col' : 'mt-4 p-4', className)}>
+      <ChartContainer
+        config={chartConfig}
+        className={cn(compact ? 'h-full min-h-[120px] w-full' : 'h-64 w-full', compact && COMPACT_CHART_AXIS_CLASS)}
+      >
         <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap="20%" barGap={2}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey={STEP_KEY} tickLine={false} axisLine={false} interval={0} />
@@ -116,24 +131,24 @@ export const FunnelChart = ({ series, colorByStep }: { series: FunnelSeriesData[
                         <div className="space-y-0.5 pl-3.5">
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-muted-foreground">Completed</span>
-                            <span className="font-mono tabular-nums">{compactNumber(count)}</span>
+                            <span className="tabular-nums">{compactNumber(count)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-4">
                             <span className="text-muted-foreground">From start</span>
-                            <span className="font-mono tabular-nums">{conv.toFixed(1)}%</span>
+                            <span className="tabular-nums">{conv.toFixed(1)}%</span>
                           </div>
                           {!isMultiSeries && (
                             <>
                               <div className="flex items-center justify-between gap-4">
                                 <span className="text-muted-foreground">From previous</span>
-                                <span className="font-mono tabular-nums">
+                                <span className="tabular-nums">
                                   {Number.isFinite(fromPrev) ? `${fromPrev.toFixed(1)}%` : '—'}
                                 </span>
                               </div>
                               {Number.isFinite(dropOff) && (
                                 <div className="flex items-center justify-between gap-4">
                                   <span className="text-muted-foreground">Drop-off</span>
-                                  <span className="font-mono tabular-nums">{compactNumber(dropOff)}</span>
+                                  <span className="tabular-nums">{compactNumber(dropOff)}</span>
                                 </div>
                               )}
                             </>
@@ -200,27 +215,29 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
     <div className="mt-4 space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Highest conversion rate</p>
+          <p className="text-xs font-normal text-muted-foreground">Highest conversion rate</p>
           <div className="flex items-baseline gap-2">
             {allRatesZero ? (
-              <span className="text-2xl font-semibold tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{highestConv?.label}</span>
-                <span className="text-2xl font-semibold tabular-nums">{highestConv?.rate.toFixed(1)}%</span>
+                <span className="text-lg font-medium tabular-nums text-foreground">
+                  {highestConv?.rate.toFixed(1)}%
+                </span>
               </>
             )}
           </div>
         </div>
         <div className="space-y-0.5">
-          <p className="text-xs text-muted-foreground">Most conversions</p>
+          <p className="text-xs font-normal text-muted-foreground">Most conversions</p>
           <div className="flex items-baseline gap-2">
             {allCompletedZero ? (
-              <span className="text-2xl font-semibold tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{mostCompleted?.label}</span>
-                <span className="text-2xl font-semibold tabular-nums">
+                <span className="text-lg font-medium tabular-nums text-foreground">
                   {compactNumber(mostCompleted?.completed ?? 0)}
                 </span>
               </>

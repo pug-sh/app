@@ -43,7 +43,7 @@ const CopyButton = ({ value }: { value: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div>
-    <p className="text-2xl font-semibold tabular-nums">{value.toLocaleString()}</p>
+    <p className="text-2xl font-medium tabular-nums">{value.toLocaleString()}</p>
     <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
   </div>
 )
@@ -97,7 +97,7 @@ const ProfileShell = ({ profileId, children }: { profileId: string; children: Re
             </span>
           </div>
           <div className="min-w-0 space-y-1">
-            <span className={cn('block truncate text-xl font-semibold', identity.isFallback && 'font-mono')}>
+            <span className={cn('block truncate text-xl font-medium', identity.isFallback && 'font-mono')}>
               {identity.name}
             </span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
