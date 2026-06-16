@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { autoGranularity, clampGranularity, granularityDisabledReason } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
@@ -49,8 +50,6 @@ const GLOBAL_DASHBOARD_GRANULARITIES = [
   { label: 'Select granularity', value: Granularity.UNSPECIFIED },
   ...GRANULARITIES,
 ] as const
-
-const DAY_MS = 24 * 60 * 60 * 1000
 
 const formatRelative = (ts: number): string => {
   const elapsed = Date.now() - ts
@@ -81,16 +80,6 @@ const countChanges = (a: Dashboard, b: Dashboard): number => {
   return count
 }
 
-const getAutoGlobalGranularity = (range: TimeRange | undefined) => {
-  if (!range) return Granularity.UNSPECIFIED
-
-  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
-  if (durationMs <= DAY_MS) return Granularity.HOUR
-  if (durationMs <= 90 * DAY_MS) return Granularity.DAY
-  if (durationMs <= 365 * DAY_MS) return Granularity.WEEK
-  return Granularity.MONTH
-}
-
 const DashboardDetail = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
@@ -117,7 +106,7 @@ const DashboardDetail = () => {
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
   const [globalGranularity, setGlobalGranularity] = useState(() => {
     if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
-    return getAutoGlobalGranularity(initialGlobalOverrides.timeRange)
+    return autoGranularity(initialGlobalOverrides.timeRange)
   })
 
   const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
@@ -159,7 +148,7 @@ const DashboardDetail = () => {
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     setGlobalTimeRange(range)
-    setGlobalGranularity(getAutoGlobalGranularity(range))
+    setGlobalGranularity(g => clampGranularity(g, range))
   }, [])
 
   const enterEditMode = useCallback(
@@ -366,6 +355,7 @@ const DashboardDetail = () => {
             options={GLOBAL_DASHBOARD_GRANULARITIES}
             value={globalGranularity}
             onChange={setGlobalGranularity}
+            isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
           />
           {mode === 'view' ? (
             <Button size="sm" variant="outline" onClick={() => enterEditMode()}>
