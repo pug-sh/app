@@ -99,7 +99,7 @@ export const EventQueryRow = memo(
           {letter && (
             <span className="flex items-center gap-1.5">
               {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
-              <span className="text-[10px] font-semibold text-muted-foreground w-3">{letter}</span>
+              <span className="text-[10px] font-medium text-muted-foreground w-3">{letter}</span>
             </span>
           )}
           <EventChip

@@ -116,10 +116,10 @@ export function DateRangePicker({
                     onChange(preset.resolve())
                     setOpen(false)
                   }}
-                  className="px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                 >
                   {preset.label}
-                  <span className="block text-[10px] text-muted-foreground/50">
+                  <span className="block text-[11px] text-muted-foreground/50">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>
@@ -132,7 +132,7 @@ export function DateRangePicker({
                   onChange(undefined)
                   setOpen(false)
                 }}
-                className="px-2.5 py-1 text-[11px] text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
               >
                 {unsetLabel}
               </button>

@@ -152,7 +152,7 @@ const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
   return (
     <div className="w-56 text-xs">
       <div className="mb-2">
-        <div className="truncate text-sm font-semibold text-foreground">{marker.page}</div>
+        <div className="truncate text-sm font-medium text-foreground">{marker.page}</div>
         <div className="truncate text-muted-foreground">{location || country}</div>
       </div>
       <div className="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-muted-foreground">
