@@ -5,6 +5,7 @@ import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { granularityDisabledReason } from '@/lib/granularity'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { InlineEditableText } from '../editor-shared'
@@ -90,6 +91,7 @@ export const DashboardHeader = ({
           options={GLOBAL_DASHBOARD_GRANULARITIES}
           value={globalGranularity}
           onChange={onGranularityChange}
+          isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
         />
         {!editing ? <ShareControl shareId={shareId} sharing={sharing} onTogglePublic={onTogglePublic} /> : null}
         {!editing ? (

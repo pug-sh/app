@@ -26,6 +26,7 @@ import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
+import { clampGranularity, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
@@ -111,6 +112,13 @@ const Insights = () => {
 
   const removeBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => prev.filter(p => p !== prop))
+  }, [])
+
+  // Keep granularity valid for the range: a too-fine granularity (e.g. Hour over 30 days)
+  // would be rejected by the backend, so bump it to the finest that still fits.
+  const handleTimeRangeChange = useCallback((range: TimeRange | undefined) => {
+    setTimeRange(range)
+    setGranularity(g => clampGranularity(g, range))
   }, [])
 
   // Schema loading and URL sync.
@@ -322,7 +330,7 @@ const Insights = () => {
         )}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <DateRangePicker value={timeRange} onChange={setTimeRange} presets={INSIGHTS_PRESETS} />
+          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} presets={INSIGHTS_PRESETS} />
           <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTimeSeriesInsight && (
             <>
@@ -332,6 +340,7 @@ const Insights = () => {
                 options={GRANULARITIES}
                 value={granularity}
                 onChange={setGranularity}
+                isOptionDisabled={v => granularityDisabledReason(v, timeRange)}
               />
               {isTrends && (
                 <OptionChip

@@ -168,6 +168,17 @@ Rules:
 - Funnel and retention ignore per-event aggregation and should continue using total counts.
 - Summary stats should adapt to aggregation type instead of always presenting totals.
 
+### Insights Granularity & Time Range
+
+The backend enforces a max time-range span per granularity (buf.validate CEL constraints on `QueryRequest` in `proto/shared/insights/v1/insights.proto`) — e.g. `GRANULARITY_HOUR requires a time range of at most 14 days`. The frontend must keep granularity and time range compatible so these never reach the server.
+
+- Single source of truth: `src/lib/granularity.ts` (mirrors the proto caps — keep them in sync).
+- Any page with both a time-range picker and a granularity picker must use these helpers — do not re-derive or duplicate the ladder per page:
+  - `granularityDisabledReason(granularity, range)` → pass as `OptionChip`'s `isOptionDisabled` so over-cap granularities render disabled with a tooltip.
+  - `clampGranularity(granularity, range)` → call from the time-range `onChange`. Keeps a still-valid pick as-is, leaves `UNSPECIFIED` ("Auto") untouched, and bumps a now-disabled pick to the **smallest/finest** granularity that still fits.
+  - `autoGranularity(range)` → resolve `UNSPECIFIED` ("Auto") to a concrete value at the consumption point. This is the only place the auto ladder lives.
+- Behavior must be identical across Insights, Overview, and Dashboard (the three current consumers): same disabled options, same clamp-to-finest-valid on range change.
+
 ### Form Validation
 
 Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for client-side validation. Define constraints in the Zod schema — required fields, string lengths, formats — so errors surface immediately in the UI before any RPC call. The protovalidate interceptor still runs as a safety net but is not the primary validation layer for forms.

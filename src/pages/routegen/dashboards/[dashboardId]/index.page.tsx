@@ -10,13 +10,13 @@ import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
+import { autoGranularity, clampGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { deleteDashboardAtom, fetchDashboardAtom, setDashboardVisibilityAtom } from '../dashboard.atoms'
 import { type DashboardDeleteTarget } from '../delete-confirmation'
 import { DashboardEmptyState } from '../tiles'
-import { getAutoGlobalGranularity } from './controls-helpers'
 import { DashboardCanvas } from './dashboard-canvas'
 import { DashboardHeader } from './dashboard-header'
 import { useDashboardEditor } from './use-dashboard-editor'
@@ -59,7 +59,7 @@ const DashboardDetail = () => {
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
   const [globalGranularity, setGlobalGranularity] = useState(() => {
     if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
-    return getAutoGlobalGranularity(initialGlobalOverrides.timeRange)
+    return autoGranularity(initialGlobalOverrides.timeRange)
   })
 
   useEffect(() => {
@@ -68,7 +68,7 @@ const DashboardDetail = () => {
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     setGlobalTimeRange(range)
-    setGlobalGranularity(getAutoGlobalGranularity(range))
+    setGlobalGranularity(g => clampGranularity(g, range))
   }, [])
 
   const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
