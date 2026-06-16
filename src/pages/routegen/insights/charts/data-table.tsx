@@ -40,7 +40,7 @@ export const DataTable = ({
                 {formatTooltipDate(d.date, granularity, timeZone)}
               </td>
               {d.values.map((v, si) => (
-                <td key={si} className="py-2 pr-2 text-right font-mono text-sm tabular-nums">
+                <td key={si} className="py-2 pr-2 text-right text-sm tabular-nums">
                   {v.toLocaleString()}
                 </td>
               ))}

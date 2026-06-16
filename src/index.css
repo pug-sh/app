@@ -1,7 +1,49 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+/* Self-hosted Apfel Grotezk. The @fontsource package only ships 400/700, but
+   the UI leans heavily on font-medium (500) — without the Mittel cut every
+   medium element silently falls back to 400. Ship the full named scale so the
+   weight hierarchy renders as designed. */
+@font-face {
+  font-family: "Apfel Grotezk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff) format("woff");
+}
+@font-face {
+  font-family: "Apfel Grotezk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff2) format("woff2"),
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff) format("woff");
+}
+@font-face {
+  font-family: "Apfel Grotezk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff2) format("woff2"),
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff) format("woff");
+}
+@font-face {
+  font-family: "Apfel Grotezk";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src:
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2) format("woff2"),
+    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff) format("woff");
+}
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,7 +75,7 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Apfel Grotezk", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -60,11 +102,20 @@
   }
   body {
     @apply antialiased bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-size: 14px;
+    font-weight: 400;
     margin: 0;
   }
   html {
     @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 500;
+    letter-spacing: -0.013em;
   }
 }
 
@@ -73,7 +124,7 @@
   .markdown-body h1,
   .markdown-body h2,
   .markdown-body h3 {
-    @apply mb-2 font-semibold text-foreground;
+    @apply mb-2 font-medium tracking-tight text-foreground;
   }
 
   .markdown-body h1 {
@@ -132,9 +183,9 @@
 :root {
   --background: oklch(0.98 0.002 250);
   --foreground: oklch(0.15 0.02 260);
-  --card: oklch(1 0 0);
+  --card: oklch(0.995 0.0015 260);
   --card-foreground: oklch(0.15 0.02 260);
-  --popover: oklch(1 0 0);
+  --popover: oklch(0.995 0.0015 260);
   --popover-foreground: oklch(0.15 0.02 260);
   --primary: oklch(0.55 0.18 265);
   --primary-foreground: oklch(0.98 0.005 265);
@@ -151,20 +202,23 @@
   --ring: oklch(0.55 0.18 265);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.7 0.15 70);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* charts — hued to match the semantic palette (blue/green/amber/magenta/red),
+     tuned a touch darker than dark mode so each series reads on the light bg */
+  --chart-1: oklch(0.55 0.18 265);
+  --chart-2: oklch(0.6 0.17 145);
+  --chart-3: oklch(0.7 0.15 70);
+  --chart-4: oklch(0.55 0.16 330);
+  --chart-5: oklch(0.58 0.2 25);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* sidebar — slightly recessed from background, sharing the cool tint */
+  --sidebar: oklch(0.965 0.003 260);
+  --sidebar-foreground: oklch(0.15 0.02 260);
+  --sidebar-primary: oklch(0.55 0.18 265);
+  --sidebar-primary-foreground: oklch(0.98 0.005 265);
+  --sidebar-accent: oklch(0.94 0.01 260);
+  --sidebar-accent-foreground: oklch(0.25 0.02 260);
+  --sidebar-border: oklch(0.9 0.008 260);
+  --sidebar-ring: oklch(0.55 0.18 265);
 }
 
 .dark {

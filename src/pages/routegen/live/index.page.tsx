@@ -52,7 +52,7 @@ type LiveStatusHeaderProps = {
 const LiveStatusHeader = ({ visitorCount, loading, lastUpdated, showRefreshSpinner }: LiveStatusHeaderProps) => (
   <div className="flex items-start justify-between gap-6">
     <div>
-      <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
+      <h1 className="flex items-center gap-2.5 text-2xl font-medium tracking-tight">
         Live
         {!loading && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
@@ -220,7 +220,7 @@ const LiveVisitorsPage = () => {
               onSelectVisitor={id => setSelectedDistinctId(prev => (prev === id ? null : id))}
             />
 
-            <div className="absolute top-4 right-4 z-10 max-w-md rounded-xl bg-background/85 px-4 py-3 shadow-xl ring-1 ring-border/50 backdrop-blur-md">
+            <div className="absolute top-4 right-4 z-10 max-w-md rounded-lg border border-border bg-background px-4 py-3 shadow-sm">
               <LiveStatusHeader
                 visitorCount={visitorCount}
                 loading={loading}
@@ -229,11 +229,11 @@ const LiveVisitorsPage = () => {
               />
             </div>
 
-            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/65 shadow-xl ring-1 ring-border/40 backdrop-blur-md">
+            <aside className="absolute bottom-4 left-4 z-10 flex max-h-[18rem] w-[30rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-border/30 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <LiveDot />
-                  <span className="text-sm font-semibold">{visitorCount} live</span>
+                  <span className="text-sm font-medium">{visitorCount} live</span>
                 </div>
                 <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">

@@ -69,6 +69,9 @@ export const useChartPrep = (
 
 export const SHARED_MARGIN = { top: 12, right: 8, left: 0, bottom: 8 }
 
+export const COMPACT_CHART_AXIS_CLASS =
+  '[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground/70 [&_.recharts-cartesian-axis-tick_text]:text-[11px]'
+
 export const SHARED_X_AXIS = {
   dataKey: 'axisLabel' as const,
   tickLine: false,

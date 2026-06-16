@@ -24,7 +24,7 @@ export const TileHeaderEdit = ({
         value={tile.displayName}
         onChange={next => onPatch({ displayName: next })}
         placeholder="Untitled tile"
-        className="font-semibold text-sm outline-hidden"
+        className="font-medium text-sm outline-hidden"
       />
       <InlineEditableText
         value={tile.description}
