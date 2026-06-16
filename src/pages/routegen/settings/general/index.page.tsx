@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { browserTimezone } from '@/lib/timezone'
-import SettingsLayout from '../settings-layout'
 import { TimezonePicker } from './timezone-picker'
 
 const projectSchema = z.object({
@@ -89,68 +88,66 @@ const General = () => {
   }
 
   return (
-    <SettingsLayout>
-      <div className="space-y-8 max-w-2xl">
+    <div className="space-y-8 max-w-2xl">
+      <section>
+        <SectionHeader title="API Endpoint" description="Configured via VITE_API_BASE_URL environment variable" />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/50 px-2.5 py-2 rounded-md font-mono">
+          <Lock className="w-3 h-3 shrink-0" />
+          <span className="break-all">{import.meta.env.VITE_API_BASE_URL}</span>
+        </div>
+      </section>
+
+      {project && projectHeaders && (
         <section>
-          <SectionHeader title="API Endpoint" description="Configured via VITE_API_BASE_URL environment variable" />
-          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/50 px-2.5 py-2 rounded-md font-mono">
-            <Lock className="w-3 h-3 shrink-0" />
-            <span className="break-all">{import.meta.env.VITE_API_BASE_URL}</span>
-          </div>
+          <SectionHeader title="Project" description="Project name and reporting timezone" />
+          <form onSubmit={projectForm.handleSubmit(handleSaveProject)} className="space-y-4">
+            <Field data-invalid={!!projectForm.formState.errors.displayName}>
+              <FieldLabel htmlFor="project-name">Project Name</FieldLabel>
+              <Input
+                {...projectForm.register('displayName')}
+                id="project-name"
+                maxLength={150}
+                aria-invalid={!!projectForm.formState.errors.displayName}
+              />
+              {projectForm.formState.errors.displayName && (
+                <FieldError errors={[projectForm.formState.errors.displayName]} />
+              )}
+            </Field>
+
+            <Field data-invalid={!!projectForm.formState.errors.reportingTimezone}>
+              <FieldLabel htmlFor="project-timezone">Reporting Timezone</FieldLabel>
+              <TimezonePicker
+                value={reportingTimezone}
+                detected={detectedTimezone}
+                onChange={value =>
+                  projectForm.setValue('reportingTimezone', value, { shouldDirty: true, shouldValidate: true })
+                }
+                invalid={!!projectForm.formState.errors.reportingTimezone}
+              />
+              <p className="text-xs text-muted-foreground">
+                Controls how days, weeks, and months are grouped in insights and dashboards.
+              </p>
+              {projectForm.formState.errors.reportingTimezone && (
+                <FieldError errors={[projectForm.formState.errors.reportingTimezone]} />
+              )}
+            </Field>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="submit"
+                variant="outline"
+                size="sm"
+                disabled={savingProject || !projectForm.formState.isDirty}
+              >
+                {savingProject ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
+                Save
+              </Button>
+              {savedProject && <span className="text-xs text-green-600 animate-in fade-in">Saved</span>}
+            </div>
+          </form>
         </section>
-
-        {project && projectHeaders && (
-          <section>
-            <SectionHeader title="Project" description="Project name and reporting timezone" />
-            <form onSubmit={projectForm.handleSubmit(handleSaveProject)} className="space-y-4">
-              <Field data-invalid={!!projectForm.formState.errors.displayName}>
-                <FieldLabel htmlFor="project-name">Project Name</FieldLabel>
-                <Input
-                  {...projectForm.register('displayName')}
-                  id="project-name"
-                  maxLength={150}
-                  aria-invalid={!!projectForm.formState.errors.displayName}
-                />
-                {projectForm.formState.errors.displayName && (
-                  <FieldError errors={[projectForm.formState.errors.displayName]} />
-                )}
-              </Field>
-
-              <Field data-invalid={!!projectForm.formState.errors.reportingTimezone}>
-                <FieldLabel htmlFor="project-timezone">Reporting Timezone</FieldLabel>
-                <TimezonePicker
-                  value={reportingTimezone}
-                  detected={detectedTimezone}
-                  onChange={value =>
-                    projectForm.setValue('reportingTimezone', value, { shouldDirty: true, shouldValidate: true })
-                  }
-                  invalid={!!projectForm.formState.errors.reportingTimezone}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Controls how days, weeks, and months are grouped in insights and dashboards.
-                </p>
-                {projectForm.formState.errors.reportingTimezone && (
-                  <FieldError errors={[projectForm.formState.errors.reportingTimezone]} />
-                )}
-              </Field>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  type="submit"
-                  variant="outline"
-                  size="sm"
-                  disabled={savingProject || !projectForm.formState.isDirty}
-                >
-                  {savingProject ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
-                  Save
-                </Button>
-                {savedProject && <span className="text-xs text-green-600 animate-in fade-in">Saved</span>}
-              </div>
-            </form>
-          </section>
-        )}
-      </div>
-    </SettingsLayout>
+      )}
+    </div>
   )
 }
 

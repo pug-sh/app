@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai'
 import { Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useLocation } from 'wouter'
+import { useLocation, useParams } from 'wouter'
 import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
@@ -55,7 +55,8 @@ const Meta = ({ label, children }: { label?: string; children: ReactNode }) => (
   </span>
 )
 
-const ProfileShell = ({ profileId, children }: { profileId: string; children: ReactNode }) => {
+const ProfileShell = ({ children }: { children: ReactNode }) => {
+  const { profileId = '' } = useParams<{ profileId: string }>()
   const profile = useAtomValue(profileFamilyAtom(profileId))
   const [location] = useLocation()
 
