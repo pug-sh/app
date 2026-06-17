@@ -19,6 +19,7 @@ export const BarChart = memo(function BarChart({
   seriesNames,
   seriesColors,
   granularity,
+  timeZone,
   stacked,
   logScale,
   zeroBaseline,
@@ -29,13 +30,14 @@ export const BarChart = memo(function BarChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  timeZone: string
   stacked: boolean
   logScale?: boolean
   zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, stacked)
+  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone, stacked)
 
   if (data.length === 0) return null
 

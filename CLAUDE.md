@@ -20,7 +20,7 @@ There is no test script today.
 
 ## Proto Code Generation
 
-Proto definitions live in `proto/` (symlink to the pug backend at `/Users/holu/workspace/go/src/github.com/fivebitsio/pug/proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `bun run generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
+Proto definitions live in `proto/` — a gitignored symlink to the pug backend checkout at `$GOPATH/src/github.com/pug-sh/pug/proto` (recreate with `ln -sfn "$(go env GOPATH)/src/github.com/pug-sh/pug/proto" proto`). Generated TypeScript goes to `src/api/genproto/` (gitignored). After backend proto changes, run `bun run generate`. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
 
 ## Architecture
 

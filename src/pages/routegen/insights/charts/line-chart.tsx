@@ -22,6 +22,7 @@ export const LineChart = memo(function LineChart({
   logScale,
   zeroBaseline,
   yTickFormatter,
+  timeZone,
   className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
@@ -31,9 +32,10 @@ export const LineChart = memo(function LineChart({
   logScale?: boolean
   zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
+  timeZone: string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity)
+  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
 
   if (data.length === 0) return null
 
