@@ -1,30 +1,50 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { fmtDate } from '@/lib/date-presets'
 import type { ChartPoint } from './types'
 
-export const formatAxisDate = (d: Date, granularity: Granularity): string => {
-  if (granularity === Granularity.HOUR)
-    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (granularity === Granularity.MONTH) return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+// Bucket boundaries are computed server-side in the project's reporting timezone, so
+// axis/tooltip labels must render in that same zone or a day bucket (e.g. IST midnight
+// = 18:30 UTC the prior day) lands under the wrong date. A malformed/unknown zone throws
+// in Intl — fall back to UTC (mirrors the server's resolveEffectiveWindow) rather than
+// crashing a tile.
+const fmtInZone = (d: Date, timeZone: string | undefined, opts: Intl.DateTimeFormatOptions): string => {
+  try {
+    return d.toLocaleString('en-US', { ...opts, timeZone: timeZone || undefined })
+  } catch {
+    return d.toLocaleString('en-US', { ...opts, timeZone: 'UTC' })
+  }
 }
 
-export const formatTooltipDate = (d: Date, granularity: Granularity): string => {
+const yearIn = (d: Date, timeZone: string | undefined) => fmtInZone(d, timeZone, { year: 'numeric' })
+
+// Month + day, with the year appended only when it differs from "now" in the same zone.
+const fmtDay = (d: Date, timeZone: string | undefined): string => {
+  const sameYear = yearIn(d, timeZone) === yearIn(new Date(), timeZone)
+  return fmtInZone(d, timeZone, { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
+}
+
+export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: string): string => {
   if (granularity === Granularity.HOUR)
-    return fmtDate(d) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    return fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (granularity === Granularity.MONTH) return fmtInZone(d, timeZone, { month: 'short', year: '2-digit' })
+  return fmtInZone(d, timeZone, { month: 'short', day: 'numeric' })
+}
+
+export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: string): string => {
+  if (granularity === Granularity.HOUR)
+    return fmtDay(d, timeZone) + ', ' + fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
 
   if (granularity === Granularity.WEEK) {
     const end = new Date(d)
     end.setDate(end.getDate() + 6)
-    return fmtDate(d) + ' - ' + fmtDate(end)
+    return fmtDay(d, timeZone) + ' - ' + fmtDay(end, timeZone)
   }
 
   if (granularity === Granularity.MONTH) {
-    const thisYear = new Date().getFullYear()
-    return d.toLocaleDateString('en-US', { month: 'long', ...(d.getFullYear() !== thisYear && { year: 'numeric' }) })
+    const sameYear = yearIn(d, timeZone) === yearIn(new Date(), timeZone)
+    return fmtInZone(d, timeZone, { month: 'long', ...(!sameYear && { year: 'numeric' }) })
   }
 
-  return fmtDate(d)
+  return fmtDay(d, timeZone)
 }
 
 /** Round v up to the next "nice" number, scaled by powers of 10, for clean Y-axis ticks. */

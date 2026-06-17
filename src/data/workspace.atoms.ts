@@ -3,6 +3,7 @@ import { atomWithStorage } from 'jotai/utils'
 import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
+import { browserTimezone } from '@/lib/timezone'
 
 // Task 2: lastOrgIdAtom — synchronous initial read avoids first-render flash
 export const LAST_ORG_ID_KEY = 'pug:lastOrgId'
@@ -110,7 +111,9 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   const org = get(activeOrgAtom)
   if (!org) return null
   const projectsRPC = get(projectsRPCAtom)
-  const resp = await projectsRPC.create({ displayName, orgId: org.id })
+  // Inherit the creator's browser zone (coerced to UTC server-side if malformed);
+  // adjust per-project later in settings.
+  const resp = await projectsRPC.create({ displayName, orgId: org.id, reportingTimezone: browserTimezone() })
   // Refresh the project list — if this fails, the project was still created server-side
   try {
     const refreshed = await projectsRPC.batchGet({ orgId: org.id })
@@ -154,6 +157,11 @@ export const projectHeaderAtom = atom(get => {
   if (!project) return undefined
   return { 'x-project-id': project.id }
 })
+
+// The project's reporting timezone, used to render bucketed insight/dashboard
+// times in the same zone the server bucketed them. `'UTC'` is a valid Intl zone
+// and the right default when the project stores `''` (the server's canonical UTC).
+export const activeProjectTimezoneAtom = atom(get => get(activeProjectAtom)?.reportingTimezone || 'UTC')
 
 // Task 7: resetWorkspaceAtom — also clears lastOrgId and resets bootstrap status
 export const resetWorkspaceAtom = atom(null, (_, set) => {
