@@ -129,11 +129,17 @@ export type QueryRequest = Message<"shared.insights.v1.QueryRequest"> & {
   granularity: Granularity;
 
   /**
-   * Optional IANA timezone name (e.g. "Asia/Kolkata") used to align time-bucket
-   * boundaries to the viewer's local day/week/month instead of UTC. Empty (or
-   * "UTC") buckets on UTC boundaries — the historical behavior. The charset is
-   * restricted so the value can be embedded in the ClickHouse toTimeZone() call
-   * without an injection surface; the zone is otherwise validated server-side.
+   * IANA timezone name (e.g. "Asia/Kolkata") used to align time-bucket boundaries
+   * to the viewer's local day/week/month instead of UTC. Empty (or "UTC") buckets on
+   * UTC boundaries — the historical behavior. The charset is restricted so the value
+   * can be embedded in the ClickHouse toTimeZone() call without an injection surface;
+   * the zone is otherwise validated server-side.
+   *
+   * SERVER-OVERWRITTEN, IGNORED ON INPUT: the InsightsService.Query handler replaces
+   * any client-supplied value with the project's stored reporting_timezone, so
+   * bucketing is server-authoritative. Do not set it on the request — it has no
+   * effect. (The field is retained rather than reserved because the executor and the
+   * dashboard render path both populate it internally.)
    *
    * @generated from field: string timezone = 12;
    */

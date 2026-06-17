@@ -40,10 +40,12 @@ const formatCohortLabel = (value: string) => {
 export const RetentionCohort = ({
   cohorts,
   granularity,
+  timeZone,
   seriesColors,
 }: {
   cohorts: RetentionCohortProto[]
   granularity: Granularity
+  timeZone: string
   seriesColors: SeriesColor[]
 }) => {
   if (cohorts.length === 0) return null
@@ -105,7 +107,7 @@ export const RetentionCohort = ({
                 const hasValue = value !== undefined
                 const cellDate = cohorts[ri]?.points[ci]?.time
                 const cellDateParsed = cellDate ? tsToDate(cellDate) : null
-                const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity) : '\u2014'
+                const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity, timeZone) : '\u2014'
                 const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
                 return (
                   <td key={ci} className="py-1.5 px-1.5">
