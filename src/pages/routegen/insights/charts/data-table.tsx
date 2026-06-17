@@ -8,11 +8,13 @@ export const DataTable = ({
   seriesNames,
   seriesColors,
   granularity,
+  timeZone,
 }: {
   data: ChartPoint[]
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  timeZone: string
 }) => {
   if (data.length === 0) return null
   return (
@@ -34,7 +36,9 @@ export const DataTable = ({
         <tbody>
           {data.map((d, i) => (
             <tr key={i} className="border-b border-border/50 transition-colors hover:bg-muted/40">
-              <td className="py-2 pr-2 text-xs text-muted-foreground">{formatTooltipDate(d.date, granularity)}</td>
+              <td className="py-2 pr-2 text-xs text-muted-foreground">
+                {formatTooltipDate(d.date, granularity, timeZone)}
+              </td>
               {d.values.map((v, si) => (
                 <td key={si} className="py-2 pr-2 text-right text-sm tabular-nums">
                   {v.toLocaleString()}

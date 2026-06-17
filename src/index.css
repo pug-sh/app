@@ -4,10 +4,11 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 
-/* Self-hosted Apfel Grotezk. The @fontsource package only ships 400/700, but
-   the UI leans heavily on font-medium (500) — without the Mittel cut every
-   medium element silently falls back to 400. Ship the full named scale so the
-   weight hierarchy renders as designed. */
+/* Self-hosted Apfel Grotezk. We deliberately do NOT ship the 500 (Mittel) cut:
+   the UI uses font-medium (500) widely, and at our text sizes the Mittel weight
+   read too heavy. With no 500 face, the font-matching algorithm renders 500
+   requests as the 400 Regular cut, giving a lighter, flatter weight throughout.
+   Satt (600) and Fett (700) remain for genuine emphasis. */
 @font-face {
   font-family: "Apfel Grotezk";
   font-style: normal;
@@ -16,15 +17,6 @@
   src:
     url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
     url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff) format("woff");
-}
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 500;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Mittel.woff) format("woff");
 }
 @font-face {
   font-family: "Apfel Grotezk";
@@ -182,7 +174,7 @@
 
 :root {
   --background: oklch(0.98 0.002 250);
-  --foreground: oklch(0.15 0.02 260);
+  --foreground: oklch(0.22 0.02 260);
   --card: oklch(0.995 0.0015 260);
   --card-foreground: oklch(0.15 0.02 260);
   --popover: oklch(0.995 0.0015 260);
