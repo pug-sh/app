@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai'
 import { TrendingUp } from 'lucide-react'
 import { memo } from 'react'
 import {
@@ -8,6 +9,7 @@ import {
   type TopKRow,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
+import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
 import {
   AreaChart,
@@ -81,6 +83,9 @@ export const InsightsContent = memo(function InsightsContent({
   compact?: boolean
   lightNumbers?: boolean
 }) {
+  // Bucket labels render in the project's reporting zone so they match the
+  // server-computed bucket boundaries (the server buckets in this same zone).
+  const timeZone = useAtomValue(activeProjectTimezoneAtom)
   const allZero = chartData.every(d => d.values.every(v => v === 0))
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
@@ -129,6 +134,7 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          timeZone={timeZone}
           className={chartClassName}
         />
       )
@@ -139,12 +145,19 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          timeZone={timeZone}
           className={chartClassName}
         />
       )
     if (viewMode === 'table')
       return (
-        <DataTable data={chartData} seriesNames={seriesNames} seriesColors={seriesColors} granularity={granularity} />
+        <DataTable
+          data={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          granularity={granularity}
+          timeZone={timeZone}
+        />
       )
     return (
       <BarChart
@@ -152,6 +165,7 @@ export const InsightsContent = memo(function InsightsContent({
         seriesNames={seriesNames}
         seriesColors={seriesColors}
         granularity={granularity}
+        timeZone={timeZone}
         stacked={viewMode === 'bar-stacked'}
         className={chartClassName}
       />
@@ -210,7 +224,12 @@ export const InsightsContent = memo(function InsightsContent({
                   </span>
                   <div className="flex-1 h-px bg-border" />
                 </div>
-                <RetentionCohort cohorts={series.cohorts} granularity={granularity} seriesColors={cohortColors} />
+                <RetentionCohort
+                  cohorts={series.cohorts}
+                  granularity={granularity}
+                  timeZone={timeZone}
+                  seriesColors={cohortColors}
+                />
               </div>
             )
           })}
@@ -219,7 +238,14 @@ export const InsightsContent = memo(function InsightsContent({
       )
     }
     if (retentionCohorts.length === 0) return renderLoadingEmptyState()
-    return <RetentionCohort cohorts={retentionCohorts} granularity={granularity} seriesColors={seriesColors} />
+    return (
+      <RetentionCohort
+        cohorts={retentionCohorts}
+        granularity={granularity}
+        timeZone={timeZone}
+        seriesColors={seriesColors}
+      />
+    )
   }
 
   if (error) {
