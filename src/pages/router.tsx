@@ -5,7 +5,27 @@ import { Route, Switch, useLocation, useParams } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import ProfileShell from './routegen/profiles/[profileId]/_shell'
+import SettingsLayout from './routegen/settings/settings-layout'
 import { routes } from './routes'
+
+// Layout groups keep a shell (tab bar + header) mounted across its tab routes. The shell is
+// imported eagerly — only the inner page is lazy — so switching tabs suspends just the body
+// (inner Suspense, loader below the tabs) instead of blanking the whole page. `base` selects
+// member routes by path prefix; `outer` is the wouter pattern that stays matched across them
+// (`/*?` = optional trailing segments, so the prefix route also matches the tab-less base URL).
+const LAYOUT_GROUPS = [
+  {
+    base: '/p/:projectId/profiles/:profileId',
+    outer: '/p/:projectId/profiles/:profileId/*?',
+    Layout: ProfileShell,
+  },
+  {
+    base: '/p/:projectId/settings',
+    outer: '/p/:projectId/settings/*?',
+    Layout: SettingsLayout,
+  },
+] as const
 
 class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false }
@@ -88,10 +108,41 @@ const ProjectRedirect = () => {
   return null
 }
 
+// Group member routes (sorted by routes.ts) by which layout owns them; the rest stay flat.
+const groupedRoutes = LAYOUT_GROUPS.map(group => ({
+  ...group,
+  members: Object.entries(routes).filter(([path]) => path === group.base || path.startsWith(group.base + '/')),
+}))
+const groupedPaths = new Set(groupedRoutes.flatMap(g => g.members.map(([path]) => path)))
+const flatRoutes = Object.entries(routes).filter(([path]) => !groupedPaths.has(path))
+
 const Router = () => {
   return (
     <Switch>
-      {Object.entries(routes).map(([path, { component: Component }]) => (
+      {groupedRoutes.map(({ outer, Layout, members }) => (
+        <Route key={outer} path={outer}>
+          <ProjectSync>
+            <RouteErrorBoundary>
+              {/* Outer Suspense covers the genuine first load (lazy shell deps + profile data).
+                  Inner Suspense covers per-tab body chunks, keeping the shell + tabs mounted. */}
+              <Suspense fallback={<LoadingSpinner />}>
+                <Layout>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <Switch>
+                      {members.map(([path, { component: Component }]) => (
+                        <Route key={path} path={path}>
+                          <Component />
+                        </Route>
+                      ))}
+                    </Switch>
+                  </Suspense>
+                </Layout>
+              </Suspense>
+            </RouteErrorBoundary>
+          </ProjectSync>
+        </Route>
+      ))}
+      {flatRoutes.map(([path, { component: Component }]) => (
         <Route key={path} path={path}>
           <ProjectSync>
             <RouteErrorBoundary>

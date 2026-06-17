@@ -12,7 +12,7 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { useEventFilters } from '@/hooks/use-event-filters'
@@ -28,6 +28,7 @@ import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { floorToZoneBucket } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import type { ChartPoint } from './charts'
@@ -78,6 +79,7 @@ const getAggregationProperty = ({
 const Insights = () => {
   // Project and RPC context.
   const project = useAtomValue(activeProjectAtom)
+  const reportingTimeZone = useAtomValue(activeProjectTimezoneAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const schema = useAtomValue(filterSchemaAtom)
@@ -173,6 +175,8 @@ const Insights = () => {
     granularity,
     propFilters,
     breakdowns,
+    // The query's floored `from` depends on the project zone, so a zone change must refetch.
+    reportingTimeZone,
   })
 
   // Remote query execution.
@@ -189,7 +193,13 @@ const Insights = () => {
       const resp = await insightsRPC.query(
         {
           granularity,
-          timeRange: toProtoTimeRange(timeRange),
+          // Floor `from` to the project-zone bucket boundary so the first bucket is
+          // complete (avoids the partial-bucket "dip" at the chart's left edge).
+          timeRange: toProtoTimeRange(
+            timeRange
+              ? { from: floorToZoneBucket(timeRange.from, granularity, reportingTimeZone), to: timeRange.to }
+              : undefined,
+          ),
           spec: {
             insightType,
             events: validEntries.map(entry => ({

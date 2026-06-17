@@ -19,7 +19,6 @@ import { structToEntries } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { resolveInlineProps } from '@/lib/well-known-events'
 import { profileFamilyAtom, profileStatsFamilyAtom } from './_data'
-import ProfileShell from './_shell'
 
 const SectionHeader = ({ title, right }: { title: string; right?: React.ReactNode }) => (
   <div className="flex items-center gap-2 mb-2">
@@ -56,11 +55,7 @@ const ProfileOverview = () => {
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
-  return (
-    <ProfileShell profileId={profileId}>
-      <OverviewBody profileId={profileId} />
-    </ProfileShell>
-  )
+  return <OverviewBody profileId={profileId} />
 }
 
 const OverviewBody = ({ profileId }: { profileId: string }) => {

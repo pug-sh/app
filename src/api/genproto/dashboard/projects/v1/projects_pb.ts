@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/projects/v1/projects.proto.
  */
 export const file_dashboard_projects_v1_projects: GenFile = /*@__PURE__*/
-  fileDesc("CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IkoKDUNyZWF0ZVJlcXVlc3QSIQoMZGlzcGxheV9uYW1lGAEgASgJQgu6SAjIAQFyAxiWARIWCgZvcmdfaWQYAiABKAlCBrpIA8gBASJBCg5DcmVhdGVSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiDwoNRGVsZXRlUmVxdWVzdCIQCg5EZWxldGVSZXNwb25zZSIMCgpHZXRSZXF1ZXN0Ij4KC0dldFJlc3BvbnNlEi8KB3Byb2plY3QYASABKAsyHi5kYXNoYm9hcmQucHJvamVjdHMudjEuUHJvamVjdCKGAQoHUHJvamVjdBIUCgxkaXNwbGF5X25hbWUYASABKAkSGAoQZmNtX3NlcnZpY2VfanNvbhgCIAEoCRIKCgJpZBgDIAEoCRIOCgZvcmdfaWQYBCABKAkSFwoPcHJpdmF0ZV9hcGlfa2V5GAUgASgJEhYKDnB1YmxpY19hcGlfa2V5GAYgASgJIj0KGFVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBIhCgxkaXNwbGF5X25hbWUYASABKAlCC7pICMgBAXIDGJYBIkwKGVVwZGF0ZURpc3BsYXlOYW1lUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IjcKG1VwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBIYChBmY21fc2VydmljZV9qc29uGAEgASgJIh4KHFVwZGF0ZUZDTVNlcnZpY2VKU09OUmVzcG9uc2Uy8AQKD1Byb2plY3RzU2VydmljZRJdCghCYXRjaEdldBImLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlcXVlc3QaJy5kYXNoYm9hcmQucHJvamVjdHMudjEuQmF0Y2hHZXRSZXNwb25zZSIAElcKBkNyZWF0ZRIkLmRhc2hib2FyZC5wcm9qZWN0cy52MS5DcmVhdGVSZXF1ZXN0GiUuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlc3BvbnNlIgASVwoGRGVsZXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkRlbGV0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVzcG9uc2UiABJOCgNHZXQSIS5kYXNoYm9hcmQucHJvamVjdHMudjEuR2V0UmVxdWVzdBoiLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXNwb25zZSIAEngKEVVwZGF0ZURpc3BsYXlOYW1lEi8uZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZURpc3BsYXlOYW1lUmVxdWVzdBowLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVEaXNwbGF5TmFtZVJlc3BvbnNlIgASgQEKFFVwZGF0ZUZDTVNlcnZpY2VKU09OEjIuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBozLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVGQ01TZXJ2aWNlSlNPTlJlc3BvbnNlIgBCS1pJZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvcHJvamVjdHMvdjE7cHJvamVjdHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IoMBCg1DcmVhdGVSZXF1ZXN0EiEKDGRpc3BsYXlfbmFtZRgBIAEoCUILukgIyAEBcgMYlgESFgoGb3JnX2lkGAIgASgJQga6SAPIAQESNwoScmVwb3J0aW5nX3RpbWV6b25lGAMgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoOQ3JlYXRlUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0Ig8KDURlbGV0ZVJlcXVlc3QiEAoORGVsZXRlUmVzcG9uc2UiDAoKR2V0UmVxdWVzdCI+CgtHZXRSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiogEKB1Byb2plY3QSFAoMZGlzcGxheV9uYW1lGAEgASgJEhgKEGZjbV9zZXJ2aWNlX2pzb24YAiABKAkSCgoCaWQYAyABKAkSDgoGb3JnX2lkGAQgASgJEhcKD3ByaXZhdGVfYXBpX2tleRgFIAEoCRIWCg5wdWJsaWNfYXBpX2tleRgGIAEoCRIaChJyZXBvcnRpbmdfdGltZXpvbmUYByABKAkibgoRVXBkYXRlTWV0YVJlcXVlc3QSIAoMZGlzcGxheV9uYW1lGAEgASgJQgq6SAdyBRABGJYBEjcKEnJlcG9ydGluZ190aW1lem9uZRgCIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokIkUKElVwZGF0ZU1ldGFSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiNwobVXBkYXRlRkNNU2VydmljZUpTT05SZXF1ZXN0EhgKEGZjbV9zZXJ2aWNlX2pzb24YASABKAkiHgocVXBkYXRlRkNNU2VydmljZUpTT05SZXNwb25zZTLbBAoPUHJvamVjdHNTZXJ2aWNlEl0KCEJhdGNoR2V0EiYuZGFzaGJvYXJkLnByb2plY3RzLnYxLkJhdGNoR2V0UmVxdWVzdBonLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlc3BvbnNlIgASVwoGQ3JlYXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuQ3JlYXRlUmVzcG9uc2UiABJXCgZEZWxldGUSJC5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVxdWVzdBolLmRhc2hib2FyZC5wcm9qZWN0cy52MS5EZWxldGVSZXNwb25zZSIAEk4KA0dldBIhLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXF1ZXN0GiIuZGFzaGJvYXJkLnByb2plY3RzLnYxLkdldFJlc3BvbnNlIgASYwoKVXBkYXRlTWV0YRIoLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVNZXRhUmVxdWVzdBopLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVNZXRhUmVzcG9uc2UiABKBAQoUVXBkYXRlRkNNU2VydmljZUpTT04SMi5kYXNoYm9hcmQucHJvamVjdHMudjEuVXBkYXRlRkNNU2VydmljZUpTT05SZXF1ZXN0GjMuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVzcG9uc2UiAEJLWklnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9wcm9qZWN0cy92MTtwcm9qZWN0c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
 
 /**
  * @generated from message dashboard.projects.v1.BatchGetRequest
@@ -60,6 +60,15 @@ export type CreateRequest = Message<"dashboard.projects.v1.CreateRequest"> & {
    * @generated from field: string org_id = 2;
    */
   orgId: string;
+
+  /**
+   * Optional IANA timezone (e.g. "Asia/Kolkata") captured from the creator's browser
+   * and stored as the project's reporting_timezone. Empty = UTC. A malformed value is
+   * coerced to UTC server-side rather than rejected, so creation never fails on it.
+   *
+   * @generated from field: string reporting_timezone = 3;
+   */
+  reportingTimezone: string;
 };
 
 /**
@@ -175,6 +184,14 @@ export type Project = Message<"dashboard.projects.v1.Project"> & {
    * @generated from field: string public_api_key = 6;
    */
   publicApiKey: string;
+
+  /**
+   * IANA reporting timezone (e.g. "Asia/Kolkata") used to bucket day/week/month
+   * boundaries for this project's insights and dashboards. Empty string = UTC.
+   *
+   * @generated from field: string reporting_timezone = 7;
+   */
+  reportingTimezone: string;
 };
 
 /**
@@ -185,26 +202,43 @@ export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
   messageDesc(file_dashboard_projects_v1_projects, 8);
 
 /**
- * @generated from message dashboard.projects.v1.UpdateDisplayNameRequest
+ * UpdateMetaRequest is a partial update of the project's editable metadata: every
+ * field is optional and an omitted field leaves the stored value unchanged. A
+ * present reporting_timezone of "" resets to UTC (distinct from omitted).
+ *
+ * @generated from message dashboard.projects.v1.UpdateMetaRequest
  */
-export type UpdateDisplayNameRequest = Message<"dashboard.projects.v1.UpdateDisplayNameRequest"> & {
+export type UpdateMetaRequest = Message<"dashboard.projects.v1.UpdateMetaRequest"> & {
   /**
+   * Optional (partial update): omit to leave the name unchanged. When present it
+   * must be 1–150 chars; an explicit "" is rejected.
+   *
    * @generated from field: string display_name = 1;
    */
   displayName: string;
+
+  /**
+   * IANA timezone (e.g. "Asia/Kolkata") aligning insight/dashboard bucket
+   * boundaries to the project's calendar. Empty = UTC. Unlike creation, a malformed
+   * value is rejected (CodeInvalidArgument) rather than coerced — this is an
+   * explicit settings action.
+   *
+   * @generated from field: string reporting_timezone = 2;
+   */
+  reportingTimezone: string;
 };
 
 /**
- * Describes the message dashboard.projects.v1.UpdateDisplayNameRequest.
- * Use `create(UpdateDisplayNameRequestSchema)` to create a new message.
+ * Describes the message dashboard.projects.v1.UpdateMetaRequest.
+ * Use `create(UpdateMetaRequestSchema)` to create a new message.
  */
-export const UpdateDisplayNameRequestSchema: GenMessage<UpdateDisplayNameRequest> = /*@__PURE__*/
+export const UpdateMetaRequestSchema: GenMessage<UpdateMetaRequest> = /*@__PURE__*/
   messageDesc(file_dashboard_projects_v1_projects, 9);
 
 /**
- * @generated from message dashboard.projects.v1.UpdateDisplayNameResponse
+ * @generated from message dashboard.projects.v1.UpdateMetaResponse
  */
-export type UpdateDisplayNameResponse = Message<"dashboard.projects.v1.UpdateDisplayNameResponse"> & {
+export type UpdateMetaResponse = Message<"dashboard.projects.v1.UpdateMetaResponse"> & {
   /**
    * @generated from field: dashboard.projects.v1.Project project = 1;
    */
@@ -212,10 +246,10 @@ export type UpdateDisplayNameResponse = Message<"dashboard.projects.v1.UpdateDis
 };
 
 /**
- * Describes the message dashboard.projects.v1.UpdateDisplayNameResponse.
- * Use `create(UpdateDisplayNameResponseSchema)` to create a new message.
+ * Describes the message dashboard.projects.v1.UpdateMetaResponse.
+ * Use `create(UpdateMetaResponseSchema)` to create a new message.
  */
-export const UpdateDisplayNameResponseSchema: GenMessage<UpdateDisplayNameResponse> = /*@__PURE__*/
+export const UpdateMetaResponseSchema: GenMessage<UpdateMetaResponse> = /*@__PURE__*/
   messageDesc(file_dashboard_projects_v1_projects, 10);
 
 /**
@@ -285,12 +319,12 @@ export const ProjectsService: GenService<{
     output: typeof GetResponseSchema;
   },
   /**
-   * @generated from rpc dashboard.projects.v1.ProjectsService.UpdateDisplayName
+   * @generated from rpc dashboard.projects.v1.ProjectsService.UpdateMeta
    */
-  updateDisplayName: {
+  updateMeta: {
     methodKind: "unary";
-    input: typeof UpdateDisplayNameRequestSchema;
-    output: typeof UpdateDisplayNameResponseSchema;
+    input: typeof UpdateMetaRequestSchema;
+    output: typeof UpdateMetaResponseSchema;
   },
   /**
    * @generated from rpc dashboard.projects.v1.ProjectsService.UpdateFCMServiceJSON

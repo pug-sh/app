@@ -17,11 +17,12 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { floorToZoneBucket } from '@/lib/timezone'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
@@ -87,6 +88,7 @@ export const DashboardInsightContent = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
+  const timeZone = useAtomValue(activeProjectTimezoneAtom)
   // Key the memo on the embedded range's *content* (primitive millis), not on `query`'s
   // identity. Callers rebuild `query` inline each render; keying on identity re-ran the
   // preset resolver → new Date() every render, advancing timeRange.to → the stringified
@@ -113,12 +115,16 @@ export const DashboardInsightContent = ({
 
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
+    // Floor `from` to the bucket boundary in the project zone so the first bucket is
+    // complete — otherwise a mid-bucket window start renders as a partial "dip" at the
+    // chart's left edge (the server buckets in this same zone).
+    const from = floorToZoneBucket(effectiveTimeRange.from, effectiveGranularity, timeZone)
     return create(QueryRequestSchema, {
       ...query,
       granularity: effectiveGranularity,
-      timeRange: create(TimeRangeSchema, toProtoTimeRange(effectiveTimeRange)),
+      timeRange: create(TimeRangeSchema, toProtoTimeRange({ from, to: effectiveTimeRange.to })),
     })
-  }, [effectiveGranularity, effectiveTimeRange, query])
+  }, [effectiveGranularity, effectiveTimeRange, query, timeZone])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
