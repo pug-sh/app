@@ -160,12 +160,12 @@ Rules:
 
 The backend enforces a max time-range span per granularity (buf.validate CEL constraints on `QueryRequest` in `proto/shared/insights/v1/insights.proto`) — e.g. `GRANULARITY_HOUR requires a time range of at most 14 days`. The frontend must keep granularity and time range compatible so these never reach the server.
 
-- Single source of truth: `src/lib/granularity.ts` (mirrors the proto caps — keep them in sync).
+- Single source of truth: `src/lib/granularity.ts` (mirrors the proto caps — keep them in sync). The cap map is total over `Granularity`, so a new enum member without a cap is a compile error.
 - Any page with both a time-range picker and a granularity picker must use these helpers — do not re-derive or duplicate the ladder per page:
   - `granularityDisabledReason(granularity, range)` → pass as `OptionChip`'s `isOptionDisabled` so over-cap granularities render disabled with a tooltip.
-  - `clampGranularity(granularity, range)` → call from the time-range `onChange`. Keeps a still-valid pick as-is, leaves `UNSPECIFIED` ("Auto") untouched, and bumps a now-disabled pick to the **smallest/finest** granularity that still fits.
-  - `autoGranularity(range)` → resolve `UNSPECIFIED` ("Auto") to a concrete value at the consumption point. This is the only place the auto ladder lives.
-- Behavior must be identical across Insights, Overview, and Dashboard (the three current consumers): same disabled options, same clamp-to-finest-valid on range change.
+  - `clampRange(range)` and `clampGranularity(granularity, range)` → call both from the time-range `onChange`: `clampRange` caps a range too wide for *any* granularity to the supported max, then `clampGranularity` keeps a still-valid pick as-is, leaves `UNSPECIFIED` ("Auto") untouched, and bumps a now-disabled pick to the **smallest/finest** granularity that still fits.
+  - `autoGranularity(range)` → resolve `UNSPECIFIED` ("Auto") to a concrete value at the consumption point (including before passing a granularity down to dashboard tiles). This is the only place the auto ladder lives. Note: `autoGranularity` (coarser-biased default) and `clampGranularity` (finest-that-still-fits) deliberately use **different** ladders — they can return different granularities for the same range.
+- Behavior must be identical across Insights, Overview, and Dashboard (the three current consumers): same disabled options, same clamp-to-finest-valid on range change, same `autoGranularity` resolution of "Auto".
 
 ### Form Validation
 

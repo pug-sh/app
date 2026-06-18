@@ -26,7 +26,7 @@ import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
-import { clampGranularity, granularityDisabledReason } from '@/lib/granularity'
+import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { floorToZoneBucket } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
@@ -118,11 +118,13 @@ const Insights = () => {
     setBreakdowns(prev => prev.filter(p => p !== prop))
   }, [])
 
-  // Keep granularity valid for the range: a too-fine granularity (e.g. Hour over 30 days)
-  // would be rejected by the backend, so bump it to the finest that still fits.
+  // Keep range and granularity backend-valid: cap a range too wide for any granularity to the
+  // supported max, then bump a too-fine granularity (e.g. Hour over 30 days) to the finest that
+  // still fits — both combinations would otherwise be rejected by the backend.
   const handleTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    setTimeRange(range)
-    setGranularity(g => clampGranularity(g, range))
+    const clamped = clampRange(range)
+    setTimeRange(clamped)
+    setGranularity(g => clampGranularity(g, clamped))
   }, [])
 
   // Schema loading and URL sync.

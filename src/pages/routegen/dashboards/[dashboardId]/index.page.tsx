@@ -21,7 +21,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { autoGranularity, clampGranularity, granularityDisabledReason } from '@/lib/granularity'
+import {
+  autoGranularity,
+  clampGranularity,
+  clampRange,
+  granularityDisabledReason,
+  resolveTileGranularity,
+} from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { GRANULARITIES } from '../../insights/constants'
@@ -109,7 +115,9 @@ const DashboardDetail = () => {
     return autoGranularity(initialGlobalOverrides.timeRange)
   })
 
-  const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
+  // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
+  // to their own saved granularity against the global range, which may exceed its cap.
+  const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
 
   const loadDashboard = useCallback(async () => {
     if (!dashboardId) return
@@ -147,8 +155,9 @@ const DashboardDetail = () => {
   )
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    setGlobalTimeRange(range)
-    setGlobalGranularity(g => clampGranularity(g, range))
+    const clamped = clampRange(range)
+    setGlobalTimeRange(clamped)
+    setGlobalGranularity(g => clampGranularity(g, clamped))
   }, [])
 
   const enterEditMode = useCallback(

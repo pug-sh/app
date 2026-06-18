@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { autoGranularity, clampGranularity, granularityDisabledReason } from '@/lib/granularity'
+import { clampGranularity, clampRange, granularityDisabledReason, resolveTileGranularity } from '@/lib/granularity'
 import { GRANULARITIES } from '../insights/constants'
 import { OptionChip } from '../insights/controls'
 import AnalyticsMode from './analytics-mode'
@@ -49,19 +49,18 @@ const Overview = () => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
 
-  // An explicit granularity that no longer fits a widened range would be rejected by the
-  // backend — bump it to the finest that still fits (Auto stays Auto).
+  // Keep range and granularity backend-valid: cap a range too wide for any granularity, then
+  // bump an explicit granularity that no longer fits to the finest that still fits (Auto stays Auto).
   const handleGlobalTimeRangeChange = (range: TimeRange | undefined) => {
-    setGlobalTimeRange(range)
-    setGlobalGranularity(g => clampGranularity(g, range))
+    const clamped = clampRange(range)
+    setGlobalTimeRange(clamped)
+    setGlobalGranularity(g => clampGranularity(g, clamped))
   }
 
   if (!project) return <NoProject title="Overview" icon={LayoutDashboard} />
 
   const hasEvents = (schema?.events.length ?? 0) > 0
-  const effectiveGranularity =
-    globalGranularity === Granularity.UNSPECIFIED ? autoGranularity(globalTimeRange) : globalGranularity
-  const tileGranularityOverride = effectiveGranularity === Granularity.UNSPECIFIED ? undefined : effectiveGranularity
+  const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
 
   const pageActions = hasEvents ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
