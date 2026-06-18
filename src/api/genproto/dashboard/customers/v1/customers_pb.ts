@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/customers/v1/customers.proto.
  */
 export const file_dashboard_customers_v1_customers: GenFile = /*@__PURE__*/
-  fileDesc("CiZkYXNoYm9hcmQvY3VzdG9tZXJzL3YxL2N1c3RvbWVycy5wcm90bxIWZGFzaGJvYXJkLmN1c3RvbWVycy52MSIOCgxHZXRNZVJlcXVlc3QiSwoNR2V0TWVSZXNwb25zZRITCgtjdXN0b21lcl9pZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIWCg5lbWFpbF92ZXJpZmllZBgDIAEoCCIyChJTZXRQYXNzd29yZFJlcXVlc3QSHAoIcGFzc3dvcmQYASABKAlCCrpIB8gBAXICKEgiFQoTU2V0UGFzc3dvcmRSZXNwb25zZTLUAQoQQ3VzdG9tZXJzU2VydmljZRJWCgVHZXRNZRIkLmRhc2hib2FyZC5jdXN0b21lcnMudjEuR2V0TWVSZXF1ZXN0GiUuZGFzaGJvYXJkLmN1c3RvbWVycy52MS5HZXRNZVJlc3BvbnNlIgASaAoLU2V0UGFzc3dvcmQSKi5kYXNoYm9hcmQuY3VzdG9tZXJzLnYxLlNldFBhc3N3b3JkUmVxdWVzdBorLmRhc2hib2FyZC5jdXN0b21lcnMudjEuU2V0UGFzc3dvcmRSZXNwb25zZSIAQk1aS2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vZGFzaGJvYXJkL2N1c3RvbWVycy92MTtjdXN0b21lcnN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("CiZkYXNoYm9hcmQvY3VzdG9tZXJzL3YxL2N1c3RvbWVycy5wcm90bxIWZGFzaGJvYXJkLmN1c3RvbWVycy52MSIOCgxHZXRNZVJlcXVlc3QiSwoNR2V0TWVSZXNwb25zZRITCgtjdXN0b21lcl9pZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIWCg5lbWFpbF92ZXJpZmllZBgDIAEoCCI0ChJTZXRQYXNzd29yZFJlcXVlc3QSHgoIcGFzc3dvcmQYASABKAlCDLpICcgBAXIEEAYoSCIVChNTZXRQYXNzd29yZFJlc3BvbnNlMtQBChBDdXN0b21lcnNTZXJ2aWNlElYKBUdldE1lEiQuZGFzaGJvYXJkLmN1c3RvbWVycy52MS5HZXRNZVJlcXVlc3QaJS5kYXNoYm9hcmQuY3VzdG9tZXJzLnYxLkdldE1lUmVzcG9uc2UiABJoCgtTZXRQYXNzd29yZBIqLmRhc2hib2FyZC5jdXN0b21lcnMudjEuU2V0UGFzc3dvcmRSZXF1ZXN0GisuZGFzaGJvYXJkLmN1c3RvbWVycy52MS5TZXRQYXNzd29yZFJlc3BvbnNlIgBCTVpLZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvY3VzdG9tZXJzL3YxO2N1c3RvbWVyc3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
 
 /**
  * @generated from message dashboard.customers.v1.GetMeRequest
@@ -58,6 +58,11 @@ export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
  */
 export type SetPasswordRequest = Message<"dashboard.customers.v1.SetPasswordRequest"> & {
   /**
+   * min_len is a character count (>= 6); max_bytes is bcrypt's 72-byte input
+   * ceiling. Enforced here on the password-creation path — SignInWithEmail
+   * deliberately omits a min so a tightened policy never locks out an account
+   * whose password predates it.
+   *
    * @generated from field: string password = 1;
    */
   password: string;

@@ -1,11 +1,12 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
+import { toast } from 'sonner'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
 import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
-import { jwtAtom, jwtDataAtom } from './jwt.atoms'
+import { jwtAtom, jwtDataAtom, refreshTokenAtom } from './jwt.atoms'
 import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
@@ -21,7 +22,7 @@ export const signInAtom = atom(
     const authRPC = get(authRPCAtom)
     try {
       const resp = await authRPC.signInWithEmail({ email, password })
-      set(applySessionJwtAtom, resp.token)
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
       return { ok: true }
     } catch (error) {
       if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
@@ -36,14 +37,15 @@ export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
 
-// Applies a freshly issued session JWT — password sign-in, magic link, and OAuth all funnel here.
-// The token alone decides identity (the server ignores any caller session), so capture the
-// prior customer before overwriting: if the new token is for a different account, drop the
-// previous session's remembered org so it can't leak across the switch. Always clear meAtom —
-// email isn't in the JWT and must be refetched for the new identity.
-const applySessionJwtAtom = atom(null, (get, set, token: string) => {
+// Applies a freshly issued session token pair — password sign-in, magic link, and OAuth all
+// funnel here. The token alone decides identity (the server ignores any caller session), so
+// capture the prior customer before overwriting: if the new token is for a different account,
+// drop the previous session's remembered org so it can't leak across the switch. Always clear
+// meAtom — email isn't in the JWT and must be refetched for the new identity.
+const applySessionAtom = atom(null, (get, set, { token, refreshToken }: { token: string; refreshToken: string }) => {
   const prior = get(jwtDataAtom)?.customerId
   set(jwtAtom, token)
+  set(refreshTokenAtom, refreshToken)
   const next = get(jwtDataAtom)?.customerId
   if (prior && next && prior !== next) set(resetWorkspaceAtom)
   set(meAtom, null)
@@ -83,7 +85,7 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
     // Seed the auto-created default project's reporting zone from the browser.
     // Malformed/empty values are coerced to UTC server-side; correct later in settings.
     const resp = await authRPC.completeMagicLink({ token, timezone: browserTimezone() })
-    set(applySessionJwtAtom, resp.token)
+    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
     return { ok: true }
   } catch (error) {
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
@@ -103,7 +105,7 @@ export const completeGoogleOAuthAtom = atom(
         provider: OAuthProvider.GOOGLE,
         credential,
       })
-      set(applySessionJwtAtom, resp.token)
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
       return { ok: true }
     } catch (error) {
       if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
@@ -115,23 +117,31 @@ export const completeGoogleOAuthAtom = atom(
   },
 )
 
-const authClockAtom = atom(Date.now())
-authClockAtom.onMount = setAtom => {
-  const tick = () => setAtom(Date.now())
-  tick()
-  const interval = window.setInterval(tick, 30_000)
-  return () => window.clearInterval(interval)
-}
+// Authenticated whenever a refresh token is present. The access JWT is short-lived
+// (~1h) and the transport silently re-mints it, so access-token expiry must NOT gate
+// the UI or active users would be bounced to sign-in hourly. A failed refresh clears
+// the refresh token (clearSession), flipping this to false.
+export const isAuthenticatedAtom = atom(get => get(refreshTokenAtom) !== '')
 
-export const isAuthenticatedAtom = atom(get => {
-  get(authClockAtom)
-  const data = get(jwtDataAtom)
-  if (!data) return false
-  return data.exp > Date.now() / 1000
-})
-
-export const signOutAtom = atom(null, (_, set) => {
+export const signOutAtom = atom(null, async (get, set) => {
+  // Best-effort server-side revocation of the refresh token's family, so the
+  // session can't be refreshed after logout. Clear locally regardless of outcome.
+  const refreshToken = get(refreshTokenAtom)
+  if (refreshToken) {
+    try {
+      await get(authRPCAtom).signOut({ refreshToken })
+    } catch (err) {
+      // Local sign-out still proceeds below, but a failed server revoke means the
+      // refresh-token family may stay live — make that observable rather than
+      // silently dropping it (matters most on a shared machine).
+      console.error('signOut server revocation failed', err)
+      if (err instanceof ConnectError && err.code !== Code.Unauthenticated) {
+        toast.warning('Signed out on this device, but remote sessions may still be active.')
+      }
+    }
+  }
   set(jwtAtom, '')
+  set(refreshTokenAtom, '')
   set(meAtom, null)
   set(resetWorkspaceAtom)
 })
