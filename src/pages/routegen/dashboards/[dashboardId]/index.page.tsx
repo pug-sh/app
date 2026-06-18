@@ -3,14 +3,13 @@ import { LayoutGrid } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
-import { autoGranularity, clampGranularity } from '@/lib/granularity'
+import { autoGranularity, clampGranularity, clampRange, resolveTileGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
@@ -67,11 +66,14 @@ const DashboardDetail = () => {
   }, [globalGranularity, globalTimeRange])
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    setGlobalTimeRange(range)
-    setGlobalGranularity(g => clampGranularity(g, range))
+    const clamped = clampRange(range)
+    setGlobalTimeRange(clamped)
+    setGlobalGranularity(g => clampGranularity(g, clamped))
   }, [])
 
-  const tileGranularityOverride = globalGranularity === Granularity.UNSPECIFIED ? undefined : globalGranularity
+  // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
+  // to their own saved granularity against the global range, which may exceed its cap.
+  const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
 
   // Edit/draft state machine (selection, tile mutations, save/discard/resume).
   const editor = useDashboardEditor({ dashboardId, dashboard, setDashboard })

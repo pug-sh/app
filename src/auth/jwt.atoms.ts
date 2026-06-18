@@ -1,21 +1,25 @@
 import { atom, getDefaultStore } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 
-// Shared with transport.ts — both read the same localStorage key
+// Shared with transport.ts — both read the same localStorage keys.
 export const JWT_KEY = 'pug:jwt'
+// The long-lived refresh token. The access JWT (JWT_KEY) is short-lived (~1h);
+// the refresh token is exchanged for a fresh pair via AuthService.RefreshSession.
+export const REFRESH_KEY = 'pug:refresh'
 
-// Read synchronously so the first render already knows the auth state (no sign-in flash)
-const storedJwt = (() => {
+// Read synchronously so the first render already knows the auth state (no sign-in flash).
+const readStored = (key: string): string => {
   try {
-    const raw = localStorage.getItem(JWT_KEY)
+    const raw = localStorage.getItem(key)
     return raw ? (JSON.parse(raw) as string) : ''
   } catch (err) {
-    console.error('Failed to read stored JWT:', err)
+    console.error(`Failed to read stored ${key}:`, err)
     return ''
   }
-})()
+}
 
-export const jwtAtom = atomWithStorage(JWT_KEY, storedJwt)
+export const jwtAtom = atomWithStorage(JWT_KEY, readStored(JWT_KEY))
+export const refreshTokenAtom = atomWithStorage(REFRESH_KEY, readStored(REFRESH_KEY))
 
 interface JWTPayload {
   exp: number
@@ -45,6 +49,19 @@ export const jwtDataAtom = atom(get => {
   }
 })
 
-// Clear JWT from outside React (e.g. interceptors). Uses the default Jotai store
-// so all subscribers re-render and atomWithStorage syncs localStorage automatically.
-export const clearJwt = () => getDefaultStore().set(jwtAtom, '')
+// Persist a freshly issued token pair from outside React (transport refresh) or
+// inside it (sign-in atoms). Uses the default Jotai store so all subscribers
+// re-render and atomWithStorage syncs localStorage automatically.
+export const setSessionTokens = ({ accessToken, refreshToken }: { accessToken: string; refreshToken: string }) => {
+  const store = getDefaultStore()
+  store.set(jwtAtom, accessToken)
+  store.set(refreshTokenAtom, refreshToken)
+}
+
+// Clear the whole session (both tokens). Called when a refresh ultimately fails
+// or on explicit sign-out.
+export const clearSession = () => {
+  const store = getDefaultStore()
+  store.set(jwtAtom, '')
+  store.set(refreshTokenAtom, '')
+}
