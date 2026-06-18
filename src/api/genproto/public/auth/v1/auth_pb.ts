@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIigKF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJIjQKF1JlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABIhoKGFJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSJgChhDb21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QSFQoFdG9rZW4YASABKAlCBrpIA8gBARItCgh0aW1lem9uZRgCIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokIioKGUNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2USDQoFdG9rZW4YASABKAkidQoaQ29tcGxldGVPQXV0aFNpZ25JblJlcXVlc3QSOwoIcHJvdmlkZXIYASABKA4yHS5wdWJsaWMuYXV0aC52MS5PQXV0aFByb3ZpZGVyQgq6SAeCAQQQASAAEhoKCmNyZWRlbnRpYWwYAiABKAlCBrpIA8gBASIsChtDb21wbGV0ZU9BdXRoU2lnbkluUmVzcG9uc2USDQoFdG9rZW4YASABKAkqTAoNT0F1dGhQcm92aWRlchIfChtPX0FVVEhfUFJPVklERVJfVU5TUEVDSUZJRUQQABIaChZPX0FVVEhfUFJPVklERVJfR09PR0xFEAEyugMKC0F1dGhTZXJ2aWNlEmQKD1NpZ25JbldpdGhFbWFpbBImLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlcXVlc3QaJy5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXNwb25zZSIAEmcKEFJlcXVlc3RNYWdpY0xpbmsSJy5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVxdWVzdBooLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIAEmoKEUNvbXBsZXRlTWFnaWNMaW5rEigucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXF1ZXN0GikucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZSIAEnAKE0NvbXBsZXRlT0F1dGhTaWduSW4SKi5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBorLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXNwb25zZSIAQkBaPmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vcHVibGljL2F1dGgvdjE7YXV0aHYxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJInUKGkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0EjsKCHByb3ZpZGVyGAEgASgOMh0ucHVibGljLmF1dGgudjEuT0F1dGhQcm92aWRlckIKukgHggEEEAEgABIaCgpjcmVkZW50aWFsGAIgASgJQga6SAPIAQEiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UqTAoNT0F1dGhQcm92aWRlchIfChtPX0FVVEhfUFJPVklERVJfVU5TUEVDSUZJRUQQABIaChZPX0FVVEhfUFJPVklERVJfR09PR0xFEAEy6wQKC0F1dGhTZXJ2aWNlEmQKD1NpZ25JbldpdGhFbWFpbBImLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlcXVlc3QaJy5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXNwb25zZSIAEmcKEFJlcXVlc3RNYWdpY0xpbmsSJy5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVxdWVzdBooLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIAEmoKEUNvbXBsZXRlTWFnaWNMaW5rEigucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXF1ZXN0GikucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZSIAEnAKE0NvbXBsZXRlT0F1dGhTaWduSW4SKi5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBorLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXNwb25zZSIAEmEKDlJlZnJlc2hTZXNzaW9uEiUucHVibGljLmF1dGgudjEuUmVmcmVzaFNlc3Npb25SZXF1ZXN0GiYucHVibGljLmF1dGgudjEuUmVmcmVzaFNlc3Npb25SZXNwb25zZSIAEkwKB1NpZ25PdXQSHi5wdWJsaWMuYXV0aC52MS5TaWduT3V0UmVxdWVzdBofLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXNwb25zZSIAQkBaPmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vcHVibGljL2F1dGgvdjE7YXV0aHYxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -43,9 +43,18 @@ export const SignInWithEmailRequestSchema: GenMessage<SignInWithEmailRequest> = 
  */
 export type SignInWithEmailResponse = Message<"public.auth.v1.SignInWithEmailResponse"> & {
   /**
+   * short-lived access JWT
+   *
    * @generated from field: string token = 1;
    */
   token: string;
+
+  /**
+   * long-lived opaque refresh token
+   *
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
 };
 
 /**
@@ -116,11 +125,18 @@ export const CompleteMagicLinkRequestSchema: GenMessage<CompleteMagicLinkRequest
  */
 export type CompleteMagicLinkResponse = Message<"public.auth.v1.CompleteMagicLinkResponse"> & {
   /**
-   * session JWT
+   * short-lived access JWT
    *
    * @generated from field: string token = 1;
    */
   token: string;
+
+  /**
+   * long-lived opaque refresh token
+   *
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
 };
 
 /**
@@ -159,11 +175,18 @@ export const CompleteOAuthSignInRequestSchema: GenMessage<CompleteOAuthSignInReq
  */
 export type CompleteOAuthSignInResponse = Message<"public.auth.v1.CompleteOAuthSignInResponse"> & {
   /**
-   * session JWT — sign-in OR sign-up, decided server-side
+   * short-lived access JWT — sign-in OR sign-up, decided server-side
    *
    * @generated from field: string token = 1;
    */
   token: string;
+
+  /**
+   * long-lived opaque refresh token
+   *
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
 };
 
 /**
@@ -172,6 +195,82 @@ export type CompleteOAuthSignInResponse = Message<"public.auth.v1.CompleteOAuthS
  */
 export const CompleteOAuthSignInResponseSchema: GenMessage<CompleteOAuthSignInResponse> = /*@__PURE__*/
   messageDesc(file_public_auth_v1_auth, 7);
+
+/**
+ * @generated from message public.auth.v1.RefreshSessionRequest
+ */
+export type RefreshSessionRequest = Message<"public.auth.v1.RefreshSessionRequest"> & {
+  /**
+   * @generated from field: string refresh_token = 1;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message public.auth.v1.RefreshSessionRequest.
+ * Use `create(RefreshSessionRequestSchema)` to create a new message.
+ */
+export const RefreshSessionRequestSchema: GenMessage<RefreshSessionRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 8);
+
+/**
+ * @generated from message public.auth.v1.RefreshSessionResponse
+ */
+export type RefreshSessionResponse = Message<"public.auth.v1.RefreshSessionResponse"> & {
+  /**
+   * new short-lived access JWT
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * rotated refresh token (replaces the one sent)
+   *
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message public.auth.v1.RefreshSessionResponse.
+ * Use `create(RefreshSessionResponseSchema)` to create a new message.
+ */
+export const RefreshSessionResponseSchema: GenMessage<RefreshSessionResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 9);
+
+/**
+ * @generated from message public.auth.v1.SignOutRequest
+ */
+export type SignOutRequest = Message<"public.auth.v1.SignOutRequest"> & {
+  /**
+   * The refresh token to revoke. Optional: an empty/stale token is a no-op so a
+   * client without a stored token can still call SignOut idempotently.
+   *
+   * @generated from field: string refresh_token = 1;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message public.auth.v1.SignOutRequest.
+ * Use `create(SignOutRequestSchema)` to create a new message.
+ */
+export const SignOutRequestSchema: GenMessage<SignOutRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 10);
+
+/**
+ * @generated from message public.auth.v1.SignOutResponse
+ */
+export type SignOutResponse = Message<"public.auth.v1.SignOutResponse"> & {
+};
+
+/**
+ * Describes the message public.auth.v1.SignOutResponse.
+ * Use `create(SignOutResponseSchema)` to create a new message.
+ */
+export const SignOutResponseSchema: GenMessage<SignOutResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 11);
 
 /**
  * @generated from enum public.auth.v1.OAuthProvider
@@ -229,6 +328,28 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof CompleteOAuthSignInRequestSchema;
     output: typeof CompleteOAuthSignInResponseSchema;
+  },
+  /**
+   * RefreshSession exchanges a valid refresh token for a new access+refresh pair.
+   * Public (no JWT): it runs precisely when the access token has expired.
+   *
+   * @generated from rpc public.auth.v1.AuthService.RefreshSession
+   */
+  refreshSession: {
+    methodKind: "unary";
+    input: typeof RefreshSessionRequestSchema;
+    output: typeof RefreshSessionResponseSchema;
+  },
+  /**
+   * SignOut revokes the refresh token's rotation family. Best-effort: a stale or
+   * unknown token still returns success.
+   *
+   * @generated from rpc public.auth.v1.AuthService.SignOut
+   */
+  signOut: {
+    methodKind: "unary";
+    input: typeof SignOutRequestSchema;
+    output: typeof SignOutResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_public_auth_v1_auth, 0);
