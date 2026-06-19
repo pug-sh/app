@@ -46,13 +46,16 @@ export const OptionChip = <T extends string | number>({
           {label}
         </span>
         <span className="px-2 h-full flex items-center" style={{ minWidth: valueMinWidth }}>
-          {current?.label}
+          {current?.label ?? String(value)}
         </span>
       </PopoverTrigger>
       <PopoverContent align="start" className={cn(stableWidth ? 'w-(--anchor-width)' : 'w-auto', 'p-1')}>
         <div className="flex flex-col gap-0.5">
           {options.map(opt => {
-            const disabledReason = isOptionDisabled?.(opt.value) ?? null
+            const rawReason = isOptionDisabled?.(opt.value)
+            // Treat a blank/whitespace reason as "enabled" so a disabled option can never
+            // render an empty tooltip.
+            const disabledReason = rawReason?.trim() ? rawReason : null
             const disabled = disabledReason !== null
             let optionClassName = 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             if (opt.value === value) {
@@ -125,7 +128,7 @@ const RowAggregationPicker = memo(
   },
 )
 
-const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
+export const filterNumericSchema = (schema: GetFilterSchemaResponse | null): GetFilterSchemaResponse | null => {
   if (!schema) return null
   return {
     ...schema,

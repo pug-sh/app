@@ -5,6 +5,7 @@ import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
+import { normalizeTopKState, type TopKState } from '@/pages/routegen/insights/top-k'
 import {
   DEFAULT_USER_FLOW_CONFIG,
   parseSerializedUserFlowConfig,
@@ -12,7 +13,13 @@ import {
   type UserFlowConfig,
 } from '@/pages/routegen/insights/user-flow'
 
-const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION, InsightType.USER_FLOW]
+const VALID_INSIGHT_TYPES = [
+  InsightType.TRENDS,
+  InsightType.FUNNEL,
+  InsightType.RETENTION,
+  InsightType.USER_FLOW,
+  InsightType.TOP_K,
+]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [
   AggregationType.TOTAL,
@@ -48,6 +55,7 @@ const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
 const USER_FLOW_PARAM = 'uf'
+const TOP_K_PARAM = 'tk'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -214,6 +222,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const hasEf = params.has(EVENT_FILTERS_PARAM)
   const hasPf = params.has(PROP_FILTERS_PARAM)
   const hasBd = params.has(BREAKDOWNS_PARAM)
+  const hasTk = params.has(TOP_K_PARAM)
 
   const rawBreakdowns = parseJSONParam(params.get(BREAKDOWNS_PARAM))
   const eventFilters = Array.isArray(rawEventFilters)
@@ -249,13 +258,32 @@ export const readFilterQueryParams = (search = window.location.search) => {
     const suffix = capHit ? ` (max ${BREAKDOWN_MAX})` : ''
     warnings.push(`${droppedBreakdowns} breakdown${droppedBreakdowns === 1 ? '' : 's'}${suffix}`)
   }
+  const rawTopK = parseJSONParam(params.get(TOP_K_PARAM))
+  const topK =
+    rawTopK && typeof rawTopK === 'object' && !Array.isArray(rawTopK)
+      ? normalizeTopKState(rawTopK as Record<string, unknown>)
+      : undefined
+  // Surface a malformed/unusable `tk` like every other restorable param instead
+  // of silently falling back to the default ranking.
+  if (hasTk && params.get(TOP_K_PARAM) && !topK) warnings.push('ranking')
+
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
   const rawUserFlow = parseJSONParam(params.get(USER_FLOW_PARAM))
   const userFlowConfig = parseSerializedUserFlowConfig(rawUserFlow) ?? DEFAULT_USER_FLOW_CONFIG
 
-  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, userFlowConfig, parseWarning }
+  return {
+    eventFilters,
+    propFilters,
+    insightType,
+    granularity,
+    timeRange,
+    breakdowns,
+    userFlowConfig,
+    topK,
+    parseWarning,
+  }
 }
 
 export const writeFilterQueryParams = (
@@ -267,6 +295,7 @@ export const writeFilterQueryParams = (
     timeRange?: TimeRange
     breakdowns?: string[]
     userFlowConfig?: UserFlowConfig
+    topK?: TopKState
   },
 ) => {
   const url = new URL(window.location.href)
@@ -287,6 +316,7 @@ export const writeFilterQueryParams = (
       ? JSON.stringify(serializeUserFlowConfig(opts.userFlowConfig))
       : undefined,
   )
+  setOrDelete(url, TOP_K_PARAM, opts?.topK ? JSON.stringify(opts.topK) : undefined)
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)

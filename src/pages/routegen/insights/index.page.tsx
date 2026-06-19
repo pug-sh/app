@@ -26,7 +26,7 @@ import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
-import { clampGranularity, granularityDisabledReason } from '@/lib/granularity'
+import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { floorToZoneBucket } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,7 @@ import type { ChartPoint } from './charts'
 import {
   EMPTY_ARRAY,
   EMPTY_RESULT,
+  eventEntryCap,
   GRANULARITIES,
   GRANULARITY_VALUES,
   getPageDescription,
@@ -47,6 +48,8 @@ import {
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
+import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
+import { TopKControls } from './top-k-controls'
 import { buildUserFlowQuery, DEFAULT_USER_FLOW_CONFIG, isUserFlowConfigValid, type UserFlowConfig } from './user-flow'
 import { UserFlowControls } from './user-flow-controls'
 
@@ -108,6 +111,7 @@ const Insights = () => {
   )
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
+  const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
 
   const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
@@ -122,22 +126,27 @@ const Insights = () => {
 
   const isUserFlow = insightType === InsightType.USER_FLOW
 
-  // Keep granularity valid for the range: a too-fine granularity (e.g. Hour over 30 days)
-  // would be rejected by the backend, so bump it to the finest that still fits.
+  // Keep range and granularity backend-valid: cap a range too wide for any granularity to the
+  // supported max, then bump a too-fine granularity (e.g. Hour over 30 days) to the finest that
+  // still fits — both combinations would otherwise be rejected by the backend.
   const handleTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    setTimeRange(range)
-    setGranularity(g => clampGranularity(g, range))
+    const clamped = clampRange(range)
+    setTimeRange(clamped)
+    setGranularity(g => clampGranularity(g, clamped))
   }, [])
 
   // Schema loading and URL sync.
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
 
+  // Truncate leftover event rows when switching to an insight type with a smaller
+  // event cap (retention = 2, top-k = 1). See eventEntryCap.
   useEffect(() => {
-    if (insightType !== InsightType.RETENTION) return
+    const cap = eventEntryCap(insightType)
+    if (cap === undefined) return
     const entries = store.get(filtersAtom)
-    if (entries.length <= 2) return
-    resetFilters(entries.slice(0, 2))
+    if (entries.length <= cap) return
+    resetFilters(entries.slice(0, cap))
   }, [insightType, store, filtersAtom, resetFilters])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
@@ -154,6 +163,16 @@ const Insights = () => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
 
+  // Derived query config.
+  const validEntries = eventFilters.validEntries
+  const isTrends = insightType === InsightType.TRENDS
+  const isRetention = insightType === InsightType.RETENTION
+  const isTopK = insightType === InsightType.TOP_K
+  const isTimeSeriesInsight = isTrends || isRetention
+  const userFlowReady = isUserFlowConfigValid(userFlowConfig)
+  const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
+  const maxEvents = eventEntryCap(insightType)
+
   useEffect(() => {
     writeFilterQueryParams(eventFilters.entries, propFilters, {
       insightType,
@@ -161,17 +180,20 @@ const Insights = () => {
       timeRange,
       breakdowns,
       userFlowConfig: isUserFlow ? userFlowConfig : undefined,
+      topK: isTopK ? topK : undefined,
     })
-  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns, userFlowConfig, isUserFlow])
-
-  // Derived query config.
-  const validEntries = eventFilters.validEntries
-  const isTrends = insightType === InsightType.TRENDS
-  const isRetention = insightType === InsightType.RETENTION
-  const isTimeSeriesInsight = isTrends || isRetention
-  const userFlowReady = isUserFlowConfigValid(userFlowConfig)
-  const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
-  const maxEvents = isRetention ? 2 : undefined
+  }, [
+    eventFilters.entries,
+    propFilters,
+    insightType,
+    granularity,
+    timeRange,
+    breakdowns,
+    isUserFlow,
+    userFlowConfig,
+    isTopK,
+    topK,
+  ])
 
   const hasIncompleteNumericAggregation = useMemo(
     () =>
@@ -184,6 +206,8 @@ const Insights = () => {
     [insightType, validEntries],
   )
 
+  const topKIncomplete = isTopK ? topKIncompleteReason(topK) : null
+
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
     timeRange,
@@ -192,6 +216,7 @@ const Insights = () => {
     propFilters,
     breakdowns,
     userFlowConfig,
+    topK: isTopK ? topK : undefined,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
   })
@@ -207,17 +232,16 @@ const Insights = () => {
     async () => {
       const globalFilters = toProtoFilters(propFilters)
       const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
-      const resp = await insightsRPC.query(
-        {
-          granularity,
-          // Floor `from` to the project-zone bucket boundary so the first bucket is
-          // complete (avoids the partial-bucket "dip" at the chart's left edge).
-          timeRange: toProtoTimeRange(
-            timeRange
-              ? { from: floorToZoneBucket(timeRange.from, granularity, reportingTimeZone), to: timeRange.to }
-              : undefined,
-          ),
-          spec: {
+      // Top-k specs carry no events/breakdowns (the backend rejects them); the
+      // scope event rides inside topK instead.
+      const spec = isTopK
+        ? {
+            insightType,
+            filterGroups,
+            filterGroupsOperator: LogicalOperator.AND,
+            topK: buildTopKQuery(topK, validEntries[0]),
+          }
+        : {
             insightType,
             events: isUserFlow
               ? []
@@ -241,7 +265,18 @@ const Insights = () => {
             filterGroupsOperator: LogicalOperator.AND,
             breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
             breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
-          },
+          }
+      const resp = await insightsRPC.query(
+        {
+          granularity,
+          // Floor `from` to the project-zone bucket boundary so the first bucket is
+          // complete (avoids the partial-bucket "dip" at the chart's left edge).
+          timeRange: toProtoTimeRange(
+            timeRange
+              ? { from: floorToZoneBucket(timeRange.from, granularity, reportingTimeZone), to: timeRange.to }
+              : undefined,
+          ),
+          spec,
         },
         { headers },
       )
@@ -251,8 +286,11 @@ const Insights = () => {
       enabled:
         !!project &&
         !!timeRange &&
-        !hasIncompleteNumericAggregation &&
-        (isUserFlow ? userFlowReady : validEntries.length > 0),
+        (isUserFlow
+          ? userFlowReady
+          : isTopK
+            ? !topKIncomplete
+            : validEntries.length > 0 && !hasIncompleteNumericAggregation),
     },
   )
 
@@ -263,7 +301,8 @@ const Insights = () => {
     result.case !== 'trends' &&
     result.case !== 'funnel' &&
     result.case !== 'retention' &&
-    result.case !== 'userFlow'
+    result.case !== 'userFlow' &&
+    result.case !== 'topK'
   let resultSeriesCount = 0
   if (result.case === 'trends' || result.case === 'funnel' || result.case === 'retention') {
     resultSeriesCount = result.value.series.length
@@ -301,6 +340,11 @@ const Insights = () => {
   const funnelSeriesList = useMemo(() => {
     if (result.case !== 'funnel') return EMPTY_ARRAY
     return result.value.series
+  }, [result])
+
+  const topKRows = useMemo(() => {
+    if (result.case !== 'topK') return EMPTY_ARRAY
+    return result.value.rows
   }, [result])
 
   const funnelSeriesData = useMemo(() => {
@@ -378,6 +422,9 @@ const Insights = () => {
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} presets={INSIGHTS_PRESETS} />
           <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
+          {isTopK && (
+            <TopKControls topK={topK} onChange={setTopK} schema={globalSchema} schemaError={globalSchemaError} />
+          )}
           {isTimeSeriesInsight && (
             <>
               <OptionChip
@@ -417,7 +464,7 @@ const Insights = () => {
                 events={schema?.events}
                 schema={schema}
                 schemaError={schemaError}
-                showLetters
+                showLetters={!isTopK}
                 seriesColors={eventFilterColors}
                 getEventColor={getEventColorDot}
                 renderRowExtra={renderRowExtra}
@@ -437,6 +484,20 @@ const Insights = () => {
                   <span>Retention supports up to 2 events (A = cohort, B = return).</span>
                 </div>
               )}
+              {isTopK && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center cursor-help">
+                      <CircleHelp className="w-3.5 h-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                      Optionally scope the ranking to a single event (with per-event filters). Without a scope, all
+                      events participate.
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>Event scope is optional — leave empty to rank across all events.</span>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -451,22 +512,24 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {!isUserFlow && (propFilters.length > 0 || breakdowns.length > 0) && (
-            <span className="h-4 w-px bg-border mx-0.5" />
-          )}
-          {!isUserFlow &&
-            breakdowns.map(prop => <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />)}
-          {!isUserFlow && (
-            <BreakdownBuilder
-              schema={globalSchema}
-              schemaError={globalSchemaError}
-              breakdowns={breakdowns}
-              onAdd={addBreakdown}
-              onRemove={removeBreakdown}
-              disabled={
-                breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined
-              }
-            />
+          {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
+          {!isTopK && !isUserFlow && (
+            <>
+              {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
+              {breakdowns.map(prop => (
+                <BreakdownChip key={prop} property={prop} onRemove={() => removeBreakdown(prop)} />
+              ))}
+              <BreakdownBuilder
+                schema={globalSchema}
+                schemaError={globalSchemaError}
+                breakdowns={breakdowns}
+                onAdd={addBreakdown}
+                onRemove={removeBreakdown}
+                disabled={
+                  breakdowns.length >= BREAKDOWN_MAX ? { reason: `Up to ${BREAKDOWN_MAX} breakdowns` } : undefined
+                }
+              />
+            </>
           )}
           {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-1" />}
         </div>
@@ -495,6 +558,11 @@ const Insights = () => {
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
+        isTopK={isTopK}
+        topKRows={topKRows}
+        topKDimension={topK.dimension}
+        topKMetric={topK.metric}
+        topKIncompleteReason={topKIncomplete}
       />
     </Page>
   )

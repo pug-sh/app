@@ -1,6 +1,6 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
-import { atomFamily } from 'jotai/utils'
+import { atomFamily } from 'jotai-family'
 import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 

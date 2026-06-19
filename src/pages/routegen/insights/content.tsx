@@ -1,11 +1,13 @@
 import { useAtomValue } from 'jotai'
 import { TrendingUp } from 'lucide-react'
 import { memo } from 'react'
-import type {
+import {
   AggregationType,
-  Granularity,
-  RetentionSeries,
-  UserFlowResult,
+  type Granularity,
+  type RetentionSeries,
+  TopKQuery_Dimension,
+  type TopKRow,
+  type UserFlowResult,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
@@ -22,8 +24,9 @@ import {
   RetentionCohort,
   SankeyChart,
   SummaryStats,
+  TopKList,
 } from './charts'
-import type { ViewMode } from './constants'
+import { EMPTY_ARRAY, type ViewMode } from './constants'
 
 export const InsightsContent = memo(function InsightsContent({
   error,
@@ -48,6 +51,11 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts,
   funnelSeriesData,
   userFlowResult,
+  isTopK = false,
+  topKRows = EMPTY_ARRAY,
+  topKDimension = TopKQuery_Dimension.EVENT_KIND,
+  topKMetric = AggregationType.TOTAL,
+  topKIncompleteReason = null,
   compact = false,
   lightNumbers = false,
 }: {
@@ -73,6 +81,11 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   userFlowResult?: UserFlowResult
+  isTopK?: boolean
+  topKRows?: TopKRow[]
+  topKDimension?: TopKQuery_Dimension
+  topKMetric?: AggregationType
+  topKIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
 }) {
@@ -96,7 +109,11 @@ export const InsightsContent = memo(function InsightsContent({
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
       <p className="text-xs">
-        {showUserFlow ? 'Adjust the query above to explore transitions' : 'Pick an event above to start'}
+        {showUserFlow
+          ? 'Adjust the query above to explore transitions'
+          : isTopK
+            ? 'Loading ranking'
+            : 'Pick an event above to start'}
       </p>
     </div>
   )
@@ -198,6 +215,22 @@ export const InsightsContent = memo(function InsightsContent({
     return <SankeyChart result={userFlowResult} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
   }
 
+  const renderTopKContent = () => {
+    if (topKIncompleteReason) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">{topKIncompleteReason}</p>
+        </div>
+      )
+    }
+    if (topKRows.length > 0) {
+      return <TopKList rows={topKRows} dimension={topKDimension} metric={topKMetric} compact={compact} />
+    }
+    if (resultCase === 'topK') return renderNoEvents()
+    return renderLoadingEmptyState()
+  }
+
   const renderRetentionContent = () => {
     if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
     if (breakdowns.length > 0) {
@@ -271,6 +304,7 @@ export const InsightsContent = memo(function InsightsContent({
   }
 
   if (showUserFlow) return renderUserFlowContent()
+  if (isTopK) return renderTopKContent()
   if (isRetention) return renderRetentionContent()
   if (!isTrends) return renderFunnelContent()
   if (hasIncompleteNumericAggregation) {

@@ -16,6 +16,7 @@ import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
 import {
   buildUserFlowQuery,
   DEFAULT_USER_FLOW_CONFIG,
@@ -32,6 +33,7 @@ export type InsightEditorState = {
   propFilters: ActiveFilter[]
   breakdowns: string[]
   userFlowConfig: UserFlowConfig
+  topK: TopKState
 }
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
@@ -78,23 +80,34 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
     spec?.insightType === InsightType.TRENDS ||
     spec?.insightType === InsightType.FUNNEL ||
     spec?.insightType === InsightType.RETENTION ||
-    spec?.insightType === InsightType.USER_FLOW
+    spec?.insightType === InsightType.USER_FLOW ||
+    spec?.insightType === InsightType.TOP_K
   ) {
     return spec.insightType
   }
   return InsightType.TRENDS
 }
 
+// Top-k specs carry no events — the optional scope event maps onto the editor's
+// event entries (capped at 1) so the shared event-filter UI edits it.
+const parseSpecScopeEntries = (spec?: InsightQuerySpec) => {
+  const scope = spec?.topK?.scope
+  if (!scope?.kind) return []
+  return [createEntry(scope.kind, { filters: (scope.filters ?? []).map(filter => fromProtoFilter(filter)) })]
+}
+
 export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorState => {
   const spec = tile?.content.case === 'insight' ? tile.content.value.spec : undefined
+  const insightType = getInitialInsightType(spec)
   return {
     displayName: tile?.displayName ?? '',
     description: tile?.description ?? '',
-    insightType: getInitialInsightType(spec),
-    eventEntries: parseSpecEntries(spec),
+    insightType,
+    eventEntries: insightType === InsightType.TOP_K ? parseSpecScopeEntries(spec) : parseSpecEntries(spec),
     propFilters: parseSpecPropFilters(spec),
     breakdowns: parseSpecBreakdowns(spec),
     userFlowConfig: parseUserFlowConfig(spec?.userFlow),
+    topK: parseTopKFromSpec(spec),
   }
 }
 
@@ -104,35 +117,57 @@ export const buildInsightSpec = ({
   propFilters,
   breakdowns,
   userFlowConfig = DEFAULT_USER_FLOW_CONFIG,
+  topK,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
   userFlowConfig?: UserFlowConfig
+  topK?: TopKState
 }) => {
-  const isUserFlow = insightType === InsightType.USER_FLOW
+  const filterGroups =
+    propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : []
+
+  // Top-k specs carry no events/breakdowns (the backend rejects them); the
+  // scope event rides inside topK instead.
+  if (insightType === InsightType.TOP_K) {
+    return create(InsightQuerySpecSchema, {
+      insightType,
+      topK: buildTopKQuery(topK ?? DEFAULT_TOP_K, validEntries[0]),
+      filterGroups,
+      filterGroupsOperator: LogicalOperator.AND,
+    })
+  }
+
+  // User-flow specs carry no events/breakdowns either; the flow config maps onto
+  // the dedicated userFlow field.
+  if (insightType === InsightType.USER_FLOW) {
+    return create(InsightQuerySpecSchema, {
+      insightType,
+      userFlow: buildUserFlowQuery(userFlowConfig),
+      filterGroups,
+      filterGroupsOperator: LogicalOperator.AND,
+    })
+  }
+
   return create(InsightQuerySpecSchema, {
     insightType,
-    events: isUserFlow
-      ? []
-      : validEntries.map(entry => ({
-          event: {
-            kind: entry.kind,
-            filters: toProtoFilters(entry.filters),
-          },
-          aggregation:
-            insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
-          aggregationProperty:
-            insightType === InsightType.TRENDS && NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL)
-              ? (entry.aggregationProperty ?? '')
-              : '',
-        })),
-    userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
-    breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
-    breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
-    filterGroups:
-      propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : [],
+    events: validEntries.map(entry => ({
+      event: {
+        kind: entry.kind,
+        filters: toProtoFilters(entry.filters),
+      },
+      aggregation:
+        insightType === InsightType.TRENDS ? (entry.aggregation ?? AggregationType.TOTAL) : AggregationType.TOTAL,
+      aggregationProperty:
+        insightType === InsightType.TRENDS && NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL)
+          ? (entry.aggregationProperty ?? '')
+          : '',
+    })),
+    breakdowns: breakdowns.map(property => ({ property })),
+    breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
+    filterGroups,
     filterGroupsOperator: LogicalOperator.AND,
     includeStepTiming: false,
   })

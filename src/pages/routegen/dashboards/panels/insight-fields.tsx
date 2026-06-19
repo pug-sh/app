@@ -7,6 +7,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { EventFilterEntry, EventFiltersController } from '@/hooks/use-event-filters'
 import type { FilterStateController } from '@/hooks/use-filter-state'
 import { getSeriesColor } from '@/lib/event-colors'
+import { eventEntryCap } from '../../insights/constants'
+import type { TopKState } from '../../insights/top-k'
+import { TopKControls } from '../../insights/top-k-controls'
 
 export type InsightFieldsProps = {
   insightType: InsightType
@@ -19,6 +22,9 @@ export type InsightFieldsProps = {
   breakdowns: string[]
   addBreakdown: (property: string) => void
   removeBreakdown: (property: string) => void
+  // Paired so the top-k editor is wired all-or-nothing (passing only one half
+  // would silently render no controls).
+  topKEditor?: { value: TopKState; onChange: (next: TopKState) => void }
   renderRowExtra?: (
     entry: EventFilterEntry,
     rowSchema: GetFilterSchemaResponse | null,
@@ -37,43 +43,74 @@ export const InsightFields = ({
   breakdowns,
   addBreakdown,
   removeBreakdown,
+  topKEditor,
   renderRowExtra,
 }: InsightFieldsProps) => {
   const isRetention = insightType === InsightType.RETENTION
   const isUserFlow = insightType === InsightType.USER_FLOW
+  const isTopK = insightType === InsightType.TOP_K
   const { propFilters, addFilter, updateFilter, removeFilter } = filterState
+
+  const maxEvents = eventEntryCap(insightType)
 
   return (
     <div className="space-y-3">
+      {/* User-flow has its own controls (rendered by the parent); it shows no event bar here. */}
       {!isUserFlow ? (
-        <div className="space-y-1">
-          <EventFilterBar
-            filtersAtom={eventFilters.filtersAtom}
-            events={schema?.events}
-            schema={schema}
-            schemaError={schemaError}
-            showLetters
-            seriesColors={eventFilters.entries.map((entry, index) =>
-              getSeriesColor(entry.kind || `step ${index + 1}`, index),
-            )}
-            getEventColor={eventName => getSeriesColor(eventName).dot}
-            renderRowExtra={renderRowExtra}
-            maxEvents={isRetention ? 2 : undefined}
-          />
-          {isRetention ? (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Tooltip>
-                <TooltipTrigger className="inline-flex cursor-help items-center">
-                  <CircleHelp className="h-3.5 w-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                  Use up to two events: A defines the cohort entry event, B defines the return event.
-                </TooltipContent>
-              </Tooltip>
-              <span>Retention supports up to 2 events.</span>
+        <>
+          {isTopK && topKEditor ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <TopKControls
+                topK={topKEditor.value}
+                onChange={topKEditor.onChange}
+                schema={globalSchema}
+                schemaError={globalSchemaError}
+              />
             </div>
           ) : null}
-        </div>
+          <div className="space-y-1">
+            <EventFilterBar
+              filtersAtom={eventFilters.filtersAtom}
+              events={schema?.events}
+              schema={schema}
+              schemaError={schemaError}
+              showLetters={!isTopK}
+              seriesColors={eventFilters.entries.map((entry, index) =>
+                getSeriesColor(entry.kind || `step ${index + 1}`, index),
+              )}
+              getEventColor={eventName => getSeriesColor(eventName).dot}
+              renderRowExtra={renderRowExtra}
+              maxEvents={maxEvents}
+            />
+            {isRetention ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Tooltip>
+                  <TooltipTrigger className="inline-flex cursor-help items-center">
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                    Use up to two events: A defines the cohort entry event, B defines the return event.
+                  </TooltipContent>
+                </Tooltip>
+                <span>Retention supports up to 2 events.</span>
+              </div>
+            ) : null}
+            {isTopK ? (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <Tooltip>
+                  <TooltipTrigger className="inline-flex cursor-help items-center">
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                    Optionally scope the ranking to a single event (with per-event filters). Without a scope, all events
+                    participate.
+                  </TooltipContent>
+                </Tooltip>
+                <span>Event scope is optional.</span>
+              </div>
+            ) : null}
+          </div>
+        </>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
@@ -86,24 +123,23 @@ export const InsightFields = ({
           />
         ))}
         <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-        {!isUserFlow && (propFilters.length > 0 || breakdowns.length > 0) ? (
-          <span className="mx-0.5 h-4 w-px bg-border" />
-        ) : null}
-        {!isUserFlow
-          ? breakdowns.map(property => (
+        {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
+        {!isTopK && !isUserFlow && (
+          <>
+            {propFilters.length > 0 || breakdowns.length > 0 ? <span className="mx-0.5 h-4 w-px bg-border" /> : null}
+            {breakdowns.map(property => (
               <BreakdownChip key={property} property={property} onRemove={() => removeBreakdown(property)} />
-            ))
-          : null}
-        {!isUserFlow ? (
-          <BreakdownBuilder
-            schema={globalSchema}
-            schemaError={globalSchemaError}
-            breakdowns={breakdowns}
-            onAdd={addBreakdown}
-            onRemove={removeBreakdown}
-            disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
-          />
-        ) : null}
+            ))}
+            <BreakdownBuilder
+              schema={globalSchema}
+              schemaError={globalSchemaError}
+              breakdowns={breakdowns}
+              onAdd={addBreakdown}
+              onRemove={removeBreakdown}
+              disabled={breakdowns.length >= 5 ? { reason: 'Up to 5 breakdowns' } : undefined}
+            />
+          </>
+        )}
       </div>
     </div>
   )
