@@ -3,12 +3,6 @@ import { ChevronDown, ChevronUp, Loader2, Radio, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import HoverSwap from '@/components/hover-swap'
-import LiveVisitorMap from '@/components/live-map/visitor-map'
-import NoProject from '@/components/no-project'
-import { Button } from '@/components/ui/button'
-import { activeProjectAtom } from '@/data/workspace.atoms'
-import { formatRelative } from '@/hooks/use-relative-time'
-import { getSeriesColor } from '@/lib/event-colors'
 import {
   countryBreakdown,
   dedupeVisitors,
@@ -17,7 +11,13 @@ import {
   isMobileVisitor,
   LIVE_WINDOW_OPTIONS,
   latestKindCounts,
-} from '@/lib/live-visitors'
+} from '@/components/live-map/live-visitors'
+import LiveVisitorMap from '@/components/live-map/visitor-map'
+import NoProject from '@/components/no-project'
+import { Button } from '@/components/ui/button'
+import { activeProjectAtom } from '@/data/workspace.atoms'
+import { formatRelative } from '@/hooks/use-relative-time'
+import { getSeriesColor } from '@/lib/event-colors'
 import { structGet } from '@/lib/struct'
 import { formatDateTime } from '@/lib/timestamp'
 import LiveFilterBar, { type DeviceFilter } from './live-filter-bar'

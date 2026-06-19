@@ -2,10 +2,15 @@ import { Facehash } from 'facehash'
 import { Laptop, Monitor, Smartphone } from 'lucide-react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import HoverSwap from '@/components/hover-swap'
+import {
+  describeEvent,
+  formatCountryName,
+  isMobileVisitor,
+  visitorLocalTime,
+} from '@/components/live-map/live-visitors'
+import { LIVE_AVATAR_COLORS } from '@/components/live-map/markers'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
-import { LIVE_AVATAR_COLORS } from '@/lib/live-map/markers'
-import { describeEvent, formatCountryName, isMobileVisitor, visitorLocalTime } from '@/lib/live-visitors'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
 

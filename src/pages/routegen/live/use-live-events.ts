@@ -4,8 +4,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import {
+  dedupeVisitors,
+  LIVE_PAGE_SIZE,
+  LIVE_POLL_MS,
+  LIVE_WINDOW_MS,
+  liveTimeRange,
+} from '@/components/live-map/live-visitors'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { dedupeVisitors, LIVE_PAGE_SIZE, LIVE_POLL_MS, LIVE_WINDOW_MS, liveTimeRange } from '@/lib/live-visitors'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
 // Polls every event kind in the active window. No `events` filter is sent — the backend

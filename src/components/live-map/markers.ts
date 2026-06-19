@@ -1,8 +1,8 @@
 import { stringHash } from 'facehash'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { COUNTRY_CENTROIDS } from '@/components/country-centroids'
+import { formatPagePath, isMobileVisitor } from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
-import { formatPagePath, isMobileVisitor } from '@/lib/live-visitors'
 import { structGet } from '@/lib/struct'
 
 export const LIVE_AVATAR_COLORS = [
@@ -19,7 +19,6 @@ export const LIVE_AVATAR_COLORS = [
 
 export type VisitorMapMarker = {
   distinctId: string
-  groupKey: string
   iso: string
   region?: string
   city?: string
@@ -72,7 +71,7 @@ type Placed = {
   exact: boolean
 }
 
-export type VisitorGroup = {
+type VisitorGroup = {
   key: string
   iso: string
   region?: string
@@ -146,7 +145,6 @@ const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): Visi
   const [dLng, dLat] = sunflowerOffset(index, group.members.length, group.key)
   return {
     distinctId: v.distinctId,
-    groupKey: group.key,
     iso: group.iso,
     region: group.region,
     city: structGet(auto, '$city'),
@@ -178,7 +176,8 @@ const topKind = (members: Placed[]): string => {
   return best
 }
 
-// Flat visitor markers (no clustering) — kept for callers that always want individual faces.
+// Flat visitor markers (no clustering) — the map keys these by distinctId to fly to any visitor,
+// including one currently collapsed inside a cluster badge.
 export const groupsToMarkers = (groups: VisitorGroup[]): VisitorMapMarker[] =>
   groups.flatMap(group => group.members.map((m, i) => visitorMarker(m, group, i)))
 

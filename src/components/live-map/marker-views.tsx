@@ -1,10 +1,10 @@
 import { Facehash } from 'facehash'
 
 import { CountryFlag } from '@/components/country-flag'
+import { formatCountryName } from '@/components/live-map/live-visitors'
+import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/components/live-map/markers'
 import { BrowserLabel, DeviceLabel } from '@/components/platform-label'
 import { getSeriesColor } from '@/lib/event-colors'
-import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map/markers'
-import { formatCountryName } from '@/lib/live-visitors'
 
 const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
   const country = formatCountryName(marker.iso)

@@ -129,17 +129,6 @@ export const describeEvent = (event: ActivityEvent): { kind: string; detail: str
 
 const formatPagePathOrEmpty = (url: string | undefined) => (url ? formatPagePath(url) : '')
 
-/** All events for each visitor, preserving the caller's occur_time DESC order (newest first). */
-export const groupEventsByVisitor = (events: ActivityEvent[]): Map<string, ActivityEvent[]> => {
-  const map = new Map<string, ActivityEvent[]>()
-  for (const event of events) {
-    const existing = map.get(event.distinctId)
-    if (existing) existing.push(event)
-    else map.set(event.distinctId, [event])
-  }
-  return map
-}
-
 /** Count visitors by their latest event kind — populates the event-kind filter dropdown. */
 export const latestKindCounts = (visitors: ActivityEvent[]): KindCount[] => {
   const counts = new Map<string, number>()

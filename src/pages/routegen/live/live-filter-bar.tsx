@@ -1,11 +1,11 @@
 import { Check, Globe, ListFilter, Monitor, Search, Smartphone, X } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
+import type { CountryCount, DeviceBreakdown, KindCount } from '@/components/live-map/live-visitors'
+import { formatCountryName, LIVE_WINDOW_OPTIONS } from '@/components/live-map/live-visitors'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
-import type { CountryCount, DeviceBreakdown, KindCount } from '@/lib/live-visitors'
-import { formatCountryName, LIVE_WINDOW_OPTIONS } from '@/lib/live-visitors'
 import { cn } from '@/lib/utils'
 
 export type DeviceFilter = 'all' | 'desktop' | 'mobile'

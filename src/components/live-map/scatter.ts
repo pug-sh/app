@@ -1,4 +1,4 @@
-import type { MapEntry } from '@/lib/live-map/markers'
+import type { MapEntry } from '@/components/live-map/markers'
 
 // Sunflower offsets are in abstract cells. A cell maps to an on-screen gap (cellPxForZoom) via the
 // web-mercator scale (world = TILE_PX·2^zoom px), then ramps from 0 below SCATTER_RAMP_LO so faces sit

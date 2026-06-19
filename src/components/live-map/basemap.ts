@@ -2,7 +2,6 @@ import {
   type ExpressionSpecification,
   type FilterSpecification,
   type LayerSpecification,
-  type PaddingOptions,
   type StyleSpecification,
 } from 'maplibre-gl'
 import themeLayers from 'protomaps-themes-base'
@@ -80,18 +79,4 @@ export const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
   layers: overlayClaimLines(
     hideDisputedBoundaries(englishLabels(themeLayers(BASEMAP_SOURCE, dark ? 'dark' : 'light', 'en'))),
   ),
-})
-
-export type ViewportPadding = {
-  left?: number
-  right?: number
-  top?: number
-  bottom?: number
-}
-
-export const resolvePadding = (padding: ViewportPadding | undefined): PaddingOptions => ({
-  left: padding?.left ?? 0,
-  right: padding?.right ?? 0,
-  top: padding?.top ?? 0,
-  bottom: padding?.bottom ?? 0,
 })

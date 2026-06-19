@@ -1,25 +1,25 @@
-import maplibregl from 'maplibre-gl'
+import maplibregl, { type PaddingOptions } from 'maplibre-gl'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { buildBasemapStyle } from '@/components/live-map/basemap'
 import { ClusterView, MarkerView } from '@/components/live-map/marker-views'
-import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
-import { buildBasemapStyle, resolvePadding, type ViewportPadding } from '@/lib/live-map/basemap'
 import {
   buildGroups,
   groupsToEntries,
   groupsToMarkers,
   type MapEntry,
   type VisitorMapMarker,
-} from '@/lib/live-map/markers'
-import { DECLUSTER_ZOOM, displayPos, scatterCellDeg } from '@/lib/live-map/scatter'
+} from '@/components/live-map/markers'
+import { DECLUSTER_ZOOM, displayPos, scatterCellDeg } from '@/components/live-map/scatter'
+import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
 
 type Props = {
   visitors: ActivityEvent[]
   selectedDistinctId?: string | null
   onSelectVisitor?: (distinctId: string) => void
-  viewportPadding?: ViewportPadding
+  viewportPadding?: PaddingOptions
 }
 
 const FADE_MS = 280
@@ -87,8 +87,8 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
   const entriesRef = useRef(new Map<string, Entry>())
   const selectedRef = useRef(selectedDistinctId)
   const onSelectRef = useRef(onSelectVisitor)
-  const paddingRef = useRef(resolvePadding(viewportPadding))
-  paddingRef.current = resolvePadding(viewportPadding)
+  const paddingRef = useRef(viewportPadding)
+  paddingRef.current = viewportPadding
 
   useEffect(() => {
     onSelectRef.current = onSelectVisitor

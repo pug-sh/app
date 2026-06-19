@@ -3,7 +3,7 @@
 // (../maps) to R2 behind the Cloudflare CDN; this date pins which deployed version the app
 // requests and must be bumped together with that repo's src/config.ts. Paths are versioned so
 // the CDN caches them immutably.
-export const BASEMAP_BUILD_DATE = '20260608'
+const BASEMAP_BUILD_DATE = '20260608'
 export const BASEMAP_FILENAME = `basemap-${BASEMAP_BUILD_DATE}.pmtiles`
 export const POV_COUNTRIES_PATCH_PATH = `pov/${BASEMAP_BUILD_DATE}/countries-patch.json`
 export const POV_BOUNDARY_LINES_PATH = `pov/${BASEMAP_BUILD_DATE}/boundary-lines.json`

@@ -17,12 +17,6 @@ const ASSETS_BASE = (import.meta.env.VITE_MAP_ASSETS_URL ?? '').trim().replace(/
 
 export const mapAssetsOrigin = () => ASSETS_BASE || (typeof window === 'undefined' ? '' : window.location.origin)
 
-// maxBounds for the live map — clamp panning to the world (web-mercator usable range).
-export const WORLD_BOUNDS: LngLatBoundsLike = [
-  [-180, -85],
-  [180, 85],
-]
-
 // Default framing on load — slightly cropped poles, mirrors the previous Leaflet view.
 export const INITIAL_VIEW_BOUNDS: LngLatBoundsLike = [
   [-180, -55],
@@ -35,12 +29,10 @@ export const COUNTRIES_VIEW_BOUNDS: LngLatBoundsLike = [
   [180, 85],
 ]
 
-export type ThemeColors = {
+type ThemeColors = {
   primary: string
   border: string
   mutedForeground: string
-  foreground: string
-  background: string
 }
 
 // MapLibre paint properties accept concrete color strings only — they can't read CSS `var()`,
@@ -73,7 +65,5 @@ export const resolveThemeColors = (): ThemeColors => {
     primary: readVar(styles, '--primary'),
     border: readVar(styles, '--border'),
     mutedForeground: readVar(styles, '--muted-foreground'),
-    foreground: readVar(styles, '--foreground'),
-    background: readVar(styles, '--background'),
   }
 }
