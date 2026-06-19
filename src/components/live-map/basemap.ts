@@ -27,6 +27,19 @@ const englishLabels = (layers: LayerSpecification[]) =>
     return { ...layer, layout: { ...layer.layout, 'text-field': ENGLISH_NAME } }
   })
 
+// protomaps' `places_locality` layer draws a `townspot` sprite dot beside town labels, but the
+// reference theme loads that sprite from protomaps' CDN — which we don't use (assets are
+// self-hosted and we ship no `sprite`). Without it MapLibre logs a "townspot could not be loaded"
+// styleimagemissing error for every locality. Drop icon-image from every symbol layer so MapLibre
+// never requests the missing sprite; the text labels still render.
+const dropSpriteIcons = (layers: LayerSpecification[]) =>
+  layers.map(layer => {
+    if (layer.type !== 'symbol' || !layer.layout?.['icon-image']) return layer
+    const layout = { ...layer.layout }
+    delete layout['icon-image']
+    return { ...layer, layout }
+  })
+
 // India point-of-view boundaries. The OSM-derived tiles draw the de-facto lines in Kashmir (the
 // Line of Control / Line of Actual Control), which official Indian maps must not show as
 // international boundaries. The tiles flag those segments `disputed`, so we drop every disputed
@@ -77,6 +90,6 @@ export const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
     },
   },
   layers: overlayClaimLines(
-    hideDisputedBoundaries(englishLabels(themeLayers(BASEMAP_SOURCE, dark ? 'dark' : 'light', 'en'))),
+    dropSpriteIcons(hideDisputedBoundaries(englishLabels(themeLayers(BASEMAP_SOURCE, dark ? 'dark' : 'light', 'en')))),
   ),
 })
