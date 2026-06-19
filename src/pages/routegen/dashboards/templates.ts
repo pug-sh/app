@@ -17,6 +17,8 @@ import {
   EventQuerySchema,
   InsightQuerySpecSchema,
   InsightType,
+  TopKQuery_Dimension,
+  TopKQuerySchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { type Bindings, composeFunnelSteps, pickBindings } from '../overview/tile-bindings'
 
@@ -167,16 +169,25 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     id: 'top-events',
     group: 'suggested',
     displayName: 'Top events',
-    description: 'Ranked event volume table.',
+    description: 'Ranked event volume.',
     icon: Trophy,
     // The five highest-volume events as a ranked total-count table.
-    build: ({ topEventKinds }) =>
+    build: () =>
       create(DashboardTileInputSchema, {
         displayName: 'Top events',
-        content: insightContent(
-          InsightType.TRENDS,
-          topEventKinds.slice(0, 5).map(kind => ({ kind, aggregation: AggregationType.TOTAL })),
-        ),
+        content: {
+          case: 'insight',
+          value: create(InsightTileContentSchema, {
+            spec: create(InsightQuerySpecSchema, {
+              insightType: InsightType.TOP_K,
+              topK: create(TopKQuerySchema, {
+                dimension: TopKQuery_Dimension.EVENT_KIND,
+                metric: AggregationType.TOTAL,
+                limit: 10,
+              }),
+            }),
+          }),
+        },
         viewMode: DashboardTileViewMode.TABLE,
         position: positionFor(36, 18),
       }),

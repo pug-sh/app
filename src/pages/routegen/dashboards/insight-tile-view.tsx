@@ -15,6 +15,7 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
+import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
 import { dashboardTileViewModeToViewMode } from './tile-settings'
@@ -93,6 +94,7 @@ export const InsightTileView = ({
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
+  const topKRows = useMemo(() => (result.case === 'topK' ? result.value.rows : []), [result])
   const chartData = useMemo(() => buildChartData(trendSeries), [trendSeries])
   const kindOrder = useMemo(() => (spec?.events ?? []).map(entry => entry.event?.kind ?? ''), [spec?.events])
   const funnelSeriesData = useMemo(() => {
@@ -115,6 +117,8 @@ export const InsightTileView = ({
   const retentionCohorts = useMemo(() => retentionSeriesList[0]?.cohorts ?? [], [retentionSeriesList])
   const isTrends = spec?.insightType === InsightType.TRENDS
   const isRetention = spec?.insightType === InsightType.RETENTION
+  const isTopK = spec?.insightType === InsightType.TOP_K
+  const topKIncompleteReason = isTopK ? topKSpecIncompleteReason(spec) : null
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
@@ -139,8 +143,9 @@ export const InsightTileView = ({
 
   // KPI tiles short-circuit the chart pipeline. The compare delta (when present) is
   // assembled by the caller — the public render has no comparison, so `compare` is
-  // undefined and KpiTile degrades to a no-delta sparkline.
-  if (tile && resolvedViewMode === DashboardTileViewMode.KPI) {
+  // undefined and KpiTile degrades to a no-delta sparkline. Top-k results are not
+  // series-shaped, so they always render through the ranked list regardless of view mode.
+  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK) {
     return (
       <div className="h-full min-h-0 overflow-hidden">
         <KpiTile
@@ -160,7 +165,7 @@ export const InsightTileView = ({
       <InsightsContent
         error={error ?? null}
         retry={onRetry ?? noop}
-        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention'].includes(result.case)}
+        unknownResultCase={!!result.case && !['trends', 'funnel', 'retention', 'topK'].includes(result.case)}
         resultCase={result.case}
         resultSeriesCount={
           result.case === 'trends' || result.case === 'funnel' || result.case === 'retention'
@@ -182,6 +187,11 @@ export const InsightTileView = ({
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        isTopK={isTopK}
+        topKRows={topKRows}
+        topKDimension={spec?.topK?.dimension}
+        topKMetric={spec?.topK?.metric}
+        topKIncompleteReason={topKIncompleteReason}
         logScale={tile?.visualization?.logScale}
         zeroBaseline={tile?.visualization?.zeroBaseline}
         hideLegend={tile?.visualization?.hideLegend}

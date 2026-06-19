@@ -9,6 +9,8 @@ import {
   InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
+  TopKQuery_Dimension,
+  TopKQuerySchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import ProjectLink from '@/components/project-link'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
@@ -21,7 +23,6 @@ import { overviewBindingsAtom, overviewSchemaAtom } from './overview.atoms'
 import OverviewSectionHeader from './overview-section-header'
 import { OverviewTileShell } from './overview-tile-shell'
 import { composeFunnelSteps } from './tile-bindings'
-import TopEventsBlock from './top-events-block'
 
 // Device/acquisition auto-properties are queried literally rather than resolved from
 // schema.autoPropertyKeys — that rollup is sparse and omits keys (e.g. $os) the raw
@@ -41,6 +42,18 @@ const buildTrendsQuery = (kind: string, aggregation: AggregationType) =>
           aggregation,
         }),
       ],
+    }),
+  })
+
+const buildTopEventsQuery = () =>
+  create(QueryRequestSchema, {
+    spec: create(InsightQuerySpecSchema, {
+      insightType: InsightType.TOP_K,
+      topK: create(TopKQuerySchema, {
+        dimension: TopKQuery_Dimension.EVENT_KIND,
+        metric: AggregationType.TOTAL,
+        limit: 10,
+      }),
     }),
   })
 
@@ -193,12 +206,17 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       </section>
 
       <section className="flex flex-col gap-4">
-        <OverviewSectionHeader
-          title="Schema"
-          description="Every event kind Pug is currently tracking."
-          count={`${schema.events.length} kinds`}
-        />
-        <TopEventsBlock events={schema.events} />
+        <OverviewSectionHeader title="Top events" description="The most frequent events across all kinds." />
+        <OverviewTileShell title="Most frequent events" footer="across all events" className="h-[420px]">
+          <DashboardInsightContent
+            query={buildTopEventsQuery()}
+            defaultTimeRange={TimeRangePreset.LAST_90_DAYS}
+            timeRangeOverride={globalTimeRange}
+            granularityOverride={globalGranularity}
+            queryKeyPrefix="overview-top-events"
+            compact
+          />
+        </OverviewTileShell>
       </section>
 
       <div className="border-t border-border/60 pt-1.5 text-center">
