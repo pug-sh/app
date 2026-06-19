@@ -5,7 +5,13 @@ import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_p
 import { ClusterView, MarkerView } from '@/components/live-map/marker-views'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { buildBasemapStyle, resolvePadding, type ViewportPadding } from '@/lib/live-map/basemap'
-import { buildMapEntries, buildVisitorMapMarkers, type MapEntry, type VisitorMapMarker } from '@/lib/live-map/markers'
+import {
+  buildGroups,
+  groupsToEntries,
+  groupsToMarkers,
+  type MapEntry,
+  type VisitorMapMarker,
+} from '@/lib/live-map/markers'
 import { DECLUSTER_ZOOM, displayPos, scatterCellDeg } from '@/lib/live-map/scatter'
 import { INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
 
@@ -27,9 +33,11 @@ type Entry = {
 
 const entryId = (entry: MapEntry) => (entry.type === 'cluster' ? `cluster:${entry.groupKey}` : entry.distinctId)
 
+// Gates whether an entry's React content (face/badge) is re-rendered. Position is intentionally
+// excluded: it's reapplied every reconcile via setLngLat, and neither MarkerView nor ClusterView
+// draws coordinates — so keeping lat/lng here would only add per-entry toFixed churn for no effect.
 const entrySignature = (entry: MapEntry, selectedId: string | null) => {
-  if (entry.type === 'cluster')
-    return `c|${entry.count}|${entry.topKind}|${entry.lat.toFixed(4)}|${entry.lng.toFixed(4)}`
+  if (entry.type === 'cluster') return `c|${entry.count}|${entry.topKind}`
   return [
     'v',
     entry.distinctId === selectedId ? 'sel' : '',
@@ -40,8 +48,6 @@ const entrySignature = (entry: MapEntry, selectedId: string | null) => {
     entry.page,
     entry.browser ?? '',
     entry.device,
-    entry.lat.toFixed(6),
-    entry.lng.toFixed(6),
   ].join('|')
 }
 
@@ -50,16 +56,20 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
   // Zoom past DECLUSTER_ZOOM breaks crowded city groups into individual faces.
   const [declustered, setDeclustered] = useState(false)
 
+  // Resolve + group visitors once per data change; both projections below derive from this so the
+  // expensive GeoIP/centroid grouping runs a single time per poll (not once per consumer).
+  const groups = useMemo(() => buildGroups(visitors), [visitors])
+
   // Coordinates for every visitor regardless of clustering — used to fly to a selection.
   const visitorIndex = useMemo(() => {
     const index = new Map<string, VisitorMapMarker>()
-    for (const m of buildVisitorMapMarkers(visitors)) index.set(m.distinctId, m)
+    for (const m of groupsToMarkers(groups)) index.set(m.distinctId, m)
     return index
-  }, [visitors])
+  }, [groups])
 
   const entries = useMemo(
-    () => buildMapEntries(visitors, { threshold: declustered ? Number.POSITIVE_INFINITY : 6 }),
-    [visitors, declustered],
+    () => groupsToEntries(groups, { threshold: declustered ? Number.POSITIVE_INFINITY : 6 }),
+    [groups, declustered],
   )
 
   const { containerRef, mapRef, ready } = useMaplibreMap({
@@ -226,21 +236,40 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    const onZoom = () => {
-      const zoom = map.getZoom()
-      const cell = scatterCellDeg(zoom)
+
+    // `zoom` fires every frame of a wheel-zoom and every frame of the 700ms flyTo/fitBounds
+    // animations, and each reposition is O(markers) of layout-affecting setLngLat writes. Coalesce
+    // to one run per frame via rAF, and skip entirely when the scatter cell is unchanged — notably
+    // it's a constant 0 below the ramp floor, so panning/zooming at the world-overview zoom is free.
+    let frame = 0
+    let lastCell = Number.NaN
+    const reposition = () => {
+      frame = 0
+      const cell = scatterCellDeg(map.getZoom())
+      if (cell === lastCell) return
+      lastCell = cell
       for (const entry of entriesRef.current.values()) {
         if (entry.data.type === 'visitor') entry.marker.setLngLat(displayPos(entry.data, cell))
       }
+    }
+
+    const onZoom = () => {
+      if (!frame) frame = requestAnimationFrame(reposition)
+      // Declustering stays responsive at the threshold; the state guard makes it a no-op otherwise.
+      // Hysteresis (decluster at ≥6, recluster only below 5.5) stops zoom jitter right at the
+      // boundary from repeatedly tearing down and rebuilding every marker's React root.
       setDeclustered(prev => {
-        const next = zoom >= DECLUSTER_ZOOM
+        const zoom = map.getZoom()
+        const next = prev ? zoom >= DECLUSTER_ZOOM - 0.5 : zoom >= DECLUSTER_ZOOM
         return next === prev ? prev : next
       })
     }
+
     onZoom()
     map.on('zoom', onZoom)
     return () => {
       map.off('zoom', onZoom)
+      if (frame) cancelAnimationFrame(frame)
     }
   }, [ready, mapRef])
 

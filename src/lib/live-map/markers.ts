@@ -72,7 +72,7 @@ type Placed = {
   exact: boolean
 }
 
-type VisitorGroup = {
+export type VisitorGroup = {
   key: string
   iso: string
   region?: string
@@ -105,7 +105,9 @@ const groupKeyFor = (iso: string, region: string | undefined, city: string | und
   return iso
 }
 
-const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
+// Resolve and group visitors into places. This is the expensive pass (GeoIP/centroid resolution
+// per visitor); callers run it once per data change and feed the result to both projections below.
+export const buildGroups = (visitors: ActivityEvent[]): VisitorGroup[] => {
   const groups = new Map<string, VisitorGroup>()
 
   for (const v of visitors) {
@@ -177,18 +179,15 @@ const topKind = (members: Placed[]): string => {
 }
 
 // Flat visitor markers (no clustering) — kept for callers that always want individual faces.
-export const buildVisitorMapMarkers = (visitors: ActivityEvent[]): VisitorMapMarker[] =>
-  buildGroups(visitors).flatMap(group => group.members.map((m, i) => visitorMarker(m, group, i)))
+export const groupsToMarkers = (groups: VisitorGroup[]): VisitorMapMarker[] =>
+  groups.flatMap(group => group.members.map((m, i) => visitorMarker(m, group, i)))
 
 // Cluster crowded groups into a single badge; groups at/under the threshold (or explicitly
 // expanded) render their individual faces. Returns a mixed list the map renders directly.
-export const buildMapEntries = (
-  visitors: ActivityEvent[],
-  { threshold = 6 }: { threshold?: number } = {},
-): MapEntry[] => {
+export const groupsToEntries = (groups: VisitorGroup[], { threshold = 6 }: { threshold?: number } = {}): MapEntry[] => {
   const entries: MapEntry[] = []
 
-  for (const group of buildGroups(visitors)) {
+  for (const group of groups) {
     const clustered = group.members.length > threshold
     if (clustered) {
       const [lng, lat] = centroidOf(group.members)

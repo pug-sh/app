@@ -14,7 +14,6 @@ import {
   dedupeVisitors,
   describeEvent,
   deviceBreakdown,
-  groupEventsByVisitor,
   isMobileVisitor,
   LIVE_WINDOW_OPTIONS,
   latestKindCounts,
@@ -24,6 +23,9 @@ import { formatDateTime } from '@/lib/timestamp'
 import LiveFilterBar, { type DeviceFilter } from './live-filter-bar'
 import { useLiveEvents } from './use-live-events'
 import VisitorRow from './visitor-row'
+
+// Stable empty journey for unselected rows — avoids a fresh [] allocation per render.
+const EMPTY_JOURNEY: ActivityEvent[] = []
 
 const LIVE_MAP_VIEWPORT_PADDING = {
   left: 16,
@@ -65,7 +67,12 @@ const LiveVisitorsPage = () => {
   const [search, setSearch] = useState('')
 
   const allVisitors = useMemo(() => dedupeVisitors(events), [events])
-  const journeys = useMemo(() => groupEventsByVisitor(events), [events])
+  // The journey list only renders for the expanded (selected) row, so build it for that one
+  // visitor instead of grouping all events into per-visitor arrays every poll.
+  const selectedJourney = useMemo(
+    () => (selectedDistinctId ? events.filter(e => e.distinctId === selectedDistinctId) : EMPTY_JOURNEY),
+    [events, selectedDistinctId],
+  )
   const kindCounts = useMemo(() => latestKindCounts(allVisitors), [allVisitors])
   const countries = useMemo(() => countryBreakdown(allVisitors), [allVisitors])
   const devices = useMemo(() => deviceBreakdown(allVisitors), [allVisitors])
@@ -242,7 +249,7 @@ const LiveVisitorsPage = () => {
                         <VisitorRow
                           key={visitor.distinctId}
                           visitor={visitor}
-                          journey={journeys.get(visitor.distinctId) ?? []}
+                          journey={visitor.distinctId === selectedDistinctId ? selectedJourney : EMPTY_JOURNEY}
                           selected={visitor.distinctId === selectedDistinctId}
                           onClick={() => select(visitor.distinctId)}
                         />
