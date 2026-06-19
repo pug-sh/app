@@ -1,5 +1,7 @@
 import { Facehash } from 'facehash'
 
+import { CountryFlag } from '@/components/country-flag'
+import { BrowserLabel, DeviceLabel } from '@/components/platform-label'
 import { getSeriesColor } from '@/lib/event-colors'
 import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/lib/live-map/markers'
 import { formatCountryName } from '@/lib/live-visitors'
@@ -17,17 +19,24 @@ const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
           <span className="truncate font-medium text-foreground">{marker.kind}</span>
         </div>
         {marker.page && marker.page !== '—' && <div className="truncate text-muted-foreground">{marker.page}</div>}
-        <div className="truncate text-muted-foreground">{location || country}</div>
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <CountryFlag code={marker.iso} size={14} />
+          <span className="truncate">{location || country}</span>
+        </div>
       </div>
       <div className="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-muted-foreground">
         {marker.browser && (
           <>
             <span>Browser</span>
-            <span className="min-w-0 truncate text-right text-foreground">{marker.browser}</span>
+            <span className="flex min-w-0 justify-end">
+              <BrowserLabel browser={marker.browser} iconSize={14} className="text-foreground" />
+            </span>
           </>
         )}
         <span>Device</span>
-        <span className="min-w-0 truncate text-right text-foreground">{marker.device}</span>
+        <span className="flex min-w-0 justify-end">
+          <DeviceLabel device={marker.device} iconSize={14} className="text-foreground" />
+        </span>
         {marker.region && (
           <>
             <span>Region</span>
@@ -35,7 +44,10 @@ const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
           </>
         )}
         <span>Country</span>
-        <span className="min-w-0 truncate text-right text-foreground">{country}</span>
+        <span className="flex min-w-0 items-center justify-end gap-1.5 text-foreground">
+          <CountryFlag code={marker.iso} size={14} />
+          <span className="truncate">{country}</span>
+        </span>
       </div>
     </div>
   )

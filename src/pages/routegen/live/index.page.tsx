@@ -157,9 +157,9 @@ const LiveVisitorsPage = () => {
               {/* Live count + freshness — the single source of "is this still ticking" */}
               <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="flex items-center gap-2 text-sm font-semibold">
+                  <span className="flex items-center gap-2 text-sm font-medium">
                     <LiveDot />
-                    {filtered.length}
+                    <span className="font-normal text-muted-foreground/80">{filtered.length}</span>
                     {hasActiveFilters && allVisitors.length !== filtered.length && (
                       <span className="font-normal text-muted-foreground"> / {allVisitors.length}</span>
                     )}
