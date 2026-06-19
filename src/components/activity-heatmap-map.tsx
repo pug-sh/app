@@ -1,170 +1,90 @@
-import type { FeatureCollection, Geometry } from 'geojson'
-import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
-import { COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
-import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
+import { type CountryContext, WorldMap } from 'react-svg-worldmap'
+
+// react-svg-worldmap renders width = size, height = size * 3/4 (its heightRatio),
+// and that 4:3 frame includes large ocean bands + Antarctica. Match it here.
+const MAP_HEIGHT_RATIO = 3 / 4
 
 type Props = {
   countries: { iso: string; count: number }[]
 }
 
-const FILL_LAYER = 'countries-fill'
-const LINE_LAYER = 'countries-line'
-const SOURCE = 'countries'
+const countryStyle = ({ countryValue, minValue, maxValue, color }: CountryContext) => {
+  const stroke = 'var(--border)'
 
-const EMPTY_STYLE: StyleSpecification = { version: 8, sources: {}, layers: [] }
+  if (countryValue === undefined) {
+    return {
+      fill: 'var(--muted-foreground)',
+      fillOpacity: 0.07,
+      stroke,
+      strokeWidth: 0.5,
+      strokeOpacity: 0.3,
+      cursor: 'default' as const,
+    }
+  }
 
-// Match the previous react-svg-worldmap intensity: sqrt-scaled opacity in [0.16, 0.90].
-const opacityForValue = (value: number, min: number, max: number) => {
-  const range = max - min
-  const t = range > 0 ? Math.sqrt((value - min) / range) : 1
-  return 0.16 + t * 0.74
+  const value = typeof countryValue === 'number' ? countryValue : minValue
+  const range = maxValue - minValue
+  const t = range > 0 ? Math.sqrt((value - minValue) / range) : 1
+
+  return {
+    fill: color,
+    fillOpacity: 0.16 + t * 0.74,
+    stroke,
+    strokeWidth: 0.5,
+    strokeOpacity: 0.35,
+    cursor: 'pointer' as const,
+  }
 }
 
-const fillColorExpr = (primary: string, muted: string): ExpressionSpecification => [
-  'case',
-  ['boolean', ['feature-state', 'hasData'], false],
-  primary,
-  muted,
-]
-
 const ActivityHeatmapMap = ({ countries }: Props) => {
-  const dark = useResolvedDark()
-  const [tooltip, setTooltip] = useState<{ name: string; count: number; x: number; y: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState(0)
 
-  // Keep interaction enabled (so layer hover events fire for the tooltip) but disable every
-  // navigation handler — the choropleth is a static, non-pannable map like the old SVG.
-  const { containerRef, mapRef, ready } = useMaplibreMap({
-    style: EMPTY_STYLE,
-    bounds: COUNTRIES_VIEW_BOUNDS,
-    renderWorldCopies: false,
-    attributionControl: false,
-    dragPan: false,
-    scrollZoom: false,
-    boxZoom: false,
-    dragRotate: false,
-    keyboard: false,
-    doubleClickZoom: false,
-    touchZoomRotate: false,
-  })
-
-  // Latest count-by-alpha2, read by the bound (once) hover handler.
-  const countsRef = useRef(new Map<string, number>())
-  const counts = useMemo(() => new Map(countries.map(({ iso, count }) => [iso.toUpperCase(), count])), [countries])
-  countsRef.current = counts
-
-  // Country shapes resolve asynchronously (the India-POV patch is fetched from the map-assets
-  // origin); source and layers are added once they land.
-  const [worldCountries, setWorldCountries] = useState<FeatureCollection<Geometry> | null>(null)
-  useEffect(() => {
-    let active = true
-    loadWorldCountries().then(fc => {
-      if (active) setWorldCountries(fc)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  // One-time: source, layers, and hover handlers (added once the map and the shapes are ready).
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready || !worldCountries) return
-
-    const { primary, mutedForeground, border } = resolveThemeColors()
-    map.addSource(SOURCE, { type: 'geojson', data: worldCountries })
-    map.addLayer({
-      id: FILL_LAYER,
-      type: 'fill',
-      source: SOURCE,
-      paint: {
-        'fill-color': fillColorExpr(primary, mutedForeground),
-        'fill-opacity': [
-          'case',
-          ['boolean', ['feature-state', 'hasData'], false],
-          ['coalesce', ['feature-state', 'opacity'], 0.16],
-          0.07,
-        ],
-      },
-    })
-    map.addLayer({
-      id: LINE_LAYER,
-      type: 'line',
-      source: SOURCE,
-      paint: { 'line-color': border, 'line-width': 0.5, 'line-opacity': 0.35 },
-    })
-
-    const onMove = (e: MapLayerMouseEvent) => {
-      const feature = e.features?.[0]
-      const alpha2 = feature?.properties?.alpha2 as string | undefined
-      const count = alpha2 ? countsRef.current.get(alpha2) : undefined
-      if (count === undefined) {
-        setTooltip(null)
-        return
-      }
-      const name = (feature?.properties?.name as string | undefined) ?? alpha2 ?? ''
-      setTooltip({ name, count, x: e.point.x, y: e.point.y })
-    }
-    const onLeave = () => setTooltip(null)
-    map.on('mousemove', FILL_LAYER, onMove)
-    map.on('mouseleave', FILL_LAYER, onLeave)
-
-    return () => {
-      map.off('mousemove', FILL_LAYER, onMove)
-      map.off('mouseleave', FILL_LAYER, onLeave)
-    }
-  }, [ready, mapRef, worldCountries])
-
-  // Data-driven feature state — recompute on every countries change.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready || !map.getSource(SOURCE)) return
-
-    map.removeFeatureState({ source: SOURCE })
-    if (counts.size === 0) return
-
-    const values = [...counts.values()]
-    const min = Math.min(...values)
-    const max = Math.max(...values)
-    for (const [iso, count] of counts) {
-      const id = ALPHA2_TO_M49[iso]
-      if (id === undefined) continue
-      map.setFeatureState({ source: SOURCE, id }, { hasData: true, opacity: opacityForValue(count, min, max) })
-    }
-  }, [counts, ready, mapRef, worldCountries])
-
-  // Theme swap — re-resolve token colors into the paint properties (opacities are data-driven).
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready || !map.getLayer(FILL_LAYER)) return
-    const { primary, mutedForeground, border } = resolveThemeColors()
-    map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(primary, mutedForeground))
-    map.setPaintProperty(LINE_LAYER, 'line-color', border)
-  }, [dark, ready, mapRef, worldCountries])
-
-  // Keep the canvas sized to the container.
   useEffect(() => {
     const el = containerRef.current
-    const map = mapRef.current
-    if (!el || !map) return
-    const observer = new ResizeObserver(() => {
-      map.resize()
-      map.fitBounds(COUNTRIES_VIEW_BOUNDS, { animate: false })
-    })
+    if (!el) return
+
+    const measure = () => {
+      const width = el.clientWidth
+      const height = el.clientHeight
+      if (width <= 0 || height <= 0) return
+      // Contain: fit the whole map inside the tile so nothing is clipped. The map's
+      // fixed 4:3 frame has an oversized bottom band (Antarctica), so a cover/crop
+      // fit eats into the northern continents — contain avoids that entirely.
+      const next = Math.floor(Math.min(width, height / MAP_HEIGHT_RATIO))
+      setSize(prev => (prev === next ? prev : next))
+    }
+    measure()
+
+    const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [containerRef, mapRef])
+  }, [])
+
+  const data = useMemo(
+    () => countries.map(({ iso, count }) => ({ country: iso.toLowerCase(), value: count })),
+    [countries],
+  )
 
   return (
-    <div ref={containerRef} className="relative h-full min-h-0 w-full overflow-hidden">
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md"
-          style={{ left: tooltip.x, top: tooltip.y - 8 }}
-        >
-          {tooltip.name} {tooltip.count} events
-        </div>
+    <div
+      ref={containerRef}
+      className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden [&_.worldmap__figure-container]:m-0 [&_svg]:max-h-full [&_svg]:max-w-full"
+    >
+      {size > 0 && (
+        <WorldMap
+          size={size}
+          data={data}
+          color="var(--primary)"
+          borderColor="var(--border)"
+          backgroundColor="transparent"
+          strokeOpacity={0.35}
+          styleFunction={countryStyle}
+          tooltipBgColor="var(--foreground)"
+          tooltipTextColor="var(--background)"
+          valueSuffix=" events"
+        />
       )}
     </div>
   )
