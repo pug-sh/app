@@ -35,6 +35,7 @@ import type { ChartPoint } from './charts'
 import {
   EMPTY_ARRAY,
   EMPTY_RESULT,
+  eventEntryCap,
   GRANULARITIES,
   GRANULARITY_VALUES,
   getPageDescription,
@@ -131,12 +132,10 @@ const Insights = () => {
   const store = useStore()
   const { filtersAtom, reset: resetFilters } = eventFilters
 
-  // Retention caps event entries at 2 (cohort + return); top-k caps at 1 (the
-  // optional scope event).
+  // Truncate leftover event rows when switching to an insight type with a smaller
+  // event cap (retention = 2, top-k = 1). See eventEntryCap.
   useEffect(() => {
-    let cap: number | undefined
-    if (insightType === InsightType.RETENTION) cap = 2
-    if (insightType === InsightType.TOP_K) cap = 1
+    const cap = eventEntryCap(insightType)
     if (cap === undefined) return
     const entries = store.get(filtersAtom)
     if (entries.length <= cap) return
@@ -160,9 +159,7 @@ const Insights = () => {
   const isTopK = insightType === InsightType.TOP_K
   const isTimeSeriesInsight = isTrends || isRetention
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
-  let maxEvents: number | undefined
-  if (isRetention) maxEvents = 2
-  if (isTopK) maxEvents = 1
+  const maxEvents = eventEntryCap(insightType)
 
   useEffect(() => {
     writeFilterQueryParams(eventFilters.entries, propFilters, {

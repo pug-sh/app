@@ -209,6 +209,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const hasEf = params.has(EVENT_FILTERS_PARAM)
   const hasPf = params.has(PROP_FILTERS_PARAM)
   const hasBd = params.has(BREAKDOWNS_PARAM)
+  const hasTk = params.has(TOP_K_PARAM)
 
   const rawBreakdowns = parseJSONParam(params.get(BREAKDOWNS_PARAM))
   const eventFilters = Array.isArray(rawEventFilters)
@@ -244,13 +245,18 @@ export const readFilterQueryParams = (search = window.location.search) => {
     const suffix = capHit ? ` (max ${BREAKDOWN_MAX})` : ''
     warnings.push(`${droppedBreakdowns} breakdown${droppedBreakdowns === 1 ? '' : 's'}${suffix}`)
   }
+  const rawTopK = parseJSONParam(params.get(TOP_K_PARAM))
+  const topK =
+    rawTopK && typeof rawTopK === 'object' && !Array.isArray(rawTopK)
+      ? normalizeTopKState(rawTopK as Record<string, unknown>)
+      : undefined
+  // Surface a malformed/unusable `tk` like every other restorable param instead
+  // of silently falling back to the default ranking.
+  if (hasTk && params.get(TOP_K_PARAM) && !topK) warnings.push('ranking')
+
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
-
-  const rawTopK = parseJSONParam(params.get(TOP_K_PARAM))
-  const topK =
-    rawTopK && typeof rawTopK === 'object' ? normalizeTopKState(rawTopK as Record<string, unknown>) : undefined
 
   return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, topK, parseWarning }
 }

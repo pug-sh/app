@@ -4,9 +4,7 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
-
-// Share-of-total only makes sense for additive metrics.
-const SHARE_METRICS = new Set([AggregationType.TOTAL, AggregationType.UNIQUE_USERS, AggregationType.SUM])
+import { topKShareInfo } from '../top-k'
 
 const OTHERS_HINT = 'Everything outside the top results, aggregated into a single bucket.'
 
@@ -102,11 +100,7 @@ export const TopKList = ({
   compact?: boolean
 }) => {
   const maxValue = Math.max(...rows.map(row => row.value), 0)
-  const total = rows.reduce((sum, row) => sum + row.value, 0)
-  const showShare = SHARE_METRICS.has(metric) && total > 0
-  const othersRow = rows.find(row => row.isOthers)
-  const rankedCount = rows.length - (othersRow ? 1 : 0)
-  const othersShare = othersRow && total > 0 ? othersRow.value / total : null
+  const { total, rankedCount, showShare, othersShare } = topKShareInfo(rows, metric)
 
   return (
     <div className={cn('flex flex-col gap-1.5', compact ? 'h-full min-h-0' : 'mt-2')}>

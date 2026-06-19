@@ -46,7 +46,7 @@ export const OptionChip = <T extends string | number>({
           {label}
         </span>
         <span className="px-2 h-full flex items-center" style={{ minWidth: valueMinWidth }}>
-          {current?.label}
+          {current?.label ?? String(value)}
         </span>
       </PopoverTrigger>
       <PopoverContent align="start" className={cn(stableWidth ? 'w-(--anchor-width)' : 'w-auto', 'p-1')}>

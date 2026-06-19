@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { EventFilterEntry, EventFiltersController } from '@/hooks/use-event-filters'
 import type { FilterStateController } from '@/hooks/use-filter-state'
 import { getSeriesColor } from '@/lib/event-colors'
+import { eventEntryCap } from '../../insights/constants'
 import type { TopKState } from '../../insights/top-k'
 import { TopKControls } from '../../insights/top-k-controls'
 
@@ -21,8 +22,9 @@ export type InsightFieldsProps = {
   breakdowns: string[]
   addBreakdown: (property: string) => void
   removeBreakdown: (property: string) => void
-  topK?: TopKState
-  onTopKChange?: (next: TopKState) => void
+  // Paired so the top-k editor is wired all-or-nothing (passing only one half
+  // would silently render no controls).
+  topKEditor?: { value: TopKState; onChange: (next: TopKState) => void }
   renderRowExtra?: (
     entry: EventFilterEntry,
     rowSchema: GetFilterSchemaResponse | null,
@@ -41,23 +43,25 @@ export const InsightFields = ({
   breakdowns,
   addBreakdown,
   removeBreakdown,
-  topK,
-  onTopKChange,
+  topKEditor,
   renderRowExtra,
 }: InsightFieldsProps) => {
   const isRetention = insightType === InsightType.RETENTION
   const isTopK = insightType === InsightType.TOP_K
   const { propFilters, addFilter, updateFilter, removeFilter } = filterState
 
-  let maxEvents: number | undefined
-  if (isRetention) maxEvents = 2
-  if (isTopK) maxEvents = 1
+  const maxEvents = eventEntryCap(insightType)
 
   return (
     <div className="space-y-3">
-      {isTopK && topK && onTopKChange ? (
+      {isTopK && topKEditor ? (
         <div className="flex flex-wrap items-center gap-2">
-          <TopKControls topK={topK} onChange={onTopKChange} schema={globalSchema} schemaError={globalSchemaError} />
+          <TopKControls
+            topK={topKEditor.value}
+            onChange={topKEditor.onChange}
+            schema={globalSchema}
+            schemaError={globalSchemaError}
+          />
         </div>
       ) : null}
       <div className="space-y-1">

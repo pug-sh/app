@@ -5,10 +5,16 @@ import {
   type TopKQuery,
   TopKQuery_Dimension,
   TopKQuerySchema,
+  type TopKRow,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
-import { NUMERIC_AGGREGATIONS } from './constants'
+import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
+
+// Metrics the UI actually offers (everything except UNSPECIFIED). Mirrors the
+// dimension/limit allowlists below so all three field validations use one
+// representation-independent technique.
+const VALID_METRICS = new Set<AggregationType>(AGGREGATIONS.map(a => a.value))
 
 // Editor state for a top-k insight. The optional event scope is not part of
 // this state — it rides on the shared event-filters entries (capped at 1).
@@ -56,6 +62,12 @@ export const topKIncompleteReason = (topK: Pick<TopKState, 'dimension' | 'proper
   if (topK.dimension === TopKQuery_Dimension.PROPERTY && !topK.property.trim()) {
     return 'Select a property to rank'
   }
+  // The editor controls prevent this, but a saved/migrated spec can carry it —
+  // gate it here so the dashboard replay path catches it client-side instead of
+  // letting the backend reject the query.
+  if (topK.dimension === TopKQuery_Dimension.USER && TOP_K_USER_FORBIDDEN_METRICS.has(topK.metric)) {
+    return 'This measure isn’t available when ranking users'
+  }
   if (NUMERIC_AGGREGATIONS.has(topK.metric) && !topK.metricProperty.trim()) {
     return 'Select a numeric property for this measure'
   }
@@ -98,15 +110,20 @@ export const normalizeTopKState = (raw: {
     typeof raw.dimension === 'number' && TOP_K_DIMENSION_VALUES.includes(raw.dimension)
       ? (raw.dimension as TopKQuery_Dimension)
       : DEFAULT_TOP_K.dimension
-  const metric =
-    typeof raw.metric === 'number' && AggregationType[raw.metric] !== undefined && raw.metric !== 0
+  const rawMetric =
+    typeof raw.metric === 'number' && VALID_METRICS.has(raw.metric as AggregationType)
       ? (raw.metric as AggregationType)
       : DEFAULT_TOP_K.metric
+  const metric = normalizeMetric(dimension, rawMetric)
+  const property = typeof raw.property === 'string' ? raw.property.trim() : ''
+  const metricProperty = typeof raw.metricProperty === 'string' ? raw.metricProperty.trim() : ''
+  // Drop fields that don't apply to the chosen dimension/metric so the state
+  // matches what buildTopKQuery actually sends (no stale property in the URL).
   return {
     dimension,
-    property: typeof raw.property === 'string' ? raw.property.trim() : '',
-    metric: normalizeMetric(dimension, metric),
-    metricProperty: typeof raw.metricProperty === 'string' ? raw.metricProperty.trim() : '',
+    property: dimension === TopKQuery_Dimension.PROPERTY ? property : '',
+    metric,
+    metricProperty: NUMERIC_AGGREGATIONS.has(metric) ? metricProperty : '',
     limit: typeof raw.limit === 'number' && TOP_K_LIMIT_VALUES.includes(raw.limit) ? raw.limit : DEFAULT_TOP_K.limit,
   }
 }
@@ -114,4 +131,24 @@ export const normalizeTopKState = (raw: {
 export const parseTopKFromSpec = (spec?: InsightQuerySpec): TopKState => {
   if (!spec?.topK) return DEFAULT_TOP_K
   return normalizeTopKState(spec.topK)
+}
+
+// Share-of-total is only valid for additive metrics. UNIQUE_USERS is excluded:
+// the same user can fall into multiple dimension groups, so per-group counts
+// don't sum to a meaningful total (TopKResult carries no server-side total).
+const SHARE_METRICS = new Set([AggregationType.TOTAL, AggregationType.SUM])
+
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+
+// Coverage math for the ranked list. `showShare` stays false unless the metric is
+// additive and every value is non-negative — SUM/MIN over a signed property can be
+// negative, which would render nonsensical "% of total" figures.
+export const topKShareInfo = (rows: Pick<TopKRow, 'value' | 'isOthers'>[], metric: AggregationType) => {
+  const total = rows.reduce((sum, row) => sum + row.value, 0)
+  const othersRow = rows.find(row => row.isOthers)
+  const rankedCount = rows.length - (othersRow ? 1 : 0)
+  const allNonNegative = rows.every(row => row.value >= 0)
+  const showShare = SHARE_METRICS.has(metric) && total > 0 && allNonNegative
+  const othersShare = othersRow && total > 0 ? clamp01(othersRow.value / total) : null
+  return { total, rankedCount, showShare, othersShare }
 }

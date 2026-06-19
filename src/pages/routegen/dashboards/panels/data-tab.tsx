@@ -13,7 +13,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
-import { INSIGHT_TYPES } from '../../insights/constants'
+import { eventEntryCap, INSIGHT_TYPES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { InsightFields } from './insight-fields'
@@ -53,14 +53,12 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const [breakdowns, setBreakdowns] = useState<string[]>(defaults.breakdowns)
   const [topK, setTopK] = useState(defaults.topK)
 
-  // Retention caps event entries at 2 (cohort + return); top-k caps at 1 (the
-  // optional scope event). Truncate leftover rows when switching insight type.
+  // Truncate leftover event rows when switching to an insight type with a smaller
+  // event cap (retention = 2, top-k = 1). See eventEntryCap.
   const store = useStore()
   const { filtersAtom, reset: resetEntries } = eventFilters
   useEffect(() => {
-    let cap: number | undefined
-    if (insightType === InsightType.RETENTION) cap = 2
-    if (insightType === InsightType.TOP_K) cap = 1
+    const cap = eventEntryCap(insightType)
     if (cap === undefined) return
     const entries = store.get(filtersAtom)
     if (entries.length <= cap) return
@@ -123,8 +121,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
           breakdowns={breakdowns}
           addBreakdown={addBreakdown}
           removeBreakdown={removeBreakdown}
-          topK={topK}
-          onTopKChange={setTopK}
+          topKEditor={{ value: topK, onChange: setTopK }}
         />
       </Section>
 
