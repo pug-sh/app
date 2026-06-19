@@ -1,6 +1,7 @@
 import type { JsonValue } from '@bufbuild/protobuf'
 import { fromJson, toJson } from '@bufbuild/protobuf'
-import { atomFamily, atomWithStorage } from 'jotai/utils'
+import { atomWithStorage } from 'jotai/utils'
+import { atomFamily } from 'jotai-family'
 import { type Dashboard, DashboardSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 
 export type StoredDraft = {
