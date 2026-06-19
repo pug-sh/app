@@ -495,7 +495,6 @@ const Insights = () => {
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
-        userFlowGroupBy={userFlowConfig.groupBy}
       />
     </Page>
   )

@@ -7,7 +7,6 @@ import type {
   RetentionSeries,
   UserFlowResult,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { UserFlowQuery_GroupBy } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
@@ -49,7 +48,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts,
   funnelSeriesData,
   userFlowResult,
-  userFlowGroupBy,
   compact = false,
   lightNumbers = false,
 }: {
@@ -75,7 +73,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   userFlowResult?: UserFlowResult
-  userFlowGroupBy?: UserFlowQuery_GroupBy
   compact?: boolean
   lightNumbers?: boolean
 }) {
@@ -198,13 +195,7 @@ export const InsightsContent = memo(function InsightsContent({
   const renderUserFlowContent = () => {
     if (!userFlowResult) return renderLoadingEmptyState()
     if (userFlowResult.links.length === 0) return renderNoEvents()
-    return (
-      <SankeyChart
-        result={userFlowResult}
-        groupBy={userFlowGroupBy}
-        className={compact ? 'h-full min-h-[120px] w-full' : undefined}
-      />
-    )
+    return <SankeyChart result={userFlowResult} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
   }
 
   const renderRetentionContent = () => {

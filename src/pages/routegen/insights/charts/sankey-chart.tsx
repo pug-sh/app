@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Sankey, type SankeyLinkProps, type SankeyNodeProps, Tooltip } from 'recharts'
-import { UserFlowQuery_GroupBy, type UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ChartContainer } from '@/components/ui/chart'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
@@ -59,14 +59,12 @@ const SankeyLink = ({
 
 export const SankeyChart = ({
   result,
-  groupBy = UserFlowQuery_GroupBy.SESSION,
   className = 'h-[420px] w-full',
 }: {
   result: UserFlowResult
-  groupBy?: UserFlowQuery_GroupBy
   className?: string
 }) => {
-  const unitLabel = groupBy === UserFlowQuery_GroupBy.USER ? 'users' : 'sessions'
+  const unitLabel = 'sessions'
   const containerRef = useRef<HTMLDivElement>(null)
   const [chartWidth, setChartWidth] = useState(0)
 

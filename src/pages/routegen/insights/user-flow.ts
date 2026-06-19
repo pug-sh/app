@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { z } from 'zod'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import {
+  type UserFlowNode,
   UserFlowQuery_GroupBy,
   UserFlowQuery_NodeKind,
   UserFlowQuerySchema,
@@ -34,11 +35,6 @@ export const DEFAULT_USER_FLOW_CONFIG: UserFlowConfig = {
 export const USER_FLOW_NODE_KIND_OPTIONS = [
   { label: 'Event kind', value: UserFlowQuery_NodeKind.EVENT_KIND },
   { label: 'Property', value: UserFlowQuery_NodeKind.PROPERTY },
-] as const
-
-export const USER_FLOW_GROUP_BY_OPTIONS = [
-  { label: 'Session', value: UserFlowQuery_GroupBy.SESSION },
-  { label: 'User', value: UserFlowQuery_GroupBy.USER },
 ] as const
 
 const activeFilterSchema = z.custom<ActiveFilter>(
@@ -83,7 +79,7 @@ export const parseUserFlowConfig = (query?: {
       ? UserFlowQuery_NodeKind.PROPERTY
       : UserFlowQuery_NodeKind.EVENT_KIND,
   nodeProperty: query?.nodeProperty ?? '',
-  groupBy: query?.groupBy === UserFlowQuery_GroupBy.USER ? UserFlowQuery_GroupBy.USER : UserFlowQuery_GroupBy.SESSION,
+  groupBy: UserFlowQuery_GroupBy.SESSION,
   scope: {
     kind: query?.scope?.kind?.trim() ?? '',
     filters: (query?.scope?.filters ?? []).map(fromProtoFilter),
@@ -161,11 +157,15 @@ const breakCyclesForSankey = (links: SankeyLink[]) => {
   return kept
 }
 
+// Nodes no longer carry a display label — render the id, except the synthetic
+// overflow bucket, which is identified by the is_others flag (not by id string).
+const nodeLabel = (node: UserFlowNode) => (node.isOthers ? 'Others' : node.id)
+
 export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
   const nodeIndex = new Map<string, number>()
   const nodes = result.nodes.map((node, index) => {
     nodeIndex.set(node.id, index)
-    return { name: node.label || node.id, color: '' }
+    return { name: nodeLabel(node), color: '' }
   })
 
   const rawLinks = result.links.flatMap(link => {
@@ -179,8 +179,8 @@ export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
         source,
         target,
         value,
-        sourceName: result.nodes[source]?.label || link.source,
-        targetName: result.nodes[target]?.label || link.target,
+        sourceName: result.nodes[source] ? nodeLabel(result.nodes[source]) : link.source,
+        targetName: result.nodes[target] ? nodeLabel(result.nodes[target]) : link.target,
       },
     ]
   })

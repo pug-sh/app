@@ -282,7 +282,6 @@ export const DashboardInsightContent = ({
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
-        userFlowGroupBy={effectiveQuery?.spec?.userFlow?.groupBy}
         compact={compact}
         lightNumbers={lightMetrics}
       />

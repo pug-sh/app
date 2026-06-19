@@ -1,16 +1,11 @@
 import { useState } from 'react'
 import type { EventNameMeta, GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
-import { UserFlowQuery_GroupBy, UserFlowQuery_NodeKind } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { UserFlowQuery_NodeKind } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { PropertyPickerList } from '@/components/event-filters'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { OptionChip } from './controls'
-import {
-  USER_FLOW_GROUP_BY_OPTIONS,
-  USER_FLOW_NODE_KIND_OPTIONS,
-  type UserFlowConfig,
-  type UserFlowScope,
-} from './user-flow'
+import { USER_FLOW_NODE_KIND_OPTIONS, type UserFlowConfig, type UserFlowScope } from './user-flow'
 import { UserFlowScopeControls } from './user-flow-scope'
 
 export const UserFlowControls = ({
@@ -64,18 +59,7 @@ export const UserFlowControls = ({
             </PopoverContent>
           </Popover>
         ) : null}
-        <OptionChip
-          label="group by"
-          options={USER_FLOW_GROUP_BY_OPTIONS}
-          value={config.groupBy}
-          onChange={groupBy => onChange({ ...config, groupBy })}
-        />
       </div>
-      {config.groupBy === UserFlowQuery_GroupBy.USER ? (
-        <p className="text-[11px] text-muted-foreground">
-          User grouping can link the last event of one session to the first event of the next.
-        </p>
-      ) : null}
       <UserFlowScopeControls scope={config.scope} onChange={setScope} events={events} schemaError={schemaError} />
     </div>
   )
