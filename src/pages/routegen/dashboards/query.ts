@@ -17,6 +17,7 @@ import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
 import { NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
@@ -26,6 +27,7 @@ export type InsightEditorState = {
   eventEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
+  topK: TopKState
 }
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
@@ -90,22 +92,33 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
   if (
     spec?.insightType === InsightType.TRENDS ||
     spec?.insightType === InsightType.FUNNEL ||
-    spec?.insightType === InsightType.RETENTION
+    spec?.insightType === InsightType.RETENTION ||
+    spec?.insightType === InsightType.TOP_K
   ) {
     return spec.insightType
   }
   return InsightType.TRENDS
 }
 
+// Top-k specs carry no events — the optional scope event maps onto the editor's
+// event entries (capped at 1) so the shared event-filter UI edits it.
+const parseSpecScopeEntries = (spec?: InsightQuerySpec) => {
+  const scope = spec?.topK?.scope
+  if (!scope?.kind) return []
+  return [createEntry(scope.kind, { filters: (scope.filters ?? []).map(filter => fromProtoFilter(filter)) })]
+}
+
 export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorState => {
   const spec = tile?.content.case === 'insight' ? tile.content.value.spec : undefined
+  const insightType = getInitialInsightType(spec)
   return {
     displayName: tile?.displayName ?? '',
     description: tile?.description ?? '',
-    insightType: getInitialInsightType(spec),
-    eventEntries: parseSpecEntries(spec),
+    insightType,
+    eventEntries: insightType === InsightType.TOP_K ? parseSpecScopeEntries(spec) : parseSpecEntries(spec),
     propFilters: parseSpecPropFilters(spec),
     breakdowns: parseSpecBreakdowns(spec),
+    topK: parseTopKFromSpec(spec),
   }
 }
 
@@ -114,13 +127,29 @@ export const buildInsightSpec = ({
   validEntries,
   propFilters,
   breakdowns,
+  topK,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
-}) =>
-  create(InsightQuerySpecSchema, {
+  topK?: TopKState
+}) => {
+  const filterGroups =
+    propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : []
+
+  // Top-k specs carry no events/breakdowns (the backend rejects them); the
+  // scope event rides inside topK instead.
+  if (insightType === InsightType.TOP_K) {
+    return create(InsightQuerySpecSchema, {
+      insightType,
+      topK: buildTopKQuery(topK ?? DEFAULT_TOP_K, validEntries[0]),
+      filterGroups,
+      filterGroupsOperator: LogicalOperator.AND,
+    })
+  }
+
+  return create(InsightQuerySpecSchema, {
     insightType,
     events: validEntries.map(entry => ({
       event: {
@@ -136,8 +165,8 @@ export const buildInsightSpec = ({
     })),
     breakdowns: breakdowns.map(property => ({ property })),
     breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
-    filterGroups:
-      propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : [],
+    filterGroups,
     filterGroupsOperator: LogicalOperator.AND,
     includeStepTiming: false,
   })
+}

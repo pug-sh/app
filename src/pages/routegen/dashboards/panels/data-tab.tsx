@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import {
   ComparePeriod,
@@ -8,11 +8,12 @@ import {
   InsightTileContentSchema,
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
-import { INSIGHT_TYPES } from '../../insights/constants'
+import { eventEntryCap, INSIGHT_TYPES } from '../../insights/constants'
 import { OptionChip } from '../../insights/controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { InsightFields } from './insight-fields'
@@ -50,6 +51,19 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const eventFilters = useEventFilters(defaults.eventEntries)
   const filterState = useFilterState(defaults.propFilters)
   const [breakdowns, setBreakdowns] = useState<string[]>(defaults.breakdowns)
+  const [topK, setTopK] = useState(defaults.topK)
+
+  // Truncate leftover event rows when switching to an insight type with a smaller
+  // event cap (retention = 2, top-k = 1). See eventEntryCap.
+  const store = useStore()
+  const { filtersAtom, reset: resetEntries } = eventFilters
+  useEffect(() => {
+    const cap = eventEntryCap(insightType)
+    if (cap === undefined) return
+    const entries = store.get(filtersAtom)
+    if (entries.length <= cap) return
+    resetEntries(entries.slice(0, cap))
+  }, [insightType, store, filtersAtom, resetEntries])
 
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
@@ -64,6 +78,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       validEntries: eventFilters.validEntries,
       propFilters: filterState.propFilters,
       breakdowns,
+      topK,
     })
     onPatch({
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
@@ -74,7 +89,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     // editor state — DataTab is keyed by tile.id so cross-tile switches do
     // re-seed cleanly.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
-  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns])
+  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, topK])
 
   const addBreakdown = (property: string) => {
     setBreakdowns(current => (current.includes(property) || current.length >= 5 ? current : [...current, property]))
@@ -94,7 +109,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
         />
       </Section>
 
-      <Section label="Events">
+      <Section label={insightType === InsightType.TOP_K ? 'Ranking' : 'Events'}>
         <InsightFields
           insightType={insightType}
           schema={schema}
@@ -106,6 +121,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
           breakdowns={breakdowns}
           addBreakdown={addBreakdown}
           removeBreakdown={removeBreakdown}
+          topKEditor={{ value: topK, onChange: setTopK }}
         />
       </Section>
 
