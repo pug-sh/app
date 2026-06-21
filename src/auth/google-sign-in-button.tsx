@@ -63,7 +63,7 @@ export const GoogleSignInButton = ({
   }
 
   return (
-    <div ref={containerRef} className="min-h-10 w-full">
+    <div ref={containerRef} className="min-h-10 w-full overflow-hidden rounded-md">
       <GoogleLogin
         onSuccess={handleSuccess}
         onError={() => {
