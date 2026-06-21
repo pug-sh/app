@@ -58,10 +58,9 @@ export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard
   tiles: dashboard.tiles.filter(tile => tile.id !== tileId),
 })
 
-export const patchDashboardMetadata = (
-  dashboard: Dashboard,
-  patch: Partial<Pick<Dashboard, 'displayName' | 'description'>>,
-): Dashboard => ({
+export type DashboardMetaPatch = Partial<Pick<Dashboard, 'displayName' | 'description'>>
+
+export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => ({
   ...dashboard,
   ...patch,
 })

@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import {
   ComparePeriod,
@@ -18,6 +18,7 @@ import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '..
 import { InsightsRowAggregationControls, OptionChip } from '../../insights/controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { InsightFields } from './insight-fields'
+import { Section } from './section'
 
 type DataTabProps = {
   tile: DashboardTile
@@ -186,10 +187,3 @@ const MarkdownDataTab = ({ tile, onPatch }: DataTabProps) => {
     </Section>
   )
 }
-
-const Section = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    {children}
-  </div>
-)

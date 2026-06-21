@@ -21,7 +21,7 @@ export const ProfileAvatar = ({ identity, className }: { identity: ProfileIdenti
   const tone = placeholderTone(identity.colorSeed)
   return (
     <span
-      className={cn('inline-flex shrink-0 items-center justify-center font-semibold', className)}
+      className={cn('inline-flex shrink-0 items-center justify-center font-medium', className)}
       style={{ backgroundColor: tone.bg, color: tone.fg }}
       aria-hidden
     >

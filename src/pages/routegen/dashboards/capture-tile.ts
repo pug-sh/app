@@ -116,7 +116,9 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
     const img = await loadImage(svgUrl, width, height)
     return { img, width, height, ...colors }
   } finally {
-    // Safe to revoke immediately: the image has finished decoding by onload.
+    // loadImage has settled — resolved after onload (bitmap retained independently
+    // of the URL) or rejected on error/timeout (load abandoned). Either way the
+    // object URL is no longer needed.
     URL.revokeObjectURL(svgUrl)
   }
 }
@@ -135,7 +137,12 @@ export const loadBrandLogo = () => {
         const url = URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' }))
         return loadImage(url, 64, 64).finally(() => URL.revokeObjectURL(url))
       })
-      .catch(() => null)
+      .catch(error => {
+        // Cosmetic: the share card just renders without the mark. Log so a 404'd
+        // favicon (e.g. after an asset-hash change) is debuggable rather than silent.
+        console.error('Failed to load brand logo for share card', error)
+        return null
+      })
   }
   return brandLogoPromise
 }
@@ -211,8 +218,9 @@ export const composeShareCard = async ({
   if (!ctx) throw new Error('Canvas 2D context unavailable')
   ctx.scale(scale, scale)
 
-  // Rounded card surface + hairline border (corners stay transparent). Inset by
-  // half a pixel so the 1px stroke isn't clipped at the canvas edge.
+  // Flat, edge-to-edge card: the surface fills the image, with a hairline border
+  // and rounded corners (the tiny corner nubs stay transparent). No frame, no
+  // shadow — it reads as a clean product snapshot, matching the app's flat look.
   ctx.beginPath()
   ctx.roundRect(0.5, 0.5, cardW - 1, cardH - 1, CARD_RADIUS)
   ctx.fillStyle = card.surface
@@ -288,7 +296,9 @@ export const downloadBlob = (blob: Blob, filename: string) => {
     link.click()
     link.remove()
   } finally {
-    URL.revokeObjectURL(url)
+    // Defer the revoke: some browsers haven't started the download by the time
+    // click() returns, and revoking synchronously can truncate it to an empty file.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
   }
 }
 

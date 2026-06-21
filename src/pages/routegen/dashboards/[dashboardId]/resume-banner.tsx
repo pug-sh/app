@@ -23,12 +23,12 @@ export const ResumeBanner = ({
   onDiscard: () => void
   onResume: () => void
 }) => (
-  <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
+  <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm dark:border-amber-400/25 dark:bg-amber-400/10">
     <div className="min-w-0">
-      <span className="font-medium text-amber-900">
+      <span className="font-medium text-amber-900 dark:text-amber-200">
         {kind === 'resume' ? 'Resume editing' : 'Dashboard changed since you started'}
       </span>
-      <span className="ml-2 text-amber-700">started {formatRelative(startedAt)}</span>
+      <span className="ml-2 text-amber-700 dark:text-amber-400">started {formatRelative(startedAt)}</span>
     </div>
     <div className="flex shrink-0 items-center gap-2">
       <Button size="sm" variant="ghost" onClick={onDiscard}>

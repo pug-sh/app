@@ -42,7 +42,7 @@ const CopyId = ({ value }: { value: string }) => {
       className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
     >
       {value}
-      {copied ? <Check className="size-3 text-green-600" /> : <Copy className="size-3" />}
+      {copied ? <Check className="size-3 text-green-600 dark:text-green-400" /> : <Copy className="size-3" />}
     </button>
   )
 }
@@ -295,7 +295,7 @@ const Organization = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateOrg(true)}
-                className="flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline cursor-pointer"
+                className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline cursor-pointer"
               >
                 <Plus className="size-4" />
                 New organization

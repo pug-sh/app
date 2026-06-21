@@ -13,7 +13,7 @@ import {
 import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { floorToZoneBucket } from '@/lib/timezone'
@@ -22,11 +22,6 @@ import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
 import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
-
-export { formatYAxisValue } from './insight-tile-view'
-
-const stringifyQueryKey = (value: unknown) =>
-  JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
 
 export const DashboardInsightContent = ({
   tile,
@@ -166,26 +161,3 @@ export const DashboardInsightContent = ({
     />
   )
 }
-
-export const DashboardInsightPreview = ({
-  tile,
-  viewMode,
-  query,
-  defaultTimeRange,
-}: {
-  tile?: DashboardTile
-  viewMode?: DashboardTileViewMode
-  query: QueryRequest | undefined
-  defaultTimeRange: TimeRangePreset | undefined
-}) => (
-  <div className="h-80 min-h-0 overflow-hidden rounded-lg border border-border/60 bg-background/60 p-3">
-    <DashboardInsightContent
-      tile={tile}
-      viewMode={viewMode}
-      query={query}
-      defaultTimeRange={defaultTimeRange}
-      queryKeyPrefix="editor-preview"
-      compact
-    />
-  </div>
-)

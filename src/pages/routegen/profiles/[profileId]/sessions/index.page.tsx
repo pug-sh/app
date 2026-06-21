@@ -163,7 +163,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
             <td className="py-2.5 pr-4">
               <ProjectLink
                 href={`/profiles/${encodeURIComponent(profileId)}/sessions/${encodeURIComponent(r.sessionId)}`}
-                className="text-xs font-mono text-primary hover:underline underline-offset-4"
+                className="text-xs font-mono text-link hover:underline underline-offset-4"
               >
                 {r.sessionId.slice(0, 8)}
               </ProjectLink>

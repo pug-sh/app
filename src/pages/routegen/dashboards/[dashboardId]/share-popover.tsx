@@ -47,7 +47,7 @@ export const ShareControl = ({
   return (
     <Popover>
       <PopoverTrigger render={<Button size="sm" variant={isPublic ? 'secondary' : 'outline'} />}>
-        {isPublic ? <Globe className="size-4 text-primary" /> : <Share className="size-3" />}
+        {isPublic ? <Globe className="size-4 text-link" /> : <Share className="size-3" />}
         {isPublic ? 'Public' : 'Share'}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80">

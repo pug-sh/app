@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf'
-import type { ReactNode } from 'react'
 import {
   type DashboardTile,
+  type TileHeader,
   TileHeaderSchema,
-  VisualizationOptions_YAxisFormat,
+  type VisualizationOptions,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { TwemojiIcon } from '@/components/twemoji-icon'
@@ -13,6 +13,7 @@ import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
+import { Section } from './section'
 
 type DisplayTabProps = {
   tile: DashboardTile
@@ -20,32 +21,14 @@ type DisplayTabProps = {
 }
 
 export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
-  const setHeader = (next: Partial<{ icon: string; accentColor: string; hideTitle: boolean; borderless: boolean }>) => {
-    const current = tile.header
-    onPatch({
-      header: create(TileHeaderSchema, {
-        icon: current?.icon ?? '',
-        accentColor: current?.accentColor ?? '',
-        hideTitle: current?.hideTitle ?? false,
-        borderless: current?.borderless ?? false,
-        ...next,
-      }),
-    })
-  }
+  // Spread the existing message so a patch from this tab preserves fields owned by
+  // the Format tab (and vice versa) — both tabs edit the same tile. create()
+  // clones-or-defaults so the base is always a complete message.
+  const setHeader = (next: Partial<TileHeader>) =>
+    onPatch({ header: { ...create(TileHeaderSchema, tile.header), ...next } })
 
-  const setViz = (next: Partial<{ hideSparkline: boolean }>) => {
-    const current = tile.visualization
-    onPatch({
-      visualization: create(VisualizationOptionsSchema, {
-        yAxisFormat: current?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
-        logScale: current?.logScale ?? false,
-        hideLegend: current?.hideLegend ?? false,
-        zeroBaseline: current?.zeroBaseline ?? false,
-        hideSparkline: current?.hideSparkline ?? false,
-        ...next,
-      }),
-    })
-  }
+  const setViz = (next: Partial<VisualizationOptions>) =>
+    onPatch({ visualization: { ...create(VisualizationOptionsSchema, tile.visualization), ...next } })
 
   const { showViewMode, showKpiOptions } = tileOptionApplicability(tile)
 
@@ -144,10 +127,3 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
     </div>
   )
 }
-
-const Section = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    {children}
-  </div>
-)

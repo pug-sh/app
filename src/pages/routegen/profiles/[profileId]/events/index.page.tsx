@@ -270,7 +270,7 @@ const UserActivity = () => {
                                   >
                                     <ProjectLink
                                       href={`/profiles/${encodeURIComponent(profileId!)}/sessions/${encodeURIComponent(lane.sessionId)}`}
-                                      className="text-[10px] font-mono text-primary hover:underline underline-offset-4 whitespace-nowrap"
+                                      className="text-[10px] font-mono text-link hover:underline underline-offset-4 whitespace-nowrap"
                                     >
                                       {lane.sessionId.slice(0, 8)}
                                     </ProjectLink>

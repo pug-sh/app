@@ -261,7 +261,7 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
                 className="w-3.5 h-3.5 rounded-sm border-2 shrink-0 transition-colors flex items-center justify-center"
                 style={{ borderColor: s.color, background: isVisible ? s.color : 'transparent' }}
               >
-                {isVisible && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+                {isVisible && <Check className="w-2.5 h-2.5 text-white dark:text-black" strokeWidth={3} />}
               </span>
               <span className="text-sm flex-1 min-w-0 truncate">{s.label}</span>
               <span className="text-xs text-muted-foreground">Conversion</span>

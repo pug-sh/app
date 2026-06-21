@@ -8,11 +8,10 @@ import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { granularityDisabledReason } from '@/lib/granularity'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
+import type { DashboardMetaPatch } from '../draft-state'
 import { InlineEditableText } from '../editor-shared'
 import { GLOBAL_DASHBOARD_GRANULARITIES } from './controls-helpers'
 import { ShareControl } from './share-popover'
-
-type DashboardMetaPatch = Partial<Pick<Dashboard, 'displayName' | 'description'>>
 
 // Page header: the dashboard title/description (inline-editable in edit mode) plus
 // the global time/granularity controls and the edit/delete actions.

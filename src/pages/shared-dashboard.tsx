@@ -9,20 +9,15 @@ import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { sharedDashboardsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import LoadingSpinner from '@/components/loading-spinner'
-import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import {
-  GLOBAL_DASHBOARD_GRANULARITIES,
-  getAutoGlobalGranularity,
-} from './routegen/dashboards/[dashboardId]/controls-helpers'
+import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboardId]/controls-helpers'
 import { DashboardGrid } from './routegen/dashboards/grid'
 import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
 import { OptionChip } from './routegen/insights/controls'
-
-const stringifyQueryKey = (value: unknown) =>
-  JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
 
 const Shell = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen overflow-auto">
@@ -31,7 +26,7 @@ const Shell = ({ children }: { children: ReactNode }) => (
         <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
           <Bell className="size-4.5 text-primary-foreground" />
         </div>
-        <span className="text-lg font-semibold tracking-tight">Pug</span>
+        <span className="text-lg font-medium tracking-tight">Pug</span>
       </div>
       {children}
     </div>
@@ -45,9 +40,13 @@ const SharedDashboard = () => {
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
   const [granularity, setGranularity] = useState(Granularity.UNSPECIFIED)
 
+  // Keep granularity and range within the backend's per-granularity caps so an
+  // over-cap pair never reaches SharedDashboardsService.Query (mirrors the authed
+  // dashboard header — see src/lib/granularity.ts).
   const handleTimeRangeChange = (range: TimeRange | undefined) => {
-    setTimeRange(range)
-    setGranularity(getAutoGlobalGranularity(range))
+    const clamped = clampRange(range)
+    setTimeRange(clamped)
+    setGranularity(g => clampGranularity(g, clamped))
   }
 
   const request = useMemo(
@@ -106,7 +105,7 @@ const SharedDashboard = () => {
     <Shell>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-semibold tracking-tight">{data.displayName}</h1>
+          <h1 className="text-3xl font-medium tracking-tight">{data.displayName}</h1>
           {data.description ? <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{data.description}</p> : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -123,6 +122,7 @@ const SharedDashboard = () => {
             options={GLOBAL_DASHBOARD_GRANULARITIES}
             value={granularity}
             onChange={setGranularity}
+            isOptionDisabled={v => granularityDisabledReason(v, timeRange)}
           />
         </div>
       </div>

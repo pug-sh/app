@@ -167,3 +167,14 @@ export const transportAtom = atom(() => {
     interceptors: [authBearer, protovalidate],
   })
 })
+
+// Transport for unauthenticated public endpoints (shared dashboards). Deliberately
+// WITHOUT authBearer so the public read path never attaches a logged-in viewer's
+// JWT or triggers a token refresh — it must behave identically for an anonymous
+// visitor, which also keeps the backend's token-independent authz path exercised.
+export const publicTransportAtom = atom(() => {
+  return createConnectTransport({
+    baseUrl: apiBaseUrl,
+    interceptors: [protovalidate],
+  })
+})

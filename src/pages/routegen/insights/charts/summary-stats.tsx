@@ -80,7 +80,7 @@ export const SummaryStats = ({
           return (
             <div key={si} className="flex min-w-0 items-center gap-2">
               <span className="size-2 shrink-0 rounded-full" style={{ background: seriesColors[si]?.dot }} />
-              <span className={cn('truncate text-sm tabular-nums text-foreground', inlineWeight)}>
+              <span className={cn('shrink-0 whitespace-nowrap text-sm tabular-nums text-foreground', inlineWeight)}>
                 {compactNumber(headline)}
               </span>
               <span className="truncate text-xs text-muted-foreground">{breakdownDisplayName(name)}</span>
@@ -102,7 +102,7 @@ export const SummaryStats = ({
               )}
               <p
                 className={cn(
-                  'truncate leading-tight tracking-tight tabular-nums text-foreground',
+                  'whitespace-nowrap leading-tight tracking-tight tabular-nums text-foreground',
                   'font-medium',
                   compact ? 'text-lg' : 'text-[22px]',
                 )}

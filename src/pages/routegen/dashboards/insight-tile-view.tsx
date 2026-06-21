@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import {
   type DashboardTile,
@@ -11,7 +12,8 @@ import {
   InsightType,
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { getSeriesColor } from '@/lib/event-colors'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
@@ -50,8 +52,9 @@ const noop = () => {}
 // Presentational core of an insight tile: given an already-resolved query result
 // (from a live fetch OR a server-pre-rendered RenderedTile) plus the tile's spec,
 // derive the chart series and render either a KPI or the full InsightsContent.
-// Holds no atoms/RPC/fetching — both the authenticated tile (DashboardInsightContent)
-// and the public shared tile (SharedTileBody) render through this.
+// Holds no data atoms/RPC/fetching (only subscribes to the theme so colors adapt) —
+// both the authenticated tile (DashboardInsightContent) and the public shared tile
+// (SharedTileBody) render through this.
 export const InsightTileView = ({
   tile,
   viewMode,
@@ -83,6 +86,10 @@ export const InsightTileView = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
+  // Series colors are theme-adapted (see event-colors.ts). Subscribe so a theme
+  // toggle re-renders and re-derives the memoized palettes below.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+
   // A configured Y-axis format drives the chart axis ticks; Plain/unspecified is
   // left undefined so charts keep their compact default.
   const yAxisFormat = tile?.visualization?.yAxisFormat
@@ -104,9 +111,10 @@ export const InsightTileView = ({
     return funnelSeriesList.map((series, index) => ({
       label: labels[index],
       steps: sortFunnelSteps(series.steps, kindOrder),
-      color: getSeriesColor(labels[index], index).dot,
+      // Breakdown funnels: distinct color per split (see getIndexedColor).
+      color: getIndexedColor(index).dot,
     }))
-  }, [funnelSeriesList, kindOrder])
+  }, [funnelSeriesList, kindOrder, resolvedTheme])
   const retentionLabels = useMemo(
     () =>
       disambiguateLabels(
@@ -130,7 +138,20 @@ export const InsightTileView = ({
       return series.eventKind || `Series ${index + 1}`
     })
   }, [result.case, retentionCohorts, trendSeries])
-  const seriesColors = useMemo(() => seriesNames.map((name, index) => getSeriesColor(name, index)), [seriesNames])
+  const seriesColors = useMemo(() => {
+    // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
+    // so color them by index for distinctness; coloring by the "event · value"
+    // label made every split inherit the event's family hue (all blue). Without a
+    // breakdown, keep the event kind's semantic color.
+    if (result.case === 'trends') {
+      return trendSeries.map((series, index) =>
+        breakdownLabel(series.breakdown, '')
+          ? getIndexedColor(index)
+          : getSeriesColor(series.eventKind || `Series ${index + 1}`, index),
+      )
+    }
+    return seriesNames.map((name, index) => getSeriesColor(name, index))
+  }, [result.case, trendSeries, seriesNames, resolvedTheme])
   const seriesAggregations = useMemo(
     () => (spec?.events ?? []).map(entry => entry.aggregation ?? AggregationType.TOTAL),
     [spec?.events],

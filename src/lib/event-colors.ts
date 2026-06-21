@@ -6,7 +6,7 @@ export type SeriesColor = {
   dot: string
 }
 
-/** Expects a 6-char hex color (e.g. '#2563eb'). Derives fill by appending alpha. */
+/** Build a series color from a 6-char hex: solid line/dot, plus a 10%-alpha fill (`1a` suffix). */
 const color = (hex: string): SeriesColor => ({
   line: hex,
   fill: hex + '1a',
@@ -251,27 +251,119 @@ const hashString = (s: string): number => {
   return Math.abs(h)
 }
 
+// ── OKLCH color math (sRGB hex ↔ OKLCH) ──────────────────────────────────────
+
+const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+
+const linearToByte = (c: number) => {
+  const v = Math.max(0, Math.min(1, c))
+  const s = v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055
+  return Math.round(s * 255)
+}
+
+const hexToOklch = (hex: string): [number, number, number] => {
+  const n = hex.replace('#', '')
+  const r = srgbToLinear(Number.parseInt(n.slice(0, 2), 16) / 255)
+  const g = srgbToLinear(Number.parseInt(n.slice(2, 4), 16) / 255)
+  const b = srgbToLinear(Number.parseInt(n.slice(4, 6), 16) / 255)
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  const okl = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
+  const oka = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+  const okb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  return [okl, Math.hypot(oka, okb), Math.atan2(okb, oka)]
+}
+
+const oklchToHex = (L: number, C: number, H: number) => {
+  const a = C * Math.cos(H)
+  const b = C * Math.sin(H)
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3
+  const r = linearToByte(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s)
+  const g = linearToByte(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s)
+  const bl = linearToByte(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)
+  const hh = (v: number) => v.toString(16).padStart(2, '0')
+  return `#${hh(r)}${hh(g)}${hh(bl)}`
+}
+
+// Memoize a hex→hex transform. The palette is small and fixed, so per-scheme
+// results cache permanently and keep getSeriesColor off the conversion math.
+const memoizeHex = (transform: (hex: string) => string) => {
+  const cache = new Map<string, string>()
+  return (hex: string) => {
+    const cached = cache.get(hex)
+    if (cached !== undefined) return cached
+    const out = transform(hex)
+    cache.set(hex, out)
+    return out
+  }
+}
+
+// ── Theme adaptation ─────────────────────────────────────────────────────────
+// The base palette is mid-tone hues that don't all read against either canvas as
+// badge text / chart lines: the darkest vanish on dark, the palest on white. Each
+// hue is pushed into a legible band for the active scheme — lift on dark, cap on
+// light — so hue (and the semantic families / failure-red / success-green
+// crossovers) stays meaningful. These are JS inline styles / SVG fills, not CSS
+// variables, so App pushes the active scheme in via setSeriesColorScheme (driven
+// by resolvedThemeAtom); badges and charts re-color on toggle.
+
+let darkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+
+export const setSeriesColorScheme = (isDark: boolean) => {
+  darkMode = isDark
+}
+
+// Dark canvas: lift lightness into a legible band, taming extreme chroma.
+const toDarkHex = memoizeHex(hex => {
+  const [L, C, H] = hexToOklch(hex)
+  return oklchToHex(0.62 + 0.3 * L, Math.min(C, 0.16), H)
+})
+
+// Light canvas: cap lightness so pale shades read on white; darker hues pass through.
+const toLightHex = memoizeHex(hex => {
+  const [L, C, H] = hexToOklch(hex)
+  return L <= 0.52 ? hex : oklchToHex(0.52, C, H)
+})
+
+// Re-tint a base series color for the active scheme (reusing color()'s fill
+// convention); a hue already in-band returns untouched.
+const themed = (sc: SeriesColor): SeriesColor => {
+  const hex = darkMode ? toDarkHex(sc.line) : toLightHex(sc.line)
+  return hex === sc.line ? sc : color(hex)
+}
+
 // ── Lookup ──────────────────────────────────────────────────────────────────
 
 const GENERIC_LABEL_RE = /^(step|cohort|series)\s+\d+$/i
 
 export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesColor => {
   if (!seriesName || GENERIC_LABEL_RE.test(seriesName)) {
-    return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
+    return themed(FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length])
   }
 
   const canonical = resolveKind(seriesName)
   if (!canonical) {
-    return FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length]
+    return themed(FALLBACK_COLORS[fallbackIndex % FALLBACK_COLORS.length])
   }
 
   const mapped = EVENT_COLORS[canonical]
-  if (mapped) return mapped
+  if (mapped) return themed(mapped)
 
   // Unmapped (custom) event — deterministic by name, identical for every user
   // and view. Borrow the matching family's hue; otherwise hash into the shared
-  // fallback palette. (fallbackIndex now only steers the generic labels above.)
+  // fallback palette. (Only the generic-label / unresolved paths above use fallbackIndex.)
   const family = FAMILIES.find(f => f.prefixes.some(p => canonical.startsWith(p)))
-  if (family) return color(family.palette[hashString(canonical) % family.palette.length])
-  return FALLBACK_COLORS[hashString(canonical) % FALLBACK_COLORS.length]
+  if (family) return themed(color(family.palette[hashString(canonical) % family.palette.length]))
+  return themed(FALLBACK_COLORS[hashString(canonical) % FALLBACK_COLORS.length])
 }
+
+// Distinct color by position, for breakdown splits (OS, traffic source, …).
+// Their values carry no semantic palette identity and must stay visually
+// separable within one chart — name-based hashing collides (e.g. github /
+// newsletter / twitter), and an "event · value" label inherits the event's
+// family hue (every page_view split → blue). Index assignment guarantees
+// adjacent splits get the broad-hue fallback palette in order.
+export const getIndexedColor = (index: number): SeriesColor => themed(FALLBACK_COLORS[index % FALLBACK_COLORS.length])

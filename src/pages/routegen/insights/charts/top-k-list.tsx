@@ -1,6 +1,6 @@
 import { AggregationType, TopKQuery_Dimension, type TopKRow } from '@/api/genproto/shared/insights/v1/insights_pb'
 import ProjectLink from '@/components/project-link'
-import { getSeriesColor } from '@/lib/event-colors'
+import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
@@ -37,7 +37,7 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
         <ProjectLink
           href={`/profiles/${encodeURIComponent(row.profile.id)}`}
           className={cn(
-            'block truncate text-primary hover:underline underline-offset-4',
+            'block truncate text-link hover:underline underline-offset-4',
             identity.isFallback && 'font-mono',
           )}
         >
@@ -107,7 +107,7 @@ export const TopKList = ({
       <CoverageSummary rankedCount={rankedCount} othersShare={othersShare} showShare={showShare} />
       <div className={compact ? 'min-h-0 flex-1 overflow-y-auto' : undefined}>
         {rows.map((row, i) => {
-          const barColor = row.isOthers ? 'var(--muted-foreground)' : getSeriesColor(row.dimensionValue, i).dot
+          const barColor = row.isOthers ? 'var(--muted-foreground)' : getIndexedColor(i).dot
           const barWidth = maxValue > 0 ? Math.max((row.value / maxValue) * 100, 0.5) : 0
           return (
             <div

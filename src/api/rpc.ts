@@ -1,6 +1,6 @@
 import { createClient } from '@connectrpc/connect'
 import { atom } from 'jotai'
-import { transportAtom } from '@/network/transport'
+import { publicTransportAtom, transportAtom } from '@/network/transport'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OrgEmailProvidersService } from './genproto/dashboard/orgemailproviders/v1/orgemailproviders_pb'
@@ -14,7 +14,9 @@ import { ProfilesService } from './genproto/shared/profiles/v1/profiles_pb'
 
 // Public (unauthenticated)
 export const authRPCAtom = atom(get => createClient(AuthService, get(transportAtom)))
-export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboardsService, get(transportAtom)))
+// Shared dashboards are read by anonymous visitors — use the credential-free
+// transport so a logged-in viewer's JWT is never attached to the public read path.
+export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboardsService, get(publicTransportAtom)))
 
 // Dashboard — org-scoped (JWT auth)
 export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))

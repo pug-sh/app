@@ -1,12 +1,12 @@
 import { create } from '@bufbuild/protobuf'
 import { Plus } from 'lucide-react'
-import type { ReactNode } from 'react'
 import {
   type DashboardTile,
   type ThresholdRule,
   ThresholdRule_Operator,
   ThresholdRule_Tone,
   ThresholdRuleSchema,
+  type VisualizationOptions,
   VisualizationOptions_YAxisFormat,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ThresholdRuleEditor } from '../threshold-rule-editor'
 import { tileOptionApplicability } from './option-applicability'
+import { Section } from './section'
 
 const Y_FORMAT_OPTIONS = [
   { label: 'Plain', value: VisualizationOptions_YAxisFormat.UNSPECIFIED },
@@ -32,23 +33,11 @@ type FormatTabProps = {
 export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
   const viz = tile.visualization
 
-  const setViz = (
-    next: Partial<{
-      yAxisFormat: VisualizationOptions_YAxisFormat
-      logScale: boolean
-      hideLegend: boolean
-      zeroBaseline: boolean
-    }>,
-  ) =>
-    onPatch({
-      visualization: create(VisualizationOptionsSchema, {
-        yAxisFormat: viz?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
-        logScale: viz?.logScale ?? false,
-        hideLegend: viz?.hideLegend ?? false,
-        zeroBaseline: viz?.zeroBaseline ?? false,
-        ...next,
-      }),
-    })
+  // Spread the existing options so a patch from this tab can't drop a field set
+  // elsewhere (e.g. hideSparkline from the Display tab). create() clones-or-defaults
+  // so the base is always a complete message.
+  const setViz = (next: Partial<VisualizationOptions>) =>
+    onPatch({ visualization: { ...create(VisualizationOptionsSchema, viz), ...next } })
 
   const addRule = () => {
     if (tile.thresholds.length >= 5) return
@@ -145,10 +134,3 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
     </div>
   )
 }
-
-const Section = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    {children}
-  </div>
-)

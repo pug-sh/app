@@ -117,7 +117,7 @@ export const DashboardCanvas = ({
                 <button
                   type="button"
                   onClick={() => setShowPicker(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-link text-sm transition-colors hover:bg-primary/5"
                 >
                   <Plus className="size-4" />
                   Add tile

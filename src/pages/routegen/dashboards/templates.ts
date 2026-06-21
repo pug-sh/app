@@ -171,7 +171,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     displayName: 'Top events',
     description: 'Ranked event volume.',
     icon: Trophy,
-    // The five highest-volume events as a ranked total-count table.
+    // The highest-volume events as a ranked total-count table.
     build: () =>
       create(DashboardTileInputSchema, {
         displayName: 'Top events',

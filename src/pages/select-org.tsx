@@ -156,7 +156,7 @@ const SelectOrg = () => {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4 cursor-pointer"
+              className="mt-4 flex items-center gap-2 text-sm text-link hover:underline underline-offset-4 cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               Create new organization

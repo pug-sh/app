@@ -136,6 +136,7 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
 - Single source of truth: `src/lib/event-colors.ts`
 - Use `getSeriesColor(name, fallbackIndex)` to resolve colors
 - Color assignment is name-based and deterministic — events in the semantic map get their assigned color, unmapped events get a stable hash-based fallback. Related events are manually grouped under the same hue.
+- **Breakdowns are the exception:** splits by a dimension (`$os`, `$utmSource`, …) are colored **by index** via `getIndexedColor(i)`, not by value name — applies to trends, funnel, and top-K series. Breakdown values carry no semantic identity, and name-based coloring fails them two ways: an `event · value` series label inherits the event's family hue (every `page_view`-by-`$os` split came out blue), and bare values hash-collide in the 12-color fallback (e.g. `github` / `newsletter` / `twitter`). Index assignment guarantees distinct, in-order palette hues.
 - Keep colors consistent across:
   - event row markers (A/B/C)
   - selected event chips
@@ -146,6 +147,15 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
 - Retention cohort:
   - Heatmap cell colors stay value-intensity based
   - Cohort label markers should still use the shared series/family color mapping
+- Theme adaptation: the base hexes are mid-tones that don't all read against either canvas (darkest vanish on dark, palest vanish on white), so `getSeriesColor` adapts them on the fly per theme — lift toward light on dark (`L' = 0.62 + 0.30·L`, chroma capped at `0.16`), cap lightness on light (`L' = min(L, 0.52)` — pale hues darken to the 0.52 ceiling, hues already ≤ 0.52 pass through unchanged); hue is preserved (so semantic families and the failure-red / success-green crossovers stay meaningful). Tune the bands in `event-colors.ts` (`toDarkHex` / `toLightHex`); do **not** add per-mode hexes. JS-driven because these are inline styles / SVG fills, not CSS vars: `resolvedThemeAtom` (`src/data/theme.atoms.ts`) is pushed via `setSeriesColorScheme` from `App.tsx`'s render, so badges + charts re-color on theme toggle. Inline `getSeriesColor()` calls re-color for free, but any component that **memoizes** a derived palette (`useMemo`) must also read `resolvedThemeAtom` and list it in the memo deps — otherwise the cached colors go stale on toggle (the module mutation can't invalidate a `useMemo`). See `seriesColors` in `insights/index.page.tsx` and `dashboards/insight-tile-view.tsx`.
+
+### Dark Mode Contrast
+
+Color tokens live in `src/index.css` (`:root` = light, `.dark` = dark). When auditing dark mode, baseline against light mode (which is tuned and trusted) and fix only what diverged — e.g. the faint hairline borders read identically in both modes and are intentional ("borders barely there"), not a contrast bug.
+
+- Dark `--primary` (`0.54/0.16`) and `--destructive` (`0.54/0.18`) are deep + saturated so **white button text clears AA**, matching the light-mode CTA character (`white` on the fill ≈ 4.6:1). Dark `--foreground` (`0.91`, body ≈ 12:1) and `--muted-foreground` (`0.76`, ≈ 7:1) are lifted for low-brightness legibility — muted is used heavily, so it carries extra headroom.
+- **A filled button and colored body text pull lightness in opposite directions** — the fill wants to stay dark (white text on it), colored text wants to be light (to read on the dark canvas); no single token satisfies both at AA. So **colored text is decoupled from the fill:** `--link` (`0.70/0.16`, ≈ 5.5:1) is the blue used *as text* (links, primary-tinted icons) via the `text-link` utility, while `--primary` stays the dark **fill** (`bg-primary`). Do **not** point links at `text-primary` or lighten `--primary` to fix them — use `text-link`; lightening `--primary` re-breaks the buttons.
+- Still deferred — **deliberate, not a bug:** `text-destructive` *text* (~2.8:1) on the dark canvas is sub-AA (the same fill-vs-text conflict). The fix is the same pattern (a `--destructive`-text token mirroring `--link`); not yet done because error text is rare. Don't lighten `--destructive` itself.
 
 ### Insights Aggregations
 

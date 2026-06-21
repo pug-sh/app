@@ -16,6 +16,7 @@ import {
   appendDraftTile,
   cloneForDraft,
   countDashboardChanges,
+  type DashboardMetaPatch,
   patchDashboardMetadata,
   patchTile,
   removeDraftTile,
@@ -23,11 +24,9 @@ import {
 import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
 import type { DashboardLayouts } from '../grid'
-import { buildTemplateContext, type TemplateContext } from '../templates'
+import { buildTemplateContext, type TileTemplate } from '../templates'
 import { buildUpsertRequest } from '../upsert-dashboard'
 import { useEditorShortcuts } from '../use-editor-shortcuts'
-
-type DashboardMetaPatch = Partial<Pick<Dashboard, 'displayName' | 'description'>>
 
 // The dashboard edit state machine: holds the working draft (persisted to
 // localStorage so it survives reloads), tracks selection/highlight UI state, and
@@ -245,7 +244,7 @@ export const useDashboardEditor = ({
   }, [duplicateTile, selectedTile])
 
   const handleSelectTemplate = useCallback(
-    (template: { build: (ctx: TemplateContext) => Parameters<typeof appendDraftTile>[1] }) => {
+    (template: TileTemplate) => {
       if (!storedDraft) return
       const tileInput = template.build(templateContext)
       const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
