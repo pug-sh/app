@@ -1,4 +1,4 @@
-import { clone, create } from '@bufbuild/protobuf'
+import { clone, create, equals } from '@bufbuild/protobuf'
 import {
   type Dashboard,
   DashboardSchema,
@@ -58,10 +58,30 @@ export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard
   tiles: dashboard.tiles.filter(tile => tile.id !== tileId),
 })
 
-export const patchDashboardMetadata = (
-  dashboard: Dashboard,
-  patch: Partial<Pick<Dashboard, 'displayName' | 'description'>>,
-): Dashboard => ({
+export type DashboardMetaPatch = Partial<Pick<Dashboard, 'displayName' | 'description'>>
+
+export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => ({
   ...dashboard,
   ...patch,
 })
+
+// Count the fields that differ between two dashboards (name, description, and
+// each added/removed/changed tile). Drives the dirty-count badge in edit mode.
+export const countDashboardChanges = (a: Dashboard, b: Dashboard): number => {
+  let count = 0
+  if (a.displayName !== b.displayName) count++
+  if (a.description !== b.description) count++
+
+  const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
+  const bById = new Map(b.tiles.map(tile => [tile.id, tile]))
+  for (const id of new Set([...aById.keys(), ...bById.keys()])) {
+    const left = aById.get(id)
+    const right = bById.get(id)
+    if (!left || !right) {
+      count++
+      continue
+    }
+    if (!equals(DashboardTileSchema, left, right)) count++
+  }
+  return count
+}

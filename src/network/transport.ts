@@ -6,6 +6,7 @@ import { atom, getDefaultStore } from 'jotai'
 import { toast } from 'sonner'
 import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
 import { AuthService } from '@/api/genproto/public/auth/v1/auth_pb'
+import { file_public_dashboards_v1_dashboards } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
 import {
   clearSession,
@@ -21,7 +22,11 @@ import {
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references
 // common.v1.FilterOperator).
 const validator = createValidator({
-  registry: createRegistry(file_common_v1_filters, file_shared_insights_v1_insights),
+  registry: createRegistry(
+    file_common_v1_filters,
+    file_shared_insights_v1_insights,
+    file_public_dashboards_v1_dashboards,
+  ),
 })
 
 const protovalidate: Interceptor = next => async req => {
@@ -160,5 +165,16 @@ export const transportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: apiBaseUrl,
     interceptors: [authBearer, protovalidate],
+  })
+})
+
+// Transport for unauthenticated public endpoints (shared dashboards). Deliberately
+// WITHOUT authBearer so the public read path never attaches a logged-in viewer's
+// JWT or triggers a token refresh — it must behave identically for an anonymous
+// visitor, which also keeps the backend's token-independent authz path exercised.
+export const publicTransportAtom = atom(() => {
+  return createConnectTransport({
+    baseUrl: apiBaseUrl,
+    interceptors: [protovalidate],
   })
 })

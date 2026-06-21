@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { AppGoogleOAuthProvider } from './auth/google-oauth-provider'
 import { TooltipProvider } from './components/ui/tooltip'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import './index.css'
 
 const checkBrowserStorage = () => {
@@ -56,7 +57,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-4">Something went wrong.</p>
             <button
-              className="text-sm text-primary hover:underline underline-offset-4"
+              className="text-sm text-link hover:underline underline-offset-4"
               onClick={() => window.location.reload()}
             >
               Reload

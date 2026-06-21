@@ -12,6 +12,7 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
@@ -25,7 +26,7 @@ import {
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import { getSeriesColor } from '@/lib/event-colors'
+import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { floorToZoneBucket } from '@/lib/timezone'
@@ -41,6 +42,7 @@ import {
   getPageDescription,
   INSIGHT_TYPE_VALUES,
   INSIGHT_TYPES,
+  isIncompleteNumericAggregation,
   NUMERIC_AGGREGATIONS,
   VIEW_MODES,
   type ViewMode,
@@ -90,6 +92,9 @@ const Insights = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
+  // Series colors are theme-adapted (see event-colors.ts). Subscribe so a theme
+  // toggle re-renders and re-derives the memoized palettes below.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
   useEffect(() => {
@@ -198,11 +203,7 @@ const Insights = () => {
   const hasIncompleteNumericAggregation = useMemo(
     () =>
       insightType === InsightType.TRENDS &&
-      validEntries.some(
-        entry =>
-          NUMERIC_AGGREGATIONS.has(entry.aggregation ?? AggregationType.TOTAL) &&
-          !(entry.aggregationProperty ?? '').trim(),
-      ),
+      validEntries.some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty)),
     [insightType, validEntries],
   )
 
@@ -352,9 +353,10 @@ const Insights = () => {
     return funnelSeriesList.map((series, si) => ({
       label: labels[si],
       steps: sortFunnelSteps(series.steps, kindOrder),
-      color: getSeriesColor(labels[si], si).dot,
+      // Breakdown funnels: distinct color per split (see getIndexedColor).
+      color: getIndexedColor(si).dot,
     }))
-  }, [funnelSeriesList, kindOrder])
+  }, [funnelSeriesList, kindOrder, resolvedTheme])
 
   const retentionLabels = useMemo(
     () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
@@ -373,7 +375,19 @@ const Insights = () => {
     })
   }, [result.case, retentionCohorts, trendSeries])
 
-  const seriesColors = useMemo(() => seriesNames.map((name, i) => getSeriesColor(name, i)), [seriesNames])
+  const seriesColors = useMemo(() => {
+    // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
+    // so color them by index for guaranteed distinctness. Coloring by the
+    // "event · value" label instead made every split inherit the event's family
+    // hue — e.g. all page_view-by-$os bars came out blue. Without a breakdown,
+    // keep the event kind's semantic color.
+    if (result.case === 'trends') {
+      return trendSeries.map((s, i) =>
+        breakdownLabel(s.breakdown, '') ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
+      )
+    }
+    return seriesNames.map((name, i) => getSeriesColor(name, i))
+  }, [result.case, trendSeries, seriesNames, resolvedTheme])
 
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []

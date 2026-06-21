@@ -79,7 +79,7 @@ const Overview = () => {
         onChange={setGlobalGranularity}
         isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
       />
-      <ProjectLink href="/dashboards" className="ml-1 text-xs text-primary hover:underline underline-offset-4">
+      <ProjectLink href="/dashboards" className="ml-1 text-xs text-link hover:underline underline-offset-4">
         Build your own →
       </ProjectLink>
     </div>

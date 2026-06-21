@@ -197,7 +197,7 @@ const AppSidebar = () => {
                       >
                         <ProjectChip name={proj.displayName} className="size-5 rounded text-[10px]" />
                         <span className="min-w-0 flex-1 truncate">{proj.displayName}</span>
-                        {selected ? <Check className="size-3.5 shrink-0 text-primary" /> : null}
+                        {selected ? <Check className="size-3.5 shrink-0 text-link" /> : null}
                       </button>
                     )
                   })}
@@ -225,7 +225,7 @@ const AppSidebar = () => {
                       type="button"
                       onClick={handleCreateProject}
                       disabled={saving || !newProjectName.trim()}
-                      className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-primary transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                      className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
                     >
                       {saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create'}
                     </button>
@@ -235,7 +235,7 @@ const AppSidebar = () => {
                     type="button"
                     onClick={() => setCreating(true)}
                     disabled={!activeOrg}
-                    className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-primary transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                    className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
                   >
                     <Plus className="size-4" />
                     New project

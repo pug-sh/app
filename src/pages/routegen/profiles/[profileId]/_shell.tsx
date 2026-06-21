@@ -177,7 +177,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
                 className={cn(
                   'border-b-2 pb-2 text-sm font-medium transition-colors',
                   isActive
-                    ? 'border-foreground text-foreground'
+                    ? 'border-foreground/50 text-foreground/70'
                     : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >

@@ -43,7 +43,11 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
           aria-label="Copy raw JSON"
           title="Copy raw JSON"
         >
-          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
         </Button>
       </div>
       {jsonMode ? (

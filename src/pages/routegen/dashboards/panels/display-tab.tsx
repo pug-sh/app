@@ -1,18 +1,20 @@
 import { create } from '@bufbuild/protobuf'
-import type { ReactNode } from 'react'
 import {
   type DashboardTile,
-  DashboardTileViewMode,
+  type TileHeader,
   TileHeaderSchema,
-  VisualizationOptions_YAxisFormat,
+  type VisualizationOptions,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { TwemojiIcon } from '@/components/twemoji-icon'
+import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
 import { DASHBOARD_TILE_VIEW_MODES, USER_FLOW_TILE_VIEW_MODES } from '../tile-settings'
+import { tileOptionApplicability } from './option-applicability'
+import { Section } from './section'
 
 type DisplayTabProps = {
   tile: DashboardTile
@@ -20,40 +22,22 @@ type DisplayTabProps = {
 }
 
 export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
-  const setHeader = (next: Partial<{ icon: string; accentColor: string; hideTitle: boolean; borderless: boolean }>) => {
-    const current = tile.header
-    onPatch({
-      header: create(TileHeaderSchema, {
-        icon: current?.icon ?? '',
-        accentColor: current?.accentColor ?? '',
-        hideTitle: current?.hideTitle ?? false,
-        borderless: current?.borderless ?? false,
-        ...next,
-      }),
-    })
-  }
+  // Spread the existing message so a patch from this tab preserves fields owned by
+  // the Format tab (and vice versa) — both tabs edit the same tile. create()
+  // clones-or-defaults so the base is always a complete message.
+  const setHeader = (next: Partial<TileHeader>) =>
+    onPatch({ header: { ...create(TileHeaderSchema, tile.header), ...next } })
 
-  const setViz = (next: Partial<{ hideSparkline: boolean }>) => {
-    const current = tile.visualization
-    onPatch({
-      visualization: create(VisualizationOptionsSchema, {
-        yAxisFormat: current?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED,
-        logScale: current?.logScale ?? false,
-        hideLegend: current?.hideLegend ?? false,
-        zeroBaseline: current?.zeroBaseline ?? false,
-        hideSparkline: current?.hideSparkline ?? false,
-        ...next,
-      }),
-    })
-  }
+  const setViz = (next: Partial<VisualizationOptions>) =>
+    onPatch({ visualization: { ...create(VisualizationOptionsSchema, tile.visualization), ...next } })
 
-  const isInsight = tile.content.case === 'insight'
   const isUserFlow = tile.content.case === 'insight' && tile.content.value.spec?.insightType === InsightType.USER_FLOW
   const viewModeOptions = isUserFlow ? USER_FLOW_TILE_VIEW_MODES : DASHBOARD_TILE_VIEW_MODES
+  const { showViewMode, showKpiOptions } = tileOptionApplicability(tile)
 
   return (
     <div className="space-y-4">
-      {isInsight ? (
+      {showViewMode ? (
         <Section label="View mode">
           <OptionChip
             label="view"
@@ -64,16 +48,16 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
         </Section>
       ) : null}
 
-      {isInsight && tile.viewMode === DashboardTileViewMode.KPI ? (
+      {showKpiOptions ? (
         <Section label="KPI">
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
+          <div className="flex items-center gap-2 text-xs">
+            <Checkbox
+              id="tile-hide-sparkline"
               checked={tile.visualization?.hideSparkline === true}
-              onChange={e => setViz({ hideSparkline: e.target.checked })}
+              onCheckedChange={checked => setViz({ hideSparkline: checked === true })}
             />
-            Hide sparkline
-          </label>
+            <label htmlFor="tile-hide-sparkline">Hide sparkline</label>
+          </div>
         </Section>
       ) : null}
 
@@ -123,33 +107,26 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
       </Section>
 
       <Section label="Header">
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 text-xs">
+          <Checkbox
+            id="tile-hide-title"
             checked={tile.header?.hideTitle === true}
-            onChange={e => setHeader({ hideTitle: e.target.checked })}
+            onCheckedChange={checked => setHeader({ hideTitle: checked === true })}
           />
-          Hide title
-        </label>
+          <label htmlFor="tile-hide-title">Hide title</label>
+        </div>
       </Section>
 
       <Section label="Surface">
-        <label className="flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2 text-xs">
+          <Checkbox
+            id="tile-borderless"
             checked={tile.header?.borderless === true}
-            onChange={e => setHeader({ borderless: e.target.checked })}
+            onCheckedChange={checked => setHeader({ borderless: checked === true })}
           />
-          Borderless
-        </label>
+          <label htmlFor="tile-borderless">Borderless</label>
+        </div>
       </Section>
     </div>
   )
 }
-
-const Section = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    {children}
-  </div>
-)

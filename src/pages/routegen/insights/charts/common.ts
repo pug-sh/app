@@ -80,11 +80,30 @@ export const SHARED_X_AXIS = {
   interval: 'preserveStartEnd' as const,
 }
 
-export const sharedYAxis = (yMax: number) => ({
-  tickLine: false,
-  axisLine: false,
-  width: 44,
-  domain: [0, yMax] as [number, number],
-  allowDecimals: false,
-  tickFormatter: compactNumber,
-})
+type YAxisOptions = {
+  logScale?: boolean
+  zeroBaseline?: boolean
+  tickFormatter?: (value: number) => string
+}
+
+export const sharedYAxis = (yMax: number, opts?: YAxisOptions) => {
+  const base = {
+    tickLine: false,
+    axisLine: false,
+    width: 44,
+    // A custom formatter (percent, duration) maps fractional values to readable
+    // ticks, so don't force integer ticks — that would collapse a 0–1 ratio axis.
+    allowDecimals: opts?.tickFormatter !== undefined,
+    tickFormatter: opts?.tickFormatter ?? compactNumber,
+  }
+  // Log scale can't include 0, so float the min and let recharts pick it.
+  if (opts?.logScale) {
+    return { ...base, scale: 'log' as const, domain: [1, 'auto'] as [number, string], allowDataOverflow: true }
+  }
+  // Only drop the zero floor when the caller explicitly opts out — the Insights
+  // page passes no options and keeps the historical zero-based axis.
+  if (opts?.zeroBaseline === false) {
+    return { ...base, domain: ['auto', yMax] as [string, number] }
+  }
+  return { ...base, domain: [0, yMax] as [number, number] }
+}

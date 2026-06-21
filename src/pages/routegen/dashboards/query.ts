@@ -15,7 +15,7 @@ import { fromProtoFilter, toProtoFilters } from '@/components/event-filters/filt
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
-import { NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
 import {
   buildUserFlowQuery,
@@ -86,6 +86,14 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
     return spec.insightType
   }
   return InsightType.TRENDS
+}
+
+// True when a TRENDS spec has an event whose numeric aggregation (Sum/Avg/Min/Max)
+// is missing the property it needs to resolve. Mirrors the Insights page guard so
+// the tile doesn't fire an incomplete query.
+export const specHasIncompleteNumericAggregation = (spec?: InsightQuerySpec) => {
+  if (spec?.insightType !== InsightType.TRENDS) return false
+  return (spec.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty))
 }
 
 // Top-k specs carry no events — the optional scope event maps onto the editor's

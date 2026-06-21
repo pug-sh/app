@@ -1,10 +1,13 @@
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TileSectionHeader } from './editor-shared'
-import { TEMPLATE_GROUPS, TILE_TEMPLATES, type TileTemplate } from './templates'
+import { TEMPLATE_GROUPS, type TemplateContext, TILE_TEMPLATES, type TileTemplate } from './templates'
 
 type InlineTemplatePickerProps = {
   onSelect: (template: TileTemplate) => void
+  // Resolved project context, used to hide templates that aren't applicable
+  // (e.g. Revenue when the project has no monetization event).
+  context: TemplateContext
   // When provided, render a collapse (×) control — used for the "add another
   // tile" flow. Omitted on an empty dashboard, where the picker is shown
   // directly and there is nothing to collapse back to.
@@ -14,7 +17,7 @@ type InlineTemplatePickerProps = {
 // Inline add-tile picker: renders the tile templates as a grid of light bordered
 // option tiles directly in the canvas flow (no popover). Grouped under the shared
 // section-divider headers to match the rest of the editor.
-export const InlineTemplatePicker = ({ onSelect, onCancel }: InlineTemplatePickerProps) => {
+export const InlineTemplatePicker = ({ onSelect, onCancel, context }: InlineTemplatePickerProps) => {
   return (
     <div className="rounded-lg border border-border/60 p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -28,7 +31,9 @@ export const InlineTemplatePicker = ({ onSelect, onCancel }: InlineTemplatePicke
 
       <div className="space-y-4">
         {TEMPLATE_GROUPS.map(({ label, group }) => {
-          const items = TILE_TEMPLATES.filter(template => template.group === group)
+          const items = TILE_TEMPLATES.filter(
+            template => template.group === group && (template.isAvailable?.(context) ?? true),
+          )
           if (items.length === 0) return null
           return (
             <div key={group}>

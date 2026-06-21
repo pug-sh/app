@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Bell, Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
+import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -16,6 +16,60 @@ const authSchema = z.object({
 })
 
 type AuthFormData = z.infer<typeof authSchema>
+
+// The Pug mark — an analytics pulse, matching the favicon. Renders in currentColor
+// so it works white-on-indigo (hero) and indigo-on-light (mobile header) alike.
+const PugPulse = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden
+  >
+    <path d="M3 14h3.5l2.5-7 3 12 2.5-8H21" />
+  </svg>
+)
+
+// Illustrative time-series area that anchors the hero — full-bleed across the canvas
+// so it slides under the form card. Drawn once on load (see .signin-trend-* in
+// index.css). Bold stroke + gradient fill so it reads, not just a faint hairline.
+const HeroTrend = () => {
+  // Sits as a gentle rising wave in the upper part of the band so it clears the
+  // caption + footer that anchor the bottom-left.
+  const line =
+    'M0 138 L40 130 L80 142 L120 114 L160 124 L200 98 L240 108 L280 80 L320 88 L360 60 L400 68 L440 44 L480 36'
+  return (
+    <svg
+      viewBox="0 0 480 220"
+      preserveAspectRatio="none"
+      className="absolute inset-x-0 bottom-0 w-full h-80"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="signin-trend-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="white" stopOpacity={0.32} />
+          <stop offset="100%" stopColor="white" stopOpacity={0.02} />
+        </linearGradient>
+      </defs>
+      <path className="signin-trend-area" d={`${line} L480 220 L0 220 Z`} fill="url(#signin-trend-fill)" />
+      <path
+        className="signin-trend-line"
+        d={line}
+        fill="none"
+        stroke="white"
+        strokeOpacity={0.85}
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
+}
 
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
@@ -86,186 +140,205 @@ const SignIn = () => {
   const authBusy = loading || magicLinkLoading
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left — branding panel */}
-      <div className="hidden lg:flex lg:w-[45%] bg-primary relative overflow-hidden">
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
+    <div className="min-h-screen flex bg-[oklch(0.63_0.13_265)] relative overflow-hidden">
+      {/* Trend spans the full canvas and slides under the form card — no hard cut at the seam. */}
+      <HeroTrend />
+      {/* Left — analytics hero, directly on the blue canvas. The product, quietly breathing. */}
+      <div className="hidden lg:flex lg:w-1/2 relative z-10 text-primary-foreground">
+        {/* Solid base so the caption + footer stay legible over the trend. */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[oklch(0.63_0.13_265)] to-transparent"
+          aria-hidden
+        />
+        <div className="relative z-10 flex flex-col justify-between w-full p-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-              <Bell className="w-5 h-5" />
+              <PugPulse className="w-5 h-5" />
             </div>
             <span className="text-xl font-medium tracking-tight">Pug</span>
           </div>
-          <div className="max-w-sm">
-            <p className="text-3xl font-medium leading-tight tracking-tight">
-              Analytics and
+
+          <div className="max-w-md">
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-60">Product analytics</p>
+            <h2 className="mt-4 text-4xl font-medium leading-[1.1] tracking-tight">
+              See what your
               <br />
-              engagement, unified.
-            </p>
-            <p className="mt-4 text-sm opacity-70 leading-relaxed">
-              Manage campaigns, track delivery, and understand your users — all from one dashboard.
+              users actually do.
+            </h2>
+            <p className="mt-4 max-w-sm text-sm opacity-70 leading-relaxed">
+              Track events, funnels, and retention — and turn product behavior into decisions you can ship.
             </p>
           </div>
-          <p className="text-xs opacity-40">
-            Pug — by{' '}
-            <a href="https://tshoka.com" className="underline-offset-2 hover:underline">
+
+          <p className="text-xs opacity-70">
+            by{' '}
+            <a
+              href="https://tshoka.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline-offset-4 hover:underline"
+            >
               tshoka
             </a>
           </p>
         </div>
       </div>
 
-      {/* Right — auth form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Bell className="w-4.5 h-4.5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-medium tracking-tight">Pug</span>
-          </div>
-
-          {magicLinkSent ? (
-            <div>
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
-                <MailCheck className="w-5 h-5 text-primary" />
+      {/* Right — form on an inset card so it pops against the blue and leads. */}
+      <div className="flex-1 lg:w-1/2 p-4 relative z-10">
+        <div className="flex h-full w-full items-center justify-center rounded-3xl bg-background p-8">
+          <div className="w-full max-w-sm">
+            <div className="lg:hidden flex items-center gap-3 mb-10">
+              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
+                <PugPulse className="w-4.5 h-4.5" />
               </div>
-              <h1 className="text-2xl font-medium tracking-tight">Check your inbox</h1>
-              <p className="text-sm text-muted-foreground mt-1.5">
-                We sent a sign-in link to{' '}
-                <span className="font-medium text-foreground break-all">{magicLinkEmail}</span>. Click it to continue —
-                it expires in 15 minutes.
-              </p>
-              <button
-                type="button"
-                className="text-primary font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6"
-                onClick={() => {
-                  setMagicLinkSent(false)
-                  setError('')
-                }}
-              >
-                Use a different email
-              </button>
+              <span className="text-lg font-medium tracking-tight">Pug</span>
             </div>
-          ) : (
-            <>
-              <h1 className="text-2xl font-medium tracking-tight">
-                {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1.5 mb-8">
-                {mode === 'link'
-                  ? "We'll email you a secure link to sign in or create your account."
-                  : 'Enter the password you set for your account'}
-              </p>
 
-              {googleOAuthEnabled && (
-                <>
-                  <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
-                  <div className="flex items-center gap-3 my-4">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">or continue with email</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                </>
-              )}
-
-              <form
-                onSubmit={e => {
-                  e.preventDefault()
-                  if (mode === 'password') {
-                    authForm.handleSubmit(submitPassword)()
-                  } else {
-                    handleMagicLink()
-                  }
-                }}
-                className="space-y-4"
-              >
-                <Field data-invalid={!!authForm.formState.errors.email}>
-                  <FieldLabel htmlFor="email">Email</FieldLabel>
-                  <Input
-                    {...authForm.register('email')}
-                    id="email"
-                    type="email"
-                    placeholder="you@company.com"
-                    aria-invalid={!!authForm.formState.errors.email}
-                    autoComplete="email"
-                  />
-                  {authForm.formState.errors.email && <FieldError errors={[authForm.formState.errors.email]} />}
-                </Field>
-
-                {mode === 'password' && (
-                  <Field data-invalid={!!authForm.formState.errors.password}>
-                    <div className="flex items-center justify-between">
-                      <FieldLabel htmlFor="password">Password</FieldLabel>
-                      <button
-                        type="button"
-                        onClick={handleMagicLink}
-                        disabled={authBusy}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        Forgot?
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        {...authForm.register('password')}
-                        id="password"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••"
-                        className="pr-9"
-                        aria-invalid={!!authForm.formState.errors.password}
-                        autoComplete="current-password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {authForm.formState.errors.password && <FieldError errors={[authForm.formState.errors.password]} />}
-                  </Field>
-                )}
-
-                {error && <p className="text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
-
-                <Button type="submit" className="w-full" disabled={authBusy}>
-                  {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}
-                  {mode === 'link' ? 'Email me a sign-in link' : 'Sign in'}
-                </Button>
-              </form>
-
-              {googleOAuthEnabled ? (
+            {magicLinkSent ? (
+              <div>
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
+                  <MailCheck className="w-5 h-5 text-link" />
+                </div>
+                <h1 className="text-2xl font-medium tracking-tight">Check your inbox</h1>
+                <p className="text-sm text-muted-foreground mt-1.5">
+                  We sent a sign-in link to{' '}
+                  <span className="font-medium text-foreground break-all">{magicLinkEmail}</span>. Click it to continue
+                  — it expires in 15 minutes.
+                </p>
                 <button
                   type="button"
-                  onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
-                  disabled={authBusy}
-                  className="text-primary font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
+                  className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6"
+                  onClick={() => {
+                    setMagicLinkSent(false)
+                    setError('')
+                  }}
                 >
-                  {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                  Use a different email
                 </button>
-              ) : (
-                <>
-                  <div className="flex items-center gap-3 my-4">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">or</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <Button
+              </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-medium tracking-tight">
+                  {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1.5 mb-6">
+                  {mode === 'link'
+                    ? "We'll email you a secure link to sign in or create your account."
+                    : 'Enter the password you set for your account'}
+                </p>
+
+                {googleOAuthEnabled && (
+                  <>
+                    <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
+                    <div className="flex items-center gap-3 my-5">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs text-muted-foreground">or continue with email</span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                  </>
+                )}
+
+                <form
+                  onSubmit={e => {
+                    e.preventDefault()
+                    if (mode === 'password') {
+                      authForm.handleSubmit(submitPassword)()
+                    } else {
+                      handleMagicLink()
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <Field data-invalid={!!authForm.formState.errors.email}>
+                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <Input
+                      {...authForm.register('email')}
+                      id="email"
+                      type="email"
+                      placeholder="you@company.com"
+                      aria-invalid={!!authForm.formState.errors.email}
+                      autoComplete="email"
+                    />
+                    {authForm.formState.errors.email && <FieldError errors={[authForm.formState.errors.email]} />}
+                  </Field>
+
+                  {mode === 'password' && (
+                    <Field data-invalid={!!authForm.formState.errors.password}>
+                      <div className="flex items-center justify-between">
+                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                        <button
+                          type="button"
+                          onClick={handleMagicLink}
+                          disabled={authBusy}
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          Forgot?
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          {...authForm.register('password')}
+                          id="password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          className="pr-9"
+                          aria-invalid={!!authForm.formState.errors.password}
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      {authForm.formState.errors.password && (
+                        <FieldError errors={[authForm.formState.errors.password]} />
+                      )}
+                    </Field>
+                  )}
+
+                  {error && <p className="text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
+
+                  <Button type="submit" className="w-full" disabled={authBusy}>
+                    {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}
+                    {mode === 'link' ? 'Email me a sign-in link' : 'Sign in'}
+                  </Button>
+                </form>
+
+                {googleOAuthEnabled ? (
+                  <button
                     type="button"
-                    variant="outline"
-                    className="w-full"
                     onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
                     disabled={authBusy}
+                    className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
                   >
                     {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
-                  </Button>
-                </>
-              )}
-            </>
-          )}
+                  </button>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-border" />
+                      <span className="text-xs text-muted-foreground">or</span>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
+                      disabled={authBusy}
+                    >
+                      {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -48,6 +48,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-link: var(--link);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -181,6 +182,10 @@
   --popover-foreground: oklch(0.15 0.02 260);
   --primary: oklch(0.55 0.18 265);
   --primary-foreground: oklch(0.98 0.005 265);
+  /* Brand/blue color used AS text on the canvas (links, primary-tinted icons).
+     Decoupled from --primary so dark mode can lighten it without lightening the
+     button fill. Light mode reads fine, so it tracks --primary here. */
+  --link: oklch(0.55 0.18 265);
   --secondary: oklch(0.94 0.01 260);
   --secondary-foreground: oklch(0.25 0.02 260);
   --muted: oklch(0.94 0.01 260);
@@ -216,24 +221,28 @@
 .dark {
   /* surfaces — #242424 base, gentle blue tint, quiet layering */
   --background: oklch(0.26 0.004 265);
-  --foreground: oklch(0.87 0.005 265);
+  --foreground: oklch(0.91 0.005 265); /* lifted from 0.87: body contrast toward light-mode parity (~12:1) */
   --card: oklch(0.29 0.005 265);
-  --card-foreground: oklch(0.87 0.005 265);
+  --card-foreground: oklch(0.91 0.005 265);
   --popover: oklch(0.3 0.006 265);
-  --popover-foreground: oklch(0.87 0.005 265);
+  --popover-foreground: oklch(0.91 0.005 265);
 
   /* actions — understated, not shouty */
-  --primary: oklch(0.62 0.12 265);
+  --primary: oklch(0.54 0.16 265); /* deeper + saturated: white text clears AA */
   --primary-foreground: oklch(0.96 0.005 265);
+  /* Brand/blue text on the canvas (links, primary-tinted icons). Lighter than the
+     --primary fill so it clears AA as text (~5.5:1) while the fill stays dark for
+     white button text. See --link in :root. */
+  --link: oklch(0.7 0.16 265);
   --secondary: oklch(0.31 0.005 265);
   --secondary-foreground: oklch(0.78 0.005 265);
   --muted: oklch(0.31 0.005 265);
-  --muted-foreground: oklch(0.58 0.008 265);
+  --muted-foreground: oklch(0.76 0.008 265); /* lifted from 0.69: muted is used heavily; ~7:1 */
   --accent: oklch(0.33 0.006 265);
   --accent-foreground: oklch(0.82 0.005 265);
 
   /* semantic — softened for dark bg */
-  --destructive: oklch(0.62 0.16 25);
+  --destructive: oklch(0.54 0.18 25); /* deeper + saturated: white text clears AA */
   --destructive-foreground: oklch(0.96 0.005 25);
   --success: oklch(0.62 0.14 145);
   --warning: oklch(0.72 0.12 70);
@@ -261,36 +270,51 @@
   --sidebar-ring: oklch(0.62 0.12 265);
 }
 
-.live-visitor-marker {
-  background: transparent !important;
-  border: none !important;
+/* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */
+.live-visitor-marker:hover {
+  z-index: 30 !important;
 }
 
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  font-family: inherit;
+/* Sign-in hero — one-time draw of the analytics trend line on load.
+   540 ≈ the trend path length; dash-draw isn't expressible as a Tailwind utility. */
+@keyframes signin-trend-draw {
+  from {
+    stroke-dashoffset: 540;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
-.leaflet-tile-pane {
-  filter: var(--live-map-tile-filter, none);
+@keyframes signin-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.live-visitor-popup .leaflet-popup-content-wrapper {
-  width: 15.5rem;
-  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--background) 86%, transparent);
-  color: var(--foreground);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
-  backdrop-filter: blur(12px);
+.signin-trend-line {
+  stroke-dasharray: 540;
+  stroke-dashoffset: 540;
+  animation: signin-trend-draw 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
 }
 
-.live-visitor-popup .leaflet-popup-content {
-  width: auto !important;
-  margin: 0.75rem;
+.signin-trend-area {
+  opacity: 0;
+  animation: signin-fade-rise 0.7s ease-out 1.2s forwards;
 }
 
-.live-visitor-popup .leaflet-popup-tip {
-  background: color-mix(in oklab, var(--background) 86%, transparent);
+@media (prefers-reduced-motion: reduce) {
+  .signin-trend-line {
+    stroke-dashoffset: 0;
+    animation: none;
+  }
+  .signin-trend-area {
+    opacity: 1;
+    animation: none;
+  }
 }
