@@ -105,7 +105,7 @@ export const TopKList = ({
   return (
     <div className={cn('flex flex-col gap-1.5', compact ? 'h-full min-h-0' : 'mt-2')}>
       <CoverageSummary rankedCount={rankedCount} othersShare={othersShare} showShare={showShare} />
-      <div className={compact ? 'min-h-0 flex-1 overflow-y-auto' : undefined}>
+      <div className={compact ? 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden' : undefined}>
         {rows.map((row, i) => {
           const barColor = row.isOthers ? 'var(--muted-foreground)' : getIndexedColor(i).dot
           const barWidth = maxValue > 0 ? Math.max((row.value / maxValue) * 100, 0.5) : 0
