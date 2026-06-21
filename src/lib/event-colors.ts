@@ -322,10 +322,17 @@ const toDarkHex = memoizeHex(hex => {
   return oklchToHex(0.62 + 0.3 * L, Math.min(C, 0.16), H)
 })
 
-// Light canvas: cap lightness so pale shades read on white; darker hues pass through.
+// Light canvas: cap lightness so pale shades read on white, and cap chroma so the
+// most vivid hues (violet/red/magenta at C≈0.21–0.25) don't shout against the
+// near-grayscale UI. Lightness drives contrast, so taming chroma barely moves the
+// ratio (~5:1 holds). Sits below the dark cap (0.16) because mid-lightness colors on
+// white read as more saturated than lifted pastels on dark. A hue already under both
+// caps passes through untouched.
+const LIGHT_CHROMA_CAP = 0.14
 const toLightHex = memoizeHex(hex => {
   const [L, C, H] = hexToOklch(hex)
-  return L <= 0.52 ? hex : oklchToHex(0.52, C, H)
+  if (L <= 0.52 && C <= LIGHT_CHROMA_CAP) return hex
+  return oklchToHex(Math.min(L, 0.52), Math.min(C, LIGHT_CHROMA_CAP), H)
 })
 
 // Re-tint a base series color for the active scheme (reusing color()'s fill
