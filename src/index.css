@@ -261,38 +261,9 @@
   --sidebar-ring: oklch(0.62 0.12 265);
 }
 
-.live-visitor-marker {
-  background: transparent !important;
-  border: none !important;
-}
-
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  font-family: inherit;
-}
-
-.leaflet-tile-pane {
-  filter: var(--live-map-tile-filter, none);
-}
-
-.live-visitor-popup .leaflet-popup-content-wrapper {
-  width: 15.5rem;
-  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--background) 86%, transparent);
-  color: var(--foreground);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
-  backdrop-filter: blur(12px);
-}
-
-.live-visitor-popup .leaflet-popup-content {
-  width: auto !important;
-  margin: 0.75rem;
-}
-
-.live-visitor-popup .leaflet-popup-tip {
-  background: color-mix(in oklab, var(--background) 86%, transparent);
+/* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */
+.live-visitor-marker:hover {
+  z-index: 30 !important;
 }
 
 /* Sign-in hero — one-time draw of the analytics trend line on load.
