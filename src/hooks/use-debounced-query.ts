@@ -1,6 +1,11 @@
 import { ConnectError } from '@connectrpc/connect'
 import { useEffect, useRef, useState } from 'react'
 
+// Build a stable string key from an arbitrary query-input object. Proto fields are
+// often bigint, which JSON.stringify rejects, so coerce those to strings.
+export const stringifyQueryKey = (value: unknown) =>
+  JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
+
 export const useDebouncedQuery = <T>(
   queryKey: string,
   queryFn: () => Promise<T>,

@@ -47,6 +47,10 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  logScale,
+  zeroBaseline,
+  hideLegend,
+  yTickFormatter,
   isTopK = false,
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
@@ -75,6 +79,10 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  logScale?: boolean
+  zeroBaseline?: boolean
+  hideLegend?: boolean
+  yTickFormatter?: (value: number) => string
   isTopK?: boolean
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
@@ -134,6 +142,9 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          logScale={logScale}
+          zeroBaseline={zeroBaseline}
+          yTickFormatter={yTickFormatter}
           timeZone={timeZone}
           className={chartClassName}
         />
@@ -145,6 +156,9 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
+          logScale={logScale}
+          zeroBaseline={zeroBaseline}
+          yTickFormatter={yTickFormatter}
           timeZone={timeZone}
           className={chartClassName}
         />
@@ -167,6 +181,9 @@ export const InsightsContent = memo(function InsightsContent({
         granularity={granularity}
         timeZone={timeZone}
         stacked={viewMode === 'bar-stacked'}
+        logScale={logScale}
+        zeroBaseline={zeroBaseline}
+        yTickFormatter={yTickFormatter}
         className={chartClassName}
       />
     )
@@ -296,15 +313,17 @@ export const InsightsContent = memo(function InsightsContent({
   if (chartData.length > 0) {
     return (
       <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
-        <SummaryStats
-          series={seriesNames}
-          data={chartData}
-          seriesColors={seriesColors}
-          aggregations={seriesAggregations}
-          compact={compact}
-          showSeriesNames={breakdowns.length > 0}
-          lightNumbers={lightNumbers}
-        />
+        {hideLegend ? null : (
+          <SummaryStats
+            series={seriesNames}
+            data={chartData}
+            seriesColors={seriesColors}
+            aggregations={seriesAggregations}
+            compact={compact}
+            showSeriesNames={breakdowns.length > 0}
+            lightNumbers={lightNumbers}
+          />
+        )}
         <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
       </div>
     )

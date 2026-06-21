@@ -57,7 +57,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
           <div className="text-center">
             <p className="text-sm text-muted-foreground mb-4">Something went wrong.</p>
             <button
-              className="text-sm text-primary hover:underline underline-offset-4"
+              className="text-sm text-link hover:underline underline-offset-4"
               onClick={() => window.location.reload()}
             >
               Reload

@@ -273,7 +273,7 @@ const Profiles = () => {
                             <ProjectLink
                               href={`/profiles/${encodeURIComponent(profileId)}`}
                               className={cn(
-                                'block truncate font-medium text-foreground hover:text-primary',
+                                'block truncate font-medium text-foreground hover:text-link',
                                 identity.isFallback && 'font-mono',
                               )}
                             >

@@ -205,7 +205,7 @@ const Members = () => {
                 <button
                   onClick={handleInvite}
                   disabled={inviting || !email.trim()}
-                  className="p-1 rounded-md hover:bg-muted text-primary disabled:opacity-50 cursor-pointer"
+                  className="p-1 rounded-md hover:bg-muted text-link disabled:opacity-50 cursor-pointer"
                 >
                   {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 </button>

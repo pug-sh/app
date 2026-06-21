@@ -222,7 +222,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
       <div className="border-t border-border/60 pt-1.5 text-center">
         <p className="text-xs text-muted-foreground">
           Want a view tailored to your team?{' '}
-          <ProjectLink href="/dashboards" className="text-primary hover:underline underline-offset-4">
+          <ProjectLink href="/dashboards" className="text-link hover:underline underline-offset-4">
             Build your own →
           </ProjectLink>
         </p>

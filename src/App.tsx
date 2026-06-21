@@ -2,13 +2,13 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
-import { useLocation } from 'wouter'
+import { Route, useLocation } from 'wouter'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { applyTheme, themeAtom } from '@/data/theme.atoms'
+import { applyTheme, resolvedThemeAtom, themeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -23,6 +23,7 @@ import {
   selectOrgAtom,
   workspaceErrorAtom,
 } from '@/data/workspace.atoms'
+import { setSeriesColorScheme } from '@/lib/event-colors'
 import { lazyWithRetry } from '@/lib/lazy'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
@@ -30,6 +31,7 @@ const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
+const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -168,13 +170,33 @@ const App = () => {
   const authenticated = useAtomValue(isAuthenticatedAtom)
   const status = useAtomValue(bootstrapStatusAtom)
   const workspaceError = useAtomValue(workspaceErrorAtom)
+
+  // Event-series colors are JS-computed (badge inline styles + chart SVG fills),
+  // so unlike CSS-variable tokens they can't react to the .dark class on their
+  // own. Sync the color module to the resolved theme via a module-level mutation
+  // during render: App is the tree root, so descendants rendered later this pass
+  // read the new scheme. Inline getSeriesColor() callers pick it up for free;
+  // consumers that memoize palettes also subscribe to resolvedThemeAtom and key
+  // their memo on it, so the mutation has landed before they re-derive.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  setSeriesColorScheme(resolvedTheme === 'dark')
+
+  // The public shared-dashboard route renders standalone and must not touch the
+  // authenticated workspace — skip bootstrap so a logged-in viewer's org/project
+  // RPCs never fire on a public page.
+  const isSharedRoute = location.startsWith('/shared/')
+
   return (
     <>
       <ThemeSync />
-      <WorkspaceBootstrap />
+      {isSharedRoute ? null : <WorkspaceBootstrap />}
       {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
           <MagicLink />
+        </Suspense>
+      ) : isSharedRoute ? (
+        <Suspense fallback={<LoadingSpinner />}>
+          <Route path="/shared/:shareId" component={SharedDashboard} />
         </Suspense>
       ) : !authenticated ? (
         <Suspense fallback={<LoadingSpinner />}>

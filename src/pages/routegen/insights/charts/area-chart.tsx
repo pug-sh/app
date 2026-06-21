@@ -19,6 +19,9 @@ export const AreaChart = memo(function AreaChart({
   seriesNames,
   seriesColors,
   granularity,
+  logScale,
+  zeroBaseline,
+  yTickFormatter,
   timeZone,
   className = 'h-70 w-full',
 }: {
@@ -26,6 +29,9 @@ export const AreaChart = memo(function AreaChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
+  logScale?: boolean
+  zeroBaseline?: boolean
+  yTickFormatter?: (value: number) => string
   timeZone: string
   className?: string
 }) {
@@ -38,7 +44,7 @@ export const AreaChart = memo(function AreaChart({
       <ReAreaChart data={chartData} margin={SHARED_MARGIN}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax)} />
+        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
         <ChartTooltip
           cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
           content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}

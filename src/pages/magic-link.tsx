@@ -47,7 +47,7 @@ const MagicLink = () => {
           <button
             type="button"
             onClick={() => navigate('/')}
-            className="text-primary text-sm font-medium hover:underline underline-offset-4 cursor-pointer"
+            className="text-link text-sm font-medium hover:underline underline-offset-4 cursor-pointer"
           >
             Back to sign in
           </button>

@@ -83,7 +83,7 @@ const SessionSummary = ({
           <div className="flex items-center gap-1.5 mt-1">
             <ProjectLink
               href={`/profiles/${encodeURIComponent(distinctId)}/events`}
-              className="text-xs text-primary font-mono hover:underline underline-offset-4"
+              className="text-xs text-link font-mono hover:underline underline-offset-4"
             >
               {distinctId}
             </ProjectLink>

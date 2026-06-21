@@ -40,7 +40,7 @@ const Heatmap = ({ days }: { days: HeatmapDay[] }) => {
         return (
           <div
             key={d.date}
-            className="h-8 w-2 rounded-sm bg-primary"
+            className="h-8 w-2 rounded-sm bg-link"
             style={{ opacity }}
             title={`${d.date} · ${d.count} events`}
           />
@@ -124,7 +124,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
           {totalProps > topProps.length && (
             <ProjectLink
               href={`/profiles/${encodeURIComponent(profileId)}/properties`}
-              className="mt-3 inline-block text-xs text-primary hover:underline underline-offset-4"
+              className="mt-3 inline-block text-xs text-link hover:underline underline-offset-4"
             >
               See all {totalProps} →
             </ProjectLink>
@@ -161,10 +161,10 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
               const colors = getSeriesColor(e.kind)
               const inline = resolveInlineProps(e.kind, e.customProperties, e.autoProperties)
               return (
-                <li key={e.eventId} className="flex items-center gap-3 py-2 text-xs">
+                <li key={e.eventId} className="flex items-center gap-3 py-2.5 text-xs">
                   <Badge
                     variant="secondary"
-                    className="text-[10px] font-medium px-2 py-0.5 shrink-0"
+                    className="text-[11px] font-medium px-2 py-0.5 shrink-0"
                     style={{ backgroundColor: colors.fill, color: colors.dot }}
                   >
                     {e.kind}
@@ -184,7 +184,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
         )}
         <ProjectLink
           href={`/profiles/${encodeURIComponent(profileId)}/events`}
-          className="mt-3 inline-block text-xs text-primary hover:underline underline-offset-4"
+          className="mt-3 inline-block text-xs text-link hover:underline underline-offset-4"
         >
           See all events →
         </ProjectLink>

@@ -124,7 +124,9 @@ const Account = () => {
               {saving ? <Loader2 className="animate-spin" /> : <Lock className="w-4 h-4" />}
               Set password
             </Button>
-            {saved && <span className="text-xs text-green-600 animate-in fade-in">Password updated</span>}
+            {saved && (
+              <span className="text-xs text-green-600 dark:text-green-400 animate-in fade-in">Password updated</span>
+            )}
           </div>
         </form>
       </section>

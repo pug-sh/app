@@ -10,14 +10,11 @@ import ActivityHeatmapMap from '@/components/activity-heatmap-map'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
-import { useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { countryCountsFromTrendSeries } from './activity-map'
 import { getInitialGranularity, getProtoRange } from './query'
-
-const stringifyQueryKey = (value: unknown) =>
-  JSON.stringify(value, (_key, nextValue) => (typeof nextValue === 'bigint' ? nextValue.toString() : nextValue))
 
 export type ActivityMapDataProps = {
   query: QueryRequest | undefined

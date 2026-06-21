@@ -1,6 +1,8 @@
 import { create } from '@bufbuild/protobuf'
 import type { LucideIcon } from 'lucide-react'
-import { BarChart3, FileText, Hash, LineChart, ListOrdered, Repeat, Trophy } from 'lucide-react'
+import { BarChart3, DollarSign, FileText, Hash, LineChart, ListOrdered, Repeat, Trophy } from 'lucide-react'
+import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
+import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import {
   ComparePeriod,
   type DashboardTileInput,
@@ -12,11 +14,13 @@ import {
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   AggregationType,
+  EventQuerySchema,
   InsightQuerySpecSchema,
   InsightType,
   TopKQuery_Dimension,
   TopKQuerySchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { type Bindings, composeFunnelSteps, pickBindings } from '../overview/tile-bindings'
 
 export type TileTemplateId =
   | 'kpi-big-number'
@@ -24,10 +28,34 @@ export type TileTemplateId =
   | 'signup-activation-funnel'
   | 'day-7-retention'
   | 'top-events'
+  | 'revenue'
   | 'text-note'
   | 'custom-chart'
 
 export type TileTemplateGroup = 'suggested' | 'blank'
+
+// Resolved project context handed to each template's build(). Lets the suggested
+// templates seed real, project-specific events the same way the overview page
+// auto-derives its tiles — instead of opening an empty tile the user must fill in.
+export type TemplateContext = {
+  // Well-known event bindings (primary / signin-like / conversion-like), or null
+  // when the project has no events yet — in which case suggested templates fall
+  // back to an empty spec.
+  bindings: Bindings | null
+  // Event kinds sorted by volume (desc); seeds the "top events" table.
+  topEventKinds: string[]
+}
+
+export const EMPTY_TEMPLATE_CONTEXT: TemplateContext = { bindings: null, topEventKinds: [] }
+
+// Derive a TemplateContext from the project's filter schema. Reuses pickBindings
+// (shared with the overview page) so both surfaces resolve the same canonical
+// events from the same conventions.
+export const buildTemplateContext = (schema: GetFilterSchemaResponse | null): TemplateContext => {
+  if (!schema || schema.events.length === 0) return EMPTY_TEMPLATE_CONTEXT
+  const topEventKinds = [...schema.events].sort((a, b) => Number(b.count - a.count)).map(event => event.name)
+  return { bindings: pickBindings(schema.events), topEventKinds }
+}
 
 export type TileTemplate = {
   id: TileTemplateId
@@ -35,15 +63,30 @@ export type TileTemplate = {
   displayName: string
   description: string
   icon: LucideIcon
-  build: () => DashboardTileInput
+  // Optional gate: a template is only offered in the picker when this returns
+  // true (or is absent). Used to hide tiles that are meaningless for the project
+  // — e.g. Revenue only appears when a monetization event exists.
+  isAvailable?: (ctx: TemplateContext) => boolean
+  build: (ctx: TemplateContext) => DashboardTileInput
 }
 
 const positionFor = (w: number, h: number) => create(GridPositionSchema, { x: 0, y: 0, w, h })
 
-const insightContent = (insightType: InsightType) => ({
+type SeedEvent = { kind: string; aggregation?: AggregationType; aggregationProperty?: string }
+
+const insightContent = (insightType: InsightType, events: SeedEvent[] = []) => ({
   case: 'insight' as const,
   value: create(InsightTileContentSchema, {
-    spec: create(InsightQuerySpecSchema, { insightType }),
+    spec: create(InsightQuerySpecSchema, {
+      insightType,
+      events: events.map(({ kind, aggregation, aggregationProperty }) =>
+        create(EventQuerySchema, {
+          event: create(EventFilterSchema, { kind }),
+          aggregation: aggregation ?? AggregationType.TOTAL,
+          aggregationProperty: aggregationProperty ?? '',
+        }),
+      ),
+    }),
   }),
 })
 
@@ -71,10 +114,15 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     displayName: 'Daily active users',
     description: 'Trend line of unique users by day.',
     icon: LineChart,
-    build: () =>
+    // Unique users of the project's most-active event — same metric the overview
+    // page surfaces as its "active users" tile.
+    build: ({ bindings }) =>
       create(DashboardTileInputSchema, {
         displayName: 'Daily active users',
-        content: insightContent(InsightType.TRENDS),
+        content: insightContent(
+          InsightType.TRENDS,
+          bindings ? [{ kind: bindings.primary, aggregation: AggregationType.UNIQUE_USERS }] : [],
+        ),
         viewMode: DashboardTileViewMode.LINE,
         position: positionFor(36, 18),
       }),
@@ -85,13 +133,22 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     displayName: 'Signup → activation funnel',
     description: 'Conversion through ordered steps.',
     icon: BarChart3,
-    build: () =>
-      create(DashboardTileInputSchema, {
+    // Prefer the convention-based shape (signin → primary → conversion); for apps
+    // whose events don't match those conventions, fall back to the top events by
+    // volume so the funnel still opens with an editable multi-step scaffold.
+    build: ({ bindings, topEventKinds }) => {
+      const conventional = bindings ? composeFunnelSteps(bindings) : []
+      const steps = conventional.length >= 2 ? conventional : topEventKinds.slice(0, 3)
+      return create(DashboardTileInputSchema, {
         displayName: 'Funnel',
-        content: insightContent(InsightType.FUNNEL),
+        content: insightContent(
+          InsightType.FUNNEL,
+          steps.map(kind => ({ kind })),
+        ),
         viewMode: DashboardTileViewMode.LINE,
         position: positionFor(36, 18),
-      }),
+      })
+    },
   },
   'day-7-retention': {
     id: 'day-7-retention',
@@ -99,10 +156,11 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     displayName: 'Day-7 retention',
     description: 'Cohort retention curve.',
     icon: Repeat,
-    build: () =>
+    // Retention of the most-active event; user can add a distinct return event.
+    build: ({ bindings }) =>
       create(DashboardTileInputSchema, {
         displayName: 'Retention',
-        content: insightContent(InsightType.RETENTION),
+        content: insightContent(InsightType.RETENTION, bindings ? [{ kind: bindings.primary }] : []),
         viewMode: DashboardTileViewMode.LINE,
         position: positionFor(36, 18),
       }),
@@ -113,6 +171,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     displayName: 'Top events',
     description: 'Ranked event volume.',
     icon: Trophy,
+    // The highest-volume events as a ranked total-count table.
     build: () =>
       create(DashboardTileInputSchema, {
         displayName: 'Top events',
@@ -130,6 +189,30 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
           }),
         },
         viewMode: DashboardTileViewMode.TABLE,
+        position: positionFor(36, 18),
+      }),
+  },
+  revenue: {
+    id: 'revenue',
+    group: 'suggested',
+    displayName: 'Revenue',
+    description: 'Sum of amount over time.',
+    icon: DollarSign,
+    // Only meaningful when the project has a monetization event. Hidden otherwise
+    // so non-revenue apps aren't offered a tile that can't be configured.
+    isAvailable: ({ bindings }) => !!bindings?.revenueLike,
+    // Sum of the `amount` property on the project's revenue event — the shared
+    // convention across all well-known monetization events.
+    build: ({ bindings }) =>
+      create(DashboardTileInputSchema, {
+        displayName: 'Revenue',
+        content: insightContent(
+          InsightType.TRENDS,
+          bindings?.revenueLike
+            ? [{ kind: bindings.revenueLike, aggregation: AggregationType.SUM, aggregationProperty: 'amount' }]
+            : [],
+        ),
+        viewMode: DashboardTileViewMode.LINE,
         position: positionFor(36, 18),
       }),
   },
@@ -171,6 +254,7 @@ const TEMPLATE_ORDER: readonly TileTemplateId[] = [
   'signup-activation-funnel',
   'day-7-retention',
   'top-events',
+  'revenue',
   'text-note',
   'custom-chart',
 ]

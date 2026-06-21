@@ -26,6 +26,12 @@ export const NUMERIC_AGGREGATIONS = new Set([
   AggregationType.MAX,
 ])
 
+// A numeric aggregation (Sum/Avg/Min/Max) needs a property to resolve against;
+// it's "incomplete" until one is chosen. Shared by the Insights page and the
+// dashboard tile editor/renderer so the check can't drift between them.
+export const isIncompleteNumericAggregation = (aggregation?: AggregationType, aggregationProperty?: string) =>
+  NUMERIC_AGGREGATIONS.has(aggregation ?? AggregationType.TOTAL) && !(aggregationProperty ?? '').trim()
+
 export const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
   { label: 'Funnel', value: InsightType.FUNNEL },

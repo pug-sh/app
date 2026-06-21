@@ -198,7 +198,7 @@ const SignIn = () => {
             {magicLinkSent ? (
               <div>
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
-                  <MailCheck className="w-5 h-5 text-primary" />
+                  <MailCheck className="w-5 h-5 text-link" />
                 </div>
                 <h1 className="text-2xl font-medium tracking-tight">Check your inbox</h1>
                 <p className="text-sm text-muted-foreground mt-1.5">
@@ -208,7 +208,7 @@ const SignIn = () => {
                 </p>
                 <button
                   type="button"
-                  className="text-primary font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6"
+                  className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6"
                   onClick={() => {
                     setMagicLinkSent(false)
                     setError('')
@@ -314,7 +314,7 @@ const SignIn = () => {
                     type="button"
                     onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
                     disabled={authBusy}
-                    className="text-primary font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
+                    className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
                   >
                     {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
                   </button>

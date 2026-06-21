@@ -95,7 +95,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
           <ProjectLink
             href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
             onClick={e => e.stopPropagation()}
-            className="text-xs font-mono text-primary hover:underline underline-offset-4"
+            className="text-xs font-mono text-link hover:underline underline-offset-4"
           >
             {event.distinctId}
           </ProjectLink>
@@ -105,7 +105,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
               <ProjectLink
                 href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
                 onClick={e => e.stopPropagation()}
-                className="text-xs font-mono text-primary hover:underline underline-offset-4"
+                className="text-xs font-mono text-link hover:underline underline-offset-4"
               >
                 {event.sessionId.slice(0, 8)}
               </ProjectLink>

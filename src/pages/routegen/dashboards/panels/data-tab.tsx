@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import {
   ComparePeriod,
   type DashboardTile,
@@ -9,14 +10,15 @@ import {
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { useEventFilters } from '@/hooks/use-event-filters'
+import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
-import { eventEntryCap, INSIGHT_TYPES } from '../../insights/constants'
-import { OptionChip } from '../../insights/controls'
+import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '../../insights/constants'
+import { InsightsRowAggregationControls, OptionChip } from '../../insights/controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { InsightFields } from './insight-fields'
+import { Section } from './section'
 
 type DataTabProps = {
   tile: DashboardTile
@@ -98,6 +100,31 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     setBreakdowns(current => current.filter(p => p !== property))
   }
 
+  // Per-event measure picker (Total events / Unique users / Sum / …). Only TRENDS
+  // supports per-event aggregation; funnel and retention always use total counts.
+  const renderRowExtra = useMemo(() => {
+    if (insightType !== InsightType.TRENDS) return undefined
+    return (entry: EventFilterEntry, rowSchema: GetFilterSchemaResponse | null, rowSchemaError: string | null) => (
+      <InsightsRowAggregationControls
+        entry={entry}
+        rowSchema={rowSchema}
+        rowSchemaError={rowSchemaError}
+        filtersAtom={eventFilters.filtersAtom}
+        setAggregation={eventFilters.setAggregation}
+        setAggregationProperty={eventFilters.setAggregationProperty}
+      />
+    )
+  }, [insightType, eventFilters.filtersAtom, eventFilters.setAggregation, eventFilters.setAggregationProperty])
+
+  const hasIncompleteNumericAggregation = useMemo(
+    () =>
+      insightType === InsightType.TRENDS &&
+      eventFilters.validEntries.some(entry =>
+        isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty),
+      ),
+    [insightType, eventFilters.validEntries],
+  )
+
   return (
     <div className="space-y-4">
       <Section label="Insight type">
@@ -121,8 +148,12 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
           breakdowns={breakdowns}
           addBreakdown={addBreakdown}
           removeBreakdown={removeBreakdown}
+          renderRowExtra={renderRowExtra}
           topKEditor={{ value: topK, onChange: setTopK }}
         />
+        {hasIncompleteNumericAggregation ? (
+          <p className="mt-2 text-[11px] text-muted-foreground">Select a numeric property to run this aggregation.</p>
+        ) : null}
       </Section>
 
       {tile.viewMode === DashboardTileViewMode.KPI ? (
@@ -156,10 +187,3 @@ const MarkdownDataTab = ({ tile, onPatch }: DataTabProps) => {
     </Section>
   )
 }
-
-const Section = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
-    <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
-    {children}
-  </div>
-)

@@ -114,8 +114,11 @@ export const RetentionCohort = ({
                     <div
                       className="h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2"
                       style={{
-                        backgroundColor: hasValue ? retentionColor(value) : 'hsl(var(--muted) / 0.35)',
-                        color: hasValue && value >= 35 ? '#f8fafc' : 'hsl(var(--foreground))',
+                        backgroundColor: hasValue
+                          ? retentionColor(value)
+                          : 'color-mix(in oklab, var(--muted) 35%, transparent)',
+                        // Text contrasts the value-intensity green (theme-independent); empty cells use the muted token.
+                        color: !hasValue ? 'var(--muted-foreground)' : value >= 35 ? '#f8fafc' : '#14532d',
                       }}
                       title={title}
                     >

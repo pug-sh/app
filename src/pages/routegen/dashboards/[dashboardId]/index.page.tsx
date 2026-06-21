@@ -1,123 +1,37 @@
-import { create, equals } from '@bufbuild/protobuf'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Clock, Edit3, LayoutGrid, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { toast } from 'sonner'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { LayoutGrid } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
-import {
-  type Dashboard,
-  DashboardSchema,
-  type DashboardTile,
-  DashboardTileSchema,
-  GridPositionSchema,
-} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
-import {
-  autoGranularity,
-  clampGranularity,
-  clampRange,
-  granularityDisabledReason,
-  resolveTileGranularity,
-} from '@/lib/granularity'
+import { autoGranularity, clampGranularity, clampRange, resolveTileGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
-import { GRANULARITIES } from '../../insights/constants'
-import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
-import {
-  deleteDashboardAtom,
-  fetchDashboardAtom,
-  pendingEditDashboardIdAtom,
-  upsertDashboardAtom,
-} from '../dashboard.atoms'
-import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
-import { appendDraftTile, cloneForDraft, patchDashboardMetadata, patchTile, removeDraftTile } from '../draft-state'
-import { clearDraftKey, draftAtomFamily } from '../draft-storage'
-import { buildDuplicateTileInput } from '../duplicate-tile'
-import { EditBar } from '../edit-bar'
-import { InlineEditableText } from '../editor-shared'
-import { DashboardGrid, type DashboardLayouts } from '../grid'
-import { InlineTemplatePicker } from '../template-picker'
-import { TileConfigPanel } from '../tile-config-panel'
+import { deleteDashboardAtom, fetchDashboardAtom, setDashboardVisibilityAtom } from '../dashboard.atoms'
+import { type DashboardDeleteTarget } from '../delete-confirmation'
 import { DashboardEmptyState } from '../tiles'
-import { buildUpsertRequest } from '../upsert-dashboard'
-import { useEditorShortcuts } from '../use-editor-shortcuts'
-
-const GLOBAL_DASHBOARD_GRANULARITIES = [
-  { label: 'Select granularity', value: Granularity.UNSPECIFIED },
-  ...GRANULARITIES,
-] as const
-
-const formatRelative = (ts: number): string => {
-  const elapsed = Date.now() - ts
-  const minutes = Math.round(elapsed / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.round(hours / 24)}d ago`
-}
-
-const countChanges = (a: Dashboard, b: Dashboard): number => {
-  let count = 0
-  if (a.displayName !== b.displayName) count++
-  if (a.description !== b.description) count++
-
-  const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
-  const bById = new Map(b.tiles.map(tile => [tile.id, tile]))
-  for (const id of new Set([...aById.keys(), ...bById.keys()])) {
-    const left = aById.get(id)
-    const right = bById.get(id)
-    if (!left || !right) {
-      count++
-      continue
-    }
-    if (!equals(DashboardTileSchema, left, right)) count++
-  }
-  return count
-}
+import { DashboardCanvas } from './dashboard-canvas'
+import { DashboardHeader } from './dashboard-header'
+import { useDashboardEditor } from './use-dashboard-editor'
 
 const DashboardDetail = () => {
   const { dashboardId } = useParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)
-  const upsertDashboard = useSetAtom(upsertDashboardAtom)
-  const [saving, setSaving] = useState(false)
-  const [showPicker, setShowPicker] = useState(false)
+  const setVisibility = useSetAtom(setDashboardVisibilityAtom)
   const navigate = useProjectNavigate()
+
+  // Dashboard data
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
-  const [mode, setMode] = useState<'view' | 'edit'>('view')
-  const [autoFocusName, setAutoFocusName] = useState(false)
-  const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
-  const [railCollapsed, setRailCollapsed] = useState(false)
-  const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
-  const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
-  const [storedDraft, setStoredDraft] = useAtom(draftAtom)
-  const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
-  const [savingDashboard, setSavingDashboard] = useState(false)
-  const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
-  const [globalGranularity, setGlobalGranularity] = useState(() => {
-    if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
-    return autoGranularity(initialGlobalOverrides.timeRange)
-  })
-
-  // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
-  // to their own saved granularity against the global range, which may exceed its cap.
-  const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
 
   const loadDashboard = useCallback(async () => {
     if (!dashboardId) return
@@ -136,23 +50,20 @@ const DashboardDetail = () => {
   }, [dashboardId, fetchDashboard])
 
   useEffect(() => {
-    if (project) {
-      loadDashboard()
-    }
+    if (project) loadDashboard()
   }, [loadDashboard, project])
+
+  // Global time + granularity controls, mirrored to the URL query string.
+  const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
+  const [globalGranularity, setGlobalGranularity] = useState(() => {
+    if (initialGlobalOverrides.granularity !== undefined) return initialGlobalOverrides.granularity
+    return autoGranularity(initialGlobalOverrides.timeRange)
+  })
 
   useEffect(() => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
-
-  const patchDraftMeta = useCallback(
-    (patch: Partial<Pick<Dashboard, 'displayName' | 'description'>>) => {
-      setStoredDraft(current =>
-        current ? { ...current, draft: patchDashboardMetadata(current.draft, patch) } : current,
-      )
-    },
-    [setStoredDraft],
-  )
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     const clamped = clampRange(range)
@@ -160,81 +71,34 @@ const DashboardDetail = () => {
     setGlobalGranularity(g => clampGranularity(g, clamped))
   }, [])
 
-  const enterEditMode = useCallback(
-    (opts?: { focusName?: boolean }) => {
+  // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
+  // to their own saved granularity against the global range, which may exceed its cap.
+  const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
+
+  // Edit/draft state machine (selection, tile mutations, save/discard/resume).
+  const editor = useDashboardEditor({ dashboardId, dashboard, setDashboard })
+
+  // Sharing flow (view-mode only; operates on the saved dashboard, not the draft).
+  const [sharing, setSharing] = useState(false)
+
+  const handleTogglePublic = useCallback(
+    async (next: boolean) => {
       if (!dashboard) return
-      setStoredDraft({
-        draft: cloneForDraft(dashboard),
-        viewSnapshot: cloneForDraft(dashboard),
-        startedAt: Date.now(),
-      })
-      setMode('edit')
-      setSelectedTileId(dashboard.tiles[0]?.id ?? null)
-      setAutoFocusName(opts?.focusName ?? false)
+      setSharing(true)
+      try {
+        setDashboard(await setVisibility({ dashboard, isPublic: next }))
+      } catch (err) {
+        toastRPCError(err, 'Failed to update sharing')
+      } finally {
+        setSharing(false)
+      }
     },
-    [dashboard, setStoredDraft],
+    [dashboard, setVisibility],
   )
 
-  const exitEditMode = useCallback(() => {
-    if (!dashboardId) return
-    setStoredDraft(null)
-    clearDraftKey(dashboardId)
-    setMode('view')
-    setSelectedTileId(null)
-  }, [dashboardId, setStoredDraft])
-
-  // A freshly created dashboard records its id in pendingEditDashboardIdAtom; once
-  // it has loaded here, open straight into edit mode with the name field focused.
-  useEffect(() => {
-    if (!dashboard || pendingEditId !== dashboard.id) return
-    setPendingEditId(null)
-    if (mode === 'view') enterEditMode({ focusName: true })
-  }, [dashboard, pendingEditId, mode, enterEditMode, setPendingEditId])
-
-  const effectiveDashboard = mode === 'edit' && storedDraft ? storedDraft.draft : dashboard
-
-  const dirtyCount = useMemo(() => {
-    if (!storedDraft) return 0
-    return countChanges(storedDraft.viewSnapshot, storedDraft.draft)
-  }, [storedDraft])
-
-  const handleSave = useCallback(async () => {
-    if (!storedDraft || !dashboardId) return
-    if (!storedDraft.draft.displayName.trim()) {
-      toast.error('Dashboard name is required')
-      return
-    }
-    setSaving(true)
-    try {
-      const response = await upsertDashboard(buildUpsertRequest(storedDraft.draft))
-      setDashboard(response)
-      setStoredDraft(null)
-      clearDraftKey(dashboardId)
-      setMode('view')
-      setSelectedTileId(null)
-    } catch (err) {
-      toastRPCError(err, 'Failed to save dashboard')
-    } finally {
-      setSaving(false)
-    }
-  }, [dashboardId, setStoredDraft, storedDraft, upsertDashboard])
-
-  const handleDiscard = useCallback(() => {
-    exitEditMode()
-  }, [exitEditMode])
-
-  // viewSnapshot equal to current dashboard → safe resume; otherwise the
-  // dashboard changed externally and we surface a conflict prompt.
-  const resumeBanner = useMemo<'none' | 'resume' | 'conflict'>(() => {
-    if (mode !== 'view' || !dashboard || !storedDraft) return 'none'
-    return equals(DashboardSchema, storedDraft.viewSnapshot, dashboard) ? 'resume' : 'conflict'
-  }, [dashboard, mode, storedDraft])
-
-  const resumeEditing = useCallback(() => {
-    if (!storedDraft) return
-    setMode('edit')
-    setSelectedTileId(storedDraft.draft.tiles[0]?.id ?? null)
-  }, [storedDraft])
+  // Delete flow
+  const [deleteTarget, setDeleteTarget] = useState<DashboardDeleteTarget | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const requestDeleteDashboard = useCallback(() => {
     if (!dashboard) return
@@ -247,224 +111,16 @@ const DashboardDetail = () => {
 
   const handleConfirmDelete = useCallback(async () => {
     if (!dashboard || !deleteTarget) return
-    setSavingDashboard(true)
+    setDeleting(true)
     try {
       await deleteDashboard(deleteTarget.dashboardId)
       setDeleteTarget(null)
       navigate('/dashboards', { replace: true })
     } catch (err) {
       toastRPCError(err, 'Failed to delete dashboard')
-      setSavingDashboard(false)
+      setDeleting(false)
     }
   }, [dashboard, deleteDashboard, deleteTarget, navigate])
-
-  const handleLayoutsChange = useCallback(
-    (layouts: DashboardLayouts) => {
-      if (mode !== 'edit' || !storedDraft) return
-      // Single uniform layout: write each item's geometry back as the tile's
-      // canonical grid position.
-      const items = layouts.lg
-      if (!items) return
-      let next = storedDraft.draft
-      for (const item of items) {
-        const id = item.i as string
-        if (!next.tiles.some(tile => tile.id === id)) continue
-        next = patchTile(next, id, {
-          position: create(GridPositionSchema, { x: item.x, y: item.y, w: item.w, h: item.h }),
-        })
-      }
-      setStoredDraft({ ...storedDraft, draft: next })
-    },
-    [mode, setStoredDraft, storedDraft],
-  )
-
-  const selectedTile = useMemo(() => {
-    if (mode !== 'edit' || !storedDraft) return null
-    return storedDraft.draft.tiles.find(tile => tile.id === selectedTileId) ?? null
-  }, [mode, selectedTileId, storedDraft])
-
-  const patchSelectedTile = useCallback(
-    (patch: Partial<DashboardTile>) => {
-      if (!storedDraft || !selectedTileId) return
-      setStoredDraft({ ...storedDraft, draft: patchTile(storedDraft.draft, selectedTileId, patch) })
-    },
-    [selectedTileId, setStoredDraft, storedDraft],
-  )
-
-  const removeSelectedTile = useCallback(() => {
-    if (!storedDraft || !selectedTileId) return
-    setStoredDraft({ ...storedDraft, draft: removeDraftTile(storedDraft.draft, selectedTileId) })
-    setSelectedTileId(null)
-  }, [selectedTileId, setStoredDraft, storedDraft])
-
-  const handlePatchTile = useCallback(
-    (tileId: string, patch: Partial<DashboardTile>) => {
-      setStoredDraft(current => (current ? { ...current, draft: patchTile(current.draft, tileId, patch) } : current))
-    },
-    [setStoredDraft],
-  )
-
-  // Selecting a tile reveals the config rail so its settings are visible even if
-  // the rail was previously collapsed.
-  const selectTile = useCallback((tileId: string) => {
-    setSelectedTileId(tileId)
-    setRailCollapsed(false)
-  }, [])
-
-  const highlightTimerRef = useRef<number | null>(null)
-  const focusNewTile = useCallback(
-    (tileId: string) => {
-      selectTile(tileId)
-      setHighlightTileId(tileId)
-      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-      highlightTimerRef.current = window.setTimeout(
-        () => setHighlightTileId(current => (current === tileId ? null : current)),
-        1200,
-      )
-    },
-    [selectTile],
-  )
-
-  useEffect(
-    () => () => {
-      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-    },
-    [],
-  )
-
-  const duplicateTile = useCallback(
-    (tile: DashboardTile) => {
-      if (!storedDraft) return
-      const nextDraft = appendDraftTile(storedDraft.draft, buildDuplicateTileInput(tile))
-      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
-      setStoredDraft({ ...storedDraft, draft: nextDraft })
-      if (newId) focusNewTile(newId)
-    },
-    [focusNewTile, setStoredDraft, storedDraft],
-  )
-
-  const duplicateSelectedTile = useCallback(() => {
-    if (selectedTile) duplicateTile(selectedTile)
-  }, [duplicateTile, selectedTile])
-
-  const pageActions = useMemo(
-    () =>
-      dashboard ? (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <DateRangePicker
-            value={globalTimeRange}
-            onChange={handleGlobalTimeRangeChange}
-            presets={INSIGHTS_PRESETS}
-            allowUnset
-            unsetLabel="Select time"
-          />
-          <OptionChip
-            label="granularity"
-            icon={Clock}
-            options={GLOBAL_DASHBOARD_GRANULARITIES}
-            value={globalGranularity}
-            onChange={setGlobalGranularity}
-            isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
-          />
-          {mode === 'view' ? (
-            <Button size="sm" variant="outline" onClick={() => enterEditMode()}>
-              <Edit3 className="size-4" />
-              Edit
-            </Button>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
-              <MoreHorizontal className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem variant="destructive" onClick={requestDeleteDashboard} disabled={savingDashboard}>
-                <Trash2 className="size-4" />
-                Delete dashboard
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ) : null,
-    [
-      dashboard,
-      enterEditMode,
-      globalGranularity,
-      globalTimeRange,
-      handleGlobalTimeRangeChange,
-      mode,
-      requestDeleteDashboard,
-      savingDashboard,
-    ],
-  )
-
-  const handleSelectTemplate = useCallback(
-    (template: { build: () => Parameters<typeof appendDraftTile>[1] }) => {
-      if (!storedDraft) return
-      const tileInput = template.build()
-      const nextDraft = appendDraftTile(storedDraft.draft, tileInput)
-      const newId = nextDraft.tiles[nextDraft.tiles.length - 1]?.id
-      setStoredDraft({ ...storedDraft, draft: nextDraft })
-      setShowPicker(false)
-      if (newId) focusNewTile(newId)
-    },
-    [focusNewTile, setStoredDraft, storedDraft],
-  )
-
-  const pageHeader = useMemo(() => {
-    const editing = mode === 'edit'
-    const meta = editing ? effectiveDashboard : dashboard
-    return (
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1 space-y-3">
-          {editing ? (
-            <InlineEditableText
-              value={meta?.displayName ?? ''}
-              onChange={next => patchDraftMeta({ displayName: next })}
-              placeholder={UNTITLED_DASHBOARD_NAME}
-              autoFocus={autoFocusName}
-              className="min-h-12 flex-1 text-3xl font-medium tracking-tight outline-hidden"
-            />
-          ) : (
-            <h1 className="min-h-12 text-3xl font-medium tracking-tight">
-              {dashboard?.displayName || UNTITLED_DASHBOARD_NAME}
-            </h1>
-          )}
-          {editing ? (
-            <InlineEditableText
-              value={meta?.description ?? ''}
-              onChange={next => patchDraftMeta({ description: next })}
-              placeholder="Add a short description for what this dashboard tracks"
-              multiline
-              className="min-h-8 max-w-3xl text-sm text-muted-foreground outline-hidden"
-            />
-          ) : dashboard?.description ? (
-            <p className="min-h-8 max-w-3xl text-sm text-muted-foreground">{dashboard.description}</p>
-          ) : null}
-        </div>
-        <div className="shrink-0">{pageActions}</div>
-      </div>
-    )
-  }, [autoFocusName, dashboard, effectiveDashboard, mode, pageActions, patchDraftMeta])
-
-  const handleEscapeDeselect = useCallback(() => {
-    // Esc closes the inline add-tile picker first if it's open; otherwise it
-    // clears the current tile selection.
-    if (showPicker) {
-      setShowPicker(false)
-      return
-    }
-    setSelectedTileId(null)
-  }, [showPicker])
-
-  const openPicker = useCallback(() => setShowPicker(true), [])
-
-  useEditorShortcuts({
-    active: mode === 'edit',
-    dirty: dirtyCount > 0,
-    onSave: handleSave,
-    onDeselect: handleEscapeDeselect,
-    onAdd: openPicker,
-  })
 
   if (!project) return <NoProject title="Dashboards" icon={LayoutGrid} />
 
@@ -492,91 +148,37 @@ const DashboardDetail = () => {
     )
   }
 
+  const header = (
+    <DashboardHeader
+      dashboard={dashboard}
+      editing={editor.mode === 'edit'}
+      meta={editor.effectiveDashboard}
+      autoFocusName={editor.autoFocusName}
+      onPatchMeta={editor.patchDraftMeta}
+      globalTimeRange={globalTimeRange}
+      globalGranularity={globalGranularity}
+      onTimeRangeChange={handleGlobalTimeRangeChange}
+      onGranularityChange={setGlobalGranularity}
+      onEdit={() => editor.enterEditMode()}
+      onRequestDelete={requestDeleteDashboard}
+      deleting={deleting}
+      shareId={dashboard.shareId}
+      sharing={sharing}
+      onTogglePublic={handleTogglePublic}
+    />
+  )
+
   return (
-    <Page title={dashboard.displayName} description={dashboard.description} header={pageHeader}>
-      <div className="space-y-6">
-        {mode === 'edit' ? (
-          <EditBar dirtyCount={dirtyCount} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
-        ) : null}
-        {resumeBanner !== 'none' && storedDraft ? (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm">
-            <div className="min-w-0">
-              <span className="font-medium text-amber-900">
-                {resumeBanner === 'resume' ? 'Resume editing' : 'Dashboard changed since you started'}
-              </span>
-              <span className="ml-2 text-amber-700">started {formatRelative(storedDraft.startedAt)}</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={handleDiscard}>
-                Discard
-              </Button>
-              <Button size="sm" onClick={resumeEditing}>
-                {resumeBanner === 'resume' ? 'Resume' : 'Resume anyway'}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        {deleteTarget ? (
-          <DashboardDeleteConfirmation
-            target={deleteTarget}
-            deleting={savingDashboard}
-            onCancel={() => setDeleteTarget(null)}
-            onConfirm={handleConfirmDelete}
-          />
-        ) : null}
-
-        {mode === 'view' && (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
-          <DashboardEmptyState title="No tiles yet" description="Click Edit to start adding tiles." />
-        ) : (
-          <div className="flex min-h-0 gap-4">
-            <div className="min-w-0 flex-1 space-y-4">
-              {(effectiveDashboard?.tiles.length ?? 0) > 0 ? (
-                <DashboardGrid
-                  tiles={effectiveDashboard?.tiles ?? []}
-                  mode={mode}
-                  selectedTileId={selectedTileId}
-                  highlightTileId={highlightTileId}
-                  globalTimeRange={globalTimeRange}
-                  globalGranularity={tileGranularityOverride}
-                  onLayoutsChange={handleLayoutsChange}
-                  onSelectTile={mode === 'edit' ? selectTile : undefined}
-                  onPatchTile={mode === 'edit' ? handlePatchTile : undefined}
-                  onDuplicateTile={mode === 'edit' ? duplicateTile : undefined}
-                />
-              ) : null}
-              {mode === 'edit' ? (
-                (effectiveDashboard?.tiles.length ?? 0) === 0 ? (
-                  <InlineTemplatePicker onSelect={handleSelectTemplate} />
-                ) : showPicker ? (
-                  <InlineTemplatePicker onSelect={handleSelectTemplate} onCancel={() => setShowPicker(false)} />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowPicker(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/40 border-dashed py-6 text-primary text-sm transition-colors hover:bg-primary/5"
-                  >
-                    <Plus className="size-4" />
-                    Add tile
-                  </button>
-                )
-              ) : null}
-            </div>
-            {mode === 'edit' && (effectiveDashboard?.tiles.length ?? 0) > 0 ? (
-              <TileConfigPanel
-                key={selectedTile?.id ?? '__none__'}
-                tile={selectedTile}
-                collapsed={railCollapsed}
-                onToggleCollapse={() => setRailCollapsed(value => !value)}
-                onClose={() => setSelectedTileId(null)}
-                onPatch={patchSelectedTile}
-                onDelete={removeSelectedTile}
-                onDuplicate={duplicateSelectedTile}
-              />
-            ) : null}
-          </div>
-        )}
-      </div>
+    <Page title={dashboard.displayName} description={dashboard.description} header={header}>
+      <DashboardCanvas
+        editor={editor}
+        globalTimeRange={globalTimeRange}
+        tileGranularityOverride={tileGranularityOverride}
+        deleteTarget={deleteTarget}
+        deleting={deleting}
+        onCancelDelete={() => setDeleteTarget(null)}
+        onConfirmDelete={handleConfirmDelete}
+      />
     </Page>
   )
 }
