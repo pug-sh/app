@@ -110,10 +110,15 @@ export const SankeyChart = ({
           data={chartData}
           node={renderNode}
           link={renderLink}
-          nodePadding={24}
+          nodePadding={18}
           nodeWidth={12}
           margin={{ top: 16, right: 120, bottom: 16, left: 120 }}
-          sort={false}
+          // align="left" pins each node to its longest-path depth, which in the
+          // step-indexed graph equals its server-assigned step. The default
+          // "justify" instead yanks every terminal node (a session that ended) to
+          // the last column, producing the long arcs the old single-node-per-event
+          // model suffered. Sort (default true) relaxes node order to cut crossings.
+          align="left"
         >
           <Tooltip
             content={({ active, payload }) => {

@@ -118,73 +118,81 @@ export const buildUserFlowQuery = (config: UserFlowConfig) => {
   })
 }
 
-export type SankeyChartData = {
-  nodes: { name: string; color: string }[]
-  links: { source: number; target: number; value: number; sourceName: string; targetName: string }[]
+// A node carries stepDepth (the 0-based Sankey column from the server) so the
+// chart pins columns to actual flow steps instead of recomputing them from the
+// graph. The server emits a layered DAG (every edge spans depth d → d+1), so no
+// cycle-breaking is needed — the same event at two steps is two distinct nodes.
+export type SankeyNodeDatum = {
+  id: string
+  name: string
+  stepDepth: number
+  isOthers: boolean
 }
 
-type SankeyLink = SankeyChartData['links'][number]
+export type SankeyLinkDatum = {
+  source: number
+  target: number
+  value: number
+  sourceName: string
+  targetName: string
+}
 
-// Recharts Sankey layout recurses through target nodes to assign depth and crashes on cycles
-// (common in user flows: page_view → click → page_view). Keep highest-value forward links first.
-const breakCyclesForSankey = (links: SankeyLink[]) => {
+export type SankeyChartData = {
+  nodes: SankeyNodeDatum[]
+  links: SankeyLinkDatum[]
+}
+
+// The overflow bucket is identified by is_others (never by id/label string).
+const nodeLabel = (node: UserFlowNode) => (node.isOthers ? 'Others' : node.label || node.id)
+
+// recharts' Sankey assigns node depth by recursing through every target with no
+// cycle detection, so one back-edge triggers infinite recursion ("too much
+// recursion"). The step-indexed server response is a strict DAG (every edge goes
+// depth d → d+1), so this keeps every link — a no-op on correct data. It remains
+// as a defensive guard against a stale/pre-migration server still emitting the
+// old page-collapsed, cyclic graph, so the chart degrades instead of crashing.
+const guardAcyclic = (links: SankeyLinkDatum[]): SankeyLinkDatum[] => {
   const adj = new Map<number, number[]>()
-  const kept: SankeyLink[] = []
-
   const canReach = (from: number, to: number) => {
-    const visited = new Set<number>()
+    const seen = new Set<number>()
     const stack = [from]
     while (stack.length) {
-      const node = stack.pop()
-      if (node === undefined) continue
-      if (node === to) return true
-      if (visited.has(node)) continue
-      visited.add(node)
-      for (const next of adj.get(node) ?? []) stack.push(next)
+      const n = stack.pop()
+      if (n === undefined) continue
+      if (n === to) return true
+      if (seen.has(n)) continue
+      seen.add(n)
+      for (const next of adj.get(n) ?? []) stack.push(next)
     }
     return false
   }
-
+  const kept: SankeyLinkDatum[] = []
   for (const link of [...links].sort((a, b) => b.value - a.value)) {
     if (link.source === link.target) continue
     if (canReach(link.target, link.source)) continue
     kept.push(link)
-    const outgoing = adj.get(link.source)
-    if (outgoing) outgoing.push(link.target)
+    const out = adj.get(link.source)
+    if (out) out.push(link.target)
     else adj.set(link.source, [link.target])
   }
-
   return kept
 }
-
-// Nodes no longer carry a display label — render the id, except the synthetic
-// overflow bucket, which is identified by the is_others flag (not by id string).
-const nodeLabel = (node: UserFlowNode) => (node.isOthers ? 'Others' : node.id)
 
 export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
   const nodeIndex = new Map<string, number>()
   const nodes = result.nodes.map((node, index) => {
     nodeIndex.set(node.id, index)
-    return { name: nodeLabel(node), color: '' }
+    return { id: node.id, name: nodeLabel(node), stepDepth: node.depth, isOthers: node.isOthers }
   })
 
-  const rawLinks = result.links.flatMap(link => {
+  const links = result.links.flatMap(link => {
     const source = nodeIndex.get(link.source)
     const target = nodeIndex.get(link.target)
     if (source === undefined || target === undefined) return []
     const value = Number(link.value)
     if (!Number.isFinite(value) || value <= 0) return []
-    return [
-      {
-        source,
-        target,
-        value,
-        sourceName: result.nodes[source] ? nodeLabel(result.nodes[source]) : link.source,
-        targetName: result.nodes[target] ? nodeLabel(result.nodes[target]) : link.target,
-      },
-    ]
+    return [{ source, target, value, sourceName: nodes[source].name, targetName: nodes[target].name }]
   })
 
-  const links = breakCyclesForSankey(rawLinks)
-  return { nodes, links }
+  return { nodes, links: guardAcyclic(links) }
 }
