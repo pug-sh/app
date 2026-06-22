@@ -7,6 +7,7 @@ import {
   type RetentionSeries,
   TopKQuery_Dimension,
   type TopKRow,
+  type UserFlowResult,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
@@ -21,6 +22,7 @@ import {
   type FunnelSeriesData,
   LineChart,
   RetentionCohort,
+  SankeyChart,
   SummaryStats,
   TopKList,
 } from './charts'
@@ -34,6 +36,7 @@ export const InsightsContent = memo(function InsightsContent({
   resultSeriesCount,
   isRetention,
   isTrends,
+  isUserFlow,
   hasIncompleteNumericAggregation,
   chartData,
   seriesNames,
@@ -47,6 +50,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  userFlowResult,
   logScale,
   zeroBaseline,
   hideLegend,
@@ -66,6 +70,7 @@ export const InsightsContent = memo(function InsightsContent({
   resultSeriesCount: number
   isRetention: boolean
   isTrends: boolean
+  isUserFlow: boolean
   hasIncompleteNumericAggregation: boolean
   chartData: ChartPoint[]
   seriesNames: string[]
@@ -79,6 +84,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  userFlowResult?: UserFlowResult
   logScale?: boolean
   zeroBaseline?: boolean
   hideLegend?: boolean
@@ -98,6 +104,8 @@ export const InsightsContent = memo(function InsightsContent({
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
 
+  const showUserFlow = isUserFlow || resultCase === 'userFlow'
+
   const renderLoadingEmptyState = () => (
     <div
       className={
@@ -108,7 +116,13 @@ export const InsightsContent = memo(function InsightsContent({
     >
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
-      <p className="text-xs">{isTopK ? 'Loading ranking' : 'Pick an event above to start'}</p>
+      <p className="text-xs">
+        {showUserFlow
+          ? 'Adjust the query above to explore transitions'
+          : isTopK
+            ? 'Loading ranking'
+            : 'Pick an event above to start'}
+      </p>
     </div>
   )
 
@@ -120,7 +134,9 @@ export const InsightsContent = memo(function InsightsContent({
           : 'flex h-48 items-center justify-center text-muted-foreground'
       }
     >
-      <p className="text-sm">No events recorded in this period</p>
+      <p className="text-sm">
+        {showUserFlow ? 'No transitions recorded in this period' : 'No events recorded in this period'}
+      </p>
     </div>
   )
 
@@ -208,6 +224,12 @@ export const InsightsContent = memo(function InsightsContent({
     }
 
     return funnelBody
+  }
+
+  const renderUserFlowContent = () => {
+    if (!userFlowResult) return renderLoadingEmptyState()
+    if (userFlowResult.links.length === 0) return renderNoEvents()
+    return <SankeyChart result={userFlowResult} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
   }
 
   const renderTopKContent = () => {
@@ -298,6 +320,7 @@ export const InsightsContent = memo(function InsightsContent({
     )
   }
 
+  if (showUserFlow) return renderUserFlowContent()
   if (isTopK) return renderTopKContent()
   if (isRetention) return renderRetentionContent()
   if (!isTrends) return renderFunnelContent()

@@ -6,12 +6,13 @@ import {
   type VisualizationOptions,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
-import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
+import { DASHBOARD_TILE_VIEW_MODES, USER_FLOW_TILE_VIEW_MODES } from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'
 
@@ -30,6 +31,8 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
   const setViz = (next: Partial<VisualizationOptions>) =>
     onPatch({ visualization: { ...create(VisualizationOptionsSchema, tile.visualization), ...next } })
 
+  const isUserFlow = tile.content.case === 'insight' && tile.content.value.spec?.insightType === InsightType.USER_FLOW
+  const viewModeOptions = isUserFlow ? USER_FLOW_TILE_VIEW_MODES : DASHBOARD_TILE_VIEW_MODES
   const { showViewMode, showKpiOptions } = tileOptionApplicability(tile)
 
   return (
@@ -38,7 +41,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
         <Section label="View mode">
           <OptionChip
             label="view"
-            options={DASHBOARD_TILE_VIEW_MODES}
+            options={viewModeOptions}
             value={tile.viewMode}
             onChange={next => onPatch({ viewMode: next })}
           />

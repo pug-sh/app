@@ -10,7 +10,10 @@ export const DASHBOARD_TILE_VIEW_MODES = [
   { label: 'Bar (grouped)', value: DashboardTileViewMode.BAR_GROUPED },
   { label: 'Bar (stacked)', value: DashboardTileViewMode.BAR_STACKED },
   { label: 'Table', value: DashboardTileViewMode.TABLE },
+  { label: 'Sankey', value: DashboardTileViewMode.SANKEY },
 ] as const
+
+export const USER_FLOW_TILE_VIEW_MODES = [{ label: 'Sankey', value: DashboardTileViewMode.SANKEY }] as const
 
 export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | undefined): DashboardTileViewMode => {
   switch (mode) {
@@ -19,6 +22,8 @@ export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | un
     case DashboardTileViewMode.BAR_GROUPED:
     case DashboardTileViewMode.BAR_STACKED:
     case DashboardTileViewMode.TABLE:
+      return mode
+    case DashboardTileViewMode.SANKEY:
       return mode
     default:
       return DEFAULT_DASHBOARD_TILE_VIEW_MODE
@@ -35,6 +40,8 @@ export const dashboardTileViewModeToViewMode = (mode: DashboardTileViewMode | un
       return 'bar-stacked'
     case DashboardTileViewMode.TABLE:
       return 'table'
+    case DashboardTileViewMode.SANKEY:
+      return 'sankey'
     case DashboardTileViewMode.LINE:
     default:
       return 'line'

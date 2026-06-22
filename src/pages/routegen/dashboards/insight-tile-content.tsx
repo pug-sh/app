@@ -18,10 +18,25 @@ import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { floorToZoneBucket } from '@/lib/timezone'
 import { topKSpecIncompleteReason } from '../insights/top-k'
+import { isUserFlowConfigValid, parseUserFlowConfig } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
 import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
+
+// User-flow and top-k specs carry no events: user-flow runs once its flow config is
+// valid, top-k as soon as the ranking config is complete. Everything else needs at
+// least one event and (for trends) a resolved numeric-aggregation property.
+const queryReady = (query: QueryRequest) => {
+  const spec = query.spec
+  if (spec?.insightType === InsightType.USER_FLOW) {
+    return isUserFlowConfigValid(parseUserFlowConfig(spec.userFlow))
+  }
+  if (spec?.insightType === InsightType.TOP_K) {
+    return !topKSpecIncompleteReason(spec)
+  }
+  return (spec?.events.length ?? 0) > 0 && !specHasIncompleteNumericAggregation(spec)
+}
 
 export const DashboardInsightContent = ({
   tile,
@@ -94,15 +109,6 @@ export const DashboardInsightContent = ({
     projectId,
     query: effectiveQuery,
   })
-  // Top-k specs carry no events, so they are runnable as soon as the ranking
-  // config is complete; everything else needs at least one event and (for TRENDS)
-  // a resolved numeric-aggregation property.
-  const isTopK = effectiveQuery?.spec?.insightType === InsightType.TOP_K
-  const topKIncomplete = isTopK ? topKSpecIncompleteReason(effectiveQuery?.spec) : null
-  const queryReady = isTopK
-    ? !topKIncomplete
-    : (effectiveQuery?.spec?.events.length ?? 0) > 0 && !specHasIncompleteNumericAggregation(effectiveQuery?.spec)
-
   const { data, error, retry } = useDebouncedQuery(
     queryKey,
     async () => {
@@ -110,7 +116,7 @@ export const DashboardInsightContent = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && queryReady, debounceMs: 0 },
+    { enabled: !!effectiveQuery && !!headers && queryReady(effectiveQuery), debounceMs: 0 },
   )
 
   const comparisonQuery = useMemo(

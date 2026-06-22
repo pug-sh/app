@@ -52,6 +52,8 @@ import { InsightsRowAggregationControls, OptionChip } from './controls'
 import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
+import { buildUserFlowQuery, DEFAULT_USER_FLOW_CONFIG, isUserFlowConfigValid, type UserFlowConfig } from './user-flow'
+import { UserFlowControls } from './user-flow-controls'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
   if (initialInsightType !== undefined && INSIGHT_TYPE_VALUES.includes(initialInsightType)) {
@@ -109,6 +111,9 @@ const Insights = () => {
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
   const [viewMode, setViewMode] = useState<ViewMode>('line')
+  const [userFlowConfig, setUserFlowConfig] = useState<UserFlowConfig>(
+    () => initialFilterState.userFlowConfig ?? DEFAULT_USER_FLOW_CONFIG,
+  )
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
@@ -123,6 +128,8 @@ const Insights = () => {
   const removeBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => prev.filter(p => p !== prop))
   }, [])
+
+  const isUserFlow = insightType === InsightType.USER_FLOW
 
   // Keep range and granularity backend-valid: cap a range too wide for any granularity to the
   // supported max, then bump a too-fine granularity (e.g. Hour over 30 days) to the finest that
@@ -150,7 +157,11 @@ const Insights = () => {
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
-    selectedEventKinds: eventFilters.entries.map(e => e.kind),
+    selectedEventKinds: isUserFlow
+      ? userFlowConfig.scope.kind
+        ? [userFlowConfig.scope.kind]
+        : []
+      : eventFilters.entries.map(e => e.kind),
   })
 
   useEffect(() => {
@@ -163,6 +174,7 @@ const Insights = () => {
   const isRetention = insightType === InsightType.RETENTION
   const isTopK = insightType === InsightType.TOP_K
   const isTimeSeriesInsight = isTrends || isRetention
+  const userFlowReady = isUserFlowConfigValid(userFlowConfig)
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = eventEntryCap(insightType)
 
@@ -172,9 +184,21 @@ const Insights = () => {
       granularity,
       timeRange,
       breakdowns,
+      userFlowConfig: isUserFlow ? userFlowConfig : undefined,
       topK: isTopK ? topK : undefined,
     })
-  }, [eventFilters.entries, propFilters, insightType, granularity, timeRange, breakdowns, isTopK, topK])
+  }, [
+    eventFilters.entries,
+    propFilters,
+    insightType,
+    granularity,
+    timeRange,
+    breakdowns,
+    isUserFlow,
+    userFlowConfig,
+    isTopK,
+    topK,
+  ])
 
   const hasIncompleteNumericAggregation = useMemo(
     () =>
@@ -192,6 +216,7 @@ const Insights = () => {
     granularity,
     propFilters,
     breakdowns,
+    userFlowConfig,
     topK: isTopK ? topK : undefined,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
@@ -219,25 +244,28 @@ const Insights = () => {
           }
         : {
             insightType,
-            events: validEntries.map(entry => ({
-              event: {
-                kind: entry.kind,
-                filters: toProtoFilters(entry.filters),
-              },
-              aggregation:
-                insightType === InsightType.TRENDS
-                  ? (entry.aggregation ?? AggregationType.TOTAL)
-                  : AggregationType.TOTAL,
-              aggregationProperty: getAggregationProperty({
-                insightType,
-                aggregation: entry.aggregation,
-                aggregationProperty: entry.aggregationProperty,
-              }),
-            })),
+            events: isUserFlow
+              ? []
+              : validEntries.map(entry => ({
+                  event: {
+                    kind: entry.kind,
+                    filters: toProtoFilters(entry.filters),
+                  },
+                  aggregation:
+                    insightType === InsightType.TRENDS
+                      ? (entry.aggregation ?? AggregationType.TOTAL)
+                      : AggregationType.TOTAL,
+                  aggregationProperty: getAggregationProperty({
+                    insightType,
+                    aggregation: entry.aggregation,
+                    aggregationProperty: entry.aggregationProperty,
+                  }),
+                })),
+            userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
-            breakdowns: breakdowns.map(property => ({ property })),
-            breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
+            breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
+            breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
           }
       const resp = await insightsRPC.query(
         {
@@ -259,7 +287,11 @@ const Insights = () => {
       enabled:
         !!project &&
         !!timeRange &&
-        (isTopK ? !topKIncomplete : validEntries.length > 0 && !hasIncompleteNumericAggregation),
+        (isUserFlow
+          ? userFlowReady
+          : isTopK
+            ? !topKIncomplete
+            : validEntries.length > 0 && !hasIncompleteNumericAggregation),
     },
   )
 
@@ -270,6 +302,7 @@ const Insights = () => {
     result.case !== 'trends' &&
     result.case !== 'funnel' &&
     result.case !== 'retention' &&
+    result.case !== 'userFlow' &&
     result.case !== 'topK'
   let resultSeriesCount = 0
   if (result.case === 'trends' || result.case === 'funnel' || result.case === 'retention') {
@@ -369,6 +402,7 @@ const Insights = () => {
     [eventFilters.entries],
   )
   const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
+  const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
 
   // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
@@ -429,44 +463,56 @@ const Insights = () => {
         </div>
 
         <div className="space-y-1">
-          <EventFilterBar
-            filtersAtom={eventFilters.filtersAtom}
-            events={schema?.events}
-            schema={schema}
-            schemaError={schemaError}
-            showLetters={!isTopK}
-            seriesColors={eventFilterColors}
-            getEventColor={getEventColorDot}
-            renderRowExtra={renderRowExtra}
-            maxEvents={maxEvents}
-          />
-          {isRetention && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Tooltip>
-                <TooltipTrigger className="inline-flex items-center cursor-help">
-                  <CircleHelp className="w-3.5 h-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                  Use up to two events: A defines the cohort entry event, B defines the return event. If B is omitted, A
-                  is used for both cohort and return.
-                </TooltipContent>
-              </Tooltip>
-              <span>Retention supports up to 2 events (A = cohort, B = return).</span>
-            </div>
-          )}
-          {isTopK && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <Tooltip>
-                <TooltipTrigger className="inline-flex items-center cursor-help">
-                  <CircleHelp className="w-3.5 h-3.5" />
-                </TooltipTrigger>
-                <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                  Optionally scope the ranking to a single event (with per-event filters). Without a scope, all events
-                  participate.
-                </TooltipContent>
-              </Tooltip>
-              <span>Event scope is optional — leave empty to rank across all events.</span>
-            </div>
+          {isUserFlow ? (
+            <UserFlowControls
+              config={userFlowConfig}
+              onChange={setUserFlowConfig}
+              schema={schema}
+              schemaError={schemaError}
+              events={schema?.events}
+            />
+          ) : (
+            <>
+              <EventFilterBar
+                filtersAtom={eventFilters.filtersAtom}
+                events={schema?.events}
+                schema={schema}
+                schemaError={schemaError}
+                showLetters={!isTopK}
+                seriesColors={eventFilterColors}
+                getEventColor={getEventColorDot}
+                renderRowExtra={renderRowExtra}
+                maxEvents={maxEvents}
+              />
+              {isRetention && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center cursor-help">
+                      <CircleHelp className="w-3.5 h-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                      Use up to two events: A defines the cohort entry event, B defines the return event. If B is
+                      omitted, A is used for both cohort and return.
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>Retention supports up to 2 events (A = cohort, B = return).</span>
+                </div>
+              )}
+              {isTopK && (
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Tooltip>
+                    <TooltipTrigger className="inline-flex items-center cursor-help">
+                      <CircleHelp className="w-3.5 h-3.5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
+                      Optionally scope the ranking to a single event (with per-event filters). Without a scope, all
+                      events participate.
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>Event scope is optional — leave empty to rank across all events.</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -480,8 +526,8 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {/* Breakdowns are rejected for top-k specs — the dimension is the breakdown. */}
-          {!isTopK && (
+          {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
+          {!isTopK && !isUserFlow && (
             <>
               {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
               {breakdowns.map(prop => (
@@ -511,6 +557,7 @@ const Insights = () => {
         resultSeriesCount={resultSeriesCount}
         isRetention={isRetention}
         isTrends={isTrends}
+        isUserFlow={isUserFlow}
         hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
         chartData={chartData}
         seriesNames={seriesNames}
@@ -524,6 +571,7 @@ const Insights = () => {
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
+        userFlowResult={userFlowResult}
         isTopK={isTopK}
         topKRows={topKRows}
         topKDimension={topK.dimension}

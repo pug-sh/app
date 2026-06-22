@@ -16,6 +16,7 @@ import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '../../insights/constants'
 import { InsightsRowAggregationControls, OptionChip } from '../../insights/controls'
+import { UserFlowControls } from '../../insights/user-flow-controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { InsightFields } from './insight-fields'
 import { Section } from './section'
@@ -53,6 +54,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const eventFilters = useEventFilters(defaults.eventEntries)
   const filterState = useFilterState(defaults.propFilters)
   const [breakdowns, setBreakdowns] = useState<string[]>(defaults.breakdowns)
+  const [userFlowConfig, setUserFlowConfig] = useState(defaults.userFlowConfig)
   const [topK, setTopK] = useState(defaults.topK)
 
   // Truncate leftover event rows when switching to an insight type with a smaller
@@ -80,18 +82,23 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       validEntries: eventFilters.validEntries,
       propFilters: filterState.propFilters,
       breakdowns,
+      userFlowConfig,
       topK,
     })
-    onPatch({
+    const patch: Partial<DashboardTile> = {
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
-    })
+    }
+    if (insightType === InsightType.USER_FLOW && tile.viewMode !== DashboardTileViewMode.SANKEY) {
+      patch.viewMode = DashboardTileViewMode.SANKEY
+    }
+    onPatch(patch)
     // Exclude `tile` and `onPatch`: this fires only on editor-state changes, not
     // on parent re-renders that produce a new tile object identity. In-place
     // mutation of the same tile from outside the panel will not re-seed local
     // editor state — DataTab is keyed by tile.id so cross-tile switches do
     // re-seed cleanly.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
-  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, topK])
+  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, userFlowConfig, topK])
 
   const addBreakdown = (property: string) => {
     setBreakdowns(current => (current.includes(property) || current.length >= 5 ? current : [...current, property]))
@@ -137,6 +144,15 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       </Section>
 
       <Section label={insightType === InsightType.TOP_K ? 'Ranking' : 'Events'}>
+        {insightType === InsightType.USER_FLOW ? (
+          <UserFlowControls
+            config={userFlowConfig}
+            onChange={setUserFlowConfig}
+            schema={schema}
+            schemaError={schemaError}
+            events={schema?.events}
+          />
+        ) : null}
         <InsightFields
           insightType={insightType}
           schema={schema}

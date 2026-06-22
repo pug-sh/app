@@ -36,6 +36,7 @@ export const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
   { label: 'Funnel', value: InsightType.FUNNEL },
   { label: 'Retention', value: InsightType.RETENTION },
+  { label: 'User flow', value: InsightType.USER_FLOW },
   { label: 'Top K', value: InsightType.TOP_K },
 ] as const
 
@@ -50,7 +51,9 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
   return undefined
 }
 
-export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
+export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table' | 'sankey'
+// `sankey` is persisted on dashboard tiles (DashboardTileViewMode.SANKEY). User-flow charts render
+// from `resultCase === 'userFlow'`, not from viewMode.
 
 export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
@@ -66,6 +69,7 @@ export const EMPTY_ARRAY: never[] = []
 export const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
+  if (insightType === InsightType.USER_FLOW) return 'Explore how sessions move between events'
   if (insightType === InsightType.TOP_K) return 'Rank top events, property values, or users'
   return 'Analyze step-by-step conversion'
 }

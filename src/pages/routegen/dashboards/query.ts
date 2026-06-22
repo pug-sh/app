@@ -1,5 +1,4 @@
 import { create } from '@bufbuild/protobuf'
-import type { PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { TimeRange as ProtoTimeRange } from '@/api/genproto/common/v1/time_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -11,13 +10,19 @@ import {
   InsightType,
   type QueryRequest,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { type ActiveFilter, FILTER_OPERATORS } from '@/components/event-filters/filter-model'
-import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
+import { fromProtoFilter, toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
 import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
+import {
+  buildUserFlowQuery,
+  DEFAULT_USER_FLOW_CONFIG,
+  parseUserFlowConfig,
+  type UserFlowConfig,
+} from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
@@ -27,6 +32,7 @@ export type InsightEditorState = {
   eventEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
+  userFlowConfig: UserFlowConfig
   topK: TopKState
 }
 
@@ -35,25 +41,6 @@ export const getProtoRange = (range?: ProtoTimeRange) => {
   const to = tsToDate(range?.to)
   if (!from || !to) return undefined
   return { from, to }
-}
-
-export const fromProtoFilter = (filter: PropertyFilter): ActiveFilter => {
-  const property = filter.property ?? ''
-  const source = filter.source
-  const operator = filter.operator
-  const arity = FILTER_OPERATORS.find(option => option.value === operator)?.arity
-  const values = filter.values ?? []
-
-  if (arity === 'none') {
-    return { property, source, operator, kind: 'presence' }
-  }
-  if (arity === 'range') {
-    return { property, source, operator, kind: 'range', min: values[0] ?? '', max: values[1] ?? '' }
-  }
-  if (arity === 'list') {
-    return { property, source, operator, kind: 'multi', values }
-  }
-  return { property, source, operator, kind: 'single', value: filter.value ?? '' }
 }
 
 export const parseSpecEntries = (spec?: InsightQuerySpec) =>
@@ -93,6 +80,7 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
     spec?.insightType === InsightType.TRENDS ||
     spec?.insightType === InsightType.FUNNEL ||
     spec?.insightType === InsightType.RETENTION ||
+    spec?.insightType === InsightType.USER_FLOW ||
     spec?.insightType === InsightType.TOP_K
   ) {
     return spec.insightType
@@ -126,6 +114,7 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
     eventEntries: insightType === InsightType.TOP_K ? parseSpecScopeEntries(spec) : parseSpecEntries(spec),
     propFilters: parseSpecPropFilters(spec),
     breakdowns: parseSpecBreakdowns(spec),
+    userFlowConfig: parseUserFlowConfig(spec?.userFlow),
     topK: parseTopKFromSpec(spec),
   }
 }
@@ -135,12 +124,14 @@ export const buildInsightSpec = ({
   validEntries,
   propFilters,
   breakdowns,
+  userFlowConfig = DEFAULT_USER_FLOW_CONFIG,
   topK,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
+  userFlowConfig?: UserFlowConfig
   topK?: TopKState
 }) => {
   const filterGroups =
@@ -152,6 +143,17 @@ export const buildInsightSpec = ({
     return create(InsightQuerySpecSchema, {
       insightType,
       topK: buildTopKQuery(topK ?? DEFAULT_TOP_K, validEntries[0]),
+      filterGroups,
+      filterGroupsOperator: LogicalOperator.AND,
+    })
+  }
+
+  // User-flow specs carry no events/breakdowns either; the flow config maps onto
+  // the dedicated userFlow field.
+  if (insightType === InsightType.USER_FLOW) {
+    return create(InsightQuerySpecSchema, {
+      insightType,
+      userFlow: buildUserFlowQuery(userFlowConfig),
       filterGroups,
       filterGroupsOperator: LogicalOperator.AND,
     })
