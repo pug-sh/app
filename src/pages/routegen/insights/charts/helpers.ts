@@ -47,16 +47,25 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
   return fmtDay(d, timeZone)
 }
 
-/** Round v up to the next "nice" number, scaled by powers of 10, for clean Y-axis ticks. */
+/**
+ * Round v up to the next "nice" number, scaled by powers of 10, for clean Y-axis ticks.
+ *
+ * Steps are ≤1.5× apart so a peak just over a coarse boundary (e.g. 595) no longer rounds
+ * all the way up to the next power of ten (1000) — the old [1,2,2.5,5,10] ladder had 2×
+ * gaps, so a peak could fill as little as ~50% of the chart height. Worst-case fill is now
+ * ~67% (a peak just above a 1×10^k boundary); the 595 case rises to 600 (~99%).
+ *
+ * Every value emitted is a small integer multiple (3/4/5×) of a nice step, so recharts —
+ * which pins the domain to [0, yMax] and fits integer ticks inside — lands even gridlines
+ * exactly on yMax (e.g. 600 → 0/200/400/600). 1.5 is the finest sub-step on purpose: 1.25
+ * would yield 12.5 and fractional ticks for small integer counts.
+ */
 export const niceMax = (v: number): number => {
   if (v <= 0) return 10
   const mag = 10 ** Math.floor(Math.log10(v))
   const norm = v / mag
-  if (norm <= 1) return mag
-  if (norm <= 2) return 2 * mag
-  if (norm <= 2.5) return 2.5 * mag
-  if (norm <= 5) return 5 * mag
-  return 10 * mag
+  const step = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10].find(s => norm <= s) ?? 10
+  return step * mag
 }
 
 export const computeYMax = (data: ChartPoint[], stacked = false) => {
