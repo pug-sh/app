@@ -52,13 +52,8 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
     )
   }
 
-  if (dimension === TopKQuery_Dimension.PROPERTY) {
-    return (
-      <span className="block truncate font-mono" title={row.dimensionValue}>
-        {row.dimensionValue}
-      </span>
-    )
-  }
+  // Property and event-kind values are arbitrary human-readable strings (search
+  // terms, plan names, …) — render them in the regular font, not mono.
   return (
     <span className="block truncate" title={row.dimensionValue}>
       {row.dimensionValue}
