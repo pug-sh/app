@@ -18,7 +18,7 @@ const passwordSchema = z
   .object({
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters')
+      .min(6, 'Password must be at least 6 characters')
       .max(72, 'Password must be at most 72 characters'),
     confirm: z.string().min(1, 'Please confirm your password'),
   })
