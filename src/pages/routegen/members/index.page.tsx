@@ -2,8 +2,9 @@ import { useAtomValue } from 'jotai'
 import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { InvitationStatus, type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
+import { Can, useCan } from '@/auth/can'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
@@ -13,8 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
-
-const INVITE_STATUS_ACCEPTED = 2
 
 const initials = (name: string) =>
   name
@@ -26,6 +25,7 @@ const initials = (name: string) =>
 const Members = () => {
   const org = useAtomValue(activeOrgAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
+  const can = useCan()
   const [members, setMembers] = useState<OrgMember[]>([])
   const [invitations, setInvitations] = useState<OrgInvitation[]>([])
   const [loading, setLoading] = useState(false)
@@ -41,9 +41,12 @@ const Members = () => {
     if (!org) return
     setLoading(true)
     setError(null)
+    // Invitations are admin-only (invitation:read) — a plain member would get
+    // PermissionDenied, so skip the call entirely instead of toasting an error.
+    const canReadInvites = can('read', 'invitation')
     const [membersResult, invitesResult] = await Promise.allSettled([
       orgsRPC.listMembers({ orgId: org.id }),
-      orgsRPC.listInvitations({ orgId: org.id }),
+      canReadInvites ? orgsRPC.listInvitations({ orgId: org.id }) : Promise.resolve(undefined),
     ])
     if (membersResult.status === 'fulfilled') {
       setMembers(membersResult.value.members)
@@ -51,7 +54,7 @@ const Members = () => {
       console.error('Failed to load members:', membersResult.reason)
     }
     if (invitesResult.status === 'fulfilled') {
-      setInvitations(invitesResult.value.invitations)
+      setInvitations(invitesResult.value?.invitations ?? [])
     } else {
       console.error('Failed to load invitations:', invitesResult.reason)
     }
@@ -63,7 +66,7 @@ const Members = () => {
       toast.error('Failed to load invitations')
     }
     setLoading(false)
-  }, [org, orgsRPC])
+  }, [org, orgsRPC, can])
 
   useEffect(() => {
     fetchData()
@@ -75,7 +78,7 @@ const Members = () => {
     setInviteRole(OrgRole.MEMBER)
   }
 
-  const pendingInvitations = invitations.filter(inv => inv.status !== INVITE_STATUS_ACCEPTED)
+  const pendingInvitations = invitations.filter(inv => inv.status !== InvitationStatus.ACCEPTED)
 
   const handleInvite = async () => {
     if (!org || !email.trim()) return
@@ -153,21 +156,23 @@ const Members = () => {
                       >
                         {m.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
                       </Badge>
-                      {confirmingRemove === m.customerId ? (
-                        <button
-                          onClick={() => handleRemove(m.customerId)}
-                          className="text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer"
-                        >
-                          Remove?
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmingRemove(m.customerId)}
-                          className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <Can action="delete" resource="member">
+                        {confirmingRemove === m.customerId ? (
+                          <button
+                            onClick={() => handleRemove(m.customerId)}
+                            className="text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer"
+                          >
+                            Remove?
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmingRemove(m.customerId)}
+                            className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </Can>
                     </div>
                   )
                 })}
@@ -175,61 +180,67 @@ const Members = () => {
             )}
 
             {/* Inline invite */}
-            {showInvite ? (
-              <div className="flex items-center gap-2 mt-1 pl-2">
-                <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
-                  <Plus className="w-3 h-3 text-muted-foreground" />
+            <Can action="create" resource="invitation">
+              {showInvite ? (
+                <div className="flex items-center gap-2 mt-1 pl-2">
+                  <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+                    <Plus className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                  <Input
+                    ref={inputRef}
+                    type="email"
+                    placeholder="colleague@company.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleInvite()
+                      if (e.key === 'Escape') closeInvite()
+                    }}
+                    className="flex-1"
+                    disabled={inviting}
+                  />
+                  <Select
+                    value={inviteRole}
+                    onValueChange={v => setInviteRole(v ?? OrgRole.MEMBER)}
+                    disabled={inviting}
+                  >
+                    <SelectTrigger className="shrink-0">
+                      <SelectValue>{v => (v === OrgRole.ADMIN ? 'Admin' : 'Member')}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
+                      <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <button
+                    onClick={handleInvite}
+                    disabled={inviting || !email.trim()}
+                    className="p-1 rounded-md hover:bg-muted text-link disabled:opacity-50 cursor-pointer"
+                  >
+                    {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    onClick={closeInvite}
+                    className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-                <Input
-                  ref={inputRef}
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleInvite()
-                    if (e.key === 'Escape') closeInvite()
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowInvite(true)
+                    setTimeout(() => inputRef.current?.focus(), 0)
                   }}
-                  className="flex-1"
-                  disabled={inviting}
-                />
-                <Select value={inviteRole} onValueChange={v => setInviteRole(v ?? OrgRole.MEMBER)} disabled={inviting}>
-                  <SelectTrigger className="shrink-0">
-                    <SelectValue>{v => (v === OrgRole.ADMIN ? 'Admin' : 'Member')}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
-                    <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-                <button
-                  onClick={handleInvite}
-                  disabled={inviting || !email.trim()}
-                  className="p-1 rounded-md hover:bg-muted text-link disabled:opacity-50 cursor-pointer"
+                  className="flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
                 >
-                  {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  <div className="w-7 h-7 rounded-full border border-dashed border-border flex items-center justify-center shrink-0">
+                    <Plus className="w-3 h-3" />
+                  </div>
+                  Invite member
                 </button>
-                <button
-                  onClick={closeInvite}
-                  className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setShowInvite(true)
-                  setTimeout(() => inputRef.current?.focus(), 0)
-                }}
-                className="flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
-              >
-                <div className="w-7 h-7 rounded-full border border-dashed border-border flex items-center justify-center shrink-0">
-                  <Plus className="w-3 h-3" />
-                </div>
-                Invite member
-              </button>
-            )}
+              )}
+            </Can>
           </section>
 
           {/* Pending invitations */}

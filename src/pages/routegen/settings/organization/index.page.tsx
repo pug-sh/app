@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
+import { Can } from '@/auth/can'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError } from '@/components/ui/field'
@@ -214,40 +215,46 @@ const Organization = () => {
 
           {/* Current org: inline-editable name + copyable id */}
           <div className="mt-4 space-y-1">
-            {renaming ? (
-              <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className="max-w-xs">
-                <Field data-invalid={!!orgForm.formState.errors.displayName}>
-                  <Input
-                    {...orgForm.register('displayName')}
-                    autoFocus
-                    maxLength={150}
-                    disabled={savingOrg}
-                    aria-label="Organization name"
-                    aria-invalid={!!orgForm.formState.errors.displayName}
-                    className="h-8"
-                    onKeyDown={e => {
-                      if (e.key === 'Escape') cancelRename()
-                    }}
-                    onBlur={() => {
-                      if (!savingOrg) cancelRename()
-                    }}
-                  />
-                  {orgForm.formState.errors.displayName && (
-                    <FieldError errors={[orgForm.formState.errors.displayName]} />
-                  )}
-                </Field>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={startRename}
-                aria-label="Rename organization"
-                className="group inline-flex items-center gap-2 text-sm cursor-pointer"
-              >
-                <span className="font-medium">{org.displayName}</span>
-                <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            )}
+            <Can
+              action="update"
+              resource="org"
+              fallback={<span className="text-sm font-medium">{org.displayName}</span>}
+            >
+              {renaming ? (
+                <form onSubmit={orgForm.handleSubmit(handleRenameOrg)} className="max-w-xs">
+                  <Field data-invalid={!!orgForm.formState.errors.displayName}>
+                    <Input
+                      {...orgForm.register('displayName')}
+                      autoFocus
+                      maxLength={150}
+                      disabled={savingOrg}
+                      aria-label="Organization name"
+                      aria-invalid={!!orgForm.formState.errors.displayName}
+                      className="h-8"
+                      onKeyDown={e => {
+                        if (e.key === 'Escape') cancelRename()
+                      }}
+                      onBlur={() => {
+                        if (!savingOrg) cancelRename()
+                      }}
+                    />
+                    {orgForm.formState.errors.displayName && (
+                      <FieldError errors={[orgForm.formState.errors.displayName]} />
+                    )}
+                  </Field>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRename}
+                  aria-label="Rename organization"
+                  className="group inline-flex items-center gap-2 text-sm cursor-pointer"
+                >
+                  <span className="font-medium">{org.displayName}</span>
+                  <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              )}
+            </Can>
             <div>
               <CopyId value={org.id} />
             </div>
