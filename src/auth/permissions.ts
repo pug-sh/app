@@ -37,20 +37,31 @@ export type Action = (typeof ACTIONS)[number]
 // grants are not repeated here — they come from INHERITS, mirroring Casbin's `g` rules.
 type Grants = Partial<Record<Resource, readonly Action[] | 'all'>>
 
-// Role hierarchy, mirroring the `g` grouping in policy.go (admin inherits member). Extend
-// with e.g. `[OrgRole.OWNER]: OrgRole.ADMIN` when richer roles land.
+// Role hierarchy, mirroring the `g` grouping in policy.go (admin inherits member, member
+// inherits viewer). Extend with e.g. `[OrgRole.OWNER]: OrgRole.ADMIN` when richer roles land.
 const INHERITS: Partial<Record<OrgRole, OrgRole>> = {
   [OrgRole.ADMIN]: OrgRole.MEMBER,
+  [OrgRole.MEMBER]: OrgRole.VIEWER,
 }
 
 // Direct grants per role. Total over OrgRole, so a newly added enum member fails to compile
 // until its grants are declared.
 const ROLE_GRANTS: Record<OrgRole, Grants> = {
   [OrgRole.UNSPECIFIED]: {},
-  [OrgRole.MEMBER]: {
+  // Read-only role: sees everything a member can read (org, members, projects, and all
+  // analytics objects) but authors nothing. No INHERITS entry — VIEWER is the floor.
+  [OrgRole.VIEWER]: {
     org: ['read'],
     member: ['read'],
     project: ['read'],
+    dashboard: ['read'],
+    insight: ['read'],
+    activity: ['read'],
+    profile: ['read'],
+  },
+  // Inherits VIEWER's reads (org/member/project + analytics) via INHERITS; adds full CRUD on
+  // the analytics objects.
+  [OrgRole.MEMBER]: {
     dashboard: 'all',
     insight: 'all',
     activity: 'all',
@@ -74,8 +85,12 @@ const resolvedCache = new Map<OrgRole, ReadonlySet<string>>()
 
 const resolveGrants = (role: OrgRole) => {
   const keys = new Set<string>()
+  const seen = new Set<OrgRole>()
   let current: OrgRole | undefined = role
-  while (current !== undefined) {
+  // `seen` guards against an accidental INHERITS cycle (e.g. a future A→B→A edit), which would
+  // otherwise spin forever at module load.
+  while (current !== undefined && !seen.has(current)) {
+    seen.add(current)
     const grants = ROLE_GRANTS[current]
     for (const resource of Object.keys(grants) as Resource[]) {
       const actions = grants[resource]
@@ -90,7 +105,10 @@ const resolveGrants = (role: OrgRole) => {
 const grantsForRole = (role: OrgRole) => {
   let cached = resolvedCache.get(role)
   if (!cached) {
-    cached = resolveGrants(role)
+    // proto3 enums are open: a role value off the wire may not be a declared key (e.g. a role
+    // shipped backend-first). Unknown role → no grants (deny-by-default), never a throw in
+    // resolveGrants's Object.keys.
+    cached = ROLE_GRANTS[role] ? resolveGrants(role) : new Set<string>()
     resolvedCache.set(role, cached)
   }
   return cached
@@ -107,3 +125,16 @@ export const canAtom = atom(get => {
   const grants = grantsForRole(get(currentRoleAtom))
   return (action: Action, resource: Resource) => grants.has(grantKey(action, resource))
 })
+
+// Human-readable role names for badges and role pickers. Total over OrgRole so a new role
+// must declare a label (same compile-safety as ROLE_GRANTS). UNSPECIFIED (and any
+// unrecognized role off the wire) has no label — call sites treat the empty string as
+// "show no badge".
+export const ROLE_LABEL: Record<OrgRole, string> = {
+  [OrgRole.UNSPECIFIED]: '',
+  [OrgRole.VIEWER]: 'Viewer',
+  [OrgRole.MEMBER]: 'Member',
+  [OrgRole.ADMIN]: 'Admin',
+}
+
+export const roleLabel = (role: OrgRole) => ROLE_LABEL[role] ?? ''

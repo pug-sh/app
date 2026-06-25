@@ -1,6 +1,7 @@
 import { Clock, Edit3, MoreHorizontal, Trash2 } from 'lucide-react'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Can } from '@/auth/can'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -92,24 +93,32 @@ export const DashboardHeader = ({
           onChange={onGranularityChange}
           isOptionDisabled={v => granularityDisabledReason(v, globalTimeRange)}
         />
-        {!editing ? <ShareControl shareId={shareId} sharing={sharing} onTogglePublic={onTogglePublic} /> : null}
         {!editing ? (
-          <Button size="sm" variant="outline" onClick={onEdit}>
-            <Edit3 className="size-3" />
-            Edit
-          </Button>
+          <Can action="update" resource="dashboard">
+            <ShareControl shareId={shareId} sharing={sharing} onTogglePublic={onTogglePublic} />
+          </Can>
         ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
-            <MoreHorizontal className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem variant="destructive" onClick={onRequestDelete} disabled={deleting}>
-              <Trash2 className="size-4" />
-              Delete dashboard
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!editing ? (
+          <Can action="update" resource="dashboard">
+            <Button size="sm" variant="outline" onClick={onEdit}>
+              <Edit3 className="size-3" />
+              Edit
+            </Button>
+          </Can>
+        ) : null}
+        <Can action="delete" resource="dashboard">
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button size="icon-sm" variant="ghost" />}>
+              <MoreHorizontal className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem variant="destructive" onClick={onRequestDelete} disabled={deleting}>
+                <Trash2 className="size-4" />
+                Delete dashboard
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </Can>
       </div>
     </div>
   </div>

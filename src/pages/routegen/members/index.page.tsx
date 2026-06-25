@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { InvitationStatus, type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
+import { roleLabel } from '@/auth/permissions'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
@@ -154,7 +155,7 @@ const Members = () => {
                         variant={m.role === OrgRole.ADMIN ? 'default' : 'secondary'}
                         className="text-[10px] shrink-0"
                       >
-                        {m.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
+                        {roleLabel(m.role)}
                       </Badge>
                       <Can action="delete" resource="member">
                         {confirmingRemove === m.customerId ? (
@@ -205,9 +206,10 @@ const Members = () => {
                     disabled={inviting}
                   >
                     <SelectTrigger className="shrink-0">
-                      <SelectValue>{v => (v === OrgRole.ADMIN ? 'Admin' : 'Member')}</SelectValue>
+                      <SelectValue>{v => roleLabel(v ?? OrgRole.MEMBER)}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value={OrgRole.VIEWER}>Viewer</SelectItem>
                       <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
                       <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
                     </SelectContent>
@@ -261,7 +263,7 @@ const Members = () => {
                       variant={inv.role === OrgRole.ADMIN ? 'default' : 'secondary'}
                       className="text-[10px] shrink-0"
                     >
-                      {inv.role === OrgRole.ADMIN ? 'Admin' : 'Member'}
+                      {roleLabel(inv.role)}
                     </Badge>
                     <Badge variant="secondary" className="text-[10px] shrink-0">
                       Pending
