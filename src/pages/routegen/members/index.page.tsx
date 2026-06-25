@@ -1,10 +1,11 @@
 import { useAtomValue } from 'jotai'
-import { Check, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
+import { Check, History, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { InvitationStatus, type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
+import { jwtDataAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -16,6 +17,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 
+const omitKey = <T,>(obj: Record<string, T>, key: string): Record<string, T> => {
+  const { [key]: _, ...rest } = obj
+  return rest
+}
+
 const initials = (name: string) =>
   name
     .split(/[\s@.]+/)
@@ -26,7 +32,9 @@ const initials = (name: string) =>
 const Members = () => {
   const org = useAtomValue(activeOrgAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
+  const me = useAtomValue(jwtDataAtom)
   const can = useCan()
+  const canEditRole = can('update', 'member')
   const [members, setMembers] = useState<OrgMember[]>([])
   const [invitations, setInvitations] = useState<OrgInvitation[]>([])
   const [loading, setLoading] = useState(false)
@@ -35,6 +43,8 @@ const Members = () => {
   const [email, setEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<OrgRole>(OrgRole.MEMBER)
   const [inviting, setInviting] = useState(false)
+  const [resending, setResending] = useState<string | null>(null)
+  const [roleStatus, setRoleStatus] = useState<Record<string, 'saving' | 'saved'>>({})
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -95,6 +105,37 @@ const Members = () => {
     }
   }
 
+  const handleRoleChange = async (customerId: string, role: OrgRole) => {
+    if (!org) return
+    const prev = members
+    setMembers(ms => ms.map(m => (m.customerId === customerId ? { ...m, role } : m)))
+    setRoleStatus(s => ({ ...s, [customerId]: 'saving' }))
+    try {
+      await orgsRPC.updateMemberRole({ orgId: org.id, customerId, role })
+      setRoleStatus(s => ({ ...s, [customerId]: 'saved' }))
+      // Clear the check after a beat — but only if a newer change hasn't put this
+      // row back into 'saving', so a stale timer can't wipe an in-flight save.
+      setTimeout(() => setRoleStatus(s => (s[customerId] === 'saved' ? omitKey(s, customerId) : s)), 1500)
+    } catch (err) {
+      setMembers(prev)
+      setRoleStatus(s => omitKey(s, customerId))
+      toastRPCError(err, 'Failed to update role')
+    }
+  }
+
+  const handleResend = async (invitationId: string) => {
+    if (!org) return
+    setResending(invitationId)
+    try {
+      await orgsRPC.resendInvite({ orgId: org.id, invitationId })
+      toast.success('Invitation resent')
+    } catch (err) {
+      toastRPCError(err, 'Failed to resend invitation')
+    } finally {
+      setResending(null)
+    }
+  }
+
   const handleRemove = async (customerId: string) => {
     if (!org) return
     try {
@@ -151,12 +192,34 @@ const Members = () => {
                         <p className="text-sm font-medium truncate">{name}</p>
                         <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
-                      <Badge
-                        variant={m.role === OrgRole.ADMIN ? 'default' : 'secondary'}
-                        className="text-[10px] shrink-0"
-                      >
-                        {roleLabel(m.role)}
-                      </Badge>
+                      {canEditRole && m.customerId !== me?.customerId ? (
+                        <Select value={m.role} onValueChange={v => handleRoleChange(m.customerId, v ?? m.role)}>
+                          <SelectTrigger size="sm" className="shrink-0">
+                            <SelectValue>{v => roleLabel(v ?? m.role)}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
+                            <SelectItem value={OrgRole.VIEWER}>Viewer</SelectItem>
+                            <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
+                            <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge
+                          variant={m.role === OrgRole.ADMIN ? 'default' : 'secondary'}
+                          className="text-[10px] shrink-0"
+                        >
+                          {roleLabel(m.role)}
+                        </Badge>
+                      )}
+                      {roleStatus[m.customerId] && (
+                        <span className="shrink-0 w-3.5 flex items-center justify-center">
+                          {roleStatus[m.customerId] === 'saving' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+                          )}
+                        </span>
+                      )}
                       <Can action="delete" resource="member">
                         {confirmingRemove === m.customerId ? (
                           <button
@@ -208,7 +271,7 @@ const Members = () => {
                     <SelectTrigger className="shrink-0">
                       <SelectValue>{v => roleLabel(v ?? OrgRole.MEMBER)}</SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
                       <SelectItem value={OrgRole.VIEWER}>Viewer</SelectItem>
                       <SelectItem value={OrgRole.MEMBER}>Member</SelectItem>
                       <SelectItem value={OrgRole.ADMIN}>Admin</SelectItem>
@@ -253,7 +316,7 @@ const Members = () => {
                 {pendingInvitations.map(inv => (
                   <div
                     key={inv.id}
-                    className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
+                    className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
                   >
                     <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
                       <span className="text-[10px] font-medium text-muted-foreground">{initials(inv.email)}</span>
@@ -268,6 +331,22 @@ const Members = () => {
                     <Badge variant="secondary" className="text-[10px] shrink-0">
                       Pending
                     </Badge>
+                    <Can action="update" resource="invitation">
+                      <button
+                        onClick={() => handleResend(inv.id)}
+                        disabled={resending === inv.id}
+                        className={`p-1 rounded-md transition-opacity hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer ${
+                          resending === inv.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                        }`}
+                        title="Resend invitation"
+                      >
+                        {resending === inv.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <History className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </Can>
                   </div>
                 ))}
               </div>
