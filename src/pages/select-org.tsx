@@ -4,8 +4,8 @@ import { Bell, ChevronRight, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { signOutAtom } from '@/auth/auth.atoms'
+import { roleLabel } from '@/auth/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError } from '@/components/ui/field'
@@ -17,12 +17,6 @@ const createSchema = z.object({
   displayName: z.string().min(1, 'Required').max(150, 'Max 150 characters'),
 })
 type CreateFormData = z.infer<typeof createSchema>
-
-const roleLabel = (role: OrgRole) => {
-  if (role === OrgRole.ADMIN) return 'ADMIN'
-  if (role === OrgRole.MEMBER) return 'MEMBER'
-  return null
-}
 
 const SelectOrg = () => {
   const orgs = useAtomValue(orgsAtom)
@@ -99,7 +93,7 @@ const SelectOrg = () => {
 
           <ul>
             {orgs.map(org => {
-              const label = roleLabel(org.role)
+              const label = roleLabel(org.role).toUpperCase()
               return (
                 <li key={org.id}>
                   <button

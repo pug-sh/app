@@ -8,6 +8,7 @@ import {
   type DashboardTile,
   GridPositionSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { canAtom } from '@/auth/permissions'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom } from '../../events/filter-schema.atoms'
@@ -42,6 +43,10 @@ export const useDashboardEditor = ({
   setDashboard: (dashboard: Dashboard | null) => void
 }) => {
   const upsertDashboard = useSetAtom(upsertDashboardAtom)
+  // Editing is gated to dashboard:update (UX-only; the server re-checks on save). Guarding
+  // every entry point here — not just the buttons — keeps a viewer out of edit mode even via
+  // the auto-edit-on-open and resume-draft paths.
+  const canEdit = useAtomValue(canAtom)('update', 'dashboard')
   const [mode, setMode] = useState<'view' | 'edit'>('view')
   const [saving, setSaving] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
@@ -78,7 +83,7 @@ export const useDashboardEditor = ({
 
   const enterEditMode = useCallback(
     (opts?: { focusName?: boolean }) => {
-      if (!dashboard) return
+      if (!dashboard || !canEdit) return
       setStoredDraft({
         draft: cloneForDraft(dashboard),
         viewSnapshot: cloneForDraft(dashboard),
@@ -88,7 +93,7 @@ export const useDashboardEditor = ({
       setSelectedTileId(dashboard.tiles[0]?.id ?? null)
       setAutoFocusName(opts?.focusName ?? false)
     },
-    [dashboard, setStoredDraft],
+    [dashboard, canEdit, setStoredDraft],
   )
 
   const exitEditMode = useCallback(() => {
@@ -142,15 +147,15 @@ export const useDashboardEditor = ({
   // viewSnapshot equal to current dashboard → safe resume; otherwise the
   // dashboard changed externally and we surface a conflict prompt.
   const resumeBanner = useMemo<'none' | 'resume' | 'conflict'>(() => {
-    if (mode !== 'view' || !dashboard || !storedDraft) return 'none'
+    if (!canEdit || mode !== 'view' || !dashboard || !storedDraft) return 'none'
     return equals(DashboardSchema, storedDraft.viewSnapshot, dashboard) ? 'resume' : 'conflict'
-  }, [dashboard, mode, storedDraft])
+  }, [dashboard, canEdit, mode, storedDraft])
 
   const resumeEditing = useCallback(() => {
-    if (!storedDraft) return
+    if (!storedDraft || !canEdit) return
     setMode('edit')
     setSelectedTileId(storedDraft.draft.tiles[0]?.id ?? null)
-  }, [storedDraft])
+  }, [storedDraft, canEdit])
 
   const handleLayoutsChange = useCallback(
     (layouts: DashboardLayouts) => {

@@ -1,6 +1,7 @@
 import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { ArrowRight, Globe, PanelsTopLeft, Trash2 } from 'lucide-react'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { Can } from '@/auth/can'
 import HoverSwap from '@/components/hover-swap'
 import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
@@ -109,18 +110,20 @@ export const DashboardListRow = ({
           {showCreated ? <TimeStat label="Created" ts={dashboard.createTime} /> : null}
         </span>
         <span className="flex items-center justify-end gap-1">
-          <button
-            type="button"
-            aria-label="Delete dashboard"
-            onClick={event => {
-              event.preventDefault()
-              event.stopPropagation()
-              onRequestDelete()
-            }}
-            className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-          >
-            <Trash2 className="size-4" />
-          </button>
+          <Can action="delete" resource="dashboard">
+            <button
+              type="button"
+              aria-label="Delete dashboard"
+              onClick={event => {
+                event.preventDefault()
+                event.stopPropagation()
+                onRequestDelete()
+              }}
+              className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </Can>
           <ArrowRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
         </span>
       </div>

@@ -21,6 +21,7 @@ import { type CSSProperties, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
+import { Can } from '@/auth/can'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -202,45 +203,47 @@ const AppSidebar = () => {
                     )
                   })}
                 </div>
-                <div className="mx-1 my-1.5 h-px bg-border/70" />
-                {creating ? (
-                  <div className="flex items-center gap-1.5 p-0.5">
-                    <Input
-                      autoFocus
-                      value={newProjectName}
-                      onChange={e => setNewProjectName(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') handleCreateProject()
-                        if (e.key === 'Escape') {
-                          e.stopPropagation()
-                          setCreating(false)
-                          setNewProjectName('')
-                        }
-                      }}
-                      placeholder="Project name"
-                      disabled={saving}
-                      className="h-8 flex-1 text-sm"
-                    />
+                <Can action="create" resource="project">
+                  <div className="mx-1 my-1.5 h-px bg-border/70" />
+                  {creating ? (
+                    <div className="flex items-center gap-1.5 p-0.5">
+                      <Input
+                        autoFocus
+                        value={newProjectName}
+                        onChange={e => setNewProjectName(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleCreateProject()
+                          if (e.key === 'Escape') {
+                            e.stopPropagation()
+                            setCreating(false)
+                            setNewProjectName('')
+                          }
+                        }}
+                        placeholder="Project name"
+                        disabled={saving}
+                        className="h-8 flex-1 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateProject}
+                        disabled={saving || !newProjectName.trim()}
+                        className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        {saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create'}
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={handleCreateProject}
-                      disabled={saving || !newProjectName.trim()}
-                      className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                      onClick={() => setCreating(true)}
+                      disabled={!activeOrg}
+                      className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
                     >
-                      {saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create'}
+                      <Plus className="size-4" />
+                      New project
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setCreating(true)}
-                    disabled={!activeOrg}
-                    className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                  >
-                    <Plus className="size-4" />
-                    New project
-                  </button>
-                )}
+                  )}
+                </Can>
               </PopoverContent>
             </Popover>
           </SidebarMenuItem>
