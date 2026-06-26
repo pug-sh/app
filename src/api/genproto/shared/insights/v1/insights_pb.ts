@@ -424,6 +424,14 @@ export const UserFlowQuery_GroupBySchema: GenEnum<UserFlowQuery_GroupBy> = /*@__
  * dimension by an aggregate metric, plus a trailing $others bucket that
  * aggregates everything outside the top K.
  *
+ * Granularity note: top K has no time bucketing, so QueryRequest.granularity
+ * does not affect a top-K result. It is still required (every QueryRequest
+ * requires one) and, for top K, serves only to select which time-range cap
+ * applies — see the query_request.granularity_*_max_range rules: e.g.
+ * GRANULARITY_MINUTE caps the window at 6h, GRANULARITY_MONTH at ~10y. Send the
+ * coarsest granularity whose cap admits your intended window; the value is
+ * otherwise inert for top K.
+ *
  * @generated from message shared.insights.v1.TopKQuery
  */
 export type TopKQuery = Message<"shared.insights.v1.TopKQuery"> & {

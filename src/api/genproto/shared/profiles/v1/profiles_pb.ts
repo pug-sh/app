@@ -2,8 +2,8 @@
 // @generated from file shared/profiles/v1/profiles.proto (package shared.profiles.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import type { LogicalOperator, PropertyFilter } from "../../../common/v1/filters_pb";
 import { file_common_v1_filters } from "../../../common/v1/filters_pb";
@@ -15,7 +15,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file shared/profiles/v1/profiles.proto.
  */
 export const file_shared_profiles_v1_profiles: GenFile = /*@__PURE__*/
-  fileDesc("CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiEAoORGVsZXRlUmVzcG9uc2UiNQoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBIkcKF0dldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlEiwKB3Byb2ZpbGUYASABKAsyGy5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZSIgCgpHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiOwoLR2V0UmVzcG9uc2USLAoHcHJvZmlsZRgBIAEoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlInEKC0ZpbHRlckdyb3VwEjQKB2ZpbHRlcnMYASADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAggBEiwKCG9wZXJhdG9yGAIgASgOMhouY29tbW9uLnYxLkxvZ2ljYWxPcGVyYXRvciKVAQoLTGlzdFJlcXVlc3QSEgoKcGFnZV90b2tlbhgBIAEoCRI2Cg1maWx0ZXJfZ3JvdXBzGAIgAygLMh8uc2hhcmVkLnByb2ZpbGVzLnYxLkZpbHRlckdyb3VwEjoKFmZpbHRlcl9ncm91cHNfb3BlcmF0b3IYAyABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSK7AgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCSKLAgoHUHJvZmlsZRIvCgtjcmVhdGVfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXh0ZXJuYWxfaWQYAiABKAkSCgoCaWQYAyABKAkSKwoKcHJvcGVydGllcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKcHJvamVjdF9pZBgFIAEoCRIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPAoIYWN0aXZpdHkYByABKAsyKi5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZUFjdGl2aXR5U3VtbWFyeTLrAgoPUHJvZmlsZXNTZXJ2aWNlEkgKA0dldBIeLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXF1ZXN0Gh8uc2hhcmVkLnByb2ZpbGVzLnYxLkdldFJlc3BvbnNlIgASbAoPR2V0QnlFeHRlcm5hbElkEiouc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlcXVlc3QaKy5zaGFyZWQucHJvZmlsZXMudjEuR2V0QnlFeHRlcm5hbElkUmVzcG9uc2UiABJNCgRMaXN0Eh8uc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXF1ZXN0GiAuc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXNwb25zZSIAMAESUQoGRGVsZXRlEiEuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlcXVlc3QaIi5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlUmVzcG9uc2UiAEJIWkZnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3NoYXJlZC9wcm9maWxlcy92MTtwcm9maWxlc3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiNwoYRGVsZXRlRGF0YVN1YmplY3RSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQEiYQoORGVsZXRlUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRI7CgZzdGF0dXMYAiABKA4yKy5zaGFyZWQucHJvZmlsZXMudjEuQ29tcGxpYW5jZVJlcXVlc3RTdGF0dXMibAoZRGVsZXRlRGF0YVN1YmplY3RSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJEjsKBnN0YXR1cxgCIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cyI3ChlHZXREZWxldGlvblJlcXVlc3RSZXF1ZXN0EhoKCnJlcXVlc3RfaWQYASABKAlCBrpIA8gBASKkAgoaR2V0RGVsZXRpb25SZXF1ZXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRITCgtleHRlcm5hbF9pZBgCIAEoCRISCgpwcm9maWxlX2lkGAMgASgJEjsKBnN0YXR1cxgEIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cxIZChFldmVudHNfaWRlbnRpZmllZBgFIAEoAxIwCgxyZXF1ZXN0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFZXJyb3IYCCABKAkiNQoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBIkcKF0dldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlEiwKB3Byb2ZpbGUYASABKAsyGy5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZSIgCgpHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiOwoLR2V0UmVzcG9uc2USLAoHcHJvZmlsZRgBIAEoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlInEKC0ZpbHRlckdyb3VwEjQKB2ZpbHRlcnMYASADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAggBEiwKCG9wZXJhdG9yGAIgASgOMhouY29tbW9uLnYxLkxvZ2ljYWxPcGVyYXRvciKVAQoLTGlzdFJlcXVlc3QSEgoKcGFnZV90b2tlbhgBIAEoCRI2Cg1maWx0ZXJfZ3JvdXBzGAIgAygLMh8uc2hhcmVkLnByb2ZpbGVzLnYxLkZpbHRlckdyb3VwEjoKFmZpbHRlcl9ncm91cHNfb3BlcmF0b3IYAyABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSK7AgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCSKLAgoHUHJvZmlsZRIvCgtjcmVhdGVfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXh0ZXJuYWxfaWQYAiABKAkSCgoCaWQYAyABKAkSKwoKcHJvcGVydGllcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKcHJvamVjdF9pZBgFIAEoCRIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPAoIYWN0aXZpdHkYByABKAsyKi5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZUFjdGl2aXR5U3VtbWFyeSrkAQoXQ29tcGxpYW5jZVJlcXVlc3RTdGF0dXMSKQolQ09NUExJQU5DRV9SRVFVRVNUX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIUNPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfUEVORElORxABEigKJENPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfUFJPQ0VTU0lORxACEicKI0NPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfQ09NUExFVEVEEAMSJAogQ09NUExJQU5DRV9SRVFVRVNUX1NUQVRVU19GQUlMRUQQBDLWBAoPUHJvZmlsZXNTZXJ2aWNlEkgKA0dldBIeLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXF1ZXN0Gh8uc2hhcmVkLnByb2ZpbGVzLnYxLkdldFJlc3BvbnNlIgASbAoPR2V0QnlFeHRlcm5hbElkEiouc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlcXVlc3QaKy5zaGFyZWQucHJvZmlsZXMudjEuR2V0QnlFeHRlcm5hbElkUmVzcG9uc2UiABJNCgRMaXN0Eh8uc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXF1ZXN0GiAuc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXNwb25zZSIAMAESUQoGRGVsZXRlEiEuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlcXVlc3QaIi5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlUmVzcG9uc2UiABJyChFEZWxldGVEYXRhU3ViamVjdBIsLnNoYXJlZC5wcm9maWxlcy52MS5EZWxldGVEYXRhU3ViamVjdFJlcXVlc3QaLS5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlRGF0YVN1YmplY3RSZXNwb25zZSIAEnUKEkdldERlbGV0aW9uUmVxdWVzdBItLnNoYXJlZC5wcm9maWxlcy52MS5HZXREZWxldGlvblJlcXVlc3RSZXF1ZXN0Gi4uc2hhcmVkLnByb2ZpbGVzLnYxLkdldERlbGV0aW9uUmVxdWVzdFJlc3BvbnNlIgBCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zaGFyZWQvcHJvZmlsZXMvdjE7cHJvZmlsZXN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message shared.profiles.v1.DeleteRequest
@@ -35,9 +35,41 @@ export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
   messageDesc(file_shared_profiles_v1_profiles, 0);
 
 /**
+ * @generated from message shared.profiles.v1.DeleteDataSubjectRequest
+ */
+export type DeleteDataSubjectRequest = Message<"shared.profiles.v1.DeleteDataSubjectRequest"> & {
+  /**
+   * @generated from field: string external_id = 1;
+   */
+  externalId: string;
+};
+
+/**
+ * Describes the message shared.profiles.v1.DeleteDataSubjectRequest.
+ * Use `create(DeleteDataSubjectRequestSchema)` to create a new message.
+ */
+export const DeleteDataSubjectRequestSchema: GenMessage<DeleteDataSubjectRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 1);
+
+/**
+ * DeleteResponse and DeleteDataSubjectResponse are kept as distinct types (not a
+ * shared message) to satisfy buf's RPC_REQUEST_RESPONSE_UNIQUE rule, which lets
+ * each erasure RPC evolve its response independently.
+ *
  * @generated from message shared.profiles.v1.DeleteResponse
  */
 export type DeleteResponse = Message<"shared.profiles.v1.DeleteResponse"> & {
+  /**
+   * ID of the recorded erasure request; pass to GetDeletionRequest to track completion.
+   *
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: shared.profiles.v1.ComplianceRequestStatus status = 2;
+   */
+  status: ComplianceRequestStatus;
 };
 
 /**
@@ -45,7 +77,106 @@ export type DeleteResponse = Message<"shared.profiles.v1.DeleteResponse"> & {
  * Use `create(DeleteResponseSchema)` to create a new message.
  */
 export const DeleteResponseSchema: GenMessage<DeleteResponse> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 1);
+  messageDesc(file_shared_profiles_v1_profiles, 2);
+
+/**
+ * @generated from message shared.profiles.v1.DeleteDataSubjectResponse
+ */
+export type DeleteDataSubjectResponse = Message<"shared.profiles.v1.DeleteDataSubjectResponse"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: shared.profiles.v1.ComplianceRequestStatus status = 2;
+   */
+  status: ComplianceRequestStatus;
+};
+
+/**
+ * Describes the message shared.profiles.v1.DeleteDataSubjectResponse.
+ * Use `create(DeleteDataSubjectResponseSchema)` to create a new message.
+ */
+export const DeleteDataSubjectResponseSchema: GenMessage<DeleteDataSubjectResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 3);
+
+/**
+ * @generated from message shared.profiles.v1.GetDeletionRequestRequest
+ */
+export type GetDeletionRequestRequest = Message<"shared.profiles.v1.GetDeletionRequestRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+};
+
+/**
+ * Describes the message shared.profiles.v1.GetDeletionRequestRequest.
+ * Use `create(GetDeletionRequestRequestSchema)` to create a new message.
+ */
+export const GetDeletionRequestRequestSchema: GenMessage<GetDeletionRequestRequest> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 4);
+
+/**
+ * @generated from message shared.profiles.v1.GetDeletionRequestResponse
+ */
+export type GetDeletionRequestResponse = Message<"shared.profiles.v1.GetDeletionRequestResponse"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string external_id = 2;
+   */
+  externalId: string;
+
+  /**
+   * @generated from field: string profile_id = 3;
+   */
+  profileId: string;
+
+  /**
+   * @generated from field: shared.profiles.v1.ComplianceRequestStatus status = 4;
+   */
+  status: ComplianceRequestStatus;
+
+  /**
+   * Number of event rows identified for erasure when the request was frozen
+   * (counted just before the deletes run, not reconciled to rows physically
+   * removed). Projects the compliance_requests.events_affected column, named
+   * generically because the same ledger serves export.
+   *
+   * @generated from field: int64 events_identified = 5;
+   */
+  eventsIdentified: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp requested_at = 6;
+   */
+  requestedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp completed_at = 7;
+   */
+  completedAt?: Timestamp | undefined;
+
+  /**
+   * Failure reason when status is FAILED (the compliance_requests.error column);
+   * empty otherwise.
+   *
+   * @generated from field: string error = 8;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message shared.profiles.v1.GetDeletionRequestResponse.
+ * Use `create(GetDeletionRequestResponseSchema)` to create a new message.
+ */
+export const GetDeletionRequestResponseSchema: GenMessage<GetDeletionRequestResponse> = /*@__PURE__*/
+  messageDesc(file_shared_profiles_v1_profiles, 5);
 
 /**
  * @generated from message shared.profiles.v1.GetByExternalIdRequest
@@ -62,7 +193,7 @@ export type GetByExternalIdRequest = Message<"shared.profiles.v1.GetByExternalId
  * Use `create(GetByExternalIdRequestSchema)` to create a new message.
  */
 export const GetByExternalIdRequestSchema: GenMessage<GetByExternalIdRequest> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 2);
+  messageDesc(file_shared_profiles_v1_profiles, 6);
 
 /**
  * @generated from message shared.profiles.v1.GetByExternalIdResponse
@@ -79,7 +210,7 @@ export type GetByExternalIdResponse = Message<"shared.profiles.v1.GetByExternalI
  * Use `create(GetByExternalIdResponseSchema)` to create a new message.
  */
 export const GetByExternalIdResponseSchema: GenMessage<GetByExternalIdResponse> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 3);
+  messageDesc(file_shared_profiles_v1_profiles, 7);
 
 /**
  * @generated from message shared.profiles.v1.GetRequest
@@ -96,7 +227,7 @@ export type GetRequest = Message<"shared.profiles.v1.GetRequest"> & {
  * Use `create(GetRequestSchema)` to create a new message.
  */
 export const GetRequestSchema: GenMessage<GetRequest> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 4);
+  messageDesc(file_shared_profiles_v1_profiles, 8);
 
 /**
  * @generated from message shared.profiles.v1.GetResponse
@@ -113,7 +244,7 @@ export type GetResponse = Message<"shared.profiles.v1.GetResponse"> & {
  * Use `create(GetResponseSchema)` to create a new message.
  */
 export const GetResponseSchema: GenMessage<GetResponse> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 5);
+  messageDesc(file_shared_profiles_v1_profiles, 9);
 
 /**
  * @generated from message shared.profiles.v1.FilterGroup
@@ -135,7 +266,7 @@ export type FilterGroup = Message<"shared.profiles.v1.FilterGroup"> & {
  * Use `create(FilterGroupSchema)` to create a new message.
  */
 export const FilterGroupSchema: GenMessage<FilterGroup> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 6);
+  messageDesc(file_shared_profiles_v1_profiles, 10);
 
 /**
  * @generated from message shared.profiles.v1.ListRequest
@@ -164,7 +295,7 @@ export type ListRequest = Message<"shared.profiles.v1.ListRequest"> & {
  * Use `create(ListRequestSchema)` to create a new message.
  */
 export const ListRequestSchema: GenMessage<ListRequest> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 7);
+  messageDesc(file_shared_profiles_v1_profiles, 11);
 
 /**
  * @generated from message shared.profiles.v1.ListResponse
@@ -188,7 +319,7 @@ export type ListResponse = Message<"shared.profiles.v1.ListResponse"> & {
  * Use `create(ListResponseSchema)` to create a new message.
  */
 export const ListResponseSchema: GenMessage<ListResponse> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 8);
+  messageDesc(file_shared_profiles_v1_profiles, 12);
 
 /**
  * @generated from message shared.profiles.v1.ProfileActivitySummary
@@ -265,7 +396,7 @@ export type ProfileActivitySummary = Message<"shared.profiles.v1.ProfileActivity
  * Use `create(ProfileActivitySummarySchema)` to create a new message.
  */
 export const ProfileActivitySummarySchema: GenMessage<ProfileActivitySummary> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 9);
+  messageDesc(file_shared_profiles_v1_profiles, 13);
 
 /**
  * @generated from message shared.profiles.v1.Profile
@@ -312,7 +443,47 @@ export type Profile = Message<"shared.profiles.v1.Profile"> & {
  * Use `create(ProfileSchema)` to create a new message.
  */
 export const ProfileSchema: GenMessage<Profile> = /*@__PURE__*/
-  messageDesc(file_shared_profiles_v1_profiles, 10);
+  messageDesc(file_shared_profiles_v1_profiles, 14);
+
+/**
+ * ComplianceRequestStatus is the lifecycle of a compliance (DSAR) request. It
+ * mirrors the compliance_requests.status CHECK constraint and the
+ * core/profiles.ComplianceStatus constants.
+ *
+ * @generated from enum shared.profiles.v1.ComplianceRequestStatus
+ */
+export enum ComplianceRequestStatus {
+  /**
+   * @generated from enum value: COMPLIANCE_REQUEST_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: COMPLIANCE_REQUEST_STATUS_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: COMPLIANCE_REQUEST_STATUS_PROCESSING = 2;
+   */
+  PROCESSING = 2,
+
+  /**
+   * @generated from enum value: COMPLIANCE_REQUEST_STATUS_COMPLETED = 3;
+   */
+  COMPLETED = 3,
+
+  /**
+   * @generated from enum value: COMPLIANCE_REQUEST_STATUS_FAILED = 4;
+   */
+  FAILED = 4,
+}
+
+/**
+ * Describes the enum shared.profiles.v1.ComplianceRequestStatus.
+ */
+export const ComplianceRequestStatusSchema: GenEnum<ComplianceRequestStatus> = /*@__PURE__*/
+  enumDesc(file_shared_profiles_v1_profiles, 0);
 
 /**
  * @generated from service shared.profiles.v1.ProfilesService
@@ -343,12 +514,41 @@ export const ProfilesService: GenService<{
     output: typeof ListResponseSchema;
   },
   /**
+   * Delete erases a data subject identified by profile id. Like
+   * DeleteDataSubject, it enqueues asynchronous hard erasure that reaches the
+   * events table and every derived rollup; the profile is soft-deleted
+   * synchronously in PostgreSQL and physically removed from every store by the
+   * compliance worker.
+   *
    * @generated from rpc shared.profiles.v1.ProfilesService.Delete
    */
   delete: {
     methodKind: "unary";
     input: typeof DeleteRequestSchema;
     output: typeof DeleteResponseSchema;
+  },
+  /**
+   * DeleteDataSubject erases a data subject identified by external_id (the
+   * controller-facing handle). Proceeds even when no profile row exists, since
+   * events can be keyed directly by external_id. See docs/compliance/4.1-erasure-scope.md.
+   *
+   * @generated from rpc shared.profiles.v1.ProfilesService.DeleteDataSubject
+   */
+  deleteDataSubject: {
+    methodKind: "unary";
+    input: typeof DeleteDataSubjectRequestSchema;
+    output: typeof DeleteDataSubjectResponseSchema;
+  },
+  /**
+   * GetDeletionRequest returns the status of an erasure request so a controller
+   * can prove fulfilment within the statutory window (the DSAR audit trail).
+   *
+   * @generated from rpc shared.profiles.v1.ProfilesService.GetDeletionRequest
+   */
+  getDeletionRequest: {
+    methodKind: "unary";
+    input: typeof GetDeletionRequestRequestSchema;
+    output: typeof GetDeletionRequestResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_shared_profiles_v1_profiles, 0);
