@@ -55,6 +55,7 @@ export const InsightsContent = memo(function InsightsContent({
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
   topKMetric = AggregationType.TOTAL,
+  topKOmitOthers = false,
   topKIncompleteReason = null,
   compact = false,
   lightNumbers = false,
@@ -87,6 +88,7 @@ export const InsightsContent = memo(function InsightsContent({
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
   topKMetric?: AggregationType
+  topKOmitOthers?: boolean
   topKIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
@@ -220,7 +222,15 @@ export const InsightsContent = memo(function InsightsContent({
       )
     }
     if (topKRows.length > 0) {
-      return <TopKList rows={topKRows} dimension={topKDimension} metric={topKMetric} compact={compact} />
+      return (
+        <TopKList
+          rows={topKRows}
+          dimension={topKDimension}
+          metric={topKMetric}
+          omitOthers={topKOmitOthers}
+          compact={compact}
+        />
+      )
     }
     if (resultCase === 'topK') return renderNoEvents()
     return renderLoadingEmptyState()

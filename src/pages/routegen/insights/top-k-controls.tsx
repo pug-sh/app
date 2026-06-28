@@ -1,4 +1,4 @@
-import { ListOrdered, Ruler, Trophy } from 'lucide-react'
+import { Check, ListOrdered, Ruler, Trophy } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { TopKQuery_Dimension } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -49,6 +49,42 @@ const TopKPropertyChip = ({
     </Popover>
   )
 }
+
+// A checkbox-style toggle chip, sized to match the OptionChip siblings. Used for
+// boolean options as a direct toggle (button state) rather than a popover, per the
+// flat-interaction design direction.
+const TopKToggleChip = ({
+  label,
+  checked,
+  title,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  title?: string
+  onChange: (next: boolean) => void
+}) => (
+  <button
+    type="button"
+    aria-pressed={checked}
+    title={title}
+    onClick={() => onChange(!checked)}
+    className={cn(
+      'inline-flex items-center gap-1.5 h-7 px-2.5 text-xs border border-border rounded-md cursor-pointer transition-colors',
+      checked ? 'bg-muted/60 text-foreground' : 'text-muted-foreground hover:bg-muted/40',
+    )}
+  >
+    <span
+      className={cn(
+        'flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border transition-colors',
+        checked ? 'border-primary bg-primary text-primary-foreground' : 'border-input',
+      )}
+    >
+      {checked && <Check className="size-2.5" />}
+    </span>
+    {label}
+  </button>
+)
 
 // The chip row configuring a top-k insight: rank dimension, ranked property
 // (PROPERTY dimension only), measure, measure property (numeric measures only),
@@ -118,6 +154,12 @@ export const TopKControls = ({
         options={TOP_K_LIMITS}
         value={topK.limit}
         onChange={limit => onChange({ ...topK, limit })}
+      />
+      <TopKToggleChip
+        label="Omit $others"
+        checked={topK.omitOthers}
+        title="Drop the trailing $others bucket and show only the top results"
+        onChange={omitOthers => onChange({ ...topK, omitOthers })}
       />
     </>
   )

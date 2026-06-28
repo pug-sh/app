@@ -212,6 +212,7 @@ export const InsightTileView = ({
         topKRows={topKRows}
         topKDimension={spec?.topK?.dimension}
         topKMetric={spec?.topK?.metric}
+        topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}
         logScale={tile?.visualization?.logScale}
         zeroBaseline={tile?.visualization?.zeroBaseline}

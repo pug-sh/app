@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
 import { topKShareInfo } from '../top-k'
 
-const OTHERS_HINT = 'Everything outside the top results, aggregated into a single bucket.'
+const OTHERS_HINT = '$others — everything outside the top results, aggregated into a single bucket.'
 
 const formatValue = (value: number) => {
   if (Number.isInteger(value) || Math.abs(value) >= 1000) return compactNumber(value)
@@ -19,8 +19,8 @@ const exactValue = (value: number) => value.toLocaleString('en-US', { maximumFra
 const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimension }) => {
   if (row.isOthers) {
     return (
-      <span className="truncate text-muted-foreground" title={OTHERS_HINT}>
-        Others
+      <span className="truncate font-mono text-muted-foreground" title={OTHERS_HINT}>
+        $others
       </span>
     )
   }
@@ -74,7 +74,7 @@ const CoverageSummary = ({
 }) => {
   const parts = [`Top ${rankedCount}`]
   if (showShare && othersShare !== null) {
-    parts.push(`${((1 - othersShare) * 100).toFixed(1)}% of total`, `${(othersShare * 100).toFixed(1)}% in others`)
+    parts.push(`${((1 - othersShare) * 100).toFixed(1)}% of total`, `${(othersShare * 100).toFixed(1)}% in $others`)
   } else if (showShare) {
     parts.push('all values shown')
   }
@@ -87,15 +87,17 @@ export const TopKList = ({
   rows,
   dimension,
   metric,
+  omitOthers = false,
   compact = false,
 }: {
   rows: TopKRow[]
   dimension: TopKQuery_Dimension
   metric: AggregationType
+  omitOthers?: boolean
   compact?: boolean
 }) => {
   const maxValue = Math.max(...rows.map(row => row.value), 0)
-  const { total, rankedCount, showShare, othersShare } = topKShareInfo(rows, metric)
+  const { total, rankedCount, showShare, othersShare } = topKShareInfo(rows, metric, omitOthers)
 
   return (
     <div className={cn('flex flex-col gap-1.5', compact ? 'h-full min-h-0' : 'mt-2')}>
