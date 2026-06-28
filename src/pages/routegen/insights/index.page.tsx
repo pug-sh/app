@@ -528,6 +528,7 @@ const Insights = () => {
         topKRows={topKRows}
         topKDimension={topK.dimension}
         topKMetric={topK.metric}
+        topKOmitOthers={topK.omitOthers}
         topKIncompleteReason={topKIncomplete}
       />
     </Page>
