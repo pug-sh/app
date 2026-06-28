@@ -34,12 +34,16 @@ export const SummaryStats = ({
   return (
     <div
       className={cn(
-        'grid grid-cols-2',
+        // Width-driven columns: tiles and the insights panel size independently of the
+        // viewport, so fit as many fixed-width tracks as the container allows rather than
+        // capping at a viewport breakpoint. min(100%, …) keeps a single track from
+        // overflowing a very narrow tile.
+        'grid',
         compact && showSeriesNames
-          ? 'mb-0 gap-x-4 gap-y-2'
+          ? 'mb-0 grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-x-4 gap-y-2'
           : compact
-            ? 'mb-0 gap-x-5 gap-y-4'
-            : 'mb-1 gap-4 sm:grid-cols-4',
+            ? 'mb-0 grid-cols-[repeat(auto-fill,minmax(min(100%,9rem),1fr))] gap-x-5 gap-y-4'
+            : 'mb-1 grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-4',
       )}
     >
       {series.map((name, si) => {
