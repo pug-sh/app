@@ -125,6 +125,9 @@ const LiveVisitorsPage = () => {
   if (!project) return <NoProject title="Live" icon={Radio} />
 
   const focus = selectedVisitor ? describeEvent(selectedVisitor) : selectedSnapshot.current
+  // Project-scoped profile route for the map popover's "View profile" link. Built here in the
+  // React tree because each marker renders in a detached root with no router/project context.
+  const profileHref = (distinctId: string) => `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
 
   return (
     <>
@@ -151,6 +154,7 @@ const LiveVisitorsPage = () => {
               selectedDistinctId={selectedDistinctId}
               viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
               onSelectVisitor={select}
+              profileHref={profileHref}
             />
 
             <aside className="absolute bottom-4 left-4 z-10 flex max-h-[26rem] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md">
