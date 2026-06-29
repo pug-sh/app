@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJInUKGkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0EjsKCHByb3ZpZGVyGAEgASgOMh0ucHVibGljLmF1dGgudjEuT0F1dGhQcm92aWRlckIKukgHggEEEAEgABIaCgpjcmVkZW50aWFsGAIgASgJQga6SAPIAQEiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UqTAoNT0F1dGhQcm92aWRlchIfChtPX0FVVEhfUFJPVklERVJfVU5TUEVDSUZJRUQQABIaChZPX0FVVEhfUFJPVklERVJfR09PR0xFEAEy6wQKC0F1dGhTZXJ2aWNlEmQKD1NpZ25JbldpdGhFbWFpbBImLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlcXVlc3QaJy5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXNwb25zZSIAEmcKEFJlcXVlc3RNYWdpY0xpbmsSJy5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVxdWVzdBooLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXNwb25zZSIAEmoKEUNvbXBsZXRlTWFnaWNMaW5rEigucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXF1ZXN0GikucHVibGljLmF1dGgudjEuQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZSIAEnAKE0NvbXBsZXRlT0F1dGhTaWduSW4SKi5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBorLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXNwb25zZSIAEmEKDlJlZnJlc2hTZXNzaW9uEiUucHVibGljLmF1dGgudjEuUmVmcmVzaFNlc3Npb25SZXF1ZXN0GiYucHVibGljLmF1dGgudjEuUmVmcmVzaFNlc3Npb25SZXNwb25zZSIAEkwKB1NpZ25PdXQSHi5wdWJsaWMuYXV0aC52MS5TaWduT3V0UmVxdWVzdBofLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXNwb25zZSIAQkBaPmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vcHVibGljL2F1dGgvdjE7YXV0aHYxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJInUKGkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0EjsKCHByb3ZpZGVyGAEgASgOMh0ucHVibGljLmF1dGgudjEuT0F1dGhQcm92aWRlckIKukgHggEEEAEgABIaCgpjcmVkZW50aWFsGAIgASgJQga6SAPIAQEiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UiEwoRRGVtb1NpZ25JblJlcXVlc3QiTgoSRGVtb1NpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCSpMCg1PQXV0aFByb3ZpZGVyEh8KG09fQVVUSF9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhoKFk9fQVVUSF9QUk9WSURFUl9HT09HTEUQATLCBQoLQXV0aFNlcnZpY2USZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgAScAoTQ29tcGxldGVPQXV0aFNpZ25JbhIqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0GisucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlIgASYQoOUmVmcmVzaFNlc3Npb24SJS5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlc3BvbnNlIgASTAoHU2lnbk91dBIeLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXF1ZXN0Gh8ucHVibGljLmF1dGgudjEuU2lnbk91dFJlc3BvbnNlIgASVQoKRGVtb1NpZ25JbhIhLnB1YmxpYy5hdXRoLnYxLkRlbW9TaWduSW5SZXF1ZXN0GiIucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -273,6 +273,53 @@ export const SignOutResponseSchema: GenMessage<SignOutResponse> = /*@__PURE__*/
   messageDesc(file_public_auth_v1_auth, 11);
 
 /**
+ * @generated from message public.auth.v1.DemoSignInRequest
+ */
+export type DemoSignInRequest = Message<"public.auth.v1.DemoSignInRequest"> & {
+};
+
+/**
+ * Describes the message public.auth.v1.DemoSignInRequest.
+ * Use `create(DemoSignInRequestSchema)` to create a new message.
+ */
+export const DemoSignInRequestSchema: GenMessage<DemoSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 12);
+
+/**
+ * @generated from message public.auth.v1.DemoSignInResponse
+ */
+export type DemoSignInResponse = Message<"public.auth.v1.DemoSignInResponse"> & {
+  /**
+   * short-lived access JWT for the demo viewer
+   *
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * long-lived opaque refresh token
+   *
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+
+  /**
+   * The demo project to scope reads to; the client sends it back as the
+   * x-project-id header on subsequent dashboard/insights/profile requests.
+   *
+   * @generated from field: string project_id = 3;
+   */
+  projectId: string;
+};
+
+/**
+ * Describes the message public.auth.v1.DemoSignInResponse.
+ * Use `create(DemoSignInResponseSchema)` to create a new message.
+ */
+export const DemoSignInResponseSchema: GenMessage<DemoSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 13);
+
+/**
  * @generated from enum public.auth.v1.OAuthProvider
  */
 export enum OAuthProvider {
@@ -350,6 +397,19 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof SignOutRequestSchema;
     output: typeof SignOutResponseSchema;
+  },
+  /**
+   * DemoSignIn mints a session for the read-only demo viewer account with no
+   * credentials, so a visitor landing on the public demo page is authenticated
+   * in viewer mode. Gated by PUG_DEMO_ENABLED on the server; returns UNAVAILABLE
+   * when disabled or when the demo account has not been seeded.
+   *
+   * @generated from rpc public.auth.v1.AuthService.DemoSignIn
+   */
+  demoSignIn: {
+    methodKind: "unary";
+    input: typeof DemoSignInRequestSchema;
+    output: typeof DemoSignInResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_public_auth_v1_auth, 0);

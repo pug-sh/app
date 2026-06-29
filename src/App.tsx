@@ -4,6 +4,7 @@ import { Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
@@ -32,6 +33,7 @@ const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
+const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 
 const ThemeSync = () => {
   const theme = useAtomValue(themeAtom)
@@ -139,6 +141,7 @@ const AuthenticatedApp = () => {
         <AppSidebar />
       </Suspense>
       <SidebarInset className="min-h-0">
+        <DemoBanner />
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
         </header>
@@ -193,6 +196,12 @@ const App = () => {
       {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
           <MagicLink />
+        </Suspense>
+      ) : location === '/demo' ? (
+        // Matched before the !authenticated branch on purpose: an already-signed-in user must still
+        // reach <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
+        <Suspense fallback={<LoadingSpinner />}>
+          <Demo />
         </Suspense>
       ) : isSharedRoute ? (
         <Suspense fallback={<LoadingSpinner />}>
