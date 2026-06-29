@@ -3,8 +3,9 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useLocation } from 'wouter'
 import { z } from 'zod'
-import { googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { demoEnabledAtom, googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { GoogleSignInButton } from '@/auth/google-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -75,6 +76,8 @@ const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
   const googleOAuthEnabled = useAtomValue(googleOAuthEnabledAtom)
+  const demoEnabled = useAtomValue(demoEnabledAtom)
+  const [, navigate] = useLocation()
   // Magic link is the primary path — the backend creates the account on first use,
   // so it covers both returning and brand-new users. Password sign-in is opt-in for
   // people who set a password via the in-app SetPassword flow.
@@ -335,6 +338,19 @@ const SignIn = () => {
                       {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
                     </Button>
                   </>
+                )}
+
+                {demoEnabled && (
+                  <div className="mt-6 text-center">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/demo')}
+                      disabled={authBusy}
+                      className="cursor-pointer text-xs font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
+                    >
+                      Explore the live demo →
+                    </button>
+                  </div>
                 )}
               </>
             )}

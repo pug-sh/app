@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
+import { isDemoSessionAtom } from '@/auth/demo'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -66,6 +67,10 @@ const navGroups = [
   },
 ]
 
+// Nav paths hidden during the read-only demo. Settings exposes the shared demo account's
+// email/password + org config; its /settings route is guarded in SettingsLayout as well.
+const DEMO_HIDDEN_PATHS = ['settings']
+
 const getProjectInitial = (projectName?: string | null) => {
   const normalizedName = projectName?.trim()
   if (!normalizedName) return 'P'
@@ -103,6 +108,7 @@ const AppSidebar = () => {
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const createProject = useSetAtom(createProjectAtom)
   const signOut = useSetAtom(signOutAtom)
+  const isDemo = useAtomValue(isDemoSessionAtom)
   const [theme, setTheme] = useAtom(themeAtom)
 
   const routeProjectId = location.match(/^\/p\/([^/]+)/)?.[1] ?? null
@@ -251,29 +257,34 @@ const AppSidebar = () => {
       </SidebarHeader>
 
       <SidebarContent>
-        {navGroups.map((group, groupIndex) => (
-          <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
-            {group.label ? (
-              <SidebarGroupLabel className="h-7 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
-                {group.label}
-              </SidebarGroupLabel>
-            ) : null}
-            <SidebarMenu className="gap-1">
-              {group.items.map(item => {
-                const href = `${prefix}/${item.path}`
-                const isActive = pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path))
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton render={<Link href={href} />} isActive={isActive} tooltip={item.label}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        {navGroups.map((group, groupIndex) => {
+          const items = isDemo ? group.items.filter(item => !DEMO_HIDDEN_PATHS.includes(item.path)) : group.items
+          if (items.length === 0) return null
+          return (
+            <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
+              {group.label ? (
+                <SidebarGroupLabel className="h-7 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                  {group.label}
+                </SidebarGroupLabel>
+              ) : null}
+              <SidebarMenu className="gap-1">
+                {items.map(item => {
+                  const href = `${prefix}/${item.path}`
+                  const isActive =
+                    pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path))
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton render={<Link href={href} />} isActive={isActive} tooltip={item.label}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
       <SidebarFooter>
@@ -287,7 +298,15 @@ const AppSidebar = () => {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => signOut()} tooltip="Sign out">
+            <SidebarMenuButton
+              onClick={async () => {
+                await signOut()
+                // A demo sign-out resets the URL to the sign-in page; a real sign-out lets App
+                // re-render to <SignIn /> on its own (preserving today's behavior).
+                if (isDemo) navigate('/')
+              }}
+              tooltip="Sign out"
+            >
               <LogOut />
               <span>Sign out</span>
             </SidebarMenuButton>

@@ -1,5 +1,6 @@
 import { atom, getDefaultStore } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { isDemoSessionAtom } from './demo'
 
 // Shared with transport.ts — both read the same localStorage keys.
 export const JWT_KEY = 'pug:jwt'
@@ -58,10 +59,12 @@ export const setSessionTokens = ({ accessToken, refreshToken }: { accessToken: s
   store.set(refreshTokenAtom, refreshToken)
 }
 
-// Clear the whole session (both tokens). Called when a refresh ultimately fails
-// or on explicit sign-out.
+// Clear the whole session (both tokens + the demo marker). Called when a refresh ultimately fails
+// or on explicit sign-out — the demo marker must die with the session so it can't bleed into the
+// next login (parity with signOutAtom / applySessionAtom).
 export const clearSession = () => {
   const store = getDefaultStore()
   store.set(jwtAtom, '')
   store.set(refreshTokenAtom, '')
+  store.set(isDemoSessionAtom, false)
 }

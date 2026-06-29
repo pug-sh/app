@@ -6,6 +6,7 @@ import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
+import { isDemoEnabled, isDemoSessionAtom } from './demo'
 import { jwtAtom, jwtDataAtom, refreshTokenAtom } from './jwt.atoms'
 import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
 
@@ -15,6 +16,11 @@ export type AuthResult = { ok: true } | { ok: false; error: string }
 // Build-time gate for the Google sign-in button (driven by VITE_GOOGLE_CLIENT_ID), exposed as
 // an atom so config reads flow through the store like the rest of auth state.
 export const googleOAuthEnabledAtom = atom(() => isGoogleOAuthEnabled())
+
+// Build-time gate for the sign-in page's "Explore the live demo" link, driven by VITE_DEMO_ENABLED
+// (not the in-app banner — that follows the active demo session; see isDemoSessionAtom). Exposed as
+// an atom for parity with googleOAuthEnabledAtom.
+export const demoEnabledAtom = atom(() => isDemoEnabled())
 
 export const signInAtom = atom(
   null,
@@ -49,6 +55,9 @@ const applySessionAtom = atom(null, (get, set, { token, refreshToken }: { token:
   const next = get(jwtDataAtom)?.customerId
   if (prior && next && prior !== next) set(resetWorkspaceAtom)
   set(meAtom, null)
+  // Every real sign-in funnels through here — clear the demo marker so a prior demo session's
+  // banner can't bleed into a real login. demoSignInAtom re-sets it true after this runs.
+  set(isDemoSessionAtom, false)
 })
 
 export const fetchMeAtom = atom(null, async (get, set) => {
@@ -117,6 +126,35 @@ export const completeGoogleOAuthAtom = atom(
   },
 )
 
+// Credential-less sign-in for the public read-only demo viewer (snoop@pug.sh). The minted token is
+// an ordinary viewer JWT — the role is never in the JWT (by design); viewer mode follows from the
+// account's ORG_ROLE_VIEWER membership, which WorkspaceBootstrap loads into activeOrgAtom and
+// currentRoleAtom reads, flipping useCan() read-only. We deliberately ignore the response's
+// projectId rather than pinning it as x-project-id: correctness instead relies on the demo account
+// being seeded with exactly one project, so WorkspaceBootstrap's default pick (projects[0]) is it.
+// The frontend does no ordering of its own — revisit (pin projectId) if the demo account ever gains
+// a second project, or it could scope the demo to the wrong data.
+export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> => {
+  const authRPC = get(authRPCAtom)
+  try {
+    const resp = await authRPC.demoSignIn({})
+    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
+    set(isDemoSessionAtom, true)
+    return { ok: true }
+  } catch (error) {
+    // Unavailable = PUG_DEMO_ENABLED off or the demo account isn't seeded — expected, not a bug, so
+    // don't log it. Anything else (Internal, PermissionDenied, ResourceExhausted, or a non-Connect
+    // JS error) is unexpected; log it before the generic copy, or a "demo is down" incident leaves
+    // no frontend trace at all.
+    if (error instanceof ConnectError && error.code === Code.Unavailable) {
+      return { ok: false, error: "The live demo isn't available right now." }
+    }
+    const detail = error instanceof ConnectError ? { code: error.code, message: error.message } : error
+    console.error('demoSignIn failed', detail)
+    return { ok: false, error: 'Could not start the demo. Please try again.' }
+  }
+})
+
 // Authenticated whenever a refresh token is present. The access JWT is short-lived
 // (~1h) and the transport silently re-mints it, so access-token expiry must NOT gate
 // the UI or active users would be bounced to sign-in hourly. A failed refresh clears
@@ -143,5 +181,6 @@ export const signOutAtom = atom(null, async (get, set) => {
   set(jwtAtom, '')
   set(refreshTokenAtom, '')
   set(meAtom, null)
+  set(isDemoSessionAtom, false)
   set(resetWorkspaceAtom)
 })

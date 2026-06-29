@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react'
-import { useLocation } from 'wouter'
+import { useAtomValue } from 'jotai'
+import { type ReactNode, useEffect } from 'react'
+import { useLocation, useParams } from 'wouter'
+import { isDemoSessionAtom } from '@/auth/demo'
 import Page from '@/components/layout/page'
+import LoadingSpinner from '@/components/loading-spinner'
 import ProjectLink from '@/components/project-link'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +14,18 @@ const SETTINGS_TABS = [
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
-  const [location] = useLocation()
+  const [location, navigate] = useLocation()
+  const { projectId } = useParams<{ projectId: string }>()
+  const isDemo = useAtomValue(isDemoSessionAtom)
+
+  // Settings is hidden in the read-only demo — it exposes the shared demo account's email/password
+  // and org config. The sidebar entry is dropped (DEMO_HIDDEN_PATHS in sidebar.tsx); this guards a
+  // demo visitor who reaches a /settings URL directly (bookmark, typed, or back button).
+  useEffect(() => {
+    if (isDemo && projectId) navigate(`/p/${projectId}/overview`, { replace: true })
+  }, [isDemo, projectId, navigate])
+
+  if (isDemo) return <LoadingSpinner />
 
   // Active tab comes from the URL segment after /settings/ (source of truth, not state).
   const currentTab = location.match(/\/settings\/([^/]+)/)?.[1]
