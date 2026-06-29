@@ -1,10 +1,11 @@
 import { type CredentialResponse, GoogleLogin } from '@react-oauth/google'
 import { useSetAtom } from 'jotai'
 import { Loader2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { completeGoogleOAuthAtom } from '@/auth/auth.atoms'
 
-// Sign-in form uses max-w-sm (384px); avoids a blank frame before ResizeObserver runs.
+// First-render fallback until the layout effect measures the container. max-w-sm (384px)
+// is the widest the sign-in form ever gets, so on desktop this is already correct.
 const defaultButtonWidth = 384
 
 export const GoogleSignInButton = ({
@@ -21,7 +22,9 @@ export const GoogleSignInButton = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const [buttonWidth, setButtonWidth] = useState(defaultButtonWidth)
 
-  useEffect(() => {
+  // Measure in a layout effect (before paint) so the GIS button never flashes at the 384px
+  // default on narrow screens; the ResizeObserver keeps it in sync on later resizes.
+  useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
     const update = () => {
@@ -55,15 +58,19 @@ export const GoogleSignInButton = ({
 
   if (busy) {
     return (
-      <div className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-sm text-muted-foreground opacity-50">
+      <div className="flex h-10 w-full items-center justify-center gap-2 rounded border border-input bg-background text-sm text-muted-foreground opacity-50">
         {loading && <Loader2 className="h-4 w-4 animate-spin" />}
         Continue with Google
       </div>
     )
   }
 
+  // No overflow clip here: the GIS button renders at buttonWidth, and the column's min-w-0
+  // (in sign-in.tsx) lets it track the viewport, so the button can't force page overflow.
+  // Leaving it un-clipped keeps the button's own rounded corners + outline border intact —
+  // an overflow-hidden clip on the container shaved the button's right corners in responsive mode.
   return (
-    <div ref={containerRef} className="min-h-10 w-full overflow-hidden rounded-md">
+    <div ref={containerRef} className="min-h-10 w-full">
       <GoogleLogin
         onSuccess={handleSuccess}
         onError={() => {
