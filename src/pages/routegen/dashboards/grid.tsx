@@ -3,6 +3,7 @@ import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } fr
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
 import { tilePosition } from './draft-state'
 import { DashboardTileBody } from './tiles'
@@ -113,6 +114,7 @@ export const DashboardGrid = ({
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const editable = mode === 'edit'
+  const isMobile = useIsMobile()
   const highlightRef = useRef<HTMLDivElement>(null)
 
   // Bring a just-added/duplicated tile into view so it never lands off-screen.
@@ -145,6 +147,62 @@ export const DashboardGrid = ({
     onSelectTile(tile.id)
   }
 
+  // The inner tile node, shared by the desktop grid and the mobile stack.
+  // Selection, the highlight ref, and the click handler live here — not on the
+  // grid-item root: react-grid-layout clones the root (wrapping it in
+  // <DraggableCore>/<Resizable>) and overwrites its onMouseDown and ref with its
+  // own. Props nested here are never clobbered.
+  const renderTileContent = (tile: DashboardTile) => (
+    <div
+      ref={highlightTileId === tile.id ? highlightRef : undefined}
+      onMouseDown={handleTileSelect(tile)}
+      className={[
+        'min-h-0 flex-1',
+        selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+        highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
+      ].join(' ')}
+    >
+      {renderTile ? (
+        renderTile(tile)
+      ) : (
+        <DashboardTileBody
+          tile={tile}
+          editing={editable}
+          onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
+          globalTimeRange={globalTimeRange}
+          globalGranularity={globalGranularity}
+          onDuplicate={editable ? onDuplicateTile : undefined}
+        />
+      )}
+    </div>
+  )
+
+  // Narrow viewports can't honor the proportional 72-column layout — a half-width
+  // tile would be ~180px, a KPI ~60px. Stack every tile full-width in reading
+  // order (top-to-bottom, then left-to-right) at its authored height, bypassing
+  // react-grid-layout entirely. Keyed off the viewport (not the grid container),
+  // so opening the edit config rail never trips it; drag/resize is desktop-only.
+  if (isMobile) {
+    const ordered = [...tiles].sort((a, b) => {
+      const pa = tilePosition(a)
+      const pb = tilePosition(b)
+      return pa.y - pb.y || pa.x - pb.x
+    })
+    return (
+      <div className="flex flex-col gap-4">
+        {ordered.map(tile => {
+          const pos = tilePosition(tile)
+          const height = Math.max(pos.h, getTileMinHeight(tile)) * GRID_ROW_HEIGHT
+          return (
+            <div key={tile.id} className="group flex flex-col" style={{ height }}>
+              {renderTileContent(tile)}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       {editable ? <GridGuides /> : null}
@@ -168,32 +226,7 @@ export const DashboardGrid = ({
           // Cards fill their cell (no inset). A gap is an empty track; two tiles
           // with no empty track between them sit flush (continuous).
           <div key={tile.id} className="group flex h-full min-h-0 flex-col">
-            {/* Selection, the highlight ref, and the click handler live on this
-              inner node, not the grid-item root: react-grid-layout clones the root
-              (wrapping it in <DraggableCore>/<Resizable>) and overwrites its
-              onMouseDown and ref with its own. Props nested here are never clobbered. */}
-            <div
-              ref={highlightTileId === tile.id ? highlightRef : undefined}
-              onMouseDown={handleTileSelect(tile)}
-              className={[
-                'min-h-0 flex-1',
-                selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
-                highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
-              ].join(' ')}
-            >
-              {renderTile ? (
-                renderTile(tile)
-              ) : (
-                <DashboardTileBody
-                  tile={tile}
-                  editing={editable}
-                  onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
-                  globalTimeRange={globalTimeRange}
-                  globalGranularity={globalGranularity}
-                  onDuplicate={editable ? onDuplicateTile : undefined}
-                />
-              )}
-            </div>
+            {renderTileContent(tile)}
           </div>
         ))}
       </ResponsiveGridLayoutWithWidth>

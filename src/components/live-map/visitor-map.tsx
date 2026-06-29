@@ -19,6 +19,7 @@ type Props = {
   visitors: ActivityEvent[]
   selectedDistinctId?: string | null
   onSelectVisitor?: (distinctId: string) => void
+  profileHref?: (distinctId: string) => string
   viewportPadding?: PaddingOptions
 }
 
@@ -51,7 +52,13 @@ const entrySignature = (entry: MapEntry, selectedId: string | null) => {
   ].join('|')
 }
 
-const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, viewportPadding }: Props) => {
+const LiveVisitorMap = ({
+  visitors,
+  selectedDistinctId = null,
+  onSelectVisitor,
+  profileHref,
+  viewportPadding,
+}: Props) => {
   const dark = useResolvedDark()
   // Zoom past DECLUSTER_ZOOM breaks crowded city groups into individual faces.
   const [declustered, setDeclustered] = useState(false)
@@ -87,6 +94,8 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
   const entriesRef = useRef(new Map<string, Entry>())
   const selectedRef = useRef(selectedDistinctId)
   const onSelectRef = useRef(onSelectVisitor)
+  const profileHrefRef = useRef(profileHref)
+  profileHrefRef.current = profileHref
   const paddingRef = useRef(viewportPadding)
   paddingRef.current = viewportPadding
 
@@ -113,7 +122,14 @@ const LiveVisitorMap = ({ visitors, selectedDistinctId = null, onSelectVisitor, 
       root.render(<ClusterView cluster={entry} onZoomTo={zoomToClusterRef.current} />)
       return
     }
-    root.render(<MarkerView marker={entry} selected={entry.distinctId === selectedId} onSelect={onSelectRef.current} />)
+    root.render(
+      <MarkerView
+        marker={entry}
+        selected={entry.distinctId === selectedId}
+        onSelect={onSelectRef.current}
+        profileHref={profileHrefRef.current}
+      />,
+    )
   }, [])
 
   // Theme swap — restyle the basemap; DOM markers persist across setStyle.

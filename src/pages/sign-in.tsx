@@ -187,9 +187,16 @@ const SignIn = () => {
         </div>
       </div>
 
-      {/* Right — form on an inset card so it pops against the blue and leads. */}
-      <div className="flex-1 lg:w-1/2 p-4 relative z-10">
-        <div className="flex h-full w-full items-center justify-center rounded-3xl bg-background p-8">
+      {/* Right — form on an inset card so it pops against the blue and leads. On mobile the
+          card fills the screen edge-to-edge (covering the blue + trend); the inset framing
+          (blue gutter + rounded corners) is a desktop-only treatment.
+          min-w-0: this is a flex item, so its default min-width:auto floors it at its
+          content's min-content — the GIS button's fixed 384px width — and it can't shrink
+          below that, overflowing (clipped right) on phones narrower than ~432px. min-w-0
+          lets it shrink so the form column tracks the viewport (GoogleSignInButton drops its
+          own overflow clip in reliance on this). */}
+      <div className="flex-1 lg:w-1/2 lg:p-4 relative z-10 min-w-0">
+        <div className="flex h-full w-full items-center justify-center bg-background p-6 lg:rounded-3xl lg:p-8">
           <div className="w-full max-w-sm">
             <div className="lg:hidden flex items-center gap-3 mb-10">
               <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">

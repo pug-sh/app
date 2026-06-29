@@ -180,11 +180,11 @@ const Organization = () => {
 
           {/* Switcher */}
           <div className="flex gap-2">
-            <Select value="" onValueChange={v => handleSwitchOrg(v ?? '')}>
-              <SelectTrigger className="flex-1 max-w-xs">
-                <SelectValue placeholder={org.displayName} />
+            <Select value={org.id} onValueChange={v => handleSwitchOrg(v ?? '')}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue>{v => orgs.find(o => o.id === v)?.displayName ?? org.displayName}</SelectValue>
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
                 {orgsLoading ? (
                   <div className="flex justify-center py-3">
                     <Loader2 className="size-4 animate-spin text-muted-foreground" />

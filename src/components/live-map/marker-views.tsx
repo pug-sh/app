@@ -1,4 +1,5 @@
 import { Facehash } from 'facehash'
+import { navigate } from 'wouter/use-browser-location'
 
 import { CountryFlag } from '@/components/country-flag'
 import { formatCountryName } from '@/components/live-map/live-visitors'
@@ -6,10 +7,21 @@ import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from
 import { BrowserLabel, DeviceLabel } from '@/components/platform-label'
 import { getSeriesColor } from '@/lib/event-colors'
 
-const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
+const MarkerPopover = ({
+  marker,
+  selected,
+  profileHref,
+}: {
+  marker: VisitorMapMarker
+  selected: boolean
+  profileHref?: (distinctId: string) => string
+}) => {
   const country = formatCountryName(marker.iso)
   const location = [marker.city, marker.region, country].filter(Boolean).join(', ')
   const color = getSeriesColor(marker.kind).dot
+  // Hover popovers are pointer-events-none peeks; only the selected one is clickable, so the
+  // profile link is offered there — where it can actually be followed.
+  const href = selected ? profileHref?.(marker.distinctId) : undefined
 
   return (
     <div className="w-56 text-xs">
@@ -49,6 +61,21 @@ const MarkerPopover = ({ marker }: { marker: VisitorMapMarker }) => {
           <span className="truncate">{country}</span>
         </span>
       </div>
+      {href && (
+        <a
+          href={href}
+          onClick={e => {
+            // Plain left-click navigates within the SPA; modified/middle clicks keep their
+            // native open-in-new-tab behaviour (href is a real project-scoped route).
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
+            e.preventDefault()
+            navigate(href)
+          }}
+          className="mt-2.5 flex items-center justify-center gap-1 border-t border-border/40 pt-2.5 font-medium text-link underline-offset-4 hover:underline"
+        >
+          View profile →
+        </a>
+      )}
     </div>
   )
 }
@@ -57,10 +84,12 @@ export const MarkerView = ({
   marker,
   selected,
   onSelect,
+  profileHref,
 }: {
   marker: VisitorMapMarker
   selected: boolean
   onSelect?: (distinctId: string) => void
+  profileHref?: (distinctId: string) => string
 }) => {
   const locationLabel = marker.region
     ? `${marker.region}, ${formatCountryName(marker.iso)}`
@@ -96,7 +125,7 @@ export const MarkerView = ({
           selected ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover/marker:opacity-100'
         }`}
       >
-        <MarkerPopover marker={marker} />
+        <MarkerPopover marker={marker} selected={selected} profileHref={profileHref} />
       </div>
     </div>
   )
