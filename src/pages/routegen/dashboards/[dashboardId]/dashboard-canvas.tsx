@@ -54,6 +54,7 @@ export const DashboardCanvas = ({
     duplicateTile,
     handleSelectTemplate,
     patchSelectedTile,
+    patchSelectedTileSilent,
     removeSelectedTile,
     duplicateSelectedTile,
     templateContext,
@@ -133,6 +134,7 @@ export const DashboardCanvas = ({
               onToggleCollapse={() => setRailCollapsed(value => !value)}
               onClose={deselectTile}
               onPatch={patchSelectedTile}
+              onPatchSpec={patchSelectedTileSilent}
               onDelete={removeSelectedTile}
               onDuplicate={duplicateSelectedTile}
             />

@@ -15,6 +15,9 @@ export type TileConfigPanelProps = {
   onToggleCollapse: () => void
   onClose: () => void
   onPatch: (patch: Partial<DashboardTile>) => void
+  // Insight-spec edits (the Data tab) bypass undo history — that tab owns its own
+  // editor state, so a recorded undo would desync it. See patchSelectedTileSilent.
+  onPatchSpec: (patch: Partial<DashboardTile>) => void
   onDelete: () => void
   onDuplicate: () => void
 }
@@ -25,6 +28,7 @@ export const TileConfigPanel = ({
   onToggleCollapse,
   onClose,
   onPatch,
+  onPatchSpec,
   onDelete,
   onDuplicate,
 }: TileConfigPanelProps) => {
@@ -88,7 +92,7 @@ export const TileConfigPanel = ({
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-4">
-            {tab === 'data' ? <DataTab tile={tile} onPatch={onPatch} /> : null}
+            {tab === 'data' ? <DataTab tile={tile} onPatch={onPatchSpec} /> : null}
             {tab === 'display' ? <DisplayTab tile={tile} onPatch={onPatch} /> : null}
             {tab === 'format' ? <FormatTab tile={tile} onPatch={onPatch} /> : null}
           </div>
