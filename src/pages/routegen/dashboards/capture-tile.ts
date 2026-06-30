@@ -5,8 +5,9 @@
 // <foreignObject>, and load that SVG through an <img>. Recharts renders plain
 // SVG, so nothing taints the canvas and toBlob() stays usable. The <img> stays
 // vector — drawing it onto a scaled canvas rasterizes crisply at device
-// resolution. Fonts fall back to the system stack (the SVG loads in an isolated
-// document that cannot see @font-face faces), which is fine for a chart snapshot.
+// resolution. The SVG loads in an isolated document that cannot see the page's
+// @font-face faces, so the UI font is re-supplied by embedding it in the SVG (see
+// loadFontFaceCss) — without it the chart text falls back to the system stack.
 
 // Copy resolved styles from each source element onto its clone counterpart. The
 // clone tree mirrors the source tree 1:1, so we recurse in lockstep. Reading from
@@ -47,6 +48,41 @@ const loadImage = (src: string, width: number, height: number) =>
     }
     img.src = src
   })
+
+// The SVG-image renderer loads in an isolated document that cannot see the page's
+// @font-face faces, so chart text otherwise falls back to the system sans stack —
+// visibly different from the rest of the UI. We re-supply the font by embedding it
+// directly in the SVG as a base64 data: URL @font-face (an external url() would not
+// load inside an <img>-loaded SVG). Only the Regular (400) cut is embedded: the UI
+// ships no 500 face and the snapshot renders no 600/700 chart text, so 400 covers
+// title and chart alike. Fetched and base64-encoded once, then cached.
+const FONT_FAMILY = 'Apfel Grotezk'
+const FONT_URL = '/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2'
+let fontFaceCssPromise: Promise<string> | undefined
+
+const loadFontFaceCss = () => {
+  if (!fontFaceCssPromise) {
+    fontFaceCssPromise = fetch(FONT_URL)
+      .then(response => (response.ok ? response.arrayBuffer() : Promise.reject(new Error('font missing'))))
+      .then(buffer => {
+        const bytes = new Uint8Array(buffer)
+        let binary = ''
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+        const base64 = btoa(binary)
+        return (
+          `@font-face{font-family:"${FONT_FAMILY}";font-style:normal;font-weight:400;` +
+          `src:url(data:font/woff2;base64,${base64}) format("woff2");}`
+        )
+      })
+      .catch(error => {
+        // Cosmetic: the chart text just falls back to the system sans stack, as it
+        // did before embedding. Log so a moved/renamed font file is debuggable.
+        console.error('Failed to load font for share card', error)
+        return ''
+      })
+  }
+  return fontFaceCssPromise
+}
 
 export type CapturedChart = {
   img: HTMLImageElement
@@ -94,6 +130,7 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
   if (width === 0 || height === 0) throw new Error('Nothing to capture')
 
   const colors = resolveCardColors(node)
+  const fontFaceCss = await loadFontFaceCss()
 
   const clone = node.cloneNode(true) as HTMLElement
   inlineComputedStyles(node, clone)
@@ -103,8 +140,11 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
   clone.style.height = `${height}px`
 
   const serialized = new XMLSerializer().serializeToString(clone)
+  // base64 src is XML-safe ([A-Za-z0-9+/=]), so the @font-face needs no CDATA wrap.
+  const fontStyle = fontFaceCss ? `<style>${fontFaceCss}</style>` : ''
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+    fontStyle +
     `<foreignObject x="0" y="0" width="${width}" height="${height}">${serialized}</foreignObject>` +
     '</svg>'
 
@@ -243,7 +283,7 @@ export const composeShareCard = async ({
       ctx.fillText(meta, cardW - CARD_PAD, baseY)
     }
     if (trimmedTitle) {
-      ctx.font = `600 ${TITLE_SIZE}px ${fontFamily}`
+      ctx.font = `500 ${TITLE_SIZE}px ${fontFamily}`
       ctx.fillStyle = card.foreground
       ctx.textAlign = 'left'
       ctx.textBaseline = 'alphabetic'
