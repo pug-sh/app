@@ -1,14 +1,16 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { LayoutGrid } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
+import { isDashboardTimeRangePreset, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { autoGranularity, clampGranularity, clampRange, resolveTileGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { toastRPCError } from '@/lib/rpc-error'
@@ -64,6 +66,29 @@ const DashboardDetail = () => {
   useEffect(() => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
+
+  // Seed the global range/granularity from the dashboard's saved default the first time it
+  // loads — but only when the user didn't arrive with an explicit range in the URL (a
+  // shared/bookmarked link wins), and only once per dashboard (so it never clobbers a pick
+  // made afterward, including after a save). With no saved default the controls stay empty
+  // and each tile falls back to its own range.
+  const seededDashboardIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!dashboard || seededDashboardIdRef.current === dashboard.id) return
+    seededDashboardIdRef.current = dashboard.id
+    if (initialGlobalOverrides.timeRange || !isDashboardTimeRangePreset(dashboard.defaultTimeRange)) return
+    const range = resolveDashboardTimeRangePreset(dashboard.defaultTimeRange)
+    setGlobalTimeRange(range)
+    // Keep a URL granularity if present; else honor the saved default granularity (clamped to
+    // the range's cap), else derive it from the range ("Auto").
+    if (initialGlobalOverrides.granularity === undefined) {
+      setGlobalGranularity(
+        dashboard.defaultGranularity === Granularity.UNSPECIFIED
+          ? autoGranularity(range)
+          : clampGranularity(dashboard.defaultGranularity, range),
+      )
+    }
+  }, [dashboard, initialGlobalOverrides])
 
   const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     const clamped = clampRange(range)

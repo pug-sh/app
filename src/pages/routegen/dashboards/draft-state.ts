@@ -58,7 +58,9 @@ export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard
   tiles: dashboard.tiles.filter(tile => tile.id !== tileId),
 })
 
-export type DashboardMetaPatch = Partial<Pick<Dashboard, 'displayName' | 'description'>>
+export type DashboardMetaPatch = Partial<
+  Pick<Dashboard, 'displayName' | 'description' | 'defaultTimeRange' | 'defaultGranularity'>
+>
 
 export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => ({
   ...dashboard,
@@ -71,6 +73,8 @@ export const countDashboardChanges = (a: Dashboard, b: Dashboard): number => {
   let count = 0
   if (a.displayName !== b.displayName) count++
   if (a.description !== b.description) count++
+  if (a.defaultTimeRange !== b.defaultTimeRange) count++
+  if (a.defaultGranularity !== b.defaultGranularity) count++
 
   const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
   const bById = new Map(b.tiles.map(tile => [tile.id, tile]))
