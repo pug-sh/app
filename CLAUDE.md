@@ -216,7 +216,7 @@ Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for cli
 - Event-row filters are event-scoped (`kindFilter`) and should only show properties for that event kind.
 - Value input UX:
   - Always allow free text for values (suggestions are optional, not required).
-  - Multi-value operators (`in`, `not in`, `contains`, `not contains`) support manual multi-entry via Enter/comma + Add.
+  - Multi-value operators (`in`, `not in`) support manual multi-entry via Enter/comma + Add. `contains` / `not contains` are single-value (substring match) — the backend's `PropertyFilter` CEL constraints require a non-empty `value` and forbid `values` for them, so they are not list-arity.
   - Presence operators (`is set`, `is not set`) are no-value operators and should commit immediately.
 
 ### TypeScript Style

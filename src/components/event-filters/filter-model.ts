@@ -15,8 +15,8 @@ export const FILTER_OPERATORS: readonly {
 }[] = [
   { value: FilterOperator.EQUALS, label: 'equals', symbol: '=' },
   { value: FilterOperator.NOT_EQUALS, label: 'not equals', symbol: '≠' },
-  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃', arity: 'list' },
-  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅', arity: 'list' },
+  { value: FilterOperator.CONTAINS, label: 'contains', symbol: '⊃' },
+  { value: FilterOperator.NOT_CONTAINS, label: 'not contains', symbol: '⊅' },
   { value: FilterOperator.IN, label: 'in', symbol: '∈', arity: 'list' },
   { value: FilterOperator.NOT_IN, label: 'not in', symbol: '∉', arity: 'list' },
   { value: FilterOperator.IS_SET, label: 'is set', symbol: '✓', arity: 'none' },
