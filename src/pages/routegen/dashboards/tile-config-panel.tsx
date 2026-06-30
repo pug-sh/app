@@ -32,7 +32,7 @@ export const TileConfigPanel = ({
 
   if (collapsed) {
     return (
-      <aside className="flex h-full w-10 shrink-0 flex-col items-center border-border/60 border-l bg-background py-3">
+      <aside className="sticky top-16 flex max-h-[calc(100svh-5rem)] w-10 shrink-0 flex-col items-center self-start border-border/60 border-l bg-background py-3">
         <Button size="icon-xs" variant="ghost" onClick={onToggleCollapse} aria-label="Expand panel">
           <PanelRightOpen className="size-4" />
         </Button>
@@ -41,7 +41,7 @@ export const TileConfigPanel = ({
   }
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-border/60 border-l bg-background">
+    <aside className="sticky top-16 flex max-h-[calc(100svh-5rem)] w-80 shrink-0 flex-col self-start border-border/60 border-l bg-background">
       <div className="flex items-center justify-between gap-2 border-border/60 border-b px-4 py-3">
         {tile ? (
           <div className="min-w-0 flex-1">
