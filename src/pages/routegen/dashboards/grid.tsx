@@ -14,13 +14,21 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Fine uniform grid. react-grid-layout runs with margin 0 and a high column count
-// (COLS.lg), so one column ≈ one row ≈ the visual gap (~18px). Cards fill their
-// cells with no inset; a gap between tiles is simply an empty track, and two tiles
-// with no empty track between them sit flush — continuous. compactType is null so
-// tiles stay exactly where they are placed (no auto-stacking that would swallow
-// the empty gap tracks).
-const GRID_ROW_HEIGHT = 18
+// Fine uniform grid with a high column count (COLS.lg), so one column ≈ the visual
+// gap (~18px). Horizontally, margin is 0 and a gap between tiles is just an empty
+// column track — adjacent tiles with no empty track sit flush.
+//
+// Vertically the grid auto-compacts (compactType 'vertical', below): dragging a tile
+// onto another reflows the displaced tile UP into the vacated slot — a true swap —
+// instead of only ever shoving it down. Compaction removes the empty ROW tracks that
+// used to space stacked tiles, so vertical breathing room moves to a margin: the row
+// PITCH is split into a short tile row (GRID_ROW_HEIGHT) plus a gutter (GRID_V_GUTTER).
+// Because the pitch stays 18px, every stored tile position lands exactly where it
+// always did — each tile is simply GRID_V_GUTTER px shorter, and that shaved strip is
+// the gap to the tile below.
+const GRID_PITCH = 18
+const GRID_V_GUTTER = 14
+const GRID_ROW_HEIGHT = GRID_PITCH - GRID_V_GUTTER
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -78,7 +86,7 @@ const GridGuides = () => {
       ref={ref}
       aria-hidden
       className="dashboard-grid-guides pointer-events-none absolute inset-0"
-      style={columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_ROW_HEIGHT}px` } : undefined}
+      style={columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_PITCH}px` } : undefined}
     />
   )
 }
@@ -192,7 +200,7 @@ export const DashboardGrid = ({
       <div className="flex flex-col gap-4">
         {ordered.map(tile => {
           const pos = tilePosition(tile)
-          const height = Math.max(pos.h, getTileMinHeight(tile)) * GRID_ROW_HEIGHT
+          const height = Math.max(pos.h, getTileMinHeight(tile)) * GRID_PITCH
           return (
             <div key={tile.id} className="group flex flex-col" style={{ height }}>
               {renderTileContent(tile)}
@@ -212,9 +220,9 @@ export const DashboardGrid = ({
         cols={COLS}
         layouts={layouts}
         rowHeight={GRID_ROW_HEIGHT}
-        margin={[0, 0]}
+        margin={[0, GRID_V_GUTTER]}
         containerPadding={[0, 0]}
-        compactType={null}
+        compactType="vertical"
         isDraggable={editable}
         isResizable={editable}
         draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
@@ -223,8 +231,8 @@ export const DashboardGrid = ({
         onResizeStop={layout => persistLayout(layout)}
       >
         {tiles.map(tile => (
-          // Cards fill their cell (no inset). A gap is an empty track; two tiles
-          // with no empty track between them sit flush (continuous).
+          // Cards fill their cell (no inset). Horizontally a gap is an empty column
+          // track; vertical spacing is the grid's row gutter (see GRID_PITCH).
           <div key={tile.id} className="group flex h-full min-h-0 flex-col">
             {renderTileContent(tile)}
           </div>
