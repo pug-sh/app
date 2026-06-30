@@ -110,6 +110,15 @@
     font-weight: 500;
     letter-spacing: -0.013em;
   }
+
+  /* Tailwind v4 makes <button> use cursor:default to match native browsers (shadcn/ui#6843).
+     This app wants the pointer affordance on interactive elements, so restore it globally —
+     covers shadcn <Button>, hand-rolled buttons, and role=button triggers. Only natively-disabled
+     buttons are excluded — an aria-disabled role=button still gets the pointer. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @layer components {
@@ -317,4 +326,27 @@
     opacity: 1;
     animation: none;
   }
+}
+
+/* sugar-high palette for the SDK setup snippets (overview setup screen). Structural tokens
+   reuse the theme foreground/muted vars so they adapt to light/dark for free; only the three
+   accent hues — keyword, string, class — are tuned per theme, kept restrained (mid-tone on
+   light, lifted on dark, following the same restraint as the insights color bands — these are
+   static oklch values, not the insights' runtime transform) for the near-grayscale UI. */
+.sugar-high {
+  --sh-identifier: var(--foreground);
+  --sh-property: var(--foreground);
+  --sh-entity: var(--foreground);
+  --sh-jsxliterals: var(--foreground);
+  --sh-sign: var(--muted-foreground);
+  --sh-comment: var(--muted-foreground);
+  --sh-keyword: oklch(0.55 0.16 18);
+  --sh-string: oklch(0.5 0.1 160);
+  --sh-class: oklch(0.52 0.12 255);
+}
+
+.dark .sugar-high {
+  --sh-keyword: oklch(0.77 0.13 18);
+  --sh-string: oklch(0.8 0.11 160);
+  --sh-class: oklch(0.8 0.1 255);
 }

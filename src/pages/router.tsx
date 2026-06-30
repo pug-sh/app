@@ -77,7 +77,7 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
         <p className="text-xs mb-3">This project may have been removed or you don't have access.</p>
         <button
           onClick={() => navigate('/', { replace: true })}
-          className="text-xs text-link hover:underline underline-offset-4 cursor-pointer"
+          className="text-xs text-link hover:underline underline-offset-4"
         >
           Go to overview
         </button>

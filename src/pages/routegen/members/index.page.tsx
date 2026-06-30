@@ -224,14 +224,14 @@ const Members = () => {
                         {confirmingRemove === m.customerId ? (
                           <button
                             onClick={() => handleRemove(m.customerId)}
-                            className="text-[11px] font-medium text-destructive hover:underline underline-offset-2 cursor-pointer"
+                            className="text-[11px] font-medium text-destructive hover:underline underline-offset-2"
                           >
                             Remove?
                           </button>
                         ) : (
                           <button
                             onClick={() => setConfirmingRemove(m.customerId)}
-                            className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground cursor-pointer"
+                            className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -280,14 +280,11 @@ const Members = () => {
                   <button
                     onClick={handleInvite}
                     disabled={inviting || !email.trim()}
-                    className="p-1 rounded-md hover:bg-muted text-link disabled:opacity-50 cursor-pointer"
+                    className="p-1 rounded-md hover:bg-muted text-link disabled:opacity-50"
                   >
                     {inviting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                   </button>
-                  <button
-                    onClick={closeInvite}
-                    className="p-1 rounded-md hover:bg-muted text-muted-foreground cursor-pointer"
-                  >
+                  <button onClick={closeInvite} className="p-1 rounded-md hover:bg-muted text-muted-foreground">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -297,7 +294,7 @@ const Members = () => {
                     setShowInvite(true)
                     setTimeout(() => inputRef.current?.focus(), 0)
                   }}
-                  className="flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 mt-1 py-2 px-2 -mx-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                 >
                   <div className="w-7 h-7 rounded-full border border-dashed border-border flex items-center justify-center shrink-0">
                     <Plus className="w-3 h-3" />
@@ -335,7 +332,7 @@ const Members = () => {
                       <button
                         onClick={() => handleResend(inv.id)}
                         disabled={resending === inv.id}
-                        className={`p-1 rounded-md transition-opacity hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer ${
+                        className={`p-1 rounded-md transition-opacity hover:bg-muted text-muted-foreground hover:text-foreground ${
                           resending === inv.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                         }`}
                         title="Resend invitation"

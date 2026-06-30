@@ -40,7 +40,7 @@ const CopyId = ({ value }: { value: string }) => {
     <button
       type="button"
       onClick={() => copy(value)}
-      className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+      className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
     >
       {value}
       {copied ? <Check className="size-3 text-green-600 dark:text-green-400" /> : <Copy className="size-3" />}
@@ -248,7 +248,7 @@ const Organization = () => {
                   type="button"
                   onClick={startRename}
                   aria-label="Rename organization"
-                  className="group inline-flex items-center gap-2 text-sm cursor-pointer"
+                  className="group inline-flex items-center gap-2 text-sm"
                 >
                   <span className="font-medium">{org.displayName}</span>
                   <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -288,7 +288,7 @@ const Organization = () => {
                         setShowCreateOrg(false)
                         createOrgForm.reset()
                       }}
-                      className="shrink-0 text-xs text-muted-foreground hover:underline cursor-pointer"
+                      className="shrink-0 text-xs text-muted-foreground hover:underline"
                     >
                       Cancel
                     </button>
@@ -302,7 +302,7 @@ const Organization = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateOrg(true)}
-                className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline cursor-pointer"
+                className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline"
               >
                 <Plus className="size-4" />
                 New organization
@@ -316,7 +316,7 @@ const Organization = () => {
                   type="button"
                   onClick={handleLeaveOrg}
                   disabled={leaving}
-                  className="text-destructive hover:underline cursor-pointer disabled:opacity-50"
+                  className="text-destructive hover:underline disabled:opacity-50"
                 >
                   {leaving ? 'Leaving…' : 'Confirm'}
                 </button>
@@ -324,7 +324,7 @@ const Organization = () => {
                   type="button"
                   onClick={() => setConfirmingLeave(false)}
                   disabled={leaving}
-                  className="text-muted-foreground hover:underline cursor-pointer"
+                  className="text-muted-foreground hover:underline"
                 >
                   Cancel
                 </button>
@@ -333,7 +333,7 @@ const Organization = () => {
               <button
                 type="button"
                 onClick={() => setConfirmingLeave(true)}
-                className="block text-sm text-muted-foreground transition-colors hover:text-destructive cursor-pointer"
+                className="block text-sm text-muted-foreground transition-colors hover:text-destructive"
               >
                 Leave organization
               </button>

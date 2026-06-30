@@ -245,7 +245,7 @@ const EventExplorer = () => {
             <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
               <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">user</span>
               <Popover>
-                <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer">
+                <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">
                   {userFilter}
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-52 p-2">
@@ -266,7 +266,7 @@ const EventExplorer = () => {
               <button
                 type="button"
                 onClick={() => setUserFilter('')}
-                className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+                className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>

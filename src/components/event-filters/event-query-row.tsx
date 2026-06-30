@@ -133,7 +133,7 @@ export const EventQueryRow = memo(
                   type="button"
                   onClick={retryScopedSchema}
                   title={scopedSchemaError}
-                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   retry schema
                 </button>
@@ -145,7 +145,7 @@ export const EventQueryRow = memo(
         <button
           type="button"
           onClick={onRemove}
-          className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+          className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <X className="w-3 h-3" />
         </button>

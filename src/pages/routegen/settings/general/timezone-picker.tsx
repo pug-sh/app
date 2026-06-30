@@ -46,7 +46,7 @@ export const TimezonePicker = ({
       <PopoverTrigger
         className={cn(
           'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs',
-          'hover:bg-muted/40 transition-colors cursor-pointer',
+          'hover:bg-muted/40 transition-colors',
           invalid && 'border-destructive',
         )}
         aria-invalid={invalid}

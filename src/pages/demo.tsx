@@ -69,7 +69,7 @@ const Demo = () => {
           <button
             type="button"
             onClick={() => navigate(authenticated ? '/overview' : '/')}
-            className="text-link text-sm font-medium hover:underline underline-offset-4 cursor-pointer"
+            className="text-link text-sm font-medium hover:underline underline-offset-4"
           >
             {authenticated ? 'Back to my dashboard' : 'Back to sign in'}
           </button>
@@ -94,7 +94,7 @@ const Demo = () => {
           type="button"
           onClick={() => navigate('/overview')}
           disabled={switching}
-          className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
+          className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6 disabled:opacity-50"
         >
           Back to my dashboard
         </button>

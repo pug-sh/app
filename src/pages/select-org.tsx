@@ -99,7 +99,7 @@ const SelectOrg = () => {
                   <button
                     type="button"
                     onClick={() => selectOrg(org)}
-                    className="group w-full flex items-center gap-3 py-3 border-b border-border/50 transition-colors hover:bg-muted/40 cursor-pointer text-left"
+                    className="group w-full flex items-center gap-3 py-3 border-b border-border/50 transition-colors hover:bg-muted/40 text-left"
                   >
                     <span className="flex-1 font-medium">{org.displayName}</span>
                     {label && (
@@ -150,7 +150,7 @@ const SelectOrg = () => {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="mt-4 flex items-center gap-2 text-sm text-link hover:underline underline-offset-4 cursor-pointer"
+              className="mt-4 flex items-center gap-2 text-sm text-link hover:underline underline-offset-4"
             >
               <Plus className="w-4 h-4" />
               Create new organization
@@ -161,7 +161,7 @@ const SelectOrg = () => {
             <button
               type="button"
               onClick={() => signOut()}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Sign out
             </button>

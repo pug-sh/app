@@ -29,8 +29,7 @@ type Props = {
   onClearAll: () => void
 }
 
-const triggerClass =
-  'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] transition-colors cursor-pointer'
+const triggerClass = 'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] transition-colors'
 
 const KindFilter = ({
   kinds,

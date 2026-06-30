@@ -31,6 +31,26 @@ export const fetchOverviewSchemaAtom = atom(null, async (get, set) => {
   }
 })
 
+// Background refresh for the setup screen's poll. Unlike fetchOverviewSchemaAtom it neither
+// clears the schema nor toggles the page-level loading flag, so the setup screen stays put (no
+// spinner flash between ticks) and the page swaps to the dashboard the instant the first events
+// land. Returns whether the fetch succeeded: the background poll ignores a miss (the initial load
+// already surfaced schema errors, so a transient tick shouldn't toast or tear down the screen),
+// while the explicit "Check now" action uses the result to tell the user when a refresh fails.
+export const pollOverviewSchemaAtom = atom(null, async (get, set) => {
+  const insightsRPC = get(insightsRPCAtom)
+  const headers = get(projectHeaderAtom)
+  if (!headers) return false
+  try {
+    const resp = await insightsRPC.getFilterSchema({}, { headers })
+    set(overviewSchemaAtom, resp)
+    return true
+  } catch (err) {
+    console.debug('overview schema poll failed', err)
+    return false
+  }
+})
+
 export const overviewBindingsAtom = atom<Bindings | null>(get => {
   const schema = get(overviewSchemaAtom)
   if (!schema) return null

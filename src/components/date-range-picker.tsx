@@ -69,7 +69,7 @@ export function DateRangePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
         <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
           <CalendarDays className="w-3 h-3" />
           time
@@ -82,7 +82,7 @@ export function DateRangePicker({
             type="button"
             onClick={() => setEditing('from')}
             className={cn(
-              'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
+              'text-xs px-2 py-1 rounded-md transition-colors',
               editing === 'from'
                 ? 'bg-primary/10 text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground',
@@ -95,7 +95,7 @@ export function DateRangePicker({
             type="button"
             onClick={() => setEditing('to')}
             className={cn(
-              'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
+              'text-xs px-2 py-1 rounded-md transition-colors',
               editing === 'to'
                 ? 'bg-primary/10 text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground',
@@ -116,7 +116,7 @@ export function DateRangePicker({
                     onChange(preset.resolve())
                     setOpen(false)
                   }}
-                  className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
                   {preset.label}
                   <span className="block text-[11px] text-muted-foreground/50">
@@ -132,7 +132,7 @@ export function DateRangePicker({
                   onChange(undefined)
                   setOpen(false)
                 }}
-                className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 {unsetLabel}
               </button>

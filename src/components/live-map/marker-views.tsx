@@ -102,7 +102,7 @@ export const MarkerView = ({
         aria-label={`Visitor from ${locationLabel}`}
         title={locationLabel}
         onClick={() => onSelect?.(marker.distinctId)}
-        className="block cursor-pointer border-0 bg-transparent p-0"
+        className="block border-0 bg-transparent p-0"
       >
         <span
           className={`relative block rounded-full shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
@@ -149,7 +149,7 @@ export const ClusterView = ({
       aria-label={`Zoom to ${cluster.count} visitors near ${place}`}
       onClick={() => onZoomTo?.(cluster.lng, cluster.lat)}
       style={{ width: size, height: size, borderColor: color }}
-      className="flex cursor-pointer items-center justify-center rounded-full border-2 bg-background/90 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-transform duration-200 hover:scale-110"
+      className="flex items-center justify-center rounded-full border-2 bg-background/90 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-transform duration-200 hover:scale-110"
     >
       {cluster.count}
     </button>

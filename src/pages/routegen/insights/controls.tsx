@@ -40,7 +40,7 @@ export const OptionChip = <T extends string | number>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
         <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
           {Icon && <Icon className="w-3 h-3" />}
           {label}
@@ -162,7 +162,7 @@ const RowAggregationPropertyPicker = memo(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
           <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">property</span>
           <span className={cn('px-2 h-full flex items-center', !value && 'text-muted-foreground')}>
             {value || 'Select numeric property'}

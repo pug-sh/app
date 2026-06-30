@@ -21,11 +21,7 @@ export const DemoBanner = () => {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b border-border bg-muted/40 px-4 py-1.5 text-center text-xs">
       <span className="text-muted-foreground">You're exploring a live, read-only demo of Pug.</span>
-      <button
-        type="button"
-        onClick={signUp}
-        className="cursor-pointer font-medium text-link underline-offset-4 hover:underline"
-      >
+      <button type="button" onClick={signUp} className="font-medium text-link underline-offset-4 hover:underline">
         Sign up free →
       </button>
     </div>

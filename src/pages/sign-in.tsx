@@ -218,7 +218,7 @@ const SignIn = () => {
                 </p>
                 <button
                   type="button"
-                  className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6"
+                  className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6"
                   onClick={() => {
                     setMagicLinkSent(false)
                     setError('')
@@ -281,7 +281,7 @@ const SignIn = () => {
                           type="button"
                           onClick={handleMagicLink}
                           disabled={authBusy}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
                         >
                           Forgot?
                         </button>
@@ -299,7 +299,7 @@ const SignIn = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           tabIndex={-1}
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -324,7 +324,7 @@ const SignIn = () => {
                     type="button"
                     onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
                     disabled={authBusy}
-                    className="text-link font-medium text-sm hover:underline underline-offset-4 cursor-pointer mt-6 disabled:opacity-50"
+                    className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6 disabled:opacity-50"
                   >
                     {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
                   </button>
@@ -353,7 +353,7 @@ const SignIn = () => {
                       type="button"
                       onClick={() => navigate('/demo')}
                       disabled={authBusy}
-                      className="cursor-pointer text-xs font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
+                      className="text-xs font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
                     >
                       Explore the live demo →
                     </button>

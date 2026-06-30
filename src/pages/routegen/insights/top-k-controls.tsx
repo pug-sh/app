@@ -28,7 +28,7 @@ const TopKPropertyChip = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
         <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">{label}</span>
         <span className={cn('px-2 h-full flex items-center', value ? 'font-mono' : 'text-muted-foreground')}>
           {value || placeholder}
@@ -70,7 +70,7 @@ const TopKToggleChip = ({
     title={title}
     onClick={() => onChange(!checked)}
     className={cn(
-      'inline-flex items-center gap-1.5 h-7 px-2.5 text-xs border border-border rounded-md cursor-pointer transition-colors',
+      'inline-flex items-center gap-1.5 h-7 px-2.5 text-xs border border-border rounded-md transition-colors',
       checked ? 'bg-muted/60 text-foreground' : 'text-muted-foreground hover:bg-muted/40',
     )}
   >
