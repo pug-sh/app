@@ -163,14 +163,14 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
   }
 }
 
-// The app's brand mark (public/favicon.svg). Loaded once and cached. We add an
+// The app's brand mark (public/logo.svg). Loaded once and cached. We add an
 // explicit width/height so the SVG has an intrinsic size for canvas drawing
 // (Firefox refuses to draw a sizeless SVG image). Resolves null if unavailable.
 let brandLogoPromise: Promise<HTMLImageElement | null> | undefined
 
 export const loadBrandLogo = () => {
   if (!brandLogoPromise) {
-    brandLogoPromise = fetch('/favicon.svg')
+    brandLogoPromise = fetch('/logo.svg')
       .then(response => (response.ok ? response.text() : Promise.reject(new Error('logo missing'))))
       .then(markup => {
         const sized = /<svg[^>]*\swidth=/.test(markup) ? markup : markup.replace('<svg', '<svg width="64" height="64"')
@@ -179,7 +179,7 @@ export const loadBrandLogo = () => {
       })
       .catch(error => {
         // Cosmetic: the share card just renders without the mark. Log so a 404'd
-        // favicon (e.g. after an asset-hash change) is debuggable rather than silent.
+        // logo (e.g. after an asset-hash change) is debuggable rather than silent.
         console.error('Failed to load brand logo for share card', error)
         return null
       })

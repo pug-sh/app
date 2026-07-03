@@ -18,23 +18,6 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// The Pug mark — an analytics pulse, matching the favicon. Renders in currentColor
-// so it works white-on-indigo (hero) and indigo-on-light (mobile header) alike.
-const PugPulse = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    aria-hidden
-  >
-    <path d="M3 14h3.5l2.5-7 3 12 2.5-8H21" />
-  </svg>
-)
-
 // Illustrative time-series area that anchors the hero — full-bleed across the canvas
 // so it slides under the form card. Drawn once on load (see .signin-trend-* in
 // index.css). Bold stroke + gradient fill so it reads, not just a faint hairline.
@@ -155,9 +138,7 @@ const SignIn = () => {
         />
         <div className="relative z-10 flex flex-col justify-between w-full p-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-              <PugPulse className="w-5 h-5" />
-            </div>
+            <img src="/logo.svg" alt="" className="w-10 h-10" />
             <span className="text-xl font-medium tracking-tight">Pug</span>
           </div>
 
@@ -199,9 +180,7 @@ const SignIn = () => {
         <div className="flex h-full w-full items-center justify-center bg-background p-6 lg:rounded-3xl lg:p-8">
           <div className="w-full max-w-sm">
             <div className="lg:hidden flex items-center gap-3 mb-10">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
-                <PugPulse className="w-4.5 h-4.5" />
-              </div>
+              <img src="/logo.svg" alt="" className="w-9 h-9" />
               <span className="text-lg font-medium tracking-tight">Pug</span>
             </div>
 

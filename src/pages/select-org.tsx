@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Bell, ChevronRight, Loader2, Plus } from 'lucide-react'
+import { ChevronRight, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -48,9 +48,7 @@ const SelectOrg = () => {
       <div className="hidden lg:flex lg:w-[45%] bg-primary relative overflow-hidden">
         <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-              <Bell className="w-5 h-5" />
-            </div>
+            <img src="/logo.svg" alt="" className="w-10 h-10" />
             <span className="text-xl font-medium tracking-tight">Pug</span>
           </div>
           <div className="max-w-sm">
@@ -76,9 +74,7 @@ const SelectOrg = () => {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Bell className="w-4.5 h-4.5 text-primary-foreground" />
-            </div>
+            <img src="/logo.svg" alt="" className="w-9 h-9" />
             <span className="text-lg font-medium tracking-tight">Pug</span>
           </div>
 
