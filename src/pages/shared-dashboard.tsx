@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { Bell, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { useParams } from 'wouter'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
@@ -23,9 +23,7 @@ const Shell = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen overflow-auto">
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-8 flex items-center gap-3">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-          <Bell className="size-4.5 text-primary-foreground" />
-        </div>
+        <img src="/logo.svg" alt="" className="size-9" />
         <span className="text-lg font-medium tracking-tight">Pug</span>
       </div>
       {children}
