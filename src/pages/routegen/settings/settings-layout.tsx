@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 
 const SETTINGS_TABS = [
   { path: 'general', label: 'General' },
+  { path: 'api-keys', label: 'API Keys' },
   { path: 'account', label: 'Account' },
   { path: 'organization', label: 'Organization' },
 ] as const
