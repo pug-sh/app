@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { projectsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
+import CopyableCode from '@/components/copyable-code'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -98,6 +99,18 @@ const General = () => {
           <span className="break-all">{import.meta.env.VITE_API_BASE_URL}</span>
         </div>
       </section>
+
+      {project && (
+        <section>
+          <SectionHeader title="API Keys" description="Authenticate the Pug SDK — keep the private key secret" />
+          <table className="w-full max-w-xl">
+            <tbody>
+              <CopyableCode label="Public Key" value={project.publicApiKey} />
+              <CopyableCode label="Private Key" value={project.privateApiKey} masked />
+            </tbody>
+          </table>
+        </section>
+      )}
 
       {project && projectHeaders && (
         <section>
