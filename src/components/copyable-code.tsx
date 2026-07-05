@@ -22,11 +22,16 @@ const CopyableCode = ({ label, value, masked = false }: { label: string; value: 
       <td className="whitespace-nowrap py-2.5 align-middle">
         <span className="inline-flex gap-0.5">
           {masked && (
-            <Button variant="ghost" size="icon-xs" onClick={() => setRevealed(!revealed)}>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setRevealed(!revealed)}
+              aria-label={revealed ? `Hide ${label}` : `Reveal ${label}`}
+            >
               {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
             </Button>
           )}
-          <Button variant="ghost" size="icon-xs" onClick={() => copy(safe)}>
+          <Button variant="ghost" size="icon-xs" onClick={() => copy(safe)} aria-label={`Copy ${label}`}>
             {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
           </Button>
         </span>
