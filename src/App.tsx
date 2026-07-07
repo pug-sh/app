@@ -6,6 +6,7 @@ import { Route, useLocation } from 'wouter'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
+import { SocialNav } from '@/components/social-nav'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -144,6 +145,7 @@ const AuthenticatedApp = () => {
         <DemoBanner />
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
+          <SocialNav className="ml-auto -mr-1" />
         </header>
         <main className="relative flex min-h-0 flex-1 flex-col overflow-x-clip">
           <Suspense fallback={<LoadingSpinner />}>
