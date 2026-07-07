@@ -34,7 +34,7 @@ const CopyButton = ({ value }: { value: string }) => (
   <button
     type="button"
     onClick={() => navigator.clipboard.writeText(value)}
-    className="opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
     aria-label="Copy"
   >
     <Copy className="w-3 h-3" />
@@ -89,8 +89,8 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
 
   const header = (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
           <div className="relative shrink-0">
             <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
             <span className="absolute -bottom-0.5 -right-0.5">
@@ -103,16 +103,16 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
             </span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               {profile.externalId && profile.externalId !== identity.name && (
-                <span className="group flex items-center gap-1.5">
-                  <span className="text-muted-foreground/60">ext</span>
-                  <span className="font-mono">{profile.externalId}</span>
+                <span className="group flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-muted-foreground/60">ext</span>
+                  <span className="min-w-0 truncate font-mono">{profile.externalId}</span>
                   <CopyButton value={profile.externalId} />
                 </span>
               )}
               {profile.id && profile.id !== identity.name && (
-                <span className="group flex items-center gap-1.5">
-                  <span className="text-muted-foreground/60">distinct</span>
-                  <span className="font-mono">{profile.id.slice(0, 12)}…</span>
+                <span className="group flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-muted-foreground/60">distinct</span>
+                  <span className="min-w-0 truncate font-mono">{profile.id.slice(0, 12)}…</span>
                   <CopyButton value={profile.id} />
                 </span>
               )}

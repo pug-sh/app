@@ -91,26 +91,28 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 align-middle">
           <InlineEventProps {...inlineResult} />
         </td>
-        <td className="py-2.5 pr-2 text-right whitespace-nowrap align-middle overflow-hidden">
-          <ProjectLink
-            href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
-            onClick={e => e.stopPropagation()}
-            className="text-xs font-mono text-link hover:underline underline-offset-4"
-          >
-            {event.distinctId}
-          </ProjectLink>
-          {event.sessionId && (
-            <>
-              <span className="text-muted-foreground/40"> / </span>
-              <ProjectLink
-                href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
-                onClick={e => e.stopPropagation()}
-                className="text-xs font-mono text-link hover:underline underline-offset-4"
-              >
-                {event.sessionId.slice(0, 8)}
-              </ProjectLink>
-            </>
-          )}
+        <td className="py-2.5 pr-2 align-middle overflow-hidden">
+          <div className="flex items-center justify-end">
+            <ProjectLink
+              href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
+              onClick={e => e.stopPropagation()}
+              className="text-xs font-mono text-link hover:underline underline-offset-4 truncate min-w-0"
+            >
+              {event.distinctId}
+            </ProjectLink>
+            {event.sessionId && (
+              <>
+                <span className="shrink-0 text-muted-foreground/40"> / </span>
+                <ProjectLink
+                  href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
+                  onClick={e => e.stopPropagation()}
+                  className="shrink-0 text-xs font-mono text-link hover:underline underline-offset-4"
+                >
+                  {event.sessionId.slice(0, 8)}
+                </ProjectLink>
+              </>
+            )}
+          </div>
         </td>
         <td className="py-2.5 w-5 align-middle text-right">
           {hasMore &&
