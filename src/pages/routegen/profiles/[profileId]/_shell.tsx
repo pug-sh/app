@@ -34,7 +34,7 @@ const CopyButton = ({ value }: { value: string }) => (
   <button
     type="button"
     onClick={() => navigator.clipboard.writeText(value)}
-    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-foreground"
     aria-label="Copy"
   >
     <Copy className="w-3 h-3" />
@@ -105,14 +105,18 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
               {profile.externalId && profile.externalId !== identity.name && (
                 <span className="group flex min-w-0 items-center gap-1.5">
                   <span className="shrink-0 text-muted-foreground/60">ext</span>
-                  <span className="min-w-0 truncate font-mono">{profile.externalId}</span>
+                  <span className="min-w-0 truncate font-mono" title={profile.externalId}>
+                    {profile.externalId}
+                  </span>
                   <CopyButton value={profile.externalId} />
                 </span>
               )}
               {profile.id && profile.id !== identity.name && (
                 <span className="group flex min-w-0 items-center gap-1.5">
                   <span className="shrink-0 text-muted-foreground/60">distinct</span>
-                  <span className="min-w-0 truncate font-mono">{profile.id.slice(0, 12)}…</span>
+                  <span className="min-w-0 truncate font-mono" title={profile.id}>
+                    {profile.id.slice(0, 12)}…
+                  </span>
                   <CopyButton value={profile.id} />
                 </span>
               )}
