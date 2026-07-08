@@ -4,12 +4,15 @@ import nodejsIcon from 'devicon/icons/nodejs/nodejs-original.svg?url'
 
 // Per-platform onboarding shown on the Overview setup screen while a project has no events yet.
 //
-// PLACEHOLDERS TO CONFIRM: the package names, docs URLs, and SDK method surface below are
-// best-guess conventions — this repo has no real SDK references yet. Update these once the
-// published packages and docs site are settled. Key split follows the usual convention: the
-// publishable public key goes in client SDKs, the secret private key stays server-side.
+// Snippets are verified against the published SDKs: @pug-sh/browser (init(projectId, { apiKey })),
+// pug_flutter (Pug.init(projectId, PugOptions(apiKey))), and @pug-sh/node (new Pug({ apiKey })).
+// Client SDKs (web, Flutter) take the project ID at init — it namespaces the stored
+// identity/session/consent and stamps every event, so it's required, not cosmetic. The Node server
+// SDK omits it: the secret private key is project-scoped, and track() takes the distinctId first
+// since a server has no ambient user. Docs links deep-link into the one tabbed SDK page via
+// ?platform= — verified live at docs.pug.sh/docs/sdks.
 
-const DOCS_BASE = 'https://docs.pug.sh/sdks'
+const DOCS_BASE = 'https://docs.pug.sh/docs/sdks'
 
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
 // Adding a platform = one entry here + one in PLATFORMS (the total Record makes the latter a
@@ -23,31 +26,31 @@ export type Platform = {
   icon: string
   docsUrl: string
   install: string
-  // The public (publishable) key is interpolated into client snippets; the Node snippet reads
-  // its secret key from the environment instead, so it ignores this argument.
-  setup: (publicKey: string) => string
+  // Client snippets interpolate the project ID and the public (publishable) key; the Node snippet
+  // reads its secret key from the environment instead, so it ignores both arguments.
+  setup: (projectId: string, publicKey: string) => string
 }
 
 export const PLATFORMS: Record<PlatformId, Platform> = {
   web: {
     label: 'Web',
     icon: javascriptIcon,
-    docsUrl: `${DOCS_BASE}/web`,
-    install: 'npm install @pug-sh/web',
-    setup: publicKey => `import { Pug } from '@pug-sh/web'
+    docsUrl: `${DOCS_BASE}?platform=web`,
+    install: 'npm install @pug-sh/browser',
+    setup: (projectId, publicKey) => `import { init, identify, track } from '@pug-sh/browser'
 
-const pug = new Pug({ apiKey: '${publicKey}' })
+init('${projectId}', { apiKey: '${publicKey}' })
 
 // Tie events to a user once they sign in
-pug.identify('user_123', { email: 'ada@example.com', plan: 'pro' })
+identify('user_123', { email: 'ada@example.com', plan: 'pro' })
 
 // Track what they do
-pug.track('signed_up', { plan: 'pro' })`,
+track('signed_up', { plan: 'pro' })`,
   },
   node: {
     label: 'Node',
     icon: nodejsIcon,
-    docsUrl: `${DOCS_BASE}/node`,
+    docsUrl: `${DOCS_BASE}?platform=node`,
     install: 'npm install @pug-sh/node',
     setup: () => `import { Pug } from '@pug-sh/node'
 
@@ -56,21 +59,21 @@ const pug = new Pug({ apiKey: process.env.PUG_API_KEY })
 
 await pug.identify('user_123', { email: 'ada@example.com', plan: 'pro' })
 
-await pug.track('order_completed', { userId: 'user_123', revenue: 49 })`,
+pug.track('user_123', 'order_completed', { revenue: 49 })`,
   },
   flutter: {
     label: 'Flutter',
     icon: flutterIcon,
-    docsUrl: `${DOCS_BASE}/flutter`,
+    docsUrl: `${DOCS_BASE}?platform=flutter`,
     install: 'flutter pub add pug_flutter',
-    setup: publicKey => `import 'package:pug_flutter/pug_flutter.dart';
+    setup: (projectId, publicKey) => `import 'package:pug_flutter/pug_flutter.dart';
 
-final pug = Pug(apiKey: '${publicKey}');
+await Pug.init('${projectId}', const PugOptions(apiKey: '${publicKey}'));
 
 // Tie events to a user once they sign in
-pug.identify('user_123', traits: {'email': 'ada@example.com', 'plan': 'pro'});
+await Pug.identify('user_123', traits: {'email': 'ada@example.com', 'plan': 'pro'});
 
 // Track what they do
-pug.track('signed_up', properties: {'plan': 'pro'});`,
+Pug.track('signed_up', props: {'plan': 'pro'});`,
   },
 }

@@ -124,7 +124,7 @@ const SetupMode = ({ project }: { project: Project }) => {
 
         <div className="space-y-1.5">
           <p className="text-xs font-medium text-muted-foreground">Initialize &amp; track</p>
-          <CodeBlock code={platform.setup(project.publicApiKey)} />
+          <CodeBlock code={platform.setup(project.id, project.publicApiKey)} />
         </div>
       </section>
 
