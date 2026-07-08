@@ -42,7 +42,7 @@ const ApiKeys = () => {
   return (
     <div className="space-y-8 max-w-2xl">
       <section>
-        <SectionHeader title="API Keys" description="Authenticate the Pug SDK" />
+        <SectionHeader title="API Keys" description="Project ID and public key for the Pug SDK" />
         {loading ? (
           <LoadingSpinner />
         ) : error ? (
@@ -55,6 +55,7 @@ const ApiKeys = () => {
         ) : project ? (
           <table className="w-full max-w-xl">
             <tbody>
+              <CopyableCode label="Project ID" value={project.id} />
               <CopyableCode label="Public Key" value={project.publicApiKey} />
               {/* Private key is intentionally not shown: the backend returns it only once, at
                   project creation (roToRPCMsg omits it from every read). Retrieving it later needs
