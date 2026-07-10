@@ -110,9 +110,13 @@ export const completeGoogleOAuthAtom = atom(
   async (get, set, { credential }: { credential: string }): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
+      // Seed the auto-created default project's reporting zone from the browser on
+      // first sign-in (parity with completeMagicLink). Ignored server-side for a
+      // returning user; malformed/empty values are coerced to UTC.
       const resp = await authRPC.completeOAuthSignIn({
         provider: OAuthProvider.GOOGLE,
         credential,
+        timezone: browserTimezone(),
       })
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
       return { ok: true }
