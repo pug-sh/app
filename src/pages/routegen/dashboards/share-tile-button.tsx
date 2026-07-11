@@ -89,7 +89,7 @@ export const ShareTileButton = ({
       .catch(error => {
         if (cancelled) return
         console.error('Failed to compose share card', error)
-        toast.error('Could not render share image')
+        toast.error(error instanceof Error ? error.message : 'Could not render share image')
       })
     return () => {
       cancelled = true

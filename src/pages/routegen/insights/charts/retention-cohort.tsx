@@ -60,8 +60,10 @@ export const RetentionCohort = ({
   }))
 
   return (
-    <div className="mt-4 overflow-auto max-h-full">
-      <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3">
+    <div className="mt-4 flex flex-col max-h-full">
+      {/* Caption sits outside the scroll region so it stays put when the table is
+          scrolled horizontally or vertically — only the table below scrolls. */}
+      <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3 shrink-0">
         <p className="text-xs text-muted-foreground">Retention by cohort</p>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
           <span>Low</span>
@@ -71,66 +73,71 @@ export const RetentionCohort = ({
           <span>High</span>
         </div>
       </div>
-      <table className="w-full min-w-170">
-        <thead>
-          <tr className="border-b border-border bg-muted/20">
-            <th className="sticky left-0 z-20 bg-background py-2 px-3 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-55">
-              Cohort
-            </th>
-            <th className="sticky left-55 z-20 bg-background py-2 px-2 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60">
-              Total profiles
-            </th>
-            {Array.from({ length: columnCount }).map((_, col) => (
-              <th
-                key={col}
-                className="py-2 px-3 text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium"
-              >
-                {col === 0 ? 'Start' : `+${col}`}
+      <div className="overflow-auto min-h-0">
+        <table className="w-full min-w-170">
+          <thead>
+            <tr className="border-b border-border bg-muted/20">
+              <th className="sticky left-0 z-20 bg-background py-2 px-3 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-55">
+                Cohort
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, ri) => (
-            <tr key={ri} className="border-b last:border-b-0 border-border/50">
-              <td className="sticky left-0 z-10 bg-background py-2 px-3 text-xs text-foreground whitespace-nowrap min-w-55">
-                <div className="inline-flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seriesColors[ri]?.dot }} />
-                  <span>{formatCohortLabel(row.label)}</span>
-                </div>
-              </td>
-              <td className="sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60">
-                {row.size.toLocaleString()}
-              </td>
-              {Array.from({ length: columnCount }).map((_, ci) => {
-                const value = row.values[ci]
-                const hasValue = value !== undefined
-                const cellDate = cohorts[ri]?.points[ci]?.time
-                const cellDateParsed = cellDate ? tsToDate(cellDate) : null
-                const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity, timeZone) : '\u2014'
-                const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
-                return (
-                  <td key={ci} className="py-1.5 px-1.5">
-                    <div
-                      className="h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2"
-                      style={{
-                        backgroundColor: hasValue
-                          ? retentionColor(value)
-                          : 'color-mix(in oklab, var(--muted) 35%, transparent)',
-                        // Text contrasts the value-intensity green (theme-independent); empty cells use the muted token.
-                        color: !hasValue ? 'var(--muted-foreground)' : value >= 35 ? '#f8fafc' : '#14532d',
-                      }}
-                      title={title}
-                    >
-                      {hasValue ? `${Math.round(value)}%` : '—'}
-                    </div>
-                  </td>
-                )
-              })}
+              <th className="sticky left-55 z-20 bg-background py-2 px-2 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60">
+                Total profiles
+              </th>
+              {Array.from({ length: columnCount }).map((_, col) => (
+                <th
+                  key={col}
+                  className="py-2 px-3 text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium"
+                >
+                  {col === 0 ? 'Start' : `+${col}`}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} className="border-b last:border-b-0 border-border/50">
+                <td className="sticky left-0 z-10 bg-background py-2 px-3 text-xs text-foreground whitespace-nowrap min-w-55">
+                  <div className="inline-flex items-center gap-1.5">
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: seriesColors[ri]?.dot }}
+                    />
+                    <span>{formatCohortLabel(row.label)}</span>
+                  </div>
+                </td>
+                <td className="sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60">
+                  {row.size.toLocaleString()}
+                </td>
+                {Array.from({ length: columnCount }).map((_, ci) => {
+                  const value = row.values[ci]
+                  const hasValue = value !== undefined
+                  const cellDate = cohorts[ri]?.points[ci]?.time
+                  const cellDateParsed = cellDate ? tsToDate(cellDate) : null
+                  const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity, timeZone) : '\u2014'
+                  const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
+                  return (
+                    <td key={ci} className="py-1.5 px-1.5">
+                      <div
+                        className="h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2"
+                        style={{
+                          backgroundColor: hasValue
+                            ? retentionColor(value)
+                            : 'color-mix(in oklab, var(--muted) 35%, transparent)',
+                          // Text contrasts the value-intensity green (theme-independent); empty cells use the muted token.
+                          color: !hasValue ? 'var(--muted-foreground)' : value >= 35 ? '#f8fafc' : '#14532d',
+                        }}
+                        title={title}
+                      >
+                        {hasValue ? `${Math.round(value)}%` : '—'}
+                      </div>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
