@@ -117,15 +117,12 @@ const SetupMode = ({ project }: { project: Project }) => {
           </a>
         </div>
 
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Install</p>
-          <CodeBlock code={platform.install} />
-        </div>
-
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-muted-foreground">Initialize &amp; track</p>
-          <CodeBlock code={platform.setup(project.id, project.publicApiKey)} />
-        </div>
+        {platform.sections.map(section => (
+          <div key={section.label} className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">{section.label}</p>
+            <CodeBlock code={section.code(project.id, project.publicApiKey)} />
+          </div>
+        ))}
       </section>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-4">
