@@ -2,16 +2,18 @@
 // @generated from file dashboard/projects/v1/projects.proto (package dashboard.projects.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file dashboard/projects/v1/projects.proto.
  */
 export const file_dashboard_projects_v1_projects: GenFile = /*@__PURE__*/
-  fileDesc("CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IoMBCg1DcmVhdGVSZXF1ZXN0EiEKDGRpc3BsYXlfbmFtZRgBIAEoCUILukgIyAEBcgMYlgESFgoGb3JnX2lkGAIgASgJQga6SAPIAQESNwoScmVwb3J0aW5nX3RpbWV6b25lGAMgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoOQ3JlYXRlUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0Ig8KDURlbGV0ZVJlcXVlc3QiEAoORGVsZXRlUmVzcG9uc2UiDAoKR2V0UmVxdWVzdCI+CgtHZXRSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiogEKB1Byb2plY3QSFAoMZGlzcGxheV9uYW1lGAEgASgJEhgKEGZjbV9zZXJ2aWNlX2pzb24YAiABKAkSCgoCaWQYAyABKAkSDgoGb3JnX2lkGAQgASgJEhcKD3ByaXZhdGVfYXBpX2tleRgFIAEoCRIWCg5wdWJsaWNfYXBpX2tleRgGIAEoCRIaChJyZXBvcnRpbmdfdGltZXpvbmUYByABKAkibgoRVXBkYXRlTWV0YVJlcXVlc3QSIAoMZGlzcGxheV9uYW1lGAEgASgJQgq6SAdyBRABGJYBEjcKEnJlcG9ydGluZ190aW1lem9uZRgCIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokIkUKElVwZGF0ZU1ldGFSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QiNwobVXBkYXRlRkNNU2VydmljZUpTT05SZXF1ZXN0EhgKEGZjbV9zZXJ2aWNlX2pzb24YASABKAkiHgocVXBkYXRlRkNNU2VydmljZUpTT05SZXNwb25zZTLbBAoPUHJvamVjdHNTZXJ2aWNlEl0KCEJhdGNoR2V0EiYuZGFzaGJvYXJkLnByb2plY3RzLnYxLkJhdGNoR2V0UmVxdWVzdBonLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlc3BvbnNlIgASVwoGQ3JlYXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuQ3JlYXRlUmVzcG9uc2UiABJXCgZEZWxldGUSJC5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVxdWVzdBolLmRhc2hib2FyZC5wcm9qZWN0cy52MS5EZWxldGVSZXNwb25zZSIAEk4KA0dldBIhLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXF1ZXN0GiIuZGFzaGJvYXJkLnByb2plY3RzLnYxLkdldFJlc3BvbnNlIgASYwoKVXBkYXRlTWV0YRIoLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVNZXRhUmVxdWVzdBopLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVNZXRhUmVzcG9uc2UiABKBAQoUVXBkYXRlRkNNU2VydmljZUpTT04SMi5kYXNoYm9hcmQucHJvamVjdHMudjEuVXBkYXRlRkNNU2VydmljZUpTT05SZXF1ZXN0GjMuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVzcG9uc2UiAEJLWklnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9wcm9qZWN0cy92MTtwcm9qZWN0c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate]);
+  fileDesc("CiRkYXNoYm9hcmQvcHJvamVjdHMvdjEvcHJvamVjdHMucHJvdG8SFWRhc2hib2FyZC5wcm9qZWN0cy52MSIpCg9CYXRjaEdldFJlcXVlc3QSFgoGb3JnX2lkGAEgASgJQga6SAPIAQEiRAoQQmF0Y2hHZXRSZXNwb25zZRIwCghwcm9qZWN0cxgBIAMoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0IoMBCg1DcmVhdGVSZXF1ZXN0EiEKDGRpc3BsYXlfbmFtZRgBIAEoCUILukgIyAEBcgMYlgESFgoGb3JnX2lkGAIgASgJQga6SAPIAQESNwoScmVwb3J0aW5nX3RpbWV6b25lGAMgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoOQ3JlYXRlUmVzcG9uc2USLwoHcHJvamVjdBgBIAEoCzIeLmRhc2hib2FyZC5wcm9qZWN0cy52MS5Qcm9qZWN0Ig8KDURlbGV0ZVJlcXVlc3QiEAoORGVsZXRlUmVzcG9uc2UiDAoKR2V0UmVxdWVzdCI+CgtHZXRSZXNwb25zZRIvCgdwcm9qZWN0GAEgASgLMh4uZGFzaGJvYXJkLnByb2plY3RzLnYxLlByb2plY3QingEKB1Byb2plY3QSFAoMZGlzcGxheV9uYW1lGAEgASgJEhgKEGZjbV9zZXJ2aWNlX2pzb24YAiABKAkSCgoCaWQYAyABKAkSDgoGb3JnX2lkGAQgASgJEhoKEnJlcG9ydGluZ190aW1lem9uZRgHIAEoCUoECAUQBkoECAYQB1IPcHJpdmF0ZV9hcGlfa2V5Ug5wdWJsaWNfYXBpX2tleSKpAQoGQXBpS2V5Ei8KC2NyZWF0ZV90aW1lGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgxkaXNwbGF5X25hbWUYAiABKAkSCgoCaWQYAyABKAkSLwoEa2luZBgEIAEoDjIhLmRhc2hib2FyZC5wcm9qZWN0cy52MS5BcGlLZXlLaW5kEgsKA2tleRgFIAEoCRIOCgZtYXNrZWQYBiABKAkiFAoSTGlzdEFwaUtleXNSZXF1ZXN0IkYKE0xpc3RBcGlLZXlzUmVzcG9uc2USLwoIYXBpX2tleXMYASADKAsyHS5kYXNoYm9hcmQucHJvamVjdHMudjEuQXBpS2V5InUKE0NyZWF0ZUFwaUtleVJlcXVlc3QSPgoEa2luZBgBIAEoDjIhLmRhc2hib2FyZC5wcm9qZWN0cy52MS5BcGlLZXlLaW5kQg26SArIAQGCAQQQASAAEh4KDGRpc3BsYXlfbmFtZRgCIAEoCUIIukgFcgMYlgEiUwoUQ3JlYXRlQXBpS2V5UmVzcG9uc2USLgoHYXBpX2tleRgBIAEoCzIdLmRhc2hib2FyZC5wcm9qZWN0cy52MS5BcGlLZXkSCwoDa2V5GAIgASgJIikKE0RlbGV0ZUFwaUtleVJlcXVlc3QSEgoCaWQYASABKAlCBrpIA8gBASIWChREZWxldGVBcGlLZXlSZXNwb25zZSJuChFVcGRhdGVNZXRhUmVxdWVzdBIgCgxkaXNwbGF5X25hbWUYASABKAlCCrpIB3IFEAEYlgESNwoScmVwb3J0aW5nX3RpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiRQoSVXBkYXRlTWV0YVJlc3BvbnNlEi8KB3Byb2plY3QYASABKAsyHi5kYXNoYm9hcmQucHJvamVjdHMudjEuUHJvamVjdCI3ChtVcGRhdGVGQ01TZXJ2aWNlSlNPTlJlcXVlc3QSGAoQZmNtX3NlcnZpY2VfanNvbhgBIAEoCSIeChxVcGRhdGVGQ01TZXJ2aWNlSlNPTlJlc3BvbnNlKl0KCkFwaUtleUtpbmQSHAoYQVBJX0tFWV9LSU5EX1VOU1BFQ0lGSUVEEAASFwoTQVBJX0tFWV9LSU5EX1BVQkxJQxABEhgKFEFQSV9LRVlfS0lORF9QUklWQVRFEAIymQcKD1Byb2plY3RzU2VydmljZRJdCghCYXRjaEdldBImLmRhc2hib2FyZC5wcm9qZWN0cy52MS5CYXRjaEdldFJlcXVlc3QaJy5kYXNoYm9hcmQucHJvamVjdHMudjEuQmF0Y2hHZXRSZXNwb25zZSIAElcKBkNyZWF0ZRIkLmRhc2hib2FyZC5wcm9qZWN0cy52MS5DcmVhdGVSZXF1ZXN0GiUuZGFzaGJvYXJkLnByb2plY3RzLnYxLkNyZWF0ZVJlc3BvbnNlIgASVwoGRGVsZXRlEiQuZGFzaGJvYXJkLnByb2plY3RzLnYxLkRlbGV0ZVJlcXVlc3QaJS5kYXNoYm9hcmQucHJvamVjdHMudjEuRGVsZXRlUmVzcG9uc2UiABJOCgNHZXQSIS5kYXNoYm9hcmQucHJvamVjdHMudjEuR2V0UmVxdWVzdBoiLmRhc2hib2FyZC5wcm9qZWN0cy52MS5HZXRSZXNwb25zZSIAEmMKClVwZGF0ZU1ldGESKC5kYXNoYm9hcmQucHJvamVjdHMudjEuVXBkYXRlTWV0YVJlcXVlc3QaKS5kYXNoYm9hcmQucHJvamVjdHMudjEuVXBkYXRlTWV0YVJlc3BvbnNlIgASgQEKFFVwZGF0ZUZDTVNlcnZpY2VKU09OEjIuZGFzaGJvYXJkLnByb2plY3RzLnYxLlVwZGF0ZUZDTVNlcnZpY2VKU09OUmVxdWVzdBozLmRhc2hib2FyZC5wcm9qZWN0cy52MS5VcGRhdGVGQ01TZXJ2aWNlSlNPTlJlc3BvbnNlIgASZgoLTGlzdEFwaUtleXMSKS5kYXNoYm9hcmQucHJvamVjdHMudjEuTGlzdEFwaUtleXNSZXF1ZXN0GiouZGFzaGJvYXJkLnByb2plY3RzLnYxLkxpc3RBcGlLZXlzUmVzcG9uc2UiABJpCgxDcmVhdGVBcGlLZXkSKi5kYXNoYm9hcmQucHJvamVjdHMudjEuQ3JlYXRlQXBpS2V5UmVxdWVzdBorLmRhc2hib2FyZC5wcm9qZWN0cy52MS5DcmVhdGVBcGlLZXlSZXNwb25zZSIAEmkKDERlbGV0ZUFwaUtleRIqLmRhc2hib2FyZC5wcm9qZWN0cy52MS5EZWxldGVBcGlLZXlSZXF1ZXN0GisuZGFzaGJvYXJkLnByb2plY3RzLnYxLkRlbGV0ZUFwaUtleVJlc3BvbnNlIgBCS1pJZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvcHJvamVjdHMvdjE7cHJvamVjdHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dashboard.projects.v1.BatchGetRequest
@@ -176,16 +178,6 @@ export type Project = Message<"dashboard.projects.v1.Project"> & {
   orgId: string;
 
   /**
-   * @generated from field: string private_api_key = 5;
-   */
-  privateApiKey: string;
-
-  /**
-   * @generated from field: string public_api_key = 6;
-   */
-  publicApiKey: string;
-
-  /**
    * IANA reporting timezone (e.g. "Asia/Kolkata") used to bucket day/week/month
    * boundaries for this project's insights and dashboards. Empty string = UTC.
    *
@@ -200,6 +192,166 @@ export type Project = Message<"dashboard.projects.v1.Project"> & {
  */
 export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
   messageDesc(file_dashboard_projects_v1_projects, 8);
+
+/**
+ * ApiKey is one of a project's API keys. It never carries a private key's value:
+ * only its digest is stored, so CreateApiKey's response is the one and only time
+ * a private key is visible.
+ *
+ * @generated from message dashboard.projects.v1.ApiKey
+ */
+export type ApiKey = Message<"dashboard.projects.v1.ApiKey"> & {
+  /**
+   * @generated from field: google.protobuf.Timestamp create_time = 1;
+   */
+  createTime?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string id = 3;
+   */
+  id: string;
+
+  /**
+   * @generated from field: dashboard.projects.v1.ApiKeyKind kind = 4;
+   */
+  kind: ApiKeyKind;
+
+  /**
+   * Full value for a public key; empty for a private key — use `masked` to
+   * identify one of those.
+   *
+   * @generated from field: string key = 5;
+   */
+  key: string;
+
+  /**
+   * Fixed-format hint ("prv_...3f9c") to tell a project's keys apart.
+   *
+   * @generated from field: string masked = 6;
+   */
+  masked: string;
+};
+
+/**
+ * Describes the message dashboard.projects.v1.ApiKey.
+ * Use `create(ApiKeySchema)` to create a new message.
+ */
+export const ApiKeySchema: GenMessage<ApiKey> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 9);
+
+/**
+ * @generated from message dashboard.projects.v1.ListApiKeysRequest
+ */
+export type ListApiKeysRequest = Message<"dashboard.projects.v1.ListApiKeysRequest"> & {
+};
+
+/**
+ * Describes the message dashboard.projects.v1.ListApiKeysRequest.
+ * Use `create(ListApiKeysRequestSchema)` to create a new message.
+ */
+export const ListApiKeysRequestSchema: GenMessage<ListApiKeysRequest> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 10);
+
+/**
+ * @generated from message dashboard.projects.v1.ListApiKeysResponse
+ */
+export type ListApiKeysResponse = Message<"dashboard.projects.v1.ListApiKeysResponse"> & {
+  /**
+   * @generated from field: repeated dashboard.projects.v1.ApiKey api_keys = 1;
+   */
+  apiKeys: ApiKey[];
+};
+
+/**
+ * Describes the message dashboard.projects.v1.ListApiKeysResponse.
+ * Use `create(ListApiKeysResponseSchema)` to create a new message.
+ */
+export const ListApiKeysResponseSchema: GenMessage<ListApiKeysResponse> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 11);
+
+/**
+ * @generated from message dashboard.projects.v1.CreateApiKeyRequest
+ */
+export type CreateApiKeyRequest = Message<"dashboard.projects.v1.CreateApiKeyRequest"> & {
+  /**
+   * @generated from field: dashboard.projects.v1.ApiKeyKind kind = 1;
+   */
+  kind: ApiKeyKind;
+
+  /**
+   * Optional label to tell keys apart on the settings page (e.g. "CI", "staging").
+   *
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message dashboard.projects.v1.CreateApiKeyRequest.
+ * Use `create(CreateApiKeyRequestSchema)` to create a new message.
+ */
+export const CreateApiKeyRequestSchema: GenMessage<CreateApiKeyRequest> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 12);
+
+/**
+ * @generated from message dashboard.projects.v1.CreateApiKeyResponse
+ */
+export type CreateApiKeyResponse = Message<"dashboard.projects.v1.CreateApiKeyResponse"> & {
+  /**
+   * @generated from field: dashboard.projects.v1.ApiKey api_key = 1;
+   */
+  apiKey?: ApiKey | undefined;
+
+  /**
+   * The full key. For a private key this is the only time it is ever returned —
+   * it is unrecoverable afterwards.
+   *
+   * @generated from field: string key = 2;
+   */
+  key: string;
+};
+
+/**
+ * Describes the message dashboard.projects.v1.CreateApiKeyResponse.
+ * Use `create(CreateApiKeyResponseSchema)` to create a new message.
+ */
+export const CreateApiKeyResponseSchema: GenMessage<CreateApiKeyResponse> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 13);
+
+/**
+ * @generated from message dashboard.projects.v1.DeleteApiKeyRequest
+ */
+export type DeleteApiKeyRequest = Message<"dashboard.projects.v1.DeleteApiKeyRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message dashboard.projects.v1.DeleteApiKeyRequest.
+ * Use `create(DeleteApiKeyRequestSchema)` to create a new message.
+ */
+export const DeleteApiKeyRequestSchema: GenMessage<DeleteApiKeyRequest> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 14);
+
+/**
+ * @generated from message dashboard.projects.v1.DeleteApiKeyResponse
+ */
+export type DeleteApiKeyResponse = Message<"dashboard.projects.v1.DeleteApiKeyResponse"> & {
+};
+
+/**
+ * Describes the message dashboard.projects.v1.DeleteApiKeyResponse.
+ * Use `create(DeleteApiKeyResponseSchema)` to create a new message.
+ */
+export const DeleteApiKeyResponseSchema: GenMessage<DeleteApiKeyResponse> = /*@__PURE__*/
+  messageDesc(file_dashboard_projects_v1_projects, 15);
 
 /**
  * UpdateMetaRequest is a partial update of the project's editable metadata: every
@@ -233,7 +385,7 @@ export type UpdateMetaRequest = Message<"dashboard.projects.v1.UpdateMetaRequest
  * Use `create(UpdateMetaRequestSchema)` to create a new message.
  */
 export const UpdateMetaRequestSchema: GenMessage<UpdateMetaRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 9);
+  messageDesc(file_dashboard_projects_v1_projects, 16);
 
 /**
  * @generated from message dashboard.projects.v1.UpdateMetaResponse
@@ -250,7 +402,7 @@ export type UpdateMetaResponse = Message<"dashboard.projects.v1.UpdateMetaRespon
  * Use `create(UpdateMetaResponseSchema)` to create a new message.
  */
 export const UpdateMetaResponseSchema: GenMessage<UpdateMetaResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 10);
+  messageDesc(file_dashboard_projects_v1_projects, 17);
 
 /**
  * @generated from message dashboard.projects.v1.UpdateFCMServiceJSONRequest
@@ -267,7 +419,7 @@ export type UpdateFCMServiceJSONRequest = Message<"dashboard.projects.v1.UpdateF
  * Use `create(UpdateFCMServiceJSONRequestSchema)` to create a new message.
  */
 export const UpdateFCMServiceJSONRequestSchema: GenMessage<UpdateFCMServiceJSONRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 11);
+  messageDesc(file_dashboard_projects_v1_projects, 18);
 
 /**
  * @generated from message dashboard.projects.v1.UpdateFCMServiceJSONResponse
@@ -280,7 +432,39 @@ export type UpdateFCMServiceJSONResponse = Message<"dashboard.projects.v1.Update
  * Use `create(UpdateFCMServiceJSONResponseSchema)` to create a new message.
  */
 export const UpdateFCMServiceJSONResponseSchema: GenMessage<UpdateFCMServiceJSONResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_projects_v1_projects, 12);
+  messageDesc(file_dashboard_projects_v1_projects, 19);
+
+/**
+ * @generated from enum dashboard.projects.v1.ApiKeyKind
+ */
+export enum ApiKeyKind {
+  /**
+   * @generated from enum value: API_KEY_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Embedded in client apps to send events. Extractable by anyone who ships it,
+   * so it is not a secret: it is stored and returned in full.
+   *
+   * @generated from enum value: API_KEY_KIND_PUBLIC = 1;
+   */
+  PUBLIC = 1,
+
+  /**
+   * Authenticates server-side and MCP callers against the whole project. Stored
+   * only as a digest and returned exactly once, by CreateApiKey.
+   *
+   * @generated from enum value: API_KEY_KIND_PRIVATE = 2;
+   */
+  PRIVATE = 2,
+}
+
+/**
+ * Describes the enum dashboard.projects.v1.ApiKeyKind.
+ */
+export const ApiKeyKindSchema: GenEnum<ApiKeyKind> = /*@__PURE__*/
+  enumDesc(file_dashboard_projects_v1_projects, 0);
 
 /**
  * @generated from service dashboard.projects.v1.ProjectsService
@@ -333,6 +517,30 @@ export const ProjectsService: GenService<{
     methodKind: "unary";
     input: typeof UpdateFCMServiceJSONRequestSchema;
     output: typeof UpdateFCMServiceJSONResponseSchema;
+  },
+  /**
+   * @generated from rpc dashboard.projects.v1.ProjectsService.ListApiKeys
+   */
+  listApiKeys: {
+    methodKind: "unary";
+    input: typeof ListApiKeysRequestSchema;
+    output: typeof ListApiKeysResponseSchema;
+  },
+  /**
+   * @generated from rpc dashboard.projects.v1.ProjectsService.CreateApiKey
+   */
+  createApiKey: {
+    methodKind: "unary";
+    input: typeof CreateApiKeyRequestSchema;
+    output: typeof CreateApiKeyResponseSchema;
+  },
+  /**
+   * @generated from rpc dashboard.projects.v1.ProjectsService.DeleteApiKey
+   */
+  deleteApiKey: {
+    methodKind: "unary";
+    input: typeof DeleteApiKeyRequestSchema;
+    output: typeof DeleteApiKeyResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dashboard_projects_v1_projects, 0);

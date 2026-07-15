@@ -490,6 +490,10 @@ export const ComplianceRequestStatusSchema: GenEnum<ComplianceRequestStatus> = /
  */
 export const ProfilesService: GenService<{
   /**
+   * Get returns a single user profile by its pug profile id, including identity
+   * properties and an activity summary. A claimed anonymous id is redirected to
+   * its canonical profile.
+   *
    * @generated from rpc shared.profiles.v1.ProfilesService.Get
    */
   get: {
@@ -498,6 +502,9 @@ export const ProfilesService: GenService<{
     output: typeof GetResponseSchema;
   },
   /**
+   * GetByExternalId returns a single user profile looked up by the external_id your
+   * application assigned to its end user, rather than by pug's internal profile id.
+   *
    * @generated from rpc shared.profiles.v1.ProfilesService.GetByExternalId
    */
   getByExternalId: {
@@ -506,6 +513,9 @@ export const ProfilesService: GenService<{
     output: typeof GetByExternalIdResponseSchema;
   },
   /**
+   * List returns a page of user profiles for the project. Server-streaming, so it
+   * is not exposed as an MCP tool.
+   *
    * @generated from rpc shared.profiles.v1.ProfilesService.List
    */
   list: {
@@ -530,7 +540,7 @@ export const ProfilesService: GenService<{
   /**
    * DeleteDataSubject erases a data subject identified by external_id (the
    * controller-facing handle). Proceeds even when no profile row exists, since
-   * events can be keyed directly by external_id. See docs/compliance/4.1-erasure-scope.md.
+   * events can be keyed directly by external_id.
    *
    * @generated from rpc shared.profiles.v1.ProfilesService.DeleteDataSubject
    */

@@ -3,16 +3,29 @@ import { Check, Copy, ExternalLink, RefreshCw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { highlight } from 'sugar-high'
-import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
+import { ApiKeyKind, type Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import CopyableCode from '@/components/copyable-code'
+import LoadingSpinner from '@/components/loading-spinner'
+import ProjectLink from '@/components/project-link'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
+import { useApiKeys } from '@/hooks/use-api-keys'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { cn } from '@/lib/utils'
 import { pollOverviewSchemaAtom } from './overview.atoms'
 import { PLATFORM_ORDER, PLATFORMS, type PlatformId } from './setup-platforms'
 
-const CodeBlock = ({ code }: { code: string }) => {
+// Stands in for the project's public key in the snippets when there is none to show. Once the key
+// state resolves, that is a fact — every public key was revoked — and the placeholder is honest,
+// where an empty string would silently ship a broken init. While the key is still unresolved it is
+// not a fact, so those snippets withhold Copy instead (see publicKeyPending).
+const PUBLIC_KEY_PLACEHOLDER = 'YOUR_PUBLIC_KEY'
+
+// `copyable` is opt-out so a caller can suppress Copy for code it knows is provisional — the
+// placeholder below reads exactly like the docs' own "fill this in" convention, so a copy taken
+// mid-load is indistinguishable from a finished snippet and fails only once it is running in the
+// user's app.
+const CodeBlock = ({ code, copyable = true }: { code: string; copyable?: boolean }) => {
   const { copied, copy } = useCopyToClipboard()
   // sugar-high returns an HTML string of token spans colored via `--sh-*` CSS vars (themed in
   // index.css under `.sugar-high`). Safe to inject because the input is trusted — our own static
@@ -25,24 +38,36 @@ const CodeBlock = ({ code }: { code: string }) => {
         {/* biome-ignore lint/security/noDangerouslySetInnerHtml: trusted sugar-high output, see above */}
         <code dangerouslySetInnerHTML={{ __html: html }} />
       </pre>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={() => copy(code)}
-        className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
-      >
-        {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
-      </Button>
+      {copyable && (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => copy(code)}
+          className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
+        >
+          {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
+        </Button>
+      )}
     </div>
   )
 }
 
 const SetupMode = ({ project }: { project: Project }) => {
   const poll = useSetAtom(pollOverviewSchemaAtom)
+  const { keys, loading: keysLoading, refreshing: keysRefreshing, error: keysError, reload: reloadKeys } = useApiKeys()
   const [platformId, setPlatformId] = useState<PlatformId>('web')
   const [refreshing, setRefreshing] = useState(false)
 
   const platform = PLATFORMS[platformId]
+
+  // Any public key authenticates the project, so take the first one — the backend resolves a
+  // project by the key's own token, with no notion of a primary. It can be absent: every public
+  // key is revocable, including the starter one created with the project.
+  const publicKey = keys.find(k => k.kind === ApiKeyKind.PUBLIC)?.key ?? ''
+
+  // Loading, or the fetch failed: the key is unknown rather than absent, so the placeholder the
+  // snippets fall back to isn't true yet, and snippets carrying it withhold Copy.
+  const publicKeyPending = keysLoading || !!keysError
 
   // Poll for the project's first events every 5s. When they land, overviewSchemaAtom gains an
   // event and the page swaps to the dashboard — unmounting this screen and clearing the interval.
@@ -69,12 +94,28 @@ const SetupMode = ({ project }: { project: Project }) => {
     <div className="space-y-8">
       <section>
         <SectionHeader title="API Keys" />
-        <table className="w-full max-w-xl">
-          <tbody>
-            <CopyableCode label="Public Key" value={project.publicApiKey} />
-            <CopyableCode label="Private Key" value={project.privateApiKey} masked />
-          </tbody>
-        </table>
+        {keysLoading ? (
+          <LoadingSpinner />
+        ) : keysError ? (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">{keysError}</p>
+            <Button variant="outline" size="sm" onClick={reloadKeys} disabled={keysRefreshing}>
+              Retry
+            </Button>
+          </div>
+        ) : publicKey ? (
+          <div className="max-w-xl">
+            <CopyableCode label="Public Key" value={publicKey} />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            This project has no public key.{' '}
+            <ProjectLink href="/settings/api-keys" className="text-link underline-offset-4 hover:underline">
+              Create one
+            </ProjectLink>{' '}
+            to start sending events.
+          </p>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -117,10 +158,23 @@ const SetupMode = ({ project }: { project: Project }) => {
           </a>
         </div>
 
+        {platform.needsPrivateKey && (
+          <p className="text-xs text-muted-foreground">
+            The server SDK authenticates with a private key.{' '}
+            <ProjectLink href="/settings/api-keys" className="text-link underline-offset-4 hover:underline">
+              Create one in settings
+            </ProjectLink>{' '}
+            — it is shown once, when created.
+          </p>
+        )}
+
         {platform.sections.map(section => (
           <div key={section.label} className="space-y-1.5">
             <p className="text-xs font-medium text-muted-foreground">{section.label}</p>
-            <CodeBlock code={section.code(project.id, project.publicApiKey)} />
+            <CodeBlock
+              code={section.code(project.id, publicKey || PUBLIC_KEY_PLACEHOLDER)}
+              copyable={!(publicKeyPending && section.credential === 'public')}
+            />
           </div>
         ))}
       </section>

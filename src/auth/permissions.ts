@@ -24,6 +24,7 @@ export type Resource =
   | 'invitation'
   | 'email_provider'
   | 'project'
+  | 'api_key'
   | 'dashboard'
   | 'insight'
   | 'activity'
@@ -48,12 +49,15 @@ const INHERITS: Partial<Record<OrgRole, OrgRole>> = {
 // until its grants are declared.
 const ROLE_GRANTS: Record<OrgRole, Grants> = {
   [OrgRole.UNSPECIFIED]: {},
-  // Read-only role: sees everything a member can read (org, members, projects, and all
-  // analytics objects) but authors nothing. No INHERITS entry — VIEWER is the floor.
+  // Read-only role: sees everything a member can read (org, members, projects, API keys, and
+  // all analytics objects) but authors nothing. No INHERITS entry — VIEWER is the floor.
   [OrgRole.VIEWER]: {
     org: ['read'],
     member: ['read'],
     project: ['read'],
+    // Every role reads the key list — it is what the settings page shows, and a private key
+    // is only ever returned masked.
+    api_key: ['read'],
     dashboard: ['read'],
     insight: ['read'],
     activity: ['read'],
@@ -73,6 +77,10 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     invitation: 'all',
     email_provider: 'all',
     project: 'all',
+    // Minting a credential for a whole project is an administrative act, so create/delete sit
+    // here rather than with MEMBER (read comes from VIEWER via INHERITS). Not `'all'`: the
+    // backend defines no update action for a key — it is created and revoked, never edited.
+    api_key: ['create', 'delete'],
   },
 }
 
