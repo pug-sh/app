@@ -14,6 +14,7 @@ import {
   jwtAtom,
   REFRESH_KEY,
   readJWT,
+  readStored,
   refreshTokenAtom,
   setSessionTokens,
 } from '@/auth/jwt.atoms'
@@ -50,18 +51,8 @@ if (!apiBaseUrl) {
 const store = getDefaultStore()
 
 // Read a token from the Jotai store, falling back to localStorage for the first
-// request before atomWithStorage hydrates. atomWithStorage JSON-serializes values,
-// so the raw localStorage value is e.g. '"abc..."'.
-const readToken = (atomRef: typeof jwtAtom, key: string): string => {
-  const inMemory = store.get(atomRef)
-  if (inMemory) return inMemory
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as string) : ''
-  } catch {
-    return ''
-  }
-}
+// request before atomWithStorage hydrates.
+const readToken = (atomRef: typeof jwtAtom, key: string): string => store.get(atomRef) || readStored(key)
 
 const getAccessToken = () => readToken(jwtAtom, JWT_KEY)
 const getRefreshToken = () => readToken(refreshTokenAtom, REFRESH_KEY)
@@ -83,20 +74,45 @@ const refreshClient = createClient(
   createConnectTransport({ baseUrl: apiBaseUrl, interceptors: [protovalidate] }),
 )
 
-// Single-flight: concurrent requests that all see an expired token share ONE
-// refresh call. Critical for reuse-detection — firing two RefreshSession calls
-// with the same refresh token would trip the server's family revocation and log
-// the user out. The promise is cleared once settled so the next window refreshes.
+// Refresh must be single-flight, because the server CONSUMES the presented refresh
+// token on rotation: a second call with the same token is, to the server, a replay,
+// and it responds by revoking the entire family — hard-logging the user out
+// everywhere. Two layers enforce that, and both are needed:
+//
+// 1. refreshInFlight (here) coalesces concurrent requests within ONE tab.
+// 2. withRefreshLock (below) serializes tabs against each other.
+//
+// This layer is module-scoped, so it is blind to other tabs. It is kept anyway
+// because it is the cheap path — it collapses a burst of parallel requests into a
+// single lock acquisition. The promise is cleared once settled so the next window
+// refreshes.
 let refreshInFlight: Promise<string | null> | null = null
 
-const refreshAccessToken = (): Promise<string | null> => {
+// presentedRefresh is the refresh token the caller was about to spend. It is only a
+// hint for the coalesced call: when a refresh is already in flight the first
+// caller's value wins, which is correct because every caller reads it from the same
+// storage a moment apart.
+const refreshAccessToken = (presentedRefresh: string): Promise<string | null> => {
   if (!refreshInFlight) {
-    refreshInFlight = doRefresh().finally(() => {
+    refreshInFlight = doRefresh(presentedRefresh).finally(() => {
       refreshInFlight = null
     })
   }
   return refreshInFlight
 }
+
+// Every tab shares ONE localStorage refresh token, so tabs waking from the same
+// expiry window would each present it and all but the winner would trip the
+// reuse-detection described above. Web Locks are origin-scoped, so they queue tabs
+// where a module-scoped promise cannot see them.
+//
+// The API needs a secure context; where it is absent (plain-HTTP origin, jsdom) fall
+// back to in-tab-only serialization rather than crash — that is exactly the behavior
+// this replaces, so degrading costs nothing that was already working.
+const REFRESH_LOCK = 'pug:refresh-lock'
+
+const withRefreshLock = <T>(fn: () => Promise<T>): Promise<T> =>
+  navigator.locks ? (navigator.locks.request(REFRESH_LOCK, fn) as Promise<T>) : fn()
 
 // doRefresh is the SOLE authority on session death. It clears the session ONLY
 // when RefreshSession returns Unauthenticated — i.e. the server authoritatively
@@ -106,31 +122,56 @@ const refreshAccessToken = (): Promise<string | null> => {
 // the caller's request fail normally and retry later. Conflating the two would
 // log active users out on infrastructure noise — the exact failure this whole
 // feature exists to avoid.
-const doRefresh = async (): Promise<string | null> => {
-  const refreshToken = getRefreshToken()
-  if (!refreshToken) return null
-  try {
-    const resp = await refreshClient.refreshSession({ refreshToken })
-    setSessionTokens({ accessToken: resp.token, refreshToken: resp.refreshToken })
-    return resp.token
-  } catch (err) {
-    if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
-      clearSession()
-      toast.error('Session expired — please sign in again')
+const doRefresh = (presentedRefresh: string): Promise<string | null> =>
+  withRefreshLock(async () => {
+    // Re-read now that the lock is held. This must bypass the Jotai store: jwtAtom is
+    // unmounted on nearly every page, so it never receives the storage event carrying
+    // another tab's write. localStorage is the only place a rotation is visible.
+    const storedRefresh = readStored(REFRESH_KEY)
+    // Empty means another tab cleared the session (sign-out, or its own refresh was
+    // authoritatively rejected). Nothing to present.
+    if (!storedRefresh) return null
+
+    // A refresh token that changed under us means another tab rotated the family
+    // while we queued, so presentedRefresh is now consumed — presenting it is
+    // precisely the replay that revokes the family. Adopt the winner's access token
+    // instead. Note the test is rotation, NOT access-token expiry: on the 401 retry
+    // path below the access token is unexpired and still rejected (revoked ahead of
+    // its exp), and keying off expiry there would hand back the very token the
+    // server just refused and skip the refresh entirely.
+    if (storedRefresh !== presentedRefresh) {
+      const storedAccess = readStored(JWT_KEY)
+      if (storedAccess && !accessTokenExpired(storedAccess)) {
+        setSessionTokens({ accessToken: storedAccess, refreshToken: storedRefresh })
+        return storedAccess
+      }
+      // Their access token is unusable — fall through and spend the rotated refresh
+      // token, which is live either way.
+    }
+
+    try {
+      const resp = await refreshClient.refreshSession({ refreshToken: storedRefresh })
+      setSessionTokens({ accessToken: resp.token, refreshToken: resp.refreshToken })
+      return resp.token
+    } catch (err) {
+      if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
+        clearSession()
+        toast.error('Session expired — please sign in again')
+        return null
+      }
+      // Transient — keep the session intact.
+      console.error('token refresh failed (transient); keeping session', err)
       return null
     }
-    // Transient — keep the session intact.
-    console.error('token refresh failed (transient); keeping session', err)
-    return null
-  }
-}
+  })
 
 const authBearer: Interceptor = next => async req => {
   let token = getAccessToken()
   // Proactively refresh an expired/missing access token while a refresh token
   // exists, so the first request after the access window doesn't have to 401 first.
-  if ((!token || accessTokenExpired(token)) && getRefreshToken()) {
-    token = (await refreshAccessToken()) ?? ''
+  const refreshToken = getRefreshToken()
+  if ((!token || accessTokenExpired(token)) && refreshToken) {
+    token = (await refreshAccessToken(refreshToken)) ?? ''
     if (!token) {
       // doRefresh already cleared the session (authoritative) or kept it (transient).
       // Either way there's no usable access token, so don't send a doomed request.
@@ -153,8 +194,11 @@ const authBearer: Interceptor = next => async req => {
     // So we never clear the session based on this business-endpoint 401: session
     // death is decided only inside doRefresh. If the retry still 401s, that's
     // authorization, not an expired session — let it propagate untouched.
-    if (!getRefreshToken()) throw err
-    const fresh = await refreshAccessToken()
+    // Re-read rather than reusing the value from above: the proactive path may have
+    // rotated it since.
+    const currentRefresh = getRefreshToken()
+    if (!currentRefresh) throw err
+    const fresh = await refreshAccessToken(currentRefresh)
     if (!fresh) throw err
     req.header.set('authorization', `Bearer ${fresh}`)
     return await next(req)

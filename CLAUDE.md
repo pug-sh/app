@@ -36,7 +36,7 @@ All state is Jotai atoms. No React Context, no Redux. Pattern:
 
 `src/network/transport.ts` — single transport with two interceptors:
 
-1. **authBearer** — reads JWT from localStorage, sets Authorization header on every request. No per-call `{ headers }` needed for auth.
+1. **authBearer** — attaches the access JWT and keeps it alive: refreshes proactively on expiry, and once reactively on a `401`. No per-call `{ headers }` needed for auth. The refresh token is **single-use** — the server consumes it on rotation and reads a second presentation as a replay, revoking the whole family and logging the user out of every tab. So refresh is single-flight twice over: an in-memory promise within a tab, plus a `navigator.locks` mutex across tabs with a localStorage re-read inside the lock, so a queued tab adopts the winner's token instead of replaying a consumed one. That re-read keys off **rotation** (did the refresh token change?), not access-token expiry — on the 401 path the access token is unexpired and still rejected. Session death is decided only inside `doRefresh`, and only on `Unauthenticated`: a business-endpoint 401 is often just authorization (a forbidden `x-project-id`) and must never clear the session. All of this is pinned by `tests/transport.test.ts`.
 2. **protovalidate** — validates outgoing messages against proto buf.validate constraints before sending.
 
 For project-scoped endpoints (campaigns, insights), pass `{ headers }` from `projectHeaderAtom` which only contains `x-project-id`. Auth is automatic.

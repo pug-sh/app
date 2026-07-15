@@ -4,12 +4,17 @@ import { isDemoSessionAtom } from './demo'
 
 // Shared with transport.ts — both read the same localStorage keys.
 export const JWT_KEY = 'pug:jwt'
-// The long-lived refresh token. The access JWT (JWT_KEY) is short-lived (~1h);
+// The long-lived refresh token. The access JWT (JWT_KEY) is short-lived (~24h);
 // the refresh token is exchanged for a fresh pair via AuthService.RefreshSession.
 export const REFRESH_KEY = 'pug:refresh'
 
-// Read synchronously so the first render already knows the auth state (no sign-in flash).
-const readStored = (key: string): string => {
+// Read a token straight from localStorage, bypassing the Jotai store. Two callers,
+// both of which need to skip the store deliberately: seeding the atoms below at
+// module load, so the first render already knows the auth state (no sign-in flash);
+// and transport.ts's cross-tab refresh lock, where localStorage is the ONLY place
+// another tab's rotation is visible. atomWithStorage JSON-serializes, so the raw
+// value is e.g. '"abc..."'.
+export const readStored = (key: string): string => {
   try {
     const raw = localStorage.getItem(key)
     return raw ? (JSON.parse(raw) as string) : ''

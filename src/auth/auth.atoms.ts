@@ -160,8 +160,8 @@ export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> =
 })
 
 // Authenticated whenever a refresh token is present. The access JWT is short-lived
-// (~1h) and the transport silently re-mints it, so access-token expiry must NOT gate
-// the UI or active users would be bounced to sign-in hourly. A failed refresh clears
+// (~24h) and the transport silently re-mints it, so access-token expiry must NOT gate
+// the UI or active users would be bounced to sign-in daily. A failed refresh clears
 // the refresh token (clearSession), flipping this to false.
 export const isAuthenticatedAtom = atom(get => get(refreshTokenAtom) !== '')
 
