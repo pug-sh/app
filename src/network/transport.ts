@@ -69,9 +69,23 @@ const accessTokenExpired = (token: string): boolean => {
 
 // Dedicated client for RefreshSession — deliberately WITHOUT authBearer so a
 // refresh call can't recurse into the refresh logic.
+//
+// The timeout is load-bearing, not hygiene: this call runs while the cross-tab lock
+// is HELD (see withRefreshLock), so an unbounded refresh — captive portal, stalled
+// TCP, a server that accepts and never answers — would pin the origin-wide lock and
+// queue every other tab's doRefresh behind it indefinitely. Worse, those tabs'
+// refreshInFlight would never settle, so they could not recover even once it freed.
+// Bounding the call bounds the hold. A timeout arrives as a non-Unauthenticated
+// ConnectError, i.e. transient, so the session survives it.
+const REFRESH_TIMEOUT_MS = 15_000
+
 const refreshClient = createClient(
   AuthService,
-  createConnectTransport({ baseUrl: apiBaseUrl, interceptors: [protovalidate] }),
+  createConnectTransport({
+    baseUrl: apiBaseUrl,
+    interceptors: [protovalidate],
+    defaultTimeoutMs: REFRESH_TIMEOUT_MS,
+  }),
 )
 
 // Refresh must be single-flight, because the server CONSUMES the presented refresh
@@ -149,10 +163,9 @@ const doRefresh = (presentedRefresh: string): Promise<string | null> =>
       // token, which is live either way.
     }
 
+    let resp
     try {
-      const resp = await refreshClient.refreshSession({ refreshToken: storedRefresh })
-      setSessionTokens({ accessToken: resp.token, refreshToken: resp.refreshToken })
-      return resp.token
+      resp = await refreshClient.refreshSession({ refreshToken: storedRefresh })
     } catch (err) {
       if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
         clearSession()
@@ -163,6 +176,25 @@ const doRefresh = (presentedRefresh: string): Promise<string | null> =>
       console.error('token refresh failed (transient); keeping session', err)
       return null
     }
+
+    // Past this line the server has CONSUMED storedRefresh, so persisting the rotated
+    // pair is not optional. If the write throws (storage full — quota is per-origin, so
+    // a co-tenant script or a shrunken private-browsing budget is enough), resp's
+    // refresh token is lost while the now-dead storedRefresh stays in localStorage.
+    // The next refresh in ANY tab then presents it, the server reads a replay, and the
+    // family is revoked: a logout everywhere, up to an access-token lifetime after the
+    // fault that caused it. This must NOT ride the transient branch above — the refresh
+    // SUCCEEDED, and "keeping the session" would mean keeping a token already dead.
+    // Ending the session now is the honest outcome, and it clears the consumed token.
+    try {
+      setSessionTokens({ accessToken: resp.token, refreshToken: resp.refreshToken })
+    } catch (err) {
+      console.error('rotation succeeded but could not be persisted; ending session', err)
+      clearSession()
+      toast.error('Could not keep you signed in — your browser is blocking storage')
+      return null
+    }
+    return resp.token
   })
 
 const authBearer: Interceptor = next => async req => {

@@ -111,6 +111,10 @@ const connectErr = (code: string, status: number) =>
 interface Server {
   refreshCalls: number
   listAuthHeaders: (string | null)[]
+  // Connect-Timeout-Ms as sent on each RefreshSession. Connect only emits the header
+  // when the transport has a timeout, so its presence is what pins that the refresh
+  // call is bounded — see the lock-hold test below.
+  refreshTimeouts: (string | null)[]
   onRefresh: () => Promise<Response>
   onList: (auth: string | null) => Promise<Response>
 }
@@ -121,6 +125,7 @@ const installServer = () => {
   server = {
     refreshCalls: 0,
     listAuthHeaders: [],
+    refreshTimeouts: [],
     onRefresh: async () => connectOk({ token: 'unset', refreshToken: 'unset' }),
     onList: async () => connectOk({ orgs: [] }),
   }
@@ -129,6 +134,7 @@ const installServer = () => {
     const path = new URL(req.url).pathname
     if (path === REFRESH_PATH) {
       server.refreshCalls++
+      server.refreshTimeouts.push(req.headers.get('connect-timeout-ms'))
       return server.onRefresh()
     }
     if (path === LIST_PATH) {
@@ -316,6 +322,35 @@ describe('session death', () => {
     expect(storedRefresh()).toBe('R1')
   })
 
+  test('ends the session when a SUCCEEDED rotation cannot be persisted', async () => {
+    // The mirror image of the test above, and the reason the two must not share a
+    // catch. By the time the write runs, the server has already CONSUMED R1. If the
+    // write throws (storage full), R2 is lost while dead R1 sits in localStorage —
+    // where the next refresh in ANY tab presents it, the server reads a replay, and
+    // the family is revoked: a logout everywhere, an access-token lifetime later.
+    // Treating this as transient ("keep the session") would keep an already-dead
+    // token, so it must end the session and clear the consumed one instead.
+    seed(EXPIRED, 'R1')
+    server.onRefresh = async () => connectOk({ token: FRESH2, refreshToken: 'R2' })
+
+    const realSetItem = storage.setItem.bind(storage)
+    storage.setItem = (k: string, v: string) => {
+      if (k === REFRESH_KEY && JSON.parse(v) === 'R2') throw new Error('QuotaExceededError')
+      realSetItem(k, v)
+    }
+    const client = await freshTab()
+    try {
+      await expect(client.list({})).rejects.toThrow()
+    } finally {
+      storage.setItem = realSetItem
+    }
+
+    // R1 is consumed. Leaving it behind is what arms the replay, so it must be gone.
+    expect(storedRefresh()).toBe('')
+    expect(storedAccess()).toBe('')
+    // Never sent — there is no usable access token.
+    expect(server.listAuthHeaders).toEqual([])
+  })
 })
 
 // --- single-flight, one tab ---------------------------------------------------
@@ -396,6 +431,25 @@ describe('single-flight across tabs', () => {
     // R1 was consumed by the other tab. Presenting it would have killed the family.
     expect(server.refreshCalls).toBe(0)
     expect(server.listAuthHeaders).toEqual([`Bearer ${FRESH2}`])
+  })
+
+  test('bounds the refresh call so a hung server cannot pin the lock forever', async () => {
+    // doRefresh runs INSIDE the lock, so an unbounded refresh would hold this
+    // origin-wide mutex for the life of the request — a captive portal or a server
+    // that accepts and never answers would queue every other tab behind it with no
+    // error, and their refreshInFlight would never settle, so they could not recover
+    // even once it freed. Connect emits Connect-Timeout-Ms only when the transport
+    // has a timeout, so the header's presence is what pins that the call is bounded.
+    seed(EXPIRED, 'R1')
+    server.onRefresh = async () => connectOk({ token: FRESH2, refreshToken: 'R2' })
+    const client = await freshTab()
+
+    await client.list({})
+
+    expect(server.refreshTimeouts).toHaveLength(1)
+    const timeoutMs = Number(server.refreshTimeouts[0])
+    expect(Number.isFinite(timeoutMs)).toBe(true)
+    expect(timeoutMs).toBeGreaterThan(0)
   })
 
   test('falls back to in-tab serialization when Web Locks is unavailable', async () => {
