@@ -1,6 +1,6 @@
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Component, type ReactNode, Suspense, useEffect } from 'react'
+import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
 import { Route, Switch, useLocation, useParams } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -89,7 +89,14 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
     return <LoadingSpinner />
   }
 
-  return <>{children}</>
+  // Keyed on the route's project so switching projects remounts the page rather than re-rendering
+  // it with new data underneath its old state. Every generated route is `/p/:projectId/...` (see
+  // routes.ts), so this covers all of them. Without it the two switch paths disagree: back/forward
+  // changes the URL before `activeProject` catches up, so the gate above unmounts the subtree, but
+  // the sidebar batches setActiveProject + navigate into one render, so the gate never trips and a
+  // page's local state survives — now describing the wrong project. Each page fetching its own
+  // project-scoped data would otherwise have to notice that for itself.
+  return <Fragment key={projectId}>{children}</Fragment>
 }
 
 const ProjectRedirect = () => {

@@ -45,8 +45,14 @@ export type PlatformId = (typeof PLATFORM_ORDER)[number]
 // One labeled code block in a platform's setup flow, rendered top-to-bottom. `code` receives the
 // project's identifiers so client snippets can interpolate them; sections that don't need them —
 // install commands, and the Node server snippet (secret key from the environment) — ignore both args.
+//
+// `credential` states which of them the snippet actually bakes in, so the setup screen knows whether
+// the block is waiting on a fetched key. Required, not optional: a new section is a compile error
+// until it answers, which is how this module keeps the rest of its metadata honest (see
+// PLATFORM_ORDER above).
 export type CodeSection = {
   label: string
+  credential: 'public' | 'none'
   code: (projectId: string, publicKey: string) => string
 }
 
@@ -55,6 +61,10 @@ export type Platform = {
   icon: string
   docsUrl: string
   sections: CodeSection[]
+  // Set when the platform authenticates with a private key. Its snippet reads that key from the
+  // environment rather than interpolating it, and a project does not come with one — so the setup
+  // screen points at the settings page, the only place to mint one and see it (once).
+  needsPrivateKey?: boolean
 }
 
 export const PLATFORMS: Record<PlatformId, Platform> = {
@@ -63,9 +73,10 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     icon: javascriptIcon,
     docsUrl: `${DOCS_BASE}?platform=web`,
     sections: [
-      { label: 'Install', code: () => 'npm install @pug-sh/browser' },
+      { label: 'Install', credential: 'none', code: () => 'npm install @pug-sh/browser' },
       {
         label: 'Initialize & track',
+        credential: 'public',
         code: (projectId, publicKey) => `import { init, identify, track } from '@pug-sh/browser'
 
 init('${projectId}', { apiKey: '${publicKey}' })
@@ -85,6 +96,7 @@ track('signed_up', { plan: 'pro' })`,
     sections: [
       {
         label: 'Add to your <head>',
+        credential: 'public',
         code: (projectId, publicKey) => `<script>
   !(function (w, d) {
     if (w.pug) { if (!w.pug._q) console.warn('[Pug SDK] window.pug already defined by another script; not loaded.'); return; }
@@ -107,6 +119,7 @@ track('signed_up', { plan: 'pro' })`,
       },
       {
         label: 'Or, under a strict CSP (no inline script)',
+        credential: 'public',
         code: (projectId, publicKey) => `<script
   async
   src="${PUG_CDN_URL}"
@@ -120,10 +133,12 @@ track('signed_up', { plan: 'pro' })`,
     label: 'Node',
     icon: nodejsIcon,
     docsUrl: `${DOCS_BASE}?platform=node`,
+    needsPrivateKey: true,
     sections: [
-      { label: 'Install', code: () => 'npm install @pug-sh/node' },
+      { label: 'Install', credential: 'none', code: () => 'npm install @pug-sh/node' },
       {
         label: 'Initialize & track',
+        credential: 'none',
         code: () => `import { Pug } from '@pug-sh/node'
 
 // Server-side: use your private key, read from the environment — never hardcode it
@@ -140,9 +155,10 @@ pug.track('user_123', 'order_completed', { revenue: 49 })`,
     icon: flutterIcon,
     docsUrl: `${DOCS_BASE}?platform=flutter`,
     sections: [
-      { label: 'Install', code: () => 'flutter pub add pug_flutter' },
+      { label: 'Install', credential: 'none', code: () => 'flutter pub add pug_flutter' },
       {
         label: 'Initialize & track',
+        credential: 'public',
         code: (projectId, publicKey) => `import 'package:pug_flutter/pug_flutter.dart';
 
 await Pug.init('${projectId}', const PugOptions(apiKey: '${publicKey}'));
