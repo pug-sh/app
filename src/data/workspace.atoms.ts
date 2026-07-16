@@ -104,14 +104,22 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
   set(activeProjectAtom, null)
   set(projectsOrgIdAtom, null)
   const projectsRPC = get(projectsRPCAtom)
+  // A response outlives the request that asked for it: switch org — or sign out — while batchGet is
+  // in flight and it resolves into a workspace that has moved on. Committing then doesn't just write
+  // the wrong org's list, it keys that list to the org now active, and projectsOrgIdAtom saying "this
+  // org's projects have landed" is the one claim workspaceSettledAtom trusts. Drop the response
+  // instead: whatever moved the org has already started the fetch that answers for it.
+  const stale = () => get(activeOrgAtom)?.id !== org.id
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
+    if (stale()) return []
     set(projectsAtom, resp.projects)
     set(projectsOrgIdAtom, org.id)
     set(workspaceErrorAtom, null)
     return resp.projects
   } catch (err) {
     console.error('fetchProjects failed:', err)
+    if (stale()) return []
     set(projectsAtom, [])
     set(activeProjectAtom, null)
     // The list is as resolved as it will get: a failure is a settled answer, not a pending one.
