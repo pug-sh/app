@@ -54,7 +54,9 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
   }
 }
 
-const ProjectSync = ({ children }: { children: React.ReactNode }) => {
+// Exported for tests: it adopts whatever project the URL names, so it's what turns a wrong redirect
+// into a wrong active project. Pinning ProjectRedirect without it would miss that entirely.
+export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   const { projectId } = useParams<{ projectId: string }>()
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const projects = useAtomValue(projectsAtom)
@@ -99,11 +101,16 @@ const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   return <Fragment key={projectId}>{children}</Fragment>
 }
 
-const ProjectRedirect = () => {
+// Exported for the test that pins it against WorkspaceBootstrap: the two race for the first
+// navigation off '/', and the bug only appears when they run together.
+export const ProjectRedirect = () => {
   const [, navigate] = useLocation()
-  const activeProject = useAtomValue(activeProjectAtom)
-  const projects = useAtomValue(projectsAtom)
-  const project = activeProject ?? projects[0]
+  // Waits for activeProjectAtom rather than falling back to projects[0] itself. This route is the
+  // one place the URL names no project, so App's bootstrap always has a pick coming — and a second
+  // pick here doesn't just duplicate that one, it beats it: both run off the render where the list
+  // arrives, and this effect's captured projects[0] would navigate before the bootstrap's restored
+  // project could land, putting the wrong id in the URL for ProjectSync to then adopt back.
+  const project = useAtomValue(activeProjectAtom)
 
   useEffect(() => {
     if (project) {

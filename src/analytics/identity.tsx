@@ -3,16 +3,28 @@ import { useEffect, useRef } from 'react'
 import { isDemoSessionAtom } from '@/auth/demo'
 import { jwtDataAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
-import { activeOrgAtom, activeProjectAtom } from '@/data/workspace.atoms'
+import { activeOrgAtom, activeProjectAtom, workspaceSettledAtom } from '@/data/workspace.atoms'
 import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 
 // Keeps the SDK's identity in step with the session. Mounted from App.tsx alongside ThemeSync,
 // which is the pattern for a null-rendering effect that syncs a module to atom state.
-const AnalyticsIdentity = () => {
+//
+// awaitWorkspace says whether WorkspaceBootstrap is mounted and therefore whether org/project are
+// still on their way. It has to be told: a workspace that hasn't started and one that will never
+// start look identical from the atoms (both 'idle'), and the difference is a routing fact App
+// already knows. False is the shared-dashboard route — nothing is coming, so identify immediately
+// with whatever traits exist (none).
+//
+// A prop rather than an atom WorkspaceBootstrap sets on mount, and that's not a shortcut: this
+// component renders first (App.tsx), so its effect would run before any such atom was written, read
+// "no bootstrap coming", and identify on the spot — the very thing the gate below exists to stop. A
+// prop is known at render time; an effect-written atom isn't.
+const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const customerId = useAtomValue(jwtDataAtom)?.customerId
   const org = useAtomValue(activeOrgAtom)
   const project = useAtomValue(activeProjectAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
+  const workspaceSettled = useAtomValue(workspaceSettledAtom)
 
   // What we last sent. customerId is tracked apart from the traits so the three transitions that
   // matter can be told apart: signed-out boot vs sign-out, a trait refresh vs an account switch.
@@ -42,27 +54,39 @@ const AnalyticsIdentity = () => {
 
     // An account switch with no sign-out in between — applySessionAtom explicitly supports this
     // (a magic link for another account while signed in). The SDK holds identity until told
-    // otherwise, so without this the new user inherits the previous user's session.
+    // otherwise, so without this the new user inherits the previous user's session. Ahead of the
+    // settle gate below on purpose: track() stamps the distinct ID at call time, so waiting for the
+    // new workspace would bill the new user's first events to the account they just left.
     if (sentCustomerId.current && sentCustomerId.current !== customerId) {
       resetIdentity()
+      sentCustomerId.current = null
       sentTraits.current = null
     }
+
+    // Bootstrap resolves the org, then the project, a render apart. Each of those states is a real
+    // change, so the dedup below — which only catches *repeats* — would let every one of them send.
+    // Wait for the traits to stop moving and state them once.
+    //
+    // Nothing is lost by waiting. A device that has identified before resolves its distinct ID from
+    // the stored external ID, so its events carry the customer either way; a first-time one stamps
+    // the anonymous ID, which the first identify hands to the server to merge. A session that ends
+    // before this fires is absorbed by the next one.
+    if (awaitWorkspace && !workspaceSettled) return
 
     const traits: CustomerTraits = {
       ...(org && { orgId: org.id, orgName: org.displayName, role: roleLabel(org.role) }),
       ...(project && { projectId: project.id, projectName: project.displayName }),
     }
 
-    // Traits arrive in waves (bootstrap resolves the org, then the project), and each wave
-    // re-renders this. Only send when something actually changed, or every workspace load costs a
-    // handful of redundant identify round-trips.
+    // Renames and org/project switches still land here as genuine changes; this only skips resends
+    // of traits the server already has.
     const nextTraits = JSON.stringify(traits)
     if (sentCustomerId.current === customerId && sentTraits.current === nextTraits) return
     sentCustomerId.current = customerId
     sentTraits.current = nextTraits
 
     identifyCustomer(customerId, traits)
-  }, [customerId, org, project, isDemo])
+  }, [customerId, org, project, isDemo, awaitWorkspace, workspaceSettled])
 
   return null
 }

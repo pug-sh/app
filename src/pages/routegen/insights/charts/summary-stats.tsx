@@ -3,18 +3,10 @@ import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { collapseValues, SERIES_COLLAPSE } from '../helpers'
 import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
-
-// Series names arrive as "event · value"; the event kind is redundant here because the
-// grid only shows names when a breakdown is active, so keep just the value. A name with
-// no separator is an unsplit series — show it whole rather than inventing a value for it.
-const breakdownDisplayName = (name: string) => {
-  const sep = name.indexOf(' · ')
-  if (sep >= 0) return name.slice(sep + 3)
-  return name
-}
 
 export const SummaryStats = ({
   series,
@@ -57,28 +49,30 @@ export const SummaryStats = ({
         const max = Math.max(...vals, 0)
         const aggregation = aggregations[si] ?? AggregationType.TOTAL
 
-        let headline = total
+        const collapse = SERIES_COLLAPSE[aggregation]
+        const headline = collapseValues(vals, collapse)
+
+        // Which two figures give the headline context isn't derivable from the collapse rule — an
+        // averaged headline wants different neighbours depending on whether it averages counts of
+        // people or averages of averages — so it stays a ladder. AVG is checked ahead of the
+        // collapse it shares with the user counts.
         let stats: DetailStat[] = [
           { label: 'avg', value: compactNumber(Math.round(avg)) },
           { label: 'peak', value: compactNumber(max) },
         ]
-
         if (aggregation === AggregationType.AVG) {
-          headline = avg
           stats = [
             { label: 'min', value: compactNumber(min) },
             { label: 'max', value: compactNumber(max) },
           ]
-        } else if (aggregation === AggregationType.MIN) {
-          headline = min
-          stats = [
-            { label: 'avg', value: compactNumber(Math.round(avg)) },
-            { label: 'peak', value: compactNumber(max) },
-          ]
         } else if (aggregation === AggregationType.MAX) {
-          headline = max
           stats = [
             { label: 'avg', value: compactNumber(Math.round(avg)) },
+            { label: 'floor', value: compactNumber(min) },
+          ]
+        } else if (collapse === 'avg') {
+          stats = [
+            { label: 'peak', value: compactNumber(max) },
             { label: 'floor', value: compactNumber(min) },
           ]
         }
@@ -90,7 +84,7 @@ export const SummaryStats = ({
               <span className={cn('shrink-0 whitespace-nowrap text-sm tabular-nums text-foreground', inlineWeight)}>
                 {compactNumber(headline)}
               </span>
-              <span className="truncate text-xs text-muted-foreground">{breakdownDisplayName(name)}</span>
+              <span className="truncate text-xs text-muted-foreground">{name}</span>
             </div>
           )
         }

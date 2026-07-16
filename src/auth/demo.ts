@@ -16,4 +16,11 @@ export function isDemoEnabled() {
 // mid-demo keeps the banner. Written by applySessionAtom, derived from the sign-in method in the same
 // pass as the token: a demo login (via demoSignInAtom, method 'demo') sets it and every other real
 // sign-in clears it; also cleared on sign-out and when a session dies via clearSession (failed refresh).
-export const isDemoSessionAtom = atomWithStorage('pug:isDemo', false)
+//
+// getOnInit is what makes the flag true on the *first* render of a reload rather than one render
+// later: atomWithStorage otherwise starts at the default and only reads storage on mount, and a
+// consumer that acts in its first effect acts on `false`. Analytics is exactly that consumer — a
+// demo reload would identify the shared demo account before the real value landed, which is the one
+// thing the demo must never do (see analytics/identity.tsx). The JWT atoms take the same care by
+// seeding from a synchronous read; this is the same fix spelled with the option.
+export const isDemoSessionAtom = atomWithStorage('pug:isDemo', false, undefined, { getOnInit: true })

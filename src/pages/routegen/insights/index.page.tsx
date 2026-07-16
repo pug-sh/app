@@ -50,7 +50,15 @@ import {
 } from './constants'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
-import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from './helpers'
+import {
+  breakdownLabel,
+  buildChartData,
+  disambiguateLabels,
+  hasBreakdown,
+  resolveSeriesAggregations,
+  sortFunnelSteps,
+  trendSeriesNames,
+} from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 
@@ -346,10 +354,7 @@ const Insights = () => {
       return retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
     }
 
-    return trendSeries.map((s, i) => {
-      if (hasBreakdown(s.breakdown)) return `${s.eventKind} · ${breakdownLabel(s.breakdown, '')}`
-      return s.eventKind || `Series ${i + 1}`
-    })
+    return trendSeriesNames(trendSeries)
   }, [result.case, retentionCohorts, trendSeries])
 
   const seriesColors = useMemo(() => {
@@ -368,11 +373,7 @@ const Insights = () => {
 
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []
-
-    return trendSeries.map(series => {
-      const entry = validEntries.find(candidate => candidate.kind === series.eventKind)
-      return entry?.aggregation ?? AggregationType.TOTAL
-    })
+    return resolveSeriesAggregations(validEntries, trendSeries)
   }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),

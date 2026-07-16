@@ -9,14 +9,26 @@ Dashboard frontend for Pug — an analytics + communication platform (similar to
 ## Commands
 
 ```sh
-bun run dev       # Start dev server (Vite)
-bun run build     # Type-check + production build (tsc -b && vite build)
-bun run generate  # Regenerate TypeScript proto types from backend protos
-bun run format    # Biome formatter (format only)
-bun run lint      # Biome check — format + lint + import organization (safe fixes)
+bun run dev        # Start dev server (Vite)
+bun run build      # Type-check + production build (tsc -b && vite build)
+bun run generate   # Regenerate TypeScript proto types from backend protos
+bun run format     # Biome formatter (format only)
+bun run lint       # Biome check — format + lint + import organization (safe fixes)
+bun run lint:ci    # Biome check, reporting only — never writes (what CI runs)
+bun run test       # Vitest, single run
+bun run test:watch # Vitest, watch mode
 ```
 
-There is no test script today.
+## Tests
+
+Vitest + happy-dom + Testing Library, in `src/**/*.test.{ts,tsx}` next to the code they cover. `.github/workflows/ci.yml` runs lint, typecheck/build, and tests on every PR. `tsc -b` type-checks test files too (`tsconfig.app.json` includes all of `src`), so a broken test type fails the build.
+
+This is a young suite covering load-order and state bugs, not a coverage regime. What's worth knowing before adding to it:
+
+- **A regression test must be shown to fail against the unfixed code.** Break the fix, watch it go red, restore. Several of these looked right and passed against the bug — a React-timing test in particular is easy to write so that it can't observe the thing it's named after.
+- **Test through the structure that produces the bug.** The default-project race only reproduces when `ProjectRedirect` renders inside a `Switch` — rendered bare it never unmounts and self-corrects, passing either way.
+- **The environment has to install its own storage.** Node 25 defines inert `localStorage`/`sessionStorage` globals, and vitest won't overwrite a global that already exists, so happy-dom's real Storage never lands. `src/test/setup.ts` puts it back — don't assume the environment did.
+- **Fake the RPC atoms, not the transport** (`vi.mock('@/api/rpc', …)`); a hand-held `batchGet` lets a test decide when a call resolves, which is the only way to land a response into a workspace that has moved on.
 
 ## Proto Code Generation
 

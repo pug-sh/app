@@ -6,7 +6,6 @@ import {
   VisualizationOptions_YAxisFormat,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
-  AggregationType,
   type Granularity,
   type InsightQuerySpec,
   InsightType,
@@ -16,7 +15,15 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
-import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from '../insights/helpers'
+import {
+  breakdownLabel,
+  buildChartData,
+  disambiguateLabels,
+  hasBreakdown,
+  seriesAggregationResolver,
+  sortFunnelSteps,
+  trendSeriesNames,
+} from '../insights/helpers'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
@@ -132,10 +139,7 @@ export const InsightTileView = ({
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
     }
 
-    return trendSeries.map((series, index) => {
-      if (hasBreakdown(series.breakdown)) return `${series.eventKind} · ${breakdownLabel(series.breakdown, '')}`
-      return series.eventKind || `Series ${index + 1}`
-    })
+    return trendSeriesNames(trendSeries)
   }, [result.case, retentionCohorts, trendSeries])
   const seriesColors = useMemo(() => {
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
@@ -151,10 +155,14 @@ export const InsightTileView = ({
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
   }, [result.case, trendSeries, seriesNames, resolvedTheme])
-  const seriesAggregations = useMemo(
-    () => (spec?.events ?? []).map(entry => entry.aggregation ?? AggregationType.TOTAL),
+  const eventAggregations = useMemo(
+    () => (spec?.events ?? []).map(entry => ({ kind: entry.event?.kind ?? '', aggregation: entry.aggregation })),
     [spec?.events],
   )
+  // One resolver, two result sets: the series below and — for a KPI — the comparison window, which
+  // is its own query and must not be read through this one's indices.
+  const aggregationFor = useMemo(() => seriesAggregationResolver(eventAggregations), [eventAggregations])
+  const seriesAggregations = useMemo(() => trendSeries.map(aggregationFor), [trendSeries, aggregationFor])
   const hasIncompleteNumericAggregation = useMemo(
     () =>
       (spec?.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty)),
@@ -171,6 +179,7 @@ export const InsightTileView = ({
         <KpiTile
           tile={tile}
           currentSeries={trendSeries}
+          aggregationFor={aggregationFor}
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
           metadata={kpiMetadata}
