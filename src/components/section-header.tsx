@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 const SectionHeader = ({
   title,
   count,
@@ -5,7 +7,8 @@ const SectionHeader = ({
 }: {
   title: string
   count?: string | number
-  description?: string
+  // ReactNode, not string: a description may carry an inline docs link.
+  description?: ReactNode
 }) => (
   <div className={description ? 'mb-4' : 'mb-2'}>
     <div className="flex items-center gap-2 mb-1">

@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai'
-import { Check, Copy, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Check, Copy, ExternalLink, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { trackEvent } from '@/analytics/pug'
 import { type ApiKey, ApiKeyKind } from '@/api/genproto/dashboard/projects/v1/projects_pb'
@@ -19,6 +19,8 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
+
+const AUTH_DOCS_URL = 'https://docs.pug.sh/docs/get-started/authentication'
 
 // Total over ApiKeyKind so a new kind must declare a label (same compile-safety as ROLE_LABEL).
 const KIND_LABEL: Record<ApiKeyKind, string> = {
@@ -161,7 +163,24 @@ const ApiKeys = () => {
         <SectionHeader
           title="API Keys"
           count={loading || error ? undefined : keys.length}
-          description="Public keys ship in your app and send events. Private keys authenticate server-side callers and are shown once, when created."
+          description={
+            // Two lines, one per kind — spans (not divs) because SectionHeader renders this inside a <p>.
+            <>
+              <span className="block">Public keys ship in your app and send events.</span>
+              <span className="block">
+                Private keys authenticate server-side callers and are shown once, when created.{' '}
+                <a
+                  href={AUTH_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-link underline-offset-4 hover:underline"
+                >
+                  Authentication docs
+                  <ExternalLink className="size-3" />
+                </a>
+              </span>
+            </>
+          }
         />
 
         {newPrivateKey && <NewPrivateKey value={newPrivateKey} onDismiss={() => setNewPrivateKey(null)} />}
@@ -275,9 +294,23 @@ const ApiKeys = () => {
                     <SelectTrigger className="shrink-0">
                       <SelectValue>{v => kindLabel(v ?? ApiKeyKind.PUBLIC)}</SelectValue>
                     </SelectTrigger>
+                    {/* The trigger renders from SelectValue's render fn, not from ItemText, so these
+                        descriptions stay in the dropdown instead of collapsing into the closed trigger. */}
                     <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
-                      <SelectItem value={ApiKeyKind.PUBLIC}>Public</SelectItem>
-                      <SelectItem value={ApiKeyKind.PRIVATE}>Private</SelectItem>
+                      <SelectItem value={ApiKeyKind.PUBLIC} className="py-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span>Public</span>
+                          <span className="text-xs text-muted-foreground">Safe to ship in your app. Sends events.</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value={ApiKeyKind.PRIVATE} className="py-1.5">
+                        <div className="flex flex-col gap-0.5">
+                          <span>Private</span>
+                          <span className="text-xs text-muted-foreground">
+                            Server-side only. Shown once, at creation.
+                          </span>
+                        </div>
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <button

@@ -53,6 +53,9 @@ export const SocialNav = ({ className }: { className?: string }) => (
         variant="ghost"
         size="icon-sm"
         className="text-muted-foreground"
+        // These render as <a>, not <button>: Base UI defaults nativeButton to true and would
+        // otherwise claim native button semantics the anchor doesn't have.
+        nativeButton={false}
         render={<a href={href} target="_blank" rel="noreferrer" aria-label={`Pug on ${label}`} title={label} />}
       >
         <Icon />
