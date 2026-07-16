@@ -34,12 +34,12 @@ const createOrgSchema = z.object({
 })
 type CreateOrgFormData = z.infer<typeof createOrgSchema>
 
-const CopyId = ({ value, context }: { value: string; context?: string }) => {
+const CopyId = ({ value }: { value: string }) => {
   const { copied, copy } = useCopyToClipboard()
   return (
     <button
       type="button"
-      onClick={() => copy(value, context)}
+      onClick={() => copy(value)}
       className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
     >
       {value}
@@ -256,10 +256,7 @@ const Organization = () => {
               )}
             </Can>
             <div>
-              {/* identifier:* mirrors CopyableCode's convention (Project ID / Public Key) so all
-                  identifier copies group under one `copied` breakdown. org.id is our own resource
-                  ID, not a secret. */}
-              <CopyId value={org.id} context="identifier:Organization ID" />
+              <CopyId value={org.id} />
             </div>
           </div>
 

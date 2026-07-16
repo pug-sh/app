@@ -13,7 +13,6 @@ export function isDemoEnabled() {
 // viewer JWT — indistinguishable from a real viewer login, since the role is never in the JWT (by
 // design) — so this frontend-only flag is what lets the UI show the demo banner, route sign-out
 // back to sign-in, and detect an already-active demo on the /demo page. Persisted so a reload
-// mid-demo keeps the banner. Written by applySessionAtom, derived from the sign-in method in the same
-// pass as the token: a demo login (via demoSignInAtom, method 'demo') sets it and every other real
-// sign-in clears it; also cleared on sign-out and when a session dies via clearSession (failed refresh).
+// mid-demo keeps the banner. Set in demoSignInAtom; cleared on every real sign-in (applySessionAtom),
+// on sign-out, and when a session dies via clearSession (failed refresh).
 export const isDemoSessionAtom = atomWithStorage('pug:isDemo', false)

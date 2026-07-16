@@ -23,7 +23,6 @@
     "@connectrpc/connect-web": "^2.1.1",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
-    "@pug-sh/browser": "^0.0.4",
     "@react-oauth/google": "^0.13.5",
     "@tailwindcss/vite": "^4.2.2",
     "class-variance-authority": "^0.7.1",

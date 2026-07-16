@@ -16,7 +16,7 @@ const CopyableCode = ({ label, value }: { label: string; value: string }) => {
         variant="ghost"
         size="icon-xs"
         className="shrink-0"
-        onClick={() => copy(value, `identifier:${label}`)}
+        onClick={() => copy(value)}
         aria-label={`Copy ${label}`}
       >
         {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
