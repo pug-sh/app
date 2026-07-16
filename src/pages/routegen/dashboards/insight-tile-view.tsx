@@ -16,7 +16,7 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
-import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from '../insights/helpers'
+import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from '../insights/helpers'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
@@ -133,8 +133,7 @@ export const InsightTileView = ({
     }
 
     return trendSeries.map((series, index) => {
-      const bd = breakdownLabel(series.breakdown, '')
-      if (bd) return `${series.eventKind} · ${bd}`
+      if (hasBreakdown(series.breakdown)) return `${series.eventKind} · ${breakdownLabel(series.breakdown, '')}`
       return series.eventKind || `Series ${index + 1}`
     })
   }, [result.case, retentionCohorts, trendSeries])
@@ -145,7 +144,7 @@ export const InsightTileView = ({
     // breakdown, keep the event kind's semantic color.
     if (result.case === 'trends') {
       return trendSeries.map((series, index) =>
-        breakdownLabel(series.breakdown, '')
+        hasBreakdown(series.breakdown)
           ? getIndexedColor(index)
           : getSeriesColor(series.eventKind || `Series ${index + 1}`, index),
       )

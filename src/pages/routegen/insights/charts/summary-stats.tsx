@@ -7,10 +7,13 @@ import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
 
+// Series names arrive as "event · value"; the event kind is redundant here because the
+// grid only shows names when a breakdown is active, so keep just the value. A name with
+// no separator is an unsplit series — show it whole rather than inventing a value for it.
 const breakdownDisplayName = (name: string) => {
   const sep = name.indexOf(' · ')
   if (sep >= 0) return name.slice(sep + 3)
-  return '(direct)'
+  return name
 }
 
 export const SummaryStats = ({

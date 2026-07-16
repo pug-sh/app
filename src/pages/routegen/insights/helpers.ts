@@ -11,8 +11,27 @@ export const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[
   return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
 }
 
-export const breakdownLabel = (breakdown: Record<string, string>, fallback: string) =>
-  Object.values(breakdown).join(' / ') || fallback
+// Shown wherever a property value is empty — an event carrying no $utmSource, no $os,
+// and so on. The backend counts those events as a real bucket rather than dropping them,
+// in breakdowns and in top-k alike, so both render this. Deliberately generic: the
+// property decides what "empty" means, and one label serves every key. Resist naming it
+// for one property's story — "(direct)" would be wrong even for $utmSource, whose empty
+// bucket is every untagged visit (app sessions, organic search, untagged referrals),
+// not the referrer-derived direct traffic that name implies.
+export const EMPTY_VALUE_LABEL = '(none)'
+
+// A series with no breakdown keys is unsplit: the backend returns exactly one such
+// series when the request asked for no breakdown. That is distinct from a requested
+// breakdown that resolved to an empty value, which is a real bucket and must not be
+// mistaken for the unsplit total.
+export const hasBreakdown = (breakdown: Record<string, string>) => Object.keys(breakdown).length > 0
+
+export const breakdownLabel = (breakdown: Record<string, string>, fallback: string) => {
+  if (!hasBreakdown(breakdown)) return fallback
+  return Object.values(breakdown)
+    .map(value => value || EMPTY_VALUE_LABEL)
+    .join(' / ')
+}
 
 export const disambiguateLabels = (labels: string[]) => {
   const seen = new Map<string, number>()
