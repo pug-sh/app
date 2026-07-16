@@ -1,6 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { toast } from 'sonner'
+import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
 import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
@@ -28,7 +29,7 @@ export const signInAtom = atom(
     const authRPC = get(authRPCAtom)
     try {
       const resp = await authRPC.signInWithEmail({ email, password })
-      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'password' })
       return { ok: true }
     } catch (error) {
       if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
@@ -43,22 +44,33 @@ export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
 export const meAtom = atom<Me | null>(null)
 
-// Applies a freshly issued session token pair — password sign-in, magic link, and OAuth all
-// funnel here. The token alone decides identity (the server ignores any caller session), so
+// How the session was obtained. Threaded in rather than inferred so every path that mints a
+// session has to say which it is — a new one is a type error until it answers.
+export type SignInMethod = 'password' | 'magic_link' | 'google' | 'demo'
+
+// Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
+// all funnel here. The token alone decides identity (the server ignores any caller session), so
 // capture the prior customer before overwriting: if the new token is for a different account,
 // drop the previous session's remembered org so it can't leak across the switch. Always clear
 // meAtom — email isn't in the JWT and must be refetched for the new identity.
-const applySessionAtom = atom(null, (get, set, { token, refreshToken }: { token: string; refreshToken: string }) => {
-  const prior = get(jwtDataAtom)?.customerId
-  set(jwtAtom, token)
-  set(refreshTokenAtom, refreshToken)
-  const next = get(jwtDataAtom)?.customerId
-  if (prior && next && prior !== next) set(resetWorkspaceAtom)
-  set(meAtom, null)
-  // Every real sign-in funnels through here — clear the demo marker so a prior demo session's
-  // banner can't bleed into a real login. demoSignInAtom re-sets it true after this runs.
-  set(isDemoSessionAtom, false)
-})
+const applySessionAtom = atom(
+  null,
+  (get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
+    const prior = get(jwtDataAtom)?.customerId
+    set(jwtAtom, token)
+    set(refreshTokenAtom, refreshToken)
+    const next = get(jwtDataAtom)?.customerId
+    if (prior && next && prior !== next) set(resetWorkspaceAtom)
+    set(meAtom, null)
+    // The demo marker is derived from the method and written in the same pass as the token, so a
+    // real login clears a prior demo's banner and a demo login sets it. Deriving it (rather than
+    // clearing here and letting demoSignInAtom set it true afterwards) removes the window where a
+    // demo JWT is live while this still reads false — analytics identity keys off this flag, and
+    // identifying the shared demo account would fuse every demo visitor into one profile.
+    set(isDemoSessionAtom, method === 'demo')
+    trackEvent('signin', { method })
+  },
+)
 
 export const fetchMeAtom = atom(null, async (get, set) => {
   const customersRPC = get(customersRPCAtom)
@@ -94,7 +106,7 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
     // Seed the auto-created default project's reporting zone from the browser.
     // Malformed/empty values are coerced to UTC server-side; correct later in settings.
     const resp = await authRPC.completeMagicLink({ token, timezone: browserTimezone() })
-    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
+    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'magic_link' })
     return { ok: true }
   } catch (error) {
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
@@ -118,7 +130,7 @@ export const completeGoogleOAuthAtom = atom(
         credential,
         timezone: browserTimezone(),
       })
-      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'google' })
       return { ok: true }
     } catch (error) {
       if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
@@ -142,8 +154,8 @@ export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> =
   const authRPC = get(authRPCAtom)
   try {
     const resp = await authRPC.demoSignIn({})
-    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken })
-    set(isDemoSessionAtom, true)
+    // method: 'demo' is what sets isDemoSessionAtom — see applySessionAtom.
+    set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'demo' })
     return { ok: true }
   } catch (error) {
     // Unavailable = PUG_DEMO_ENABLED off or the demo account isn't seeded — expected, not a bug, so
@@ -166,6 +178,11 @@ export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> =
 export const isAuthenticatedAtom = atom(get => get(refreshTokenAtom) !== '')
 
 export const signOutAtom = atom(null, async (get, set) => {
+  // Ahead of the clear, and of the reset() the identity sync fires once the token is gone: track()
+  // stamps the distinct ID at call time, so this is the last moment the event can be attributed to
+  // the user who is leaving rather than to a fresh anonymous ID.
+  trackEvent('signout')
+
   // Best-effort server-side revocation of the refresh token's family, so the
   // session can't be refreshed after logout. Clear locally regardless of outcome.
   const refreshToken = get(refreshTokenAtom)

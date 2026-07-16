@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
+import AnalyticsIdentity from '@/analytics/identity'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -147,7 +148,20 @@ const AuthenticatedApp = () => {
           <SidebarTrigger className="-ml-1" />
           <SocialNav className="ml-auto -mr-1" />
         </header>
-        <main className="relative flex min-h-0 flex-1 flex-col overflow-x-clip">
+        {/*
+          data-pug-no-capture blanks the text our own click/dead-click capture would otherwise read
+          out of this subtree. Everything a page renders here belongs to a customer — their
+          end-users' emails and distinct IDs, their property values, their event names — and that
+          text has no business in our analytics. Clicks still count; only the free text is dropped,
+          and structural fields (tag/id/class/coords) still ride along.
+
+          It sits on <main> rather than on each table or detail pane by design: the SDK resolves the
+          marker with closest(), so one boundary covers every page that will ever mount here,
+          including ones not written yet. Per-region markers would have to be remembered forever,
+          and forgetting one puts a third party's PII in our project permanently. The cost is that
+          button labels in here are blanked too — trackFeature() names those explicitly instead.
+        */}
+        <main className="relative flex min-h-0 flex-1 flex-col overflow-x-clip" data-pug-no-capture>
           <Suspense fallback={<LoadingSpinner />}>
             <Router />
           </Suspense>
@@ -194,6 +208,12 @@ const App = () => {
   return (
     <>
       <ThemeSync />
+      {/*
+        Unconditional, including on the shared route: it issues no workspace RPCs, so it doesn't
+        break that route's rule above — and a signed-in user reading a shared dashboard is a
+        session worth seeing. Traits are just thinner there, since bootstrap hasn't run.
+      */}
+      <AnalyticsIdentity />
       {isSharedRoute ? null : <WorkspaceBootstrap />}
       {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
