@@ -32,7 +32,7 @@ const DOCS_BASE = 'https://docs.pug.sh/docs/sdks'
 // Web tab's unpinned `npm install` drifts ahead of it. Unlike sdk-web, nothing here gates this
 // version against the SDK release, so the bump is manual. Pre-1.0 pins the exact version; at 1.0
 // this becomes a rolling `v1` alias.
-const PUG_CDN_VERSION = 'v0.0.3'
+const PUG_CDN_VERSION = 'v0.0.4'
 const PUG_CDN_URL = `https://cdn.pugs.dev/${PUG_CDN_VERSION}/pug.min.js`
 
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
