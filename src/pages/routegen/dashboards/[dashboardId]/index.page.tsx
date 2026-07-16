@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { LayoutGrid } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'wouter'
+import { trackEvent } from '@/analytics/pug'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
@@ -54,6 +55,18 @@ const DashboardDetail = () => {
   useEffect(() => {
     if (project) loadDashboard()
   }, [loadDashboard, project])
+
+  // "Which dashboard was opened", which page_view can't answer: sanitizeUrl masks the id out of
+  // $url (a shared dashboard's id is a bearer credential), so the id has to ride as a property
+  // instead. The ref guard fires once per distinct dashboard id, so a refetch or StrictMode's
+  // double-effect (same id) is collapsed, while navigating to another dashboard (new id) re-fires —
+  // it dedups on the id itself, no remount required.
+  const trackedViewRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!dashboard || trackedViewRef.current === dashboard.id) return
+    trackedViewRef.current = dashboard.id
+    trackEvent('dashboard_viewed', { dashboardId: dashboard.id })
+  }, [dashboard])
 
   // Global time + granularity controls, mirrored to the URL query string.
   const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])

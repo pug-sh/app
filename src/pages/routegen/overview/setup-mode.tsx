@@ -25,7 +25,7 @@ const PUBLIC_KEY_PLACEHOLDER = 'YOUR_PUBLIC_KEY'
 // placeholder below reads exactly like the docs' own "fill this in" convention, so a copy taken
 // mid-load is indistinguishable from a finished snippet and fails only once it is running in the
 // user's app.
-const CodeBlock = ({ code, copyable = true }: { code: string; copyable?: boolean }) => {
+const CodeBlock = ({ code, copyable = true, context }: { code: string; copyable?: boolean; context?: string }) => {
   const { copied, copy } = useCopyToClipboard()
   // sugar-high returns an HTML string of token spans colored via `--sh-*` CSS vars (themed in
   // index.css under `.sugar-high`). Safe to inject because the input is trusted — our own static
@@ -42,7 +42,7 @@ const CodeBlock = ({ code, copyable = true }: { code: string; copyable?: boolean
         <Button
           variant="ghost"
           size="icon-xs"
-          onClick={() => copy(code)}
+          onClick={() => copy(code, context)}
           className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
         >
           {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
@@ -174,6 +174,10 @@ const SetupMode = ({ project }: { project: Project }) => {
             <CodeBlock
               code={section.code(project.id, publicKey || PUBLIC_KEY_PLACEHOLDER)}
               copyable={!(publicKeyPending && section.credential === 'public')}
+              // Which platform's which snippet got copied — the strongest activation signal on this
+              // screen. platformId is stable ('web'/'node'/…); section.label is our own fixed
+              // section name, never customer text.
+              context={`sdk_snippet:${platformId}:${section.label}`}
             />
           </div>
         ))}

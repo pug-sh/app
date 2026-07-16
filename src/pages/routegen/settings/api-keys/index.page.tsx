@@ -1,6 +1,7 @@
 import { useAtomValue } from 'jotai'
 import { Check, Copy, ExternalLink, KeyRound, Loader2, Plus, Trash2, X } from 'lucide-react'
 import { useRef, useState } from 'react'
+import { trackEvent } from '@/analytics/pug'
 import { type ApiKey, ApiKeyKind } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { projectsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
@@ -44,7 +45,7 @@ const KeyValue = ({ apiKey }: { apiKey: ApiKey }) => {
   return (
     <button
       type="button"
-      onClick={() => copy(apiKey.key)}
+      onClick={() => copy(apiKey.key, 'api_key:public')}
       // The key value is this cell's only content, and an aria-label would replace it as the
       // button's accessible name — leaving a screen reader no way to read the key itself.
       aria-label={`Copy key ${apiKey.key}`}
@@ -73,6 +74,12 @@ const NewPrivateKey = ({ value, onDismiss }: { value: string; onDismiss: () => v
       </div>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded bg-background px-2 py-1.5 font-mono text-xs">{value}</code>
+        {/*
+          Deliberately no copy context: this is the once-shown private key, a live secret. The
+          event would carry only the label, never the value — but we don't emit analytics tied to
+          handling a secret at all. api_key_created (scope: Private) already records that a private
+          key was minted, which is the activation signal; the copy itself stays untracked.
+        */}
         <Button variant="outline" size="sm" className="shrink-0" onClick={() => copy(value)}>
           {copied ? <Check className="size-3.5 text-green-600 dark:text-green-400" /> : <Copy className="size-3.5" />}
           {copied ? 'Copied' : 'Copy'}
@@ -111,6 +118,9 @@ const ApiKeys = () => {
     setCreating(true)
     try {
       const resp = await projectsRPC.createApiKey({ kind, displayName: name.trim() }, { headers: projectHeaders })
+      // scope, not displayName: which kind gets minted is the signal (a private key means someone
+      // is wiring up a server SDK), while the name is the customer's own free text and buys nothing.
+      trackEvent('api_key_created', { apiKeyId: resp.apiKey?.id ?? '', scope: kindLabel(kind) })
       // A private key is returned exactly once, here — hold it until dismissed. A public key needs
       // no banner: ListApiKeys returns its value in full, every time.
       if (kind === ApiKeyKind.PRIVATE) setNewPrivateKey(resp.key)
@@ -128,6 +138,7 @@ const ApiKeys = () => {
     setRevoking(id)
     try {
       await projectsRPC.deleteApiKey({ id }, { headers: projectHeaders })
+      trackEvent('api_key_revoked', { apiKeyId: id })
       setConfirmingRevoke(null)
       await reload()
     } catch (err) {
