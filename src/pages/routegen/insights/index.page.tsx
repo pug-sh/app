@@ -49,7 +49,7 @@ import {
 } from './constants'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
-import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
+import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 
@@ -336,8 +336,7 @@ const Insights = () => {
     }
 
     return trendSeries.map((s, i) => {
-      const bd = breakdownLabel(s.breakdown, '')
-      if (bd) return `${s.eventKind} · ${bd}`
+      if (hasBreakdown(s.breakdown)) return `${s.eventKind} · ${breakdownLabel(s.breakdown, '')}`
       return s.eventKind || `Series ${i + 1}`
     })
   }, [result.case, retentionCohorts, trendSeries])
@@ -350,7 +349,7 @@ const Insights = () => {
     // keep the event kind's semantic color.
     if (result.case === 'trends') {
       return trendSeries.map((s, i) =>
-        breakdownLabel(s.breakdown, '') ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
+        hasBreakdown(s.breakdown) ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
       )
     }
     return seriesNames.map((name, i) => getSeriesColor(name, i))
