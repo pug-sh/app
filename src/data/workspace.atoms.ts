@@ -76,33 +76,66 @@ export const bootstrapStatusAtom = atom<BootstrapStatus>('idle')
 // Projects
 export const projectsAtom = atom<Project[]>([])
 
+// Which org the loaded project list belongs to, or '' while a fetch is in flight or none has run.
+// An empty `projectsAtom` can't answer that on its own — it means both "not fetched yet" and "this
+// org has no projects", and only the first is worth waiting on. Keyed by org rather than a
+// loaded/loading boolean so that every path which changes the active org invalidates it for free:
+// there is no flag for a future switch path to forget to reset.
+export const projectsOrgIdAtom = atom('')
+
 export const fetchProjectsAtom = atom(null, async (get, set) => {
   const org = get(activeOrgAtom)
   if (!org) {
     set(projectsAtom, [])
     set(activeProjectAtom, null)
+    set(projectsOrgIdAtom, '')
     return []
   }
   // Clear stale projects before the await so the previous org's projects
   // don't briefly leak through (e.g. when switching orgs from settings).
   set(projectsAtom, [])
   set(activeProjectAtom, null)
+  set(projectsOrgIdAtom, '')
   const projectsRPC = get(projectsRPCAtom)
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
     set(projectsAtom, resp.projects)
+    set(projectsOrgIdAtom, org.id)
     set(workspaceErrorAtom, null)
     return resp.projects
   } catch (err) {
     console.error('fetchProjects failed:', err)
     set(projectsAtom, [])
     set(activeProjectAtom, null)
+    // The list is as resolved as it will get: a failure is a settled answer, not a pending one.
+    set(projectsOrgIdAtom, org.id)
     set(workspaceErrorAtom, 'Failed to load projects. Please check your connection and try again.')
     return []
   }
 })
 
 export const activeProjectAtom = atom<Project | null>(null)
+
+// True once the org and project have stopped resolving on their own — bootstrap either finished
+// picking them or reached a state where it never will (no org to select, or a hard failure).
+//
+// This exists because a load walks through several honest-but-incomplete states (no org → org →
+// org + project), one render apart, and anything that *reports* on workspace state rather than
+// merely rendering it would otherwise report each one. Analytics is that consumer: without this it
+// sent an identify per intermediate state, three per page load. Rendering code wants the
+// intermediate states and should keep reading the individual atoms.
+//
+// A caller must only trust this while WorkspaceBootstrap is mounted — 'idle' means "bootstrap
+// hasn't started", which is indistinguishable from "no bootstrap is coming" (the shared-dashboard
+// route mounts neither). App owns that distinction and passes it down.
+export const workspaceSettledAtom = atom(get => {
+  const status = get(bootstrapStatusAtom)
+  if (status !== 'ready') return status === 'needs-selection' || status === 'error'
+  const org = get(activeOrgAtom)
+  if (!org || get(projectsOrgIdAtom) !== org.id) return false
+  // The list has landed; the pick follows a render later. An org with no projects has no pick coming.
+  return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
+})
 
 // Last project visited per org (orgId → projectId), restored when switching orgs.
 export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {})

@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/sidebar'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import { useRouteProjectId } from '@/lib/project-path'
 import { cn } from '@/lib/utils'
 
 const navGroups = [
@@ -111,7 +112,7 @@ const AppSidebar = () => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const [theme, setTheme] = useAtom(themeAtom)
 
-  const routeProjectId = location.match(/^\/p\/([^/]+)/)?.[1] ?? null
+  const routeProjectId = useRouteProjectId()
   const currentProjectId = routeProjectId ?? activeProject?.id ?? null
   const prefix = currentProjectId ? `/p/${currentProjectId}` : ''
   const pagePath = location.match(/^\/p\/[^/]+\/(.*)$/)?.[1] ?? 'overview'

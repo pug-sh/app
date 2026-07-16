@@ -28,6 +28,7 @@ import {
 } from '@/data/workspace.atoms'
 import { setSeriesColorScheme } from '@/lib/event-colors'
 import { lazyWithRetry } from '@/lib/lazy'
+import { useRouteProjectId } from '@/lib/project-path'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
@@ -57,6 +58,7 @@ const WorkspaceBootstrap = () => {
   const projects = useAtomValue(projectsAtom)
   const activeOrg = useAtomValue(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
+  const routeProjectId = useRouteProjectId()
   const lastOrgId = useAtomValue(lastOrgIdAtom)
   const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
@@ -115,10 +117,16 @@ const WorkspaceBootstrap = () => {
       if (activeProject) setActiveProject(null)
       return
     }
-    if (!activeProject || !projects.some(project => project.id === activeProject.id)) {
-      setActiveProject(projects[0])
-    }
-  }, [projects, activeProject, setActiveProject])
+    if (activeProject && projects.some(project => project.id === activeProject.id)) return
+    // A /p/:projectId route already names the project it wants, and ProjectSync sets it from there.
+    // Defaulting to projects[0] here would win that race and make a project the user never asked for
+    // briefly active for everything that watches activeProjectAtom — the page itself is shielded by
+    // ProjectSync's gate, but analytics saw it and reported it as a second identity. Only default
+    // when the URL has no opinion, or names a project that isn't available (ProjectSync renders
+    // "Project not found" and needs a sane fallback behind it).
+    if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
+    setActiveProject(projects[0])
+  }, [projects, activeProject, routeProjectId, setActiveProject])
 
   useEffect(() => {
     if (status !== 'needs-selection' || !activeOrg) return
@@ -211,9 +219,11 @@ const App = () => {
       {/*
         Unconditional, including on the shared route: it issues no workspace RPCs, so it doesn't
         break that route's rule above — and a signed-in user reading a shared dashboard is a
-        session worth seeing. Traits are just thinner there, since bootstrap hasn't run.
+        session worth seeing. Traits are just thinner there, since bootstrap hasn't run, which is
+        also why it's told: waiting for a workspace that is never coming would mean never
+        identifying. Kept next to the line that decides it so the two can't drift apart.
       */}
-      <AnalyticsIdentity />
+      <AnalyticsIdentity awaitWorkspace={!isSharedRoute} />
       {isSharedRoute ? null : <WorkspaceBootstrap />}
       {location === '/magic-link' ? (
         <Suspense fallback={<LoadingSpinner />}>
