@@ -45,7 +45,11 @@ const BreakdownTile = ({
       events: [
         create(EventQuerySchema, {
           event: create(EventFilterSchema, { kind: eventKind }),
-          aggregation: AggregationType.TOTAL,
+          // These tiles answer "who are my users" — what platform they're on, where they came
+          // from. That's a question about people, so count people. TOTAL counted occurrences, which
+          // weights by activity instead: one power user with 80 clicks read as "80 Linux" beside
+          // "1 Android", in a legend whose shape invites you to read it as a user count.
+          aggregation: AggregationType.UNIQUE_USERS,
         }),
       ],
       breakdowns: [create(BreakdownSchema, { property: breakdownProperty })],
