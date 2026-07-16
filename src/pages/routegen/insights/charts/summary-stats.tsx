@@ -3,6 +3,7 @@ import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { isPerBucketAggregation } from '../helpers'
 import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
@@ -54,12 +55,10 @@ export const SummaryStats = ({
           { label: 'peak', value: compactNumber(max) },
         ]
 
-        if (aggregation === AggregationType.UNIQUE_USERS || aggregation === AggregationType.PER_USER_AVG) {
-          // Neither is summable across buckets, which is what the `total` default would do: the
-          // same person active on two days is one unique user, not two, and per-user averages don't
-          // add either. The series carries counts rather than identities, so a range-wide unique
-          // count can't be recovered here at all — it would take its own query. Lead with the
-          // per-bucket average, which is what this data can honestly say.
+        if (isPerBucketAggregation(aggregation)) {
+          // Not summable across buckets, which is what the `total` default above would do — see
+          // isPerBucketAggregation. Lead with the per-bucket average, which is what this data can
+          // honestly say.
           headline = avg
           stats = [
             { label: 'peak', value: compactNumber(max) },

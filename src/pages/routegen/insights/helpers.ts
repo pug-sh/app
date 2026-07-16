@@ -1,5 +1,13 @@
-import type { FunnelSeries, TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType, type FunnelSeries, type TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
+
+// Aggregations whose values are already normalized per bucket, so adding them across buckets is
+// meaningless: the same person active on two days is one unique user rather than two, and per-user
+// averages don't add. A range-wide unique count can't be recovered from per-bucket data at all —
+// the series carry counts, not identities, so it would take its own query. Everything that collapses
+// a series to one number therefore averages these instead of summing, and says so in its label.
+export const isPerBucketAggregation = (aggregation: AggregationType) =>
+  aggregation === AggregationType.UNIQUE_USERS || aggregation === AggregationType.PER_USER_AVG
 
 type ChartPoint = {
   date: Date

@@ -6,6 +6,7 @@ import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/da
 import {
   AggregationType,
   EventQuerySchema,
+  Granularity,
   InsightQuerySpecSchema,
   InsightType,
   QueryRequestSchema,
@@ -29,6 +30,24 @@ import { composeFunnelSteps } from './tile-bindings'
 // events still carry. The Query RPC reads raw events, so these breakdowns populate.
 const OS_PROPERTY = '$os'
 const UTM_SOURCE_PROPERTY = '$utmSource'
+
+// A KPI over a unique-users series is an average across buckets, never a sum — a daily regular is
+// one user, not thirty (see isPerBucketAggregation). So the title has to name the bucket: an average
+// over hours is not an average over days, and the granularity chip moves it.
+//
+// globalGranularity arrives already resolved (resolveTileGranularity, in index.page.tsx). It is
+// undefined only when the user has picked neither a range nor a granularity, in which case each tile
+// resolves "Auto" against its own default window — 30 days for this row (see kpi-tile.tsx), which
+// the auto ladder lands on Day.
+const GRANULARITY_ADVERB: Partial<Record<Granularity, string>> = {
+  [Granularity.HOUR]: 'hourly',
+  [Granularity.DAY]: 'daily',
+  [Granularity.WEEK]: 'weekly',
+  [Granularity.MONTH]: 'monthly',
+}
+
+const perBucketAdverb = (granularity: Granularity | undefined) =>
+  GRANULARITY_ADVERB[granularity ?? Granularity.DAY] ?? 'daily'
 
 type Props = GlobalOverrides
 
@@ -76,7 +95,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
         <div className="flex flex-col gap-3.5">
           <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-5">
             <KpiTile
-              title="Active users"
+              title={`Avg ${perBucketAdverb(globalGranularity)} active users`}
               via={bindings.primary}
               query={buildTrendsQuery(bindings.primary, AggregationType.UNIQUE_USERS)}
               globalTimeRange={globalTimeRange}
@@ -103,7 +122,10 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
               <KpiTile
                 title="New signups"
                 via={bindings.signinLike}
-                query={buildTrendsQuery(bindings.signinLike, AggregationType.UNIQUE_USERS)}
+                // A count over the whole window, which is what the title promises — so TOTAL, whose
+                // buckets do sum. UNIQUE_USERS here was per-bucket uniques, and any honest reading
+                // of those is an average: "New signups: 2" for a month that brought sixty.
+                query={buildTrendsQuery(bindings.signinLike, AggregationType.TOTAL)}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={globalGranularity}
                 queryKeyPrefix="overview-kpi-signups"
