@@ -4,9 +4,11 @@ import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
+import { EMPTY_VALUE_LABEL } from '../helpers'
 import { topKShareInfo } from '../top-k'
 
 const OTHERS_HINT = '$others — everything outside the top results, aggregated into a single bucket.'
+const EMPTY_HINT = 'Events carrying no value for this property. Ranked as a real bucket, not an error.'
 
 const formatValue = (value: number) => {
   if (Number.isInteger(value) || Math.abs(value) >= 1000) return compactNumber(value)
@@ -49,6 +51,18 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
           </span>
         )}
       </div>
+    )
+  }
+
+  // An empty value is a real bucket the backend ranks rather than drops (isOthers is
+  // false on it), and it is routinely the largest row — untagged traffic outweighs any
+  // single $utmSource — so a blank label would leave the top bar unexplained. Muted,
+  // like $others, to read as a marker rather than a literal value.
+  if (!row.dimensionValue) {
+    return (
+      <span className="block truncate text-muted-foreground" title={EMPTY_HINT}>
+        {EMPTY_VALUE_LABEL}
+      </span>
     )
   }
 
