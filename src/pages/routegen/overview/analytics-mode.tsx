@@ -31,23 +31,29 @@ import { composeFunnelSteps } from './tile-bindings'
 const OS_PROPERTY = '$os'
 const UTM_SOURCE_PROPERTY = '$utmSource'
 
-// A KPI over a unique-users series is an average across buckets, never a sum — a daily regular is
-// one user, not thirty (see isPerBucketAggregation). So the title has to name the bucket: an average
-// over hours is not an average over days, and the granularity chip moves it.
+// A KPI over a series that isn't a count is an average across buckets, never a sum (SERIES_COLLAPSE)
+// — a daily regular is one user, not thirty. So the title names the bucket, and moves with the
+// granularity chip: an average over hours is not an average over days.
 //
-// globalGranularity arrives already resolved (resolveTileGranularity, in index.page.tsx). It is
-// undefined only when the user has picked neither a range nor a granularity, in which case each tile
-// resolves "Auto" against its own default window — 30 days for this row (see kpi-tile.tsx), which
-// the auto ladder lands on Day.
-const GRANULARITY_ADVERB: Partial<Record<Granularity, string>> = {
+// Total over Granularity, like GRANULARITY_MAX_RANGE_MS and unlike GRANULARITY_MAX_RANGE_LABEL —
+// that one's Partial is fine because a miss degrades to a generic message, whereas a miss here would
+// assert a specific and false one.
+const GRANULARITY_ADVERB = {
+  // Never reached: resolveTileGranularity hands down a concrete value or undefined, and the
+  // undefined case resolves to DAY below.
+  [Granularity.UNSPECIFIED]: 'daily',
+  [Granularity.MINUTE]: 'per-minute',
   [Granularity.HOUR]: 'hourly',
   [Granularity.DAY]: 'daily',
   [Granularity.WEEK]: 'weekly',
   [Granularity.MONTH]: 'monthly',
-}
+} as const satisfies Record<Granularity, string>
 
-const perBucketAdverb = (granularity: Granularity | undefined) =>
-  GRANULARITY_ADVERB[granularity ?? Granularity.DAY] ?? 'daily'
+// globalGranularity arrives already resolved (resolveTileGranularity, in index.page.tsx), and is
+// undefined only when the user has picked neither a range nor a granularity. The tiles then fall
+// back to getInitialGranularity, which answers DAY for a query carrying no granularity of its own —
+// as these do — so DAY is the honest default here too.
+const perBucketAdverb = (granularity: Granularity | undefined) => GRANULARITY_ADVERB[granularity ?? Granularity.DAY]
 
 type Props = GlobalOverrides
 
@@ -111,7 +117,7 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
               queryKeyPrefix="overview-kpi-volume"
             />
             <KpiTile
-              title="Events per user"
+              title={`Avg ${perBucketAdverb(globalGranularity)} events per user`}
               via={bindings.primary}
               query={buildTrendsQuery(bindings.primary, AggregationType.PER_USER_AVG)}
               globalTimeRange={globalTimeRange}
@@ -122,9 +128,9 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
               <KpiTile
                 title="New signups"
                 via={bindings.signinLike}
-                // A count over the whole window, which is what the title promises — so TOTAL, whose
-                // buckets do sum. UNIQUE_USERS here was per-bucket uniques, and any honest reading
-                // of those is an average: "New signups: 2" for a month that brought sixty.
+                // The title promises a count over the whole window, so the aggregation has to be one
+                // whose buckets sum. Per-bucket uniques don't, and would render a sixty-signup month
+                // as the average: "New signups: 2".
                 query={buildTrendsQuery(bindings.signinLike, AggregationType.TOTAL)}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={globalGranularity}

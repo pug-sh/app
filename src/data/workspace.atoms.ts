@@ -37,6 +37,7 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
     set(activeOrgAtom, null)
     set(projectsAtom, [])
     set(activeProjectAtom, null)
+    set(projectsOrgIdAtom, null)
     set(workspaceErrorAtom, 'Failed to load your workspace. Please check your connection and try again.')
     return []
   }
@@ -66,6 +67,7 @@ export const selectOrgAtom = atom(null, (_get, set, org: Org) => {
   // Switching org invalidates the current project context (mirrors leaveOrgAtom).
   set(activeProjectAtom, null)
   set(projectsAtom, [])
+  set(projectsOrgIdAtom, null)
 })
 
 // Task 5: bootstrapStatusAtom — tracks the org-bootstrap lifecycle
@@ -76,26 +78,31 @@ export const bootstrapStatusAtom = atom<BootstrapStatus>('idle')
 // Projects
 export const projectsAtom = atom<Project[]>([])
 
-// Which org the loaded project list belongs to, or '' while a fetch is in flight or none has run.
-// An empty `projectsAtom` can't answer that on its own — it means both "not fetched yet" and "this
-// org has no projects", and only the first is worth waiting on. Keyed by org rather than a
-// loaded/loading boolean so that every path which changes the active org invalidates it for free:
-// there is no flag for a future switch path to forget to reset.
-export const projectsOrgIdAtom = atom('')
+// Which org's project list is loaded, or null while a fetch is in flight or none has run. An empty
+// `projectsAtom` can't answer that on its own — it means both "not fetched yet" and "this org has no
+// projects", and only the first is worth waiting on. A failed fetch counts as loaded: see the catch
+// in fetchProjectsAtom.
+//
+// Keyed by org rather than a loaded/loading boolean because switching org then invalidates it
+// without anyone remembering to — the key simply stops matching. That covers switches, NOT teardowns
+// that return to the same org: sign out and back in, and a boolean and a key are equally stale. So
+// every path that clears `projectsAtom` clears this beside it. Module-private to keep that pairing
+// enforceable here; null rather than '' so it can't collide with an Org's own proto-default id.
+const projectsOrgIdAtom = atom<string | null>(null)
 
 export const fetchProjectsAtom = atom(null, async (get, set) => {
   const org = get(activeOrgAtom)
   if (!org) {
     set(projectsAtom, [])
     set(activeProjectAtom, null)
-    set(projectsOrgIdAtom, '')
+    set(projectsOrgIdAtom, null)
     return []
   }
   // Clear stale projects before the await so the previous org's projects
   // don't briefly leak through (e.g. when switching orgs from settings).
   set(projectsAtom, [])
   set(activeProjectAtom, null)
-  set(projectsOrgIdAtom, '')
+  set(projectsOrgIdAtom, null)
   const projectsRPC = get(projectsRPCAtom)
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
@@ -116,21 +123,29 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
 
 export const activeProjectAtom = atom<Project | null>(null)
 
-// True once the org and project have stopped resolving on their own — bootstrap either finished
-// picking them or reached a state where it never will (no org to select, or a hard failure).
+// True once the org and project have stopped resolving on their own — bootstrap has either finished
+// picking them or reached a state where it never will.
 //
-// This exists because a load walks through several honest-but-incomplete states (no org → org →
-// org + project), one render apart, and anything that *reports* on workspace state rather than
-// merely rendering it would otherwise report each one. Analytics is that consumer: without this it
-// sent an identify per intermediate state, three per page load. Rendering code wants the
-// intermediate states and should keep reading the individual atoms.
+// A load walks through several honest-but-incomplete states (no org → org → org + project) a render
+// apart. Anything that *reports* workspace state rather than merely rendering it has to wait for the
+// end of that walk, or it reports each step as though it were the answer; analytics is the consumer
+// this exists for. Rendering code wants the intermediate states and should keep reading the
+// individual atoms.
 //
-// A caller must only trust this while WorkspaceBootstrap is mounted — 'idle' means "bootstrap
-// hasn't started", which is indistinguishable from "no bootstrap is coming" (the shared-dashboard
-// route mounts neither). App owns that distinction and passes it down.
+// Only trustworthy while WorkspaceBootstrap is mounted: 'idle' means "bootstrap hasn't started",
+// which from here is indistinguishable from "no bootstrap is coming" (the shared-dashboard route
+// mounts neither). App owns that distinction and passes it down.
+//
+// It also can't see ProjectSync adopting the URL's project, which happens after this reports
+// settled. What keeps that honest is App's bootstrap declining to default-pick when the route names
+// a project, so there's only ever one pick — - remove that and this quietly under-reports again.
 export const workspaceSettledAtom = atom(get => {
   const status = get(bootstrapStatusAtom)
-  if (status !== 'ready') return status === 'needs-selection' || status === 'error'
+  // The org picker counts as settled only while it's still waiting on the user: selectOrg sets the
+  // org a render before the status reaches 'ready', and settling in that window spends a report on
+  // traits that are a strict subset of the ones one render away.
+  if (status === 'needs-selection') return !get(activeOrgAtom)
+  if (status !== 'ready') return status === 'error'
   const org = get(activeOrgAtom)
   if (!org || get(projectsOrgIdAtom) !== org.id) return false
   // The list has landed; the pick follows a render later. An org with no projects has no pick coming.
@@ -181,6 +196,7 @@ export const leaveOrgAtom = atom(null, async (get, set, orgId: string) => {
   set(lastOrgIdAtom, '')
   set(activeProjectAtom, null)
   set(projectsAtom, [])
+  set(projectsOrgIdAtom, null)
   set(bootstrapStatusAtom, 'idle')
 })
 
@@ -202,6 +218,7 @@ export const resetWorkspaceAtom = atom(null, (_, set) => {
   set(activeOrgAtom, null)
   set(projectsAtom, [])
   set(activeProjectAtom, null)
+  set(projectsOrgIdAtom, null)
   set(workspaceErrorAtom, null)
   set(lastOrgIdAtom, '')
   set(bootstrapStatusAtom, 'idle')

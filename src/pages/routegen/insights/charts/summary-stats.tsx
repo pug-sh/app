@@ -3,7 +3,7 @@ import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { isPerBucketAggregation } from '../helpers'
+import { collapseValues, SERIES_COLLAPSE } from '../helpers'
 import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
@@ -49,37 +49,30 @@ export const SummaryStats = ({
         const max = Math.max(...vals, 0)
         const aggregation = aggregations[si] ?? AggregationType.TOTAL
 
-        let headline = total
+        const collapse = SERIES_COLLAPSE[aggregation]
+        const headline = collapseValues(vals, collapse)
+
+        // Which two figures give the headline context isn't derivable from the collapse rule — an
+        // averaged headline wants different neighbours depending on whether it averages counts of
+        // people or averages of averages — so it stays a ladder. AVG is checked ahead of the
+        // collapse it shares with the user counts.
         let stats: DetailStat[] = [
           { label: 'avg', value: compactNumber(Math.round(avg)) },
           { label: 'peak', value: compactNumber(max) },
         ]
-
-        if (isPerBucketAggregation(aggregation)) {
-          // Not summable across buckets, which is what the `total` default above would do — see
-          // isPerBucketAggregation. Lead with the per-bucket average, which is what this data can
-          // honestly say.
-          headline = avg
-          stats = [
-            { label: 'peak', value: compactNumber(max) },
-            { label: 'floor', value: compactNumber(min) },
-          ]
-        } else if (aggregation === AggregationType.AVG) {
-          headline = avg
+        if (aggregation === AggregationType.AVG) {
           stats = [
             { label: 'min', value: compactNumber(min) },
             { label: 'max', value: compactNumber(max) },
           ]
-        } else if (aggregation === AggregationType.MIN) {
-          headline = min
-          stats = [
-            { label: 'avg', value: compactNumber(Math.round(avg)) },
-            { label: 'peak', value: compactNumber(max) },
-          ]
         } else if (aggregation === AggregationType.MAX) {
-          headline = max
           stats = [
             { label: 'avg', value: compactNumber(Math.round(avg)) },
+            { label: 'floor', value: compactNumber(min) },
+          ]
+        } else if (collapse === 'avg') {
+          stats = [
+            { label: 'peak', value: compactNumber(max) },
             { label: 'floor', value: compactNumber(min) },
           ]
         }

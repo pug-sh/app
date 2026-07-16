@@ -120,10 +120,10 @@ const WorkspaceBootstrap = () => {
     if (activeProject && projects.some(project => project.id === activeProject.id)) return
     // A /p/:projectId route already names the project it wants, and ProjectSync sets it from there.
     // Defaulting to projects[0] here would win that race and make a project the user never asked for
-    // briefly active for everything that watches activeProjectAtom — the page itself is shielded by
-    // ProjectSync's gate, but analytics saw it and reported it as a second identity. Only default
-    // when the URL has no opinion, or names a project that isn't available (ProjectSync renders
-    // "Project not found" and needs a sane fallback behind it).
+    // briefly active for everything watching activeProjectAtom — the page itself is shielded by
+    // ProjectSync's gate, but workspaceSettledAtom isn't, and reports a settled workspace around the
+    // wrong project. Only default when the URL has no opinion, or names a project that isn't
+    // available (ProjectSync renders "Project not found" and needs a sane fallback behind it).
     if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
     setActiveProject(projects[0])
   }, [projects, activeProject, routeProjectId, setActiveProject])

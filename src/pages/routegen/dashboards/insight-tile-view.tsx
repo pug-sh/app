@@ -6,7 +6,6 @@ import {
   VisualizationOptions_YAxisFormat,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
-  AggregationType,
   type Granularity,
   type InsightQuerySpec,
   InsightType,
@@ -21,6 +20,7 @@ import {
   buildChartData,
   disambiguateLabels,
   hasBreakdown,
+  seriesAggregationResolver,
   sortFunnelSteps,
   trendSeriesNames,
 } from '../insights/helpers'
@@ -155,17 +155,14 @@ export const InsightTileView = ({
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
   }, [result.case, trendSeries, seriesNames, resolvedTheme])
-  // Aligned to the SERIES, not to spec.events — the insights page resolves it the same way. A
-  // breakdown splits one event into a series per value, so walking the event list by series
-  // position handed every split after the first the TOTAL default. That default is exactly wrong
-  // for a unique-users series (it sums per-bucket uniques), which made the first breakdown value
-  // read honestly while the rest silently inflated.
-  const seriesAggregations = useMemo(() => {
-    const byKind = new Map(
-      (spec?.events ?? []).map(entry => [entry.event?.kind ?? '', entry.aggregation ?? AggregationType.TOTAL]),
-    )
-    return trendSeries.map(series => byKind.get(series.eventKind) ?? AggregationType.TOTAL)
-  }, [spec?.events, trendSeries])
+  const eventAggregations = useMemo(
+    () => (spec?.events ?? []).map(entry => ({ kind: entry.event?.kind ?? '', aggregation: entry.aggregation })),
+    [spec?.events],
+  )
+  // One resolver, two result sets: the series below and — for a KPI — the comparison window, which
+  // is its own query and must not be read through this one's indices.
+  const aggregationFor = useMemo(() => seriesAggregationResolver(eventAggregations), [eventAggregations])
+  const seriesAggregations = useMemo(() => trendSeries.map(aggregationFor), [trendSeries, aggregationFor])
   const hasIncompleteNumericAggregation = useMemo(
     () =>
       (spec?.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty)),
@@ -182,7 +179,7 @@ export const InsightTileView = ({
         <KpiTile
           tile={tile}
           currentSeries={trendSeries}
-          aggregations={seriesAggregations}
+          aggregationFor={aggregationFor}
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
           metadata={kpiMetadata}

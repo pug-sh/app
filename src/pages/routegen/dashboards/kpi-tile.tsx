@@ -1,9 +1,9 @@
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { useId, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { AggregationType, type TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { cn } from '@/lib/utils'
-import { isPerBucketAggregation } from '../insights/helpers'
+import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from '../insights/helpers'
 import { accentTextClass, toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
@@ -12,33 +12,32 @@ export type KpiCompare = { series: TrendSeries[]; label: string } | { error: tru
 type KpiTileProps = {
   tile: DashboardTile
   currentSeries: TrendSeries[]
-  // Per series, not per event — a breakdown yields several series from one event row.
-  aggregations: AggregationType[]
+  // Resolves a series to the aggregation that produced it. Applies to `compare`'s series too, which
+  // is why it's a function: that's a different query's result and shares nothing but the spec.
+  aggregationFor: SeriesAggregationResolver
   compare?: KpiCompare
   formatValue: (value: number) => string
   metadata?: string
   lightMetric?: boolean
 }
 
-// Collapse one series to a single number. Summing its buckets is right for counts and wrong for
-// anything already normalized per bucket (see isPerBucketAggregation) — "active users" summed over
-// thirty daily buckets counts a daily regular thirty times. Those average instead, and the caller
-// names the tile accordingly ("Avg daily active users").
-const collapseSeries = (series: TrendSeries, aggregation: AggregationType): number => {
-  const total = series.points.reduce((acc, point) => acc + point.value, 0)
-  if (!isPerBucketAggregation(aggregation)) return total
-  if (series.points.length === 0) return 0
-  return total / series.points.length
-}
-
 // KPI tiles aren't designed for multi-series queries, but if the underlying spec
 // yields multiple series we collapse to a single number rather than render
 // nothing. Returns NaN when there are no series at all so the renderer can
 // distinguish "no data" from a true zero.
-const summarize = (series: TrendSeries[], aggregations: AggregationType[]): number => {
+//
+// Each series is asked what produced it rather than being read off a position, so the comparison
+// window — a separate query, with its own series — summarizes correctly instead of borrowing the
+// current window's order. Only counts sum; SERIES_COLLAPSE decides.
+const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResolver) => {
   if (series.length === 0) return Number.NaN
   return series.reduce(
-    (acc, entry, index) => acc + collapseSeries(entry, aggregations[index] ?? AggregationType.TOTAL),
+    (acc, entry) =>
+      acc +
+      collapseValues(
+        entry.points.map(point => point.value),
+        SERIES_COLLAPSE[aggregationFor(entry)],
+      ),
     0,
   )
 }
@@ -72,16 +71,16 @@ const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
 export const KpiTile = ({
   tile,
   currentSeries,
-  aggregations,
+  aggregationFor,
   compare,
   formatValue,
   metadata,
   lightMetric,
 }: KpiTileProps) => {
-  const current = useMemo(() => summarize(currentSeries, aggregations), [currentSeries, aggregations])
+  const current = useMemo(() => summarize(currentSeries, aggregationFor), [currentSeries, aggregationFor])
   const prior = useMemo(
-    () => (compare && 'series' in compare ? summarize(compare.series, aggregations) : undefined),
-    [compare, aggregations],
+    () => (compare && 'series' in compare ? summarize(compare.series, aggregationFor) : undefined),
+    [compare, aggregationFor],
   )
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
 

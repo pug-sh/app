@@ -45,10 +45,11 @@ const BreakdownTile = ({
       events: [
         create(EventQuerySchema, {
           event: create(EventFilterSchema, { kind: eventKind }),
-          // These tiles answer "who are my users" — what platform they're on, where they came
-          // from. That's a question about people, so count people. TOTAL counted occurrences, which
-          // weights by activity instead: one power user with 80 clicks read as "80 Linux" beside
-          // "1 Android", in a legend whose shape invites you to read it as a user count.
+          // These tiles ask what platform users are on and where they came from — questions about
+          // people, so count people rather than occurrences, which would weight by activity and let
+          // one busy user outweigh a hundred quiet ones. Per bucket, necessarily: a range-wide
+          // unique count isn't recoverable from a trends series (SERIES_COLLAPSE), so the summary
+          // reads as an average per bucket.
           aggregation: AggregationType.UNIQUE_USERS,
         }),
       ],

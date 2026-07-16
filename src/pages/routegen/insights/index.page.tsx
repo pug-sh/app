@@ -55,6 +55,7 @@ import {
   buildChartData,
   disambiguateLabels,
   hasBreakdown,
+  resolveSeriesAggregations,
   sortFunnelSteps,
   trendSeriesNames,
 } from './helpers'
@@ -372,11 +373,7 @@ const Insights = () => {
 
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []
-
-    return trendSeries.map(series => {
-      const entry = validEntries.find(candidate => candidate.kind === series.eventKind)
-      return entry?.aggregation ?? AggregationType.TOTAL
-    })
+    return resolveSeriesAggregations(validEntries, trendSeries)
   }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),

@@ -14,6 +14,11 @@ import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 // start look identical from the atoms (both 'idle'), and the difference is a routing fact App
 // already knows. False is the shared-dashboard route — nothing is coming, so identify immediately
 // with whatever traits exist (none).
+//
+// A prop rather than an atom WorkspaceBootstrap sets on mount, and that's not a shortcut: this
+// component renders first (App.tsx), so its effect would run before any such atom was written, read
+// "no bootstrap coming", and identify on the spot — the very thing the gate below exists to stop. A
+// prop is known at render time; an effect-written atom isn't.
 const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const customerId = useAtomValue(jwtDataAtom)?.customerId
   const org = useAtomValue(activeOrgAtom)
@@ -58,12 +63,14 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
       sentTraits.current = null
     }
 
-    // Bootstrap resolves the org, then the project, a render apart — and each of those states is a
-    // real change, so the dedup below (which only catches *repeats*) happily sent one identify per
-    // wave: three per load, four when the URL named a project other than the first. Wait for the
-    // workspace to stop moving and send the finished traits once. Nothing is lost by waiting: the
-    // SDK stamps events with the anonymous ID and the first identify hands that ID to the server to
-    // merge, so a session that ends before this fires is still absorbed by the next one.
+    // Bootstrap resolves the org, then the project, a render apart. Each of those states is a real
+    // change, so the dedup below — which only catches *repeats* — would let every one of them send.
+    // Wait for the traits to stop moving and state them once.
+    //
+    // Nothing is lost by waiting. A device that has identified before resolves its distinct ID from
+    // the stored external ID, so its events carry the customer either way; a first-time one stamps
+    // the anonymous ID, which the first identify hands to the server to merge. A session that ends
+    // before this fires is absorbed by the next one.
     if (awaitWorkspace && !workspaceSettled) return
 
     const traits: CustomerTraits = {

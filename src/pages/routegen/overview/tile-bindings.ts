@@ -4,10 +4,9 @@ import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 // in the project's event schema wins. Add more entries here as we discover
 // common customer conventions.
 //
-// page_view is the only primary candidate today: it's the canonical unit of "someone used this"
-// for a web project, and it's the one autocaptured kind that fires while the landing URL — and so
-// $utmSource — is still current, which the Traffic source tile depends on. Add a mobile equivalent
-// here when the other SDKs grow one.
+// page_view is the only primary candidate today: one event per navigation is the closest thing a web
+// project has to a unit of "someone used this", where a click is one per interaction. Add a mobile
+// equivalent here when the other SDKs grow one.
 const PRIMARY_CANDIDATES = ['page_view'] as const
 const SIGNIN_CANDIDATES = ['signin', 'signup', 'identified', 'account_created'] as const
 const CONVERSION_CANDIDATES = [
@@ -31,10 +30,11 @@ type SigninKind = (typeof SIGNIN_CANDIDATES)[number]
 type ConversionKind = (typeof CONVERSION_CANDIDATES)[number]
 type RevenueKind = (typeof REVENUE_CANDIDATES)[number]
 
-// Autocaptured interaction kinds, which are never a good answer to "what does this project do".
-// They fire on raw interaction rather than intent, so wherever autoCapture is on they win "most
-// events" by a wide margin — a click on every interaction, a scroll on every page. Only consulted
-// for the fallback below: page_view is autocaptured too, and it's the one we want.
+// Autocaptured kinds that fire on raw interaction rather than intent, so wherever autoCapture is on
+// they win "most events" by a wide margin — a click on every interaction, a scroll on every page —
+// and say nothing about what the project is for. Deliberately not the whole autocapture set: it also
+// includes page_view, which is the pick we want, and form_submit, which is a real user action and a
+// defensible primary for a project that has no page_view. Only consulted for the fallback below.
 const NOT_PRIMARY: ReadonlySet<string> = new Set(['click', 'dead_click', 'rage_click', 'scroll'])
 
 export type Bindings = Readonly<{
@@ -65,12 +65,10 @@ export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
   const sorted = [...events].sort((a, b) => Number(b.count - a.count))
   const available = new Set(sorted.map(event => event.name))
   return {
-    // Convention first, then the busiest event that isn't autocapture noise. Picking the busiest
-    // event outright — which is what this used to do — meant `click` in any project with autoCapture
-    // on, so the whole Overview read "via click": "Retention via click", and a Traffic source
-    // breakdown that was structurally always (none), since a click's URL has no $utmSource left by
-    // the time it fires. The last resort is still the busiest event: a project with nothing but
-    // clicks is better described as "via click" than by hiding the Overview behind a null.
+    // Convention first, then the busiest event that isn't autocapture noise, and only then the
+    // busiest event outright: a project whose every event is a click is better described as "via
+    // click" than by hiding the whole Overview behind a null. That last tier announces itself —
+    // every tile renders `via <kind>` — so a degraded pick is visible rather than silent.
     primary:
       findFirst(PRIMARY_CANDIDATES, available) ??
       sorted.find(event => !NOT_PRIMARY.has(event.name))?.name ??
