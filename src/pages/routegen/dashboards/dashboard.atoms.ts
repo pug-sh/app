@@ -1,6 +1,5 @@
 import { create } from '@bufbuild/protobuf'
 import { atom } from 'jotai'
-import { trackFeature } from '@/analytics/pug'
 import type { Dashboard, DashboardsServiceUpsertRequest } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   DashboardsServiceDeleteRequestSchema,
@@ -55,9 +54,6 @@ export const createDashboardAtom = atom(null, async (get, set, input: { displayN
 
   const dashboardsRPC = get(dashboardsRPCAtom)
   const resp = await dashboardsRPC.create(input, { headers })
-  // On the atom rather than the button, so every entry point counts and a new one can't forget.
-  // No displayName — that's the customer's text, and featureId already says what happened.
-  trackFeature({ featureId: 'dashboard.create', featureName: 'New dashboard' })
   await set(fetchDashboardsAtom)
   const dashboard = resp.dashboard ?? null
   if (dashboard) set(pendingEditDashboardIdAtom, dashboard.id)
@@ -70,9 +66,6 @@ export const deleteDashboardAtom = atom(null, async (get, set, id: string) => {
 
   const dashboardsRPC = get(dashboardsRPCAtom)
   await dashboardsRPC.delete(create(DashboardsServiceDeleteRequestSchema, { id }), { headers })
-  // The delete control is an icon-only, hover-revealed row action — click autocapture reports it
-  // as tag `svg` with no text, so without this the click is unattributable.
-  trackFeature({ featureId: 'dashboard.delete', featureName: 'Delete dashboard' })
   return (await set(fetchDashboardsAtom)) ?? []
 })
 

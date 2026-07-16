@@ -19,11 +19,8 @@ import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
 import { OptionChip } from './routegen/insights/controls'
 
-// This route renders standalone, outside the <main> that carries the marker in App.tsx, and it is
-// entirely a customer's data — their dashboard, tile titles, and event names, shown to the public.
-// It needs its own boundary or click capture would read all of it back out.
 const Shell = ({ children }: { children: ReactNode }) => (
-  <div className="min-h-screen overflow-auto" data-pug-no-capture>
+  <div className="min-h-screen overflow-auto">
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-8 flex items-center gap-3">
         <img src="/logo.svg" alt="" className="size-9" />
