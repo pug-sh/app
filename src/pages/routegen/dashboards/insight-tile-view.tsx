@@ -16,7 +16,14 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
-import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from '../insights/helpers'
+import {
+  breakdownLabel,
+  buildChartData,
+  disambiguateLabels,
+  hasBreakdown,
+  sortFunnelSteps,
+  trendSeriesNames,
+} from '../insights/helpers'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
@@ -132,10 +139,7 @@ export const InsightTileView = ({
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
     }
 
-    return trendSeries.map((series, index) => {
-      if (hasBreakdown(series.breakdown)) return `${series.eventKind} · ${breakdownLabel(series.breakdown, '')}`
-      return series.eventKind || `Series ${index + 1}`
-    })
+    return trendSeriesNames(trendSeries)
   }, [result.case, retentionCohorts, trendSeries])
   const seriesColors = useMemo(() => {
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,

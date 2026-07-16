@@ -33,6 +33,27 @@ export const breakdownLabel = (breakdown: Record<string, string>, fallback: stri
     .join(' / ')
 }
 
+// Names for trends series, shared by everything that displays them — chart tooltip and legend,
+// table headers, the summary grid. One source, so they can't drift into disagreeing about what a
+// series is called (the grid used to strip the event kind on its own while the tooltip kept it, so
+// one tile showed both "Linux" and "click · Linux" for the same series).
+//
+// The "event · value" prefix only earns its place when there is more than one event kind on the
+// chart to tell apart. With a single event — every Overview tile, and most insights — the chart
+// already says which event it is, and the prefix only repeats it on every row: "click · Linux",
+// "click · macOS", "click · Android". Keyed on distinct kinds rather than the number of event rows
+// because that is what the prefix actually disambiguates: two rows of the same kind (same event,
+// different filters) read as "click · Linux" twice, which the prefix does nothing for.
+export const trendSeriesNames = (trendSeries: TrendSeries[]) => {
+  const showEventKind = new Set(trendSeries.map(series => series.eventKind)).size > 1
+  return trendSeries.map((series, index) => {
+    if (!hasBreakdown(series.breakdown)) return series.eventKind || `Series ${index + 1}`
+    const value = breakdownLabel(series.breakdown, '')
+    if (showEventKind && series.eventKind) return `${series.eventKind} · ${value}`
+    return value
+  })
+}
+
 export const disambiguateLabels = (labels: string[]) => {
   const seen = new Map<string, number>()
   return labels.map(label => {

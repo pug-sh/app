@@ -50,7 +50,14 @@ import {
 } from './constants'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
-import { breakdownLabel, buildChartData, disambiguateLabels, hasBreakdown, sortFunnelSteps } from './helpers'
+import {
+  breakdownLabel,
+  buildChartData,
+  disambiguateLabels,
+  hasBreakdown,
+  sortFunnelSteps,
+  trendSeriesNames,
+} from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 
@@ -346,10 +353,7 @@ const Insights = () => {
       return retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
     }
 
-    return trendSeries.map((s, i) => {
-      if (hasBreakdown(s.breakdown)) return `${s.eventKind} · ${breakdownLabel(s.breakdown, '')}`
-      return s.eventKind || `Series ${i + 1}`
-    })
+    return trendSeriesNames(trendSeries)
   }, [result.case, retentionCohorts, trendSeries])
 
   const seriesColors = useMemo(() => {
