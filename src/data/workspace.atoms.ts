@@ -160,8 +160,16 @@ export const workspaceSettledAtom = atom(get => {
   return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
 })
 
-// Last project visited per org (orgId → projectId), restored when switching orgs.
-export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {})
+// Last project visited per org (orgId → projectId), restored when switching orgs and when a bare URL
+// leaves the project unnamed.
+//
+// getOnInit because the restore loses a race without it: atomWithStorage otherwise starts at the
+// initial value and only reads storage in onMount, so an early reader sees {} and defaults to the
+// first project — and once that default lands it *is* a valid pick, so the stored one never gets
+// another chance. (lastOrgIdAtom above buys the same guarantee by hand, predating this option.)
+export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {}, undefined, {
+  getOnInit: true,
+})
 
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)

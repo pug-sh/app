@@ -52,7 +52,10 @@ const ThemeSync = () => {
   return null
 }
 
-const WorkspaceBootstrap = () => {
+// Exported for its tests: this owns the only default project pick in the app, and the rules it
+// follows (defer to the route, restore the last visit, then fall back to the first) are each a
+// separate bug when dropped.
+export const WorkspaceBootstrap = () => {
   const authenticated = useAtomValue(isAuthenticatedAtom)
   const [status, setStatus] = useAtom(bootstrapStatusAtom)
   const projects = useAtomValue(projectsAtom)
@@ -65,7 +68,7 @@ const WorkspaceBootstrap = () => {
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
-  const setLastProjectByOrg = useSetAtom(lastProjectByOrgAtom)
+  const [lastProjectByOrg, setLastProjectByOrg] = useAtom(lastProjectByOrgAtom)
 
   useEffect(() => {
     if (!authenticated) {
@@ -125,8 +128,13 @@ const WorkspaceBootstrap = () => {
     // wrong project. Only default when the URL has no opinion, or names a project that isn't
     // available (ProjectSync renders "Project not found" and needs a sane fallback behind it).
     if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
-    setActiveProject(projects[0])
-  }, [projects, activeProject, routeProjectId, setActiveProject])
+    // The URL has no opinion, so restore the last project visited in this org before falling back to
+    // the first: landing on the bare app URL should return you where you left off, the way lastOrgId
+    // already restores the org around it. The settings org switcher prefers the same stored pick, so
+    // this is what makes a switch survive the trip back through '/'.
+    const lastProjectId = activeOrg ? lastProjectByOrg[activeOrg.id] : undefined
+    setActiveProject(projects.find(project => project.id === lastProjectId) ?? projects[0])
+  }, [projects, activeProject, routeProjectId, activeOrg, lastProjectByOrg, setActiveProject])
 
   useEffect(() => {
     if (status !== 'needs-selection' || !activeOrg) return
