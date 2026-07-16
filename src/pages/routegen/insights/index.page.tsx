@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { trackEvent } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -253,6 +254,16 @@ const Insights = () => {
         },
         { headers },
       )
+      // One event per settled query: useDebouncedQuery re-runs this fn only when queryKey changes,
+      // and the 300ms debounce collapses keystrokes — so no dedup is needed here. Shape only, never
+      // filter values: insightType/counts answer "what kinds of insights get run, how complex"
+      // without carrying a customer's property values (which is why $url drops the query string).
+      trackEvent('insight_queried', {
+        insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
+        eventCount: isTopK ? 1 : validEntries.length,
+        breakdownCount: breakdowns.length,
+        hasGlobalFilters: globalFilters.length > 0,
+      })
       return resp.result
     },
     {
