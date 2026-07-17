@@ -1,7 +1,8 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { trackFeature } from '@/analytics/pug'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
@@ -24,7 +25,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { formatRelative } from '@/hooks/use-relative-time'
+import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { defaultRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet, structToEntries } from '@/lib/struct'
@@ -167,6 +168,8 @@ const EventExplorer = () => {
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const lastUpdatedLabel = useRelativeTime(lastUpdated)
 
   const filterRef = useRef<HTMLDivElement>(null)
   const [filterH, setFilterH] = useState(0)
@@ -207,7 +210,10 @@ const EventExplorer = () => {
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
+          // Only a fresh load restamps this. "Load more" appends older rows below rows still fetched
+          // at the original time, so bumping it there would overstate how current the list is.
           setEvents(resp.events)
+          setLastUpdated(new Date())
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
@@ -226,6 +232,15 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
+  // Refetches page one, dropping any pages loaded via "Load more" — same reset the Retry buttons do.
+  // trackFeature sits here rather than in fetchEvents() because that also runs on mount and on every
+  // filter change; only this handler is a deliberate click. Named explicitly since an icon-only
+  // button autocaptures as tag `svg` with no text.
+  const handleRefresh = () => {
+    trackFeature({ featureId: 'events.refresh', featureName: 'Refresh events' })
+    fetchEvents()
+  }
+
   if (!project) return <NoProject title="Events" icon={List} />
 
   return (
@@ -237,6 +252,26 @@ const EventExplorer = () => {
       >
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+          {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
+              ml-4 keeps the icon off the picker chip: butted straight against it, it reads as one of
+              the chip's own controls rather than an action on the table. The timestamp is the only
+              confirmation a refresh returning no new rows can give — it resets to "just now" when
+              nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
+          <div className="ml-4 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              aria-label="Refresh events"
+              className="text-muted-foreground"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            </Button>
+            {lastUpdated && (
+              <HoverSwap primary={`Updated ${lastUpdatedLabel}`} secondary={formatDateTime(lastUpdated)} />
+            )}
+          </div>
         </div>
         <EventFilterBar
           filtersAtom={eventFilters.filtersAtom}

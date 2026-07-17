@@ -1,7 +1,8 @@
 import { useAtomValue } from 'jotai'
-import { ContactRound, Loader2 } from 'lucide-react'
+import { ContactRound, Loader2, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { Profile } from '@/api/genproto/shared/profiles/v1/profiles_pb'
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
-import { formatRelative } from '@/hooks/use-relative-time'
+import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { compactNumber } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -73,6 +74,8 @@ const Profiles = () => {
   const [error, setError] = useState<string | null>(null)
   const [schema, setSchema] = useState<GetFilterSchemaResponse | null>(null)
   const [schemaError, setSchemaError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const lastUpdatedLabel = useRelativeTime(lastUpdated)
   const latestProfilesRequestRef = useRef(0)
 
   // Measure the sticky filter bar so the sticky table header can sit just below it.
@@ -171,13 +174,17 @@ const Profiles = () => {
           }
           setProfiles([])
           setNextToken('')
+          setLastUpdated(new Date())
           return
         }
 
         if (pageToken) {
           setProfiles(prev => [...prev, ...response.profiles])
         } else {
+          // Only a fresh load restamps this. "Load more" appends rows below ones still fetched at the
+          // original time, so bumping it there would overstate how current the list is.
           setProfiles(response.profiles)
+          setLastUpdated(new Date())
         }
         setNextToken(response.nextPageToken)
       } catch (err) {
@@ -198,6 +205,15 @@ const Profiles = () => {
     if (project) fetchProfilesPage()
   }, [project, fetchProfilesPage])
 
+  // Refetches page one, dropping any pages loaded via "Load more" — same reset the Retry buttons do.
+  // trackFeature sits here rather than in fetchProfilesPage() because that also runs on mount and on
+  // every filter change; only this handler is a deliberate click. Named explicitly since an icon-only
+  // button autocaptures as tag `svg` with no text.
+  const handleRefresh = () => {
+    trackFeature({ featureId: 'profiles.refresh', featureName: 'Refresh profiles' })
+    fetchProfilesPage()
+  }
+
   if (!project) return <NoProject title="Profiles" icon={ContactRound} />
 
   return (
@@ -216,6 +232,26 @@ const Profiles = () => {
             />
           ))}
           <FilterBuilder schema={profileSchema} schemaError={schemaError} onAdd={addFilter} />
+          {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
+              ml-4 keeps the icon off the filter controls: butted straight against them, it reads as
+              one of their controls rather than an action on the table. The timestamp is the only
+              confirmation a refresh returning no new rows can give — it resets to "just now" when
+              nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
+          <div className="ml-4 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              aria-label="Refresh profiles"
+              className="text-muted-foreground"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            </Button>
+            {lastUpdated && (
+              <HoverSwap primary={`Updated ${lastUpdatedLabel}`} secondary={formatDateTime(lastUpdated)} />
+            )}
+          </div>
         </div>
       </div>
 
