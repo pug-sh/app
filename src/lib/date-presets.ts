@@ -4,6 +4,10 @@ import type { DatePreset, TimeRange } from '@/components/date-range-picker'
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 
+// Midnight-to-now. Shared by the 'Today' preset and the Overview web-analytics default window, so
+// the two never drift and neither hard-codes a preset-label lookup.
+export const todayRange = (): TimeRange => ({ from: startOfDay(new Date()), to: new Date() })
+
 const lastNHours = (n: number): TimeRange => {
   const now = new Date()
   const from = new Date(now)
@@ -43,7 +47,7 @@ const lastWeek = (): TimeRange => {
 }
 
 export const ACTIVITY_PRESETS: DatePreset[] = [
-  { label: 'Today', resolve: () => ({ from: startOfDay(new Date()), to: new Date() }) },
+  { label: 'Today', resolve: todayRange },
   {
     label: 'Yesterday',
     resolve: yesterday,

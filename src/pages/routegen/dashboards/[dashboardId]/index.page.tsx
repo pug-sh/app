@@ -1,7 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { LayoutGrid } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams } from 'wouter'
 import { trackEvent } from '@/analytics/pug'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -14,6 +13,7 @@ import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from 
 import { isDashboardTimeRangePreset, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { autoGranularity, clampGranularity, clampRange, resolveTileGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
+import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { deleteDashboardAtom, fetchDashboardAtom, setDashboardVisibilityAtom } from '../dashboard.atoms'
@@ -24,7 +24,7 @@ import { DashboardHeader } from './dashboard-header'
 import { useDashboardEditor } from './use-dashboard-editor'
 
 const DashboardDetail = () => {
-  const { dashboardId } = useParams<{ dashboardId: string }>()
+  const { dashboardId } = useRouteParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)

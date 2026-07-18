@@ -1,10 +1,11 @@
 import { useAtomValue } from 'jotai'
 import { type ReactNode, useEffect } from 'react'
-import { useLocation, useParams } from 'wouter'
+import { useLocation } from 'wouter'
 import { isDemoSessionAtom } from '@/auth/demo'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import ProjectLink from '@/components/project-link'
+import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
 
 const SETTINGS_TABS = [
@@ -16,7 +17,7 @@ const SETTINGS_TABS = [
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const [location, navigate] = useLocation()
-  const { projectId } = useParams<{ projectId: string }>()
+  const { projectId } = useRouteParams<{ projectId: string }>()
   const isDemo = useAtomValue(isDemoSessionAtom)
 
   // Settings is hidden in the read-only demo — it exposes the shared demo account's email/password

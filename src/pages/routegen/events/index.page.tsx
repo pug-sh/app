@@ -97,7 +97,9 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
             <ProjectLink
               href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
               onClick={e => e.stopPropagation()}
-              className="text-xs font-mono text-link hover:underline underline-offset-4 truncate min-w-0"
+              // underline-offset-2, not the usual 4: `truncate` clips at the content box, and on a
+              // text-xs line box an offset-4 underline lands past the bottom edge and never renders.
+              className="text-xs font-mono text-link hover:underline underline-offset-2 truncate min-w-0"
               title={event.distinctId}
             >
               {event.distinctId}
@@ -108,7 +110,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
                 <ProjectLink
                   href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
                   onClick={e => e.stopPropagation()}
-                  className="shrink-0 text-xs font-mono text-link hover:underline underline-offset-4"
+                  className="shrink-0 text-xs font-mono text-link hover:underline underline-offset-2"
                   title={event.sessionId}
                 >
                   {event.sessionId.slice(0, 8)}

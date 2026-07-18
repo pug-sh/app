@@ -1,7 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { resolveBrowserDevicon, resolveDeviceDevicon, resolveOsDevicon } from '@/lib/devicon-map'
 import { getSeriesColor } from '@/lib/event-colors'
+import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
 
@@ -166,7 +166,7 @@ const SessionSummary = ({
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const SessionView = () => {
-  const { profileId, sessionId } = useParams<{ profileId: string; sessionId: string }>()
+  const { profileId, sessionId } = useRouteParams<{ profileId: string; sessionId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)

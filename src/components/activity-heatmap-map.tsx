@@ -2,11 +2,15 @@ import type { FeatureCollection, Geometry } from 'geojson'
 import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
-import { COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
+import { COUNTRIES_VIEW_ASPECT, COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
 import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
 
 type Props = {
   countries: { iso: string; count: number }[]
+  // When set, clicking a country that has data invokes this with its alpha-2 ISO (e.g. "IN").
+  onCountrySelect?: (alpha2: string) => void
+  // Alpha-2 ISO codes to highlight as selected (a bold accent outline). Empty/undefined = none.
+  selected?: readonly string[]
 }
 
 const FILL_LAYER = 'countries-fill'
@@ -29,7 +33,15 @@ const fillColorExpr = (primary: string, muted: string): ExpressionSpecification 
   muted,
 ]
 
-const ActivityHeatmapMap = ({ countries }: Props) => {
+// Selected countries get a bold accent outline; everything else the faint neutral border.
+const lineColorExpr = (primary: string, border: string): ExpressionSpecification => [
+  'case',
+  ['boolean', ['feature-state', 'selected'], false],
+  primary,
+  border,
+]
+
+const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => {
   const dark = useResolvedDark()
   const [tooltip, setTooltip] = useState<{ name: string; count: number; x: number; y: number } | null>(null)
 
@@ -53,6 +65,13 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
   const countsRef = useRef(new Map<string, number>())
   const counts = useMemo(() => new Map(countries.map(({ iso, count }) => [iso.toUpperCase(), count])), [countries])
   countsRef.current = counts
+
+  // Alpha-2 codes currently selected (uppercased to match `counts`), painted as a highlight ring.
+  const selectedSet = useMemo(() => new Set((selected ?? []).map(iso => iso.toUpperCase())), [selected])
+
+  // Latest select callback, read by the bound (once) click handler.
+  const onSelectRef = useRef(onCountrySelect)
+  onSelectRef.current = onCountrySelect
 
   // Country shapes resolve asynchronously (the India-POV patch is fetched from the map-assets
   // origin); source and layers are added once they land.
@@ -92,7 +111,11 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
       id: LINE_LAYER,
       type: 'line',
       source: SOURCE,
-      paint: { 'line-color': border, 'line-width': 0.5, 'line-opacity': 0.35 },
+      paint: {
+        'line-color': lineColorExpr(primary, border),
+        'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 2, 0.5],
+        'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0.35],
+      },
     })
 
     const onMove = (e: MapLayerMouseEvent) => {
@@ -101,38 +124,60 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
       const count = alpha2 ? countsRef.current.get(alpha2) : undefined
       if (count === undefined) {
         setTooltip(null)
+        map.getCanvas().style.cursor = ''
         return
       }
       const name = (feature?.properties?.name as string | undefined) ?? alpha2 ?? ''
       setTooltip({ name, count, x: e.point.x, y: e.point.y })
+      // Pointer only over countries with data, and only when a selection handler is wired.
+      map.getCanvas().style.cursor = onSelectRef.current ? 'pointer' : ''
     }
-    const onLeave = () => setTooltip(null)
+    const onLeave = () => {
+      setTooltip(null)
+      map.getCanvas().style.cursor = ''
+    }
+    // Cross-filter on click — data countries only, so clicking blank ocean/no-data land is a no-op.
+    const onClick = (e: MapLayerMouseEvent) => {
+      const alpha2 = e.features?.[0]?.properties?.alpha2 as string | undefined
+      if (alpha2 && countsRef.current.has(alpha2)) onSelectRef.current?.(alpha2)
+    }
     map.on('mousemove', FILL_LAYER, onMove)
     map.on('mouseleave', FILL_LAYER, onLeave)
+    map.on('click', FILL_LAYER, onClick)
 
     return () => {
       map.off('mousemove', FILL_LAYER, onMove)
       map.off('mouseleave', FILL_LAYER, onLeave)
+      map.off('click', FILL_LAYER, onClick)
     }
   }, [ready, mapRef, worldCountries])
 
-  // Data-driven feature state — recompute on every countries change.
+  // Data + selection feature state — repaint on any counts/selection change. removeFeatureState clears
+  // everything (including `selected`), so both are re-applied together in one pass.
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready || !map.getSource(SOURCE)) return
 
     map.removeFeatureState({ source: SOURCE })
-    if (counts.size === 0) return
+    if (counts.size === 0 && selectedSet.size === 0) return
 
     const values = [...counts.values()]
     const min = Math.min(...values)
     const max = Math.max(...values)
-    for (const [iso, count] of counts) {
+    // A selected country may carry no data in the current window (e.g. restored from the URL), so paint
+    // the union: data countries get their intensity, selected countries get the highlight ring.
+    for (const iso of new Set([...counts.keys(), ...selectedSet])) {
       const id = ALPHA2_TO_M49[iso]
       if (id === undefined) continue
-      map.setFeatureState({ source: SOURCE, id }, { hasData: true, opacity: opacityForValue(count, min, max) })
+      const count = counts.get(iso)
+      map.setFeatureState(
+        { source: SOURCE, id },
+        count === undefined
+          ? { selected: true }
+          : { hasData: true, opacity: opacityForValue(count, min, max), selected: selectedSet.has(iso) },
+      )
     }
-  }, [counts, ready, mapRef, worldCountries])
+  }, [counts, selectedSet, ready, mapRef, worldCountries])
 
   // Theme swap — re-resolve token colors into the paint properties (opacities are data-driven).
   useEffect(() => {
@@ -140,7 +185,7 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
     if (!map || !ready || !map.getLayer(FILL_LAYER)) return
     const { primary, mutedForeground, border } = resolveThemeColors()
     map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(primary, mutedForeground))
-    map.setPaintProperty(LINE_LAYER, 'line-color', border)
+    map.setPaintProperty(LINE_LAYER, 'line-color', lineColorExpr(primary, border))
   }, [dark, ready, mapRef, worldCountries])
 
   // Keep the canvas sized to the container.
@@ -156,16 +201,21 @@ const ActivityHeatmapMap = ({ countries }: Props) => {
     return () => observer.disconnect()
   }, [containerRef, mapRef])
 
+  // In a box wider than the frame's aspect, renderWorldCopies:false makes MapLibre zoom in until the
+  // world spans the width, cropping the far south. Cap the canvas to that aspect and centre it.
   return (
-    <div ref={containerRef} className="relative h-full min-h-0 w-full overflow-hidden">
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md"
-          style={{ left: tooltip.x, top: tooltip.y - 8 }}
-        >
-          {tooltip.name} {tooltip.count} events
-        </div>
-      )}
+    <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
+      <div className="relative h-full max-w-full" style={{ aspectRatio: COUNTRIES_VIEW_ASPECT }}>
+        <div ref={containerRef} className="h-full w-full" />
+        {tooltip && (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md"
+            style={{ left: tooltip.x, top: tooltip.y - 8 }}
+          >
+            {tooltip.name} {tooltip.count} events
+          </div>
+        )}
+      </div>
     </div>
   )
 }

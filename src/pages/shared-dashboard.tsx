@@ -2,7 +2,6 @@ import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
 import { Clock } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
-import { useParams } from 'wouter'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { SharedDashboardsServiceQueryRequestSchema } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -12,6 +11,7 @@ import LoadingSpinner from '@/components/loading-spinner'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
+import { useRouteParams } from '@/lib/route-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboardId]/controls-helpers'
 import { DashboardGrid } from './routegen/dashboards/grid'
@@ -35,7 +35,7 @@ const Shell = ({ children }: { children: ReactNode }) => (
 )
 
 const SharedDashboard = () => {
-  const { shareId } = useParams<{ shareId: string }>()
+  const { shareId } = useRouteParams<{ shareId: string }>()
   const sharedRPC = useAtomValue(sharedDashboardsRPCAtom)
 
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)

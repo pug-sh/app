@@ -1,7 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { AlertCircle, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { useParams } from 'wouter'
 import type { ActivityEvent, HeatmapDay } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
@@ -14,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
+import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { structToEntries } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -51,7 +51,7 @@ const Heatmap = ({ days }: { days: HeatmapDay[] }) => {
 }
 
 const ProfileOverview = () => {
-  const { profileId } = useParams<{ profileId: string }>()
+  const { profileId } = useRouteParams<{ profileId: string }>()
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null

@@ -18,8 +18,8 @@ export const file_common_events_v1_navigation_events: GenFile = /*@__PURE__*/
  * Web page navigation. Use screen_view for native mobile screens.
  *
  * Page URL, title, referrer, and UTM parameters are provided by SDK-injected
- * auto-properties ($url, $title, $referrer, $utm_source, $utm_medium,
- * $utm_campaign, $utm_term, $utm_content) on every event. SDK authors:
+ * auto-properties ($url, $pageTitle, $referrer, $utmSource, $utmMedium,
+ * $utmCampaign, $utmTerm, $utmContent) on every event. SDK authors:
  * do not add these as typed fields here — let the auto-property pipeline
  * supply them so they stay consistent across all event kinds.
  *
