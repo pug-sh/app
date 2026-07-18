@@ -35,10 +35,10 @@ vi.mock('@/analytics/pug', () => ({
 
 const { WorkspaceBootstrap } = await import('./App')
 const { ProjectRedirect, ProjectSync } = await import('@/pages/router')
-const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, lastProjectByOrgAtom } = await import(
+const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, rememberLastProjectAtom } = await import(
   '@/data/workspace.atoms'
 )
-const { refreshTokenAtom } = await import('@/auth/jwt.atoms')
+const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
 const projects = [
@@ -46,12 +46,21 @@ const projects = [
   create(ProjectSchema, { id: 'p2', displayName: 'Second' }),
 ]
 
+// Stored visits are keyed by the customer in the JWT, so these tests need one. Only the payload is
+// ever parsed (readJWT), so the header and signature can be anything.
+const jwtFor = (customerId: string) => `h.${btoa(JSON.stringify({ exp: 9e9, sub: customerId }))}.s`
+
 const mount = ({ path = '/', lastProjectByOrg }: { path?: string; lastProjectByOrg?: Record<string, string> } = {}) => {
   const store = createStore()
   store.set(refreshTokenAtom, 'refresh-token') // what isAuthenticatedAtom derives from
+  store.set(jwtAtom, jwtFor('cust-1'))
   store.set(bootstrapStatusAtom, 'ready')
   store.set(activeOrgAtom, orgA)
-  if (lastProjectByOrg) store.set(lastProjectByOrgAtom, lastProjectByOrg)
+  // Seeded through the real write path rather than by poking the stored shape, so these tests break
+  // if recording a visit breaks.
+  for (const [orgId, projectId] of Object.entries(lastProjectByOrg ?? {})) {
+    store.set(rememberLastProjectAtom, { orgId, projectId })
+  }
 
   render(
     <Provider store={store}>
@@ -126,9 +135,10 @@ describe('landing on the bare app URL', () => {
     const { hook, history } = memoryLocation({ path: '/', record: true })
     const store = createStore()
     store.set(refreshTokenAtom, 'refresh-token')
+    store.set(jwtAtom, jwtFor('cust-1'))
     store.set(bootstrapStatusAtom, 'ready')
     store.set(activeOrgAtom, orgA)
-    store.set(lastProjectByOrgAtom, { 'org-a': 'p2' })
+    store.set(rememberLastProjectAtom, { orgId: 'org-a', projectId: 'p2' })
 
     render(
       <Provider store={store}>

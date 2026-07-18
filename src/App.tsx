@@ -22,6 +22,7 @@ import {
   lastProjectByOrgAtom,
   loadOrgAtom,
   projectsAtom,
+  rememberLastProjectAtom,
   resetWorkspaceAtom,
   selectOrgAtom,
   workspaceErrorAtom,
@@ -68,7 +69,8 @@ export const WorkspaceBootstrap = () => {
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
-  const [lastProjectByOrg, setLastProjectByOrg] = useAtom(lastProjectByOrgAtom)
+  const lastProjectByOrg = useAtomValue(lastProjectByOrgAtom)
+  const rememberLastProject = useSetAtom(rememberLastProjectAtom)
 
   useEffect(() => {
     if (!authenticated) {
@@ -141,13 +143,12 @@ export const WorkspaceBootstrap = () => {
     setStatus('ready')
   }, [activeOrg, status, setStatus])
 
-  // Remember the last project visited per org, to restore when switching orgs.
+  // Remember the last project visited per org, to restore when switching orgs. Scoped to the
+  // signed-in customer inside the atom, so two accounts sharing an org don't overwrite each other.
   useEffect(() => {
     if (!activeOrg || !activeProject) return
-    setLastProjectByOrg(prev =>
-      prev[activeOrg.id] === activeProject.id ? prev : { ...prev, [activeOrg.id]: activeProject.id },
-    )
-  }, [activeOrg, activeProject, setLastProjectByOrg])
+    rememberLastProject({ orgId: activeOrg.id, projectId: activeProject.id })
+  }, [activeOrg, activeProject, rememberLastProject])
 
   return null
 }

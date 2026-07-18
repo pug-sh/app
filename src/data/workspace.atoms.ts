@@ -3,6 +3,7 @@ import { atomWithStorage } from 'jotai/utils'
 import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
+import { jwtDataAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
 
 // Task 2: lastOrgIdAtom — synchronous initial read avoids first-render flash
@@ -160,16 +161,55 @@ export const workspaceSettledAtom = atom(get => {
   return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
 })
 
-// Last project visited per org (orgId → projectId), restored when switching orgs and when a bare URL
-// leaves the project unnamed.
+// Last project visited, per customer and org (customerId → orgId → projectId), restored when
+// switching orgs and when a bare URL leaves the project unnamed.
+//
+// Keyed by customer as well as org because one browser outlives one account. Under an org key alone,
+// two accounts that share an org share one entry: signing in as the second lands you on the first's
+// project, and the effect recording your next visit overwrites theirs, so the two stomp each other
+// for as long as both stay in use. Accounts in disjoint orgs never collided — the org key already
+// separated them — and this keeps that while fixing the shared-org case. It also means nothing has
+// to clear the map on sign-out: an account only ever reads its own slice.
 //
 // getOnInit because the restore loses a race without it: atomWithStorage otherwise starts at the
 // initial value and only reads storage in onMount, so an early reader sees {} and defaults to the
 // first project — and once that default lands it *is* a valid pick, so the stored one never gets
 // another chance. (lastOrgIdAtom above buys the same guarantee by hand, predating this option.)
-export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {}, undefined, {
-  getOnInit: true,
+const lastProjectStoreAtom = atomWithStorage<Record<string, Record<string, string>>>(
+  'pug:lastProjectByOrg',
+  {},
+  undefined,
+  { getOnInit: true },
+)
+
+// Shared rather than a fresh `{}` per read: this value sits in a useEffect dep array in App.
+const NO_VISITS: Record<string, string> = {}
+
+// The signed-in customer's slice — the orgId → projectId shape consumers read. jwtDataAtom is
+// synchronous in the same way the store is (jwtAtom's initial value *is* the stored token), so the
+// customer id is already there on the first read and doesn't reintroduce the race above.
+//
+// A value written before this was customer-keyed reads as an empty slice, since its keys are org ids
+// and none of those match a customer id. That costs one restore; the next visit writes the new shape.
+export const lastProjectByOrgAtom = atom(get => {
+  const customerId = get(jwtDataAtom)?.customerId
+  if (!customerId) return NO_VISITS
+  return get(lastProjectStoreAtom)[customerId] ?? NO_VISITS
 })
+
+// Record a visit against the signed-in customer. A write atom rather than a setter on the atom above
+// because the stored shape is two levels deep and the customer id comes from the session, not the
+// caller — neither belongs at the call site.
+export const rememberLastProjectAtom = atom(
+  null,
+  (get, set, { orgId, projectId }: { orgId: string; projectId: string }) => {
+    const customerId = get(jwtDataAtom)?.customerId
+    if (!customerId) return
+    const store = get(lastProjectStoreAtom)
+    if (store[customerId]?.[orgId] === projectId) return
+    set(lastProjectStoreAtom, { ...store, [customerId]: { ...store[customerId], [orgId]: projectId } })
+  },
+)
 
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)

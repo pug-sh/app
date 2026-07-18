@@ -138,16 +138,53 @@ describe('fetchProjectsAtom', () => {
 })
 
 describe('lastProjectByOrgAtom', () => {
+  // Only the payload is ever parsed (readJWT), so the header and signature can be anything.
+  const jwtFor = (customerId: string) => `h.${btoa(JSON.stringify({ exp: 9e9, sub: customerId }))}.s`
+
   it('reads storage on init, before anything mounts it', async () => {
-    localStorage.setItem('pug:lastProjectByOrg', JSON.stringify({ 'org-a': 'a2' }))
+    localStorage.setItem('pug:jwt', JSON.stringify(jwtFor('cust-1')))
+    localStorage.setItem('pug:lastProjectByOrg', JSON.stringify({ 'cust-1': { 'org-a': 'a2' } }))
     vi.resetModules()
 
     // Re-imported so the atom initializes against the seeded storage: getOnInit reads at atom
     // construction, which is module scope. A plain read here would see the already-built atom.
+    // resetModules re-instantiates jwt.atoms alongside it, so the customer id is seeded the same way.
     const { lastProjectByOrgAtom: freshAtom } = await import('./workspace.atoms')
 
     // No mount, no effects — the value is there at the first synchronous read, which is the whole
-    // point: the default pick runs before onMount would have gotten around to loading it.
+    // point: the default pick runs before onMount would have gotten around to loading it. Both reads
+    // have to be synchronous for this to pass; a lazy JWT would land an empty slice here instead.
     expect(createStore().get(freshAtom)).toEqual({ 'org-a': 'a2' })
+  })
+
+  it('keeps two accounts sharing an org from overwriting each other', async () => {
+    const { jwtAtom } = await import('@/auth/jwt.atoms')
+    const { lastProjectByOrgAtom, rememberLastProjectAtom } = await import('./workspace.atoms')
+    const store = createStore()
+
+    // Two accounts on one browser, both members of org-a, each working in a different project.
+    store.set(jwtAtom, jwtFor('cust-1'))
+    store.set(rememberLastProjectAtom, { orgId: 'org-a', projectId: 'a1' })
+    store.set(jwtAtom, jwtFor('cust-2'))
+    store.set(rememberLastProjectAtom, { orgId: 'org-a', projectId: 'a2' })
+
+    expect(store.get(lastProjectByOrgAtom)).toEqual({ 'org-a': 'a2' })
+
+    // Keyed by org alone, cust-2's visit landed on the same entry and this came back 'a2' — the
+    // second account's project, restored for the first.
+    store.set(jwtAtom, jwtFor('cust-1'))
+    expect(store.get(lastProjectByOrgAtom)).toEqual({ 'org-a': 'a1' })
+  })
+
+  it('ignores a value stored before visits were customer-keyed', async () => {
+    localStorage.setItem('pug:jwt', JSON.stringify(jwtFor('cust-1')))
+    localStorage.setItem('pug:lastProjectByOrg', JSON.stringify({ 'org-a': 'a2' }))
+    vi.resetModules()
+
+    const { lastProjectByOrgAtom: freshAtom } = await import('./workspace.atoms')
+
+    // The legacy keys are org ids, which never match a customer id. Reading it back as one account's
+    // visits would hand every account the same stale pick, so it has to read as no visits at all.
+    expect(createStore().get(freshAtom)).toEqual({})
   })
 })
