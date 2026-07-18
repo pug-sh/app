@@ -13,13 +13,21 @@ import { activeOrgAtom, createOrgAtom, leaveOrgAtom, renameOrgAtom } from '@/dat
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
 
+// trim() before min(1), so a name of nothing but spaces is rejected here rather than saved: the
+// length check runs on the trimmed value, and the resolver hands the trimmed string to the RPC.
+// Without it the rename path stores '   ' — the switcher then lists an org with no visible name —
+// while the create path trims to '' and gets a protovalidate throw instead of a field error.
 const orgSchema = z.object({
-  displayName: z.string().min(1, 'Organization name is required').max(150, 'Name must be at most 150 characters'),
+  displayName: z
+    .string()
+    .trim()
+    .min(1, 'Organization name is required')
+    .max(150, 'Name must be at most 150 characters'),
 })
 type OrgFormData = z.infer<typeof orgSchema>
 
 const createOrgSchema = z.object({
-  displayName: z.string().min(1, 'Required').max(150, 'Max 150 characters'),
+  displayName: z.string().trim().min(1, 'Required').max(150, 'Max 150 characters'),
 })
 type CreateOrgFormData = z.infer<typeof createOrgSchema>
 
@@ -69,7 +77,7 @@ const Organization = () => {
   const handleCreateOrg = async ({ displayName }: CreateOrgFormData) => {
     setCreatingOrg(true)
     try {
-      const created = await createOrg(displayName.trim())
+      const created = await createOrg(displayName)
       if (!created) throw new Error('Create returned no org')
       setShowCreateOrg(false)
       createOrgForm.reset()

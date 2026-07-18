@@ -13,8 +13,10 @@ import { Input } from '@/components/ui/input'
 import { createOrgAtom, orgsAtom, selectOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 
+// trim() before min(1), so the checks run on the trimmed value and a name of nothing but spaces is
+// rejected here instead of reaching createOrg — same ordering as the settings page's schemas.
 const createSchema = z.object({
-  displayName: z.string().min(1, 'Required').max(150, 'Max 150 characters'),
+  displayName: z.string().trim().min(1, 'Required').max(150, 'Max 150 characters'),
 })
 type CreateFormData = z.infer<typeof createSchema>
 
@@ -33,7 +35,7 @@ const SelectOrg = () => {
   const onCreate = async ({ displayName }: CreateFormData) => {
     setCreating(true)
     try {
-      const org = await createOrg(displayName.trim())
+      const org = await createOrg(displayName)
       if (!org) throw new Error('Create returned no org')
     } catch (err) {
       toastRPCError(err, 'Failed to create organization')
