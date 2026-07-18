@@ -1,11 +1,17 @@
-import { useMemo, useState } from 'react'
+import { type ReactNode, useMemo, useState } from 'react'
 import type { AggregationType, Granularity, SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { CountryFlag } from '@/components/country-flag'
 import type { TimeRange } from '@/components/date-range-picker'
+import { Devicon } from '@/components/devicon'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
+import { type DeviconName, resolveBrowserDevicon, resolveDeviceModelDevicon, resolveOsDevicon } from '@/lib/devicon-map'
+import { formatCountryName } from '@/lib/location'
 import { cn } from '@/lib/utils'
+import { DomainFavicon } from './domain-favicon'
 import { OverviewTileShell } from './overview-tile-shell'
 import { useWebQuery } from './use-web-query'
+import { utmSourceDomain } from './utm-source-domains'
 import { buildEventKindTopKQuery, buildSessionBreakdownQuery, buildTopKBreakdownQuery } from './web-analytics-queries'
 import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './web-breakdown'
 import { filtersExcept, hasFilter } from './web-filters'
@@ -13,11 +19,28 @@ import { WebRankedList } from './web-ranked-list'
 
 const SESSION_BREAKDOWN_LIMIT = 50
 
+// Brand-icon resolver per device dimension: a $browser / $os / $device value → a devicon name, or null
+// when the brand isn't recognized. $device ranks raw UA models ("Pixel 8", "Mac") with no OS column to
+// lean on, so it classifies the model string directly (see resolveDeviceModelDevicon).
+const DEVICON_RESOLVERS: Record<'browser' | 'os' | 'device', (value?: string) => DeviconName | null> = {
+  browser: resolveBrowserDevicon,
+  os: resolveOsDevicon,
+  device: resolveDeviceModelDevicon,
+}
+
 // A tab is one ranked view within a panel. `property` tabs rank an auto-property via top-K;
 // `eventKind` ranks event kinds; `session` ranks entry/exit pages from a session breakdown. Kept as
-// plain data (no closures) so a panel's tab list can be a stable module constant.
+// plain data (no closures) so a panel's tab list can be a stable module constant. `valueKind` tags how
+// a property's values are presented with a leading glyph: 'domain'/'source' (referrers / UTM tokens) →
+// a site favicon; 'country' (ISO code) → a Twemoji flag plus the country name; 'browser'/'os'/'device' →
+// a brand devicon.
 export type BreakdownTab = { id: string; label: string } & (
-  | { source: 'property'; property: string; metric: AggregationType }
+  | {
+      source: 'property'
+      property: string
+      metric: AggregationType
+      valueKind?: 'domain' | 'source' | 'country' | 'browser' | 'os' | 'device'
+    }
   | { source: 'eventKind' }
   | { source: 'session'; metric: SessionMetric.ENTRY | SessionMetric.EXIT; property: string }
 )
@@ -105,6 +128,41 @@ export const WebBreakdownPanel = ({
   else if (tab.source === 'eventKind' && onEventClick) onRowClick = row => onEventClick(row.label)
   const isActive = selfProperty ? (row: RankedRow) => hasFilter(filters, selfProperty, row.label) : undefined
 
+  // A `valueKind`-tagged tab leads each row with a glyph and, for countries, a friendlier label. The
+  // raw value stays the filter/query key; only presentation changes. Rows with nothing to show — the
+  // muted (none)/others buckets, plus unmapped source tokens — get a same-size spacer so labels align.
+  const valueKind = tab.source === 'property' ? tab.valueKind : undefined
+  let renderLeading: ((row: RankedRow) => ReactNode) | undefined
+  let formatLabel: ((row: RankedRow) => string) | undefined
+  if (valueKind === 'domain' || valueKind === 'source') {
+    const toDomain = valueKind === 'source' ? utmSourceDomain : (value: string) => value
+    renderLeading = row => {
+      const domain = row.muted ? undefined : toDomain(row.label)
+      return domain ? <DomainFavicon domain={domain} /> : <span className="size-4 shrink-0" />
+    }
+  } else if (valueKind === 'country') {
+    // $country is an ISO alpha-2 code: flag from the code, name for the label (CountryFlag renders
+    // nothing for the muted buckets / dirty values, so the fixed-width box preserves alignment).
+    renderLeading = row => (
+      <span className="inline-flex w-4 shrink-0 items-center justify-center">
+        {row.muted ? null : <CountryFlag code={row.label} size={16} />}
+      </span>
+    )
+    formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
+  } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
+    // $browser / $os / $device values are already display names; just lead with the brand devicon (an
+    // unrecognized brand or muted bucket leaves the fixed-width box empty, keeping labels aligned).
+    const resolve = DEVICON_RESOLVERS[valueKind]
+    renderLeading = row => {
+      const icon = row.muted ? null : resolve(row.label)
+      return (
+        <span className="inline-flex w-4 shrink-0 items-center justify-center">
+          {icon ? <Devicon name={icon} size={16} /> : null}
+        </span>
+      )
+    }
+  }
+
   return (
     <OverviewTileShell
       title={config.title}
@@ -122,7 +180,14 @@ export const WebBreakdownPanel = ({
             </Button>
           </div>
         ) : (
-          <WebRankedList rows={rows} showShare={isTopK} onRowClick={onRowClick} isActive={isActive} />
+          <WebRankedList
+            rows={rows}
+            showShare={isTopK}
+            onRowClick={onRowClick}
+            isActive={isActive}
+            renderLeading={renderLeading}
+            formatLabel={formatLabel}
+          />
         )}
       </div>
     </OverviewTileShell>

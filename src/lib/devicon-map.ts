@@ -79,6 +79,43 @@ export const resolveDeviceDevicon = (device?: string, os?: string) => {
   return resolveOsDevicon(os)
 }
 
+// Brand glyph for a $device *model* string on its own — what a device breakdown ranks. resolveDeviceDevicon
+// leans on the OS string to classify, which a breakdown row doesn't carry, so an Android model like
+// "Pixel 8" would resolve to nothing. Here the model itself is the signal: Apple families
+// ("iPhone"/"iPad"/"iPod", "Mac") map to the Apple glyphs, the major Android brands to the Android glyph,
+// and everything else (desktops report no model; plus the long tail and bots like "Spider") stays
+// iconless. Best-effort — a miss only costs an icon, never a wrong one.
+const APPLE_MOBILE_MODELS = ['iphone', 'ipod', 'ipad']
+const APPLE_DESKTOP_MODELS = ['macintosh', 'mac']
+const ANDROID_BRANDS = [
+  'pixel',
+  'nexus',
+  'samsung',
+  'galaxy',
+  'oneplus',
+  'xiaomi',
+  'redmi',
+  'poco',
+  'huawei',
+  'honor',
+  'oppo',
+  'vivo',
+  'realme',
+  'moto',
+  'nokia',
+  'xperia',
+  'asus',
+  'zenfone',
+  'lenovo',
+]
+
+export const resolveDeviceModelDevicon = (device?: string) => {
+  if (matchToken(device, APPLE_MOBILE_MODELS)) return 'ios'
+  if (matchToken(device, APPLE_DESKTOP_MODELS)) return 'macos'
+  if (matchToken(device, ANDROID_BRANDS)) return 'android-original'
+  return null
+}
+
 export const formatBrowserLabel = (browser?: string, browserVersion?: string) =>
   [browser, browserVersion].filter(Boolean).join(' ')
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -15,16 +16,25 @@ const OTHERS_KEY = '$__others'
 //
 // When `onRowClick` is provided, real (non-muted) rows become buttons that cross-filter the page;
 // `isActive` marks rows already in the filter set.
+//
+// `renderLeading` fills an optional fixed-size slot before each label (domain favicons, country
+// flags). Return a same-size spacer for rows that shouldn't carry one so labels stay aligned.
+// `formatLabel` overrides the displayed text (e.g. country code → name); the row's raw label is still
+// the filter/query key, so only presentation changes.
 export const WebRankedList = ({
   rows,
   showShare = false,
   onRowClick,
   isActive,
+  renderLeading,
+  formatLabel,
 }: {
   rows: RankedRow[]
   showShare?: boolean
   onRowClick?: (row: RankedRow) => void
   isActive?: (row: RankedRow) => boolean
+  renderLeading?: (row: RankedRow) => ReactNode
+  formatLabel?: (row: RankedRow) => string
 }) => {
   if (rows.length === 0) {
     return <div className="flex h-full items-center justify-center text-xs text-muted-foreground/70">No data</div>
@@ -37,6 +47,7 @@ export const WebRankedList = ({
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
       {rows.map((row, index) => {
         const active = isActive?.(row) ?? false
+        const label = formatLabel ? formatLabel(row) : row.label
         const canClick = !!onRowClick && !row.muted
         const barColor = row.muted ? 'var(--muted-foreground)' : getIndexedColor(index).dot
         const barWidth = maxValue > 0 ? Math.max((row.value / maxValue) * 100, 0.5) : 0
@@ -46,16 +57,17 @@ export const WebRankedList = ({
             <span className="w-5 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground/70">
               {row.key === OTHERS_KEY ? '·' : index + 1}
             </span>
-            <div className="w-28 min-w-0 shrink-0 text-xs">
+            <div className={cn('w-28 min-w-0 shrink-0 text-xs', renderLeading && 'flex items-center gap-1.5')}>
+              {renderLeading?.(row)}
               <span
                 className={cn(
-                  'block truncate',
+                  'block min-w-0 truncate',
                   row.muted && 'text-muted-foreground',
                   active && 'font-medium text-foreground',
                 )}
-                title={row.label}
+                title={label}
               >
-                {row.label}
+                {label}
               </span>
             </div>
             <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted/60">
@@ -79,7 +91,7 @@ export const WebRankedList = ({
         )
 
         const rowClass = cn(
-          '-mx-2 flex items-center gap-3 rounded-sm border-b border-border/50 px-2 py-1.5 text-left transition-colors last:border-0',
+          '-mx-2 flex w-full items-center gap-3 rounded-sm border-b border-border/50 px-2 py-1.5 text-left transition-colors last:border-0',
           active && 'bg-primary/5',
           canClick ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
         )
@@ -91,7 +103,7 @@ export const WebRankedList = ({
               type="button"
               aria-pressed={active}
               onClick={() => onRowClick?.(row)}
-              className={cn(rowClass, 'w-full')}
+              className={rowClass}
             >
               {content}
             </button>

@@ -2,6 +2,7 @@ import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { type ActiveFilter, createFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import { formatCountryName } from '@/lib/location'
 
 // Web-analytics cross-filters reuse the Insights property-filter model wholesale: they're
 // `ActiveFilter`s on auto-properties, persisted via the shared `pf` URL param and turned into proto
@@ -89,7 +90,7 @@ export const filterChips = (filters: readonly ActiveFilter[]) =>
 
 // Human labels for the filter chips. Falls back to the raw key (minus the `$`) for anything unmapped.
 const PROPERTY_LABELS: Record<string, string> = {
-  $url: 'Page',
+  $pathname: 'Page',
   $country: 'Country',
   $region: 'Region',
   $city: 'City',
@@ -102,3 +103,9 @@ const PROPERTY_LABELS: Record<string, string> = {
 }
 
 export const filterPropertyLabel = (property: string) => PROPERTY_LABELS[property] ?? property.replace(/^\$/, '')
+
+// Display text for a filter value. $country is stored as an ISO alpha-2 code but shown as its country
+// name — keeping the chips consistent with the Countries breakdown, which does the same. Every other
+// property shows the value verbatim (the stored value is always the raw filter key).
+export const filterValueLabel = (property: string, value: string) =>
+  property === '$country' ? formatCountryName(value) : value

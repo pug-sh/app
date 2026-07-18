@@ -30,25 +30,43 @@ import { removeFilter as removeFilterValue, toggleFilter, toggleSingleFilter } f
 import { WebMapPanel } from './web-map-panel'
 import { WebStatTile } from './web-stat-tile'
 
-// Breakdown panels backed by data the currently-deployed backend already feeds (core-first). The
-// derived-property panels from the web-analytics design (Pages by $pathname, Referrers/$referrerDomain,
-// Channels, Screens, Languages) are a fast-follow once migrations 008–010 ship — a property-string
-// swap here, no structural change. Pages/Entry/Exit key on the full $url until then.
+// Breakdown panels backed by data the currently-deployed backend already feeds. Two migration-009
+// derived properties are wired here: Pages/Entry/Exit key on $pathname (the path alone, so a page
+// groups across scheme, host, and query string), and the Referrer tab keys on $referrerDomain
+// (referrer host, www-stripped, blanked on self-referral — not the raw, high-cardinality $referrer,
+// which the backend promotes but deliberately never rolls up). The remaining derived-property panels
+// from the web-analytics design (Channels/$channel, Screens, Languages) stay a fast-follow — a
+// property-string swap here, no structural change.
 const PAGES_PANEL: BreakdownPanelConfig = {
   title: 'Pages',
   footer: 'pageviews by page · sessions for entry / exit',
   tabs: [
-    { id: 'pages', label: 'Pages', source: 'property', property: '$url', metric: AggregationType.TOTAL },
-    { id: 'entry', label: 'Entry', source: 'session', metric: SessionMetric.ENTRY, property: '$url' },
-    { id: 'exit', label: 'Exit', source: 'session', metric: SessionMetric.EXIT, property: '$url' },
+    { id: 'pages', label: 'Pages', source: 'property', property: '$pathname', metric: AggregationType.TOTAL },
+    { id: 'entry', label: 'Entry', source: 'session', metric: SessionMetric.ENTRY, property: '$pathname' },
+    { id: 'exit', label: 'Exit', source: 'session', metric: SessionMetric.EXIT, property: '$pathname' },
   ],
 }
 
 const SOURCES_PANEL: BreakdownPanelConfig = {
   title: 'Sources',
-  footer: 'unique visitors by UTM',
+  footer: 'unique visitors by referrer / UTM',
   tabs: [
-    { id: 'source', label: 'Source', source: 'property', property: '$utmSource', metric: AggregationType.UNIQUE_USERS },
+    {
+      id: 'referrer',
+      label: 'Referrer',
+      source: 'property',
+      property: '$referrerDomain',
+      metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'domain',
+    },
+    {
+      id: 'source',
+      label: 'Source',
+      source: 'property',
+      property: '$utmSource',
+      metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'source',
+    },
     { id: 'medium', label: 'Medium', source: 'property', property: '$utmMedium', metric: AggregationType.UNIQUE_USERS },
     {
       id: 'campaign',
@@ -70,6 +88,7 @@ const LOCATIONS_PANEL: BreakdownPanelConfig = {
       source: 'property',
       property: '$country',
       metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'country',
     },
     { id: 'region', label: 'Regions', source: 'property', property: '$region', metric: AggregationType.UNIQUE_USERS },
     { id: 'city', label: 'Cities', source: 'property', property: '$city', metric: AggregationType.UNIQUE_USERS },
@@ -80,9 +99,30 @@ const DEVICES_PANEL: BreakdownPanelConfig = {
   title: 'Devices',
   footer: 'unique visitors by device',
   tabs: [
-    { id: 'browser', label: 'Browser', source: 'property', property: '$browser', metric: AggregationType.UNIQUE_USERS },
-    { id: 'os', label: 'OS', source: 'property', property: '$os', metric: AggregationType.UNIQUE_USERS },
-    { id: 'device', label: 'Device', source: 'property', property: '$device', metric: AggregationType.UNIQUE_USERS },
+    {
+      id: 'browser',
+      label: 'Browser',
+      source: 'property',
+      property: '$browser',
+      metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'browser',
+    },
+    {
+      id: 'os',
+      label: 'OS',
+      source: 'property',
+      property: '$os',
+      metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'os',
+    },
+    {
+      id: 'device',
+      label: 'Device',
+      source: 'property',
+      property: '$device',
+      metric: AggregationType.UNIQUE_USERS,
+      valueKind: 'device',
+    },
   ],
 }
 

@@ -6,6 +6,7 @@ import {
   filterChips,
   filterGroupFields,
   filtersExcept,
+  filterValueLabel,
   filterValues,
   hasFilter,
   removeFilter,
@@ -114,5 +115,17 @@ describe('filterGroupFields', () => {
       { property: '$country', source: AUTO, operator: FilterOperator.IN, value: '', values: ['IN', 'US'] },
       { property: '$browser', source: AUTO, operator: FilterOperator.EQUALS, value: 'Chrome', values: [] },
     ])
+  })
+})
+
+describe('filterValueLabel', () => {
+  it('renders a $country ISO code as its country name', () => {
+    expect(filterValueLabel('$country', 'US')).toBe('United States')
+    expect(filterValueLabel('$country', 'IN')).toBe('India')
+  })
+
+  it('leaves other properties untouched', () => {
+    expect(filterValueLabel('$browser', 'Chrome')).toBe('Chrome')
+    expect(filterValueLabel('$utmSource', 'google')).toBe('google')
   })
 })
