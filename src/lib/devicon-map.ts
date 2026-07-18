@@ -86,7 +86,11 @@ export const resolveDeviceDevicon = (device?: string, os?: string) => {
 // and everything else (desktops report no model; plus the long tail and bots like "Spider") stays
 // iconless. Best-effort — a miss only costs an icon, never a wrong one.
 const APPLE_MOBILE_MODELS = ['iphone', 'ipod', 'ipad']
-const APPLE_DESKTOP_MODELS = ['macintosh', 'mac']
+// Whole-word rather than the substring match the token lists use: bare "mac" is short enough to sit
+// inside unrelated model strings ("Machine"), and $device is arbitrary UA text, so a bogus model
+// would otherwise earn a confidently wrong glyph. Space-separated variants ("Mac mini", "Mac Pro")
+// are covered by the bare `mac` alternative.
+const APPLE_DESKTOP_MODEL = /\b(?:macbook|macintosh|imac|mac)\b/
 const ANDROID_BRANDS = [
   'pixel',
   'nexus',
@@ -111,7 +115,7 @@ const ANDROID_BRANDS = [
 
 export const resolveDeviceModelDevicon = (device?: string) => {
   if (matchToken(device, APPLE_MOBILE_MODELS)) return 'ios'
-  if (matchToken(device, APPLE_DESKTOP_MODELS)) return 'macos'
+  if (APPLE_DESKTOP_MODEL.test(device?.toLowerCase() ?? '')) return 'macos'
   if (matchToken(device, ANDROID_BRANDS)) return 'android-original'
   return null
 }

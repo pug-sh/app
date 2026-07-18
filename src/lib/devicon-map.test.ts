@@ -7,6 +7,17 @@ describe('resolveDeviceModelDevicon', () => {
     expect(resolveDeviceModelDevicon('iPad')).toBe('ios')
     expect(resolveDeviceModelDevicon('Mac')).toBe('macos')
     expect(resolveDeviceModelDevicon('Macintosh')).toBe('macos')
+    expect(resolveDeviceModelDevicon('MacBook Pro')).toBe('macos')
+    expect(resolveDeviceModelDevicon('Mac mini')).toBe('macos')
+    expect(resolveDeviceModelDevicon('iMac')).toBe('macos')
+  })
+
+  // 'mac' is short enough to sit inside unrelated UA model strings, and $device is arbitrary
+  // customer/bot-supplied text — a wrong glyph is worse than none.
+  it('does not read a bare "mac" substring as an Apple desktop', () => {
+    expect(resolveDeviceModelDevicon('Machine')).toBeNull()
+    expect(resolveDeviceModelDevicon('Mackerel')).toBeNull()
+    expect(resolveDeviceModelDevicon('Macropad')).toBeNull()
   })
 
   it('maps major Android brands to the Android glyph', () => {
