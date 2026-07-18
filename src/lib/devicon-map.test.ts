@@ -27,6 +27,19 @@ describe('resolveDeviceModelDevicon', () => {
     expect(resolveDeviceModelDevicon('Redmi Note 13')).toBe('android-original')
   })
 
+  it('matches Motorola under both its brand spellings', () => {
+    expect(resolveDeviceModelDevicon('Moto G54')).toBe('android-original')
+    expect(resolveDeviceModelDevicon('Motorola Edge 50')).toBe('android-original')
+  })
+
+  // Brand tokens run against arbitrary UA text, so a substring hit brands a Windows laptop as Android.
+  // Asus and Lenovo are out of the list entirely — same brand on both an Android phone and a laptop.
+  it('does not brand a Windows laptop model as Android', () => {
+    expect(resolveDeviceModelDevicon('ASUS VivoBook 15')).toBeNull()
+    expect(resolveDeviceModelDevicon('Lenovo ThinkPad X1')).toBeNull()
+    expect(resolveDeviceModelDevicon('ASUS ROG Strix G16')).toBeNull()
+  })
+
   it('is case-insensitive', () => {
     expect(resolveDeviceModelDevicon('pixel 8')).toBe('android-original')
   })

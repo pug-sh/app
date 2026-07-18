@@ -84,39 +84,26 @@ export const resolveDeviceDevicon = (device?: string, os?: string) => {
 // "Pixel 8" would resolve to nothing. Here the model itself is the signal: Apple families
 // ("iPhone"/"iPad"/"iPod", "Mac") map to the Apple glyphs, the major Android brands to the Android glyph,
 // and everything else (desktops report no model; plus the long tail and bots like "Spider") stays
-// iconless. Best-effort — a miss only costs an icon, never a wrong one.
+// iconless. Best-effort, and biased toward a miss: an icon we don't draw costs nothing, a wrong one
+// misreports the device.
 const APPLE_MOBILE_MODELS = ['iphone', 'ipod', 'ipad']
 // Whole-word rather than the substring match the token lists use: bare "mac" is short enough to sit
 // inside unrelated model strings ("Machine"), and $device is arbitrary UA text, so a bogus model
 // would otherwise earn a confidently wrong glyph. Space-separated variants ("Mac mini", "Mac Pro")
 // are covered by the bare `mac` alternative.
 const APPLE_DESKTOP_MODEL = /\b(?:macbook|macintosh|imac|mac)\b/
-const ANDROID_BRANDS = [
-  'pixel',
-  'nexus',
-  'samsung',
-  'galaxy',
-  'oneplus',
-  'xiaomi',
-  'redmi',
-  'poco',
-  'huawei',
-  'honor',
-  'oppo',
-  'vivo',
-  'realme',
-  'moto',
-  'nokia',
-  'xperia',
-  'asus',
-  'zenfone',
-  'lenovo',
-]
+// Whole-word for the same reason as APPLE_DESKTOP_MODEL: these run against arbitrary UA text, where a
+// substring hit earns a confidently wrong glyph — "vivo" sits inside "VivoBook", an Asus *laptop*.
+// `moto` can't reach "Motorola" under \b, so both are listed. Asus and Lenovo are deliberately absent:
+// both ship Windows laptops under the brand that names their Android phones, so a model string alone
+// can't tell the two apart, and Asus phones are already covered by `zenfone`.
+const ANDROID_BRAND_MODEL =
+  /\b(?:pixel|nexus|samsung|galaxy|oneplus|xiaomi|redmi|poco|huawei|honor|oppo|vivo|realme|motorola|moto|nokia|xperia|zenfone)\b/
 
 export const resolveDeviceModelDevicon = (device?: string) => {
   if (matchToken(device, APPLE_MOBILE_MODELS)) return 'ios'
   if (APPLE_DESKTOP_MODEL.test(device?.toLowerCase() ?? '')) return 'macos'
-  if (matchToken(device, ANDROID_BRANDS)) return 'android-original'
+  if (ANDROID_BRAND_MODEL.test(device?.toLowerCase() ?? '')) return 'android-original'
   return null
 }
 
