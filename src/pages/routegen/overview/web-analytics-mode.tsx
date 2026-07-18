@@ -1,14 +1,12 @@
 import { Globe } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { AggregationType, InsightType, SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
-import {
-  insightsEventFiltersSearch,
-  readPropFiltersParam,
-  writePropFiltersParam,
-} from '@/hooks/use-filter-query-params'
+import { insightsEventFiltersSearch, writePropFiltersParam } from '@/hooks/use-filter-query-params'
 import { autoGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
@@ -26,7 +24,7 @@ import {
 } from './web-analytics-queries'
 import { type BreakdownPanelConfig, WebBreakdownPanel } from './web-breakdown-panel'
 import { WebFilterBar } from './web-filter-bar'
-import { removeFilter as removeFilterValue, toggleFilter, toggleSingleFilter } from './web-filters'
+import { readWebFilters, removeFilter as removeFilterValue, toggleFilter, toggleSingleFilter } from './web-filters'
 import { WebMapPanel } from './web-map-panel'
 import { WebStatTile } from './web-stat-tile'
 
@@ -147,20 +145,28 @@ const WebAnalyticsMode = ({ schema, selectedStat, onSelectStat, globalTimeRange,
 
   // Cross-filters: clicking any breakdown value (or a country on the map) narrows the whole view.
   // These reuse the Insights property-filter model and its shared `pf` URL param, so a filtered view
-  // is shareable and survives reload.
-  const [filters, setFilters] = useState<ActiveFilter[]>(() => readPropFiltersParam())
+  // is shareable and survives reload. The write-back below rewrites `pf` from what was restored, so
+  // anything readWebFilters couldn't take is called out rather than quietly edited out of the link.
+  const restored = useMemo(() => readWebFilters(), [])
+  useEffect(() => {
+    if (restored.parseWarning) toast.warning(restored.parseWarning, { id: 'web-filter-parse-warning' })
+  }, [restored])
+
+  const [filters, setFilters] = useState<ActiveFilter[]>(restored.filters)
   useEffect(() => {
     writePropFiltersParam(filters)
   }, [filters])
   // Country is single-select (a one-country drilldown, entered from the map or the Countries list);
   // every other dimension multi-toggles.
-  const addFilter = useCallback(
-    (property: string, value: string) =>
-      setFilters(prev =>
-        property === COUNTRY_PROPERTY ? toggleSingleFilter(prev, property, value) : toggleFilter(prev, property, value),
-      ),
-    [],
-  )
+  // One call site for every cross-filter entry point (breakdown rows and the map both land here), and
+  // the only place the interaction is visible at all: these rows are icon-and-text inside <main>, which
+  // data-pug-no-capture blanks. No property or value goes with it — the id is the whole event.
+  const addFilter = useCallback((property: string, value: string) => {
+    trackFeature({ featureId: 'overview.web.filter', featureName: 'Filter web analytics' })
+    setFilters(prev =>
+      property === COUNTRY_PROPERTY ? toggleSingleFilter(prev, property, value) : toggleFilter(prev, property, value),
+    )
+  }, [])
   const removeFilter = useCallback(
     (property: string, value: string) => setFilters(prev => removeFilterValue(prev, property, value)),
     [],

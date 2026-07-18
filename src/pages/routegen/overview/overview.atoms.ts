@@ -1,5 +1,6 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { isDemoSessionAtom } from '@/auth/demo'
@@ -23,7 +24,12 @@ const storedOverviewModeAtom = atomWithStorage<OverviewMode | null>('pug:overvie
 // initializer, before any mount effect could hydrate it.
 export const overviewModeAtom = atom(
   (get): OverviewMode => get(storedOverviewModeAtom) ?? (get(isDemoSessionAtom) ? 'product' : 'web'),
-  (_get, set, next: OverviewMode) => set(storedOverviewModeAtom, next),
+  (_get, set, next: OverviewMode) => {
+    // On the atom rather than the toggle, so any future entry point counts too. The destination rides
+    // in the featureId: trackFeature takes no props, and the id is what a breakdown groups by.
+    trackFeature({ featureId: `overview.mode.${next}`, featureName: `Switch to ${next} analytics` })
+    set(storedOverviewModeAtom, next)
+  },
 )
 
 export const overviewSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
