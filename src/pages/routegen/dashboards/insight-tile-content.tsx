@@ -34,6 +34,7 @@ export const DashboardInsightContent = ({
   compact = false,
   kpiMetadata,
   lightMetrics = false,
+  hideSummary = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -47,6 +48,8 @@ export const DashboardInsightContent = ({
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
+  // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
+  hideSummary?: boolean
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
@@ -99,9 +102,13 @@ export const DashboardInsightContent = ({
   // a resolved numeric-aggregation property.
   const isTopK = effectiveQuery?.spec?.insightType === InsightType.TOP_K
   const topKIncomplete = isTopK ? topKSpecIncompleteReason(effectiveQuery?.spec) : null
+  // Session specs (web-analytics metrics) carry no events — `spec.session` is set instead — so the
+  // event-count gate would never let them run. They're ready as soon as the session query is present.
+  const isSession = !!effectiveQuery?.spec?.session
   const queryReady = isTopK
     ? !topKIncomplete
-    : (effectiveQuery?.spec?.events.length ?? 0) > 0 && !specHasIncompleteNumericAggregation(effectiveQuery?.spec)
+    : (isSession || (effectiveQuery?.spec?.events.length ?? 0) > 0) &&
+      !specHasIncompleteNumericAggregation(effectiveQuery?.spec)
 
   const { data, error, retry } = useDebouncedQuery(
     queryKey,
@@ -158,6 +165,7 @@ export const DashboardInsightContent = ({
       compact={compact}
       kpiMetadata={kpiMetadata}
       lightMetrics={lightMetrics}
+      hideSummary={hideSummary}
     />
   )
 }

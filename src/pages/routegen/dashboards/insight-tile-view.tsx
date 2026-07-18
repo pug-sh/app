@@ -74,6 +74,7 @@ export const InsightTileView = ({
   compact = false,
   kpiMetadata,
   lightMetrics = false,
+  hideSummary = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -89,6 +90,8 @@ export const InsightTileView = ({
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
+  // Suppress the chart's value·avg·peak summary row — folded into the hideLegend gate that renders it.
+  hideSummary?: boolean
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -224,7 +227,8 @@ export const InsightTileView = ({
         topKIncompleteReason={topKIncompleteReason}
         logScale={tile?.visualization?.logScale}
         zeroBaseline={tile?.visualization?.zeroBaseline}
-        hideLegend={tile?.visualization?.hideLegend}
+        // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
+        hideLegend={tile?.visualization?.hideLegend || hideSummary}
         yTickFormatter={yTickFormatter}
         compact={compact}
         lightNumbers={lightMetrics}

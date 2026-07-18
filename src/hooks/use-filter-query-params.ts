@@ -137,7 +137,7 @@ const parseJSONParam = (raw: string | null): unknown => {
   }
 }
 
-const setOrDelete = (url: URL, key: string, value: string | undefined) => {
+export const setOrDelete = (url: URL, key: string, value: string | undefined) => {
   if (value === undefined) {
     url.searchParams.delete(key)
     return
@@ -145,7 +145,7 @@ const setOrDelete = (url: URL, key: string, value: string | undefined) => {
   url.searchParams.set(key, value)
 }
 
-const replaceUrlIfChanged = (url: URL) => {
+export const replaceUrlIfChanged = (url: URL) => {
   const next = `${url.pathname}${url.search}${url.hash}`
   const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
   if (next !== current) {
@@ -287,4 +287,27 @@ export const writeFilterQueryParams = (
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)
+}
+
+// Narrow read/write for just the property-filters (`pf`) param. The Overview web-analytics view
+// persists property filters but none of the other insights params, so it can't use the full
+// read/writeFilterQueryParams (which own ef/it/bd/tk/tf/tt/gr too). Same param, JSON shape, and
+// per-entry validation — so a `pf` written here means exactly what the Insights page reads.
+export const readPropFiltersParam = (search = window.location.search): ActiveFilter[] => {
+  const raw = parseJSONParam(new URLSearchParams(search).get(PROP_FILTERS_PARAM))
+  return Array.isArray(raw) ? (raw.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]) : []
+}
+
+export const writePropFiltersParam = (filters: readonly ActiveFilter[]) => {
+  const url = new URL(window.location.href)
+  setOrDelete(url, PROP_FILTERS_PARAM, filters.length > 0 ? JSON.stringify(filters) : undefined)
+  replaceUrlIfChanged(url)
+}
+
+// Build the Insights query string (`?<this>`) that preloads `kinds` as bare event rows — the inverse
+// of readFilterQueryParams' `ef` parse. Used by the Overview events drill-through so it lands on
+// exactly those events; co-located with the parser so the two shapes can't drift.
+export const insightsEventFiltersSearch = (kinds: readonly string[]): string => {
+  const ef = JSON.stringify(kinds.map(kind => serializeEntry(createEntry(kind))))
+  return new URLSearchParams({ ef }).toString()
 }

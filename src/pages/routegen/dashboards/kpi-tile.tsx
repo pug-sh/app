@@ -42,14 +42,16 @@ const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResol
   )
 }
 
-const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
+// Exported so the web-analytics stat tiles show the identical increasing/decreasing badge — one
+// source of truth for the delta visual across both overview modes.
+export const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
   if (!Number.isFinite(current)) return null
   const pct = ((current - prior) / Math.abs(prior)) * 100
   return { pct, label: `${Math.abs(pct).toFixed(1)}%` }
 }
 
-const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
+export const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
   const positive = pct >= 0
   const Icon = positive ? TrendingUp : TrendingDown
   return (
@@ -149,11 +151,16 @@ export const KpiTile = ({
 // Area sparkline: a soft gradient fill (trend color → transparent) under a
 // constant-width line. preserveAspectRatio="none" lets it stretch to the tile
 // width; vectorEffect keeps the stroke crisp despite the non-uniform scale.
-const Sparkline = ({ points }: { points: { value: number }[] }) => {
+// Exported so the web-analytics stat cards render the identical sparkline.
+//
+// baseline='min' scales to the data's own range (default — emphasizes shape). baseline='zero'
+// anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
+// amplified to full height; the web stat cards use this to match the 0-based main chart.
+export const Sparkline = ({ points, baseline = 'min' }: { points: { value: number }[]; baseline?: 'min' | 'zero' }) => {
   const gradientId = `spark-${useId().replace(/:/g, '')}`
   const values = points.map(p => p.value)
-  const min = Math.min(...values)
   const max = Math.max(...values)
+  const min = baseline === 'zero' ? Math.min(0, ...values) : Math.min(...values)
   const range = max - min || 1
   const w = 100
   const h = 32

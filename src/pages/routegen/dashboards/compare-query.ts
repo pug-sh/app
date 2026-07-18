@@ -5,6 +5,13 @@ import { type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/ins
 import type { TimeRange } from '@/components/date-range-picker'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
+// The immediately-preceding window of equal length. Shared by the KPI compare-vs-prior query and the
+// web-analytics stat tiles so both derive the comparison window identically.
+export const priorPeriodRange = (range: TimeRange): TimeRange => {
+  const durationMs = Math.max(0, range.to.getTime() - range.from.getTime())
+  return { from: new Date(range.from.getTime() - durationMs), to: new Date(range.from.getTime()) }
+}
+
 export const buildComparisonQuery = (
   query: QueryRequest | undefined,
   effectiveTimeRange: TimeRange,
@@ -12,18 +19,12 @@ export const buildComparisonQuery = (
 ): QueryRequest | undefined => {
   if (!query) return undefined
   if (compare !== ComparePeriod.PRIOR) return undefined
-
-  const durationMs = Math.max(0, effectiveTimeRange.to.getTime() - effectiveTimeRange.from.getTime())
-  if (durationMs <= 0) return undefined
-
-  const priorRange: TimeRange = {
-    from: new Date(effectiveTimeRange.from.getTime() - durationMs),
-    to: new Date(effectiveTimeRange.from.getTime()),
-  }
+  // A zero/negative-length window has no meaningful prior period.
+  if (effectiveTimeRange.to.getTime() <= effectiveTimeRange.from.getTime()) return undefined
 
   return create(QueryRequestSchema, {
     ...query,
-    timeRange: create(TimeRangeSchema, toProtoTimeRange(priorRange)),
+    timeRange: create(TimeRangeSchema, toProtoTimeRange(priorPeriodRange(effectiveTimeRange))),
   })
 }
 

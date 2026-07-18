@@ -9,10 +9,11 @@ import { insightsRPCAtom } from '@/api/rpc'
 import ActivityHeatmapMap from '@/components/activity-heatmap-map'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { floorToZoneBucket } from '@/lib/timezone'
 import { countryCountsFromTrendSeries } from './activity-map'
 import { getInitialGranularity, getProtoRange } from './query'
 
@@ -35,6 +36,7 @@ export const useActivityMapData = ({
 }: ActivityMapDataProps) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
+  const timeZone = useAtomValue(activeProjectTimezoneAtom)
 
   // Key the memo on the embedded range's *content* (primitive millis), not on `query`'s
   // identity. Callers rebuild `query` inline each render; keying on identity re-ran the
@@ -60,12 +62,20 @@ export const useActivityMapData = ({
   )
   const effectiveQuery = useMemo(() => {
     if (!query || !countryKey) return undefined
+    // Floor `from` to the bucket boundary in the project zone (as useWebQuery / DashboardInsightContent
+    // do) so the map's window matches the sibling tiles' exactly and its first bucket is whole.
     return create(QueryRequestSchema, {
       ...query,
       granularity: effectiveGranularity,
-      timeRange: create(TimeRangeSchema, toProtoTimeRange(effectiveTimeRange)),
+      timeRange: create(
+        TimeRangeSchema,
+        toProtoTimeRange({
+          from: floorToZoneBucket(effectiveTimeRange.from, effectiveGranularity, timeZone),
+          to: effectiveTimeRange.to,
+        }),
+      ),
     })
-  }, [countryKey, effectiveGranularity, effectiveTimeRange, query])
+  }, [countryKey, effectiveGranularity, effectiveTimeRange, query, timeZone])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
@@ -106,9 +116,19 @@ type ActivityMapViewProps = {
   error: string | null
   retry: () => void
   className?: string
+  onCountrySelect?: (alpha2: string) => void
+  selected?: readonly string[]
 }
 
-export const ActivityMapView = ({ countries, loading, error, retry, className }: ActivityMapViewProps) => {
+export const ActivityMapView = ({
+  countries,
+  loading,
+  error,
+  retry,
+  className,
+  onCountrySelect,
+  selected,
+}: ActivityMapViewProps) => {
   const stateClass = className ?? 'absolute inset-0'
 
   if (loading && countries.length === 0) {
@@ -142,7 +162,7 @@ export const ActivityMapView = ({ countries, loading, error, retry, className }:
 
   return (
     <div className={stateClass}>
-      <ActivityHeatmapMap countries={countries} />
+      <ActivityHeatmapMap countries={countries} onCountrySelect={onCountrySelect} selected={selected} />
     </div>
   )
 }

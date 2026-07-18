@@ -82,6 +82,9 @@ export const InsightsContent = memo(function InsightsContent({
   funnelSeriesData: FunnelSeriesData[]
   logScale?: boolean
   zeroBaseline?: boolean
+  // Hides the value·avg·peak SummaryStats row. Named for the legend it originally gated; the
+  // web-analytics main chart opts in via InsightTileView's hideSummary (summing per-bucket session
+  // averages is meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
   yTickFormatter?: (value: number) => string
   isTopK?: boolean
