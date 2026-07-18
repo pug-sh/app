@@ -1,26 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { Check, Copy, Loader2, Pencil, Plus, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useAtomValue, useSetAtom } from 'jotai'
+import { Check, Copy, Loader2, Pencil, Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
-import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
 import SectionHeader from '@/components/section-header'
-import { Button } from '@/components/ui/button'
 import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  activeOrgAtom,
-  createOrgAtom,
-  fetchOrgsAtom,
-  lastProjectByOrgAtom,
-  leaveOrgAtom,
-  orgsAtom,
-  selectOrgAtom,
-} from '@/data/workspace.atoms'
+import { activeOrgAtom, createOrgAtom, leaveOrgAtom, renameOrgAtom } from '@/data/workspace.atoms'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
 
@@ -49,18 +38,12 @@ const CopyId = ({ value, context }: { value: string; context?: string }) => {
 }
 
 const Organization = () => {
-  const [org, setOrg] = useAtom(activeOrgAtom)
-  const orgsRPC = useAtomValue(orgsRPCAtom)
-  const projectsRPC = useAtomValue(projectsRPCAtom)
-  const orgs = useAtomValue(orgsAtom)
-  const lastProjectByOrg = useAtomValue(lastProjectByOrgAtom)
-  const fetchOrgs = useSetAtom(fetchOrgsAtom)
-  const selectOrg = useSetAtom(selectOrgAtom)
+  const org = useAtomValue(activeOrgAtom)
   const createOrg = useSetAtom(createOrgAtom)
+  const renameOrg = useSetAtom(renameOrgAtom)
   const leaveOrg = useSetAtom(leaveOrgAtom)
   const [, navigate] = useLocation()
 
-  const [orgsLoading, setOrgsLoading] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [savingOrg, setSavingOrg] = useState(false)
   const [showCreateOrg, setShowCreateOrg] = useState(false)
@@ -83,39 +66,6 @@ const Organization = () => {
     }
   }, [org, orgForm])
 
-  const reloadOrgs = useCallback(async () => {
-    setOrgsLoading(true)
-    try {
-      await fetchOrgs()
-    } finally {
-      setOrgsLoading(false)
-    }
-  }, [fetchOrgs])
-
-  // Preload the org list on every visit so the switcher is populated without opening it.
-  useEffect(() => {
-    reloadOrgs()
-  }, [reloadOrgs])
-
-  const handleSwitchOrg = async (orgId: string) => {
-    const target = orgs.find(o => o.id === orgId)
-    if (!target || target.id === org?.id) return
-    setRenaming(false)
-    setConfirmingLeave(false)
-    try {
-      // Load the new org's projects first, then stay on this settings tab for one of
-      // them. The old project id in the URL would otherwise read as "Project not found".
-      const { projects } = await projectsRPC.batchGet({ orgId: target.id })
-      selectOrg(target)
-      // Prefer the last project visited in this org, falling back to the first.
-      const lastId = lastProjectByOrg[target.id]
-      const next = projects.find(p => p.id === lastId) ?? projects[0]
-      navigate(next ? `/p/${next.id}/settings/organization` : '/', { replace: true })
-    } catch (err) {
-      toastRPCError(err, 'Failed to switch organization')
-    }
-  }
-
   const handleCreateOrg = async ({ displayName }: CreateOrgFormData) => {
     setCreatingOrg(true)
     try {
@@ -123,6 +73,10 @@ const Organization = () => {
       if (!created) throw new Error('Create returned no org')
       setShowCreateOrg(false)
       createOrgForm.reset()
+      // createOrg makes the new org active, which strands the /p/:projectId in the URL — it names a
+      // project of the org we just left. The new org has none of its own to land on, so hand the
+      // route back to ProjectRedirect.
+      navigate('/', { replace: true })
     } catch (err) {
       toastRPCError(err, 'Failed to create organization')
     } finally {
@@ -148,8 +102,7 @@ const Organization = () => {
     if (!org) return
     setSavingOrg(true)
     try {
-      await orgsRPC.updateDisplayName({ orgId: org.id, displayName: data.displayName })
-      setOrg({ ...org, displayName: data.displayName })
+      await renameOrg({ orgId: org.id, displayName: data.displayName })
       setRenaming(false)
     } catch (err) {
       toastRPCError(err, 'Failed to rename organization')
@@ -175,46 +128,11 @@ const Organization = () => {
         <section>
           <SectionHeader
             title="Organization"
-            description="Switch organizations, or rename and leave the current one."
+            description="Rename this organization, create another, or leave it. Switch between them from the sidebar."
           />
 
-          {/* Switcher */}
-          <div className="flex gap-2">
-            <Select value={org.id} onValueChange={v => handleSwitchOrg(v ?? '')}>
-              <SelectTrigger className="max-w-xs">
-                <SelectValue>{v => orgs.find(o => o.id === v)?.displayName ?? org.displayName}</SelectValue>
-              </SelectTrigger>
-              <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
-                {orgsLoading ? (
-                  <div className="flex justify-center py-3">
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  orgs.map(o => (
-                    <SelectItem key={o.id} value={o.id} className="py-1.5">
-                      <div className="flex flex-col gap-0.5">
-                        <span>{o.displayName}</span>
-                        <span className="font-mono text-xs text-muted-foreground">{o.id}</span>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={reloadOrgs}
-              disabled={orgsLoading}
-              aria-label="Reload organizations"
-              className="text-muted-foreground"
-            >
-              {orgsLoading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
-            </Button>
-          </div>
-
           {/* Current org: inline-editable name + copyable id */}
-          <div className="mt-4 space-y-1">
+          <div className="space-y-1">
             <Can
               action="update"
               resource="org"
@@ -251,7 +169,7 @@ const Organization = () => {
                   className="group inline-flex items-center gap-2 text-sm"
                 >
                   <span className="font-medium">{org.displayName}</span>
-                  <Pencil className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Pencil className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
                 </button>
               )}
             </Can>

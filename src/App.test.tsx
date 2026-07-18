@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { act, render, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Router, Switch } from 'wouter'
@@ -8,17 +8,18 @@ import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, orgsList, orgsGet } = vi.hoisted(() => ({
+const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
   batchGet: vi.fn(),
   orgsList: vi.fn(),
   orgsGet: vi.fn(),
+  orgsUpdateDisplayName: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
     projectsRPCAtom: atom({ batchGet }),
-    orgsRPCAtom: atom({ list: orgsList, get: orgsGet }),
+    orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
   }
 })
 
@@ -36,9 +37,8 @@ vi.mock('@/analytics/pug', () => ({
 
 const { SessionUrlGuard, WorkspaceBootstrap } = await import('./App')
 const { ProjectRedirect, ProjectSync } = await import('@/pages/router')
-const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, rememberLastProjectAtom } = await import(
-  '@/data/workspace.atoms'
-)
+const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, rememberLastProjectAtom, renameOrgAtom, selectOrgAtom } =
+  await import('@/data/workspace.atoms')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
@@ -263,5 +263,133 @@ describe('landing on the bare app URL', () => {
 
     await waitFor(() => expect(history.at(-1)).toBe('/p/p2/overview'))
     expect(store.get(activeProjectAtom)?.id).toBe('p2')
+  })
+})
+
+// The sidebar switcher does no more than this: set the org, hand the route back to '/'. It used to
+// fetch the target org's projects and pick one itself — a second copy of the bootstrap's restore
+// rule — so what these pin is that the machinery behind '/' really does finish the switch. Rendered
+// through the real Switch for the reason above: bare, ProjectRedirect re-navigates once the pick
+// lands and passes either way.
+describe('switching organization', () => {
+  const orgB = create(OrgSchema, { id: 'org-b', displayName: 'Org B' })
+  const projectsOfB = [
+    create(ProjectSchema, { id: 'b1', displayName: 'B First' }),
+    create(ProjectSchema, { id: 'b2', displayName: 'B Second' }),
+  ]
+
+  const mountSwitcher = (store: ReturnType<typeof seedStore>) => {
+    const { hook, history, navigate } = memoryLocation({ path: '/p/p1/overview', record: true })
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+    return { history, navigate }
+  }
+
+  it('lands on the project last visited in the org being switched to', async () => {
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects }),
+    )
+    // Two projects in org B, with the stored visit on the second: a fallback to projects[0] would
+    // land on b1 and pass a one-project org either way.
+    const store = seedStore({ 'org-b': 'b2' })
+    const { history, navigate } = mountSwitcher(store)
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+    act(() => {
+      store.set(selectOrgAtom, orgB)
+      navigate('/')
+    })
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/b2/overview'))
+    expect(store.get(activeProjectAtom)?.id).toBe('b2')
+  })
+
+  it('says so, rather than spinning, when the org being switched to has no projects', async () => {
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? [] : projects }),
+    )
+    // The case the sidebar used to branch on by hand (navigate to '/' when the fetch came back
+    // empty). Nothing navigates off '/' now, so the redirect route is what the user is left looking
+    // at — a spinner there would never resolve, since no pick is coming.
+    const store = seedStore()
+    const { history, navigate } = mountSwitcher(store)
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+    act(() => {
+      store.set(selectOrgAtom, orgB)
+      navigate('/')
+    })
+
+    await waitFor(() => expect(screen.getByText('No projects yet')).toBeTruthy())
+    expect(history.at(-1)).toBe('/')
+  })
+
+  it('waits, rather than saying so, while the project list is still in flight', async () => {
+    // The empty state above must not be reachable before the list lands, or every switch — and every
+    // cold load — flashes "No projects yet" for the length of the round-trip, telling users an org
+    // they just opened is empty. projectsAtom is [] in both windows, so projectsLoaded is the only
+    // thing that separates them: drop it from ProjectRedirect's condition and this is what goes red.
+    // Held open by hand because that window is what's under test — a resolved mock has no window.
+    let landOrgB = () => {}
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) => {
+      if (orgId !== 'org-b') return Promise.resolve({ projects })
+      return new Promise(resolve => {
+        landOrgB = () => resolve({ projects: projectsOfB })
+      })
+    })
+    const store = seedStore()
+    const { navigate } = mountSwitcher(store)
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+    act(() => {
+      store.set(selectOrgAtom, orgB)
+      navigate('/')
+    })
+
+    await waitFor(() => expect(store.get(activeOrgAtom)?.id).toBe('org-b'))
+    expect(screen.queryByText('No projects yet')).toBeNull()
+
+    // Still resolves once the list lands: asserting only the absence would equally pass against a
+    // ProjectRedirect that had lost the empty state altogether.
+    await act(async () => {
+      landOrgB()
+    })
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b1'))
+  })
+
+  // Not a switch, but the same harness: renaming is the other way an Org object gets replaced, and
+  // what it must NOT do is look like a switch to the effect that reloads projects.
+  it('does not reload the project list when the org is merely renamed', async () => {
+    batchGet.mockResolvedValue({ projects })
+    orgsUpdateDisplayName.mockResolvedValue({})
+    const store = seedStore()
+    mountSwitcher(store)
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+    const fetches = batchGet.mock.calls.length
+
+    await act(async () => {
+      await store.set(renameOrgAtom, { orgId: 'org-a', displayName: 'Renamed' })
+    })
+
+    // renameOrg writes a fresh Org object for the same org. Keyed on that object rather than its id,
+    // the fetch effect blanks the active project and refetches — so the sidebar's project list and
+    // chip empty out for a round-trip that changed nothing about which projects exist.
+    expect(batchGet.mock.calls.length).toBe(fetches)
+    expect(store.get(activeProjectAtom)?.id).toBe('p1')
   })
 })

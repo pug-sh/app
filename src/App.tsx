@@ -110,12 +110,12 @@ export const WorkspaceBootstrap = () => {
     }
   }, [authenticated, status, setStatus, resetWorkspace])
 
-  // The JWT syncs across tabs (atomWithStorage listens for storage events); the workspace does not.
-  // Sign in as someone else in another tab and this one keeps the previous account's org and project
-  // while every request it sends now carries the new account's token — including the visit it
-  // records, which would file one account's project under the other's key and undo the whole point
-  // of keying them separately. Rebuild instead. This is the rule applySessionAtom already applies to
-  // an in-tab account switch; a cross-tab one never reaches it.
+  // The one place an account switch tears the workspace down, in-tab and cross-tab alike. The JWT
+  // syncs across tabs (atomWithStorage listens for storage events); the workspace does not. Sign in
+  // as someone else in another tab and this one keeps the previous account's org and project while
+  // every request it sends now carries the new account's token — including the visit it records,
+  // which would file one account's project under the other's stamp and undo the whole point of
+  // stamping them. Rebuild instead.
   const knownCustomer = useRef(customerId)
   useEffect(() => {
     const switched = knownCustomer.current && customerId && knownCustomer.current !== customerId
@@ -154,11 +154,16 @@ export const WorkspaceBootstrap = () => {
     }
   }, [status, lastOrgId, loadOrg, fetchOrgs, selectOrg, setStatus])
 
+  // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
+  // and this effect blanks the active project and refetches the list — so a rename would clear the
+  // sidebar's project list and chip for a round-trip it didn't need. fetchProjects reads the org
+  // from the store itself, so the id is all this needs.
+  const activeOrgId = activeOrg?.id
   useEffect(() => {
-    if (status !== 'ready' || !activeOrg) return
+    if (status !== 'ready' || !activeOrgId) return
     setActiveProject(null)
     fetchProjects()
-  }, [status, activeOrg, fetchProjects, setActiveProject])
+  }, [status, activeOrgId, fetchProjects, setActiveProject])
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -186,8 +191,9 @@ export const WorkspaceBootstrap = () => {
     setStatus('ready')
   }, [activeOrg, status, setStatus])
 
-  // Remember the last project visited per org, to restore when switching orgs. Scoped to the
-  // signed-in customer inside the atom, so two accounts sharing an org don't overwrite each other.
+  // Remember the last project visited per org, to restore when switching orgs. Stamped with the
+  // signed-in customer inside the atom, so one account can't be handed the other's project when two
+  // share an org. Only one account's visits are kept — the second's write replaces the first's.
   useEffect(() => {
     if (!activeOrg || !activeProject) return
     rememberLastProject({ orgId: activeOrg.id, projectId: activeProject.id })

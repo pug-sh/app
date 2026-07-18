@@ -44,6 +44,21 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
   }
 })
 
+// Refreshes the list for a session that already has a workspace (the sidebar switcher). Not
+// fetchOrgsAtom: that one tears the workspace down on failure, which is right for bootstrap and
+// would put every session one flaky list call from the error screen. Here a failure just means stale.
+export const refreshOrgsAtom = atom(null, async (get, set) => {
+  const orgsRPC = get(orgsRPCAtom)
+  try {
+    const resp = await orgsRPC.list({})
+    set(orgsAtom, resp.orgs)
+    return resp.orgs
+  } catch (err) {
+    console.error('refreshOrgs failed:', err)
+    return get(orgsAtom)
+  }
+})
+
 // Task 3: loadOrgAtom — fetch a single org by ID and set it as active
 export const loadOrgAtom = atom(null, async (get, set, orgId: string) => {
   if (!orgId) return null
@@ -132,6 +147,15 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
 
 export const activeProjectAtom = atom<Project | null>(null)
 
+// Whether the active org's project list has landed. Read-only view of projectsOrgIdAtom, which stays
+// module-private so its writes keep their pairing — the ambiguity it resolves ("no projects" vs "not
+// fetched yet") is one rendering code needs too, or an org with none is indistinguishable from one
+// still loading and gets a spinner that never ends.
+export const projectsLoadedAtom = atom(get => {
+  const org = get(activeOrgAtom)
+  return !!org && get(projectsOrgIdAtom) === org.id
+})
+
 // True once the org and project have stopped resolving on their own — bootstrap has either finished
 // picking them or reached a state where it never will.
 //
@@ -161,20 +185,15 @@ export const workspaceSettledAtom = atom(get => {
   return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
 })
 
-// Last project visited, per customer and org (customerId → orgId → projectId), restored when
+// Last project visited per org (orgId → projectId) for the signed-in customer, restored when
 // switching orgs and when a bare URL leaves the project unnamed.
 //
-// Keyed by customer as well as org because one browser outlives one account. Under an org key alone,
-// two accounts that share an org share one entry: signing in as the second lands you on the first's
-// project, and the effect recording your next visit overwrites theirs, so the two stomp each other
-// for as long as both stay in use. Accounts in disjoint orgs never collided — the org key already
-// separated them — and this keeps that while fixing the shared-org case. It also means nothing has
-// to clear the map on sign-out: an account only ever reads its own slice.
-//
-// That last part is a retention decision as much as a correctness one. The map deliberately outlives
-// the session, so it accrues a slice per account that has ever signed in on this browser — on a
-// shared machine, a roster nothing would otherwise trim. Hence the cap below. Sign-out itself stays
-// hands-off: clearing there would forget your own last project every time you signed out.
+// Stamped with the customer it belongs to because one browser outlives one account: under an org key
+// alone, two accounts sharing an org share one entry, so the second lands on the first's project and
+// then overwrites it. One slot rather than a slice per account — one customer per browser is the
+// assumption, so a second account's visits are forgotten rather than kept forever in a roster
+// nothing trims. The stamp retires the earlier unstamped shapes for free: they carry no customerId,
+// so they can't match one and read as no visits, and the first write replaces them outright.
 //
 // getOnInit because the restore loses a race without it: atomWithStorage otherwise starts at the
 // initial value and only reads storage in onMount, so an early reader sees {} and defaults to the
@@ -182,67 +201,30 @@ export const workspaceSettledAtom = atom(get => {
 // another chance. (lastOrgIdAtom above buys the same guarantee by hand, predating this option.)
 // Not sufficient on its own: the customer id has to land synchronously too, which is why jwtAtom
 // pre-reads localStorage at module scope rather than deferring to onMount (see jwt.atoms).
-const lastProjectStoreAtom = atomWithStorage<Record<string, Record<string, string>>>(
+const lastProjectAtom = atomWithStorage<{ customerId: string; byOrg: Record<string, string> }>(
   'pug:lastProjectByOrg',
-  {},
+  { customerId: '', byOrg: {} },
   undefined,
   { getOnInit: true },
 )
 
-// How many accounts' visits this browser keeps, least-recently-written trimmed first. Comfortably
-// past what anyone juggles day to day; the point is only that the roster cannot grow without bound.
-const MAX_REMEMBERED_CUSTOMERS = 5
-
-// atomWithStorage's generic asserts the stored shape, it does not check it — and this key really did
-// hold a different one (orgId → projectId, before visits were customer-keyed), so a top-level value
-// that isn't a slice is something we shipped, not a hypothetical.
-//
-// Only the write below needs the check. A lookup *by customer id* can never reach a legacy entry:
-// those keys are org ids, and org and customer ids are drawn from one xid space server-side, so none
-// of them can match. A pre-customer-keyed value therefore reads as no visits — one forgotten restore,
-// after which the write retires the old shape outright rather than carrying it forward.
-const isVisitSlice = (value: unknown): value is Record<string, string> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-// Shared rather than rebuilt per read, so the empty case keeps a stable identity in the dep array it
-// lands in (App's default-pick effect). Frozen because it is handed out to callers, where one stray
-// write would poison every future empty read for the life of the tab.
-const NO_VISITS: Record<string, string> = Object.freeze({})
-
-// The signed-in customer's slice — the orgId → projectId shape consumers read.
-export const lastProjectByOrgAtom = atom(get => {
+// The signed-in customer's visits, or none when the stored ones belong to someone else.
+export const lastProjectByOrgAtom = atom<Record<string, string>>(get => {
   const customerId = get(customerIdAtom)
-  if (!customerId) return NO_VISITS
-  // `?? NO_VISITS` rather than a guard: this index is typed non-nullable (noUncheckedIndexedAccess is
-  // off) but misses for every account that hasn't recorded a visit yet.
-  return get(lastProjectStoreAtom)[customerId] ?? NO_VISITS
+  if (!customerId) return {}
+  const stored = get(lastProjectAtom)
+  return stored.customerId === customerId ? stored.byOrg : {}
 })
 
-// Record a visit against the signed-in customer: the stored shape is two levels deep and the customer
-// id comes from the session, not the caller, so neither belongs at the call site.
+// Record a visit against the signed-in customer: the stamp comes from the session, not the caller.
 export const rememberLastProjectAtom = atom(
   null,
   (get, set, { orgId, projectId }: { orgId: string; projectId: string }) => {
     const customerId = get(customerIdAtom)
-    if (!customerId) {
-      // Unreachable by construction: the only caller runs behind an active org and project, which
-      // exist only after a bootstrap that required a session. Logged rather than dropped quietly
-      // because there is no retry — that effect refires on org/project identity, never on the token
-      // — so a visit lost here is lost for the session and the restore just stops working.
-      console.error('rememberLastProject: no customer in session', { orgId, projectId })
-      return
-    }
-    const store = get(lastProjectStoreAtom)
-    const mine = store[customerId] ?? {}
-    if (mine[orgId] === projectId) return
-    // Rebuilt rather than spread over. Dropping non-slice values retires the pre-customer-keyed shape
-    // instead of copying it forward under every future write, and re-appending this customer last
-    // makes insertion order a least-recently-written order, so the cap trims the correct end.
-    const others = Object.entries(store).filter(([id, slice]) => id !== customerId && isVisitSlice(slice))
-    set(lastProjectStoreAtom, {
-      ...Object.fromEntries(others.slice(-(MAX_REMEMBERED_CUSTOMERS - 1))),
-      [customerId]: { ...mine, [orgId]: projectId },
-    })
+    if (!customerId) return
+    const byOrg = get(lastProjectByOrgAtom)
+    if (byOrg[orgId] === projectId) return
+    set(lastProjectAtom, { customerId, byOrg: { ...byOrg, [orgId]: projectId } })
   },
 )
 
@@ -275,6 +257,22 @@ export const createOrgAtom = atom(null, async (get, set, displayName: string) =>
   set(selectOrgAtom, resp.org)
   return resp.org
 })
+
+// Owns the rename rather than leaving it to the page: the name lives in two places, and updating
+// activeOrgAtom alone leaves the switcher listing the old one until the next refresh.
+export const renameOrgAtom = atom(
+  null,
+  async (get, set, { orgId, displayName }: { orgId: string; displayName: string }) => {
+    const orgsRPC = get(orgsRPCAtom)
+    await orgsRPC.updateDisplayName({ orgId, displayName })
+    const active = get(activeOrgAtom)
+    if (active?.id === orgId) set(activeOrgAtom, { ...active, displayName })
+    set(
+      orgsAtom,
+      get(orgsAtom).map(org => (org.id === orgId ? { ...org, displayName } : org)),
+    )
+  },
+)
 
 export const leaveOrgAtom = atom(null, async (get, set, orgId: string) => {
   const orgsRPC = get(orgsRPCAtom)
