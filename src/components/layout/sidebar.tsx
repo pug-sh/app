@@ -300,14 +300,9 @@ const AppSidebar = () => {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={async () => {
-                await signOut()
-                // Leave the /p/:projectId URL behind. App re-renders to <SignIn /> on its own, but
-                // the address bar keeps pointing at a project belonging to the account signing out,
-                // and the next account to sign in on this browser inherits it: "Project not found"
-                // if they can't see it, someone else's project if they can.
-                navigate('/')
-              }}
+              // Dropping the /p/:projectId URL is App's job, not this button's — it has to happen
+              // for a session that expires too, which has no button to hang off. See App.tsx.
+              onClick={() => signOut()}
               tooltip="Sign out"
             >
               <LogOut />

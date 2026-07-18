@@ -3,6 +3,7 @@ import { createStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
+import { jwtFor } from '@/test/jwt'
 
 const { batchGet, orgsList, orgsGet } = vi.hoisted(() => ({
   batchGet: vi.fn(),
@@ -138,9 +139,6 @@ describe('fetchProjectsAtom', () => {
 })
 
 describe('lastProjectByOrgAtom', () => {
-  // Only the payload is ever parsed (readJWT), so the header and signature can be anything.
-  const jwtFor = (customerId: string) => `h.${btoa(JSON.stringify({ exp: 9e9, sub: customerId }))}.s`
-
   it('reads storage on init, before anything mounts it', async () => {
     localStorage.setItem('pug:jwt', JSON.stringify(jwtFor('cust-1')))
     localStorage.setItem('pug:lastProjectByOrg', JSON.stringify({ 'cust-1': { 'org-a': 'a2' } }))
@@ -158,6 +156,11 @@ describe('lastProjectByOrgAtom', () => {
   })
 
   it('keeps two accounts sharing an org from overwriting each other', async () => {
+    // Fresh modules, or this inherits the generation the test above seeded: getOnInit bakes the
+    // storage read into the atom at construction, so afterEach's localStorage.clear() cannot undo
+    // it. Without this the assertions below are satisfied by that leftover value and keep passing
+    // with the rememberLastProject calls deleted outright — verified, not hypothetical.
+    vi.resetModules()
     const { jwtAtom } = await import('@/auth/jwt.atoms')
     const { lastProjectByOrgAtom, rememberLastProjectAtom } = await import('./workspace.atoms')
     const store = createStore()
@@ -174,6 +177,40 @@ describe('lastProjectByOrgAtom', () => {
     // second account's project, restored for the first.
     store.set(jwtAtom, jwtFor('cust-1'))
     expect(store.get(lastProjectByOrgAtom)).toEqual({ 'org-a': 'a1' })
+  })
+
+  it('retires the pre-customer-keyed shape instead of carrying it forward', async () => {
+    localStorage.setItem('pug:jwt', JSON.stringify(jwtFor('cust-1')))
+    localStorage.setItem('pug:lastProjectByOrg', JSON.stringify({ 'org-a': 'a2' }))
+    vi.resetModules()
+
+    const { rememberLastProjectAtom } = await import('./workspace.atoms')
+    createStore().set(rememberLastProjectAtom, { orgId: 'org-a', projectId: 'a1' })
+
+    // Spread over, the legacy string entry rides along under every future write — a value the
+    // declared type says cannot be there, waiting for the first code that iterates the map.
+    expect(JSON.parse(localStorage.getItem('pug:lastProjectByOrg') ?? '{}')).toEqual({
+      'cust-1': { 'org-a': 'a1' },
+    })
+  })
+
+  it('caps the accounts it remembers, keeping the most recently written', async () => {
+    vi.resetModules()
+    const { jwtAtom } = await import('@/auth/jwt.atoms')
+    const { lastProjectByOrgAtom, rememberLastProjectAtom } = await import('./workspace.atoms')
+    const store = createStore()
+
+    // Seven accounts through one browser — a shared machine, over time.
+    for (let i = 0; i < 7; i++) {
+      store.set(jwtAtom, jwtFor(`cust-${i}`))
+      store.set(rememberLastProjectAtom, { orgId: 'org-a', projectId: `p${i}` })
+    }
+
+    // The map outlives every one of those sessions, so without a cap it keeps all seven, then all
+    // seventy. The account holding the session is always kept: it is the one written last.
+    const stored = JSON.parse(localStorage.getItem('pug:lastProjectByOrg') ?? '{}')
+    expect(Object.keys(stored)).toEqual(['cust-2', 'cust-3', 'cust-4', 'cust-5', 'cust-6'])
+    expect(store.get(lastProjectByOrgAtom)).toEqual({ 'org-a': 'p6' })
   })
 
   it('ignores a value stored before visits were customer-keyed', async () => {

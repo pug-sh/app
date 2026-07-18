@@ -3,7 +3,7 @@ import { atomWithStorage } from 'jotai/utils'
 import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
-import { jwtDataAtom } from '@/auth/jwt.atoms'
+import { customerIdAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
 
 // Task 2: lastOrgIdAtom — synchronous initial read avoids first-render flash
@@ -171,10 +171,17 @@ export const workspaceSettledAtom = atom(get => {
 // separated them — and this keeps that while fixing the shared-org case. It also means nothing has
 // to clear the map on sign-out: an account only ever reads its own slice.
 //
+// That last part is a retention decision as much as a correctness one. The map deliberately outlives
+// the session, so it accrues a slice per account that has ever signed in on this browser — on a
+// shared machine, a roster nothing would otherwise trim. Hence the cap below. Sign-out itself stays
+// hands-off: clearing there would forget your own last project every time you signed out.
+//
 // getOnInit because the restore loses a race without it: atomWithStorage otherwise starts at the
 // initial value and only reads storage in onMount, so an early reader sees {} and defaults to the
 // first project — and once that default lands it *is* a valid pick, so the stored one never gets
 // another chance. (lastOrgIdAtom above buys the same guarantee by hand, predating this option.)
+// Not sufficient on its own: the customer id has to land synchronously too, which is why jwtAtom
+// pre-reads localStorage at module scope rather than deferring to onMount (see jwt.atoms).
 const lastProjectStoreAtom = atomWithStorage<Record<string, Record<string, string>>>(
   'pug:lastProjectByOrg',
   {},
@@ -182,32 +189,60 @@ const lastProjectStoreAtom = atomWithStorage<Record<string, Record<string, strin
   { getOnInit: true },
 )
 
-// Shared rather than a fresh `{}` per read: this value sits in a useEffect dep array in App.
-const NO_VISITS: Record<string, string> = {}
+// How many accounts' visits this browser keeps, least-recently-written trimmed first. Comfortably
+// past what anyone juggles day to day; the point is only that the roster cannot grow without bound.
+const MAX_REMEMBERED_CUSTOMERS = 5
 
-// The signed-in customer's slice — the orgId → projectId shape consumers read. jwtDataAtom is
-// synchronous in the same way the store is (jwtAtom's initial value *is* the stored token), so the
-// customer id is already there on the first read and doesn't reintroduce the race above.
+// atomWithStorage's generic asserts the stored shape, it does not check it — and this key really did
+// hold a different one (orgId → projectId, before visits were customer-keyed), so a top-level value
+// that isn't a slice is something we shipped, not a hypothetical.
 //
-// A value written before this was customer-keyed reads as an empty slice, since its keys are org ids
-// and none of those match a customer id. That costs one restore; the next visit writes the new shape.
+// Only the write below needs the check. A lookup *by customer id* can never reach a legacy entry:
+// those keys are org ids, and org and customer ids are drawn from one xid space server-side, so none
+// of them can match. A pre-customer-keyed value therefore reads as no visits — one forgotten restore,
+// after which the write retires the old shape outright rather than carrying it forward.
+const isVisitSlice = (value: unknown): value is Record<string, string> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+// Shared rather than rebuilt per read, so the empty case keeps a stable identity in the dep array it
+// lands in (App's default-pick effect). Frozen because it is handed out to callers, where one stray
+// write would poison every future empty read for the life of the tab.
+const NO_VISITS: Record<string, string> = Object.freeze({})
+
+// The signed-in customer's slice — the orgId → projectId shape consumers read.
 export const lastProjectByOrgAtom = atom(get => {
-  const customerId = get(jwtDataAtom)?.customerId
+  const customerId = get(customerIdAtom)
   if (!customerId) return NO_VISITS
+  // `?? NO_VISITS` rather than a guard: this index is typed non-nullable (noUncheckedIndexedAccess is
+  // off) but misses for every account that hasn't recorded a visit yet.
   return get(lastProjectStoreAtom)[customerId] ?? NO_VISITS
 })
 
-// Record a visit against the signed-in customer. A write atom rather than a setter on the atom above
-// because the stored shape is two levels deep and the customer id comes from the session, not the
-// caller — neither belongs at the call site.
+// Record a visit against the signed-in customer: the stored shape is two levels deep and the customer
+// id comes from the session, not the caller, so neither belongs at the call site.
 export const rememberLastProjectAtom = atom(
   null,
   (get, set, { orgId, projectId }: { orgId: string; projectId: string }) => {
-    const customerId = get(jwtDataAtom)?.customerId
-    if (!customerId) return
+    const customerId = get(customerIdAtom)
+    if (!customerId) {
+      // Unreachable by construction: the only caller runs behind an active org and project, which
+      // exist only after a bootstrap that required a session. Logged rather than dropped quietly
+      // because there is no retry — that effect refires on org/project identity, never on the token
+      // — so a visit lost here is lost for the session and the restore just stops working.
+      console.error('rememberLastProject: no customer in session', { orgId, projectId })
+      return
+    }
     const store = get(lastProjectStoreAtom)
-    if (store[customerId]?.[orgId] === projectId) return
-    set(lastProjectStoreAtom, { ...store, [customerId]: { ...store[customerId], [orgId]: projectId } })
+    const mine = store[customerId] ?? {}
+    if (mine[orgId] === projectId) return
+    // Rebuilt rather than spread over. Dropping non-slice values retires the pre-customer-keyed shape
+    // instead of copying it forward under every future write, and re-appending this customer last
+    // makes insertion order a least-recently-written order, so the cap trims the correct end.
+    const others = Object.entries(store).filter(([id, slice]) => id !== customerId && isVisitSlice(slice))
+    set(lastProjectStoreAtom, {
+      ...Object.fromEntries(others.slice(-(MAX_REMEMBERED_CUSTOMERS - 1))),
+      [customerId]: { ...mine, [orgId]: projectId },
+    })
   },
 )
 

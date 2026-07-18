@@ -1,5 +1,4 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { isDemoSessionAtom } from '@/auth/demo'
 
@@ -9,19 +8,18 @@ import { isDemoSessionAtom } from '@/auth/demo'
 export const DemoBanner = () => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const signOut = useSetAtom(signOutAtom)
-  const [, navigate] = useLocation()
 
   if (!isDemo) return null
-
-  const signUp = async () => {
-    await signOut()
-    navigate('/')
-  }
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b border-border bg-muted/40 px-4 py-1.5 text-center text-xs">
       <span className="text-muted-foreground">You're exploring a live, read-only demo of Pug.</span>
-      <button type="button" onClick={signUp} className="font-medium text-link underline-offset-4 hover:underline">
+      {/* Dropping the /p/:projectId URL is App's job, not this button's — see SessionUrlGuard. */}
+      <button
+        type="button"
+        onClick={() => signOut()}
+        className="font-medium text-link underline-offset-4 hover:underline"
+      >
         Sign up free →
       </button>
     </div>

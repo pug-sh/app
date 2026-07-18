@@ -8,7 +8,7 @@ import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
-import { jwtAtom, jwtDataAtom, refreshTokenAtom } from './jwt.atoms'
+import { customerIdAtom, jwtAtom, refreshTokenAtom } from './jwt.atoms'
 import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
@@ -56,10 +56,10 @@ export type SignInMethod = 'password' | 'magic_link' | 'google' | 'demo'
 const applySessionAtom = atom(
   null,
   (get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
-    const prior = get(jwtDataAtom)?.customerId
+    const prior = get(customerIdAtom)
     set(jwtAtom, token)
     set(refreshTokenAtom, refreshToken)
-    const next = get(jwtDataAtom)?.customerId
+    const next = get(customerIdAtom)
     if (prior && next && prior !== next) set(resetWorkspaceAtom)
     set(meAtom, null)
     // The demo marker is derived from the method and written in the same pass as the token, so a
