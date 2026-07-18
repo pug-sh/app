@@ -1,10 +1,10 @@
 import { useAtom, useAtomValue } from 'jotai'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, FolderPlus } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
 import { Route, Switch, useLocation, useParams } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import ProfileShell from './routegen/profiles/[profileId]/_shell'
 import SettingsLayout from './routegen/settings/settings-layout'
 import { routes } from './routes'
@@ -111,6 +111,8 @@ export const ProjectRedirect = () => {
   // arrives, and this effect's captured projects[0] would navigate before the bootstrap's restored
   // project could land, putting the wrong id in the URL for ProjectSync to then adopt back.
   const project = useAtomValue(activeProjectAtom)
+  const projects = useAtomValue(projectsAtom)
+  const projectsLoaded = useAtomValue(projectsLoadedAtom)
 
   useEffect(() => {
     if (project) {
@@ -118,8 +120,19 @@ export const ProjectRedirect = () => {
     }
   }, [project, navigate])
 
-  if (!project) return <LoadingSpinner />
-  return null
+  if (project) return null
+  // A brand-new org, or one whose last project was deleted, has no pick coming — waiting on one
+  // spins forever. Only say so once the list has actually landed, or the wait itself reads as empty.
+  if (projectsLoaded && projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+        <FolderPlus className="w-10 h-10 mb-4 opacity-30" />
+        <p className="text-sm font-medium mb-1">No projects yet</p>
+        <p className="text-xs">Create one from the project switcher to get started.</p>
+      </div>
+    )
+  }
+  return <LoadingSpinner />
 }
 
 // Group member routes (sorted by routes.ts) by which layout owns them; the rest stay flat.

@@ -1,10 +1,11 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import { customerIdAtom } from '@/auth/jwt.atoms'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
 import { SocialNav } from '@/components/social-nav'
@@ -22,6 +23,7 @@ import {
   lastProjectByOrgAtom,
   loadOrgAtom,
   projectsAtom,
+  rememberLastProjectAtom,
   resetWorkspaceAtom,
   selectOrgAtom,
   workspaceErrorAtom,
@@ -52,11 +54,40 @@ const ThemeSync = () => {
   return null
 }
 
+// Exported for its tests: a session that ends leaves the address bar naming the project it ended
+// in, and the next account to sign in on this browser inherits it — "Project not found" if they
+// can't see it, someone else's project if they can, and silently, since WorkspaceBootstrap declines
+// to default-pick over a route that names a project the new account *can* see.
+//
+// Owned here rather than by each sign-out button because not every path has a button. The
+// transport's clearSession() — the sole authority on session death, fired when the server rejects
+// the refresh token — reaches no component and cannot navigate for itself, and on a shared machine
+// that expiry ends more sessions than anyone clicking Sign out.
+//
+// Keyed on the true→false transition, NOT on !authenticated: arriving already signed out is how a
+// shared /p/ link works, and that URL has to survive the sign-in that follows it. Replace rather than
+// push, or Back steps into the URL this just dropped.
+export const SessionUrlGuard = () => {
+  const authenticated = useAtomValue(isAuthenticatedAtom)
+  const routeProjectId = useRouteProjectId()
+  const [, navigate] = useLocation()
+
+  const wasAuthenticated = useRef(authenticated)
+  useEffect(() => {
+    const sessionEnded = wasAuthenticated.current && !authenticated
+    wasAuthenticated.current = authenticated
+    if (sessionEnded && routeProjectId) navigate('/', { replace: true })
+  }, [authenticated, routeProjectId, navigate])
+
+  return null
+}
+
 // Exported for its tests: this owns the only default project pick in the app, and the rules it
 // follows (defer to the route, restore the last visit, then fall back to the first) are each a
 // separate bug when dropped.
 export const WorkspaceBootstrap = () => {
   const authenticated = useAtomValue(isAuthenticatedAtom)
+  const customerId = useAtomValue(customerIdAtom)
   const [status, setStatus] = useAtom(bootstrapStatusAtom)
   const projects = useAtomValue(projectsAtom)
   const activeOrg = useAtomValue(activeOrgAtom)
@@ -68,7 +99,8 @@ export const WorkspaceBootstrap = () => {
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
-  const [lastProjectByOrg, setLastProjectByOrg] = useAtom(lastProjectByOrgAtom)
+  const lastProjectByOrg = useAtomValue(lastProjectByOrgAtom)
+  const rememberLastProject = useSetAtom(rememberLastProjectAtom)
 
   useEffect(() => {
     if (!authenticated) {
@@ -77,6 +109,19 @@ export const WorkspaceBootstrap = () => {
       setStatus('loading-org')
     }
   }, [authenticated, status, setStatus, resetWorkspace])
+
+  // The one place an account switch tears the workspace down, in-tab and cross-tab alike. The JWT
+  // syncs across tabs (atomWithStorage listens for storage events); the workspace does not. Sign in
+  // as someone else in another tab and this one keeps the previous account's org and project while
+  // every request it sends now carries the new account's token — including the visit it records,
+  // which would file one account's project under the other's stamp and undo the whole point of
+  // stamping them. Rebuild instead.
+  const knownCustomer = useRef(customerId)
+  useEffect(() => {
+    const switched = knownCustomer.current && customerId && knownCustomer.current !== customerId
+    knownCustomer.current = customerId
+    if (switched) resetWorkspace()
+  }, [customerId, resetWorkspace])
 
   useEffect(() => {
     if (status !== 'loading-org') return
@@ -109,11 +154,16 @@ export const WorkspaceBootstrap = () => {
     }
   }, [status, lastOrgId, loadOrg, fetchOrgs, selectOrg, setStatus])
 
+  // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
+  // and this effect blanks the active project and refetches the list — so a rename would clear the
+  // sidebar's project list and chip for a round-trip it didn't need. fetchProjects reads the org
+  // from the store itself, so the id is all this needs.
+  const activeOrgId = activeOrg?.id
   useEffect(() => {
-    if (status !== 'ready' || !activeOrg) return
+    if (status !== 'ready' || !activeOrgId) return
     setActiveProject(null)
     fetchProjects()
-  }, [status, activeOrg, fetchProjects, setActiveProject])
+  }, [status, activeOrgId, fetchProjects, setActiveProject])
 
   useEffect(() => {
     if (projects.length === 0) {
@@ -141,13 +191,13 @@ export const WorkspaceBootstrap = () => {
     setStatus('ready')
   }, [activeOrg, status, setStatus])
 
-  // Remember the last project visited per org, to restore when switching orgs.
+  // Remember the last project visited per org, to restore when switching orgs. Stamped with the
+  // signed-in customer inside the atom, so one account can't be handed the other's project when two
+  // share an org. Only one account's visits are kept — the second's write replaces the first's.
   useEffect(() => {
     if (!activeOrg || !activeProject) return
-    setLastProjectByOrg(prev =>
-      prev[activeOrg.id] === activeProject.id ? prev : { ...prev, [activeOrg.id]: activeProject.id },
-    )
-  }, [activeOrg, activeProject, setLastProjectByOrg])
+    rememberLastProject({ orgId: activeOrg.id, projectId: activeProject.id })
+  }, [activeOrg, activeProject, rememberLastProject])
 
   return null
 }
@@ -224,6 +274,7 @@ const App = () => {
   return (
     <>
       <ThemeSync />
+      <SessionUrlGuard />
       {/*
         Unconditional, including on the shared route: it issues no workspace RPCs, so it doesn't
         break that route's rule above — and a signed-in user reading a shared dashboard is a

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { InvitationStatus, type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
-import { jwtDataAtom } from '@/auth/jwt.atoms'
+import { customerIdAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -32,7 +32,7 @@ const initials = (name: string) =>
 const Members = () => {
   const org = useAtomValue(activeOrgAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
-  const me = useAtomValue(jwtDataAtom)
+  const myCustomerId = useAtomValue(customerIdAtom)
   const can = useCan()
   const canEditRole = can('update', 'member')
   const [members, setMembers] = useState<OrgMember[]>([])
@@ -192,7 +192,7 @@ const Members = () => {
                         <p className="text-sm font-medium truncate">{name}</p>
                         <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
-                      {canEditRole && m.customerId !== me?.customerId ? (
+                      {canEditRole && m.customerId !== myCustomerId ? (
                         <Select value={m.role} onValueChange={v => handleRoleChange(m.customerId, v ?? m.role)}>
                           <SelectTrigger size="sm" className="shrink-0">
                             <SelectValue>{v => roleLabel(v ?? m.role)}</SelectValue>
