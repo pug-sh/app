@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { AggregationType, type Granularity, type SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { CountryFlag } from '@/components/country-flag'
@@ -168,12 +168,24 @@ export const WebBreakdownPanel = ({
   const baseQuery = useMemo(() => buildTabQuery(tab, queryFilters, propertyMetric), [tab, queryFilters, propertyMetric])
   const { result, error, retry } = useWebQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
 
+  // useDebouncedQuery keeps the previous `data` across a key change, and a panel's `property` tabs all
+  // share a `source`, so `result` alone can't say which tab produced it. Pin each result to the tab
+  // that was active when it landed. Not `loading`: that's set in an effect, so it still reads false on
+  // the render the switch happens on — long enough to paint the old tab's rows under the new one.
+  const [seen, setSeen] = useState({ result, tab: tab.id })
+  if (seen.result !== result) setSeen({ result, tab: tab.id })
+
   const rows = useMemo<RankedRow[]>(() => {
     if (tab.source === 'session') {
       return result.case === 'trends' ? rankSessionBreakdown(result.value.series, SESSION_BREAKDOWN_LIMIT) : []
     }
     return result.case === 'topK' ? topKToRankedRows(result.value.rows) : []
   }, [tab.source, result])
+
+  // Rows belonging to the tab we just left, or nothing fetched yet. Either way this tab has no answer
+  // to show: the old rows would read as its data, and an empty list would claim "No data" over a live
+  // query. A same-tab refetch keeps its rows (result survives), so filtering doesn't flicker.
+  const pending = seen.tab !== tab.id || result.case === undefined
 
   // Property rows cross-filter the view; event-kind rows drill through (no filter, so no active state).
   let onRowClick: ((row: RankedRow) => void) | undefined
@@ -234,6 +246,10 @@ export const WebBreakdownPanel = ({
             <Button variant="outline" size="sm" onClick={retry}>
               Retry
             </Button>
+          </div>
+        ) : pending ? (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
           </div>
         ) : (
           <WebRankedList
