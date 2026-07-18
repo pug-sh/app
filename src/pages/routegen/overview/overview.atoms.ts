@@ -1,9 +1,20 @@
 import { atom } from 'jotai'
+import { atomWithStorage } from 'jotai/utils'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { type Bindings, pickBindings } from './tile-bindings'
+import type { OverviewMode } from './url-state'
+
+// The Web vs Product analytics view is a durable personal preference (like theme), so it persists in
+// localStorage rather than the URL — a chosen default that survives reloads and new tabs while staying
+// out of shared links. getOnInit puts the stored value on the first synchronous render: the overview
+// page seeds its initial time-range window from the mode in a useState initializer, which runs before
+// any mount effect could hydrate it (the same reason isDemoSessionAtom takes the option).
+export const overviewModeAtom = atomWithStorage<OverviewMode>('pug:overviewMode', 'web', undefined, {
+  getOnInit: true,
+})
 
 export const overviewSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
 export const overviewSchemaLoadingAtom = atom(false)

@@ -1,4 +1,4 @@
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Clock, LayoutDashboard } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -17,18 +17,13 @@ import { OptionChip } from '../insights/controls'
 import AnalyticsMode from './analytics-mode'
 import {
   fetchOverviewSchemaAtom,
+  overviewModeAtom,
   overviewSchemaAtom,
   overviewSchemaErrorAtom,
   overviewSchemaLoadingAtom,
 } from './overview.atoms'
 import SetupMode from './setup-mode'
-import {
-  type OverviewMode,
-  readOverviewMode,
-  readWebStat,
-  resolveWebDefaultRange,
-  writeOverviewUrlState,
-} from './url-state'
+import { type OverviewMode, readWebStat, resolveWebDefaultRange, writeWebStatParam } from './url-state'
 import WebAnalyticsMode from './web-analytics-mode'
 
 const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
@@ -46,13 +41,14 @@ const Overview = () => {
   const fetchSchema = useSetAtom(fetchOverviewSchemaAtom)
 
   const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
-  const initialMode = useMemo(() => readOverviewMode(), [])
-  const [mode, setMode] = useState(initialMode)
+  const [mode, setMode] = useAtom(overviewModeAtom)
   const [webStat, setWebStat] = useState(() => readWebStat())
   // Web analytics lands on Today when no window is pinned; product analytics keeps its
-  // "no explicit window" default (tiles fall back to their own ranges).
+  // "no explicit window" default (tiles fall back to their own ranges). The persisted mode reads
+  // synchronously here (overviewModeAtom uses getOnInit), so this initial window matches the
+  // restored view on the very first render.
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(
-    () => initialOverrides.timeRange ?? (initialMode === 'web' ? resolveWebDefaultRange() : undefined),
+    () => initialOverrides.timeRange ?? (mode === 'web' ? resolveWebDefaultRange() : undefined),
   )
   // Stores only the user's explicit pick. UNSPECIFIED means "auto-derive from time range"
   // and the derivation happens at the consumption point below, so it stays in sync as the
@@ -70,7 +66,7 @@ const Overview = () => {
   }, [globalGranularity, globalTimeRange])
 
   useEffect(() => {
-    writeOverviewUrlState(mode, webStat)
+    writeWebStatParam(mode, webStat)
   }, [mode, webStat])
 
   // Switching into web analytics with no window pins Today, so the picker reflects the window the
