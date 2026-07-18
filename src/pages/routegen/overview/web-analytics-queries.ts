@@ -28,7 +28,6 @@ export { COUNTRY_PROPERTY }
 // shown when the project actually has this event (see WebAnalyticsMode's empty state).
 export const WEB_PRIMARY_KIND = 'page_view'
 
-// The six headline stats, in stat-row (display) order.
 export type WebStatId = 'users' | 'sessions' | 'pageviews' | 'pagesPerSession' | 'bounceRate' | 'avgDuration'
 
 type StatFormat = 'count' | 'percent' | 'duration' | 'decimal'
@@ -47,51 +46,55 @@ type WebStat = {
   readonly measure: StatMeasure
 }
 
-export const WEB_STATS: readonly WebStat[] = [
-  {
-    id: 'users',
+// `satisfies Record<WebStatId, …>` makes this table total: a new WebStatId without an entry is a
+// compile error, not a tile that renders Visitors' numbers under the new label (which is what the old
+// `?? WEB_STATS[0]` fallback did). Same standard as GRANULARITY_MAX_RANGE_MS and SERIES_COLLAPSE.
+const WEB_STAT_BY_ID = {
+  users: {
     label: 'Visitors',
     format: 'count',
     measure: { source: 'event', aggregation: AggregationType.UNIQUE_USERS },
   },
-  {
-    id: 'sessions',
+  sessions: {
     label: 'Sessions',
     format: 'count',
     measure: { source: 'session', metric: SessionMetric.SESSIONS },
   },
-  {
-    id: 'pageviews',
+  pageviews: {
     label: 'Pageviews',
     format: 'count',
     measure: { source: 'event', aggregation: AggregationType.TOTAL },
   },
-  {
-    id: 'pagesPerSession',
+  pagesPerSession: {
     label: 'Pages / session',
     format: 'decimal',
     measure: { source: 'session', metric: SessionMetric.AVG_EVENTS_PER_SESSION },
   },
-  {
-    id: 'bounceRate',
+  bounceRate: {
     label: 'Bounce rate',
     format: 'percent',
     measure: { source: 'session', metric: SessionMetric.BOUNCE_RATE },
   },
-  {
-    id: 'avgDuration',
+  avgDuration: {
     label: 'Visit duration',
     format: 'duration',
     measure: { source: 'session', metric: SessionMetric.AVG_DURATION },
   },
-] as const
+} as const satisfies Record<WebStatId, Omit<WebStat, 'id'>>
 
-const WEB_STAT_BY_ID = new Map(WEB_STATS.map(stat => [stat.id, stat]))
+// The headline stats in stat-row (display) order — declaration order above, so there's no second
+// list to keep in step.
+export const WEB_STATS: readonly WebStat[] = (Object.keys(WEB_STAT_BY_ID) as WebStatId[]).map(id => ({
+  id,
+  ...WEB_STAT_BY_ID[id],
+}))
 
-export const getWebStat = (id: WebStatId) => WEB_STAT_BY_ID.get(id) ?? WEB_STATS[0]
+export const getWebStat = (id: WebStatId) => WEB_STAT_BY_ID[id]
 
+// hasOwn, not `in`: `in` walks the prototype, so `?stat=toString` would pass and then index to a
+// function with no label.
 export const isWebStatId = (value: unknown): value is WebStatId =>
-  typeof value === 'string' && WEB_STAT_BY_ID.has(value as WebStatId)
+  typeof value === 'string' && Object.hasOwn(WEB_STAT_BY_ID, value)
 
 // page_view-scoped EventFilter, rebuilt per call (bufbuild messages are mutable, so a shared
 // instance could be aliased into two specs).
