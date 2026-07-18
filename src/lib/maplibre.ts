@@ -24,10 +24,16 @@ export const INITIAL_VIEW_BOUNDS: LngLatBoundsLike = [
 ]
 
 // Frame used by the choropleth so all countries are visible.
+const COUNTRIES_VIEW_LAT: [number, number] = [-60, 85]
 export const COUNTRIES_VIEW_BOUNDS: LngLatBoundsLike = [
-  [-180, -60],
-  [180, 85],
+  [-180, COUNTRIES_VIEW_LAT[0]],
+  [180, COUNTRIES_VIEW_LAT[1]],
 ]
+
+// Width/height of COUNTRIES_VIEW_BOUNDS in Web Mercator; the choropleth caps its canvas to it.
+const mercatorY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360))
+export const COUNTRIES_VIEW_ASPECT =
+  (2 * Math.PI) / (mercatorY(COUNTRIES_VIEW_LAT[1]) - mercatorY(COUNTRIES_VIEW_LAT[0]))
 
 type ThemeColors = {
   primary: string

@@ -230,7 +230,8 @@ export const WebBreakdownPanel = ({
     <OverviewTileShell
       title={config.title}
       footer={config.footer}
-      className="h-[420px]"
+      // min-h, not fixed h: stretches to the row when the taller map shares it.
+      className="min-h-[420px]"
       contentClassName="flex flex-col"
       meta={config.tabs.length > 1 ? <TabStrip tabs={config.tabs} activeId={tab.id} onSelect={setActiveId} /> : null}
     >

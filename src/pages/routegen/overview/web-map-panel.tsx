@@ -36,7 +36,13 @@ export const WebMapPanel = ({
   })
 
   return (
-    <OverviewTileShell title="Map" footer="pageviews by country" className="h-[420px]">
+    // Height follows width so the ~1.41:1 world frame fills the tile at any viewport; capped so
+    // ultrawide gets margins rather than a 900px-tall tile.
+    <OverviewTileShell
+      title="Map"
+      footer="pageviews by country"
+      className="h-auto w-full aspect-[1.2] max-h-[720px] min-h-[420px]"
+    >
       <ActivityMapView
         countries={countries}
         loading={loading}

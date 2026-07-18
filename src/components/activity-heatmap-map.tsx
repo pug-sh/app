@@ -2,7 +2,7 @@ import type { FeatureCollection, Geometry } from 'geojson'
 import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
-import { COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
+import { COUNTRIES_VIEW_ASPECT, COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
 import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
 
 type Props = {
@@ -201,16 +201,21 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
     return () => observer.disconnect()
   }, [containerRef, mapRef])
 
+  // In a box wider than the frame's aspect, renderWorldCopies:false makes MapLibre zoom in until the
+  // world spans the width, cropping the far south. Cap the canvas to that aspect and centre it.
   return (
-    <div ref={containerRef} className="relative h-full min-h-0 w-full overflow-hidden">
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md"
-          style={{ left: tooltip.x, top: tooltip.y - 8 }}
-        >
-          {tooltip.name} {tooltip.count} events
-        </div>
-      )}
+    <div className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
+      <div className="relative h-full max-w-full" style={{ aspectRatio: COUNTRIES_VIEW_ASPECT }}>
+        <div ref={containerRef} className="h-full w-full" />
+        {tooltip && (
+          <div
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-md bg-foreground px-2 py-1 text-xs text-background shadow-md"
+            style={{ left: tooltip.x, top: tooltip.y - 8 }}
+          >
+            {tooltip.name} {tooltip.count} events
+          </div>
+        )}
+      </div>
     </div>
   )
 }
