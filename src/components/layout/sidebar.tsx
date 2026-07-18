@@ -302,9 +302,11 @@ const AppSidebar = () => {
             <SidebarMenuButton
               onClick={async () => {
                 await signOut()
-                // A demo sign-out resets the URL to the sign-in page; a real sign-out lets App
-                // re-render to <SignIn /> on its own (preserving today's behavior).
-                if (isDemo) navigate('/')
+                // Leave the /p/:projectId URL behind. App re-renders to <SignIn /> on its own, but
+                // the address bar keeps pointing at a project belonging to the account signing out,
+                // and the next account to sign in on this browser inherits it: "Project not found"
+                // if they can't see it, someone else's project if they can.
+                navigate('/')
               }}
               tooltip="Sign out"
             >

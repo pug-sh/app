@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { ChevronRight, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { roleLabel } from '@/auth/permissions'
@@ -23,6 +24,7 @@ const SelectOrg = () => {
   const selectOrg = useSetAtom(selectOrgAtom)
   const createOrg = useSetAtom(createOrgAtom)
   const signOut = useSetAtom(signOutAtom)
+  const [, navigate] = useLocation()
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const createForm = useForm<CreateFormData>({
@@ -156,7 +158,12 @@ const SelectOrg = () => {
           <div className="mt-10 flex justify-end">
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={async () => {
+                await signOut()
+                // Same reason as the sidebar's: this screen can be reached with a stale
+                // /p/:projectId still in the address bar, which would outlive the session.
+                navigate('/')
+              }}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               Sign out
