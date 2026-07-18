@@ -27,7 +27,11 @@ const makeFilter = (property: string, values: string[]) =>
 // Rebuild the list with `property`'s values set to `next`, preserving position; drops the filter
 // entirely when `next` is empty.
 const withValues = (filters: readonly ActiveFilter[], existing: ActiveFilter, property: string, next: string[]) =>
-  filters.flatMap(filter => (filter !== existing ? [filter] : next.length ? [makeFilter(property, next)] : []))
+  filters.flatMap(filter => {
+    if (filter !== existing) return [filter]
+    if (next.length > 0) return [makeFilter(property, next)]
+    return []
+  })
 
 // Clicking a value toggles it within its property's filter.
 export const toggleFilter = (filters: readonly ActiveFilter[], property: string, value: string) => {
