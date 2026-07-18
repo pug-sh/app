@@ -2,7 +2,6 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { Activity, AlertCircle, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
@@ -20,6 +19,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative } from '@/hooks/use-relative-time'
+import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -77,7 +77,7 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const UserActivity = () => {
-  const { profileId } = useParams<{ profileId: string }>()
+  const { profileId } = useRouteParams<{ profileId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)

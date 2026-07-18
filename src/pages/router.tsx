@@ -1,10 +1,11 @@
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
-import { Route, Switch, useLocation, useParams } from 'wouter'
+import { Route, Switch, useLocation } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import { useRouteParams } from '@/lib/route-params'
 import ProfileShell from './routegen/profiles/[profileId]/_shell'
 import SettingsLayout from './routegen/settings/settings-layout'
 import { routes } from './routes'
@@ -57,7 +58,7 @@ class RouteErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 // Exported for tests: it adopts whatever project the URL names, so it's what turns a wrong redirect
 // into a wrong active project. Pinning ProjectRedirect without it would miss that entirely.
 export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
-  const { projectId } = useParams<{ projectId: string }>()
+  const { projectId } = useRouteParams<{ projectId: string }>()
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const projects = useAtomValue(projectsAtom)
   const [, navigate] = useLocation()

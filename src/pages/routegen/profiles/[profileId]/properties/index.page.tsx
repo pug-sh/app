@@ -2,9 +2,9 @@ import type { JsonValue } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
 import { Copy, User } from 'lucide-react'
 import { useMemo } from 'react'
-import { useParams } from 'wouter'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
+import { useRouteParams } from '@/lib/route-params'
 import { profileFamilyAtom } from '../_data'
 
 type Entry = { key: string; value: JsonValue; type: string; display: string }
@@ -33,7 +33,7 @@ const toEntries = (obj: Record<string, JsonValue> | undefined) => {
 }
 
 const ProfileProperties = () => {
-  const { profileId } = useParams<{ profileId: string }>()
+  const { profileId } = useRouteParams<{ profileId: string }>()
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
