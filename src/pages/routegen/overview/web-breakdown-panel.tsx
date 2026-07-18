@@ -1,10 +1,12 @@
+import { Check, ChevronDown } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
-import type { AggregationType, Granularity, SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType, type Granularity, type SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { CountryFlag } from '@/components/country-flag'
 import type { TimeRange } from '@/components/date-range-picker'
 import { Devicon } from '@/components/devicon'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type DeviconName, resolveBrowserDevicon, resolveDeviceModelDevicon, resolveOsDevicon } from '@/lib/devicon-map'
 import { formatCountryName } from '@/lib/location'
 import { cn } from '@/lib/utils'
@@ -54,10 +56,53 @@ export type BreakdownPanelConfig = {
 // The auto-property a tab's rows filter on, or undefined for event-kind rows (not cross-filterable).
 const tabFilterProperty = (tab: BreakdownTab) => (tab.source === 'eventKind' ? undefined : tab.property)
 
-const buildTabQuery = (tab: BreakdownTab, filters: readonly ActiveFilter[]) => {
-  if (tab.source === 'property') return buildTopKBreakdownQuery(tab.property, tab.metric, filters)
+const buildTabQuery = (tab: BreakdownTab, filters: readonly ActiveFilter[], propertyMetric?: AggregationType) => {
+  if (tab.source === 'property') return buildTopKBreakdownQuery(tab.property, propertyMetric ?? tab.metric, filters)
   if (tab.source === 'eventKind') return buildEventKindTopKQuery(filters)
   return buildSessionBreakdownQuery(tab.metric, tab.property, filters)
+}
+
+// Property breakdowns can be ranked by unique visitors or raw pageviews; the picker in each panel's
+// column header switches between them. Session (Entry/Exit) and event-kind tabs have a fixed metric.
+const PROPERTY_METRICS = [
+  { metric: AggregationType.UNIQUE_USERS, label: 'Visitors' },
+  { metric: AggregationType.TOTAL, label: 'Views' },
+] as const
+
+const metricLabel = (metric: AggregationType) =>
+  PROPERTY_METRICS.find(option => option.metric === metric)?.label ?? 'Value'
+
+// Compact metric picker rendered in a breakdown column header, inheriting the header's uppercase muted
+// styling. Two options, so a flat single-level popover (per the no-nested-menus design direction).
+const MetricSelect = ({ value, onChange }: { value: AggregationType; onChange: (metric: AggregationType) => void }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger className="inline-flex items-center gap-0.5 rounded-sm transition-colors hover:text-foreground">
+        {metricLabel(value)}
+        <ChevronDown className="size-3" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-36 p-1">
+        {PROPERTY_METRICS.map(option => (
+          <button
+            key={option.metric}
+            type="button"
+            onClick={() => {
+              onChange(option.metric)
+              setOpen(false)
+            }}
+            className={cn(
+              'flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-muted/60',
+              option.metric === value ? 'text-foreground' : 'text-muted-foreground',
+            )}
+          >
+            {option.label}
+            {option.metric === value && <Check className="size-3.5" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 const TabStrip = ({
@@ -109,10 +154,15 @@ export const WebBreakdownPanel = ({
   const isTopK = tab.source !== 'session'
   const selfProperty = tabFilterProperty(tab)
 
+  // Property tabs remember their own visitor/pageview choice (keyed by tab id); session and event-kind
+  // tabs have a fixed metric, so the override never applies to them.
+  const [metricByTab, setMetricByTab] = useState<Record<string, AggregationType>>({})
+  const propertyMetric = tab.source === 'property' ? (metricByTab[tab.id] ?? tab.metric) : undefined
+
   // Apply page filters except this panel's own dimension, so every value of it stays visible and
   // togglable while the rest of the filter set still narrows the list.
   const queryFilters = useMemo(() => filtersExcept(filters, selfProperty), [filters, selfProperty])
-  const baseQuery = useMemo(() => buildTabQuery(tab, queryFilters), [tab, queryFilters])
+  const baseQuery = useMemo(() => buildTabQuery(tab, queryFilters, propertyMetric), [tab, queryFilters, propertyMetric])
   const { result, error, retry } = useWebQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
 
   const rows = useMemo<RankedRow[]>(() => {
@@ -163,6 +213,19 @@ export const WebBreakdownPanel = ({
     }
   }
 
+  // The value column's header: a visitor/pageview picker for property tabs, a static label otherwise.
+  let metricControl: ReactNode = 'Count'
+  if (tab.source === 'property') {
+    metricControl = (
+      <MetricSelect
+        value={propertyMetric ?? tab.metric}
+        onChange={metric => setMetricByTab(prev => ({ ...prev, [tab.id]: metric }))}
+      />
+    )
+  } else if (tab.source === 'session') {
+    metricControl = 'Sessions'
+  }
+
   return (
     <OverviewTileShell
       title={config.title}
@@ -187,6 +250,8 @@ export const WebBreakdownPanel = ({
             isActive={isActive}
             renderLeading={renderLeading}
             formatLabel={formatLabel}
+            dimensionLabel={tab.label}
+            metricControl={metricControl}
           />
         )}
       </div>
