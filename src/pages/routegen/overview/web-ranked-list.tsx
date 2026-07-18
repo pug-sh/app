@@ -52,7 +52,7 @@ export const WebRankedList = ({
   return (
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
       {dimensionLabel && (
-        <div className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/50 bg-background px-2 pt-0.5 pb-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+        <div className="sticky top-0 z-20 mb-1 flex items-center gap-2 border-b border-border/50 bg-background px-2 pt-0.5 pb-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
           <span className="min-w-0 flex-1 truncate">{dimensionLabel}</span>
           <span className="flex w-20 shrink-0 justify-end">{metricControl}</span>
           {showShare && <span className="w-11 shrink-0 text-right">%</span>}
@@ -67,8 +67,11 @@ export const WebRankedList = ({
 
         const content = (
           <>
+            {/* Selection rail. Sits above the bar so it stays visible on a full-width one — the row tint
+                alone disappears behind the top row's bar, which is exactly where selection matters most. */}
+            {active && <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-link" />}
             <span
-              className="absolute inset-y-0.5 left-0 rounded-md"
+              className="absolute inset-y-0 left-0 rounded-md"
               style={{ width: `${barWidth}%`, background: fill, opacity: row.muted ? 0.12 : 0.2 }}
             />
             <div className={cn('relative flex min-w-0 flex-1 items-center text-xs', renderLeading && 'gap-1.5')}>
@@ -98,10 +101,17 @@ export const WebRankedList = ({
           </>
         )
 
+        // Rows are separated by spacing, not rules, so each one reads as its own pill — which also lets
+        // the selected row tint as a rounded block instead of a square band cutting across the list.
+        // Hover is split by state: a shared hover would replace the selection tint with plain grey,
+        // making a selected row look *less* selected while the pointer is on it.
         const rowClass = cn(
-          'relative flex w-full items-center gap-2 overflow-hidden border-b border-border/50 px-2 py-1.5 text-left transition-colors last:border-0',
-          active && 'bg-primary/5',
-          canClick ? 'cursor-pointer hover:bg-muted/40' : 'cursor-default',
+          'relative mb-0.5 flex w-full items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left transition-colors last:mb-0',
+          active && 'bg-primary/10 dark:bg-primary/20',
+          canClick && 'cursor-pointer',
+          canClick && !active && 'hover:bg-muted/40',
+          canClick && active && 'hover:bg-primary/15 dark:hover:bg-primary/25',
+          !canClick && 'cursor-default',
         )
 
         if (canClick) {
