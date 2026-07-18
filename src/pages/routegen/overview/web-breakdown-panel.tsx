@@ -232,10 +232,10 @@ export const WebBreakdownPanel = ({
       footer={config.footer}
       // min-h, not fixed h: stretches to the row when the taller map shares it.
       className="min-h-[420px]"
-      contentClassName="flex flex-col"
       meta={config.tabs.length > 1 ? <TabStrip tabs={config.tabs} activeId={tab.id} onSelect={setActiveId} /> : null}
     >
-      <div className="min-h-0 flex-1">
+      {/* absolute so the list scrolls at the tile's height instead of the rows setting it */}
+      <div className="absolute inset-0">
         {error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
             <p className="text-xs text-muted-foreground">{error}</p>
