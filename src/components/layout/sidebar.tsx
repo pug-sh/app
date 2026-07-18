@@ -38,7 +38,15 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
-import { activeOrgAtom, activeProjectAtom, createProjectAtom, projectsAtom } from '@/data/workspace.atoms'
+import {
+  activeOrgAtom,
+  activeProjectAtom,
+  createProjectAtom,
+  orgsAtom,
+  projectsAtom,
+  refreshOrgsAtom,
+  selectOrgAtom,
+} from '@/data/workspace.atoms'
 import { useRouteProjectId } from '@/lib/project-path'
 import { cn } from '@/lib/utils'
 
@@ -105,9 +113,12 @@ const ProjectChip = ({ name, className }: { name?: string | null; className?: st
 const AppSidebar = () => {
   const [location, navigate] = useLocation()
   const projects = useAtomValue(projectsAtom)
+  const orgs = useAtomValue(orgsAtom)
   const activeOrg = useAtomValue(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const createProject = useSetAtom(createProjectAtom)
+  const selectOrg = useSetAtom(selectOrgAtom)
+  const refreshOrgs = useSetAtom(refreshOrgsAtom)
   const signOut = useSetAtom(signOutAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
   const [theme, setTheme] = useAtom(themeAtom)
@@ -127,6 +138,12 @@ const AppSidebar = () => {
     setActiveProject(projects[0])
   }, [projects, activeProject, routeProjectId, setActiveProject])
 
+  // On mount, not on open: the count decides whether the Organizations section renders, and
+  // resolving that late makes it appear under the cursor.
+  useEffect(() => {
+    refreshOrgs()
+  }, [refreshOrgs])
+
   const closeSwitcher = () => {
     setSwitcherOpen(false)
     setCreating(false)
@@ -139,6 +156,25 @@ const AppSidebar = () => {
     if (project) {
       setActiveProject(project)
       navigate(`/p/${project.id}/${pagePath.startsWith('dashboards/') ? 'dashboards' : pagePath}`)
+    }
+    closeSwitcher()
+  }
+
+  // Hands the switch to the bootstrap rather than fetching projects and picking one here: '/' is the
+  // route that names no project, so WorkspaceBootstrap runs its own restore-last-visit-then-first
+  // rule and ProjectRedirect navigates once the pick lands. Picking here as well would be a second
+  // copy of that rule — the one the settings page used to hold — racing the first.
+  //
+  // Unconditionally '/', unlike a project switch, which keeps you on the current page: deep routes
+  // here are keyed by a dashboard or profile belonging to the org being left. Replace rather than
+  // push for the same reason — that URL names a project of the org just left, so Back lands on
+  // "Project not found", and nothing corrects it: the pick has already happened, so the bootstrap's
+  // default-pick effect sees a valid active project and declines to act.
+  const handleSelectOrg = (orgId: string) => {
+    const target = orgs.find(org => org.id === orgId)
+    if (target && target.id !== activeOrg?.id) {
+      selectOrg(target)
+      navigate('/', { replace: true })
     }
     closeSwitcher()
   }
@@ -186,6 +222,32 @@ const AppSidebar = () => {
                 <ChevronsUpDown className="ml-auto size-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
               </PopoverTrigger>
               <PopoverContent align="start" sideOffset={6} className="w-(--anchor-width) min-w-56 gap-0 p-1.5">
+                {/* Signup auto-creates an org, so for most accounts this is one entry worth no space. */}
+                {orgs.length > 1 && (
+                  <>
+                    <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Organizations
+                      </span>
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{orgs.length}</span>
+                    </div>
+                    <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
+                      {orgs.map(org => (
+                        <button
+                          key={org.id}
+                          type="button"
+                          onClick={() => handleSelectOrg(org.id)}
+                          className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
+                        >
+                          <span className="min-w-0 flex-1 truncate">{org.displayName}</span>
+                          {org.id === activeOrg?.id ? <Check className="size-3.5 shrink-0 text-link" /> : null}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="mx-1 my-1.5 h-px bg-border/70" />
+                  </>
+                )}
                 <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
                   <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     Projects
@@ -300,12 +362,9 @@ const AppSidebar = () => {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={async () => {
-                await signOut()
-                // A demo sign-out resets the URL to the sign-in page; a real sign-out lets App
-                // re-render to <SignIn /> on its own (preserving today's behavior).
-                if (isDemo) navigate('/')
-              }}
+              // Dropping the /p/:projectId URL is App's job, not this button's — it has to happen
+              // for a session that expires too, which has no button to hang off. See App.tsx.
+              onClick={() => signOut()}
               tooltip="Sign out"
             >
               <LogOut />

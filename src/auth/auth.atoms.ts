@@ -8,7 +8,7 @@ import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
-import { jwtAtom, jwtDataAtom, refreshTokenAtom } from './jwt.atoms'
+import { jwtAtom, refreshTokenAtom } from './jwt.atoms'
 import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
@@ -49,18 +49,19 @@ export const meAtom = atom<Me | null>(null)
 export type SignInMethod = 'password' | 'magic_link' | 'google' | 'demo'
 
 // Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
-// all funnel here. The token alone decides identity (the server ignores any caller session), so
-// capture the prior customer before overwriting: if the new token is for a different account,
-// drop the previous session's remembered org so it can't leak across the switch. Always clear
-// meAtom — email isn't in the JWT and must be refetched for the new identity.
+// all funnel here. The token alone decides identity (the server ignores any caller session). Always
+// clear meAtom — email isn't in the JWT and must be refetched for the new identity.
+//
+// Does NOT reset the workspace when the new token names a different account: WorkspaceBootstrap
+// watches customerIdAtom and does it for every switch, in-tab and cross-tab alike (see App.tsx).
+// Doing it here too only moved the same reset one render earlier, and nothing is mounted in that
+// render to care — every path that can reach here with a live session is on /magic-link or /demo,
+// which render standalone, and AnalyticsIdentity already resets its own identity on the switch.
 const applySessionAtom = atom(
   null,
-  (get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
-    const prior = get(jwtDataAtom)?.customerId
+  (_get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
     set(jwtAtom, token)
     set(refreshTokenAtom, refreshToken)
-    const next = get(jwtDataAtom)?.customerId
-    if (prior && next && prior !== next) set(resetWorkspaceAtom)
     set(meAtom, null)
     // The demo marker is derived from the method and written in the same pass as the token, so a
     // real login clears a prior demo's banner and a demo login sets it. Deriving it (rather than
@@ -98,8 +99,9 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
   }
 })
 
-// Magic-link sign-in or sign-up; session handling (identity switch, workspace reset, meAtom
-// reset) is delegated to applySessionJwtAtom.
+// Magic-link sign-in or sign-up; session handling (token pair, meAtom reset, demo marker) is
+// delegated to applySessionAtom. The workspace reset is not its job — WorkspaceBootstrap watches
+// customerIdAtom and rebuilds on a switch (see App.tsx).
 export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }): Promise<AuthResult> => {
   const authRPC = get(authRPCAtom)
   try {

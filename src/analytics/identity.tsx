@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai'
 import { useEffect, useRef } from 'react'
 import { isDemoSessionAtom } from '@/auth/demo'
-import { jwtDataAtom } from '@/auth/jwt.atoms'
+import { customerIdAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
 import { activeOrgAtom, activeProjectAtom, workspaceSettledAtom } from '@/data/workspace.atoms'
 import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
@@ -20,7 +20,7 @@ import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 // "no bootstrap coming", and identify on the spot — the very thing the gate below exists to stop. A
 // prop is known at render time; an effect-written atom isn't.
 const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
-  const customerId = useAtomValue(jwtDataAtom)?.customerId
+  const customerId = useAtomValue(customerIdAtom)
   const org = useAtomValue(activeOrgAtom)
   const project = useAtomValue(activeProjectAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)

@@ -3,6 +3,7 @@ import { atomWithStorage } from 'jotai/utils'
 import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
+import { customerIdAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
 
 // Task 2: lastOrgIdAtom — synchronous initial read avoids first-render flash
@@ -40,6 +41,21 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
     set(projectsOrgIdAtom, null)
     set(workspaceErrorAtom, 'Failed to load your workspace. Please check your connection and try again.')
     return []
+  }
+})
+
+// Refreshes the list for a session that already has a workspace (the sidebar switcher). Not
+// fetchOrgsAtom: that one tears the workspace down on failure, which is right for bootstrap and
+// would put every session one flaky list call from the error screen. Here a failure just means stale.
+export const refreshOrgsAtom = atom(null, async (get, set) => {
+  const orgsRPC = get(orgsRPCAtom)
+  try {
+    const resp = await orgsRPC.list({})
+    set(orgsAtom, resp.orgs)
+    return resp.orgs
+  } catch (err) {
+    console.error('refreshOrgs failed:', err)
+    return get(orgsAtom)
   }
 })
 
@@ -131,6 +147,15 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
 
 export const activeProjectAtom = atom<Project | null>(null)
 
+// Whether the active org's project list has landed. Read-only view of projectsOrgIdAtom, which stays
+// module-private so its writes keep their pairing — the ambiguity it resolves ("no projects" vs "not
+// fetched yet") is one rendering code needs too, or an org with none is indistinguishable from one
+// still loading and gets a spinner that never ends.
+export const projectsLoadedAtom = atom(get => {
+  const org = get(activeOrgAtom)
+  return !!org && get(projectsOrgIdAtom) === org.id
+})
+
 // True once the org and project have stopped resolving on their own — bootstrap has either finished
 // picking them or reached a state where it never will.
 //
@@ -160,16 +185,48 @@ export const workspaceSettledAtom = atom(get => {
   return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
 })
 
-// Last project visited per org (orgId → projectId), restored when switching orgs and when a bare URL
-// leaves the project unnamed.
+// Last project visited per org (orgId → projectId) for the signed-in customer, restored when
+// switching orgs and when a bare URL leaves the project unnamed.
+//
+// Stamped with the customer it belongs to because one browser outlives one account: under an org key
+// alone, two accounts sharing an org share one entry, so the second lands on the first's project and
+// then overwrites it. One slot rather than a slice per account — one customer per browser is the
+// assumption, so a second account's visits are forgotten rather than kept forever in a roster
+// nothing trims. The stamp retires the earlier unstamped shapes for free: they carry no customerId,
+// so they can't match one and read as no visits, and the first write replaces them outright.
 //
 // getOnInit because the restore loses a race without it: atomWithStorage otherwise starts at the
 // initial value and only reads storage in onMount, so an early reader sees {} and defaults to the
 // first project — and once that default lands it *is* a valid pick, so the stored one never gets
 // another chance. (lastOrgIdAtom above buys the same guarantee by hand, predating this option.)
-export const lastProjectByOrgAtom = atomWithStorage<Record<string, string>>('pug:lastProjectByOrg', {}, undefined, {
-  getOnInit: true,
+// Not sufficient on its own: the customer id has to land synchronously too, which is why jwtAtom
+// pre-reads localStorage at module scope rather than deferring to onMount (see jwt.atoms).
+const lastProjectAtom = atomWithStorage<{ customerId: string; byOrg: Record<string, string> }>(
+  'pug:lastProjectByOrg',
+  { customerId: '', byOrg: {} },
+  undefined,
+  { getOnInit: true },
+)
+
+// The signed-in customer's visits, or none when the stored ones belong to someone else.
+export const lastProjectByOrgAtom = atom<Record<string, string>>(get => {
+  const customerId = get(customerIdAtom)
+  if (!customerId) return {}
+  const stored = get(lastProjectAtom)
+  return stored.customerId === customerId ? stored.byOrg : {}
 })
+
+// Record a visit against the signed-in customer: the stamp comes from the session, not the caller.
+export const rememberLastProjectAtom = atom(
+  null,
+  (get, set, { orgId, projectId }: { orgId: string; projectId: string }) => {
+    const customerId = get(customerIdAtom)
+    if (!customerId) return
+    const byOrg = get(lastProjectByOrgAtom)
+    if (byOrg[orgId] === projectId) return
+    set(lastProjectAtom, { customerId, byOrg: { ...byOrg, [orgId]: projectId } })
+  },
+)
 
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)
@@ -200,6 +257,22 @@ export const createOrgAtom = atom(null, async (get, set, displayName: string) =>
   set(selectOrgAtom, resp.org)
   return resp.org
 })
+
+// Owns the rename rather than leaving it to the page: the name lives in two places, and updating
+// activeOrgAtom alone leaves the switcher listing the old one until the next refresh.
+export const renameOrgAtom = atom(
+  null,
+  async (get, set, { orgId, displayName }: { orgId: string; displayName: string }) => {
+    const orgsRPC = get(orgsRPCAtom)
+    await orgsRPC.updateDisplayName({ orgId, displayName })
+    const active = get(activeOrgAtom)
+    if (active?.id === orgId) set(activeOrgAtom, { ...active, displayName })
+    set(
+      orgsAtom,
+      get(orgsAtom).map(org => (org.id === orgId ? { ...org, displayName } : org)),
+    )
+  },
+)
 
 export const leaveOrgAtom = atom(null, async (get, set, orgId: string) => {
   const orgsRPC = get(orgsRPCAtom)
