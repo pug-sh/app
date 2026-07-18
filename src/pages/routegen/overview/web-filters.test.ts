@@ -9,6 +9,7 @@ import {
   filterValueLabel,
   filterValues,
   hasFilter,
+  readWebFilters,
   removeFilter,
   toggleFilter,
   toggleSingleFilter,
@@ -17,6 +18,53 @@ import {
 const AUTO = PropertySource.AUTO
 const single = (property: string, value: string) => createFilter(property, AUTO, FilterOperator.EQUALS, value)
 const multi = (property: string, values: string[]) => createFilter(property, AUTO, FilterOperator.IN, values)
+
+// `pf` is shared with Insights, which can author the full filter grammar. These helpers read a
+// filter's arity and never its operator, so anything outside AUTO + EQUALS/IN degrades silently —
+// see isWebFilter. Restoring has to drop those and say it did.
+describe('readWebFilters', () => {
+  const pf = (...filters: unknown[]) => `?pf=${encodeURIComponent(JSON.stringify(filters))}`
+
+  it('keeps representable filters and warns about nothing', () => {
+    const restored = readWebFilters(pf(single('$country', 'IN'), multi('$browser', ['Chrome', 'Firefox'])))
+    expect(restored.filters).toEqual([single('$country', 'IN'), multi('$browser', ['Chrome', 'Firefox'])])
+    expect(restored.parseWarning).toBeNull()
+  })
+
+  it('drops an exclusion, which would otherwise render as a selected inclusion', () => {
+    const restored = readWebFilters(pf(createFilter('$pathname', AUTO, FilterOperator.NOT_EQUALS, '/docs')))
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
+  it('drops a presence filter, which would narrow every query with no chip to remove it', () => {
+    const restored = readWebFilters(pf(createFilter('$utmSource', AUTO, FilterOperator.IS_SET)))
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
+  it('keeps only the first filter per property, since every lookup here is a .find', () => {
+    const restored = readWebFilters(pf(single('$os', 'macOS'), single('$os', 'Windows')))
+    expect(restored.filters).toEqual([single('$os', 'macOS')])
+    expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
+  it('counts unparseable entries alongside unrepresentable ones', () => {
+    const restored = readWebFilters(pf({ nonsense: true }, createFilter('$city', AUTO, FilterOperator.IS_SET)))
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBe('Could not restore 2 filters from URL')
+  })
+
+  it('treats a present-but-unusable pf as one drop', () => {
+    expect(readWebFilters('?pf={not-json').parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
+  it('is silent when there is no pf at all', () => {
+    const restored = readWebFilters('')
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBeNull()
+  })
+})
 
 describe('toggleFilter', () => {
   it('adds a single EQUALS filter, and toggling the same value clears it', () => {

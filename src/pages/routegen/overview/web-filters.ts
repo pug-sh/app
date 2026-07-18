@@ -2,6 +2,7 @@ import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { type ActiveFilter, createFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import { readPropFiltersParam } from '@/hooks/use-filter-query-params'
 import { formatCountryName } from '@/lib/location'
 
 // Web-analytics cross-filters reuse the Insights property-filter model wholesale: they're
@@ -22,6 +23,34 @@ const valuesOf = (filter: ActiveFilter) => {
 const makeFilter = (property: string, values: string[]) => {
   if (values.length === 1) return createFilter(property, AUTO, FilterOperator.EQUALS, values[0])
   return createFilter(property, AUTO, FilterOperator.IN, values)
+}
+
+// Everything below reads a filter's *arity* (valuesOf) and never its operator, and finds a property's
+// filter with `.find`. That's the whole sublanguage this view can represent: AUTO source, EQUALS or IN,
+// one filter per property. `pf` is shared with Insights, which authors the rest of the grammar
+// legitimately — and each of those degrades silently here. A NOT_EQUALS chips and highlights as if it
+// were an inclusion, and the next click on that dimension rewrites it into one. An is-set produces no
+// chip at all, so it narrows every number on the page with nothing on screen to remove. A second filter
+// on the same property is invisible past the first. So restore only what this view can actually show.
+const isWebFilter = (filter: ActiveFilter) =>
+  filter.source === AUTO &&
+  (filter.operator === FilterOperator.EQUALS || filter.operator === FilterOperator.IN) &&
+  valuesOf(filter).length > 0
+
+// Restore cross-filters from the URL, keeping only the representable ones and reporting the rest.
+export const readWebFilters = (search?: string) => {
+  const { filters, dropped } = readPropFiltersParam(search)
+  const seen = new Set<string>()
+  const kept = filters.filter(filter => {
+    if (!isWebFilter(filter) || seen.has(filter.property)) return false
+    seen.add(filter.property)
+    return true
+  })
+  const lost = dropped + filters.length - kept.length
+  return {
+    filters: kept,
+    parseWarning: lost > 0 ? `Could not restore ${lost} filter${lost === 1 ? '' : 's'} from URL` : null,
+  }
 }
 
 // Rebuild the list with `property`'s values set to `next`, preserving position; drops the filter

@@ -293,9 +293,16 @@ export const writeFilterQueryParams = (
 // persists property filters but none of the other insights params, so it can't use the full
 // read/writeFilterQueryParams (which own ef/it/bd/tk/tf/tt/gr too). Same param, JSON shape, and
 // per-entry validation — so a `pf` written here means exactly what the Insights page reads.
-export const readPropFiltersParam = (search = window.location.search): ActiveFilter[] => {
-  const raw = parseJSONParam(new URLSearchParams(search).get(PROP_FILTERS_PARAM))
-  return Array.isArray(raw) ? (raw.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]) : []
+//
+// Reports how many entries failed to parse alongside the survivors: the caller rewrites the param from
+// what it restored, so a silent drop edits the user's link out from under them with no way back. A
+// present-but-unusable `pf` (not JSON, or not an array) counts as one drop.
+export const readPropFiltersParam = (search = window.location.search) => {
+  const rawParam = new URLSearchParams(search).get(PROP_FILTERS_PARAM)
+  const parsed = parseJSONParam(rawParam)
+  if (!Array.isArray(parsed)) return { filters: [] as ActiveFilter[], dropped: rawParam ? 1 : 0 }
+  const filters = parsed.map(parseActiveFilter).filter(Boolean) as ActiveFilter[]
+  return { filters, dropped: parsed.length - filters.length }
 }
 
 export const writePropFiltersParam = (filters: readonly ActiveFilter[]) => {
