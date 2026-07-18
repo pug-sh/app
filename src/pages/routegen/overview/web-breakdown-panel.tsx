@@ -30,12 +30,10 @@ const DEVICON_RESOLVERS: Record<'browser' | 'os' | 'device', (value?: string) =>
   device: resolveDeviceModelDevicon,
 }
 
-// A tab is one ranked view within a panel. `property` tabs rank an auto-property via top-K;
-// `eventKind` ranks event kinds; `session` ranks entry/exit pages from a session breakdown. Kept as
-// plain data (no closures) so a panel's tab list can be a stable module constant. `valueKind` tags how
-// a property's values are presented with a leading glyph: 'domain'/'source' (referrers / UTM tokens) →
-// a site favicon; 'country' (ISO code) → a Twemoji flag plus the country name; 'browser'/'os'/'device' →
-// a brand devicon.
+// A tab is one ranked view within a panel: `property` ranks an auto-property via top-K, `eventKind`
+// ranks event kinds, `session` ranks entry/exit pages. Plain data (no closures) so a panel's tab list
+// stays a module constant. `valueKind` picks the leading glyph its values render with (see
+// renderLeading in the panel below).
 export type BreakdownTab = { id: string; label: string } & (
   | {
       source: 'property'
@@ -131,6 +129,11 @@ const TabStrip = ({
   </div>
 )
 
+// Fixed-width box so labels stay aligned whether or not a row resolves a glyph.
+const GlyphSlot = ({ children }: { children?: ReactNode }) => (
+  <span className="inline-flex w-4 shrink-0 items-center justify-center">{children}</span>
+)
+
 export const WebBreakdownPanel = ({
   config,
   range,
@@ -178,9 +181,8 @@ export const WebBreakdownPanel = ({
   else if (tab.source === 'eventKind' && onEventClick) onRowClick = row => onEventClick(row.label)
   const isActive = selfProperty ? (row: RankedRow) => hasFilter(filters, selfProperty, row.label) : undefined
 
-  // A `valueKind`-tagged tab leads each row with a glyph and, for countries, a friendlier label. The
-  // raw value stays the filter/query key; only presentation changes. Rows with nothing to show — the
-  // muted (none)/others buckets, plus unmapped source tokens — get a same-size spacer so labels align.
+  // A `valueKind`-tagged tab leads each row with a glyph and, for countries, a friendlier label; the
+  // raw value stays the filter/query key. Muted buckets and unresolved values fall back to a spacer.
   const valueKind = tab.source === 'property' ? tab.valueKind : undefined
   let renderLeading: ((row: RankedRow) => ReactNode) | undefined
   let formatLabel: ((row: RankedRow) => string) | undefined
@@ -191,25 +193,15 @@ export const WebBreakdownPanel = ({
       return domain ? <DomainFavicon domain={domain} /> : <span className="size-4 shrink-0" />
     }
   } else if (valueKind === 'country') {
-    // $country is an ISO alpha-2 code: flag from the code, name for the label (CountryFlag renders
-    // nothing for the muted buckets / dirty values, so the fixed-width box preserves alignment).
-    renderLeading = row => (
-      <span className="inline-flex w-4 shrink-0 items-center justify-center">
-        {row.muted ? null : <CountryFlag code={row.label} size={16} />}
-      </span>
-    )
+    // $country is an ISO alpha-2 code: flag from the code, name for the label.
+    renderLeading = row => <GlyphSlot>{row.muted ? null : <CountryFlag code={row.label} size={16} />}</GlyphSlot>
     formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
   } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
-    // $browser / $os / $device values are already display names; just lead with the brand devicon (an
-    // unrecognized brand or muted bucket leaves the fixed-width box empty, keeping labels aligned).
+    // $browser / $os / $device values are already display names; just lead with the brand devicon.
     const resolve = DEVICON_RESOLVERS[valueKind]
     renderLeading = row => {
       const icon = row.muted ? null : resolve(row.label)
-      return (
-        <span className="inline-flex w-4 shrink-0 items-center justify-center">
-          {icon ? <Devicon name={icon} size={16} /> : null}
-        </span>
-      )
+      return <GlyphSlot>{icon ? <Devicon name={icon} size={16} /> : null}</GlyphSlot>
     }
   }
 

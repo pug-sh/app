@@ -30,13 +30,11 @@ import { removeFilter as removeFilterValue, toggleFilter, toggleSingleFilter } f
 import { WebMapPanel } from './web-map-panel'
 import { WebStatTile } from './web-stat-tile'
 
-// Breakdown panels backed by data the currently-deployed backend already feeds. Two migration-009
-// derived properties are wired here: Pages/Entry/Exit key on $pathname (the path alone, so a page
-// groups across scheme, host, and query string), and the Referrer tab keys on $referrerDomain
-// (referrer host, www-stripped, blanked on self-referral — not the raw, high-cardinality $referrer,
-// which the backend promotes but deliberately never rolls up). The remaining derived-property panels
-// from the web-analytics design (Channels/$channel, Screens, Languages) stay a fast-follow — a
-// property-string swap here, no structural change.
+// Panels use the derived properties the deployed backend already feeds: $pathname (the path alone, so
+// a page groups across scheme, host, and query string) and $referrerDomain (referrer host,
+// www-stripped, blanked on self-referral — not the raw, high-cardinality $referrer, which the backend
+// promotes but deliberately never rolls up). The remaining design panels (Channels, Screens,
+// Languages) stay a fast-follow — a property-string swap here, no structural change.
 const PAGES_PANEL: BreakdownPanelConfig = {
   title: 'Pages',
   footer: 'pageviews by page · sessions for entry / exit',

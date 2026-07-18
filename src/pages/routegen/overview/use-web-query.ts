@@ -26,7 +26,6 @@ export const useWebQuery = (
   range: TimeRange,
   granularity: Granularity,
   queryKeyPrefix: string,
-  enabled = true,
 ) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -62,7 +61,7 @@ export const useWebQuery = (
       const resp = await insightsRPC.query(query, { headers })
       return resp.result
     },
-    { enabled: enabled && !!headers, debounceMs: 0 },
+    { enabled: !!headers, debounceMs: 0 },
   )
 
   return { result: data ?? EMPTY_RESULT, error, retry, loading }

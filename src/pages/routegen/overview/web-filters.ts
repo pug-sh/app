@@ -19,10 +19,10 @@ const valuesOf = (filter: ActiveFilter) => {
   return []
 }
 
-const makeFilter = (property: string, values: string[]) =>
-  values.length === 1
-    ? createFilter(property, AUTO, FilterOperator.EQUALS, values[0])
-    : createFilter(property, AUTO, FilterOperator.IN, values)
+const makeFilter = (property: string, values: string[]) => {
+  if (values.length === 1) return createFilter(property, AUTO, FilterOperator.EQUALS, values[0])
+  return createFilter(property, AUTO, FilterOperator.IN, values)
+}
 
 // Rebuild the list with `property`'s values set to `next`, preserving position; drops the filter
 // entirely when `next` is empty.
@@ -65,16 +65,14 @@ export const removeFilter = (filters: readonly ActiveFilter[], property: string,
   )
 }
 
-export const hasFilter = (filters: readonly ActiveFilter[], property: string, value: string) => {
-  const existing = filters.find(filter => filter.property === property)
-  return existing ? valuesOf(existing).includes(value) : false
-}
-
 // The values currently selected for `property` (empty when it isn't filtered).
 export const filterValues = (filters: readonly ActiveFilter[], property: string) => {
   const existing = filters.find(filter => filter.property === property)
   return existing ? valuesOf(existing) : []
 }
+
+export const hasFilter = (filters: readonly ActiveFilter[], property: string, value: string) =>
+  filterValues(filters, property).includes(value)
 
 // Filters minus those on `exceptProperty`. A breakdown panel drops its own dimension so every value
 // of it stays visible and togglable while the page's other filters still apply.

@@ -5,24 +5,8 @@ import { cn } from '@/lib/utils'
 import type { RankedRow } from './web-breakdown'
 
 // Ranked list for the web-analytics breakdown panels, in the "row is the bar" style: each row carries a
-// left-anchored background fill sized to its share of the top value, with the label (and optional
-// leading glyph) reading over it and the value + share pinned right. Takes already-resolved RankedRows,
-// so top-K results and collapsed session breakdowns render identically.
-//
-// `showShare` is the caller's promise that the rows sum to a meaningful total: true for top-K (the
-// $others bucket captures the tail, so the total is whole), false for session breakdowns (sliced to
-// top-N with no overflow bucket, so a "% of total" would silently mean "% of shown").
-//
-// When `onRowClick` is provided, real (non-muted) rows become buttons that cross-filter the page;
-// `isActive` marks rows already in the filter set.
-//
-// `renderLeading` fills an optional fixed-size slot before each label (domain favicons, country
-// flags, brand icons). Return a same-size spacer for rows that shouldn't carry one so labels stay
-// aligned. `formatLabel` overrides the displayed text (e.g. country code → name); the row's raw label
-// is still the filter/query key, so only presentation changes.
-//
-// `dimensionLabel` + `metricControl` render a sticky column header aligned to the value/share columns:
-// the dimension name on the left, the metric name (or a metric picker) over the value column.
+// left-anchored fill sized to its share of the top value, the label reading over it and the value +
+// share pinned right. Takes resolved RankedRows, so top-K and session breakdowns render identically.
 export const WebRankedList = ({
   rows,
   showShare = false,
@@ -34,10 +18,14 @@ export const WebRankedList = ({
   metricControl,
 }: {
   rows: RankedRow[]
+  // The caller's promise that the rows sum to a meaningful total: true for top-K (the $others bucket
+  // captures the tail), false for session breakdowns (top-N sliced, so a share would mean % of shown).
   showShare?: boolean
   onRowClick?: (row: RankedRow) => void
   isActive?: (row: RankedRow) => boolean
+  // Fixed-size slot before the label; return a same-size spacer for glyph-less rows so labels align.
   renderLeading?: (row: RankedRow) => ReactNode
+  // Display-only override (e.g. country code → name) — the raw label stays the filter/query key.
   formatLabel?: (row: RankedRow) => string
   dimensionLabel?: string
   metricControl?: ReactNode
