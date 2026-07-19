@@ -93,6 +93,18 @@ Standard shadcn/ui with default Base UI primitives. Uses `render` prop for compo
 
 Update components: `bunx shadcn@latest add <component> --overwrite`
 
+### Charts — vendored, never edit
+
+`src/components/charts/` is third-party code vendored from the `@bklit` shadcn registry (declared in `components.json`), pulled with `bunx shadcn@latest add @bklit/<component> --overwrite`. Keeping it identical to upstream is what makes an upgrade a re-run of that command instead of a manual merge.
+
+- **Never edit anything under `src/components/charts/` — or `src/components/shimmering-text.tsx`.** The registry drops that one dependency outside the directory (`charts/chart-loading-label.tsx` imports it), so the vendored zone is the directory *plus* that file. A local fix there is silently overwritten by the next re-add, and any drift turns an upgrade into a manual three-way merge.
+- **Customize by wrapping.** Build a wrapper next to the feature that owns it and compose the vendored chart through props / `className`. Series colors come from `getSeriesColor()` (see Insights Color System) and are passed in — never hardcoded upstream.
+- Both paths are excluded from Biome (`biome.json` → `files.includes`) so the formatter can't rewrite them either. The registry's style (double quotes, semicolons) is expected there and is not a violation. `shimmering-text.tsx` is the trap — it sits in our namespace but is not ours.
+- **`shadcn add` also overwrites shared files** — pulling the charts in rewrote `src/lib/utils.ts`, both its quote style and `cn` from an arrow to a `function` declaration. After any add, check `git diff` for collateral changes outside the component's own directory.
+- **Two patches sit on top of upstream, and a re-add reverts both.** Re-apply after every upgrade:
+  1. `chart-loading-label.tsx` ships `import … from "../components/shimmering-text"`, a path that only resolves in the author's `src/charts/` layout — at the registry's own declared target (`components/charts/`) it points at `components/components/` and fails `tsc`. Patched to `"../shimmering-text"`. The build fails loudly if you forget, so it can't ship broken.
+  2. An optional `formatDateLabel?: (date: Date) => string` prop threaded through `area-chart.tsx` → `time-series-chart-shell.tsx`, where it overrides the `dateLabels` memo. Upstream formats with `shortDateFmt` (`Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })`) — browser-local and granularity-blind — and computes the labels internally, so there is no prop-level fix. Bucket labels must render in the project's reporting zone to match the server's bucket boundaries, and must vary by granularity or hour buckets all read `Jul 19`. **This one still compiles when reverted** — it silently regresses to browser-local dates, so check it explicitly after an upgrade.
+
 ### Design Aesthetic
 
 Light and minimal. This is a deliberate design direction — do not add visual or interaction weight:
