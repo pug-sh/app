@@ -47,7 +47,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
-  zeroBaseline,
   hideLegend,
   yTickFormatter,
   isTopK = false,
@@ -79,7 +78,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
-  zeroBaseline?: boolean
   // Hides the value·avg·peak SummaryStats row. Named for the legend it originally gated; the
   // web-analytics main chart opts in via InsightTileView's hideSummary (summing per-bucket session
   // averages is meaningless there, and the stat cards already carry the accurate scalar).
@@ -145,7 +143,6 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
-          zeroBaseline={zeroBaseline}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
           className={chartClassName}
@@ -181,7 +178,6 @@ export const InsightsContent = memo(function InsightsContent({
         granularity={granularity}
         timeZone={timeZone}
         stacked={viewMode === 'bar-stacked'}
-        zeroBaseline={zeroBaseline}
         yTickFormatter={yTickFormatter}
         className={chartClassName}
       />

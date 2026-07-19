@@ -1,25 +1,23 @@
 import { memo } from 'react'
-import { CartesianGrid, Line, LineChart as ReLineChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Grid } from '@/components/charts/grid'
+import { Line } from '@/components/charts/line'
+import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
+import { ChartTooltip } from '@/components/charts/tooltip'
+import { XAxis } from '@/components/charts/x-axis'
 import type { SeriesColor } from '@/lib/event-colors'
-import { cn } from '@/lib/utils'
-import {
-  COMPACT_CHART_AXIS_CLASS,
-  formatTooltipLabel,
-  SHARED_MARGIN,
-  SHARED_X_AXIS,
-  sharedYAxis,
-  useChartPrep,
-} from './common'
+import { useVendoredChartPrep } from './common'
 import type { ChartPoint } from './types'
+import { YAxis } from './y-axis'
 
+// Wraps the vendored chart (src/components/charts) — never edit that directory
+// except for the documented patches. The y axis, series colors, tooltip rows and
+// date labels are ours to inject; the chart supplies the rest.
 export const LineChart = memo(function LineChart({
   data,
   seriesNames,
   seriesColors,
   granularity,
-  zeroBaseline,
   yTickFormatter,
   timeZone,
   className = 'h-70 w-full',
@@ -28,38 +26,32 @@ export const LineChart = memo(function LineChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
-  zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   timeZone: string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
+  const { chartData, tooltipRows, formatDateLabel } = useVendoredChartPrep(
+    data,
+    seriesNames,
+    seriesColors,
+    granularity,
+    timeZone,
+  )
 
   if (data.length === 0) return null
 
+  // aspectRatio="auto" so height comes from className, matching the other charts.
   return (
-    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
-      <ReLineChart data={chartData} margin={SHARED_MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax, { zeroBaseline, tickFormatter: yTickFormatter })} />
-        <ChartTooltip
-          cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
-        />
-        {seriesNames.map((_, si) => (
-          <Line
-            key={si}
-            type="monotone"
-            dataKey={`series${si}`}
-            stroke={seriesColors[si]?.line}
-            strokeWidth={2}
-            isAnimationActive={false}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 2 }}
-          />
-        ))}
-      </ReLineChart>
-    </ChartContainer>
+    <VendoredLineChart aspectRatio="auto" className={className} data={chartData} formatDateLabel={formatDateLabel}>
+      <Grid horizontal />
+      <XAxis />
+      <YAxis formatter={yTickFormatter} />
+      {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
+          bucket reads as uncertain data when those are real values. */}
+      {seriesNames.map((_, si) => (
+        <Line key={si} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
+      ))}
+      <ChartTooltip rows={tooltipRows} />
+    </VendoredLineChart>
   )
 })
