@@ -6,7 +6,7 @@ import { SeriesBar } from '@/components/charts/series-bar'
 import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
-import { useVendoredChartPrep } from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
 import { ChartTooltip, DateLabelProvider, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
@@ -43,6 +43,8 @@ export const BarChart = memo(function BarChart({
   if (data.length === 0) return null
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
+  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
+  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
     <DateLabelProvider value={formatDateLabel}>
       <ComposedChart
@@ -50,6 +52,7 @@ export const BarChart = memo(function BarChart({
         barGap={stacked ? 0 : 6}
         className={className}
         data={chartData}
+        margin={CHART_MARGIN}
         stacked={stacked}
       >
         <Grid horizontal />

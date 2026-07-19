@@ -6,7 +6,7 @@ import { Grid } from '@/components/charts/grid'
 import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
-import { useVendoredChartPrep } from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
 import { ChartTooltip, DateLabelProvider, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
@@ -41,9 +41,11 @@ export const AreaChart = memo(function AreaChart({
   if (data.length === 0) return null
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
+  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
+  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
     <DateLabelProvider value={formatDateLabel}>
-      <VendoredAreaChart aspectRatio="auto" className={className} data={chartData}>
+      <VendoredAreaChart aspectRatio="auto" className={className} data={chartData} margin={CHART_MARGIN}>
         <Grid horizontal />
         <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />
