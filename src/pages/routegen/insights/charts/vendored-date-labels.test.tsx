@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { AreaChart } from './area-chart'
+import { BarChart } from './bar-chart'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
@@ -37,6 +38,7 @@ describe('vendored chart date labels', () => {
   for (const [name, Chart] of [
     ['line', LineChart],
     ['area', AreaChart],
+    ['bar', BarChart],
   ] as const) {
     it(`${name} chart renders hour buckets in the project reporting zone`, () => {
       const { container } = render(
