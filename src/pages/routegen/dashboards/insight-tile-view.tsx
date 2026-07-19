@@ -20,8 +20,8 @@ import {
   buildChartData,
   disambiguateLabels,
   hasBreakdown,
-  seriesAggregationResolver,
   sortFunnelSteps,
+  specAggregationResolver,
   trendSeriesNames,
 } from '../insights/helpers'
 import { topKSpecIncompleteReason } from '../insights/top-k'
@@ -158,13 +158,9 @@ export const InsightTileView = ({
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
   }, [result.case, trendSeries, seriesNames, resolvedTheme])
-  const eventAggregations = useMemo(
-    () => (spec?.events ?? []).map(entry => ({ kind: entry.event?.kind ?? '', aggregation: entry.aggregation })),
-    [spec?.events],
-  )
   // One resolver, two result sets: the series below and — for a KPI — the comparison window, which
   // is its own query and must not be read through this one's indices.
-  const aggregationFor = useMemo(() => seriesAggregationResolver(eventAggregations), [eventAggregations])
+  const aggregationFor = useMemo(() => specAggregationResolver(spec), [spec])
   const seriesAggregations = useMemo(() => trendSeries.map(aggregationFor), [trendSeries, aggregationFor])
   const hasIncompleteNumericAggregation = useMemo(
     () =>
