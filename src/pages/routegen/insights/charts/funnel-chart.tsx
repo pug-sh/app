@@ -1,31 +1,133 @@
+import { useAtomValue } from 'jotai'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Bar, CartesianGrid, Cell, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
-import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
+import { FunnelChart as VendoredFunnel } from '@/components/charts/funnel-chart'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { COMPACT_CHART_AXIS_CLASS } from './common'
 
-// All series in a single chart must share the same step skeleton (same names,
-// same order). The chart aligns by index across series and assumes that contract.
 export interface FunnelSeriesData {
   label: string
   steps: ReadonlyArray<{ readonly name: string; readonly count: number }>
   color: string
 }
 
-// ── Chart (single or grouped bars) ──────────────────────────────────────────
+// ── Single funnel ───────────────────────────────────────────────────────────
 
-// Underscore-prefixed row keys so neither the x-axis category nor per-series
-// metrics collide with arbitrary user-supplied event/series names.
-type ChartRow = Record<string, number | string>
+const formatPercentage = (pct: number) => `${Math.round(pct)}%`
 
-const STEP_KEY = '__step'
-const valueKey = (si: number) => `s${si}__value`
-const countKey = (si: number) => `s${si}__count`
-const fromPrevKey = (si: number) => `s${si}__fromPrev`
-const dropOffKey = (si: number) => `s${si}__dropOff`
+// Step names repeat whenever a funnel revisits an event (page_view → signup →
+// page_view). The vendored chart keys its segments by label, so make them unique.
+const uniqueStepLabels = (steps: FunnelSeriesData['steps']) => {
+  const seen = new Map<string, number>()
+  return steps.map(step => {
+    const count = seen.get(step.name) ?? 0
+    seen.set(step.name, count + 1)
+    if (count === 0) return step.name
+    return `${step.name} (${count + 1})`
+  })
+}
+
+// Wraps the vendored funnel (src/components/charts) — never edit that directory.
+// It renders values, percentage and step name inline; the drop-off tooltip and
+// the step palette are ours to inject through props.
+const SingleFunnel = ({
+  steps,
+  color,
+  colorByStep,
+  compact = false,
+}: {
+  steps: FunnelSeriesData['steps']
+  color: string
+  colorByStep: boolean
+  compact?: boolean
+}) => {
+  const [hovered, setHovered] = useState<number | null>(null)
+  // getSeriesColor resolves against theme-dependent module state, which can't
+  // invalidate a memo on its own — read the theme so a toggle re-derives.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+
+  const stages = useMemo(() => {
+    const labels = uniqueStepLabels(steps)
+    return steps.map((step, i) => ({
+      label: labels[i] ?? step.name,
+      value: step.count,
+      color: colorByStep ? getSeriesColor(step.name, i).line : color,
+    }))
+  }, [steps, color, colorByStep, resolvedTheme])
+
+  const detail = useMemo(() => {
+    const step = hovered === null ? undefined : steps[hovered]
+    if (hovered === null || !step) return null
+
+    const first = steps[0]?.count ?? 0
+    const fromStart = first > 0 ? (step.count / first) * 100 : 0
+    if (hovered === 0) return { step, fromStart, fromPrev: null, dropOff: null }
+
+    const prev = steps[hovered - 1]?.count ?? 0
+    const fromPrev = prev > 0 ? (step.count / prev) * 100 : 0
+    return { step, fromStart, fromPrev, dropOff: prev - step.count }
+  }, [hovered, steps])
+
+  // Anchor the tooltip over the hovered segment, biting back at the edges so the
+  // panel stays inside the chart instead of overflowing the tile.
+  const anchor = hovered === null ? 0 : ((hovered + 0.5) / steps.length) * 100
+  const anchorShift = () => {
+    if (anchor < 15) return '0'
+    if (anchor > 85) return '-100%'
+    return '-50%'
+  }
+
+  return (
+    <div className={cn('relative', compact && 'h-full min-h-0')}>
+      <VendoredFunnel
+        className={compact ? 'h-full' : undefined}
+        color={color}
+        data={stages}
+        formatPercentage={formatPercentage}
+        formatValue={compactNumber}
+        grid={{ bands: false }}
+        hoveredIndex={hovered}
+        onHoverChange={setHovered}
+        showValues={!compact}
+        style={compact ? { aspectRatio: 'auto' } : undefined}
+      />
+      {detail && (
+        <div
+          className="pointer-events-none absolute top-0 z-30 w-max min-w-[150px] rounded-lg border border-border bg-popover p-2.5 shadow-sm text-xs"
+          style={{ left: `${anchor}%`, transform: `translateX(${anchorShift()})` }}
+        >
+          <p className="font-medium text-foreground mb-1.5">{detail.step.name}</p>
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Completed</span>
+              <span className="tabular-nums">{compactNumber(detail.step.count)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">From start</span>
+              <span className="tabular-nums">{detail.fromStart.toFixed(1)}%</span>
+            </div>
+            {detail.fromPrev !== null && (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">From previous</span>
+                <span className="tabular-nums">{detail.fromPrev.toFixed(1)}%</span>
+              </div>
+            )}
+            {detail.dropOff !== null && (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Drop-off</span>
+                <span className="tabular-nums">{compactNumber(detail.dropOff)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Chart (one funnel, or small multiples per breakdown split) ──────────────
 
 export const FunnelChart = ({
   series,
@@ -38,144 +140,42 @@ export const FunnelChart = ({
   compact?: boolean
   className?: string
 }) => {
-  const isMultiSeries = series.length > 1
-  // Single series → per-step palette; multi-series → per-series color so series identity wins.
-  const useStepColors = colorByStep ?? !isMultiSeries
-  // Skeleton comes from series[0]; all series must share it (see FunnelSeriesData doc).
-  const stepNames = useMemo(() => {
-    const names = series[0]?.steps.map(s => s.name) ?? []
-    const misaligned = series.some(
-      s => s.steps.length !== names.length || s.steps.some((step, i) => step.name !== names[i]),
+  const [first, ...rest] = series
+  if (!first || first.steps.length === 0) return null
+
+  // Single series → per-step palette; a breakdown → per-series color so series identity wins.
+  const useStepColors = colorByStep ?? rest.length === 0
+
+  if (rest.length === 0) {
+    return (
+      <div className={cn(compact ? 'flex h-full min-h-0 flex-col' : 'mt-4 p-4', className)}>
+        <SingleFunnel colorByStep={useStepColors} color={first.color} compact={compact} steps={first.steps} />
+      </div>
     )
-    if (misaligned) {
-      console.error(
-        'FunnelChart: series have mismatched step shapes; rendering aligns by index of series[0] and will silently zero-fill divergent series.',
-      )
-    }
-    return names
-  }, [series])
+  }
 
-  const chartData = useMemo<ChartRow[]>(
-    () =>
-      stepNames.map((stepName, stepIdx) => {
-        const row: ChartRow = { [STEP_KEY]: stepName }
-        series.forEach((s, si) => {
-          const firstCount = s.steps[0]?.count ?? 0
-          const stepCount = s.steps[stepIdx]?.count ?? 0
-          const prevStep = stepIdx > 0 ? s.steps[stepIdx - 1] : undefined
-          const prevMissing = stepIdx > 0 && prevStep === undefined
-          const prevCount = prevStep?.count ?? 0
-          row[valueKey(si)] = firstCount > 0 ? Number(((stepCount / firstCount) * 100).toFixed(2)) : 0
-          row[countKey(si)] = stepCount
-          // NaN sentinel for "missing prev step"; tooltip renders it as —.
-          row[fromPrevKey(si)] = prevMissing
-            ? NaN
-            : stepIdx === 0
-              ? 100
-              : prevCount > 0
-                ? Number(((stepCount / prevCount) * 100).toFixed(2))
-                : 0
-          // Drop-off is undefined for step 0 (no previous) and for misaligned series; NaN sentinel hides the row.
-          row[dropOffKey(si)] = stepIdx === 0 || prevMissing ? NaN : prevCount - stepCount
-        })
-        return row
-      }),
-    [series, stepNames],
-  )
-
-  const chartConfig = useMemo<ChartConfig>(
-    () => Object.fromEntries(series.map((s, si) => [valueKey(si), { label: s.label, color: s.color }])),
-    [series],
-  )
-
-  if (series.length === 0 || stepNames.length === 0) return null
-
+  // The vendored chart draws exactly one funnel, so a breakdown becomes small
+  // multiples — each split keeps its own taper instead of sharing a bar group.
   return (
-    <div className={cn(compact ? 'flex h-full min-h-0 flex-col' : 'mt-4 p-4', className)}>
-      <ChartContainer
-        config={chartConfig}
-        className={cn(compact ? 'h-full min-h-[120px] w-full' : 'h-64 w-full', compact && COMPACT_CHART_AXIS_CLASS)}
-      >
-        <ReBarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 8 }} barCategoryGap="20%" barGap={2}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis dataKey={STEP_KEY} tickLine={false} axisLine={false} interval={0} />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={44}
-            domain={[0, 100]}
-            tickFormatter={(value: number) => `${value}%`}
-          />
-          <ChartTooltip
-            cursor={{ fill: 'transparent' }}
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null
-              const row = payload[0]?.payload as ChartRow
-              const step = row[STEP_KEY] as string
-              return (
-                <div className="rounded-lg border border-border bg-popover p-2.5 shadow-sm text-xs min-w-[160px]">
-                  <p className="font-medium text-foreground mb-1.5">{step}</p>
-                  {series.map((s, si) => {
-                    const count = row[countKey(si)] as number
-                    const conv = row[valueKey(si)] as number
-                    const fromPrev = row[fromPrevKey(si)] as number
-                    const dropOff = row[dropOffKey(si)] as number
-                    return (
-                      <div key={si} className="py-1 border-t border-border/50 first:border-0 first:pt-0">
-                        {isMultiSeries && (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
-                            <span className="font-medium text-foreground">{s.label}</span>
-                          </div>
-                        )}
-                        <div className="space-y-0.5 pl-3.5">
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-muted-foreground">Completed</span>
-                            <span className="tabular-nums">{compactNumber(count)}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-4">
-                            <span className="text-muted-foreground">From start</span>
-                            <span className="tabular-nums">{conv.toFixed(1)}%</span>
-                          </div>
-                          {!isMultiSeries && (
-                            <>
-                              <div className="flex items-center justify-between gap-4">
-                                <span className="text-muted-foreground">From previous</span>
-                                <span className="tabular-nums">
-                                  {Number.isFinite(fromPrev) ? `${fromPrev.toFixed(1)}%` : '—'}
-                                </span>
-                              </div>
-                              {Number.isFinite(dropOff) && (
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className="text-muted-foreground">Drop-off</span>
-                                  <span className="tabular-nums">{compactNumber(dropOff)}</span>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            }}
-          />
-          {series.map((s, si) => (
-            <Bar key={si} dataKey={valueKey(si)} fill={s.color} radius={[4, 4, 0, 0]}>
-              {useStepColors &&
-                s.steps.map((step, i) => <Cell key={`cell-${i}`} fill={getSeriesColor(step.name, i).line} />)}
-            </Bar>
-          ))}
-        </ReBarChart>
-      </ChartContainer>
+    <div className={cn('mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2', className)}>
+      {series.map(s => (
+        <div key={s.label} className="min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+            <span className="text-xs font-medium truncate">{s.label}</span>
+          </div>
+          <SingleFunnel colorByStep={useStepColors} color={s.color} steps={s.steps} />
+        </div>
+      ))}
     </div>
   )
 }
 
-// ── Breakdown view (chart + series list with checkboxes) ─────────────────────
+// ── Breakdown view (small multiples + series list with checkboxes) ───────────
 
-const DEFAULT_VISIBLE = 10
+// Small multiples cost far more room than the grouped bars they replaced, so the
+// default shows fewer splits; the list below toggles the rest in.
+const DEFAULT_VISIBLE = 4
 
 export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) => {
   // Visibility tracked by label (not index) so user toggles persist when bucket

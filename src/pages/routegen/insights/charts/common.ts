@@ -55,7 +55,3 @@ export const useVendoredChartPrep = (
 
   return { chartData, tooltipRows, formatDateLabel }
 }
-
-// The funnel is the last recharts chart; everything else renders vendored.
-export const COMPACT_CHART_AXIS_CLASS =
-  '[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground/70 [&_.recharts-cartesian-axis-tick_text]:text-[11px]'
