@@ -37,9 +37,18 @@ vi.mock('@/analytics/pug', () => ({
 
 const { SessionUrlGuard, WorkspaceBootstrap } = await import('./App')
 const { ProjectRedirect, ProjectSync } = await import('@/pages/router')
-const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, rememberLastProjectAtom, renameOrgAtom, selectOrgAtom } =
-  await import('@/data/workspace.atoms')
+const {
+  activeOrgAtom,
+  activeProjectAtom,
+  bootstrapStatusAtom,
+  lastProjectByOrgAtom,
+  rememberLastProjectAtom,
+  renameOrgAtom,
+  selectOrgAtom,
+} = await import('@/data/workspace.atoms')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
+const { SidebarProvider } = await import('@/components/ui/sidebar')
+const AppSidebar = (await import('@/components/layout/sidebar')).default
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
 const projects = [
@@ -391,5 +400,90 @@ describe('switching organization', () => {
     // chip empty out for a round-trip that changed nothing about which projects exist.
     expect(batchGet.mock.calls.length).toBe(fetches)
     expect(store.get(activeProjectAtom)?.id).toBe('p1')
+  })
+})
+
+// Every test above mounts the bootstrap without the sidebar, a tree the real app never has. Both
+// subscribe to projectsAtom, so the list landing flushes both their effects in one pass — a second
+// default pick in the sidebar reads the activeProject it rendered with, so it cannot see the
+// bootstrap's and overwrites it. The real sidebar, not a stand-in: what's pinned is that the app's
+// own tree holds exactly one copy of the rule.
+describe('the sidebar alongside the bootstrap', () => {
+  const mountApp = (store: ReturnType<typeof seedStore>, path: string) => {
+    const { hook, history, navigate } = memoryLocation({ path, record: true })
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          {/* App's order: bootstrap first, then the sidebar inside AuthenticatedApp. */}
+          <WorkspaceBootstrap />
+          <SidebarProvider>
+            <AppSidebar />
+            <Switch>
+              <Route path="/p/:projectId/overview">
+                <ProjectSync>
+                  <div>overview</div>
+                </ProjectSync>
+              </Route>
+              <Route>
+                <ProjectRedirect />
+              </Route>
+            </Switch>
+          </SidebarProvider>
+        </Router>
+      </Provider>,
+    )
+    return { history, navigate }
+  }
+
+  beforeEach(() => {
+    orgsList.mockResolvedValue({ orgs: [orgA] }) // the sidebar refreshes the org list on mount
+  })
+
+  it('leaves the restored project alone on the bare app URL', async () => {
+    // Held open so the sidebar is mounted before the list lands, putting both picks in one flush. In
+    // the browser that's the sidebar's lazy chunk racing BatchGetProjects — hence only some reloads.
+    let land = () => {}
+    batchGet.mockReturnValue(
+      new Promise(resolve => {
+        land = () => resolve({ projects })
+      }),
+    )
+    const store = seedStore({ 'org-a': 'p2' })
+    const { history } = mountApp(store, '/')
+    await waitFor(() => expect(batchGet).toHaveBeenCalled())
+
+    await act(async () => {
+      land()
+    })
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/p2/overview'))
+    expect(store.get(activeProjectAtom)?.id).toBe('p2')
+    // Not a one-render blip: the bootstrap records every active project, so a losing pick is written
+    // back as the visit and every later load restores the wrong project without racing anything.
+    expect(store.get(lastProjectByOrgAtom)).toEqual({ 'org-a': 'p2' })
+  })
+
+  it('leaves the restored project alone when switching org', async () => {
+    // No race here: the sidebar is already mounted, so a second pick wins every time.
+    const orgB = create(OrgSchema, { id: 'org-b', displayName: 'Org B' })
+    const projectsOfB = [
+      create(ProjectSchema, { id: 'b1', displayName: 'B First' }),
+      create(ProjectSchema, { id: 'b2', displayName: 'B Second' }),
+    ]
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects }),
+    )
+    const store = seedStore({ 'org-b': 'b2' })
+    const { history, navigate } = mountApp(store, '/p/p1/overview')
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+    // What the sidebar's own handleSelectOrg does: set the org, hand the route back to '/'.
+    act(() => {
+      store.set(selectOrgAtom, orgB)
+      navigate('/', { replace: true })
+    })
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/b2/overview'))
+    expect(store.get(activeProjectAtom)?.id).toBe('b2')
   })
 })

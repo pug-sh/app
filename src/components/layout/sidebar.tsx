@@ -133,10 +133,8 @@ const AppSidebar = () => {
   const [newProjectName, setNewProjectName] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (projects.length === 0 || activeProject || routeProjectId) return
-    setActiveProject(projects[0])
-  }, [projects, activeProject, routeProjectId, setActiveProject])
+  // No default project pick here — WorkspaceBootstrap owns the only one. A copy flushes after it in
+  // the same pass, still seeing activeProject null, and overwrites the restored pick with projects[0].
 
   // On mount, not on open: the count decides whether the Organizations section renders, and
   // resolving that late makes it appear under the cursor.
