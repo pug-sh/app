@@ -166,8 +166,6 @@ export interface TimeSeriesChartInnerProps {
   /** Tween y-domain when the visible x-range changes during the ready phase. */
   tweenYDomainOnXDomainChange?: boolean;
   onPhaseChange?: (phase: ChartPhase) => void;
-  /** Patched: overrides the built-in browser-local date labels. See CLAUDE.md. */
-  formatDateLabel?: (date: Date) => string;
 }
 
 export function TimeSeriesChartInner(props: TimeSeriesChartInnerProps) {
@@ -208,7 +206,6 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   xDomainSlotCount,
   tweenYDomainOnXDomainChange = false,
   onPhaseChange,
-  formatDateLabel,
 }: TimeSeriesChartInnerProps) {
   const staticPreview = useStaticChartPreview();
   const innerWidth = width - margin.left - margin.right;
@@ -402,13 +399,8 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   );
 
   const dateLabels = useMemo(
-    () =>
-      visiblePlotData.map((d) =>
-        formatDateLabel
-          ? formatDateLabel(xAccessor(d))
-          : shortDateFmt.format(xAccessor(d))
-      ),
-    [visiblePlotData, xAccessor, formatDateLabel]
+    () => visiblePlotData.map((d) => shortDateFmt.format(xAccessor(d))),
+    [visiblePlotData, xAccessor]
   );
 
   const canInteract = isLoaded && isChartInteractionPhase(chartPhase);

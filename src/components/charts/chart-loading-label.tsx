@@ -2,9 +2,7 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-// Patched: upstream ships "../components/shimmering-text", valid only in the
-// author's src/charts/ layout. See CLAUDE.md → Charts — vendored, never edit.
-import { ShimmeringText } from "../shimmering-text";
+import { ShimmeringText } from "../components/shimmering-text";
 import {
   LINE_LOADING_PULSE_EASE,
   LOADING_LABEL_EXIT_S,

@@ -61,8 +61,6 @@ export interface LineChartProps {
   style?: CSSProperties;
   /** Fires when the internal chart phase changes (e.g. OG capture readiness). */
   onPhaseChange?: (phase: ChartPhase) => void;
-  /** Patched: overrides the built-in browser-local date labels. See CLAUDE.md. */
-  formatDateLabel?: (date: Date) => string;
   /** Child components (Line, Grid, ChartTooltip, etc.) */
   children: ReactNode;
 }
@@ -159,7 +157,6 @@ interface ChartInnerProps {
   children: ReactNode;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onPhaseChange: (phase: ChartPhase) => void;
-  formatDateLabel?: (date: Date) => string;
 }
 
 function ChartInner({
@@ -182,7 +179,6 @@ function ChartInner({
   children,
   containerRef,
   onPhaseChange,
-  formatDateLabel,
 }: ChartInnerProps) {
   const lines = useMemo(() => extractLineConfigs(children), [children]);
 
@@ -195,7 +191,6 @@ function ChartInner({
       containerRef={containerRef}
       data={data}
       enterTransition={enterTransition}
-      formatDateLabel={formatDateLabel}
       height={height}
       lines={lines}
       loadingLabel={loadingLabel}
@@ -234,7 +229,6 @@ export function LineChart({
   tweenYDomainOnXDomainChange = false,
   style,
   onPhaseChange,
-  formatDateLabel,
   children,
 }: LineChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -277,7 +271,6 @@ export function LineChart({
             containerRef={containerRef}
             data={data}
             enterTransition={enterTransition}
-            formatDateLabel={formatDateLabel}
             height={height}
             loadingLabel={loadingLabel}
             margin={margin}

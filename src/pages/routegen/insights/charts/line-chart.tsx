@@ -3,12 +3,11 @@ import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Grid } from '@/components/charts/grid'
 import { Line } from '@/components/charts/line'
 import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
-import { ChartTooltip } from '@/components/charts/tooltip'
-import { XAxis } from '@/components/charts/x-axis'
 import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { useVendoredChartPrep } from './common'
+import { ChartTooltip, DateLabelProvider, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
 // Wraps the vendored chart (src/components/charts) — never edit that directory
@@ -43,16 +42,18 @@ export const LineChart = memo(function LineChart({
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
   return (
-    <VendoredLineChart aspectRatio="auto" className={className} data={chartData} formatDateLabel={formatDateLabel}>
-      <Grid horizontal />
-      <XAxis />
-      <YAxis formatValue={yTickFormatter ?? compactNumber} />
-      {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
-          bucket reads as uncertain data when those are real values. */}
-      {seriesNames.map((_, si) => (
-        <Line key={si} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
-      ))}
-      <ChartTooltip rows={tooltipRows} />
-    </VendoredLineChart>
+    <DateLabelProvider value={formatDateLabel}>
+      <VendoredLineChart aspectRatio="auto" className={className} data={chartData}>
+        <Grid horizontal />
+        <XAxis />
+        <YAxis formatValue={yTickFormatter ?? compactNumber} />
+        {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
+            bucket reads as uncertain data when those are real values. */}
+        {seriesNames.map((_, si) => (
+          <Line key={si} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
+        ))}
+        <ChartTooltip rows={tooltipRows} />
+      </VendoredLineChart>
+    </DateLabelProvider>
   )
 })
