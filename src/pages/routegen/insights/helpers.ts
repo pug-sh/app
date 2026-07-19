@@ -1,4 +1,10 @@
-import { AggregationType, type FunnelSeries, type TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  type FunnelSeries,
+  type InsightQuerySpec,
+  SessionMetric,
+  type TrendSeries,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
 
 // How a series' per-bucket values collapse into the one number a KPI or a summary headline shows.
@@ -27,6 +33,23 @@ export const SERIES_COLLAPSE = {
   [AggregationType.MAX]: 'max',
 } as const satisfies Record<AggregationType, SeriesCollapse>
 
+// Session specs carry no event rows, so their series collapse by metric instead — named as the
+// AggregationType that behaves alike, which is what SERIES_COLLAPSE and the summary ladder read.
+// Session counts add across buckets (a session lands in exactly one, keyed on its start — the same
+// reasoning rankSessionBreakdown sums on); an average and a rate don't add at all. Bucket-weighted
+// averaging is the only reading a series affords; the exact window figure is the separate scalar
+// query the web stat tiles show. Total over SessionMetric, as SERIES_COLLAPSE is over AggregationType.
+const SESSION_METRIC_AGGREGATION = {
+  // Rejected by buf.validate before it can be sent; here so the map stays a compile-time check.
+  [SessionMetric.UNSPECIFIED]: AggregationType.TOTAL,
+  [SessionMetric.SESSIONS]: AggregationType.TOTAL,
+  [SessionMetric.AVG_DURATION]: AggregationType.AVG,
+  [SessionMetric.BOUNCE_RATE]: AggregationType.AVG,
+  [SessionMetric.ENTRY]: AggregationType.TOTAL,
+  [SessionMetric.EXIT]: AggregationType.TOTAL,
+  [SessionMetric.AVG_EVENTS_PER_SESSION]: AggregationType.AVG,
+} as const satisfies Record<SessionMetric, AggregationType>
+
 export const collapseValues = (values: number[], collapse: SeriesCollapse) => {
   if (values.length === 0) return 0
   if (collapse === 'min') return Math.min(...values)
@@ -48,7 +71,18 @@ export type SeriesAggregationResolver = (series: TrendSeries) => AggregationType
 // series list it was built from — and a KPI's comparison window is a separate query with its own
 // series, which may differ in count and order (a breakdown value present in one window and not the
 // other). Handing it the current window's indices is how a compare delta goes wrong.
-export const seriesAggregationResolver = (events: readonly EventAggregation[]): SeriesAggregationResolver => {
+export const seriesAggregationResolver = (
+  events: readonly EventAggregation[],
+  sessionMetric?: SessionMetric,
+): SeriesAggregationResolver => {
+  // A session spec has no event rows at all — the metric owns every series it returns, under
+  // whatever kind its scope stamped them with. Checked first: the row logic below would otherwise
+  // take the empty row list down the "no row claims this" path and sum a rate.
+  if (sessionMetric !== undefined) {
+    const aggregation = SESSION_METRIC_AGGREGATION[sessionMetric]
+    return () => aggregation
+  }
+
   // A lone row owns every series in the response, whatever a breakdown split them into — and
   // whatever kind they came back under, which matters because `kind: ''` means "all events" and
   // those series are named for the real kinds, matching no row by name.
@@ -81,6 +115,15 @@ export const seriesAggregationResolver = (events: readonly EventAggregation[]): 
 
 export const resolveSeriesAggregations = (events: readonly EventAggregation[], series: TrendSeries[]) =>
   series.map(seriesAggregationResolver(events))
+
+// Resolver for a proto spec, which is event-shaped or session-shaped. One call so a renderer that
+// handles both can't read the events and quietly forget the session metric; the Insights page builds
+// its rows from the filter UI instead and stays on resolveSeriesAggregations.
+export const specAggregationResolver = (spec: InsightQuerySpec | undefined) =>
+  seriesAggregationResolver(
+    (spec?.events ?? []).map(entry => ({ kind: entry.event?.kind ?? '', aggregation: entry.aggregation })),
+    spec?.session?.metric,
+  )
 
 type ChartPoint = {
   date: Date
