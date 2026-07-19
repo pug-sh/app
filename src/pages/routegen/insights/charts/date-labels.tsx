@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react'
+import { createContext, useContext, useEffect, useMemo } from 'react'
 import ChartStableContext, { useChartStable } from '@/components/charts/chart-context'
 import { ChartTooltip as VendoredTooltip } from '@/components/charts/tooltip'
 import type { ChartTooltipProps } from '@/components/charts/tooltip/chart-tooltip'
@@ -44,8 +44,42 @@ export function XAxis(props: XAxisProps) {
 // an unrecognised one puts the labels inside the series reveal clip.
 XAxis.displayName = 'XAxis'
 
+// The hover date pill hardcodes its type and padding and exposes no size prop,
+// and its 24px rows can't be shrunk directly — TICKER_ITEM_HEIGHT drives the
+// scroll offsets, so a shorter row desyncs the stack onto the wrong date.
+// Scaling the whole pill sidesteps that: the offsets live inside the scaled box.
+const PILL_SCALE_VAR = '--pill-scale'
+
+// The two dimensions charts actually span here: 120px is the dashboard tile's
+// min-h, 280px the insights page's h-70; 360/600 wide covers a tile at its
+// narrowest up to a half-width one.
+const HEIGHT_RANGE = [120, 280]
+const WIDTH_RANGE = [360, 600]
+const MIN_PILL_SCALE = 0.75
+
+const fit = (value: number, [min, max]: number[]) => Math.min(1, Math.max(0, (value - min) / (max - min)))
+
+// Continuous, not stepped. Driven by whichever dimension is most cramped, so a
+// wide-but-short chart shrinks on height alone.
+export const pillScale = (width: number, height: number) => {
+  const t = Math.min(fit(height, HEIGHT_RANGE), fit(width, WIDTH_RANGE))
+  return Math.round((MIN_PILL_SCALE + t * (1 - MIN_PILL_SCALE)) * 100) / 100
+}
+
+// The pill is the only element here carrying both classes: the tooltip's series
+// dots are rounded-full too, but not overflow-hidden. Anchored bottom so it
+// shrinks upward and stays put against the axis.
+export const PILL_SCALING =
+  '[&_.overflow-hidden.rounded-full]:origin-bottom [&_.overflow-hidden.rounded-full]:scale-[var(--pill-scale,1)]'
+
 export function ChartTooltip(props: ChartTooltipProps) {
   const value = useDateLabelledContext()
+  const { containerRef, width, height } = useChartStable()
+
+  // Reuses the chart's own measurement instead of observing the container again.
+  useEffect(() => {
+    containerRef.current?.style.setProperty(PILL_SCALE_VAR, `${pillScale(width, height)}`)
+  }, [containerRef, width, height])
 
   return (
     <ChartStableContext.Provider value={value}>

@@ -6,8 +6,9 @@ import { SeriesBar } from '@/components/charts/series-bar'
 import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { CHART_MARGIN, useVendoredChartPrep } from './common'
-import { ChartTooltip, DateLabelProvider, XAxis } from './date-labels'
+import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
 // Wraps the vendored chart (src/components/charts) — never edit that directory
@@ -50,7 +51,7 @@ export const BarChart = memo(function BarChart({
       <ComposedChart
         aspectRatio="auto"
         barGap={stacked ? 0 : 6}
-        className={className}
+        className={cn(PILL_SCALING, className)}
         data={chartData}
         margin={CHART_MARGIN}
         stacked={stacked}

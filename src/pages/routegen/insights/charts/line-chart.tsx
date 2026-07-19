@@ -6,8 +6,9 @@ import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
 import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { CHART_MARGIN, useVendoredChartPrep } from './common'
-import { ChartTooltip, DateLabelProvider, XAxis } from './date-labels'
+import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
 // Wraps the vendored chart (src/components/charts) — never edit that directory
@@ -45,7 +46,12 @@ export const LineChart = memo(function LineChart({
   // ~15% of the plot height on top of the y-domain's own headroom.
   return (
     <DateLabelProvider value={formatDateLabel}>
-      <VendoredLineChart aspectRatio="auto" className={className} data={chartData} margin={CHART_MARGIN}>
+      <VendoredLineChart
+        aspectRatio="auto"
+        className={cn(PILL_SCALING, className)}
+        data={chartData}
+        margin={CHART_MARGIN}
+      >
         <Grid horizontal />
         <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />

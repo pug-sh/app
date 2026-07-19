@@ -5,15 +5,18 @@ import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { AreaChart } from './area-chart'
 import { BarChart } from './bar-chart'
+import { pillScale } from './date-labels'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
 // The vendored charts size themselves off the DOM, which happy-dom reports as
 // 0x0 — without a real size they render nothing at all and every assertion below
-// would vacuously pass.
+// would vacuously pass. Mutable so the pill-scaling tests can shrink the chart.
+let mockChartSize = { width: 800, height: 400 }
+
 vi.mock('@visx/responsive', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
-    children({ width: 800, height: 400 }),
+    children(mockChartSize),
 }))
 
 const COLORS: SeriesColor[] = [{ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }]
@@ -77,4 +80,42 @@ describe('vendored chart date labels', () => {
       expect(axisLabels(hourly.container).some(l => l.startsWith('Jul'))).toBe(false)
     })
   }
+})
+
+// The hover date pill hardcodes its type and padding and exposes no size prop,
+// so it is scaled from outside via a custom property on the chart container.
+describe('hover date pill scaling', () => {
+  const pillScaleVar = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll<HTMLElement>('div'))
+      .map(el => el.style.getPropertyValue('--pill-scale'))
+      .find(Boolean)
+
+  it('stays full size on a full-height chart and eases down as it shrinks', () => {
+    expect(pillScale(800, 400)).toBe(1)
+    expect(pillScale(800, 200)).toBe(0.88)
+    expect(pillScale(800, 120)).toBe(0.75)
+  })
+
+  // The case that prompted this: a wide chart squeezed short. Scaling on width
+  // alone would report full size and change nothing.
+  it('shrinks a wide-but-short chart on height alone', () => {
+    expect(pillScale(1000, 150)).toBeLessThan(1)
+    expect(pillScale(360, 400)).toBe(0.75)
+  })
+
+  it('publishes the scale onto the chart container', () => {
+    mockChartSize = { width: 800, height: 120 }
+    const { container } = render(
+      <AreaChart
+        data={HOURLY}
+        seriesNames={['page_view']}
+        seriesColors={COLORS}
+        granularity={Granularity.HOUR}
+        timeZone="UTC"
+      />,
+    )
+
+    expect(pillScaleVar(container)).toBe('0.75')
+    mockChartSize = { width: 800, height: 400 }
+  })
 })
