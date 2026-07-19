@@ -5,14 +5,15 @@ import { Line } from '@/components/charts/line'
 import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
 import { ChartTooltip } from '@/components/charts/tooltip'
 import { XAxis } from '@/components/charts/x-axis'
+import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
 import { useVendoredChartPrep } from './common'
 import type { ChartPoint } from './types'
-import { YAxis } from './y-axis'
 
 // Wraps the vendored chart (src/components/charts) — never edit that directory
-// except for the documented patches. The y axis, series colors, tooltip rows and
-// date labels are ours to inject; the chart supplies the rest.
+// except for the documented patches. Series colors, tooltip rows and date labels
+// are ours to inject; the chart supplies the rest.
 export const LineChart = memo(function LineChart({
   data,
   seriesNames,
@@ -45,7 +46,7 @@ export const LineChart = memo(function LineChart({
     <VendoredLineChart aspectRatio="auto" className={className} data={chartData} formatDateLabel={formatDateLabel}>
       <Grid horizontal />
       <XAxis />
-      <YAxis formatter={yTickFormatter} />
+      <YAxis formatValue={yTickFormatter ?? compactNumber} />
       {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
           bucket reads as uncertain data when those are real values. */}
       {seriesNames.map((_, si) => (
