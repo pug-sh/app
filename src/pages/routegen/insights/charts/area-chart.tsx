@@ -1,26 +1,23 @@
-import { memo } from 'react'
-import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
+import { memo, useCallback, useMemo } from 'react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Area } from '@/components/charts/area'
+import { AreaChart as VendoredAreaChart } from '@/components/charts/area-chart'
+import { Grid } from '@/components/charts/grid'
+import { ChartTooltip } from '@/components/charts/tooltip'
+import { XAxis } from '@/components/charts/x-axis'
 import type { SeriesColor } from '@/lib/event-colors'
-import { cn } from '@/lib/utils'
-import {
-  COMPACT_CHART_AXIS_CLASS,
-  formatTooltipLabel,
-  SHARED_MARGIN,
-  SHARED_X_AXIS,
-  sharedYAxis,
-  useChartPrep,
-} from './common'
+import { formatAxisDate } from './helpers'
 import type { ChartPoint } from './types'
+import { YAxis } from './y-axis'
 
+// Wraps the vendored chart (src/components/charts) — never edit that directory
+// except for the documented patches. The y axis, series colors, tooltip rows and
+// date labels are all ours to inject; the chart supplies the rest.
 export const AreaChart = memo(function AreaChart({
   data,
   seriesNames,
   seriesColors,
   granularity,
-  logScale,
-  zeroBaseline,
   yTickFormatter,
   timeZone,
   className = 'h-70 w-full',
@@ -29,39 +26,53 @@ export const AreaChart = memo(function AreaChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
-  logScale?: boolean
-  zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   timeZone: string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
+  const chartData = useMemo(
+    () =>
+      data.map(point => {
+        const row: Record<string, unknown> = { date: point.date }
+        seriesNames.forEach((_, si) => {
+          row[`series${si}`] = point.values[si] ?? 0
+        })
+        return row
+      }),
+    [data, seriesNames],
+  )
+
+  // Without this the tooltip falls back to the raw dataKey ("series0") — the
+  // vendored chart has no equivalent of recharts' chartConfig label map.
+  const tooltipRows = useCallback(
+    (point: Record<string, unknown>) =>
+      seriesNames.map((name, si) => ({
+        color: seriesColors[si]?.line ?? '',
+        label: name,
+        value: Number(point[`series${si}`] ?? 0).toLocaleString(),
+      })),
+    [seriesNames, seriesColors],
+  )
+
+  // Bucket labels must render in the project's reporting zone to match the
+  // server-computed bucket boundaries, and vary by granularity.
+  const formatDateLabel = useCallback(
+    (date: Date) => formatAxisDate(date, granularity, timeZone),
+    [granularity, timeZone],
+  )
 
   if (data.length === 0) return null
 
+  // aspectRatio="auto" so height comes from className, matching the other charts.
   return (
-    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
-      <ReAreaChart data={chartData} margin={SHARED_MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
-        <ChartTooltip
-          cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
-        />
-        {seriesNames.map((_, si) => (
-          <Area
-            key={si}
-            type="monotone"
-            dataKey={`series${si}`}
-            stroke={seriesColors[si]?.line}
-            fill={seriesColors[si]?.line}
-            fillOpacity={0.22}
-            strokeWidth={2}
-            isAnimationActive={false}
-          />
-        ))}
-      </ReAreaChart>
-    </ChartContainer>
+    <VendoredAreaChart aspectRatio="auto" className={className} data={chartData} formatDateLabel={formatDateLabel}>
+      <Grid horizontal />
+      <XAxis />
+      <YAxis formatter={yTickFormatter} />
+      {seriesNames.map((_, si) => (
+        <Area key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} stroke={seriesColors[si]?.line} />
+      ))}
+      <ChartTooltip rows={tooltipRows} />
+    </VendoredAreaChart>
   )
 })
