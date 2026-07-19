@@ -70,7 +70,7 @@ export function DateRangePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs gap-1">
           <CalendarDays className="w-3 h-3" />
           time
         </span>
@@ -119,7 +119,7 @@ export function DateRangePicker({
                   className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
                   {preset.label}
-                  <span className="block text-[11px] text-muted-foreground/50">
+                  <span className="block text-xs text-muted-foreground/50">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>

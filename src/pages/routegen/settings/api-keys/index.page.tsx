@@ -199,7 +199,7 @@ const ApiKeys = () => {
             {keys.length > 0 ? (
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <th className="py-2 pr-4 text-left font-medium">Name</th>
                     <th className="py-2 pr-4 text-left font-medium">Type</th>
                     <th className="py-2 pr-4 text-left font-medium">Key</th>
@@ -220,10 +220,7 @@ const ApiKeys = () => {
                           {k.displayName || <span className="text-muted-foreground">—</span>}
                         </td>
                         <td className="py-2.5 pr-4">
-                          <Badge
-                            variant={k.kind === ApiKeyKind.PRIVATE ? 'default' : 'secondary'}
-                            className="text-[10px]"
-                          >
+                          <Badge variant={k.kind === ApiKeyKind.PRIVATE ? 'default' : 'secondary'} className="text-xs">
                             {kindLabel(k.kind)}
                           </Badge>
                         </td>
@@ -245,7 +242,7 @@ const ApiKeys = () => {
                               <button
                                 type="button"
                                 onClick={() => handleRevoke(k.id)}
-                                className="whitespace-nowrap text-[11px] font-medium text-destructive underline-offset-2 hover:underline"
+                                className="whitespace-nowrap text-xs font-medium text-destructive underline-offset-2 hover:underline"
                               >
                                 Revoke?
                               </button>

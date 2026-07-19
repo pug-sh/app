@@ -23,7 +23,7 @@ export function OverviewTileShell({ title, footer, meta, children, contentClassN
         {meta}
       </div>
       <div className={cn('relative min-h-0 flex-1', contentClassName)}>{children}</div>
-      <p className="mt-2 shrink-0 text-[11px] text-muted-foreground/70">{footer}</p>
+      <p className="mt-2 shrink-0 text-xs text-muted-foreground/70">{footer}</p>
     </div>
   )
 }

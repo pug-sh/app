@@ -29,7 +29,7 @@ type Props = {
   onClearAll: () => void
 }
 
-const triggerClass = 'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] transition-colors'
+const triggerClass = 'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors'
 
 const KindFilter = ({
   kinds,
@@ -90,7 +90,7 @@ const KindFilter = ({
                     <Check className={cn('size-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
                     <span className="size-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                     <span className="flex-1 truncate">{k.name}</span>
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/50">
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground/50">
                       {compactNumber(k.count)}
                     </span>
                   </CommandItem>
@@ -159,7 +159,7 @@ const CountryFilter = ({
                 >
                   <Check className={cn('size-3 shrink-0', selected === c.country ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex-1 truncate">{formatCountryName(c.country)}</span>
-                  <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/50">{c.count}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground/50">{c.count}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -193,7 +193,7 @@ const DeviceToggle = ({
   )
 
   return (
-    <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-[11px]">
+    <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
       {segment('all', 'All')}
       <span className="h-full w-px bg-border" />
       {segment(
@@ -216,7 +216,7 @@ const DeviceToggle = ({
 }
 
 const WindowToggle = ({ windowMs, onChange }: { windowMs: number; onChange: (ms: number) => void }) => (
-  <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-[11px]">
+  <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
     {LIVE_WINDOW_OPTIONS.map((opt, i) => (
       <span key={opt.ms} className="inline-flex h-full items-center">
         {i > 0 && <span className="h-full w-px bg-border" />}
@@ -274,7 +274,7 @@ const LiveFilterBar = ({
         <button
           type="button"
           onClick={onClearAll}
-          className="inline-flex h-7 items-center gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          className="inline-flex h-7 items-center gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
           <X className="size-3" /> Clear
         </button>

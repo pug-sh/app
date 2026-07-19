@@ -128,7 +128,7 @@ export const InsightsContent = memo(function InsightsContent({
   const renderTruncationNotice = (count: number) => {
     if (breakdowns.length === 0 || count < breakdownResponseLimit) return null
     return (
-      <p className="text-[11px] text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground mt-2">
         Showing top {breakdownResponseLimit} — additional breakdown values may be hidden.
       </p>
     )

@@ -170,10 +170,10 @@ const LiveVisitorsPage = () => {
                   </span>
                   <span className="text-sm text-muted-foreground">live now</span>
                   {arrivals > 0 && (
-                    <span className="text-[11px] font-medium text-emerald-500 tabular-nums">+{arrivals}</span>
+                    <span className="text-xs font-medium text-emerald-500 tabular-nums">+{arrivals}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {loading && <Loader2 className="size-3 animate-spin" />}
                   {lastUpdated && (
                     <HoverSwap
@@ -215,7 +215,7 @@ const LiveVisitorsPage = () => {
 
                   {selectedDistinctId && focus && (
                     <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
-                      <span className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
                         <span
                           className="size-1.5 shrink-0 rounded-full"
                           style={{ backgroundColor: getSeriesColor(focus.kind).dot }}
@@ -229,7 +229,7 @@ const LiveVisitorsPage = () => {
                       <button
                         type="button"
                         onClick={() => setSelectedDistinctId(null)}
-                        className="inline-flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
+                        className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                       >
                         <X className="size-3" /> Reset
                       </button>

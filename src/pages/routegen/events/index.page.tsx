@@ -67,7 +67,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 align-middle">
           <Badge
             variant="secondary"
-            className="text-[11px] font-medium px-2 py-0.5"
+            className="text-xs font-medium px-2 py-0.5"
             style={{ backgroundColor: colors.fill, color: colors.dot }}
           >
             {event.kind}
@@ -259,7 +259,7 @@ const EventExplorer = () => {
               the chip's own controls rather than an action on the table. The timestamp is the only
               confirmation a refresh returning no new rows can give — it resets to "just now" when
               nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
-          <div className="ml-4 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="ml-4 flex items-center gap-2 text-xs text-muted-foreground">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -284,7 +284,7 @@ const EventExplorer = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {userFilter && (
             <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-              <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">user</span>
+              <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">user</span>
               <Popover>
                 <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">
                   {userFilter}
@@ -343,7 +343,7 @@ const EventExplorer = () => {
         <>
           <table className="w-full table-fixed">
             <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
-              <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+              <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
                 <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
                 <th className="py-2 pr-2 text-left font-medium w-32">Location</th>

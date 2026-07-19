@@ -86,7 +86,7 @@ const SelectOrg = () => {
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Organizations</span>
             <div className="flex-1 h-px bg-border" />
-            <span className="text-[10px] text-muted-foreground">{orgs.length}</span>
+            <span className="text-xs text-muted-foreground">{orgs.length}</span>
           </div>
 
           <ul>
@@ -101,7 +101,7 @@ const SelectOrg = () => {
                   >
                     <span className="flex-1 font-medium">{org.displayName}</span>
                     {label && (
-                      <Badge variant="secondary" className="text-[10px] tracking-wider">
+                      <Badge variant="secondary" className="text-xs tracking-wider">
                         {label}
                       </Badge>
                     )}

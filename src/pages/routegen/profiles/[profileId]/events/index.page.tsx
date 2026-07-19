@@ -215,7 +215,7 @@ const UserActivity = () => {
                     {group.label}
                   </span>
                   <div className="flex-1 h-px bg-border" />
-                  <span className="text-[10px] text-muted-foreground">{group.events.length} events</span>
+                  <span className="text-xs text-muted-foreground">{group.events.length} events</span>
                 </div>
                 {group.events.map((event, i) => {
                   const activeLanes = lanes.filter(l => i >= l.firstIdx && i <= l.lastIdx)
@@ -270,7 +270,7 @@ const UserActivity = () => {
                                   >
                                     <ProjectLink
                                       href={`/profiles/${encodeURIComponent(profileId!)}/sessions/${encodeURIComponent(lane.sessionId)}`}
-                                      className="text-[10px] font-mono text-link hover:underline underline-offset-4 whitespace-nowrap"
+                                      className="text-xs font-mono text-link hover:underline underline-offset-4 whitespace-nowrap"
                                     >
                                       {lane.sessionId.slice(0, 8)}
                                     </ProjectLink>
@@ -279,7 +279,7 @@ const UserActivity = () => {
                                         browser={lane.browser}
                                         os={lane.os}
                                         iconSize={12}
-                                        className="text-[9px] text-muted-foreground/60"
+                                        className="text-xs text-muted-foreground/60"
                                       />
                                     )}
                                   </div>

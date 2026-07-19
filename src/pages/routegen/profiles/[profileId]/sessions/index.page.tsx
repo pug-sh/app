@@ -149,7 +149,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
   return (
     <table className="w-full">
       <thead>
-        <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+        <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <th className="py-2 pr-4 text-left font-medium">Session</th>
           <SortHeader k="started" label="Started" />
           <SortHeader k="duration" label="Duration" />

@@ -18,7 +18,7 @@ export const WebFilterBar = ({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Filters</span>
+      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Filters</span>
       {filterChips(filters).map(({ property, value }) => (
         <button
           key={`${property}:${value}`}

@@ -119,7 +119,7 @@ const TabStrip = ({
         type="button"
         onClick={() => onSelect(tab.id)}
         className={cn(
-          'rounded px-1.5 py-0.5 text-[11px] transition-colors',
+          'rounded px-1.5 py-0.5 text-xs transition-colors',
           tab.id === activeId ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
         )}
       >

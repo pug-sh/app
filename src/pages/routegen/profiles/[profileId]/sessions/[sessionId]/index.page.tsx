@@ -76,7 +76,7 @@ const SessionSummary = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">Session</p>
-            <Badge variant="secondary" className="font-mono text-[10px]">
+            <Badge variant="secondary" className="font-mono text-xs">
               {sessionId.slice(0, 16)}
             </Badge>
           </div>
@@ -94,19 +94,19 @@ const SessionSummary = ({
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Duration</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Duration</p>
           <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Events</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Events</p>
           <p className="text-sm font-medium tabular-nums">{events.length}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Entry</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Entry</p>
           <p className="text-sm font-medium truncate">{entryEvent ?? '—'}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Exit</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Exit</p>
           <p className="text-sm font-medium truncate">{exitEvent ?? '—'}</p>
         </div>
       </div>

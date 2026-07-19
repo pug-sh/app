@@ -143,7 +143,7 @@ const SignIn = () => {
           </div>
 
           <div className="max-w-md">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] opacity-60">Product analytics</p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] opacity-60">Product analytics</p>
             <h2 className="mt-4 text-4xl font-medium leading-[1.1] tracking-tight">
               See what your
               <br />

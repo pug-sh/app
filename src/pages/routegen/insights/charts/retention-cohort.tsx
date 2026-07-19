@@ -65,7 +65,7 @@ export const RetentionCohort = ({
           scrolled horizontally or vertically — only the table below scrolls. */}
       <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3 shrink-0">
         <p className="text-xs text-muted-foreground">Retention by cohort</p>
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>Low</span>
           {['#dcfce7', '#86efac', '#4ade80', '#16a34a', '#166534'].map((c, i) => (
             <span key={i} className="w-4 h-2 rounded-xs" style={{ backgroundColor: c }} />
@@ -77,16 +77,16 @@ export const RetentionCohort = ({
         <table className="w-full min-w-170">
           <thead>
             <tr className="border-b border-border bg-muted/20">
-              <th className="sticky left-0 z-20 bg-background py-2 px-3 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-55">
+              <th className="sticky left-0 z-20 bg-background py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground font-medium min-w-55">
                 Cohort
               </th>
-              <th className="sticky left-55 z-20 bg-background py-2 px-2 text-left text-[11px] uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60">
+              <th className="sticky left-55 z-20 bg-background py-2 px-2 text-left text-xs uppercase tracking-wider text-muted-foreground font-medium min-w-27.5 border-r border-border/60">
                 Total profiles
               </th>
               {Array.from({ length: columnCount }).map((_, col) => (
                 <th
                   key={col}
-                  className="py-2 px-3 text-right text-[11px] uppercase tracking-wider text-muted-foreground font-medium"
+                  className="py-2 px-3 text-right text-xs uppercase tracking-wider text-muted-foreground font-medium"
                 >
                   {col === 0 ? 'Start' : `+${col}`}
                 </th>
@@ -118,7 +118,7 @@ export const RetentionCohort = ({
                   return (
                     <td key={ci} className="py-1.5 px-1.5">
                       <div
-                        className="h-8 rounded-[6px] text-[11px] tabular-nums flex items-center justify-end px-2"
+                        className="h-8 rounded-[6px] text-xs tabular-nums flex items-center justify-end px-2"
                         style={{
                           backgroundColor: hasValue
                             ? retentionColor(value)

@@ -179,7 +179,7 @@ export const ShareTileButton = ({
         </PopoverHeader>
 
         <div className="space-y-1">
-          <label htmlFor={`share-title-${tile.id}`} className="text-[11px] font-medium text-muted-foreground">
+          <label htmlFor={`share-title-${tile.id}`} className="text-xs font-medium text-muted-foreground">
             Title
           </label>
           <Input

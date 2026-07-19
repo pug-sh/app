@@ -225,7 +225,7 @@ export const PlatformStackLabel = ({
         {icon && <Devicon name={icon} size={iconSize} />}
         <span className="truncate">{primary}</span>
       </span>
-      {secondary && <span className="max-w-full truncate text-[11px] text-muted-foreground">{secondary}</span>}
+      {secondary && <span className="max-w-full truncate text-xs text-muted-foreground">{secondary}</span>}
     </DetailTooltip>
   )
 }

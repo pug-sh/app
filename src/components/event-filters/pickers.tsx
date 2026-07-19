@@ -63,7 +63,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums shrink-0">
                   {compactNumber(pk.count)}
                 </span>
               </CommandItem>
@@ -83,7 +83,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="truncate">{pk.name}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums shrink-0">
                   {compactNumber(pk.count)}
                 </span>
               </CommandItem>
@@ -156,7 +156,7 @@ const EventPopoverList = ({
                   style={{ backgroundColor: customColor ?? colors.dot }}
                 />
                 <span className="flex-1 truncate">{ev.name}</span>
-                <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
+                <span className="text-xs text-muted-foreground/50 tabular-nums shrink-0">
                   {compactNumber(ev.count)}
                 </span>
               </CommandItem>
@@ -220,7 +220,7 @@ export const EventChip = ({
 
   return (
     <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">event</span>
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">event</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger className="px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors">
           <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color ?? colors?.dot }} />
@@ -253,7 +253,7 @@ export const EventChip = ({
 
 export const BreakdownChip = ({ property, onRemove }: { property: string; onRemove: () => void }) => (
   <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-    <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">break by</span>
+    <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">break by</span>
     <span className="px-2 h-full flex items-center font-mono">{property}</span>
     <button
       type="button"

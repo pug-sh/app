@@ -21,7 +21,7 @@ export const DataTable = ({
     <div className="max-h-64 overflow-y-auto mt-4">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+          <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <th className="py-2 pr-2 text-left font-medium sticky top-0 bg-background">Date</th>
             {seriesNames.map((name, i) => (
               <th key={i} className="py-2 pr-2 text-right font-medium sticky top-0 bg-background">

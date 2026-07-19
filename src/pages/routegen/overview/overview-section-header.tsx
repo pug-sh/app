@@ -13,7 +13,7 @@ const OverviewSectionHeader = ({
       {description ? <p className="mt-0.5 text-[13px] text-muted-foreground">{description}</p> : null}
     </div>
     {count !== undefined ? (
-      <span className="shrink-0 text-[11px] text-muted-foreground/70 tabular-nums">{count}</span>
+      <span className="shrink-0 text-xs text-muted-foreground/70 tabular-nums">{count}</span>
     ) : null}
   </div>
 )
