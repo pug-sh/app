@@ -103,11 +103,26 @@ const DashboardDetail = () => {
     }
   }, [dashboard, initialGlobalOverrides])
 
-  const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    const clamped = clampRange(range)
-    setGlobalTimeRange(clamped)
-    setGlobalGranularity(g => clampGranularity(g, clamped))
-  }, [])
+  // Clearing the range restores the dashboard's saved default. The seed effect above only fires
+  // once per id, so without this tiles drop to the hardcoded 7-day fallback and never come back.
+  const handleGlobalTimeRangeChange = useCallback(
+    (range: TimeRange | undefined) => {
+      if (!range && dashboard && isDashboardTimeRangePreset(dashboard.defaultTimeRange)) {
+        const restored = resolveDashboardTimeRangePreset(dashboard.defaultTimeRange)
+        setGlobalTimeRange(restored)
+        setGlobalGranularity(
+          dashboard.defaultGranularity === Granularity.UNSPECIFIED
+            ? autoGranularity(restored)
+            : clampGranularity(dashboard.defaultGranularity, restored),
+        )
+        return
+      }
+      const clamped = clampRange(range)
+      setGlobalTimeRange(clamped)
+      setGlobalGranularity(g => clampGranularity(g, clamped))
+    },
+    [dashboard],
+  )
 
   // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
   // to their own saved granularity against the global range, which may exceed its cap.

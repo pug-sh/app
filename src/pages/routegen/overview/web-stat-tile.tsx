@@ -1,8 +1,11 @@
+import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import { type Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
+import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
+import { alignRangeStart } from '@/lib/granularity'
 import { cn } from '@/lib/utils'
 import { priorPeriodRange } from '../dashboards/compare-query'
 import { DeltaBadge, formatDelta, Sparkline } from '../dashboards/kpi-tile'
@@ -28,9 +31,16 @@ export const WebStatTile = ({
   filters: readonly ActiveFilter[]
 }) => {
   const stat = getWebStat(statId)
+  const timeZone = useAtomValue(activeProjectTimezoneAtom)
   const scalarQuery = useMemo(() => buildWebStatQuery(statId, InsightType.SEGMENTATION, filters), [statId, filters])
   const trendQuery = useMemo(() => buildWebStatQuery(statId, InsightType.TRENDS, filters), [statId, filters])
-  const priorRange = useMemo(() => priorPeriodRange(range), [range])
+  // Derived from the window useWebQuery actually sends, not the raw one, so the delta compares two
+  // equal-length adjacent periods (see DashboardInsightContent).
+  const alignedRange = useMemo(
+    () => ({ from: alignRangeStart(range, granularity, timeZone), to: range.to }),
+    [range, granularity, timeZone],
+  )
+  const priorRange = useMemo(() => priorPeriodRange(alignedRange), [alignedRange])
 
   const { result, error, retry, loading } = useWebQuery(scalarQuery, range, granularity, `overview-web-stat-${statId}`)
   const { result: priorResult, retry: retryPrior } = useWebQuery(
@@ -38,6 +48,7 @@ export const WebStatTile = ({
     priorRange,
     granularity,
     `overview-web-stat-${statId}-prev`,
+    false,
   )
   const { result: trendResult, retry: retryTrend } = useWebQuery(
     trendQuery,

@@ -26,11 +26,10 @@ import {
 } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { DEFAULT_INSIGHTS_RANGE } from '@/lib/date-presets'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
-import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
+import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import type { ChartPoint } from './charts'
@@ -113,7 +112,7 @@ const Insights = () => {
   // Local query state.
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
-    () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve(),
+    () => initialFilterState.timeRange ?? DEFAULT_INSIGHTS_RANGE(),
   )
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
@@ -251,11 +250,9 @@ const Insights = () => {
       const resp = await insightsRPC.query(
         {
           granularity,
-          // Floor `from` to the project-zone bucket boundary so the first bucket is
-          // complete (avoids the partial-bucket "dip" at the chart's left edge).
           timeRange: toProtoTimeRange(
             timeRange
-              ? { from: floorToZoneBucket(timeRange.from, granularity, reportingTimeZone), to: timeRange.to }
+              ? { from: alignRangeStart(timeRange, granularity, reportingTimeZone), to: timeRange.to }
               : undefined,
           ),
           spec,
@@ -411,7 +408,7 @@ const Insights = () => {
         )}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} presets={INSIGHTS_PRESETS} />
+          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} />
           <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTopK && (
             <TopKControls topK={topK} onChange={setTopK} schema={globalSchema} schemaError={globalSchemaError} />

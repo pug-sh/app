@@ -1,5 +1,6 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { floorToZoneBucket } from '@/lib/timezone'
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
@@ -99,6 +100,16 @@ export const clampGranularity = (granularity: Granularity, range: TimeRange | un
     if (durationMs <= GRANULARITY_MAX_RANGE_MS[g]) return g
   }
   return Granularity.MONTH
+}
+
+// The `from` to send for a query: floored to the bucket boundary in the reporting zone so the
+// first bucket is complete. Flooring extends the window backward, though, which can push a range
+// the picker approved past the cap — the server validates what it receives. Keep the requested
+// start in that case; a partial first bucket beats a rejected query.
+export const alignRangeStart = (range: TimeRange, granularity: Granularity, timeZone: string) => {
+  const floored = floorToZoneBucket(range.from, granularity, timeZone)
+  if (range.to.getTime() - floored.getTime() <= GRANULARITY_MAX_RANGE_MS[granularity]) return floored
+  return range.from
 }
 
 // Resolve a global granularity to a concrete value to hand down to dashboard/overview tiles:

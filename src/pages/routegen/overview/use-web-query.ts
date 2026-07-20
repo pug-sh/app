@@ -7,8 +7,8 @@ import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
+import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 
 // Stable sentinel for the not-yet-loaded state, so a consumer's memo/effect deps (e.g. the breakdown
 // panel's rows memo, keyed on `result`) don't see a fresh object identity on every in-flight render.
@@ -26,6 +26,9 @@ export const useWebQuery = (
   range: TimeRange,
   granularity: Granularity,
   queryKeyPrefix: string,
+  // An already-aligned window (the compare-vs-prior period) opts out: re-flooring would push its
+  // start back another bucket, making it longer than the window it's compared against.
+  align = true,
 ) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -43,10 +46,15 @@ export const useWebQuery = (
         granularity,
         timeRange: create(
           TimeRangeSchema,
-          toProtoTimeRange({ from: floorToZoneBucket(new Date(fromMs), granularity, timeZone), to: new Date(toMs) }),
+          toProtoTimeRange({
+            from: align
+              ? alignRangeStart({ from: new Date(fromMs), to: new Date(toMs) }, granularity, timeZone)
+              : new Date(fromMs),
+            to: new Date(toMs),
+          }),
         ),
       }),
-    [baseQuery, fromMs, toMs, granularity, timeZone],
+    [baseQuery, fromMs, toMs, granularity, timeZone, align],
   )
 
   const projectId = headers?.['x-project-id'] ?? ''

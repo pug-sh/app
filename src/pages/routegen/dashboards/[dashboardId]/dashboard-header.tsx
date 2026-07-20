@@ -6,7 +6,6 @@ import { Can } from '@/auth/can'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { granularityDisabledReason } from '@/lib/granularity'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
@@ -113,9 +112,8 @@ export const DashboardHeader = ({
             <DateRangePicker
               value={globalTimeRange}
               onChange={onTimeRangeChange}
-              presets={INSIGHTS_PRESETS}
               allowUnset
-              unsetLabel="Select time"
+              unsetLabel="Default range"
             />
             <OptionChip
               label="granularity"

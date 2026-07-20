@@ -15,8 +15,8 @@ import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
@@ -78,18 +78,21 @@ export const DashboardInsightContent = ({
     [granularityOverride, query],
   )
 
+  // The window actually sent. Compare-vs-prior derives from this and not the raw range, so the two
+  // periods stay equal-length and adjacent rather than overlapping by the flooring slice.
+  const alignedTimeRange = useMemo(
+    () => ({ from: alignRangeStart(effectiveTimeRange, effectiveGranularity, timeZone), to: effectiveTimeRange.to }),
+    [effectiveTimeRange, effectiveGranularity, timeZone],
+  )
+
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
-    // Floor `from` to the bucket boundary in the project zone so the first bucket is
-    // complete — otherwise a mid-bucket window start renders as a partial "dip" at the
-    // chart's left edge (the server buckets in this same zone).
-    const from = floorToZoneBucket(effectiveTimeRange.from, effectiveGranularity, timeZone)
     return create(QueryRequestSchema, {
       ...query,
       granularity: effectiveGranularity,
-      timeRange: create(TimeRangeSchema, toProtoTimeRange({ from, to: effectiveTimeRange.to })),
+      timeRange: create(TimeRangeSchema, toProtoTimeRange(alignedTimeRange)),
     })
-  }, [effectiveGranularity, effectiveTimeRange, query, timeZone])
+  }, [effectiveGranularity, alignedTimeRange, query])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
@@ -121,8 +124,8 @@ export const DashboardInsightContent = ({
   )
 
   const comparisonQuery = useMemo(
-    () => (tile ? buildComparisonQuery(effectiveQuery, effectiveTimeRange, tile.compare) : undefined),
-    [effectiveQuery, effectiveTimeRange, tile],
+    () => (tile ? buildComparisonQuery(effectiveQuery, alignedTimeRange, tile.compare) : undefined),
+    [effectiveQuery, alignedTimeRange, tile],
   )
   const comparisonQueryKey = stringifyQueryKey({
     prefix: `${queryKeyPrefix}::compare`,
@@ -145,12 +148,12 @@ export const DashboardInsightContent = ({
   // delta is computed inside KpiTile. Only assembled for KPI tiles.
   const compare = useMemo<KpiCompare | undefined>(() => {
     if (!(tile && resolvedViewMode === DashboardTileViewMode.KPI) || !comparisonQuery) return undefined
-    const compareLabel = formatComparePeriodLabel(effectiveTimeRange)
+    const compareLabel = formatComparePeriodLabel(alignedTimeRange)
     if (comparisonError) return { error: true, label: compareLabel ?? '' }
     if (comparisonResult.case === 'trends')
       return { series: [...comparisonResult.value.series], label: compareLabel ?? '' }
     return undefined
-  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, effectiveTimeRange])
+  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, alignedTimeRange])
 
   return (
     <InsightTileView
