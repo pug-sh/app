@@ -54,11 +54,13 @@ const render = async (browser, svg, size) => {
   const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 })
   const dataUri = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
   await page.setContent(
-    `<style>html,body{margin:0;padding:0}img{display:block;width:${size}px;height:${size}px}</style>` +
+    `<style>html,body{margin:0;padding:0;background:transparent}img{display:block;width:${size}px;height:${size}px}</style>` +
       `<img src="${dataUri}">`,
   )
   await page.waitForTimeout(150)
-  const png = await page.screenshot({ type: 'png' })
+  // Without omitBackground the plate's rounded corners bake to white, which reads as a
+  // hard square on a dark tab strip.
+  const png = await page.screenshot({ type: 'png', omitBackground: true })
   await page.close()
   return png
 }
