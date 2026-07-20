@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai'
 import { Check, Copy, Download, ImageOff, Loader2, Share } from 'lucide-react'
 import { type RefObject, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
 import {
   type CapturedChart,
@@ -50,6 +52,10 @@ export const ShareTileButton = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [composedBlob, setComposedBlob] = useState<Blob | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // The capture reads live computed styles, so the whole card is composed in the
+  // theme that was in effect when the popover opened — the mark follows suit.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
   const previewUrlRef = useRef<string | null>(null)
   const copyResetRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -116,7 +122,7 @@ export const ShareTileButton = ({
 
     setTitle(tile.displayName.trim() || 'Chart')
     setFontFamily(window.getComputedStyle(node).fontFamily)
-    loadBrandLogo().then(setLogo, () => setLogo(null))
+    loadBrandLogo(resolvedTheme).then(setLogo, () => setLogo(null))
 
     setCapturing(true)
     try {

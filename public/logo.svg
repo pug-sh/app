@@ -3,9 +3,11 @@
 <!-- Light badge plate baked in: the mark is full-color (cream face, navy ears) and
      needs a pale ground to read. One self-contained asset then renders correctly on
      every surface — the indigo auth hero, the dark mobile header, the browser-tab
-     favicon, the share card — with no per-theme or OS-media-query logic. rx ~22% of
-     the canvas matches the app-icon corner radius. -->
-<rect x="0" y="0" width="1254" height="1254" rx="276" ry="276" fill="#F5F5F8"/>
+     favicon, the dark share card — with no per-theme or OS-media-query logic. rx ~22%
+     of the canvas matches the app-icon corner radius. The id is a contract: the light
+     share card strips this rect by it (capture-tile.ts), since a pale plate on a pale
+     card reads as a stray tile. Keep the id if this element is ever rewritten. -->
+<rect id="badge-plate" x="0" y="0" width="1254" height="1254" rx="276" ry="276" fill="#F5F5F8"/>
 
 <path fill="#F8EBD9" opacity="1.000000" stroke="none" 
 	d="
