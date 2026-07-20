@@ -110,7 +110,7 @@ export const WebStatTile = ({
       </div>
       <span
         className={cn(
-          'mt-1 text-4xl font-medium tracking-tight tabular-nums',
+          'mt-1 text-4xl font-medium tracking-tight tabular-nums text-display-foreground',
           loading && value === undefined && 'animate-pulse opacity-40',
         )}
       >

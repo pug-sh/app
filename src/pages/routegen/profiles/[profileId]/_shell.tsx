@@ -44,7 +44,7 @@ const CopyButton = ({ value }: { value: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div>
-    <p className="text-2xl font-medium tabular-nums">{value.toLocaleString()}</p>
+    <p className="text-2xl font-medium tabular-nums text-display-foreground">{value.toLocaleString()}</p>
     <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
   </div>
 )
