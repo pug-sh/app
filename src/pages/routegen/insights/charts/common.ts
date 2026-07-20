@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
-import { formatAxisDate } from './helpers'
+import { formatAxisDate, formatTooltipDate } from './helpers'
 import type { ChartPoint } from './types'
 
 // The vendored charts default to a 40px margin on every side. Nothing draws in the
@@ -12,7 +12,7 @@ import type { ChartPoint } from './types'
 export const CHART_MARGIN = { top: 8 }
 
 // Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
-// real Date — the vendored chart resolves its own labels via formatDateLabel.
+// real Date — the wrappers inject the formatted labels via the context override.
 export const useVendoredChartPrep = (
   data: ChartPoint[],
   seriesNames: string[],
@@ -54,11 +54,16 @@ export const useVendoredChartPrep = (
   )
 
   // Bucket labels must render in the project's reporting zone to match the
-  // server-computed bucket boundaries, and vary by granularity.
-  const formatDateLabel = useCallback(
-    (date: Date) => formatAxisDate(date, granularity, timeZone),
+  // server-computed bucket boundaries, and vary by granularity. The axis and the
+  // hover pill want different detail: the axis stays terse to fit, while the pill
+  // has to say which day an hour bucket lands on (an hourly range spans up to 14).
+  const dateLabelFormatters = useMemo(
+    () => ({
+      axis: (date: Date) => formatAxisDate(date, granularity, timeZone),
+      tooltip: (date: Date) => formatTooltipDate(date, granularity, timeZone),
+    }),
     [granularity, timeZone],
   )
 
-  return { chartData, tooltipRows, formatDateLabel }
+  return { chartData, tooltipRows, dateLabelFormatters }
 }

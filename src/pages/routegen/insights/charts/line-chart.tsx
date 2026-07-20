@@ -11,9 +11,9 @@ import { CHART_MARGIN, useVendoredChartPrep } from './common'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
-// Wraps the vendored chart (src/components/charts) — never edit that directory
-// except for the documented patches. Series colors, tooltip rows and date labels
-// are ours to inject; the chart supplies the rest.
+// Wraps the vendored chart (src/components/charts) — never edit that directory.
+// Series colors, tooltip rows and date labels are ours to inject; the chart
+// supplies the rest.
 export const LineChart = memo(function LineChart({
   data,
   seriesNames,
@@ -31,7 +31,7 @@ export const LineChart = memo(function LineChart({
   timeZone: string
   className?: string
 }) {
-  const { chartData, tooltipRows, formatDateLabel } = useVendoredChartPrep(
+  const { chartData, tooltipRows, dateLabelFormatters } = useVendoredChartPrep(
     data,
     seriesNames,
     seriesColors,
@@ -45,7 +45,7 @@ export const LineChart = memo(function LineChart({
   // margin.top trims the vendored 40px default — nothing renders in it, and it cost
   // ~15% of the plot height on top of the y-domain's own headroom.
   return (
-    <DateLabelProvider value={formatDateLabel}>
+    <DateLabelProvider value={dateLabelFormatters}>
       <VendoredLineChart
         aspectRatio="auto"
         className={cn(PILL_SCALING, className)}

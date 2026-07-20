@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo } from 'react'
-import ChartStableContext, { useChartStable } from '@/components/charts/chart-context'
+import ChartStableContext, { type ChartStableContextValue, useChartStable } from '@/components/charts/chart-context'
 import { ChartTooltip as VendoredTooltip } from '@/components/charts/tooltip'
 import type { ChartTooltipProps } from '@/components/charts/tooltip/chart-tooltip'
 import { XAxis as VendoredXAxis, type XAxisProps } from '@/components/charts/x-axis'
@@ -12,25 +12,33 @@ import { XAxis as VendoredXAxis, type XAxisProps } from '@/components/charts/x-a
 // The labels reach the axis and the tooltip through `dateLabels` on the chart
 // context, so re-providing that context is a supported seam — no vendored file
 // is touched, and a re-add can't revert it. Both consumers are wrapped below;
-// each re-provides independently because they are siblings under the shell.
-const FormatDateLabelContext = createContext<((date: Date) => string) | null>(null)
+// each re-provides independently because they are siblings under the shell, which
+// is also what lets them carry different detail for the same bucket.
+export type DateLabelFormatters = { axis: (date: Date) => string; tooltip: (date: Date) => string }
+
+const FormatDateLabelContext = createContext<DateLabelFormatters | null>(null)
 
 export const DateLabelProvider = FormatDateLabelContext.Provider
 
-const useDateLabelledContext = () => {
-  const format = useContext(FormatDateLabelContext)
+const useDateLabelledContext = (surface: keyof DateLabelFormatters) => {
+  const formatters = useContext(FormatDateLabelContext)
   const stable = useChartStable()
 
   return useMemo(() => {
-    if (!format) return stable
+    if (!formatters) return stable
+    const format = formatters[surface]
+    // Annotated rather than inferred: a spread stays assignable to the context type
+    // even if upstream renames this field, which would silently drop the override
+    // back to the browser-local labels. The annotation makes that rename a build error.
     // Mirrors the shell's own derivation, which maps the visible plot data
     // (context `data`) through `xAccessor`.
-    return { ...stable, dateLabels: stable.data.map(d => format(stable.xAccessor(d))) }
-  }, [stable, format])
+    const dateLabels: ChartStableContextValue['dateLabels'] = stable.data.map(d => format(stable.xAccessor(d)))
+    return { ...stable, dateLabels }
+  }, [stable, formatters, surface])
 }
 
 export function XAxis(props: XAxisProps) {
-  const value = useDateLabelledContext()
+  const value = useDateLabelledContext('axis')
 
   return (
     <ChartStableContext.Provider value={value}>
@@ -73,7 +81,7 @@ export const PILL_SCALING =
   '[&_.overflow-hidden.rounded-full]:origin-bottom [&_.overflow-hidden.rounded-full]:scale-[var(--pill-scale,1)]'
 
 export function ChartTooltip(props: ChartTooltipProps) {
-  const value = useDateLabelledContext()
+  const value = useDateLabelledContext('tooltip')
   const { containerRef, width, height } = useChartStable()
 
   // Reuses the chart's own measurement instead of observing the container again.

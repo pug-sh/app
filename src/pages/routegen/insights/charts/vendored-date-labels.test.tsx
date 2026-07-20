@@ -32,7 +32,7 @@ const axisLabels = (container: HTMLElement) =>
     .map(el => el.textContent?.trim() ?? '')
     .filter(text => /^\d{2}:\d{2}$/.test(text) || /^[A-Z][a-z]{2} \d/.test(text))
 
-// Guards the formatDateLabel patch documented in CLAUDE.md. Upstream computes its
+// Guards the date-label context override documented in CLAUDE.md. Upstream computes its
 // x labels internally with a browser-local, granularity-blind formatter, so a
 // re-add that drops the patch still type-checks and still renders — it just
 // silently mislabels every bucket. Each chart entry point carries its own copy of

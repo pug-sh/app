@@ -263,8 +263,8 @@
      toggled on documentElement, the same element `:root` matches, so these
      aliases resolve against whichever token value wins there and track the theme
      on their own. The registry's own values were authored against a much darker
-     canvas (its dark --chart-background was 0.145 against our 0.26), which left
-     the dark grid line darker than the surface it was drawn on. */
+     canvas (its dark --chart-background is 0.145 against our 0.21), so pinning
+     them leaves the grid barely separated from the surface it's drawn on. */
   --chart-background: var(--background);
   --chart-foreground: var(--foreground);
   --chart-foreground-muted: var(--muted-foreground);
