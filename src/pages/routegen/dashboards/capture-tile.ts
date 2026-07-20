@@ -265,28 +265,45 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
   }
 }
 
-// The app's brand mark (public/logo.svg). Loaded once and cached. We add an
-// explicit width/height so the SVG has an intrinsic size for canvas drawing
-// (Firefox refuses to draw a sizeless SVG image). Resolves null if unavailable.
-let brandLogoPromise: Promise<HTMLImageElement | null> | undefined
+// logo.svg bakes in a pale badge plate so the full-color mark reads on any surface.
+// That plate is what makes the mark legible on the dark card, but on the light card
+// it reads as a stray pale tile — so strip it there and let the mark sit directly on
+// the surface. Stripping leaves the viewBox alone, so the mark keeps its drawn size.
+const BADGE_PLATE = /<rect\b[^>]*\bid="badge-plate"[^>]*\/>\s*/
 
-export const loadBrandLogo = () => {
-  if (!brandLogoPromise) {
-    brandLogoPromise = fetch('/logo.svg')
-      .then(response => (response.ok ? response.text() : Promise.reject(new Error('logo missing'))))
-      .then(markup => {
-        const sized = /<svg[^>]*\swidth=/.test(markup) ? markup : markup.replace('<svg', '<svg width="64" height="64"')
-        const url = URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' }))
-        return loadImage(url, 64, 64).finally(() => URL.revokeObjectURL(url))
-      })
-      .catch(error => {
-        // Cosmetic: the share card just renders without the mark. Log so a 404'd
-        // logo (e.g. after an asset-hash change) is debuggable rather than silent.
-        console.error('Failed to load brand logo for share card', error)
-        return null
-      })
-  }
-  return brandLogoPromise
+const stripBadgePlate = (markup: string) => {
+  const stripped = markup.replace(BADGE_PLATE, '')
+  // A renamed/removed id would otherwise quietly restore the plate on light cards.
+  if (stripped === markup) console.error('Brand logo badge plate not found — light share card will show it')
+  return stripped
+}
+
+// The app's brand mark (public/logo.svg). Loaded once per theme and cached. We add
+// an explicit width/height so the SVG has an intrinsic size for canvas drawing
+// (Firefox refuses to draw a sizeless SVG image). Resolves null if unavailable.
+const brandLogoPromises = new Map<'light' | 'dark', Promise<HTMLImageElement | null>>()
+
+export const loadBrandLogo = (theme: 'light' | 'dark') => {
+  const cached = brandLogoPromises.get(theme)
+  if (cached) return cached
+
+  const promise = fetch('/logo.svg')
+    .then(response => (response.ok ? response.text() : Promise.reject(new Error('logo missing'))))
+    .then(markup => {
+      const plated = theme === 'dark' ? markup : stripBadgePlate(markup)
+      const sized = /<svg[^>]*\swidth=/.test(plated) ? plated : plated.replace('<svg', '<svg width="64" height="64"')
+      const url = URL.createObjectURL(new Blob([sized], { type: 'image/svg+xml' }))
+      return loadImage(url, 64, 64).finally(() => URL.revokeObjectURL(url))
+    })
+    .catch(error => {
+      // Cosmetic: the share card just renders without the mark. Log so a 404'd
+      // logo (e.g. after an asset-hash change) is debuggable rather than silent.
+      console.error('Failed to load brand logo for share card', error)
+      return null
+    })
+
+  brandLogoPromises.set(theme, promise)
+  return promise
 }
 
 const truncateToWidth = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {

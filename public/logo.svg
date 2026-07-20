@@ -2,10 +2,13 @@
 	 width="100%" viewBox="0 0 1254 1254" enable-background="new 0 0 1254 1254" xml:space="preserve">
 <!-- Light badge plate baked in: the mark is full-color (cream face, navy ears) and
      needs a pale ground to read. One self-contained asset then renders correctly on
-     every surface — the indigo auth hero, the dark mobile header, the browser-tab
-     favicon, the share card — with no per-theme or OS-media-query logic. rx ~22% of
-     the canvas matches the app-icon corner radius. -->
-<rect x="0" y="0" width="1254" height="1254" rx="276" ry="276" fill="#F5F5F8"/>
+     every app surface — the indigo auth hero, the dark mobile header, the dark share
+     card — with no per-theme logic. rx ~22% of the canvas matches the app-icon corner
+     radius. The id is a contract, dropped by it wherever the ground is already pale and
+     the plate would read as a stray tile: the light share card (capture-tile.ts) and
+     the light favicon (generated from this file in vite.config.ts, which fails the build
+     if the id stops matching). Keep the id if this element is ever rewritten. -->
+<rect id="badge-plate" x="0" y="0" width="1254" height="1254" rx="276" ry="276" fill="#F5F5F8"/>
 
 <path fill="#F8EBD9" opacity="1.000000" stroke="none" 
 	d="

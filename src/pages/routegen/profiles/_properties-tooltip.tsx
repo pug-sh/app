@@ -15,7 +15,7 @@ export const PropertiesTooltip = ({ properties }: { properties?: JsonObject }) =
 
   return (
     <div className="min-w-[9rem] max-w-[18rem] px-3 py-2">
-      <div className="font-semibold text-xs text-muted-foreground uppercase tracking-[0.09em]">Properties</div>
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Properties</div>
       <div className="-mx-3 my-2 h-px bg-border/60" />
       <div className="flex flex-col gap-1.5">
         {shown.map(([key, value]) => (
