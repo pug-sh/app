@@ -82,7 +82,7 @@ const SingleFunnel = ({
   return (
     <div className={cn('relative', compact && 'h-full min-h-0')}>
       <VendoredFunnel
-        className={compact ? 'h-full' : undefined}
+        className={cn('[&_.font-semibold]:font-medium', compact && 'h-full')}
         color={color}
         data={stages}
         formatPercentage={formatPercentage}
