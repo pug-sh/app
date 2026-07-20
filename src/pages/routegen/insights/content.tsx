@@ -188,20 +188,19 @@ export const InsightsContent = memo(function InsightsContent({
     if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
     if (!hasFunnelData) return renderNoEvents()
 
-    const funnelBody =
-      breakdowns.length > 0 ? (
+    if (breakdowns.length > 0) {
+      const breakdownBody = (
         <>
           <FunnelBreakdownView series={funnelSeriesData} />
           {renderTruncationNotice(funnelSeriesData.length)}
         </>
-      ) : (
-        <FunnelChart series={funnelSeriesData} compact={compact} />
       )
-
-    if (compact) {
-      return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
+      if (compact) return <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">{breakdownBody}</div>
+      return breakdownBody
     }
 
+    const funnelBody = <FunnelChart series={funnelSeriesData} compact={compact} />
+    if (compact) return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
     return funnelBody
   }
 
