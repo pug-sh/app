@@ -6,7 +6,8 @@
      card — with no per-theme logic. rx ~22% of the canvas matches the app-icon corner
      radius. The id is a contract, dropped by it wherever the ground is already pale and
      the plate would read as a stray tile: the light share card (capture-tile.ts) and
-     the light favicon (public/favicon.svg). Keep the id if this is ever rewritten. -->
+     the light favicon (generated from this file in vite.config.ts, which fails the build
+     if the id stops matching). Keep the id if this element is ever rewritten. -->
 <rect id="badge-plate" x="0" y="0" width="1254" height="1254" rx="276" ry="276" fill="#F5F5F8"/>
 
 <path fill="#F8EBD9" opacity="1.000000" stroke="none" 
