@@ -11,6 +11,11 @@ import type { ChartPoint } from './types'
 // they hold the axis labels. Partial: the chart merges it over DEFAULT_MARGIN.
 export const CHART_MARGIN = { top: 8 }
 
+// Marks a row added only to pad the x-domain (see the bar wrapper). Padding rows carry
+// a date and nothing else, so they draw no bar — but they are still real rows to the
+// axis, which would label them, so the date-label override blanks them by this key.
+export const PAD_ROW_KEY = '__pad'
+
 // Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
 // real Date — the wrappers inject the formatted labels via the context override.
 export const useVendoredChartPrep = (

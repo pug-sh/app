@@ -3,6 +3,7 @@ import ChartStableContext, { type ChartStableContextValue, useChartStable } from
 import { ChartTooltip as VendoredTooltip } from '@/components/charts/tooltip'
 import type { ChartTooltipProps } from '@/components/charts/tooltip/chart-tooltip'
 import { XAxis as VendoredXAxis, type XAxisProps } from '@/components/charts/x-axis'
+import { PAD_ROW_KEY } from './common'
 
 // The vendored charts format x labels internally with a browser-local,
 // granularity-blind formatter and expose no prop for it. Bucket labels have to
@@ -32,7 +33,11 @@ const useDateLabelledContext = (surface: keyof DateLabelFormatters) => {
     // back to the browser-local labels. The annotation makes that rename a build error.
     // Mirrors the shell's own derivation, which maps the visible plot data
     // (context `data`) through `xAccessor`.
-    const dateLabels: ChartStableContextValue['dateLabels'] = stable.data.map(d => format(stable.xAccessor(d)))
+    // Padding rows exist only to hold the x-domain open; labelling them would put a
+    // phantom bucket at each end of the axis.
+    const dateLabels: ChartStableContextValue['dateLabels'] = stable.data.map(d =>
+      d[PAD_ROW_KEY] ? '' : format(stable.xAccessor(d)),
+    )
     return { ...stable, dateLabels }
   }, [stable, formatters, surface])
 }
