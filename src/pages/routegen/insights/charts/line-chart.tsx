@@ -56,9 +56,11 @@ export const LineChart = memo(function LineChart({
         <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
-            bucket reads as uncertain data when those are real values. */}
+            bucket reads as uncertain data when those are real values.
+            animate={false} opts out of the vendored point-morph tween, which strands
+            the line off-plot on any data change — see line-data-change.test.tsx. */}
         {seriesNames.map((_, si) => (
-          <Line key={si} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
+          <Line key={si} animate={false} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
         ))}
         <ChartTooltip rows={tooltipRows} />
       </VendoredLineChart>
