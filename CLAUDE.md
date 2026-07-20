@@ -116,7 +116,7 @@ Two things make the override work, and both are easy to break:
 - The wrappers must keep `displayName = 'XAxis'` / `'ChartTooltip'`. The shell sorts children into layers by component name, and `XAxis` is in its clip-excluded set — an unrecognised name puts the labels inside the series reveal clip. Set it explicitly; minification mangles the function name.
 - Don't reach for `CHART_CLIP_PASSTHROUGH` to inject a provider. It looks like the right seam, but the shell renders the *unwrapped* child, so the wrapper is dropped.
 
-`insights/charts/vendored-date-labels.test.tsx` covers all three charts and is the guard — it stubs `@visx/responsive` because happy-dom reports the container as 0×0, and without a size the chart renders nothing and every assertion passes vacuously.
+Two files guard the override across all three charts, both stubbing `@visx/responsive` because happy-dom reports the container as 0×0 and without a size the chart renders nothing and every assertion passes vacuously: `insights/charts/vendored-date-labels.test.tsx` (axis labels land in the project reporting zone, plus the hover-pill scaling) and `insights/charts/vendored-tooltip-date.test.tsx` (the pill carries the day, not just the clock time). Each surface re-provides the context independently, so each needs its own guard.
 
 **Collateral still needs a manual revert after any add** — this part is not solved. `git diff` the whole tree, not just the component's directory:
 
