@@ -9,7 +9,6 @@ import { sharedDashboardsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import LoadingSpinner from '@/components/loading-spinner'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { useRouteParams } from '@/lib/route-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
@@ -106,17 +105,11 @@ const SharedDashboard = () => {
     <Shell>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-medium tracking-tight">{data.displayName}</h1>
+          <h1 className="text-3xl font-medium tracking-tight text-display-foreground">{data.displayName}</h1>
           {data.description ? <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{data.description}</p> : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <DateRangePicker
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            presets={INSIGHTS_PRESETS}
-            allowUnset
-            unsetLabel="Select time"
-          />
+          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} allowUnset unsetLabel="Default range" />
           <OptionChip
             label="granularity"
             icon={Clock}

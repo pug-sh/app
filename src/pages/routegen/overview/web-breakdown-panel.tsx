@@ -130,8 +130,8 @@ const TabStrip = ({
 )
 
 // Fixed-width box so labels stay aligned whether or not a row resolves a glyph.
-const GlyphSlot = ({ children }: { children?: ReactNode }) => (
-  <span className="inline-flex w-4 shrink-0 items-center justify-center">{children}</span>
+const GlyphSlot = ({ children, className }: { children?: ReactNode; className?: string }) => (
+  <span className={cn('inline-flex w-4 shrink-0 items-center justify-center', className)}>{children}</span>
 )
 
 export const WebBreakdownPanel = ({
@@ -205,8 +205,11 @@ export const WebBreakdownPanel = ({
       return domain ? <DomainFavicon domain={domain} /> : <span className="size-4 shrink-0" />
     }
   } else if (valueKind === 'country') {
-    // $country is an ISO alpha-2 code: flag from the code, name for the label.
-    renderLeading = row => <GlyphSlot>{row.muted ? null : <CountryFlag code={row.label} size={16} />}</GlyphSlot>
+    // $country is an ISO alpha-2 code: flag from the code, name for the label. Flags are 4:3, so they
+    // need a wider slot than the square glyphs to carry the same optical weight.
+    renderLeading = row => (
+      <GlyphSlot className="w-5">{row.muted ? null : <CountryFlag code={row.label} size={20} />}</GlyphSlot>
+    )
     formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
   } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
     // $browser / $os / $device values are already display names; just lead with the brand devicon.

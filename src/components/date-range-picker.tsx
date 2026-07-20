@@ -2,7 +2,7 @@ import { CalendarDays } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ACTIVITY_PRESETS, fmtDate } from '@/lib/date-presets'
+import { fmtDate, TIME_RANGE_PRESETS } from '@/lib/date-presets'
 import { cn } from '@/lib/utils'
 
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
@@ -21,7 +21,7 @@ export function DateRangePicker({
   value,
   onChange,
   allowUnset,
-  presets = ACTIVITY_PRESETS,
+  presets = TIME_RANGE_PRESETS,
   unsetLabel = 'All time',
 }: {
   value: TimeRange | undefined
@@ -105,7 +105,7 @@ export function DateRangePicker({
           </button>
         </div>
         <div className="flex">
-          <div className="border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5">
+          <div className="border-r border-border/50 py-1.5 px-1 w-[260px] flex flex-col gap-0.5">
             {presets.map(preset => {
               const display = preset.resolve()
               return (
@@ -116,10 +116,10 @@ export function DateRangePicker({
                     onChange(preset.resolve())
                     setOpen(false)
                   }}
-                  className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  className="flex items-baseline justify-between gap-3 px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  {preset.label}
-                  <span className="block text-xs text-muted-foreground/50">
+                  <span className="whitespace-nowrap">{preset.label}</span>
+                  <span className="shrink-0 whitespace-nowrap text-muted-foreground/50 tabular-nums">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>

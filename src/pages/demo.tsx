@@ -82,7 +82,7 @@ const Demo = () => {
   if (authenticated && !isDemo) {
     return (
       <AuthShell>
-        <h1 className="text-2xl font-medium tracking-tight">View the live demo?</h1>
+        <h1 className="text-2xl font-medium tracking-tight text-display-foreground">View the live demo?</h1>
         <p className="text-sm text-muted-foreground mt-1.5 mb-6">
           You're signed in. Viewing the read-only demo will sign you out of your account on this device.
         </p>

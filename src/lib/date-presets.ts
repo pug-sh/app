@@ -24,7 +24,13 @@ const lastNDays = (n: number): TimeRange => {
 
 const lastNMonths = (n: number): TimeRange => {
   const now = new Date()
-  const from = new Date(now.getFullYear(), now.getMonth() - n, 1)
+  const from = new Date(now)
+  from.setMonth(from.getMonth() - n)
+  // setMonth overflows forward when the target month is shorter (May 31 → Feb 31 → Mar 3).
+  if (from.getDate() !== now.getDate()) from.setDate(0)
+  // +1 day so the window spans exactly n months of buckets. Without it "Last 12 months" is 365
+  // days plus today's elapsed hours, over the backend's 365-day cap for Day granularity.
+  from.setDate(from.getDate() + 1)
   return { from: startOfDay(from), to: now }
 }
 
@@ -34,56 +40,62 @@ const yesterday = (): TimeRange => {
   return { from: startOfDay(d), to: endOfDay(d) }
 }
 
+// Monday-anchored, matching the ISO week the server buckets on.
+const startOfWeek = (d: Date) => {
+  const day = d.getDay()
+  const monday = new Date(d)
+  monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  return startOfDay(monday)
+}
+
+const thisWeek = (): TimeRange => ({ from: startOfWeek(new Date()), to: new Date() })
+
 const lastWeek = (): TimeRange => {
-  const now = new Date()
-  const day = now.getDay()
-  const thisMonday = new Date(now)
-  thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
+  const thisMonday = startOfWeek(new Date())
   const lastMonday = new Date(thisMonday)
   lastMonday.setDate(thisMonday.getDate() - 7)
   const lastSunday = new Date(thisMonday)
   lastSunday.setDate(thisMonday.getDate() - 1)
-  return { from: startOfDay(lastMonday), to: endOfDay(lastSunday) }
+  return { from: lastMonday, to: endOfDay(lastSunday) }
 }
 
-export const ACTIVITY_PRESETS: DatePreset[] = [
-  { label: 'Today', resolve: todayRange },
-  {
-    label: 'Yesterday',
-    resolve: yesterday,
-  },
-  {
-    label: 'This week',
-    resolve: () => {
-      const now = new Date()
-      const day = now.getDay()
-      const from = new Date(now)
-      from.setDate(now.getDate() - (day === 0 ? 6 : day - 1))
-      return { from: startOfDay(from), to: now }
-    },
-  },
-  {
-    label: 'Last week',
-    resolve: lastWeek,
-  },
-  {
-    label: 'This month',
-    resolve: () => {
-      const now = new Date()
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now }
-    },
-  },
-  { label: 'Last 6 months', resolve: () => lastNMonths(6) },
-]
+const thisMonth = (): TimeRange => {
+  const now = new Date()
+  return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: now }
+}
 
-export const INSIGHTS_PRESETS: DatePreset[] = [
+const lastMonth = (): TimeRange => {
+  const now = new Date()
+  // Day 0 of this month is the last day of the previous one.
+  const lastDay = new Date(now.getFullYear(), now.getMonth(), 0)
+  return { from: new Date(now.getFullYear(), now.getMonth() - 1, 1), to: endOfDay(lastDay) }
+}
+
+const thisYear = (): TimeRange => {
+  const now = new Date()
+  return { from: new Date(now.getFullYear(), 0, 1), to: now }
+}
+
+// One list behind every page-level picker, so a range offered on one page is offered on all.
+// Rolling first, then calendar-anchored next to its previous-period counterpart.
+export const TIME_RANGE_PRESETS: DatePreset[] = [
+  { label: 'Today', resolve: todayRange },
+  { label: 'Yesterday', resolve: yesterday },
   { label: 'Last 7 days', resolve: () => lastNDays(7) },
   { label: 'Last 14 days', resolve: () => lastNDays(14) },
   { label: 'Last 30 days', resolve: () => lastNDays(30) },
   { label: 'Last 3 months', resolve: () => lastNMonths(3) },
   { label: 'Last 6 months', resolve: () => lastNMonths(6) },
   { label: 'Last 12 months', resolve: () => lastNMonths(12) },
+  { label: 'This week', resolve: thisWeek },
+  { label: 'Last week', resolve: lastWeek },
+  { label: 'This month', resolve: thisMonth },
+  { label: 'Last month', resolve: lastMonth },
+  { label: 'This year', resolve: thisYear },
 ]
+
+// Named, not TIME_RANGE_PRESETS[0], so reordering the list can't move Insights' landing window.
+export const DEFAULT_INSIGHTS_RANGE = () => lastNDays(7)
 
 export const DEFAULT_DASHBOARD_TIME_RANGE_PRESET = TimeRangePreset.LAST_7_DAYS
 
@@ -123,4 +135,4 @@ export const fmtDate = (d: Date) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-export const defaultRange = () => ACTIVITY_PRESETS.find(p => p.label === 'This month')!.resolve()
+export const defaultRange = thisMonth

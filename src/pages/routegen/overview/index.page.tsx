@@ -10,7 +10,6 @@ import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
-import { ACTIVITY_PRESETS, INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { clampGranularity, clampRange, granularityDisabledReason, resolveTileGranularity } from '@/lib/granularity'
 import { GRANULARITIES } from '../insights/constants'
 import { OptionChip } from '../insights/controls'
@@ -113,9 +112,8 @@ const Overview = () => {
       <DateRangePicker
         value={globalTimeRange}
         onChange={handleGlobalTimeRangeChange}
-        presets={mode === 'web' ? ACTIVITY_PRESETS : INSIGHTS_PRESETS}
         allowUnset
-        unsetLabel="Select time"
+        unsetLabel="Default range"
       />
       <OptionChip
         label="granularity"

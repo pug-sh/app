@@ -23,6 +23,13 @@ import { DashboardCanvas } from './dashboard-canvas'
 import { DashboardHeader } from './dashboard-header'
 import { useDashboardEditor } from './use-dashboard-editor'
 
+// "Auto" derives from the range; an explicit saved pick is clamped to that range's cap. The two
+// helpers use deliberately different ladders, so this must not collapse into one call.
+const resolveDefaultGranularity = (dashboard: Dashboard, range: TimeRange) => {
+  if (dashboard.defaultGranularity === Granularity.UNSPECIFIED) return autoGranularity(range)
+  return clampGranularity(dashboard.defaultGranularity, range)
+}
+
 const DashboardDetail = () => {
   const { dashboardId } = useRouteParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
@@ -95,19 +102,26 @@ const DashboardDetail = () => {
     // Keep a URL granularity if present; else honor the saved default granularity (clamped to
     // the range's cap), else derive it from the range ("Auto").
     if (initialGlobalOverrides.granularity === undefined) {
-      setGlobalGranularity(
-        dashboard.defaultGranularity === Granularity.UNSPECIFIED
-          ? autoGranularity(range)
-          : clampGranularity(dashboard.defaultGranularity, range),
-      )
+      setGlobalGranularity(resolveDefaultGranularity(dashboard, range))
     }
   }, [dashboard, initialGlobalOverrides])
 
-  const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    const clamped = clampRange(range)
-    setGlobalTimeRange(clamped)
-    setGlobalGranularity(g => clampGranularity(g, clamped))
-  }, [])
+  // Clearing the range restores the dashboard's saved default. The seed effect above only fires
+  // once per id, so without this tiles drop to the hardcoded 7-day fallback and never come back.
+  const handleGlobalTimeRangeChange = useCallback(
+    (range: TimeRange | undefined) => {
+      if (!range && dashboard && isDashboardTimeRangePreset(dashboard.defaultTimeRange)) {
+        const restored = resolveDashboardTimeRangePreset(dashboard.defaultTimeRange)
+        setGlobalTimeRange(restored)
+        setGlobalGranularity(resolveDefaultGranularity(dashboard, restored))
+        return
+      }
+      const clamped = clampRange(range)
+      setGlobalTimeRange(clamped)
+      setGlobalGranularity(g => clampGranularity(g, clamped))
+    },
+    [dashboard],
+  )
 
   // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
   // to their own saved granularity against the global range, which may exceed its cap.

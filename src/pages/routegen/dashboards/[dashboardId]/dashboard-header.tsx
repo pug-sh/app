@@ -6,7 +6,6 @@ import { Can } from '@/auth/can'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { granularityDisabledReason } from '@/lib/granularity'
 import { OptionChip } from '../../insights/controls'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
@@ -63,10 +62,10 @@ export const DashboardHeader = ({
           onChange={next => onPatchMeta({ displayName: next })}
           placeholder={UNTITLED_DASHBOARD_NAME}
           autoFocus={autoFocusName}
-          className="min-h-12 flex-1 text-3xl font-medium tracking-tight outline-hidden"
+          className="min-h-12 flex-1 text-3xl font-medium tracking-tight outline-hidden text-display-foreground"
         />
       ) : (
-        <h1 className="min-h-12 text-3xl font-medium tracking-tight">
+        <h1 className="min-h-12 text-3xl font-medium tracking-tight text-display-foreground">
           {dashboard.displayName || UNTITLED_DASHBOARD_NAME}
         </h1>
       )}
@@ -113,9 +112,8 @@ export const DashboardHeader = ({
             <DateRangePicker
               value={globalTimeRange}
               onChange={onTimeRangeChange}
-              presets={INSIGHTS_PRESETS}
               allowUnset
-              unsetLabel="Select time"
+              unsetLabel="Default range"
             />
             <OptionChip
               label="granularity"

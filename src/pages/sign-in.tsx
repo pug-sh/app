@@ -189,7 +189,7 @@ const SignIn = () => {
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                   <MailCheck className="w-5 h-5 text-link" />
                 </div>
-                <h1 className="text-2xl font-medium tracking-tight">Check your inbox</h1>
+                <h1 className="text-2xl font-medium tracking-tight text-display-foreground">Check your inbox</h1>
                 <p className="text-sm text-muted-foreground mt-1.5">
                   We sent a sign-in link to{' '}
                   <span className="font-medium text-foreground break-all">{magicLinkEmail}</span>. Click it to continue
@@ -208,7 +208,7 @@ const SignIn = () => {
               </div>
             ) : (
               <>
-                <h1 className="text-2xl font-medium tracking-tight">
+                <h1 className="text-2xl font-medium tracking-tight text-display-foreground">
                   {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1.5 mb-6">

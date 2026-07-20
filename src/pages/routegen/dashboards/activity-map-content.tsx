@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 import { countryCountsFromTrendSeries } from './activity-map'
 import { getInitialGranularity, getProtoRange } from './query'
 
@@ -62,15 +62,15 @@ export const useActivityMapData = ({
   )
   const effectiveQuery = useMemo(() => {
     if (!query || !countryKey) return undefined
-    // Floor `from` to the bucket boundary in the project zone (as useWebQuery / DashboardInsightContent
-    // do) so the map's window matches the sibling tiles' exactly and its first bucket is whole.
+    // Aligned the same way as useWebQuery / DashboardInsightContent so the map's window matches
+    // the sibling tiles' exactly.
     return create(QueryRequestSchema, {
       ...query,
       granularity: effectiveGranularity,
       timeRange: create(
         TimeRangeSchema,
         toProtoTimeRange({
-          from: floorToZoneBucket(effectiveTimeRange.from, effectiveGranularity, timeZone),
+          from: alignRangeStart(effectiveTimeRange, effectiveGranularity, timeZone),
           to: effectiveTimeRange.to,
         }),
       ),

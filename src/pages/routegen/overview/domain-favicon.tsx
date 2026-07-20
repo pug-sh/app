@@ -25,7 +25,8 @@ export const DomainFavicon = ({ domain }: { domain: string }) => {
       width={16}
       height={16}
       onError={() => setFailed(true)}
-      className={cn(ICON_CLASS, 'object-contain')}
+      // Muted to match the other row glyphs; the fallback globe is already muted by its own color.
+      className={cn(ICON_CLASS, 'object-contain saturate-[0.5] opacity-95')}
     />
   )
 }
