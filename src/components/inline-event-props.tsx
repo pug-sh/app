@@ -19,7 +19,7 @@ export const InlineEventProps = ({
           key: 'headline',
           element: (
             <span
-              className="text-[11px] font-mono text-foreground whitespace-nowrap"
+              className="text-xs font-mono text-foreground whitespace-nowrap"
               title={headlinePairs.map(([k, v]) => `${k}: ${v}`).join(' · ')}
             >
               {headline}
@@ -32,7 +32,7 @@ export const InlineEventProps = ({
       ...headlinePairs.map(([k, v]) => ({
         key: `hp:${k}`,
         element: (
-          <span className="text-[11px] whitespace-nowrap" title={`${k}: ${v}`}>
+          <span className="text-xs whitespace-nowrap" title={`${k}: ${v}`}>
             <span className="text-muted-foreground">{k}: </span>
             <span className="font-mono text-foreground">{v}</span>
           </span>
@@ -41,7 +41,7 @@ export const InlineEventProps = ({
       ...props.map(([k, v]) => ({
         key: `p:${k}`,
         element: (
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap" title={`${k}: ${v}`}>
+          <span className="text-xs text-muted-foreground whitespace-nowrap" title={`${k}: ${v}`}>
             {k}: <span className="font-mono">{v}</span>
           </span>
         ),

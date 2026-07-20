@@ -40,7 +40,7 @@ export const WebRankedList = ({
   return (
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
       {dimensionLabel && (
-        <div className="sticky top-0 z-20 mb-1 flex items-center gap-2 border-b border-border/50 bg-background px-2 pt-0.5 pb-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+        <div className="sticky top-0 z-20 mb-1 flex items-center gap-2 border-b border-border/50 bg-background px-2 pt-0.5 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
           <span className="min-w-0 flex-1 truncate">{dimensionLabel}</span>
           <span className="flex w-20 shrink-0 justify-end">{metricControl}</span>
           {showShare && <span className="w-11 shrink-0 text-right">%</span>}
@@ -82,7 +82,7 @@ export const WebRankedList = ({
               {compactNumber(row.value)}
             </span>
             {showShare && (
-              <span className="relative w-11 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+              <span className="relative w-11 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
                 {total > 0 ? `${((row.value / total) * 100).toFixed(1)}%` : '—'}
               </span>
             )}

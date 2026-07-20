@@ -29,7 +29,7 @@ const TopKPropertyChip = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">{label}</span>
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">{label}</span>
         <span className={cn('px-2 h-full flex items-center', value ? 'font-mono' : 'text-muted-foreground')}>
           {value || placeholder}
         </span>

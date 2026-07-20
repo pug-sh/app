@@ -1,26 +1,24 @@
 import { memo } from 'react'
-import { Area, CartesianGrid, AreaChart as ReAreaChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Area } from '@/components/charts/area'
+import { AreaChart as VendoredAreaChart } from '@/components/charts/area-chart'
+import { Grid } from '@/components/charts/grid'
+import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import {
-  COMPACT_CHART_AXIS_CLASS,
-  formatTooltipLabel,
-  SHARED_MARGIN,
-  SHARED_X_AXIS,
-  sharedYAxis,
-  useChartPrep,
-} from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
+import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
+// Wraps the vendored chart (src/components/charts) — never edit that directory.
+// Series colors, tooltip rows and date labels are ours to inject; the chart
+// supplies the rest.
 export const AreaChart = memo(function AreaChart({
   data,
   seriesNames,
   seriesColors,
   granularity,
-  logScale,
-  zeroBaseline,
   yTickFormatter,
   timeZone,
   className = 'h-70 w-full',
@@ -29,39 +27,39 @@ export const AreaChart = memo(function AreaChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
-  logScale?: boolean
-  zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   timeZone: string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
+  const { chartData, tooltipRows, dateLabelFormatters } = useVendoredChartPrep(
+    data,
+    seriesNames,
+    seriesColors,
+    granularity,
+    timeZone,
+  )
 
   if (data.length === 0) return null
 
+  // aspectRatio="auto" so height comes from className, matching the other charts.
+  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
+  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
-    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
-      <ReAreaChart data={chartData} margin={SHARED_MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
-        <ChartTooltip
-          cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
-        />
+    <DateLabelProvider value={dateLabelFormatters}>
+      <VendoredAreaChart
+        aspectRatio="auto"
+        className={cn(PILL_SCALING, className)}
+        data={chartData}
+        margin={CHART_MARGIN}
+      >
+        <Grid horizontal />
+        <XAxis />
+        <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {seriesNames.map((_, si) => (
-          <Area
-            key={si}
-            type="monotone"
-            dataKey={`series${si}`}
-            stroke={seriesColors[si]?.line}
-            fill={seriesColors[si]?.line}
-            fillOpacity={0.22}
-            strokeWidth={2}
-            isAnimationActive={false}
-          />
+          <Area key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} stroke={seriesColors[si]?.line} />
         ))}
-      </ReAreaChart>
-    </ChartContainer>
+        <ChartTooltip rows={tooltipRows} />
+      </VendoredAreaChart>
+    </DateLabelProvider>
   )
 })

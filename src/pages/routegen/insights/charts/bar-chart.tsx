@@ -1,28 +1,26 @@
 import { memo } from 'react'
-import { Bar, CartesianGrid, BarChart as ReBarChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { ComposedChart } from '@/components/charts/composed-chart'
+import { Grid } from '@/components/charts/grid'
+import { SeriesBar } from '@/components/charts/series-bar'
+import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import {
-  COMPACT_CHART_AXIS_CLASS,
-  formatTooltipLabel,
-  SHARED_MARGIN,
-  SHARED_X_AXIS,
-  sharedYAxis,
-  useChartPrep,
-} from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
+import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
+// Wraps the vendored chart (src/components/charts) — never edit that directory.
+// Series colors, tooltip rows and date labels are ours to inject; the chart
+// supplies the rest.
 export const BarChart = memo(function BarChart({
   data,
   seriesNames,
   seriesColors,
   granularity,
   timeZone,
-  stacked,
-  logScale,
-  zeroBaseline,
+  stacked = false,
   yTickFormatter,
   className = 'h-70 w-full',
 }: {
@@ -31,45 +29,41 @@ export const BarChart = memo(function BarChart({
   seriesColors: SeriesColor[]
   granularity: Granularity
   timeZone: string
-  stacked: boolean
-  logScale?: boolean
-  zeroBaseline?: boolean
+  stacked?: boolean
   yTickFormatter?: (value: number) => string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone, stacked)
+  const { chartData, tooltipRows, dateLabelFormatters } = useVendoredChartPrep(
+    data,
+    seriesNames,
+    seriesColors,
+    granularity,
+    timeZone,
+  )
 
   if (data.length === 0) return null
 
+  // aspectRatio="auto" so height comes from className, matching the other charts.
+  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
+  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
-    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
-      <ReBarChart
-        key={stacked ? 'stacked' : 'grouped'}
-        data={chartData}
-        margin={SHARED_MARGIN}
+    <DateLabelProvider value={dateLabelFormatters}>
+      <ComposedChart
+        aspectRatio="auto"
         barGap={stacked ? 0 : 6}
-        barCategoryGap={stacked ? '24%' : '18%'}
+        className={cn(PILL_SCALING, className)}
+        data={chartData}
+        margin={CHART_MARGIN}
+        stacked={stacked}
       >
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
-        <ChartTooltip
-          cursor={{ fill: 'transparent' }}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
-        />
+        <Grid horizontal />
+        <XAxis />
+        <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {seriesNames.map((_, si) => (
-          <Bar
-            key={si}
-            dataKey={`series${si}`}
-            fill={seriesColors[si]?.line}
-            stroke={seriesColors[si]?.line}
-            strokeWidth={1}
-            isAnimationActive={false}
-            stackId={stacked ? 'stack' : `group-${si}`}
-            radius={stacked ? 0 : [3, 3, 0, 0]}
-          />
+          <SeriesBar key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} radius={stacked ? 0 : 3} />
         ))}
-      </ReBarChart>
-    </ChartContainer>
+        <ChartTooltip rows={tooltipRows} />
+      </ComposedChart>
+    </DateLabelProvider>
   )
 })

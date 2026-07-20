@@ -58,7 +58,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
         <>
           {autoProps.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">System</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">System</p>
               <div className="flex flex-wrap gap-1">
                 {autoProps.map(([k, v]) => (
                   <PropChip key={k} label={k} value={v} />
@@ -68,7 +68,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
           )}
           {schemaProps.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Properties</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Properties</p>
               <div className="flex flex-wrap gap-1">
                 {schemaProps.map(([k, v]) => (
                   <PropChip key={k} label={k} value={v} />
@@ -78,7 +78,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
           )}
           {extraProps.length > 0 && (
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">Custom</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-1">Custom</p>
               <div className="flex flex-wrap gap-1">
                 {extraProps.map(([k, v]) => (
                   <PropChip key={k} label={k} value={v} />
@@ -86,7 +86,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
               </div>
             </div>
           )}
-          <p className="text-[10px] text-muted-foreground/40 font-mono">{event.eventId}</p>
+          <p className="text-xs text-muted-foreground/40 font-mono">{event.eventId}</p>
         </>
       )}
     </div>

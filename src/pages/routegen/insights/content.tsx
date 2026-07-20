@@ -47,8 +47,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
-  logScale,
-  zeroBaseline,
   hideLegend,
   yTickFormatter,
   isTopK = false,
@@ -80,8 +78,6 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
-  logScale?: boolean
-  zeroBaseline?: boolean
   // Hides the value·avg·peak SummaryStats row. Named for the legend it originally gated; the
   // web-analytics main chart opts in via InsightTileView's hideSummary (summing per-bucket session
   // averages is meaningless there, and the stat cards already carry the accurate scalar).
@@ -132,7 +128,7 @@ export const InsightsContent = memo(function InsightsContent({
   const renderTruncationNotice = (count: number) => {
     if (breakdowns.length === 0 || count < breakdownResponseLimit) return null
     return (
-      <p className="text-[11px] text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground mt-2">
         Showing top {breakdownResponseLimit} — additional breakdown values may be hidden.
       </p>
     )
@@ -147,8 +143,6 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
-          logScale={logScale}
-          zeroBaseline={zeroBaseline}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
           className={chartClassName}
@@ -161,8 +155,6 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
-          logScale={logScale}
-          zeroBaseline={zeroBaseline}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
           className={chartClassName}
@@ -186,8 +178,6 @@ export const InsightsContent = memo(function InsightsContent({
         granularity={granularity}
         timeZone={timeZone}
         stacked={viewMode === 'bar-stacked'}
-        logScale={logScale}
-        zeroBaseline={zeroBaseline}
         yTickFormatter={yTickFormatter}
         className={chartClassName}
       />
@@ -198,20 +188,19 @@ export const InsightsContent = memo(function InsightsContent({
     if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
     if (!hasFunnelData) return renderNoEvents()
 
-    const funnelBody =
-      breakdowns.length > 0 ? (
+    if (breakdowns.length > 0) {
+      const breakdownBody = (
         <>
           <FunnelBreakdownView series={funnelSeriesData} />
           {renderTruncationNotice(funnelSeriesData.length)}
         </>
-      ) : (
-        <FunnelChart series={funnelSeriesData} compact={compact} />
       )
-
-    if (compact) {
-      return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
+      if (compact) return <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">{breakdownBody}</div>
+      return breakdownBody
     }
 
+    const funnelBody = <FunnelChart series={funnelSeriesData} compact={compact} />
+    if (compact) return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
     return funnelBody
   }
 

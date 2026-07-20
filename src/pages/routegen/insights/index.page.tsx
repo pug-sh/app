@@ -452,7 +452,7 @@ const Insights = () => {
             maxEvents={maxEvents}
           />
           {isRetention && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Tooltip>
                 <TooltipTrigger className="inline-flex items-center cursor-help">
                   <CircleHelp className="w-3.5 h-3.5" />
@@ -466,7 +466,7 @@ const Insights = () => {
             </div>
           )}
           {isTopK && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Tooltip>
                 <TooltipTrigger className="inline-flex items-center cursor-help">
                   <CircleHelp className="w-3.5 h-3.5" />

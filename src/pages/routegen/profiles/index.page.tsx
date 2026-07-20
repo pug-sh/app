@@ -237,7 +237,7 @@ const Profiles = () => {
               one of their controls rather than an action on the table. The timestamp is the only
               confirmation a refresh returning no new rows can give — it resets to "just now" when
               nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
-          <div className="ml-4 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="ml-4 flex items-center gap-2 text-xs text-muted-foreground">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -275,12 +275,12 @@ const Profiles = () => {
         <>
           <div className="mt-4 mb-2 flex items-center justify-between gap-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profiles</span>
-            <span className="text-[10px] text-muted-foreground">{profiles.length}</span>
+            <span className="text-xs text-muted-foreground">{profiles.length}</span>
           </div>
           <div className="overflow-x-clip">
             <table className="w-full min-w-[960px] border-collapse">
               <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
-                <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
                   <th className="py-2 pr-3 text-left font-medium">Platform</th>
@@ -304,7 +304,7 @@ const Profiles = () => {
                           contentClassName={tooltipPanelContent}
                           className="items-center gap-3"
                         >
-                          <ProfileAvatar identity={identity} className="size-7 rounded-md text-[10px]" />
+                          <ProfileAvatar identity={identity} className="size-7 rounded-md text-xs" />
                           <div className="min-w-0">
                             <ProjectLink
                               href={`/profiles/${encodeURIComponent(profileId)}`}
@@ -315,7 +315,7 @@ const Profiles = () => {
                             >
                               {identity.name}
                             </ProjectLink>
-                            <div className="truncate text-[11px] text-muted-foreground">
+                            <div className="truncate text-xs text-muted-foreground">
                               {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
                             </div>
                           </div>
@@ -334,7 +334,7 @@ const Profiles = () => {
                             '—'
                           )}
                           {location.secondary && (
-                            <div className="truncate text-[11px] text-muted-foreground">{location.secondary}</div>
+                            <div className="truncate text-xs text-muted-foreground">{location.secondary}</div>
                           )}
                         </div>
                       </td>

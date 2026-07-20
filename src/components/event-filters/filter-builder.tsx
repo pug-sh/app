@@ -123,7 +123,7 @@ export const FilterBuilder = ({
   }
 
   const breadcrumb = (
-    <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground">
+    <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-xs text-muted-foreground">
       {step !== 'property' && (
         <>
           <button
@@ -192,7 +192,7 @@ export const FilterBuilder = ({
                 onClick={() => pickOperator(o.value)}
                 className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted/50"
               >
-                <span className="inline-flex h-4 w-5 shrink-0 items-center justify-center font-mono text-[11px] text-muted-foreground">
+                <span className="inline-flex h-4 w-5 shrink-0 items-center justify-center font-mono text-xs text-muted-foreground">
                   {o.symbol}
                 </span>
                 <span>{o.label}</span>

@@ -69,7 +69,7 @@ const PropertiesSection = ({ title, entries }: { title: string; entries: Entry[]
     <div className="flex items-center gap-2 mb-2">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
       <div className="flex-1 h-px bg-border" />
-      <span className="text-[10px] text-muted-foreground">{entries.length}</span>
+      <span className="text-xs text-muted-foreground">{entries.length}</span>
     </div>
     <table className="w-full">
       <tbody>
@@ -79,7 +79,7 @@ const PropertiesSection = ({ title, entries }: { title: string; entries: Entry[]
               <span className="font-mono text-xs">{e.key}</span>
             </td>
             <td className="py-2 pr-6 align-baseline whitespace-nowrap leading-5">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{e.type}</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">{e.type}</span>
             </td>
             <td className="py-2 pr-4 align-baseline w-full leading-5">
               <div className="flex items-baseline gap-2">

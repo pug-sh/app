@@ -111,7 +111,7 @@ export const SummaryStats = ({
                 {compactNumber(headline)}
               </p>
             </div>
-            <p className="truncate text-[11px] leading-none">
+            <p className="truncate text-xs leading-none">
               {stats.map((stat, i) => (
                 <Fragment key={stat.label}>
                   {i > 0 && <span className="text-muted-foreground/30"> · </span>}

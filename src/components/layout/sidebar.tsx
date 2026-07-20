@@ -210,7 +210,7 @@ const AppSidebar = () => {
               <PopoverTrigger render={<SidebarMenuButton size="lg" />}>
                 <ProjectChip name={activeProject?.displayName} className="size-8 text-sm" />
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="truncate text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     {activeOrg?.displayName ?? 'Workspace'}
                   </span>
                   <span className="truncate font-medium text-foreground">
@@ -224,11 +224,11 @@ const AppSidebar = () => {
                 {orgs.length > 1 && (
                   <>
                     <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                         Organizations
                       </span>
                       <div className="h-px flex-1 bg-border" />
-                      <span className="text-[10px] text-muted-foreground tabular-nums">{orgs.length}</span>
+                      <span className="text-xs text-muted-foreground tabular-nums">{orgs.length}</span>
                     </div>
                     <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
                       {orgs.map(org => (
@@ -247,11 +247,9 @@ const AppSidebar = () => {
                   </>
                 )}
                 <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Projects
-                  </span>
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Projects</span>
                   <div className="h-px flex-1 bg-border" />
-                  <span className="text-[10px] text-muted-foreground tabular-nums">{projects.length}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{projects.length}</span>
                 </div>
                 <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
                   {projects.map(proj => {
@@ -263,7 +261,7 @@ const AppSidebar = () => {
                         onClick={() => handleSelectProject(proj.id)}
                         className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
                       >
-                        <ProjectChip name={proj.displayName} className="size-5 rounded text-[10px]" />
+                        <ProjectChip name={proj.displayName} className="size-5 rounded text-xs" />
                         <span className="min-w-0 flex-1 truncate">{proj.displayName}</span>
                         {selected ? <Check className="size-3.5 shrink-0 text-link" /> : null}
                       </button>
@@ -324,7 +322,7 @@ const AppSidebar = () => {
           return (
             <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
               {group.label ? (
-                <SidebarGroupLabel className="h-7 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
                   {group.label}
                 </SidebarGroupLabel>
               ) : null}

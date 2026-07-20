@@ -93,6 +93,37 @@ Standard shadcn/ui with default Base UI primitives. Uses `render` prop for compo
 
 Update components: `bunx shadcn@latest add <component> --overwrite`
 
+### Charts — vendored, never edit
+
+`src/components/charts/` is third-party code vendored from the `@bklit` shadcn registry (declared in `components.json`), pulled with `bunx shadcn@latest add @bklit/<component> --overwrite`. Keeping it identical to upstream is what makes an upgrade a re-run of that command instead of a manual merge.
+
+Every chart renders through it — trends area, line and bar (`insights/charts/{area,line,bar}-chart.tsx`) plus the funnel (`insights/charts/funnel-chart.tsx`). **recharts is gone**, and with it `components/ui/chart.tsx`; don't reintroduce either. The vendored funnel draws exactly one funnel, so a breakdown renders as small multiples (one taper per split) rather than grouped series — that shape difference is the reason the wrapper, not the chart, owns the layout.
+
+**Log scale and zero-baseline are gone.** The vendored shell hardcodes `scaleLinear` (`y-domain-utils.ts`, `time-series-chart-shell.tsx`) and tweens the y-domain itself, so both tile options were dropped from the format panel and the render path. `VisualizationOptions.logScale` / `zeroBaseline` still exist on the proto and may sit `true` on tiles saved before the migration — they are vestigial and silently ignored. Don't re-add the checkboxes without first solving a non-linear scale in the wrapper (a data-space transform plus a matching y-tick formatter); zero-baseline needs nothing, since the domain already pins `[0, max]` for non-negative data.
+
+- **Never edit anything under `src/components/charts/` — or `src/components/shimmering-text.tsx`.** The registry drops that one dependency outside the directory, so the vendored zone is the directory *plus* that file. A local fix there is silently overwritten by the next re-add, and any drift turns an upgrade into a manual three-way merge. The directory currently matches upstream byte for byte; `git diff src/components/charts/` after an add should be empty, and anything else is either collateral to revert or a real upstream change to read.
+- **Customize by wrapping.** Build a wrapper next to the feature that owns it and compose the vendored chart through props / `className`. Series colors come from `getSeriesColor()` (see Insights Color System) and are passed in — never hardcoded upstream. `useVendoredChartPrep` (`insights/charts/common.ts`) holds the prep all three wrappers share: keyed rows, tooltip rows, and the two date formatters (axis + tooltip; the pill carries the day an hour bucket lands on, the axis stays terse).
+- Both paths are excluded from Biome (`biome.json` → `files.includes`) so the formatter can't rewrite them either. The registry's style (double quotes, semicolons) is expected there and is not a violation. `shimmering-text.tsx` is the trap — it sits in our namespace but is not ours.
+- **Prefer a vendored component over a local one, and re-check on every add.** The registry gained a `YAxis` after we had hand-rolled one, and adopting it deleted our file along with its whole failure mode — ours drew SVG `<text>` at negative x and depended on `displayName` surviving minification to stay outside the series reveal clip, while upstream portals HTML and sidesteps that entirely. It also tweens tick position with the y-domain. Pass `formatValue`, not upstream's `formatLargeNumbers`: that does `(v/1000).toFixed(0)`, so 1500 renders `2k` and 1.2M renders `1200k`. The wrappers pass `yTickFormatter ?? compactNumber`.
+
+**There are no patches. Keep it that way.** There used to be two, and every `add` reverted them — silently, in the case of the date labels. Both are now solved from outside the vendored zone, so re-running an add is safe. If you hit something that looks like it needs a vendored edit, these are the two shapes of answer that worked:
+
+1. **A broken import path → satisfy the path instead of changing it.** `chart-loading-label.tsx` ships `import … from "../components/shimmering-text"`, valid only in the registry author's `src/charts/` layout; at our target (`components/charts/`) it resolves to `components/components/`. Rather than rewrite the import, `src/components/components/shimmering-text.ts` re-exports the real module. Ugly path, but it is upstream's expectation and it never needs reapplying.
+2. **Missing behaviour → re-provide the chart context.** Upstream computes x labels internally with `shortDateFmt` (`Intl.DateTimeFormat("en-US", …)`) — browser-local and granularity-blind — and exposes no prop. But the labels reach both consumers (axis and tooltip) through `dateLabels` on the chart context, and `ChartStableContext` is exported, so `insights/charts/date-labels.tsx` wraps `XAxis` and `ChartTooltip` in a provider that overrides that one field. Bucket labels must render in the project's reporting zone to match the server's bucket boundaries, and vary by granularity or every hour bucket reads `Jul 19`.
+
+Two things make the override work, and both are easy to break:
+
+- The wrappers must keep `displayName = 'XAxis'` / `'ChartTooltip'`. The shell sorts children into layers by component name, and `XAxis` is in its clip-excluded set — an unrecognised name puts the labels inside the series reveal clip. Set it explicitly; minification mangles the function name.
+- Don't reach for `CHART_CLIP_PASSTHROUGH` to inject a provider. It looks like the right seam, but the shell renders the *unwrapped* child, so the wrapper is dropped.
+
+Two files guard the override across all three charts, both stubbing `@visx/responsive` because happy-dom reports the container as 0×0 and without a size the chart renders nothing and every assertion passes vacuously: `insights/charts/vendored-date-labels.test.tsx` (axis labels land in the project reporting zone, plus the hover-pill scaling) and `insights/charts/vendored-tooltip-date.test.tsx` (the pill carries the day, not just the clock time). Each surface re-provides the context independently, so each needs its own guard.
+
+**Collateral still needs a manual revert after any add** — this part is not solved. `git diff` the whole tree, not just the component's directory:
+
+- `src/index.css` gets re-broken the same two ways every time: three `--chart-line-primary: var(----chart-line-primary)` mappings with a doubled prefix that silently kill every utility built on them, and a `.dark` block re-pinning `--chart-background`/`--chart-grid`/`--chart-label` to the registry's own darks. Those are deliberately aliased in `:root` so they track the theme; the registry's values were authored against a much darker canvas and leave the grid darker than the surface it's drawn on. Both hunks are pure regressions — revert the file.
+- `src/lib/utils.ts` gets rewritten (quote style, and `cn` from an arrow to a `function` declaration). `bun run lint` repairs the formatting; the arrow needs reverting by hand.
+- The add also rewrites files its registry entry never lists — `composed-chart` rewrote `line-chart.tsx` — and adds dependencies (`@visx/pattern`). Check `package.json` too.
+
 ### Design Aesthetic
 
 Light and minimal. This is a deliberate design direction — do not add visual or interaction weight:
@@ -101,6 +132,8 @@ Light and minimal. This is a deliberate design direction — do not add visual o
 - **No nested menus** — no DropdownMenuSub, no multi-level popover trees. Use flat inline interactions: expand/collapse in-place, inline inputs, single-level dropdowns at most
 - **No modals for simple actions** — inline editing, inline create forms, confirmation via button state (not confirm dialogs)
 - **No external CDN dependencies** for UI assets — bundle or self-host everything
+- **12px is the type floor.** `text-xs` is the smallest size in the UI — there is no `text-[11px]`, `text-[10px]`, or `text-[9px]` (all 121 uses were retired). It matches the vendored charts, which label axes at `text-xs` and set tooltip values at `text-sm`. Micro-labels get their emphasis from `uppercase tracking-wider text-muted-foreground`, not from shrinking.
+- **Corners stay soft** — `--radius: 0.625rem`, ramp at 8/10/12/16px. A tightening to 6px was tried and reverted; the soft corners are the intended look. The trap if you do retune them: the `--radius-sm/md/lg/xl` ramp in `@theme inline` is **hardcoded, not derived from `--radius`**, and `rounded-md`/`rounded-lg` (115 uses between them) read from the ramp. Only `rounded-2xl/3xl/4xl` derive. Changing `--radius` alone will look like it did nothing.
 
 ### Emoji — Twemoji only
 
@@ -127,13 +160,13 @@ Section divider header pattern:
 <div className='flex items-center gap-2 mb-2'>
   <span className='text-xs font-medium text-muted-foreground uppercase tracking-wider'>Section Title</span>
   <div className='flex-1 h-px bg-border' />
-  <span className='text-[10px] text-muted-foreground'>count</span>
+  <span className='text-xs text-muted-foreground'>count</span>
 </div>
 ```
 
 Tables use plain `<table>` elements (not the Table component), with:
 
-- Headers: `text-[11px] font-medium text-muted-foreground uppercase tracking-wider`
+- Headers: `text-xs font-medium text-muted-foreground uppercase tracking-wider`
 - Rows: `border-b border-border/50 transition-colors hover:bg-muted/40`
 - Destructive/edit actions hidden until row hover (`opacity-0 group-hover:opacity-100`)
 
@@ -165,9 +198,11 @@ For Insights (event filters + charts), do **not** use index-based colors or `kin
 
 Color tokens live in `src/index.css` (`:root` = light, `.dark` = dark). When auditing dark mode, baseline against light mode (which is tuned and trusted) and fix only what diverged — e.g. the faint hairline borders read identically in both modes and are intentional ("borders barely there"), not a contrast bug.
 
-- Dark `--primary` (`0.54/0.16`) and `--destructive` (`0.54/0.18`) are deep + saturated so **white button text clears AA**, matching the light-mode CTA character (`white` on the fill ≈ 4.6:1). Dark `--foreground` (`0.91`, body ≈ 12:1) and `--muted-foreground` (`0.76`, ≈ 7:1) are lifted for low-brightness legibility — muted is used heavily, so it carries extra headroom.
-- **A filled button and colored body text pull lightness in opposite directions** — the fill wants to stay dark (white text on it), colored text wants to be light (to read on the dark canvas); no single token satisfies both at AA. So **colored text is decoupled from the fill:** `--link` (`0.70/0.16`, ≈ 5.5:1) is the blue used *as text* (links, primary-tinted icons) via the `text-link` utility, while `--primary` stays the dark **fill** (`bg-primary`). Do **not** point links at `text-primary` or lighten `--primary` to fix them — use `text-link`; lightening `--primary` re-breaks the buttons.
-- Still deferred — **deliberate, not a bug:** `text-destructive` *text* (~2.8:1) on the dark canvas is sub-AA (the same fill-vs-text conflict). The fix is the same pattern (a `--destructive`-text token mirroring `--link`); not yet done because error text is rare. Don't lighten `--destructive` itself.
+- Dark `--primary` (`0.54/0.16`) and `--destructive` (`0.54/0.18`) are deep + saturated so **white button text clears AA**, matching the light-mode CTA character. Dark `--foreground` is `0.965` (body ≈ 16:1) and `--muted-foreground` is `0.70` (≈ 6.6:1) — the tonal range lives in the ink rather than in a lifted ground. Do **not** raise `--muted-foreground` back toward the body colour to "fix" contrast; the separation between them is what carries hierarchy on this canvas.
+- **A filled button and colored body text pull lightness in opposite directions** — the fill wants to stay dark (white text on it), colored text wants to be light (to read on the dark canvas); no single token satisfies both at AA. So **colored text is decoupled from the fill:** `--link` (`0.74/0.15`, ≈ 7.5:1) is the blue used *as text* (links, primary-tinted icons) via the `text-link` utility, while `--primary` stays the dark **fill** (`bg-primary`). Do **not** point links at `text-primary` or lighten `--primary` to fix them — use `text-link`; lightening `--primary` re-breaks the buttons.
+- Still deferred — **deliberate, not a bug:** `text-destructive` *text* (≈ 3.2:1) on the dark canvas is sub-AA (the same fill-vs-text conflict). The fix is the same pattern (a `--destructive`-text token mirroring `--link`); not yet done because error text is rare. Don't lighten `--destructive` itself.
+
+The palette is re-based on the `@bklit` chart registry's own theme: dark canvas `0.21`, tonal range in the ink (`--foreground` up, `--muted-foreground` *down*) rather than a lifted ground, and a translucent `--border` (`0.62 0.02 265 / 0.2`) so one token works on canvas, card and popover. `--input` cannot be translucent: every form control styles itself `dark:bg-input/30` (some `/50`, `/80`), and Tailwind's `/NN` modifier *multiplies* alpha, so the fill disappears — it stays opaque at `0.28`.
 
 ### Insights Aggregations
 

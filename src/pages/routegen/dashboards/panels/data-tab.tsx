@@ -152,7 +152,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
           topKEditor={{ value: topK, onChange: setTopK }}
         />
         {hasIncompleteNumericAggregation ? (
-          <p className="mt-2 text-[11px] text-muted-foreground">Select a numeric property to run this aggregation.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Select a numeric property to run this aggregation.</p>
         ) : null}
       </Section>
 

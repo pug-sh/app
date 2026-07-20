@@ -79,7 +79,7 @@ export const InsightFields = ({
           maxEvents={maxEvents}
         />
         {isRetention ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Tooltip>
               <TooltipTrigger className="inline-flex cursor-help items-center">
                 <CircleHelp className="h-3.5 w-3.5" />
@@ -92,7 +92,7 @@ export const InsightFields = ({
           </div>
         ) : null}
         {isTopK ? (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Tooltip>
               <TooltipTrigger className="inline-flex cursor-help items-center">
                 <CircleHelp className="h-3.5 w-3.5" />

@@ -63,6 +63,8 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
 
+  /* Hardcoded, not derived from --radius: rounded-md (74 uses) and rounded-lg (41)
+     read these, so retuning corners means editing the ramp, not --radius. */
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.75rem;
@@ -87,6 +89,32 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Tailwind namespace mappings for the vendored chart palette. The registry
+     installer wrote these with a doubled prefix — var(----chart-grid) — which
+     silently killed every utility built on them (text-chart-tooltip-muted fell
+     back to inherited, so light mode drew near-black label text on the dark
+     tooltip). Keep the single prefix. */
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --color-chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --color-chart-line-secondary: var(--chart-line-secondary);
+  --color-chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
 }
 
 @layer base {
@@ -183,28 +211,34 @@
 }
 
 :root {
-  --background: oklch(0.98 0.002 250);
-  --foreground: oklch(0.22 0.02 260);
-  --card: oklch(0.995 0.0015 260);
-  --card-foreground: oklch(0.15 0.02 260);
-  --popover: oklch(0.995 0.0015 260);
-  --popover-foreground: oklch(0.15 0.02 260);
+  /* Canvas sits a shade below pure white so --card (true white) separates from it —
+     1.08:1, up from 1.04:1 when the canvas was 0.98. Ink deepened 0.22 -> 0.17 to
+     widen the range against secondary text. */
+  --background: oklch(0.972 0.002 260);
+  --foreground: oklch(0.17 0.015 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.015 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.015 265);
   --primary: oklch(0.55 0.18 265);
   --primary-foreground: oklch(0.98 0.005 265);
   /* Brand/blue color used AS text on the canvas (links, primary-tinted icons).
-     Decoupled from --primary so dark mode can lighten it without lightening the
-     button fill. Light mode reads fine, so it tracks --primary here. */
-  --link: oklch(0.55 0.18 265);
-  --secondary: oklch(0.94 0.01 260);
+     Decoupled from --primary so each mode can tune it without moving the button
+     fill. Deepened alongside --foreground here: 5.8:1, up from 4.7:1. */
+  --link: oklch(0.5 0.18 265);
+  --secondary: oklch(0.94 0.008 260);
   --secondary-foreground: oklch(0.25 0.02 260);
-  --muted: oklch(0.94 0.01 260);
-  --muted-foreground: oklch(0.55 0.02 260);
-  --accent: oklch(0.94 0.01 260);
+  --muted: oklch(0.94 0.008 260);
+  /* 0.53, not 0.55: the dropped canvas cost ~0.1 of the old 4.58:1 and would have
+     landed at 4.47 — under AA. At 0.53 it clears everywhere it lands (4.9:1 on the
+     canvas, 5.3:1 on card, 4.4:1 on --muted). */
+  --muted-foreground: oklch(0.53 0.015 260);
+  --accent: oklch(0.94 0.008 260);
   --accent-foreground: oklch(0.25 0.02 260);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0.005 25);
-  --border: oklch(0.88 0.01 260);
-  --input: oklch(0.88 0.01 260);
+  --border: oklch(0.905 0.006 260);
+  --input: oklch(0.905 0.006 260);
   --ring: oklch(0.55 0.18 265);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.7 0.15 70);
@@ -217,38 +251,73 @@
   --chart-5: oklch(0.58 0.2 25);
   --radius: 0.625rem;
   /* sidebar — slightly recessed from background, sharing the cool tint */
-  --sidebar: oklch(0.965 0.003 260);
-  --sidebar-foreground: oklch(0.15 0.02 260);
+  --sidebar: oklch(0.955 0.003 260);
+  --sidebar-foreground: oklch(0.17 0.015 265);
   --sidebar-primary: oklch(0.55 0.18 265);
   --sidebar-primary-foreground: oklch(0.98 0.005 265);
-  --sidebar-accent: oklch(0.94 0.01 260);
+  --sidebar-accent: oklch(0.94 0.008 260);
   --sidebar-accent-foreground: oklch(0.25 0.02 260);
-  --sidebar-border: oklch(0.9 0.008 260);
+  --sidebar-border: oklch(0.915 0.005 260);
   --sidebar-ring: oklch(0.55 0.18 265);
+  /* Vendored chart palette. Declared once here rather than per-mode: `.dark` is
+     toggled on documentElement, the same element `:root` matches, so these
+     aliases resolve against whichever token value wins there and track the theme
+     on their own. The registry's own values were authored against a much darker
+     canvas (its dark --chart-background is 0.145 against our 0.21), so pinning
+     them leaves the grid barely separated from the surface it's drawn on. */
+  --chart-background: var(--background);
+  --chart-foreground: var(--foreground);
+  --chart-foreground-muted: var(--muted-foreground);
+  --chart-label: var(--muted-foreground);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.4 0.1828 274.34);
+  --chart-grid: var(--border);
+  --chart-brush-border: var(--border);
+  --chart-tooltip-background: var(--popover);
+  --chart-tooltip-foreground: var(--popover-foreground);
+  --chart-tooltip-muted: var(--muted-foreground);
+  --chart-marker-background: oklch(0.97 0.005 260);
+  --chart-marker-border: oklch(0.85 0.01 260);
+  --chart-marker-foreground: oklch(0.3 0.01 260);
+  --chart-scale-01: oklch(0.98 0.003 106);
+  --chart-scale-02: oklch(0.92 0.008 106);
+  --chart-scale-03: oklch(0.82 0.015 106);
+  --chart-scale-04: oklch(0.68 0.02 106);
+  --chart-scale-05: oklch(0.55 0.025 106);
+  --chart-scale-pattern-color: oklch(0.96 0.005 106);
 }
 
 .dark {
-  /* surfaces — #242424 base, gentle blue tint, quiet layering */
-  --background: oklch(0.26 0.004 265);
-  --foreground: oklch(0.91 0.005 265); /* lifted from 0.87: body contrast toward light-mode parity (~12:1) */
-  --card: oklch(0.29 0.005 265);
-  --card-foreground: oklch(0.91 0.005 265);
-  --popover: oklch(0.3 0.006 265);
-  --popover-foreground: oklch(0.91 0.005 265);
+  /* Surfaces — deep canvas, gentle blue tint, quiet layering. Depth here comes from
+     the RANGE between primary and secondary ink, not from a near-black ground: body
+     sits at ~16:1 against --muted-foreground's ~6.6:1, where the old theme was a
+     flat 11.9 over 7.2. That range is carried by --foreground, so the canvas is free
+     to be a comfortable charcoal — 0.155 was tried first and read as too dark. */
+  --background: oklch(0.21 0.006 265);
+  --foreground: oklch(0.965 0.003 265); /* 0.91 -> 0.965: body ~16:1, was ~11.9 */
+  --card: oklch(0.24 0.007 265);
+  --card-foreground: oklch(0.965 0.003 265);
+  --popover: oklch(0.26 0.008 265);
+  --popover-foreground: oklch(0.965 0.003 265);
 
   /* actions — understated, not shouty */
   --primary: oklch(0.54 0.16 265); /* deeper + saturated: white text clears AA */
   --primary-foreground: oklch(0.96 0.005 265);
   /* Brand/blue text on the canvas (links, primary-tinted icons). Lighter than the
-     --primary fill so it clears AA as text (~5.5:1) while the fill stays dark for
-     white button text. See --link in :root. */
-  --link: oklch(0.7 0.16 265);
-  --secondary: oklch(0.31 0.005 265);
-  --secondary-foreground: oklch(0.78 0.005 265);
-  --muted: oklch(0.31 0.005 265);
-  --muted-foreground: oklch(0.76 0.008 265); /* lifted from 0.69: muted is used heavily; ~7:1 */
-  --accent: oklch(0.33 0.006 265);
-  --accent-foreground: oklch(0.82 0.005 265);
+     --primary fill so it clears AA as text while the fill stays dark for white
+     button text. Tracks the deeper canvas: 0.7 -> 0.74, now ~8.2:1. */
+  --link: oklch(0.74 0.15 265);
+  --secondary: oklch(0.28 0.009 265);
+  --secondary-foreground: oklch(0.86 0.005 265);
+  --muted: oklch(0.29 0.01 265);
+  /* Lowered 0.76 -> 0.70. The drop is what opens the tonal range against
+     --foreground; it still clears AA everywhere it lands (6.6:1 canvas, 6.2:1 card,
+     5.8:1 popover, 5.3:1 on --muted itself). Don't lift it back toward the body
+     colour to "fix" contrast — that re-flattens the hierarchy. */
+  --muted-foreground: oklch(0.7 0.015 265);
+  --accent: oklch(0.305 0.012 265);
+  --accent-foreground: oklch(0.9 0.005 265);
 
   /* semantic — softened for dark bg */
   --destructive: oklch(0.54 0.18 25); /* deeper + saturated: white text clears AA */
@@ -256,9 +325,16 @@
   --success: oklch(0.62 0.14 145);
   --warning: oklch(0.72 0.12 70);
 
-  /* chrome — borders barely there */
-  --border: oklch(0.34 0.006 265);
-  --input: oklch(0.32 0.006 265);
+  /* Chrome — borders barely there. --border is translucent so it takes the tint of
+     whatever surface it sits on (canvas, card, popover) instead of being one fixed
+     grey that's too light on one and too dark on another. Alpha is 0.20, not the
+     0.18 the prototype used: 48 call sites dim it further with border-border/30..70,
+     and at 0.18 those thinned out to ~1.05:1. At 0.20 full strength lands 1.27:1,
+     a touch softer than the old solid 0.34 (1.32:1). --input stays SOLID — every
+     form control uses dark:bg-input/30, and an alpha token there would multiply
+     down to 0.06 and erase the fill. */
+  --border: oklch(0.62 0.02 265 / 0.2);
+  --input: oklch(0.28 0.009 265);
   --ring: oklch(0.62 0.12 265);
 
   /* charts — muted, distinct hues */
@@ -269,14 +345,30 @@
   --chart-5: oklch(0.62 0.16 25);
 
   /* sidebar — slightly recessed from background */
-  --sidebar: oklch(0.23 0.005 265);
-  --sidebar-foreground: oklch(0.87 0.005 265);
+  --sidebar: oklch(0.19 0.006 265);
+  --sidebar-foreground: oklch(0.94 0.005 265);
   --sidebar-primary: oklch(0.62 0.12 265);
   --sidebar-primary-foreground: oklch(0.96 0.005 265);
-  --sidebar-accent: oklch(0.3 0.006 265);
-  --sidebar-accent-foreground: oklch(0.82 0.005 265);
-  --sidebar-border: oklch(0.3 0.005 265);
+  --sidebar-accent: oklch(0.275 0.009 265);
+  --sidebar-accent-foreground: oklch(0.9 0.005 265);
+  --sidebar-border: oklch(0.62 0.02 265 / 0.14);
   --sidebar-ring: oklch(0.62 0.12 265);
+  /* Only the values that genuinely differ per mode. --chart-background,
+     --chart-foreground, --chart-foreground-muted, --chart-label, --chart-grid,
+     --chart-brush-border and the tooltip trio are aliases in :root and track the
+     theme on their own — redeclaring them here would pin them to light. */
+  --chart-crosshair: oklch(0.45 0 0);
+  /* Re-seated on the current canvas so markers read as a raised chip rather than
+     floating well above the surface. */
+  --chart-marker-background: oklch(0.255 0.008 265);
+  --chart-marker-border: oklch(0.38 0.01 265);
+  --chart-marker-foreground: oklch(0.95 0 0);
+  --chart-scale-01: oklch(0.28 0.03 270);
+  --chart-scale-02: oklch(0.38 0.04 270);
+  --chart-scale-03: oklch(0.48 0.05 270);
+  --chart-scale-04: oklch(0.58 0.06 270);
+  --chart-scale-05: oklch(0.68 0.07 270);
+  --chart-scale-pattern-color: oklch(0.145 0 0);
 }
 
 /* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */

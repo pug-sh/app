@@ -69,14 +69,14 @@ export const FilterChip = ({
   return (
     <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
       {filter.source === PropertySource.PROFILE && (
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] border-r border-border/40">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs border-r border-border/40">
           Profile
         </span>
       )}
-      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]">
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-xs">
         {filter.property}
       </span>
-      <span className="px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]">{op?.symbol}</span>
+      <span className="px-1.5 text-muted-foreground/70 h-full flex items-center text-xs">{op?.symbol}</span>
       {valueLabel !== null && (
         <Popover open={editOpen} onOpenChange={handleEditOpenChange}>
           <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">

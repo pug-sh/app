@@ -221,8 +221,6 @@ export const InsightTileView = ({
         topKMetric={spec?.topK?.metric}
         topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}
-        logScale={tile?.visualization?.logScale}
-        zeroBaseline={tile?.visualization?.zeroBaseline}
         // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
         yTickFormatter={yTickFormatter}

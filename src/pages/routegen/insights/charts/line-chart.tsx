@@ -1,26 +1,24 @@
 import { memo } from 'react'
-import { CartesianGrid, Line, LineChart as ReLineChart, XAxis, YAxis } from 'recharts'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Grid } from '@/components/charts/grid'
+import { Line } from '@/components/charts/line'
+import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
+import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
+import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import {
-  COMPACT_CHART_AXIS_CLASS,
-  formatTooltipLabel,
-  SHARED_MARGIN,
-  SHARED_X_AXIS,
-  sharedYAxis,
-  useChartPrep,
-} from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
+import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
+// Wraps the vendored chart (src/components/charts) — never edit that directory.
+// Series colors, tooltip rows and date labels are ours to inject; the chart
+// supplies the rest.
 export const LineChart = memo(function LineChart({
   data,
   seriesNames,
   seriesColors,
   granularity,
-  logScale,
-  zeroBaseline,
   yTickFormatter,
   timeZone,
   className = 'h-70 w-full',
@@ -29,39 +27,41 @@ export const LineChart = memo(function LineChart({
   seriesNames: string[]
   seriesColors: SeriesColor[]
   granularity: Granularity
-  logScale?: boolean
-  zeroBaseline?: boolean
   yTickFormatter?: (value: number) => string
   timeZone: string
   className?: string
 }) {
-  const { chartConfig, chartData, yMax } = useChartPrep(data, seriesNames, seriesColors, granularity, timeZone)
+  const { chartData, tooltipRows, dateLabelFormatters } = useVendoredChartPrep(
+    data,
+    seriesNames,
+    seriesColors,
+    granularity,
+    timeZone,
+  )
 
   if (data.length === 0) return null
 
+  // aspectRatio="auto" so height comes from className, matching the other charts.
+  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
+  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
-    <ChartContainer config={chartConfig} className={cn(className, COMPACT_CHART_AXIS_CLASS)}>
-      <ReLineChart data={chartData} margin={SHARED_MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis {...SHARED_X_AXIS} />
-        <YAxis {...sharedYAxis(yMax, { logScale, zeroBaseline, tickFormatter: yTickFormatter })} />
-        <ChartTooltip
-          cursor={{ stroke: 'currentColor', strokeOpacity: 0.15, strokeDasharray: '3 3' }}
-          content={<ChartTooltipContent labelFormatter={formatTooltipLabel} />}
-        />
+    <DateLabelProvider value={dateLabelFormatters}>
+      <VendoredLineChart
+        aspectRatio="auto"
+        className={cn(PILL_SCALING, className)}
+        data={chartData}
+        margin={CHART_MARGIN}
+      >
+        <Grid horizontal />
+        <XAxis />
+        <YAxis formatValue={yTickFormatter ?? compactNumber} />
+        {/* Line defaults fadeEdges on (Area defaults it off) — a faded first/last
+            bucket reads as uncertain data when those are real values. */}
         {seriesNames.map((_, si) => (
-          <Line
-            key={si}
-            type="monotone"
-            dataKey={`series${si}`}
-            stroke={seriesColors[si]?.line}
-            strokeWidth={2}
-            isAnimationActive={false}
-            dot={false}
-            activeDot={{ r: 4, strokeWidth: 2 }}
-          />
+          <Line key={si} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
         ))}
-      </ReLineChart>
-    </ChartContainer>
+        <ChartTooltip rows={tooltipRows} />
+      </VendoredLineChart>
+    </DateLabelProvider>
   )
 })

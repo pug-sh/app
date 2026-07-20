@@ -31,9 +31,9 @@ const Journey = ({ events }: { events: ActivityEvent[] }) => (
       const { kind, detail } = describeEvent(event)
       const at = tsToDate(event.occurTime)
       return (
-        <li key={`${event.eventId || kind}-${i}`} className="flex items-center justify-between gap-2 text-[11px]">
+        <li key={`${event.eventId || kind}-${i}`} className="flex items-center justify-between gap-2 text-xs">
           <EventLine kind={kind} detail={detail} />
-          {at && <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground/70">{formatClock(at)}</span>}
+          {at && <span className="shrink-0 tabular-nums text-xs text-muted-foreground/70">{formatClock(at)}</span>}
         </li>
       )
     })}
@@ -84,12 +84,12 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
           <div className="flex items-baseline justify-between gap-2 text-sm">
             <EventLine kind={kind} detail={detail} />
             {lastSeen && (
-              <span className="shrink-0 text-[10px] text-muted-foreground">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 <HoverSwap primary={formatRelative(lastSeen)} secondary={formatDateTime(lastSeen)} />
               </span>
             )}
           </div>
-          <div className="truncate text-[11px] text-muted-foreground">
+          <div className="truncate text-xs text-muted-foreground">
             {locality ? (
               <>
                 {locality}
@@ -99,7 +99,7 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
               countryName || '—'
             )}
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
+          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground/70">
             {browser && <span className="truncate">{browser}</span>}
             {browser && <span className="text-muted-foreground/30">·</span>}
             <span className="inline-flex items-center gap-1">
@@ -116,7 +116,7 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
 
           {selected && journey.length > 0 && (
             <div className="mt-2">
-              <div className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
+              <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
                 Recent activity
               </div>
               <Journey events={journey} />

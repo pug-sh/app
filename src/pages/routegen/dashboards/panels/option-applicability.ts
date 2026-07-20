@@ -29,7 +29,7 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
     showViewMode: isTrends,
     // KPI big-number tiles: thresholds, value format, sparkline.
     showKpiOptions: isKpi,
-    // Cartesian charts have a Y-axis to scale / baseline.
+    // Cartesian charts have a Y-axis to format.
     showAxisOptions: isChart,
     // The summary-stat row (the "legend") renders above every non-KPI trends view.
     showLegendOption: isChart || isTable,

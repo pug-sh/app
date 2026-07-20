@@ -94,29 +94,6 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
         </Section>
       ) : null}
 
-      {showAxisOptions ? (
-        <Section label="Axis options">
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="tile-log-scale"
-                checked={viz?.logScale === true}
-                onCheckedChange={checked => setViz({ logScale: checked === true })}
-              />
-              <label htmlFor="tile-log-scale">Log scale</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="tile-zero-baseline"
-                checked={viz?.zeroBaseline === true}
-                onCheckedChange={checked => setViz({ zeroBaseline: checked === true })}
-              />
-              <label htmlFor="tile-zero-baseline">Zero baseline</label>
-            </div>
-          </div>
-        </Section>
-      ) : null}
-
       {showLegendOption ? (
         <Section label="Legend">
           <div className="flex items-center gap-2 text-xs">

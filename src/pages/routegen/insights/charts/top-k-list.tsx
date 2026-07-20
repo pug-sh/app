@@ -46,7 +46,7 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
           {identity.name}
         </ProjectLink>
         {secondary && secondary !== identity.name && (
-          <span className={cn('block truncate text-[11px] text-muted-foreground', !identity.email && 'font-mono')}>
+          <span className={cn('block truncate text-xs text-muted-foreground', !identity.email && 'font-mono')}>
             {secondary}
           </span>
         )}
@@ -92,7 +92,7 @@ const CoverageSummary = ({
   } else if (showShare) {
     parts.push('all values shown')
   }
-  return <p className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{parts.join(' · ')}</p>
+  return <p className="shrink-0 text-xs text-muted-foreground tabular-nums">{parts.join(' · ')}</p>
 }
 
 // Ranked horizontal bar list for top-k results. Rows arrive metric-descending
@@ -128,7 +128,7 @@ export const TopKList = ({
                 compact ? 'py-1.5' : 'py-2.5',
               )}
             >
-              <span className="w-5 shrink-0 text-right text-[11px] font-mono tabular-nums text-muted-foreground/70">
+              <span className="w-5 shrink-0 text-right text-xs font-mono tabular-nums text-muted-foreground/70">
                 {row.isOthers ? '·' : i + 1}
               </span>
               <div className={cn('min-w-0 shrink-0 text-xs', compact ? 'w-28' : 'w-48')}>
@@ -147,7 +147,7 @@ export const TopKList = ({
                 {formatValue(row.value)}
               </span>
               {showShare && (
-                <span className="w-11 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                <span className="w-11 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
                   {((row.value / total) * 100).toFixed(1)}%
                 </span>
               )}

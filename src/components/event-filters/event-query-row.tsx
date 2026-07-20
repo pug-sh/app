@@ -99,7 +99,7 @@ export const EventQueryRow = memo(
           {letter && (
             <span className="flex items-center gap-1.5">
               {color && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />}
-              <span className="text-[10px] font-medium text-muted-foreground w-3">{letter}</span>
+              <span className="text-xs font-medium text-muted-foreground w-3">{letter}</span>
             </span>
           )}
           <EventChip
@@ -133,7 +133,7 @@ export const EventQueryRow = memo(
                   type="button"
                   onClick={retryScopedSchema}
                   title={scopedSchemaError}
-                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   retry schema
                 </button>

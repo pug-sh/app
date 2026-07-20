@@ -24,7 +24,7 @@ const SectionHeader = ({ title, right }: { title: string; right?: React.ReactNod
   <div className="flex items-center gap-2 mb-2">
     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
     <div className="flex-1 h-px bg-border" />
-    {right && <span className="text-[10px] text-muted-foreground">{right}</span>}
+    {right && <span className="text-xs text-muted-foreground">{right}</span>}
   </div>
 )
 
@@ -148,7 +148,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">No events yet for this profile.</p>
             {project && (
-              <p className="text-[11px] text-muted-foreground/70">
+              <p className="text-xs text-muted-foreground/70">
                 Project <span className="font-mono">{project.id}</span>
                 {project.displayName && <> · {project.displayName}</>}
               </p>
@@ -164,7 +164,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
                 <li key={e.eventId} className="flex items-center gap-3 py-2.5 text-xs">
                   <Badge
                     variant="secondary"
-                    className="text-[11px] font-medium px-2 py-0.5 shrink-0"
+                    className="text-xs font-medium px-2 py-0.5 shrink-0"
                     style={{ backgroundColor: colors.fill, color: colors.dot }}
                   >
                     {e.kind}

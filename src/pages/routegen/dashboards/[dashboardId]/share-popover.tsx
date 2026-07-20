@@ -72,7 +72,7 @@ export const ShareControl = ({
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground">Anyone with the link can view this dashboard.</p>
+            <p className="text-xs text-muted-foreground">Anyone with the link can view this dashboard.</p>
           </div>
         ) : null}
       </PopoverContent>
