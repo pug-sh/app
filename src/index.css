@@ -3,39 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
-
-/* Self-hosted Apfel Grotezk. We deliberately do NOT ship the 500 (Mittel) cut:
-   the UI uses font-medium (500) widely, and at our text sizes the Mittel weight
-   read too heavy. With no 500 face, the font-matching algorithm renders 500
-   requests as the 400 Regular cut, giving a lighter, flatter weight throughout.
-   Satt (600) and Fett (700) remain for genuine emphasis. */
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff) format("woff");
-}
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff) format("woff");
-}
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 700;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff) format("woff");
-}
+@import "@fontsource-variable/figtree";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -71,7 +39,7 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --font-sans: "Apfel Grotezk", system-ui, sans-serif;
+  --font-sans: "Figtree Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-display-foreground: var(--display-foreground);
