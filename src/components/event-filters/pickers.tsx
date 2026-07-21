@@ -63,9 +63,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(pk.count)}
-                </span>
+                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -83,9 +81,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="truncate">{pk.name}</span>
-                <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(pk.count)}
-                </span>
+                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -156,9 +152,7 @@ const EventPopoverList = ({
                   style={{ backgroundColor: customColor ?? colors.dot }}
                 />
                 <span className="flex-1 truncate">{ev.name}</span>
-                <span className="text-xs text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(ev.count)}
-                </span>
+                <span className="text-xs text-faint tabular-nums shrink-0">{compactNumber(ev.count)}</span>
               </CommandItem>
             )
           })}
@@ -243,7 +237,7 @@ export const EventChip = ({
       <button
         type="button"
         onClick={() => onChange('')}
-        className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors"
+        className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
       >
         <X className="w-3 h-3" />
       </button>
@@ -258,7 +252,7 @@ export const BreakdownChip = ({ property, onRemove }: { property: string; onRemo
     <button
       type="button"
       onClick={onRemove}
-      className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors"
+      className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
     >
       <X className="w-3 h-3" />
     </button>
@@ -288,7 +282,7 @@ export const BreakdownBuilder = ({
       <span
         className={cn(
           'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
-          'text-muted-foreground/50 cursor-not-allowed',
+          'text-faint cursor-not-allowed',
         )}
         title={disabled.reason}
       >

@@ -9,6 +9,8 @@
 // @font-face faces, so the UI font is re-supplied by embedding it in the SVG (see
 // loadFontFaceCss) — without it the chart text falls back to the system stack.
 
+import figtreeWoff2 from '@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url'
+
 // Force both overflow axes open with !important (overriding the stylesheet's overflow
 // class). On live elements, measureFullSize saves and restores these exact properties.
 const openOverflow = (style: CSSStyleDeclaration) => {
@@ -64,11 +66,10 @@ const loadImage = (src: string, width: number, height: number) =>
 // @font-face faces, so chart text otherwise falls back to the system sans stack —
 // visibly different from the rest of the UI. We re-supply the font by embedding it
 // directly in the SVG as a base64 data: URL @font-face (an external url() would not
-// load inside an <img>-loaded SVG). Only the Regular (400) cut is embedded: the UI
-// ships no 500 face and the snapshot renders no 600/700 chart text, so 400 covers
-// title and chart alike. Fetched and base64-encoded once, then cached.
-const FONT_FAMILY = 'Apfel Grotezk'
-const FONT_URL = '/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2'
+// load inside an <img>-loaded SVG). One variable file covers every weight; the latin
+// subset is enough for tile text. Fetched and base64-encoded once, then cached.
+const FONT_FAMILY = 'Figtree Variable'
+const FONT_URL = figtreeWoff2
 let fontFaceCssPromise: Promise<string> | undefined
 
 const loadFontFaceCss = () => {
@@ -81,7 +82,7 @@ const loadFontFaceCss = () => {
         for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
         const base64 = btoa(binary)
         return (
-          `@font-face{font-family:"${FONT_FAMILY}";font-style:normal;font-weight:400;` +
+          `@font-face{font-family:"${FONT_FAMILY}";font-style:normal;font-weight:300 900;` +
           `src:url(data:font/woff2;base64,${base64}) format("woff2");}`
         )
       })

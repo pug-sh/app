@@ -128,7 +128,7 @@ export const TopKList = ({
                 compact ? 'py-1.5' : 'py-2.5',
               )}
             >
-              <span className="w-5 shrink-0 text-right text-xs font-mono tabular-nums text-muted-foreground/70">
+              <span className="w-5 shrink-0 text-right text-xs font-mono tabular-nums text-faint">
                 {row.isOthers ? '·' : i + 1}
               </span>
               <div className={cn('min-w-0 shrink-0 text-xs', compact ? 'w-28' : 'w-48')}>

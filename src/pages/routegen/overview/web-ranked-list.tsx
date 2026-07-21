@@ -31,7 +31,7 @@ export const WebRankedList = ({
   metricControl?: ReactNode
 }) => {
   if (rows.length === 0) {
-    return <div className="flex h-full items-center justify-center text-xs text-muted-foreground/70">No data</div>
+    return <div className="flex h-full items-center justify-center text-xs text-faint">No data</div>
   }
 
   const maxValue = Math.max(...rows.map(row => row.value), 0)

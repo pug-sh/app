@@ -51,7 +51,7 @@ const Stat = ({ label, value }: { label: string; value: number }) => (
 
 const Meta = ({ label, children }: { label?: string; children: ReactNode }) => (
   <span className="flex items-center gap-1.5">
-    {label && <span className="text-muted-foreground/60">{label}</span>}
+    {label && <span className="text-faint">{label}</span>}
     {children}
   </span>
 )
@@ -105,7 +105,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               {profile.externalId && profile.externalId !== identity.name && (
                 <span className="group flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-muted-foreground/60">ext</span>
+                  <span className="shrink-0 text-faint">ext</span>
                   <span className="min-w-0 truncate font-mono" title={profile.externalId}>
                     {profile.externalId}
                   </span>
@@ -114,7 +114,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
               )}
               {profile.id && profile.id !== identity.name && (
                 <span className="group flex min-w-0 items-center gap-1.5">
-                  <span className="shrink-0 text-muted-foreground/60">distinct</span>
+                  <span className="shrink-0 text-faint">distinct</span>
                   <span className="min-w-0 truncate font-mono" title={profile.id}>
                     {profile.id.slice(0, 12)}…
                   </span>

@@ -119,7 +119,7 @@ export function DateRangePicker({
                   className="flex items-baseline justify-between gap-3 px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
                   <span className="whitespace-nowrap">{preset.label}</span>
-                  <span className="shrink-0 whitespace-nowrap text-muted-foreground/50 tabular-nums">
+                  <span className="shrink-0 whitespace-nowrap text-faint tabular-nums">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>

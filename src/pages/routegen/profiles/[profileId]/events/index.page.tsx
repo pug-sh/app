@@ -279,7 +279,7 @@ const UserActivity = () => {
                                         browser={lane.browser}
                                         os={lane.os}
                                         iconSize={12}
-                                        className="text-xs text-muted-foreground/60"
+                                        className="text-xs text-faint"
                                       />
                                     )}
                                   </div>

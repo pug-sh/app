@@ -148,7 +148,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">No events yet for this profile.</p>
             {project && (
-              <p className="text-xs text-muted-foreground/70">
+              <p className="text-xs text-faint">
                 Project <span className="font-mono">{project.id}</span>
                 {project.displayName && <> · {project.displayName}</>}
               </p>

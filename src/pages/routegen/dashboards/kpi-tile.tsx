@@ -107,7 +107,7 @@ export const KpiTile = ({
   // is nothing to compare against.
   const sparkColor =
     prior === undefined || !Number.isFinite(prior)
-      ? 'text-muted-foreground/70'
+      ? 'text-faint'
       : current >= prior
         ? 'text-emerald-500'
         : 'text-red-500'

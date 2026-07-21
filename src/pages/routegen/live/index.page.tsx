@@ -163,7 +163,7 @@ const LiveVisitorsPage = () => {
                 <div className="flex items-baseline gap-2">
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <LiveDot />
-                    <span className="font-normal text-muted-foreground/80">{filtered.length}</span>
+                    <span className="font-normal text-faint">{filtered.length}</span>
                     {hasActiveFilters && allVisitors.length !== filtered.length && (
                       <span className="font-normal text-muted-foreground"> / {allVisitors.length}</span>
                     )}
@@ -185,7 +185,7 @@ const LiveVisitorsPage = () => {
                     type="button"
                     onClick={() => setCollapsed(c => !c)}
                     aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-                    className="text-muted-foreground/70 hover:text-foreground"
+                    className="text-faint hover:text-foreground"
                   >
                     {collapsed ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                   </button>
