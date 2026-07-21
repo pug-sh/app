@@ -44,6 +44,8 @@ type WebStat = {
   readonly label: string
   readonly format: StatFormat
   readonly measure: StatMeasure
+  // Bounce rate is the only stat that improves by falling; the delta badge colors on this.
+  readonly lowerIsBetter?: boolean
 }
 
 // `satisfies Record<WebStatId, …>` makes this table total: a new WebStatId without an entry is a
@@ -74,6 +76,7 @@ const WEB_STAT_BY_ID = {
     label: 'Bounce rate',
     format: 'percent',
     measure: { source: 'session', metric: SessionMetric.BOUNCE_RATE },
+    lowerIsBetter: true,
   },
   avgDuration: {
     label: 'Visit duration',
@@ -89,7 +92,9 @@ export const WEB_STATS: readonly WebStat[] = (Object.keys(WEB_STAT_BY_ID) as Web
   ...WEB_STAT_BY_ID[id],
 }))
 
-export const getWebStat = (id: WebStatId) => WEB_STAT_BY_ID[id]
+// Annotated because the inferred type is a union of the six literal entries, and only one declares
+// `lowerIsBetter` — reading it off the union is a type error at the call site.
+export const getWebStat = (id: WebStatId): Omit<WebStat, 'id'> => WEB_STAT_BY_ID[id]
 
 // hasOwn, not `in`: `in` walks the prototype, so `?stat=toString` would pass and then index to a
 // function with no label.

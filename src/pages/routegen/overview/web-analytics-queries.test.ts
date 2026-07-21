@@ -17,6 +17,7 @@ import {
   COUNTRY_PROPERTY,
   formatWebStatValue,
   WEB_PRIMARY_KIND,
+  WEB_STATS,
 } from './web-analytics-queries'
 
 describe('buildWebStatQuery', () => {
@@ -147,5 +148,13 @@ describe('formatWebStatValue', () => {
 
   it('compacts large counts', () => {
     expect(formatWebStatValue('users', 1500)).toBe('1.5K')
+  })
+})
+
+// The flag half of the bounce-rate polarity fix: DeltaBadge honors `lowerIsBetter`, but only if the
+// stat table sets it. Asserted as the whole list so a new falling-is-good metric has to land here.
+describe('stat polarity', () => {
+  it('marks bounce rate as the only lower-is-better stat', () => {
+    expect(WEB_STATS.filter(stat => stat.lowerIsBetter).map(stat => stat.id)).toEqual(['bounceRate'])
   })
 })

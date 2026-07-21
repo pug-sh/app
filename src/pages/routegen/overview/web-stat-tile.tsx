@@ -106,7 +106,7 @@ export const WebStatTile = ({
           row so numbers stay aligned across tiles whether or not a delta is present. */}
       <div className="flex min-h-[1.375rem] items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{stat.label}</span>
-        {delta ? <DeltaBadge pct={delta.pct} label={delta.label} /> : null}
+        {delta ? <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} /> : null}
       </div>
       <span
         className={cn(
