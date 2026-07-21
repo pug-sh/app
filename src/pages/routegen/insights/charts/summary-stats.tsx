@@ -115,7 +115,7 @@ export const SummaryStats = ({
               {stats.map((stat, i) => (
                 <Fragment key={stat.label}>
                   {i > 0 && <span className="text-muted-foreground/30"> · </span>}
-                  <span className="text-muted-foreground/60">{stat.label}</span>
+                  <span className="text-faint">{stat.label}</span>
                   <span className="ml-0.5 text-muted-foreground tabular-nums">{stat.value}</span>
                 </Fragment>
               ))}

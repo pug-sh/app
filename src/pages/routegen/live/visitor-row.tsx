@@ -33,7 +33,7 @@ const Journey = ({ events }: { events: ActivityEvent[] }) => (
       return (
         <li key={`${event.eventId || kind}-${i}`} className="flex items-center justify-between gap-2 text-xs">
           <EventLine kind={kind} detail={detail} />
-          {at && <span className="shrink-0 tabular-nums text-xs text-muted-foreground/70">{formatClock(at)}</span>}
+          {at && <span className="shrink-0 tabular-nums text-xs text-faint">{formatClock(at)}</span>}
         </li>
       )
     })}
@@ -93,13 +93,13 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
             {locality ? (
               <>
                 {locality}
-                {countryName && <span className="text-muted-foreground/60"> · {countryName}</span>}
+                {countryName && <span className="text-faint"> · {countryName}</span>}
               </>
             ) : (
               countryName || '—'
             )}
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground/70">
+          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-faint">
             {browser && <span className="truncate">{browser}</span>}
             {browser && <span className="text-muted-foreground/30">·</span>}
             <span className="inline-flex items-center gap-1">
@@ -116,9 +116,7 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
 
           {selected && journey.length > 0 && (
             <div className="mt-2">
-              <div className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
-                Recent activity
-              </div>
+              <div className="text-xs font-medium text-faint uppercase tracking-wider">Recent activity</div>
               <Journey events={journey} />
             </div>
           )}

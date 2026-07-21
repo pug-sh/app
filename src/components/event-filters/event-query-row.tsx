@@ -145,7 +145,7 @@ export const EventQueryRow = memo(
         <button
           type="button"
           onClick={onRemove}
-          className="self-center p-1 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="self-center p-1 rounded text-faint hover:text-foreground hover:bg-muted/50 transition-colors"
         >
           <X className="w-3 h-3" />
         </button>

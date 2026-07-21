@@ -307,7 +307,7 @@ const EventExplorer = () => {
               <button
                 type="button"
                 onClick={() => setUserFilter('')}
-                className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors"
+                className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>

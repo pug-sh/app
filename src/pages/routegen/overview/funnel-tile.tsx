@@ -44,7 +44,7 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
           lightMetrics
         />
       </div>
-      <p className="mt-2 shrink-0 text-xs text-muted-foreground/70">via {steps.join(' → ')}</p>
+      <p className="mt-2 shrink-0 text-xs text-faint">via {steps.join(' → ')}</p>
     </div>
   )
 }

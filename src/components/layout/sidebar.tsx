@@ -322,7 +322,7 @@ const AppSidebar = () => {
           return (
             <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
               {group.label ? (
-                <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
+                <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-faint">
                   {group.label}
                 </SidebarGroupLabel>
               ) : null}

@@ -86,7 +86,7 @@ export const EventDetails = ({ event }: { event: ActivityEvent }) => {
               </div>
             </div>
           )}
-          <p className="text-xs text-muted-foreground/40 font-mono">{event.eventId}</p>
+          <p className="text-xs text-faint font-mono">{event.eventId}</p>
         </>
       )}
     </div>

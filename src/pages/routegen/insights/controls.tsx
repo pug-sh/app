@@ -62,7 +62,7 @@ export const OptionChip = <T extends string | number>({
               optionClassName = 'bg-muted text-foreground font-medium'
             }
             if (disabled) {
-              optionClassName = 'text-muted-foreground/40'
+              optionClassName = 'text-faint'
             }
             const button = (
               <button
