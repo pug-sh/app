@@ -51,15 +51,26 @@ export const formatDelta = (current: number, prior: number): { pct: number; labe
   return { pct, label: `${Math.abs(pct).toFixed(1)}%` }
 }
 
-export const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
-  const positive = pct >= 0
-  const Icon = positive ? TrendingUp : TrendingDown
+export const DeltaBadge = ({
+  pct,
+  label,
+  lowerIsBetter = false,
+}: {
+  pct: number
+  label: string
+  lowerIsBetter?: boolean
+}) => {
+  const rising = pct >= 0
+  const Icon = rising ? TrendingUp : TrendingDown
+  // The arrow follows the number, the color follows whether that direction is good. They diverge for
+  // lower-is-better metrics like bounce rate, where a climbing value is a regression, not a win.
+  const good = lowerIsBetter ? pct <= 0 : pct >= 0
   return (
     <span
       className={cn(
         'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
         'font-medium',
-        positive
+        good
           ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
           : 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
       )}
