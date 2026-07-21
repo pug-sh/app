@@ -135,6 +135,16 @@ Light and minimal. This is a deliberate design direction — do not add visual o
 - **12px is the type floor.** `text-xs` is the smallest size in the UI — there is no `text-[11px]`, `text-[10px]`, or `text-[9px]` (all 121 uses were retired). It matches the vendored charts, which label axes at `text-xs` and set tooltip values at `text-sm`. Micro-labels get their emphasis from `uppercase tracking-wider text-muted-foreground`, not from shrinking.
 - **Corners stay soft** — `--radius: 0.625rem`, ramp at 8/10/12/16px. A tightening to 6px was tried and reverted; the soft corners are the intended look. The trap if you do retune them: the `--radius-sm/md/lg/xl` ramp in `@theme inline` is **hardcoded, not derived from `--radius`**, and `rounded-md`/`rounded-lg` (115 uses between them) read from the ramp. Only `rounded-2xl/3xl/4xl` derive. Changing `--radius` alone will look like it did nothing.
 
+### Typography
+
+UI sans is **Figtree** (`@fontsource-variable/figtree`, the `wght` axis at 300–900), mono is **JetBrains Mono** (`@fontsource/jetbrains-mono`, static 400/500). Both are npm packages imported at the top of `src/index.css` and bundled — no CDN, nothing in `public/`. It replaced Apfel Grotezk, which was self-hosted from `public/fonts/`.
+
+- **`font-medium` renders at 400, not 500.** `--font-weight-medium: 400` in `@theme inline` overrides Tailwind's default. Apfel shipped no 500 cut, so the 213 `font-medium` sites had always fallen back to regular; Figtree has a real 500, and adopting it silently made the whole UI heavier. The override keeps the established weight. `font-semibold` (3 uses) and `font-bold` (2) are untouched and now come off Figtree's variable axis.
+- **`tabular-nums` does something now.** Apfel had no `tnum` feature and its digits spanned a 2.19× width range, so numeric columns sat ragged and live values reflowed as they updated — the 58 `tabular-nums` sites were inert. Figtree ships real tabular figures at a 1.55× natural spread. Fixing this was the reason for the swap; keep `tabular-nums` on numeric columns and live-updating values.
+- **The share-card renderer embeds the font separately and will not error if you forget it.** `capture-tile.ts` loads the SVG through an `<img>`, which cannot see the page's `@font-face`, so it fetches the woff2 via a Vite `?url` import and inlines it as a base64 `@font-face` built in a template string. Changing `--font-sans` means also updating `FONT_FAMILY`, the import path, **and the `font-weight` range** in that string (Figtree is `300 900`; most other variable faces are `100 900`). Get it wrong and exported tiles fall back to system sans or render off-weight — silently, and only in the export.
+
+Face selection was benched against the real surfaces rather than specimens — x-height, stem, counter, advance and digit spread taken off the outlines with fontTools. Figtree sat closest to Apfel's optical space (identical 0.500 x-height) while fixing the numerals. If you reopen this, measure; don't eyeball.
+
 ### Emoji — Twemoji only
 
 All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji) (currently v14.0.2), self-hosted under `public/twemoji/`. Do not render native Unicode emoji in JSX and do not load Twemoji from a CDN.
