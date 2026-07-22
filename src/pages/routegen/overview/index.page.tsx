@@ -84,6 +84,9 @@ const Overview = () => {
       setRangeIsDefault(true)
       setGlobalGranularity(g => clampGranularity(g, defaultRange))
     }
+    // Web's implicit default never reaches the URL, so leaving it set would clamp product tiles to
+    // 24h here but not after a reload. An explicit pick (rangeIsDefault false) carries over.
+    if (next === 'product' && rangeIsDefault) setGlobalTimeRange(undefined)
   }
 
   // Keep range and granularity backend-valid: cap a range too wide for any granularity, then
