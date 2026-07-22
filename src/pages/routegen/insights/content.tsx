@@ -100,10 +100,12 @@ export const InsightsContent = memo(function InsightsContent({
   // Bucket labels render in the project's reporting zone so they match the
   // server-computed bucket boundaries (the server buckets in this same zone).
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
+  // Only the line-shaped views draw the comparison, so only they may let it stand in for live data.
+  const drawableComparison = comparison && (viewMode === 'line' || viewMode === 'area') ? comparison : undefined
   // A zero window still draws when the prior one isn't: a collapse to zero is what compare is for.
-  const allZero = chartData.every(d => d.values.every(v => v === 0)) && !comparison?.values.some(v => v !== 0)
+  const allZero = chartData.every(d => d.values.every(v => v === 0)) && !drawableComparison?.values.some(v => v !== 0)
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
-  const drawsComparison = !!comparison && !allZero && (viewMode === 'line' || viewMode === 'area')
+  const drawsComparison = !!drawableComparison && !allZero
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
 
   const renderLoadingEmptyState = () => (
@@ -152,7 +154,7 @@ export const InsightsContent = memo(function InsightsContent({
           granularity={granularity}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
-          comparison={comparison}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )
@@ -165,7 +167,7 @@ export const InsightsContent = memo(function InsightsContent({
           granularity={granularity}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
-          comparison={comparison}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )

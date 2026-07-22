@@ -96,12 +96,17 @@ describe('InsightsContent compare-vs-prior', () => {
     expect(shows(empty.container, CAPTION)).toBe(false)
   })
 
-  // Bars and the table never receive the comparison, so they must not advertise one either.
-  it('does not name a dashed line on a view that cannot draw it', () => {
-    const { container } = render(
+  // Bars and the table never receive the comparison, so they must neither advertise one nor let it
+  // stand in for live data: a zero window on those views is still an empty window.
+  it('ignores the comparison entirely on a view that cannot draw it', () => {
+    const named = render(
       <InsightsContent {...base} chartData={LIVE} viewMode="bar-grouped" comparison={comparison([40, 50, 60])} />,
     )
+    expect(shows(named.container, CAPTION)).toBe(false)
 
-    expect(shows(container, CAPTION)).toBe(false)
+    const empty = render(
+      <InsightsContent {...base} chartData={ZERO} viewMode="bar-grouped" comparison={comparison([40, 50, 60])} />,
+    )
+    expect(shows(empty.container, EMPTY)).toBe(true)
   })
 })
