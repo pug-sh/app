@@ -58,13 +58,33 @@ const zoneOffsetMs = (timeZone: string, instant: Date) => {
   return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - instant.getTime()
 }
 
-// The UTC instant for a wall-clock time (h:00:00) on y-mo-d in `timeZone`. Refines
-// the offset once so it stays correct across a DST boundary.
-const wallToInstant = (timeZone: string, y: number, mo: number, d: number, h: number) => {
-  const guess = Date.UTC(y, mo - 1, d, h, 0, 0)
+// A wall-clock time in some zone. Month is 1-12, matching zonedParts.
+export interface ZonedCivil {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+  ms: number
+}
+
+// Use instead of the local getters when a decision is about the calendar, not the instant.
+export const zonedCivil = (instant: Date, timeZone: string): ZonedCivil => {
+  const p = zonedParts(timeZone, instant)
+  // Every IANA offset is a whole number of minutes, so sub-second is zone-invariant.
+  return { ...p, ms: instant.getMilliseconds() } as ZonedCivil
+}
+
+// Refines the offset once so it stays correct across a DST boundary.
+export const civilToInstant = (c: ZonedCivil, timeZone: string) => {
+  const guess = Date.UTC(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, c.ms)
   const refined = guess - zoneOffsetMs(timeZone, new Date(guess - zoneOffsetMs(timeZone, new Date(guess))))
   return new Date(refined)
 }
+
+const wallToInstant = (timeZone: string, y: number, mo: number, d: number, h: number) =>
+  civilToInstant({ year: y, month: mo, day: d, hour: h, minute: 0, second: 0, ms: 0 }, timeZone)
 
 // Floor `instant` to the start of its bucket at `granularity`, computed in `timeZone`,
 // matching the server's ClickHouse bucket functions (week = Sunday start, per

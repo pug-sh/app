@@ -85,6 +85,12 @@ export const DashboardInsightContent = ({
     [effectiveTimeRange, effectiveGranularity, timeZone],
   )
 
+  // The prior period shifts the aligned window, but names its unit off the unaligned one.
+  const compareWindow = useMemo(
+    () => ({ queried: alignedTimeRange, selected: effectiveTimeRange, timeZone }),
+    [alignedTimeRange, effectiveTimeRange, timeZone],
+  )
+
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
     return create(QueryRequestSchema, {
@@ -124,8 +130,8 @@ export const DashboardInsightContent = ({
   )
 
   const comparisonQuery = useMemo(
-    () => (tile ? buildComparisonQuery(effectiveQuery, alignedTimeRange, tile.compare) : undefined),
-    [effectiveQuery, alignedTimeRange, tile],
+    () => (tile ? buildComparisonQuery(effectiveQuery, compareWindow, tile.compare) : undefined),
+    [effectiveQuery, compareWindow, tile],
   )
   const comparisonQueryKey = stringifyQueryKey({
     prefix: `${queryKeyPrefix}::compare`,
@@ -148,12 +154,12 @@ export const DashboardInsightContent = ({
   // delta is computed inside KpiTile. Only assembled for KPI tiles.
   const compare = useMemo<KpiCompare | undefined>(() => {
     if (!(tile && resolvedViewMode === DashboardTileViewMode.KPI) || !comparisonQuery) return undefined
-    const compareLabel = formatComparePeriodLabel(alignedTimeRange)
+    const compareLabel = formatComparePeriodLabel(compareWindow)
     if (comparisonError) return { error: true, label: compareLabel ?? '' }
     if (comparisonResult.case === 'trends')
       return { series: [...comparisonResult.value.series], label: compareLabel ?? '' }
     return undefined
-  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, alignedTimeRange])
+  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, compareWindow])
 
   return (
     <InsightTileView
