@@ -257,14 +257,15 @@
 }
 
 .dark {
-  /* Deep ground with the band riding close to it, mirroring how light's hugs white.
-     Parking the band mid-scale is what read as washed out. Shift these together. */
+  /* Ground sits deep — parking the band mid-scale is what read as washed out. Spacing
+     stays wide: a contrast RATIO is a fraction, so near black light's 1.05:1 step is ~26x
+     less actual luminance and vanishes. Dark needs its own spacing, not light's. */
   --background: oklch(0.19 0.006 265);
   --foreground: oklch(0.773 0.003 265);
   --display-foreground: oklch(0.722 0.003 265);
-  --card: oklch(0.202 0.007 265);
+  --card: oklch(0.222 0.007 265);
   --card-foreground: oklch(0.773 0.003 265);
-  --popover: oklch(0.21 0.008 265);
+  --popover: oklch(0.242 0.008 265);
   --popover-foreground: oklch(0.773 0.003 265);
 
   /* actions */
@@ -273,13 +274,13 @@
   --link: oklch(0.685 0.15 265);
   /* The floor is --accent keeping its gap over --popover: menu-item hovers render on
      popovers, and closing it further makes them invisible. */
-  --secondary: oklch(0.22 0.009 265);
+  --secondary: oklch(0.249 0.009 265);
   --secondary-foreground: oklch(0.736 0.005 265);
-  --muted: oklch(0.225 0.01 265);
+  --muted: oklch(0.256 0.01 265);
   /* Don't lift toward the body colour to "fix" contrast — that re-flattens the hierarchy. */
-  --muted-foreground: oklch(0.631 0.006 265);
+  --muted-foreground: oklch(0.64 0.006 265);
   --faint: oklch(0.509 0.006 265);
-  --accent: oklch(0.236 0.012 265);
+  --accent: oklch(0.268 0.012 265);
   /* Capped below --foreground: solving it flat pushes chip ink past body ink. */
   --accent-foreground: oklch(0.736 0.005 265);
 
@@ -290,15 +291,15 @@
   --warning: oklch(0.72 0.12 70);
   /* Text tier — see :root. Solved against every ground these land on, including a
      15%/20% tint of their own fill, which is the worst case. */
-  --positive: oklch(0.664 0.16 145);
-  --caution: oklch(0.696 0.16 70);
-  --negative: oklch(0.699 0.16 25);
+  --positive: oklch(0.676 0.16 145);
+  --caution: oklch(0.688 0.16 70);
+  --negative: oklch(0.701 0.16 25);
 
   /* --border is translucent so it takes the tint of whatever surface it sits on. Keep
      alpha at 0.20 — call sites dim it further with border-border/30..70. --input stays
      SOLID: form controls use dark:bg-input/30, and /NN multiplies alpha away. */
   --border: oklch(0.62 0.02 265 / 0.2);
-  --input: oklch(0.22 0.009 265);
+  --input: oklch(0.249 0.009 265);
   --ring: oklch(0.62 0.12 265);
 
   /* charts */
@@ -309,21 +310,22 @@
   --chart-5: oklch(0.62 0.16 25);
 
   /* sidebar */
-  --sidebar: oklch(0.173 0.006 265);
-  --sidebar-foreground: oklch(0.764 0.005 265);
+  --sidebar: oklch(0.152 0.006 265);
+  --sidebar-foreground: oklch(0.755 0.005 265);
   /* Must match --primary — white text on it is sub-AA otherwise. */
   --sidebar-primary: oklch(0.54 0.16 265);
   --sidebar-primary-foreground: oklch(0.96 0.005 265);
   /* Seated on the sidebar, not pinned to --accent: the sidebar sits below the canvas
-     while chips sit above, so one shared value made every nav hover the loudest step. */
-  --sidebar-accent: oklch(0.195 0.012 265);
+     while chips sit above, so one shared value made every nav hover the loudest step.
+     Held below --card so the active pill can never outshine content on the canvas. */
+  --sidebar-accent: oklch(0.199 0.012 265);
   --sidebar-accent-foreground: oklch(0.736 0.005 265);
   --sidebar-border: oklch(0.62 0.02 265 / 0.14);
   --sidebar-ring: oklch(0.62 0.12 265);
   /* Only what genuinely differs per mode — the rest are :root aliases that track the
      theme; redeclaring one here pins it to light. */
   --chart-crosshair: oklch(0.45 0 0);
-  --chart-marker-background: oklch(0.22 0.008 265);
+  --chart-marker-background: oklch(0.228 0.008 265);
   --chart-marker-border: oklch(0.33 0.01 265);
   --chart-marker-foreground: oklch(0.95 0 0);
   /* Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface. */
