@@ -374,3 +374,10 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
 // family hue (every page_view split → blue). Index assignment guarantees
 // adjacent splits get the broad-hue fallback palette in order.
 export const getIndexedColor = (index: number): SeriesColor => themed(FALLBACK_COLORS[index % FALLBACK_COLORS.length])
+
+const HEX6 = /^#[0-9a-f]{6}$/i
+
+// Line and dot at 60% alpha, for a reference series drawn against a live one. Alpha rather than a
+// lighter hex so it recedes on either canvas; a color that isn't a plain hex passes through.
+export const fadedSeriesColor = (sc: SeriesColor): SeriesColor =>
+  HEX6.test(sc.line) ? { ...sc, line: `${sc.line}99`, dot: `${sc.dot}99` } : sc

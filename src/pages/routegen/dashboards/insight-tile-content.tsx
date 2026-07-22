@@ -3,7 +3,11 @@ import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
-import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  ComparePeriod,
+  type DashboardTile,
+  type DashboardTileViewMode,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   type Granularity,
   InsightType,
@@ -31,6 +35,7 @@ export const DashboardInsightContent = ({
   timeRangeOverride,
   granularityOverride,
   queryKeyPrefix,
+  comparePrior = false,
   compact = false,
   kpiMetadata,
   lightMetrics = false,
@@ -45,13 +50,15 @@ export const DashboardInsightContent = ({
   timeRangeOverride?: TimeRange
   granularityOverride?: Granularity
   queryKeyPrefix: string
+  // Run the prior-period query and draw it dashed. Overrides any tile.compare; used by tile-less
+  // callers (the overview web chart) that have no ComparePeriod setting of their own.
+  comparePrior?: boolean
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
   // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
   hideSummary?: boolean
 }) => {
-  const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
@@ -129,9 +136,10 @@ export const DashboardInsightContent = ({
     { enabled: !!effectiveQuery && !!headers && queryReady, debounceMs: 0 },
   )
 
+  const compareSetting = comparePrior ? ComparePeriod.PRIOR : (tile?.compare ?? ComparePeriod.UNSPECIFIED)
   const comparisonQuery = useMemo(
-    () => (tile ? buildComparisonQuery(effectiveQuery, compareWindow, tile.compare) : undefined),
-    [effectiveQuery, compareWindow, tile],
+    () => buildComparisonQuery(effectiveQuery, compareWindow, compareSetting),
+    [effectiveQuery, compareWindow, compareSetting],
   )
   const comparisonQueryKey = stringifyQueryKey({
     prefix: `${queryKeyPrefix}::compare`,
@@ -150,16 +158,15 @@ export const DashboardInsightContent = ({
 
   const comparisonResult = comparisonData ?? { case: undefined, value: undefined }
 
-  // Compare-vs-prior issues a second query shifted back by the window length; the
-  // delta is computed inside KpiTile. Only assembled for KPI tiles.
+  // Gated on the query rather than the view mode, so both readers — the KPI delta and the dashed
+  // chart series — get it, and neither can be handed a window that wasn't queried.
   const compare = useMemo<KpiCompare | undefined>(() => {
-    if (!(tile && resolvedViewMode === DashboardTileViewMode.KPI) || !comparisonQuery) return undefined
+    if (!comparisonQuery) return undefined
     const compareLabel = formatComparePeriodLabel(compareWindow)
-    if (comparisonError) return { error: true, label: compareLabel ?? '' }
-    if (comparisonResult.case === 'trends')
-      return { series: [...comparisonResult.value.series], label: compareLabel ?? '' }
+    if (comparisonError) return { error: true, label: compareLabel }
+    if (comparisonResult.case === 'trends') return { series: [...comparisonResult.value.series], label: compareLabel }
     return undefined
-  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, compareWindow])
+  }, [comparisonQuery, comparisonError, comparisonResult, compareWindow])
 
   return (
     <InsightTileView
@@ -171,6 +178,7 @@ export const DashboardInsightContent = ({
       error={error}
       onRetry={retry}
       compare={compare}
+      comparePrior={comparePrior}
       compact={compact}
       kpiMetadata={kpiMetadata}
       lightMetrics={lightMetrics}

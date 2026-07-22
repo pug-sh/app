@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import {
   AggregationType,
+  DataPointSchema,
   EventQuerySchema,
   InsightQuerySpecSchema,
   InsightType,
@@ -10,7 +11,7 @@ import {
   SessionQuerySchema,
   TrendSeriesSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { collapseValues, SERIES_COLLAPSE, specAggregationResolver } from './helpers'
+import { alignComparisonValues, collapseValues, SERIES_COLLAPSE, specAggregationResolver } from './helpers'
 
 const series = (eventKind: string) => create(TrendSeriesSchema, { eventKind })
 
@@ -76,5 +77,36 @@ describe('specAggregationResolver on event specs', () => {
 
   it('falls back to TOTAL for an undefined spec', () => {
     expect(specAggregationResolver(undefined)(series('page_view'))).toBe(AggregationType.TOTAL)
+  })
+})
+
+// The compare window is its own query, so its bucket count needn't match the one it's drawn over.
+describe('alignComparisonValues', () => {
+  const points = (...values: number[]) => values.map(value => create(DataPointSchema, { value }))
+
+  it('maps one-to-one when the two windows bucket the same', () => {
+    expect(alignComparisonValues(points(1, 2, 3, 4), 4)).toEqual([1, 2, 3, 4])
+  })
+
+  // A 31-day month against a 30-day one. Exact, not just endpoints-and-length: asserting the shape
+  // loosely passes on [10, 0, 0, 0, 30], which is the zero-collapse this function exists to avoid.
+  it('stretches a shorter prior window across the full width', () => {
+    expect(alignComparisonValues(points(10, 20, 30), 5)).toEqual([10, 20, 20, 30, 30])
+    expect(alignComparisonValues(points(1, 2, 3, 4), 7)).toEqual([1, 2, 2, 3, 3, 4, 4])
+  })
+
+  it('compresses a longer prior window onto the same buckets', () => {
+    const aligned = alignComparisonValues(points(1, 2, 3, 4, 5), 3)
+    expect(aligned).toEqual([1, 3, 5])
+  })
+
+  it('has nothing to draw for an empty window', () => {
+    expect(alignComparisonValues([], 5)).toEqual([])
+    expect(alignComparisonValues(points(1, 2), 0)).toEqual([])
+  })
+
+  // bucketCount 1 is the degenerate case the index scale divides by zero on.
+  it('survives a single bucket', () => {
+    expect(alignComparisonValues(points(7, 8, 9), 1)).toEqual([7])
   })
 })

@@ -236,6 +236,7 @@ const WebAnalyticsMode = ({ schema, selectedStat, onSelectStat, globalTimeRange,
               granularityOverride={granularity}
               viewMode={DashboardTileViewMode.AREA}
               queryKeyPrefix={`overview-web-chart-${selectedStat}`}
+              comparePrior
               compact
               lightMetrics
               hideSummary

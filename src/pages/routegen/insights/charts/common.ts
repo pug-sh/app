@@ -16,6 +16,13 @@ export const CHART_MARGIN = { top: 8 }
 // axis, which would label them, so the date-label override blanks them by this key.
 export const PAD_ROW_KEY = '__pad'
 
+// Prefixed like PAD_ROW_KEY so it can't collide with a `series${i}` index.
+export const COMPARE_KEY = '__compare'
+
+// The compare-vs-prior window. `values` is already laid over this window's buckets by the caller
+// (alignComparisonValues), one per row of `data`.
+export type ChartComparison = { label: string; values: number[]; color: SeriesColor }
+
 // Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
 // real Date — the wrappers inject the formatted labels via the context override.
 export const useVendoredChartPrep = (
@@ -24,10 +31,11 @@ export const useVendoredChartPrep = (
   seriesColors: SeriesColor[],
   granularity: Granularity,
   timeZone: string,
+  comparison?: ChartComparison,
 ) => {
   const chartData = useMemo(() => {
     let warned = false
-    return data.map(point => {
+    return data.map((point, index) => {
       if (!warned && point.values.length !== seriesNames.length) {
         console.error(
           'Chart data misalignment: expected',
@@ -42,20 +50,33 @@ export const useVendoredChartPrep = (
       seriesNames.forEach((_, si) => {
         row[`series${si}`] = point.values[si] ?? 0
       })
+      if (comparison) row[COMPARE_KEY] = comparison.values[index] ?? 0
       return row
     })
-  }, [data, seriesNames])
+  }, [data, seriesNames, comparison])
 
   // Without this the tooltip prints the raw dataKey ("series0") — the vendored
   // chart has no equivalent of recharts' chartConfig label map.
+  //
+  // Comparison row last: the tooltip colors its hover dots from these rows by position, and its own
+  // order is child order.
   const tooltipRows = useCallback(
-    (point: Record<string, unknown>) =>
-      seriesNames.map((name, si) => ({
+    (point: Record<string, unknown>) => {
+      const rows = seriesNames.map((name, si) => ({
         color: seriesColors[si]?.line ?? '',
         label: name,
         value: Number(point[`series${si}`] ?? 0).toLocaleString(),
-      })),
-    [seriesNames, seriesColors],
+      }))
+      if (comparison) {
+        rows.push({
+          color: comparison.color.line,
+          label: comparison.label,
+          value: Number(point[COMPARE_KEY] ?? 0).toLocaleString(),
+        })
+      }
+      return rows
+    },
+    [seriesNames, seriesColors, comparison],
   )
 
   // Bucket labels must render in the project's reporting zone to match the

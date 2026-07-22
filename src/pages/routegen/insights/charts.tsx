@@ -1,5 +1,6 @@
 export { AreaChart } from './charts/area-chart'
 export { BarChart } from './charts/bar-chart'
+export type { ChartComparison } from './charts/common'
 export { DataTable } from './charts/data-table'
 export type { FunnelSeriesData } from './charts/funnel-chart'
 export { FunnelBreakdownView, FunnelChart } from './charts/funnel-chart'
