@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
-import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
-import { formatAxisDate, formatTooltipDate } from './helpers'
+import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
 import type { ChartPoint } from './types'
 
 // The vendored charts default to a 40px margin on every side. Nothing draws in the
@@ -62,12 +62,22 @@ export const useVendoredChartPrep = (
   // server-computed bucket boundaries, and vary by granularity. The axis and the
   // hover pill want different detail: the axis stays terse to fit, while the pill
   // has to say which day an hour bucket lands on (an hourly range spans up to 14).
+  const axisNeedsDay = useMemo(
+    () =>
+      granularity === Granularity.HOUR &&
+      spansMultipleDays(
+        data.map(p => p.date),
+        timeZone,
+      ),
+    [data, granularity, timeZone],
+  )
+
   const dateLabelFormatters = useMemo(
     () => ({
-      axis: (date: Date) => formatAxisDate(date, granularity, timeZone),
+      axis: (date: Date) => formatAxisDate(date, granularity, timeZone, axisNeedsDay),
       tooltip: (date: Date) => formatTooltipDate(date, granularity, timeZone),
     }),
-    [granularity, timeZone],
+    [granularity, timeZone, axisNeedsDay],
   )
 
   return { chartData, tooltipRows, dateLabelFormatters }

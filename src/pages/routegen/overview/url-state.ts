@@ -1,5 +1,5 @@
 import { replaceUrlIfChanged, setOrDelete } from '@/hooks/use-filter-query-params'
-import { todayRange } from '@/lib/date-presets'
+import { last24HoursRange } from '@/lib/date-presets'
 import { isWebStatId, type WebStatId } from './web-analytics-queries'
 
 // Overview-local URL state: in web mode, which stat drives the chart. The Web vs Product view mode is
@@ -13,10 +13,10 @@ const STAT_PARAM = 'stat'
 
 const DEFAULT_WEB_STAT: WebStatId = 'users'
 
-// The default landing window for web analytics: today, hour-bucketed (granularity resolves to HOUR
-// from this range via autoGranularity). One line so the web default policy lives here while the
-// range primitive stays in date-presets.
-export const resolveWebDefaultRange = () => todayRange()
+// The default landing window for web analytics: the last 24 hours, hour-bucketed (granularity
+// resolves to HOUR from this range via autoGranularity). One line so the web default policy lives
+// here while the range primitive stays in date-presets.
+export const resolveWebDefaultRange = () => last24HoursRange()
 
 export const readWebStat = (search = window.location.search) => {
   const raw = new URLSearchParams(search).get(STAT_PARAM)

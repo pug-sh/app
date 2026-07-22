@@ -139,7 +139,7 @@ const WebAnalyticsMode = ({ schema, selectedStat, onSelectStat, globalTimeRange,
   const hasPageViews = schema.events.some(event => event.name === WEB_PRIMARY_KIND)
 
   // Resolve one concrete window + granularity for the whole view so every panel agrees. Default to
-  // Today when no global range is set; Auto resolves to hourly there.
+  // Last 24 hours when no global range is set; Auto resolves to hourly there.
   const range = useMemo(() => globalTimeRange ?? resolveWebDefaultRange(), [globalTimeRange])
   const granularity = globalGranularity ?? autoGranularity(range)
 

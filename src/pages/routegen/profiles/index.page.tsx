@@ -50,6 +50,26 @@ const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key:
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
 
+// Counts wrap between pairs, never inside one — that's what lets the column shrink.
+const ActivitySummary = ({ activity }: { activity: Profile['activity'] }) => {
+  const parts = [
+    { value: activity?.pageviews ?? 0, label: 'views' },
+    { value: activity?.totalEvents ?? 0, label: 'events' },
+    { value: activity?.sessions ?? 0, label: 'sessions' },
+  ]
+
+  return (
+    <div className="flex flex-wrap items-center min-[1400px]:flex-nowrap">
+      {parts.map((part, idx) => (
+        <span key={part.label} className="whitespace-nowrap">
+          <span className="tabular-nums text-foreground">{compactNumber(part.value)}</span> {part.label}
+          {idx < parts.length - 1 && <span className="mx-1.5 text-muted-foreground/40">·</span>}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 const ALLOWED_PROFILE_AUTO_PROPERTIES = new Set([
   '$browser',
   '$browserVersion',
@@ -277,9 +297,10 @@ const Profiles = () => {
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Profiles</span>
             <span className="text-xs text-muted-foreground">{profiles.length}</span>
           </div>
-          <div className="overflow-x-clip">
-            <table className="w-full min-w-[960px] border-collapse">
-              <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
+          {/* Only clip keeps overflow-y visible for the sticky header; below xl, reach beats sticking. */}
+          <div className="overflow-x-auto min-[1400px]:overflow-x-clip">
+            <table className="w-full border-collapse">
+              <thead className="static z-9 bg-background min-[1400px]:sticky" style={{ top: filterH }}>
                 <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
@@ -348,17 +369,8 @@ const Profiles = () => {
                           iconSize={16}
                         />
                       </td>
-                      <td className="py-3 pr-3 text-sm text-muted-foreground whitespace-nowrap">
-                        <span className="tabular-nums text-foreground">{compactNumber(activity?.pageviews ?? 0)}</span>{' '}
-                        views
-                        <span className="mx-1.5 text-muted-foreground/40">·</span>
-                        <span className="tabular-nums text-foreground">
-                          {compactNumber(activity?.totalEvents ?? 0)}
-                        </span>{' '}
-                        events
-                        <span className="mx-1.5 text-muted-foreground/40">·</span>
-                        <span className="tabular-nums text-foreground">{compactNumber(activity?.sessions ?? 0)}</span>{' '}
-                        sessions
+                      <td className="py-3 pr-3 text-sm text-muted-foreground">
+                        <ActivitySummary activity={activity} />
                       </td>
                       <td className="py-3 pl-6 pr-3 text-sm text-muted-foreground whitespace-nowrap">
                         {formatSeen(activity, 'lastSeen')}

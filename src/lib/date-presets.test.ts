@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { inZone } from '@/test/timezone'
 import { TIME_RANGE_PRESETS } from './date-presets'
 import { GRANULARITY_MAX_RANGE_MS } from './granularity'
 
@@ -61,5 +62,26 @@ describe('lastNMonths', () => {
     const range = resolvePreset('Last 6 months')
     expect(range.from).toEqual(new Date(2026, 0, 21))
     expect(range.to).toEqual(new Date(2026, 6, 20, 23, 47, 13, 500))
+  })
+})
+
+const HOUR_MS = 60 * 60 * 1000
+
+// setHours counted wall-clock hours, so the preset queried a window its own label disagreed with.
+describe('lastNHours', () => {
+  it('spans 24 elapsed hours across the fall-back transition', () => {
+    inZone('America/Los_Angeles', () => {
+      at(2025, 10, 2, 10)
+      const range = resolvePreset('Last 24 hours')
+      expect(range.to.getTime() - range.from.getTime()).toBe(24 * HOUR_MS)
+    })
+  })
+
+  it('spans 24 elapsed hours across the spring-forward transition', () => {
+    inZone('America/Los_Angeles', () => {
+      at(2025, 2, 9, 11)
+      const range = resolvePreset('Last 24 hours')
+      expect(range.to.getTime() - range.from.getTime()).toBe(24 * HOUR_MS)
+    })
   })
 })

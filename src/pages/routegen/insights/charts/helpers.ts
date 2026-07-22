@@ -1,4 +1,5 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { zonedCivil } from '@/lib/timezone'
 
 // Bucket boundaries are computed server-side in the project's reporting timezone, so
 // axis/tooltip labels must render in that same zone or a day bucket (e.g. IST midnight
@@ -21,21 +22,62 @@ const fmtDay = (d: Date, timeZone: string | undefined): string => {
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: string): string => {
-  if (granularity === Granularity.HOUR)
-    return fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
+// fmtDay for a date `days` calendar days later in the reporting zone. Read off the civil date
+// rather than an instant: elapsed ms drifts when that zone's clocks go back inside the span, and
+// the wall clock it would rebuild doesn't exist in a zone that springs forward at midnight.
+const fmtDayAfter = (d: Date, days: number, timeZone: string | undefined): string => {
+  try {
+    const zone = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    const c = zonedCivil(d, zone)
+    const cal = new Date(Date.UTC(c.year, c.month - 1, c.day + days))
+    const sameYear = String(cal.getUTCFullYear()) === yearIn(new Date(), zone)
+    return fmtInZone(cal, 'UTC', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
+  } catch {
+    const shifted = new Date(d)
+    shifted.setDate(shifted.getDate() + days)
+    return fmtDay(shifted, timeZone)
+  }
+}
+
+// True when the buckets don't all fall on one day in the reporting zone.
+export const spansMultipleDays = (dates: readonly Date[], timeZone?: string): boolean => {
+  const first = dates[0]
+  if (!first) return false
+  const day = fmtDay(first, timeZone)
+  return dates.some(d => fmtDay(d, timeZone) !== day)
+}
+
+// withDay is required once the window crosses a day: the vendored axis treats a tick's label as its
+// identity and drops repeats, so a bare "16:00" at both ends collapses the layout onto the first buckets.
+export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: string, withDay = false): string => {
+  if (granularity === Granularity.HOUR) {
+    const clock = fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
+    return withDay ? `${fmtDay(d, timeZone)} ${clock}` : clock
+  }
   if (granularity === Granularity.MONTH) return fmtInZone(d, timeZone, { month: 'short', year: '2-digit' })
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric' })
 }
 
+// The hover pill's ticker splits a label on spaces into a month column and a day column, and drops
+// any third token — "Jul 22, 02:00" renders as "Jul 22,". Joining everything after the month with
+// NBSP keeps it one token; it renders identically.
+const asTickerLabel = (label: string) => {
+  const [month, ...rest] = label.split(' ')
+  return rest.length > 0 ? `${month} ${rest.join('\u00a0')}` : label
+}
+
+// A range already names its own months, so letting the ticker hoist the first one into the month
+// column leaves "Jun  21 - Jun 27" split across two columns. One token keeps it in a single column.
+const asWholeTickerLabel = (label: string) => label.replaceAll(' ', '\u00a0')
+
 export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: string): string => {
-  if (granularity === Granularity.HOUR)
-    return fmtDay(d, timeZone) + ', ' + fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
+  if (granularity === Granularity.HOUR) {
+    const clock = fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
+    return asTickerLabel(`${fmtDay(d, timeZone)}, ${clock}`)
+  }
 
   if (granularity === Granularity.WEEK) {
-    const end = new Date(d)
-    end.setDate(end.getDate() + 6)
-    return fmtDay(d, timeZone) + ' - ' + fmtDay(end, timeZone)
+    return asWholeTickerLabel(`${fmtDay(d, timeZone)} - ${fmtDayAfter(d, 6, timeZone)}`)
   }
 
   if (granularity === Granularity.MONTH) {
@@ -43,5 +85,6 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
     return fmtInZone(d, timeZone, { month: 'long', ...(!sameYear && { year: 'numeric' }) })
   }
 
-  return fmtDay(d, timeZone)
+  // Wrapped too: fmtDay appends the year outside the current one, and "Dec 15, 2025" is three tokens.
+  return asTickerLabel(fmtDay(d, timeZone))
 }

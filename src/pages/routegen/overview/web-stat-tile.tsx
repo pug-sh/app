@@ -40,7 +40,10 @@ export const WebStatTile = ({
     () => ({ from: alignRangeStart(range, granularity, timeZone), to: range.to }),
     [range, granularity, timeZone],
   )
-  const priorRange = useMemo(() => priorPeriodRange(alignedRange), [alignedRange])
+  const priorRange = useMemo(
+    () => priorPeriodRange({ queried: alignedRange, selected: range, timeZone }),
+    [alignedRange, range, timeZone],
+  )
 
   const { result, error, retry, loading } = useWebQuery(scalarQuery, range, granularity, `overview-web-stat-${statId}`)
   const { result: priorResult, retry: retryPrior } = useWebQuery(
