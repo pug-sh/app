@@ -49,6 +49,7 @@ const entrySignature = (entry: MapEntry, selectedId: string | null) => {
     entry.page,
     entry.browser ?? '',
     entry.device,
+    entry.avatarUrl ?? '',
   ].join('|')
 }
 

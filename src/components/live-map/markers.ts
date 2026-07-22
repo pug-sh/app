@@ -1,21 +1,8 @@
-import { stringHash } from 'facehash'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { COUNTRY_CENTROIDS } from '@/components/country-centroids'
-import { formatPagePath, isMobileVisitor } from '@/components/live-map/live-visitors'
+import { eventAvatarUrl, formatPagePath, isMobileVisitor } from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
 import { structGet } from '@/lib/struct'
-
-export const LIVE_AVATAR_COLORS = [
-  '#f43f5e',
-  '#fb923c',
-  '#f59e0b',
-  '#84cc16',
-  '#10b981',
-  '#06b6d4',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-]
 
 export type VisitorMapMarker = {
   distinctId: string
@@ -26,6 +13,7 @@ export type VisitorMapMarker = {
   kind: string
   browser?: string
   device: string
+  avatarUrl?: string
   // lat/lng is the visitor's resolved point (GeoIP coords, else region/country centroid); offset is
   // the scatter the map scales down by zoom so coincident faces hold a constant pixel separation and
   // converge on the point as you zoom in.
@@ -55,9 +43,15 @@ export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'clus
 // stays constant. The whole group is rotated by a hash so different places don't all face the same way.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 
+const seedHash = (value: string) => {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0
+  return Math.abs(hash)
+}
+
 const sunflowerOffset = (i: number, n: number, seed: string): [number, number] => {
   if (n <= 1) return [0, 0]
-  const rot = ((stringHash(seed) & 0xffff) / 0xffff) * 2 * Math.PI
+  const rot = ((seedHash(seed) & 0xffff) / 0xffff) * 2 * Math.PI
   const r = Math.sqrt(i + 0.5)
   const theta = i * GOLDEN_ANGLE + rot
   // 0.8 squishes latitude so the fan reads as a circle on the Mercator projection.
@@ -152,6 +146,7 @@ const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): Visi
     kind: v.kind || 'event',
     browser: structGet(auto, '$browser'),
     device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
+    avatarUrl: eventAvatarUrl(v),
     lng: placed.lng,
     lat: placed.lat,
     offsetLng: dLng,

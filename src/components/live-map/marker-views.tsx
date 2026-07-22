@@ -1,9 +1,9 @@
-import { Facehash } from 'facehash'
 import { navigate } from 'wouter/use-browser-location'
 
 import { CountryFlag } from '@/components/country-flag'
+import IdentityAvatar from '@/components/identity-avatar'
 import { formatCountryName } from '@/components/live-map/live-visitors'
-import { type ClusterMapMarker, LIVE_AVATAR_COLORS, type VisitorMapMarker } from '@/components/live-map/markers'
+import type { ClusterMapMarker, VisitorMapMarker } from '@/components/live-map/markers'
 import { BrowserLabel, DeviceLabel } from '@/components/platform-label'
 import { getSeriesColor } from '@/lib/event-colors'
 
@@ -98,15 +98,7 @@ export const MarkerView = ({
             selected ? 'scale-110 shadow-success/50' : 'shadow-black/10'
           }`}
         >
-          <Facehash
-            name={marker.distinctId}
-            size={32}
-            showInitial={false}
-            intensity3d="dramatic"
-            interactive={false}
-            colors={LIVE_AVATAR_COLORS}
-            className="block rounded-full"
-          />
+          <IdentityAvatar id={marker.distinctId} src={marker.avatarUrl} className="block size-8 rounded-full" />
         </span>
       </button>
       <div

@@ -1,14 +1,14 @@
-import { Facehash } from 'facehash'
 import { Laptop, Monitor, Smartphone } from 'lucide-react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import HoverSwap from '@/components/hover-swap'
+import IdentityAvatar from '@/components/identity-avatar'
 import {
   describeEvent,
+  eventAvatarUrl,
   formatCountryName,
   isMobileVisitor,
   visitorLocalTime,
 } from '@/components/live-map/live-visitors'
-import { LIVE_AVATAR_COLORS } from '@/components/live-map/markers'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet } from '@/lib/struct'
@@ -71,14 +71,10 @@ const VisitorRow = ({ visitor, journey, selected, onClick }: Props) => {
           selected ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted/50'
         }`}
       >
-        <Facehash
-          name={visitor.distinctId}
-          size={36}
-          showInitial={false}
-          intensity3d="dramatic"
-          interactive={false}
-          colors={LIVE_AVATAR_COLORS}
-          className="size-9 shrink-0 self-start rounded-full ring-1 ring-border/40"
+        <IdentityAvatar
+          id={visitor.distinctId}
+          src={eventAvatarUrl(visitor)}
+          className="size-9 self-start rounded-full ring-1 ring-border/40"
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2 text-sm">

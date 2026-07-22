@@ -13,6 +13,7 @@ import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { ProfileAvatar } from '../_avatar'
 import { resolveIdentity } from '../_identity'
+import StatusDot from '../_status-dot'
 import { profileFamilyAtom } from './_data'
 
 const TABS = [
@@ -21,15 +22,6 @@ const TABS = [
   { suffix: '/sessions', label: 'Sessions' },
   { suffix: '/properties', label: 'Properties' },
 ] as const
-
-const StatusDot = ({ lastSeen }: { lastSeen: Date | null }) => {
-  if (!lastSeen) {
-    return <span className="inline-block size-2.5 rounded-full bg-muted-foreground/30 ring-2 ring-background" />
-  }
-  const minsAgo = (Date.now() - lastSeen.getTime()) / 60_000
-  const color = minsAgo < 5 ? 'bg-success' : minsAgo < 60 * 24 ? 'bg-warning' : 'bg-muted-foreground/30'
-  return <span className={cn('inline-block size-2.5 rounded-full ring-2 ring-background', color)} />
-}
 
 const CopyButton = ({ value }: { value: string }) => (
   <button
@@ -93,7 +85,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
           <div className="relative shrink-0">
-            <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
+            <ProfileAvatar identity={identity} className="size-10 rounded-md" />
             <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>

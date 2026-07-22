@@ -64,6 +64,9 @@ export default defineConfig({
             return 'vendor-maplibre'
           }
           if (id.includes('/@bufbuild/') || id.includes('/@connectrpc/')) return 'vendor-proto'
+          // Own chunk so ~120KB of artwork caches separately. The eagerly-imported ProfileShell
+          // still pulls it onto every authenticated route; sign-in and the share page escape it.
+          if (id.includes('/@dicebear/')) return 'vendor-avatars'
           if (id.includes('/lucide-react/')) return 'vendor-icons'
           if (id.includes('/@base-ui/')) return 'vendor-base-ui'
           if (id.includes('/tailwind-merge/') || id.includes('/class-variance-authority/') || id.includes('/clsx/')) {

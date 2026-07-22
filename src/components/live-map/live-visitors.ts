@@ -1,6 +1,11 @@
 import type { JsonObject } from '@bufbuild/protobuf'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { resolveAvatarUrl } from '@/lib/avatar-traits'
 import { structGet } from '@/lib/struct'
+
+// Only set when a customer sends a picture trait on the event; profile traits aren't on it.
+export const eventAvatarUrl = (event: ActivityEvent) =>
+  resolveAvatarUrl(event.autoProperties) ?? resolveAvatarUrl(event.customProperties)
 
 export { formatCountryName } from '@/lib/location'
 
