@@ -27,7 +27,7 @@ const StatusDot = ({ lastSeen }: { lastSeen: Date | null }) => {
     return <span className="inline-block size-2.5 rounded-full bg-muted-foreground/30 ring-2 ring-background" />
   }
   const minsAgo = (Date.now() - lastSeen.getTime()) / 60_000
-  const color = minsAgo < 5 ? 'bg-emerald-500' : minsAgo < 60 * 24 ? 'bg-amber-500' : 'bg-muted-foreground/30'
+  const color = minsAgo < 5 ? 'bg-success' : minsAgo < 60 * 24 ? 'bg-warning' : 'bg-muted-foreground/30'
   return <span className={cn('inline-block size-2.5 rounded-full ring-2 ring-background', color)} />
 }
 

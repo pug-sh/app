@@ -216,7 +216,7 @@ const Members = () => {
                           {roleStatus[m.customerId] === 'saving' ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
                           ) : (
-                            <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+                            <Check className="w-3.5 h-3.5 text-positive" />
                           )}
                         </span>
                       )}
@@ -224,14 +224,14 @@ const Members = () => {
                         {confirmingRemove === m.customerId ? (
                           <button
                             onClick={() => handleRemove(m.customerId)}
-                            className="text-xs font-medium text-destructive hover:underline underline-offset-2"
+                            className="text-xs font-medium text-negative hover:underline underline-offset-2"
                           >
                             Remove?
                           </button>
                         ) : (
                           <button
                             onClick={() => setConfirmingRemove(m.customerId)}
-                            className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive text-muted-foreground"
+                            className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-negative text-muted-foreground"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

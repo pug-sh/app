@@ -161,9 +161,7 @@ const General = () => {
                   {savingProject ? <Loader2 className="animate-spin" /> : <Save className="w-4 h-4" />}
                   Save
                 </Button>
-                {savedProject && (
-                  <span className="text-xs text-green-600 dark:text-green-400 animate-in fade-in">Saved</span>
-                )}
+                {savedProject && <span className="text-xs text-positive animate-in fade-in">Saved</span>}
               </div>
             </form>
           </Can>

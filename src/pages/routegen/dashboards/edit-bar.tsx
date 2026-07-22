@@ -43,23 +43,21 @@ export const EditBar = ({
   return (
     <div
       ref={barRef}
-      className="sticky top-0 z-30 -mx-1 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 dark:border-amber-400/25 dark:bg-amber-400/10"
+      className="sticky top-0 z-30 -mx-1 flex items-center gap-3 rounded-lg border border-warning/25 bg-warning/10 px-4 py-2"
     >
-      <span className="flex items-center gap-2 font-medium text-amber-900 dark:text-amber-200 text-sm">
+      <span className="flex items-center gap-2 font-medium text-caution text-sm">
         <Pencil className="size-3.5" />
         Editing
       </span>
-      <span className="text-amber-700 dark:text-amber-400 text-xs">
+      <span className="text-caution text-xs">
         {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
       </span>
       <div className="ml-auto flex items-center gap-2">
-        {confirming ? (
-          <span className="text-amber-800 dark:text-amber-300 text-xs">Discard {dirtyCount} changes?</span>
-        ) : null}
+        {confirming ? <span className="text-caution text-xs">Discard {dirtyCount} changes?</span> : null}
         <Button
           size="sm"
           variant="ghost"
-          className={confirming ? 'text-destructive' : undefined}
+          className={confirming ? 'text-negative' : undefined}
           onClick={handleDiscardClick}
           disabled={saving}
         >

@@ -6,18 +6,20 @@ export type AccentToken = '' | 'blue' | 'green' | 'red' | 'amber' | 'purple' | '
 
 export const ACCENT_TOKENS: AccentToken[] = ['', 'blue', 'green', 'red', 'amber', 'purple', 'gray']
 
+// A user-chosen label color, not a state — so these map to the chart palette, which is
+// already hue-matched and chroma-capped per theme, rather than to the semantic tokens.
 export const accentStripClass = (token: string): string => {
   switch (token) {
     case 'blue':
-      return 'bg-blue-500'
+      return 'bg-chart-1'
     case 'green':
-      return 'bg-emerald-500'
+      return 'bg-chart-2'
     case 'red':
-      return 'bg-red-500'
+      return 'bg-chart-5'
     case 'amber':
-      return 'bg-amber-500'
+      return 'bg-chart-3'
     case 'purple':
-      return 'bg-purple-500'
+      return 'bg-chart-4'
     case 'gray':
       return 'bg-muted-foreground/40'
     default:
@@ -33,11 +35,11 @@ export const accentTextClass = (_token: string): string => 'text-display-foregro
 export const toneTextClass = (tone: ThresholdRule_Tone): string => {
   switch (tone) {
     case ThresholdRule_Tone.GOOD:
-      return 'text-emerald-500'
+      return 'text-positive'
     case ThresholdRule_Tone.WARN:
-      return 'text-amber-500'
+      return 'text-caution'
     case ThresholdRule_Tone.BAD:
-      return 'text-red-500'
+      return 'text-negative'
     case ThresholdRule_Tone.NEUTRAL:
       return 'text-muted-foreground'
     case ThresholdRule_Tone.UNSPECIFIED:
@@ -48,11 +50,11 @@ export const toneTextClass = (tone: ThresholdRule_Tone): string => {
 export const toneSwatchClass = (tone: ThresholdRule_Tone): string => {
   switch (tone) {
     case ThresholdRule_Tone.GOOD:
-      return 'bg-emerald-500'
+      return 'bg-success'
     case ThresholdRule_Tone.WARN:
-      return 'bg-amber-500'
+      return 'bg-warning'
     case ThresholdRule_Tone.BAD:
-      return 'bg-red-500'
+      return 'bg-destructive'
     case ThresholdRule_Tone.NEUTRAL:
       return 'bg-muted-foreground'
     case ThresholdRule_Tone.UNSPECIFIED:

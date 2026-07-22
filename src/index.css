@@ -31,6 +31,9 @@
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-positive: var(--positive);
+  --color-caution: var(--caution);
+  --color-negative: var(--negative);
 
   /* Hardcoded, not derived from --radius — rounded-md/lg read these, so retune the ramp. */
   --radius-sm: 0.5rem;
@@ -206,6 +209,12 @@
   --ring: oklch(0.55 0.18 265);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.7 0.15 70);
+  /* Text tier for the three semantic fills above — same split as --link vs --primary,
+     since a fill and colored text pull lightness in opposite directions. Chroma is held
+     at the insights palette's cap so these don't shout against the near-grayscale UI. */
+  --positive: oklch(0.431 0.14 145);
+  --caution: oklch(0.451 0.14 70);
+  --negative: oklch(0.462 0.14 25);
   /* charts — semantic hues, a touch darker than dark mode to read on the light bg */
   --chart-1: oklch(0.55 0.18 265);
   --chart-2: oklch(0.6 0.17 145);
@@ -279,6 +288,11 @@
   --destructive-foreground: oklch(0.96 0.005 25);
   --success: oklch(0.62 0.14 145);
   --warning: oklch(0.72 0.12 70);
+  /* Text tier — see :root. Solved against every ground these land on, including a
+     15%/20% tint of their own fill, which is the worst case. */
+  --positive: oklch(0.664 0.16 145);
+  --caution: oklch(0.696 0.16 70);
+  --negative: oklch(0.699 0.16 25);
 
   /* --border is translucent so it takes the tint of whatever surface it sits on. Keep
      alpha at 0.20 — call sites dim it further with border-border/30..70. --input stays

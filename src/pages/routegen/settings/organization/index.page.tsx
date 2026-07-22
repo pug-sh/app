@@ -40,7 +40,7 @@ const CopyId = ({ value, context }: { value: string; context?: string }) => {
       className="inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
     >
       {value}
-      {copied ? <Check className="size-3 text-green-600 dark:text-green-400" /> : <Copy className="size-3" />}
+      {copied ? <Check className="size-3 text-positive" /> : <Copy className="size-3" />}
     </button>
   )
 }
@@ -245,7 +245,7 @@ const Organization = () => {
                   type="button"
                   onClick={handleLeaveOrg}
                   disabled={leaving}
-                  className="text-destructive hover:underline disabled:opacity-50"
+                  className="text-negative hover:underline disabled:opacity-50"
                 >
                   {leaving ? 'Leaving…' : 'Confirm'}
                 </button>
@@ -262,7 +262,7 @@ const Organization = () => {
               <button
                 type="button"
                 onClick={() => setConfirmingLeave(true)}
-                className="block text-sm text-muted-foreground transition-colors hover:text-destructive"
+                className="block text-sm text-muted-foreground transition-colors hover:text-negative"
               >
                 Leave organization
               </button>

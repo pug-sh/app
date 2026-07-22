@@ -45,7 +45,7 @@ const CodeBlock = ({ code, copyable = true, context }: { code: string; copyable?
           onClick={() => copy(code, context)}
           className="absolute right-1.5 top-1.5 opacity-0 transition-opacity group-hover:opacity-100"
         >
-          {copied ? <Check className="h-3 w-3 text-green-600 dark:text-green-400" /> : <Copy className="h-3 w-3" />}
+          {copied ? <Check className="h-3 w-3 text-positive" /> : <Copy className="h-3 w-3" />}
         </Button>
       )}
     </div>

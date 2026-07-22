@@ -101,7 +101,7 @@ export const TileConfigPanel = ({
             <Button size="sm" variant="ghost" onClick={onDuplicate}>
               Duplicate
             </Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={onDelete}>
+            <Button size="sm" variant="ghost" className="text-negative" onClick={onDelete}>
               Delete
             </Button>
           </div>

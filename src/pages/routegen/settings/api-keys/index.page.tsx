@@ -53,7 +53,7 @@ const KeyValue = ({ apiKey }: { apiKey: ApiKey }) => {
     >
       <span className="break-all">{apiKey.key}</span>
       {copied ? (
-        <Check className="size-3 shrink-0 text-green-600 dark:text-green-400" />
+        <Check className="size-3 shrink-0 text-positive" />
       ) : (
         <Copy className="size-3 shrink-0 opacity-0 transition-opacity group-hover/copy:opacity-100" />
       )}
@@ -81,7 +81,7 @@ const NewPrivateKey = ({ value, onDismiss }: { value: string; onDismiss: () => v
           key was minted, which is the activation signal; the copy itself stays untracked.
         */}
         <Button variant="outline" size="sm" className="shrink-0" onClick={() => copy(value)}>
-          {copied ? <Check className="size-3.5 text-green-600 dark:text-green-400" /> : <Copy className="size-3.5" />}
+          {copied ? <Check className="size-3.5 text-positive" /> : <Copy className="size-3.5" />}
           {copied ? 'Copied' : 'Copy'}
         </Button>
         <Button variant="ghost" size="sm" className="shrink-0" onClick={onDismiss}>
@@ -242,7 +242,7 @@ const ApiKeys = () => {
                               <button
                                 type="button"
                                 onClick={() => handleRevoke(k.id)}
-                                className="whitespace-nowrap text-xs font-medium text-destructive underline-offset-2 hover:underline"
+                                className="whitespace-nowrap text-xs font-medium text-negative underline-offset-2 hover:underline"
                               >
                                 Revoke?
                               </button>
@@ -251,7 +251,7 @@ const ApiKeys = () => {
                                 type="button"
                                 onClick={() => setConfirmingRevoke(k.id)}
                                 aria-label={`Revoke ${k.displayName || kindLabel(k.kind)} key`}
-                                className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                                className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-negative group-hover:opacity-100"
                               >
                                 <Trash2 className="size-3.5" />
                               </button>
