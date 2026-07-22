@@ -36,8 +36,8 @@ const LIVE_MAP_VIEWPORT_PADDING = {
 
 const LiveDot = () => (
   <span className="relative flex size-2">
-    <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-    <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+    <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
+    <span className="relative inline-flex size-2 rounded-full bg-success" />
   </span>
 )
 
@@ -169,9 +169,7 @@ const LiveVisitorsPage = () => {
                     )}
                   </span>
                   <span className="text-sm text-muted-foreground">live now</span>
-                  {arrivals > 0 && (
-                    <span className="text-xs font-medium text-emerald-500 tabular-nums">+{arrivals}</span>
-                  )}
+                  {arrivals > 0 && <span className="text-xs font-medium text-positive tabular-nums">+{arrivals}</span>}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   {loading && <Loader2 className="size-3 animate-spin" />}
@@ -261,7 +259,7 @@ const LiveVisitorsPage = () => {
                     </ul>
                   )}
 
-                  {error && <div className="border-t border-border/30 px-4 py-2 text-xs text-destructive">{error}</div>}
+                  {error && <div className="border-t border-border/30 px-4 py-2 text-xs text-negative">{error}</div>}
                 </>
               )}
             </aside>

@@ -71,8 +71,8 @@ export const DeltaBadge = ({
         'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
         'font-medium',
         good
-          ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-          : 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+          ? 'bg-success/15 text-positive dark:bg-success/20'
+          : 'bg-destructive/15 text-negative dark:bg-destructive/20',
       )}
     >
       <Icon className="size-3" strokeWidth={2.5} aria-hidden />
@@ -106,11 +106,7 @@ export const KpiTile = ({
   // Sparkline hue tracks the trend vs the comparison period; neutral when there
   // is nothing to compare against.
   const sparkColor =
-    prior === undefined || !Number.isFinite(prior)
-      ? 'text-faint'
-      : current >= prior
-        ? 'text-emerald-500'
-        : 'text-red-500'
+    prior === undefined || !Number.isFinite(prior) ? 'text-faint' : current >= prior ? 'text-positive' : 'text-negative'
 
   const contextParts = [compare && 'series' in compare ? compare.label : null, metadata].filter(Boolean)
 

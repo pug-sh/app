@@ -106,7 +106,7 @@ export const MarkerView = ({
       >
         <span
           className={`relative block rounded-full shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
-            selected ? 'scale-110 shadow-emerald-500/50' : 'shadow-black/10'
+            selected ? 'scale-110 shadow-success/50' : 'shadow-black/10'
           }`}
         >
           <Facehash

@@ -290,7 +290,7 @@ const SignIn = () => {
                     </Field>
                   )}
 
-                  {error && <p className="text-sm text-destructive bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
+                  {error && <p className="text-sm text-negative bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
 
                   <Button type="submit" className="w-full" disabled={authBusy}>
                     {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}

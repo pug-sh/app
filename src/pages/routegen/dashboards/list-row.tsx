@@ -119,7 +119,7 @@ export const DashboardListRow = ({
                 event.stopPropagation()
                 onRequestDelete()
               }}
-              className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+              className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-negative group-hover:opacity-100"
             >
               <Trash2 className="size-4" />
             </button>
