@@ -49,17 +49,6 @@ const MarkerPopover = ({
         <span className="flex min-w-0 justify-end">
           <DeviceLabel device={marker.device} iconSize={14} className="text-foreground" />
         </span>
-        {marker.region && (
-          <>
-            <span>Region</span>
-            <span className="min-w-0 truncate text-right text-foreground">{marker.region}</span>
-          </>
-        )}
-        <span>Country</span>
-        <span className="flex min-w-0 items-center justify-end gap-1.5 text-foreground">
-          <CountryFlag code={marker.iso} size={14} />
-          <span className="truncate">{country}</span>
-        </span>
       </div>
       {href && (
         <a

@@ -160,15 +160,15 @@ const LiveVisitorsPage = () => {
             <aside className="absolute bottom-4 left-4 z-10 flex max-h-[26rem] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md">
               {/* Live count + freshness — the single source of "is this still ticking" */}
               <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <LiveDot />
-                    <span className="font-normal text-faint">{filtered.length}</span>
+                <div className="flex items-center gap-2">
+                  <LiveDot />
+                  <span className="flex items-baseline gap-1.5">
+                    <span className="text-base tabular-nums text-foreground">{filtered.length}</span>
                     {hasActiveFilters && allVisitors.length !== filtered.length && (
-                      <span className="font-normal text-muted-foreground"> / {allVisitors.length}</span>
+                      <span className="text-xs tabular-nums text-faint">of {allVisitors.length}</span>
                     )}
+                    <span className="text-sm text-muted-foreground">live now</span>
                   </span>
-                  <span className="text-sm text-muted-foreground">live now</span>
                   {arrivals > 0 && <span className="text-xs font-medium text-positive tabular-nums">+{arrivals}</span>}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">

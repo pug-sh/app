@@ -4,8 +4,9 @@ import {
   type LayerSpecification,
   type StyleSpecification,
 } from 'maplibre-gl'
-import themeLayers from 'protomaps-themes-base'
+import { layersWithPartialCustomTheme } from 'protomaps-themes-base'
 
+import { basemapPalette } from '@/components/live-map/basemap-palette'
 import { BASEMAP_FILENAME, POV_BOUNDARY_LINES_PATH } from '@/lib/map-assets'
 import { ensurePmtilesProtocol, mapAssetsOrigin } from '@/lib/maplibre'
 
@@ -90,6 +91,12 @@ export const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
     },
   },
   layers: overlayClaimLines(
-    dropSpriteIcons(hideDisputedBoundaries(englishLabels(themeLayers(BASEMAP_SOURCE, dark ? 'dark' : 'light', 'en')))),
+    dropSpriteIcons(
+      hideDisputedBoundaries(
+        englishLabels(
+          layersWithPartialCustomTheme(BASEMAP_SOURCE, dark ? 'dark' : 'light', basemapPalette(dark), 'en'),
+        ),
+      ),
+    ),
   ),
 })
