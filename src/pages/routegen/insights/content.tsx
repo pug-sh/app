@@ -14,6 +14,7 @@ import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
 import {
   AreaChart,
   BarChart,
+  type ChartComparison,
   type ChartPoint,
   DataTable,
   FunnelBreakdownView,
@@ -49,6 +50,7 @@ export const InsightsContent = memo(function InsightsContent({
   funnelSeriesData,
   hideLegend,
   yTickFormatter,
+  comparison,
   isTopK = false,
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
@@ -83,6 +85,9 @@ export const InsightsContent = memo(function InsightsContent({
   // averages is meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
   yTickFormatter?: (value: number) => string
+  // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
+  // take it; bars and the table read the live series alone.
+  comparison?: ChartComparison
   isTopK?: boolean
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
@@ -95,8 +100,12 @@ export const InsightsContent = memo(function InsightsContent({
   // Bucket labels render in the project's reporting zone so they match the
   // server-computed bucket boundaries (the server buckets in this same zone).
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
-  const allZero = chartData.every(d => d.values.every(v => v === 0))
+  // Only the line-shaped views draw the comparison, so only they may let it stand in for live data.
+  const drawableComparison = comparison && (viewMode === 'line' || viewMode === 'area') ? comparison : undefined
+  // A zero window still draws when the prior one isn't: a collapse to zero is what compare is for.
+  const allZero = chartData.every(d => d.values.every(v => v === 0)) && !drawableComparison?.values.some(v => v !== 0)
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
+  const drawsComparison = !!drawableComparison && !allZero
   const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
 
   const renderLoadingEmptyState = () => (
@@ -145,6 +154,7 @@ export const InsightsContent = memo(function InsightsContent({
           granularity={granularity}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )
@@ -157,6 +167,7 @@ export const InsightsContent = memo(function InsightsContent({
           granularity={granularity}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )
@@ -327,6 +338,8 @@ export const InsightsContent = memo(function InsightsContent({
           />
         )}
         <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
+        {/* Named here, not by the tile shell, so the caption can't outlive the line it describes. */}
+        {drawsComparison ? <p className="shrink-0 text-xs text-faint">Dashed line is the previous period</p> : null}
       </div>
     )
   }

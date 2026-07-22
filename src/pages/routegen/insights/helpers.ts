@@ -1,5 +1,6 @@
 import {
   AggregationType,
+  type DataPoint,
   type FunnelSeries,
   type InsightQuerySpec,
   SessionMetric,
@@ -198,4 +199,15 @@ export const buildChartData = (trendSeries: TrendSeries[]): ChartPoint[] => {
       }
     })
     .filter((d): d is ChartPoint => d !== null)
+}
+
+// Lay a comparison window's points over the current one's buckets, so both shapes read against one
+// x-axis. The windows are separate queries and their bucket counts can differ (a 30-day month
+// against a 31-day one), so a shorter series is resampled to full width rather than stopping short:
+// the vendored line can't skip a point, and a tail left unfilled is zeroed downstream and reads as
+// a real collapse. Nearest-neighbour — values repeat when widening, drop when narrowing.
+export const alignComparisonValues = (points: readonly DataPoint[], bucketCount: number): number[] => {
+  if (points.length === 0 || bucketCount <= 0) return []
+  const scale = bucketCount > 1 ? (points.length - 1) / (bucketCount - 1) : 0
+  return Array.from({ length: bucketCount }, (_, i) => Number(points[Math.round(i * scale)]?.value) || 0)
 }

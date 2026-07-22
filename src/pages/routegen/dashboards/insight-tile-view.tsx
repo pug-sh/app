@@ -12,10 +12,12 @@ import {
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
-import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
+import { fadedSeriesColor, getIndexedColor, getSeriesColor } from '@/lib/event-colors'
+import type { ChartComparison } from '../insights/charts'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import {
+  alignComparisonValues,
   breakdownLabel,
   buildChartData,
   disambiguateLabels,
@@ -71,6 +73,7 @@ export const InsightTileView = ({
   error,
   onRetry,
   compare,
+  comparePrior = false,
   compact = false,
   kpiMetadata,
   lightMetrics = false,
@@ -85,8 +88,11 @@ export const InsightTileView = ({
   granularity: Granularity
   error?: string | null
   onRetry?: () => void
-  // Live KPI compare only; the public render has no comparison and passes undefined.
+  // Live compare only; the public render has no comparison and passes undefined.
   compare?: KpiCompare
+  // Opt-in rather than implied by `compare`, so a KPI tile configured to compare and later switched
+  // to a chart view doesn't grow a line from a control its config panel no longer shows.
+  comparePrior?: boolean
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
@@ -158,6 +164,17 @@ export const InsightTileView = ({
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
   }, [result.case, trendSeries, seriesNames, resolvedTheme])
+  // The prior window as a dashed reference series, in a receded shade of the live one's color.
+  // Single-series only: a dashed twin per split doubles a breakdown's lines with no way to tell
+  // which pairs with which, and the two windows' splits need not match.
+  const chartComparison = useMemo<ChartComparison | undefined>(() => {
+    if (!(comparePrior && compare) || 'error' in compare) return undefined
+    if (trendSeries.length !== 1 || chartData.length === 0) return undefined
+    const values = alignComparisonValues(compare.series[0]?.points ?? [], chartData.length)
+    const color = seriesColors[0]
+    if (values.length === 0 || !color) return undefined
+    return { label: compare.label, values, color: fadedSeriesColor(color) }
+  }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors])
   // One resolver, two result sets: the series below and — for a KPI — the comparison window, which
   // is its own query and must not be read through this one's indices.
   const aggregationFor = useMemo(() => specAggregationResolver(spec), [spec])
@@ -224,6 +241,7 @@ export const InsightTileView = ({
         // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
         yTickFormatter={yTickFormatter}
+        comparison={chartComparison}
         compact={compact}
         lightNumbers={lightMetrics}
       />

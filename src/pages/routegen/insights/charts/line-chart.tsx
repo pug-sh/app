@@ -7,7 +7,8 @@ import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, useVendoredChartPrep } from './common'
+import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, useVendoredChartPrep } from './common'
+import { CompareLine } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 
@@ -21,6 +22,7 @@ export const LineChart = memo(function LineChart({
   granularity,
   yTickFormatter,
   timeZone,
+  comparison,
   className = 'h-70 w-full',
 }: {
   data: ChartPoint[]
@@ -29,6 +31,7 @@ export const LineChart = memo(function LineChart({
   granularity: Granularity
   yTickFormatter?: (value: number) => string
   timeZone: string
+  comparison?: ChartComparison
   className?: string
 }) {
   const { chartData, tooltipRows, dateLabelFormatters } = useVendoredChartPrep(
@@ -37,6 +40,7 @@ export const LineChart = memo(function LineChart({
     seriesColors,
     granularity,
     timeZone,
+    comparison,
   )
 
   if (data.length === 0) return null
@@ -62,6 +66,8 @@ export const LineChart = memo(function LineChart({
         {seriesNames.map((_, si) => (
           <Line key={si} animate={false} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
         ))}
+        {/* Last, to match the row order in the prep. compare-series.tsx says why not a bare Line. */}
+        {comparison ? <CompareLine dataKey={COMPARE_KEY} stroke={comparison.color.line} /> : null}
         <ChartTooltip rows={tooltipRows} />
       </VendoredLineChart>
     </DateLabelProvider>
