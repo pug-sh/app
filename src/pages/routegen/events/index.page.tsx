@@ -341,24 +341,27 @@ const EventExplorer = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <table className="w-full table-fixed">
-            <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
-              <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
-                <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
-                <th className="py-2 pr-2 text-left font-medium w-32">Location</th>
-                <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
-                <th className="py-2 pr-2 text-left font-medium">Properties</th>
-                <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
-                <th className="w-5" />
-              </tr>
-            </thead>
-            <tbody>
-              {events.map(event => (
-                <EventRow key={event.eventId} event={event} />
-              ))}
-            </tbody>
-          </table>
+          {/* Only clip keeps overflow-y visible for the sticky header; below xl, reach beats sticking. */}
+          <div className="overflow-x-auto xl:overflow-x-clip">
+            <table className="w-full min-w-[960px] table-fixed">
+              <thead className="static z-9 bg-background xl:sticky" style={{ top: filterH }}>
+                <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
+                  <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
+                  <th className="py-2 pr-2 text-left font-medium w-32">Location</th>
+                  <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
+                  <th className="py-2 pr-2 text-left font-medium">Properties</th>
+                  <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
+                  <th className="w-5" />
+                </tr>
+              </thead>
+              <tbody>
+                {events.map(event => (
+                  <EventRow key={event.eventId} event={event} />
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">

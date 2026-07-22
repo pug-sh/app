@@ -1,12 +1,14 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Activity, AlertCircle, Loader2 } from 'lucide-react'
+import { Activity, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { trackFeature } from '@/analytics/pug'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
+import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { PlatformLabel } from '@/components/platform-label'
@@ -18,7 +20,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { formatRelative } from '@/hooks/use-relative-time'
+import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
@@ -103,6 +105,8 @@ const UserActivity = () => {
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const lastUpdatedLabel = useRelativeTime(lastUpdated)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -133,7 +137,9 @@ const UserActivity = () => {
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
+          // Only a fresh load restamps this; "Load more" appends rows fetched at the original time.
           setEvents(resp.events)
+          setLastUpdated(new Date())
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
@@ -149,6 +155,11 @@ const UserActivity = () => {
   useEffect(() => {
     if (project && profileId) fetchEvents()
   }, [project, profileId, fetchEvents])
+
+  const handleRefresh = () => {
+    trackFeature({ featureId: 'profile.activity.refresh', featureName: 'Refresh profile activity' })
+    fetchEvents()
+  }
 
   const groupedEvents = useMemo(() => {
     const groups: { label: string; events: ActivityEvent[] }[] = []
@@ -169,6 +180,40 @@ const UserActivity = () => {
 
   return (
     <>
+      <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+          {/* ml-4 keeps the icon off the picker chip, so it reads as an action on the feed. */}
+          <div className="ml-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              aria-label="Refresh activity"
+              className="text-muted-foreground"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            </Button>
+            {lastUpdated && (
+              <HoverSwap primary={`Updated ${lastUpdatedLabel}`} secondary={formatDateTime(lastUpdated)} />
+            )}
+          </div>
+        </div>
+        <EventFilterBar
+          filtersAtom={eventFilters.filtersAtom}
+          events={schema?.events}
+          schema={schema}
+          schemaError={schemaError}
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          {propFilters.map((f, i) => (
+            <FilterChip key={i} filter={f} onRemove={() => removeFilter(i)} onUpdate={next => updateFilter(i, next)} />
+          ))}
+          <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+        </div>
+      </div>
+
       {loading && events.length === 0 ? (
         <LoadingSpinner />
       ) : error && events.length === 0 ? (
@@ -181,29 +226,6 @@ const UserActivity = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
-            <div className="flex flex-wrap items-center gap-2">
-              <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
-            </div>
-            <EventFilterBar
-              filtersAtom={eventFilters.filtersAtom}
-              events={schema?.events}
-              schema={schema}
-              schemaError={schemaError}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              {propFilters.map((f, i) => (
-                <FilterChip
-                  key={i}
-                  filter={f}
-                  onRemove={() => removeFilter(i)}
-                  onUpdate={next => updateFilter(i, next)}
-                />
-              ))}
-              <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-            </div>
-          </div>
-
           {groupedEvents.map(group => {
             const lanes = computeSessionLanes(group.events)
             const maxCol = lanes.length > 0 ? Math.max(...lanes.map(l => l.column)) + 1 : 0

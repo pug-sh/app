@@ -10,6 +10,8 @@ const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 export interface TimeRange {
   from: Date
   to: Date
+  // Set only when the range came from a preset, so the chip can name it instead of showing dates.
+  label?: string
 }
 
 export interface DatePreset {
@@ -65,7 +67,7 @@ export function DateRangePicker({
     }
   }
 
-  const label = value ? `${fmtDate(value.from)} – ${fmtDate(value.to)}` : unsetLabel
+  const label = value ? (value.label ?? `${fmtDate(value.from)} – ${fmtDate(value.to)}`) : unsetLabel
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -113,7 +115,7 @@ export function DateRangePicker({
                   key={preset.label}
                   type="button"
                   onClick={() => {
-                    onChange(preset.resolve())
+                    onChange({ ...preset.resolve(), label: preset.label })
                     setOpen(false)
                   }}
                   className="flex items-baseline justify-between gap-3 px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"

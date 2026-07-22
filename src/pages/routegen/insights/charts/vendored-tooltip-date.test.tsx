@@ -6,6 +6,7 @@ import { useChartStable } from '@/components/charts/chart-context'
 import type { SeriesColor } from '@/lib/event-colors'
 import { AreaChart } from './area-chart'
 import { BarChart } from './bar-chart'
+import { formatTooltipDate } from './helpers'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
@@ -56,7 +57,35 @@ describe('vendored chart tooltip dates', () => {
 
       // Asia/Kolkata is UTC+5:30, so midnight UTC is 05:30 local — the reporting zone
       // has to reach the tooltip too, not just the axis.
-      expect(tooltipLabels(container)).toContain('Jul 19, 05:30')
+      expect(tooltipLabels(container)).toContain('Jul 19, 05:30')
+
+      // The pill's ticker splits on spaces into month/day columns and renders only those two, so a
+      // third token is dropped on screen while still reading correctly here. Padding rows are blank.
+      for (const label of tooltipLabels(container).filter(Boolean)) {
+        expect(label.split(' ').length).toBeLessThanOrEqual(2)
+      }
     })
   }
+})
+
+// Pure counterpart to the render assertions above: the two-token ceiling is a property of every
+// granularity's label, not just the hourly one the charts are rendered with there.
+describe('formatTooltipDate stays inside the ticker grammar', () => {
+  const AT = new Date('2026-06-21T00:00:00Z')
+
+  it.each([
+    Granularity.HOUR,
+    Granularity.DAY,
+    Granularity.WEEK,
+    Granularity.MONTH,
+  ])('granularity %i renders at most two ticker columns', granularity => {
+    expect(formatTooltipDate(AT, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
+  })
+
+  // A range names its own months, so hoisting the first into the month column left "Jun  21 - Jun 27".
+  it('keeps a week range whole rather than splitting its first month off', () => {
+    const label = formatTooltipDate(AT, Granularity.WEEK, 'Asia/Kolkata')
+    expect(label.split(' ')).toHaveLength(1)
+    expect(label.replace(/ /g, ' ')).toBe('Jun 21 - Jun 27')
+  })
 })

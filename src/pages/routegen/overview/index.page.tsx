@@ -42,7 +42,7 @@ const Overview = () => {
   const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [mode, setMode] = useAtom(overviewModeAtom)
   const [webStat, setWebStat] = useState(() => readWebStat())
-  // Web analytics lands on Today when no window is pinned; product analytics keeps its
+  // Web analytics lands on the last 24 hours when no window is pinned; product analytics keeps its
   // "no explicit window" default (tiles fall back to their own ranges). The persisted mode reads
   // synchronously here (overviewModeAtom uses getOnInit), so this initial window matches the
   // restored view on the very first render.
@@ -55,27 +55,34 @@ const Overview = () => {
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>(
     () => initialOverrides.granularity ?? Granularity.UNSPECIFIED,
   )
+  // An untouched default stays out of the URL, the way the web stat does: pinning tf/tt would
+  // freeze a rolling window into every shared link, and drop the preset name on reload.
+  const [rangeIsDefault, setRangeIsDefault] = useState(() => !initialOverrides.timeRange)
 
   useEffect(() => {
     if (project) fetchSchema()
   }, [fetchSchema, project])
 
   useEffect(() => {
-    writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
-  }, [globalGranularity, globalTimeRange])
+    writeTimeGranularityQueryParams({
+      timeRange: rangeIsDefault ? undefined : globalTimeRange,
+      granularity: globalGranularity,
+    })
+  }, [globalGranularity, globalTimeRange, rangeIsDefault])
 
   useEffect(() => {
     writeWebStatParam(mode, webStat)
   }, [mode, webStat])
 
-  // Switching into web analytics with no window pins Today, so the picker reflects the window the
-  // panels actually query rather than showing "Select time" over live data.
+  // Switching into web analytics with no window pins the default, so the picker reflects the window
+  // the panels actually query rather than showing "Select time" over live data.
   const handleModeChange = (next: OverviewMode) => {
     setMode(next)
     if (next === 'web' && !globalTimeRange) {
-      const today = resolveWebDefaultRange()
-      setGlobalTimeRange(today)
-      setGlobalGranularity(g => clampGranularity(g, today))
+      const defaultRange = resolveWebDefaultRange()
+      setGlobalTimeRange(defaultRange)
+      setRangeIsDefault(true)
+      setGlobalGranularity(g => clampGranularity(g, defaultRange))
     }
   }
 
@@ -84,6 +91,7 @@ const Overview = () => {
   const handleGlobalTimeRangeChange = (range: TimeRange | undefined) => {
     const clamped = clampRange(range)
     setGlobalTimeRange(clamped)
+    setRangeIsDefault(false)
     setGlobalGranularity(g => clampGranularity(g, clamped))
   }
 

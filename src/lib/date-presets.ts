@@ -4,8 +4,7 @@ import type { DatePreset, TimeRange } from '@/components/date-range-picker'
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 
-// Midnight-to-now. Shared by the 'Today' preset and the Overview web-analytics default window, so
-// the two never drift and neither hard-codes a preset-label lookup.
+// Midnight-to-now, behind the 'Today' preset.
 export const todayRange = (): TimeRange => ({ from: startOfDay(new Date()), to: new Date() })
 
 const lastNHours = (n: number): TimeRange => {
@@ -14,6 +13,10 @@ const lastNHours = (n: number): TimeRange => {
   from.setHours(from.getHours() - n)
   return { from, to: now }
 }
+
+// Shared by the 'Last 24 hours' preset and the Overview web-analytics default window, so the two
+// never drift and neither hard-codes a preset-label lookup.
+export const last24HoursRange = (): TimeRange => ({ ...lastNHours(24), label: 'Last 24 hours' })
 
 const lastNDays = (n: number): TimeRange => {
   const now = new Date()
@@ -79,6 +82,7 @@ const thisYear = (): TimeRange => {
 // One list behind every page-level picker, so a range offered on one page is offered on all.
 // Rolling first, then calendar-anchored next to its previous-period counterpart.
 export const TIME_RANGE_PRESETS: DatePreset[] = [
+  { label: 'Last 24 hours', resolve: last24HoursRange },
   { label: 'Today', resolve: todayRange },
   { label: 'Yesterday', resolve: yesterday },
   { label: 'Last 7 days', resolve: () => lastNDays(7) },
