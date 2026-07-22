@@ -268,16 +268,16 @@
 }
 
 .dark {
-  /* Surfaces — deep canvas, quiet layering. Depth comes from the RANGE between body
-     and muted ink, not a near-black ground; shift these together, not singly. */
-  --background: oklch(0.239 0.006 265);
-  --foreground: oklch(0.806 0.003 265);
+  /* Deep ground with the band riding close to it, mirroring how light's hugs white.
+     Parking the band mid-scale is what read as washed out. Shift these together. */
+  --background: oklch(0.19 0.006 265);
+  --foreground: oklch(0.773 0.003 265);
   /* Mirror of the light --display-foreground: down from --foreground, not up. */
-  --display-foreground: oklch(0.753 0.003 265);
-  --card: oklch(0.269 0.007 265);
-  --card-foreground: oklch(0.806 0.003 265);
-  --popover: oklch(0.289 0.008 265);
-  --popover-foreground: oklch(0.806 0.003 265);
+  --display-foreground: oklch(0.722 0.003 265);
+  --card: oklch(0.202 0.007 265);
+  --card-foreground: oklch(0.773 0.003 265);
+  --popover: oklch(0.21 0.008 265);
+  --popover-foreground: oklch(0.773 0.003 265);
 
   /* actions — understated, not shouty */
   --primary: oklch(0.54 0.16 265); /* deeper + saturated: white text clears AA */
@@ -285,19 +285,20 @@
   /* Brand/blue text on the canvas (links, primary-tinted icons). Lighter than the
      --primary fill so it clears AA as text while the fill stays dark for white
      button text. 6.4:1, matched to light's --link. */
-  --link: oklch(0.714 0.15 265);
-  /* Chip/hover grounds compressed toward light's register. The floor is --accent
-     staying visibly above --popover: menu-item hovers render on popovers. */
-  --secondary: oklch(0.296 0.009 265);
-  --secondary-foreground: oklch(0.775 0.005 265);
-  --muted: oklch(0.303 0.01 265);
+  --link: oklch(0.685 0.15 265);
+  /* Chips ride just above the canvas so the band stays tight. The floor is --accent
+     keeping its gap over --popover: menu-item hovers render on popovers, and closing
+     it further makes them invisible. */
+  --secondary: oklch(0.22 0.009 265);
+  --secondary-foreground: oklch(0.736 0.005 265);
+  --muted: oklch(0.225 0.01 265);
   /* Held ~1.6x below --foreground. Don't lift it toward the body colour to "fix"
      contrast — that re-flattens the hierarchy. */
-  --muted-foreground: oklch(0.67 0.006 265);
-  --faint: oklch(0.536 0.006 265);
-  --accent: oklch(0.315 0.012 265);
+  --muted-foreground: oklch(0.631 0.006 265);
+  --faint: oklch(0.509 0.006 265);
+  --accent: oklch(0.236 0.012 265);
   /* Capped below --foreground: solving it flat pushes chip ink past body ink. */
-  --accent-foreground: oklch(0.785 0.005 265);
+  --accent-foreground: oklch(0.736 0.005 265);
 
   /* semantic — softened for dark bg */
   --destructive: oklch(0.54 0.18 25); /* deeper + saturated: white text clears AA */
@@ -314,7 +315,7 @@
      form control uses dark:bg-input/30, and an alpha token there would multiply
      down to 0.06 and erase the fill. */
   --border: oklch(0.62 0.02 265 / 0.2);
-  --input: oklch(0.296 0.009 265);
+  --input: oklch(0.22 0.009 265);
   --ring: oklch(0.62 0.12 265);
 
   /* charts — muted, distinct hues */
@@ -325,14 +326,15 @@
   --chart-5: oklch(0.62 0.16 25);
 
   /* sidebar — slightly recessed from background */
-  --sidebar: oklch(0.219 0.006 265);
-  --sidebar-foreground: oklch(0.791 0.005 265);
+  --sidebar: oklch(0.173 0.006 265);
+  --sidebar-foreground: oklch(0.764 0.005 265);
   /* Must match --primary — white text on it is sub-AA otherwise. */
   --sidebar-primary: oklch(0.54 0.16 265);
   --sidebar-primary-foreground: oklch(0.96 0.005 265);
-  /* Must equal --accent — the two hovers sit side by side in the org switcher. */
-  --sidebar-accent: oklch(0.315 0.012 265);
-  --sidebar-accent-foreground: oklch(0.785 0.005 265);
+  /* Seated on the sidebar, not pinned to --accent: the sidebar sits below the canvas
+     while chips sit above, so one shared value made every nav hover the loudest step. */
+  --sidebar-accent: oklch(0.195 0.012 265);
+  --sidebar-accent-foreground: oklch(0.736 0.005 265);
   --sidebar-border: oklch(0.62 0.02 265 / 0.14);
   --sidebar-ring: oklch(0.62 0.12 265);
   /* Only the values that genuinely differ per mode. --chart-background,
@@ -342,13 +344,14 @@
   --chart-crosshair: oklch(0.45 0 0);
   /* Re-seated on the current canvas so markers read as a raised chip rather than
      floating well above the surface. */
-  --chart-marker-background: oklch(0.284 0.008 265);
-  --chart-marker-border: oklch(0.38 0.01 265);
+  --chart-marker-background: oklch(0.22 0.008 265);
+  --chart-marker-border: oklch(0.33 0.01 265);
   --chart-marker-foreground: oklch(0.95 0 0);
-  --chart-scale-01: oklch(0.28 0.03 270);
-  --chart-scale-02: oklch(0.38 0.04 270);
-  --chart-scale-03: oklch(0.48 0.05 270);
-  --chart-scale-04: oklch(0.58 0.06 270);
+  /* Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface. */
+  --chart-scale-01: oklch(0.225 0.03 270);
+  --chart-scale-02: oklch(0.34 0.04 270);
+  --chart-scale-03: oklch(0.45 0.05 270);
+  --chart-scale-04: oklch(0.56 0.06 270);
   --chart-scale-05: oklch(0.68 0.07 270);
   --chart-scale-pattern-color: oklch(0.145 0 0);
 }
