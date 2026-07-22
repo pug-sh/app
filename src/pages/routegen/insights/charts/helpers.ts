@@ -1,4 +1,5 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { zonedCivil } from '@/lib/timezone'
 
 // Bucket boundaries are computed server-side in the project's reporting timezone, so
 // axis/tooltip labels must render in that same zone or a day bucket (e.g. IST midnight
@@ -19,6 +20,23 @@ const yearIn = (d: Date, timeZone: string | undefined) => fmtInZone(d, timeZone,
 const fmtDay = (d: Date, timeZone: string | undefined): string => {
   const sameYear = yearIn(d, timeZone) === yearIn(new Date(), timeZone)
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
+}
+
+// fmtDay for a date `days` calendar days later in the reporting zone. Read off the civil date
+// rather than an instant: elapsed ms drifts when that zone's clocks go back inside the span, and
+// the wall clock it would rebuild doesn't exist in a zone that springs forward at midnight.
+const fmtDayAfter = (d: Date, days: number, timeZone: string | undefined): string => {
+  try {
+    const zone = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+    const c = zonedCivil(d, zone)
+    const cal = new Date(Date.UTC(c.year, c.month - 1, c.day + days))
+    const sameYear = String(cal.getUTCFullYear()) === yearIn(new Date(), zone)
+    return fmtInZone(cal, 'UTC', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
+  } catch {
+    const shifted = new Date(d)
+    shifted.setDate(shifted.getDate() + days)
+    return fmtDay(shifted, timeZone)
+  }
 }
 
 // True when the buckets don't all fall on one day in the reporting zone.
@@ -59,10 +77,7 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
   }
 
   if (granularity === Granularity.WEEK) {
-    // Elapsed days: setDate counts them on the host, and a host DST transition inside the week
-    // lands the end on the day before.
-    const end = new Date(d.getTime() + 6 * 24 * 60 * 60 * 1000)
-    return asWholeTickerLabel(`${fmtDay(d, timeZone)} - ${fmtDay(end, timeZone)}`)
+    return asWholeTickerLabel(`${fmtDay(d, timeZone)} - ${fmtDayAfter(d, 6, timeZone)}`)
   }
 
   if (granularity === Granularity.MONTH) {
@@ -70,5 +85,6 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
     return fmtInZone(d, timeZone, { month: 'long', ...(!sameYear && { year: 'numeric' }) })
   }
 
-  return fmtDay(d, timeZone)
+  // Wrapped too: fmtDay appends the year outside the current one, and "Dec 15, 2025" is three tokens.
+  return asTickerLabel(fmtDay(d, timeZone))
 }

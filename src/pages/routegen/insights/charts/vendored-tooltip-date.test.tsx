@@ -72,15 +72,32 @@ describe('vendored chart tooltip dates', () => {
 // Pure counterpart to the render assertions above: the two-token ceiling is a property of every
 // granularity's label, not just the hourly one the charts are rendered with there.
 describe('formatTooltipDate stays inside the ticker grammar', () => {
-  const AT = new Date('2026-06-21T00:00:00Z')
+  const THIS_YEAR = new Date().getUTCFullYear()
+  const AT = new Date(Date.UTC(THIS_YEAR, 5, 21))
 
-  it.each([
-    Granularity.HOUR,
-    Granularity.DAY,
-    Granularity.WEEK,
-    Granularity.MONTH,
-  ])('granularity %i renders at most two ticker columns', granularity => {
-    expect(formatTooltipDate(AT, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
+  // Both years, because fmtDay only appends one outside the current year — a same-year fixture
+  // alone let the DAY branch ship three tokens.
+  const FIXTURES = [
+    ['this year', AT],
+    ['a prior year', new Date(Date.UTC(THIS_YEAR - 1, 11, 15))],
+  ] as const
+  const GRANULARITIES = [
+    ['HOUR', Granularity.HOUR],
+    ['DAY', Granularity.DAY],
+    ['WEEK', Granularity.WEEK],
+    ['MONTH', Granularity.MONTH],
+  ] as const
+
+  it.each(
+    GRANULARITIES.flatMap(([name, g]) => FIXTURES.map(([when, at]) => [`${name} in ${when}`, g, at] as const)),
+  )('%s renders at most two ticker columns', (_name, granularity, at) => {
+    expect(formatTooltipDate(at, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
+  })
+
+  it('keeps the year on a day label inside the ticker grammar', () => {
+    const label = formatTooltipDate(new Date(Date.UTC(THIS_YEAR - 1, 11, 15)), Granularity.DAY, 'UTC')
+    expect(label.split(' ')).toHaveLength(2)
+    expect(label.replaceAll('\u00a0', ' ')).toBe(`Dec 15, ${THIS_YEAR - 1}`)
   })
 
   // Auckland springs forward on Sep 28 2025, mid-week for a Monday-anchored UTC bucket: counting
@@ -89,7 +106,17 @@ describe('formatTooltipDate stays inside the ticker grammar', () => {
     inZone('Pacific/Auckland', () => {
       const monday = new Date('2025-09-22T00:00:00Z')
       const label = formatTooltipDate(monday, Granularity.WEEK, 'UTC')
-      expect(label.replaceAll(' ', ' ')).toBe('Sep 22, 2025 - Sep 28, 2025')
+      expect(label.replaceAll('\u00a0', ' ')).toBe('Sep 22, 2025 - Sep 28, 2025')
+    })
+  })
+
+  // Los Angeles falls back inside its own Sunday-anchored bucket for the week of Nov 2 2025, so
+  // 144 elapsed hours land at 23:00 on the 7th and the week read as ending a day early.
+  it('ends the week six calendar days on when the reporting zone falls back', () => {
+    inZone('UTC', () => {
+      const sunday = new Date('2025-11-02T07:00:00Z')
+      const label = formatTooltipDate(sunday, Granularity.WEEK, 'America/Los_Angeles')
+      expect(label.replaceAll('\u00a0', ' ')).toBe('Nov 2, 2025 - Nov 8, 2025')
     })
   })
 
@@ -97,6 +124,6 @@ describe('formatTooltipDate stays inside the ticker grammar', () => {
   it('keeps a week range whole rather than splitting its first month off', () => {
     const label = formatTooltipDate(AT, Granularity.WEEK, 'Asia/Kolkata')
     expect(label.split(' ')).toHaveLength(1)
-    expect(label.replace(/ /g, ' ')).toBe('Jun 21 - Jun 27')
+    expect(label.replace(/\u00a0/g, ' ')).toBe('Jun 21 - Jun 27')
   })
 })
