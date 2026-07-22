@@ -59,8 +59,9 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
   }
 
   if (granularity === Granularity.WEEK) {
-    const end = new Date(d)
-    end.setDate(end.getDate() + 6)
+    // Elapsed days: setDate counts them on the host, and a host DST transition inside the week
+    // lands the end on the day before.
+    const end = new Date(d.getTime() + 6 * 24 * 60 * 60 * 1000)
     return asWholeTickerLabel(`${fmtDay(d, timeZone)} - ${fmtDay(end, timeZone)}`)
   }
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { useChartStable } from '@/components/charts/chart-context'
 import type { SeriesColor } from '@/lib/event-colors'
+import { inZone } from '@/test/timezone'
 import { AreaChart } from './area-chart'
 import { BarChart } from './bar-chart'
 import { formatTooltipDate } from './helpers'
@@ -80,6 +81,16 @@ describe('formatTooltipDate stays inside the ticker grammar', () => {
     Granularity.MONTH,
   ])('granularity %i renders at most two ticker columns', granularity => {
     expect(formatTooltipDate(AT, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
+  })
+
+  // Auckland springs forward on Sep 28 2025, mid-week for a Monday-anchored UTC bucket: counting
+  // the end in host civil days moved it an hour back, onto the day before.
+  it('ends the week six days on in the reporting zone, not the host one', () => {
+    inZone('Pacific/Auckland', () => {
+      const monday = new Date('2025-09-22T00:00:00Z')
+      const label = formatTooltipDate(monday, Granularity.WEEK, 'UTC')
+      expect(label.replaceAll(' ', ' ')).toBe('Sep 22, 2025 - Sep 28, 2025')
+    })
   })
 
   // A range names its own months, so hoisting the first into the month column left "Jun  21 - Jun 27".

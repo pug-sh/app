@@ -104,7 +104,9 @@ const UserActivity = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Carries the failed request's own token: retrying off nextToken appended a page instead of
+  // re-running the refresh that failed.
+  const [error, setError] = useState<{ message: string; pageToken: string } | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const lastUpdatedLabel = useRelativeTime(lastUpdated)
 
@@ -144,7 +146,7 @@ const UserActivity = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Activity feed failed:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load activity feed')
+        setError({ message: err instanceof Error ? err.message : 'Failed to load activity feed', pageToken })
       } finally {
         setLoading(false)
       }
@@ -219,8 +221,8 @@ const UserActivity = () => {
       ) : error && events.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <Activity className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents()}>
+          <p className="text-sm font-medium mb-1">{error.message}</p>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents(error.pageToken)}>
             Retry
           </Button>
         </div>
@@ -321,8 +323,8 @@ const UserActivity = () => {
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <AlertCircle className="w-3.5 h-3.5" />
-              <span>{error}</span>
-              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchEvents(nextToken)}>
+              <span>{error.message}</span>
+              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchEvents(error.pageToken)}>
                 Retry
               </Button>
             </div>

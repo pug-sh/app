@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { inZone } from '@/test/timezone'
 import { formatComparePeriodLabel, priorPeriodRange } from './compare-query'
 
 // Local-time constructors throughout, matching compare-query.ts, so the zone cancels out.
@@ -55,6 +56,37 @@ describe('priorPeriodRange', () => {
     const range = { from: at(2026, 6, 22), to: at(2026, 6, 22, 9, 37) }
     const prior = priorPeriodRange(range)
     expect(prior.to.getTime() - prior.from.getTime()).toBe(range.to.getTime() - range.from.getTime())
+  })
+
+  // No DST needed: adding March's length onto Feb 1 ran the prior month three days into this one.
+  it('ends the prior month before the current one starts', () => {
+    const range = { from: at(2026, 2, 1), to: at(2026, 2, 31, 23, 59) }
+    const prior = priorPeriodRange(range)
+    expect(prior.from).toEqual(at(2026, 1, 1))
+    expect(prior.to).toEqual(at(2026, 1, 28, 23, 59))
+  })
+})
+
+// A calendar unit is only 24h × n long when no transition sits inside it.
+describe('priorPeriodRange across DST', () => {
+  it('still reads a 25-hour fall-back day as a day', () => {
+    inZone('America/Los_Angeles', () => {
+      const range = { from: at(2025, 10, 2), to: at(2025, 10, 2, 23, 59) }
+      expect(formatComparePeriodLabel(range)).toBe('vs prior day')
+
+      const prior = priorPeriodRange(range)
+      expect(prior.from).toEqual(at(2025, 10, 1))
+      expect(prior.to).toEqual(at(2025, 10, 1, 23, 59))
+    })
+  })
+
+  // Rebuilding the end from elapsed ms pushed the prior day 59 minutes into the current one.
+  it('keeps the prior window clear of the current one after a short day', () => {
+    inZone('America/Los_Angeles', () => {
+      const range = { from: at(2025, 2, 10), to: at(2025, 2, 10, 23, 59) }
+      const prior = priorPeriodRange(range)
+      expect(prior.to.getTime()).toBeLessThanOrEqual(range.from.getTime())
+    })
   })
 })
 

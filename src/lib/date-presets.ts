@@ -7,11 +7,11 @@ const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 // Midnight-to-now, behind the 'Today' preset.
 export const todayRange = (): TimeRange => ({ from: startOfDay(new Date()), to: new Date() })
 
+// Elapsed hours, not wall-clock: setHours spans 25 real hours across a fall-back day, 23 across a
+// spring-forward one.
 const lastNHours = (n: number): TimeRange => {
   const now = new Date()
-  const from = new Date(now)
-  from.setHours(from.getHours() - n)
-  return { from, to: now }
+  return { from: new Date(now.getTime() - n * 60 * 60 * 1000), to: now }
 }
 
 // Shared by the 'Last 24 hours' preset and the Overview web-analytics default window, so the two
