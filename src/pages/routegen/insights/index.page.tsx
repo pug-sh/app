@@ -376,7 +376,10 @@ const Insights = () => {
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries],
   )
-  const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
+  const chartData = useMemo<ChartPoint[]>(
+    () => buildChartData(trendSeries, granularity, reportingTimeZone),
+    [trendSeries, granularity, reportingTimeZone],
+  )
 
   // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])

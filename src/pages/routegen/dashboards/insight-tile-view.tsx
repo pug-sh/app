@@ -12,6 +12,7 @@ import {
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { fadedSeriesColor, getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import type { ChartComparison } from '../insights/charts'
 import { isIncompleteNumericAggregation } from '../insights/constants'
@@ -105,6 +106,8 @@ export const InsightTileView = ({
   // Series colors are theme-adapted (see event-colors.ts). Subscribe so a theme
   // toggle re-renders and re-derives the memoized palettes below.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  // Reporting zone for the chart's bucket grid (UTC when no project, e.g. a public shared tile).
+  const timeZone = useAtomValue(activeProjectTimezoneAtom)
 
   // A configured Y-axis format drives the chart axis ticks; Plain/unspecified is
   // left undefined so charts keep their compact default.
@@ -118,7 +121,10 @@ export const InsightTileView = ({
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
   const retentionSeriesList = useMemo(() => (result.case === 'retention' ? result.value.series : []), [result])
   const topKRows = useMemo(() => (result.case === 'topK' ? result.value.rows : []), [result])
-  const chartData = useMemo(() => buildChartData(trendSeries), [trendSeries])
+  const chartData = useMemo(
+    () => buildChartData(trendSeries, granularity, timeZone),
+    [trendSeries, granularity, timeZone],
+  )
   const kindOrder = useMemo(() => (spec?.events ?? []).map(entry => entry.event?.kind ?? ''), [spec?.events])
   const funnelSeriesData = useMemo(() => {
     const labels = disambiguateLabels(

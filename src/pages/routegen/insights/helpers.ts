@@ -2,11 +2,13 @@ import {
   AggregationType,
   type DataPoint,
   type FunnelSeries,
+  type Granularity,
   type InsightQuerySpec,
   SessionMetric,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
+import { nextZoneBucket } from '@/lib/timezone'
 
 // How a series' per-bucket values collapse into the one number a KPI or a summary headline shows.
 //
@@ -186,19 +188,51 @@ export const disambiguateLabels = (labels: string[]) => {
   })
 }
 
-export const buildChartData = (trendSeries: TrendSeries[]): ChartPoint[] => {
+const MAX_GAP_FILL = 4096 // backstop against a non-advancing stepper
+const BUCKET_REACHED_MS = 1000 // a filler within this of the next real bucket IS it
+
+// Keep every observed bucket, and step the granularity in-zone to fill the gaps between them. Only
+// fillers come from the stepper, so its drift can't move a real bar; a null step leaves the axis.
+const fillBucketGrid = (instants: number[], granularity: Granularity, timeZone: string): number[] => {
+  const grid = [instants[0]]
+  for (let i = 1; i < instants.length; i++) {
+    const target = instants[i]
+    let next = nextZoneBucket(new Date(instants[i - 1]), granularity, timeZone)?.getTime()
+    for (let n = 0; next != null && next < target - BUCKET_REACHED_MS && n < MAX_GAP_FILL; n++) {
+      grid.push(next)
+      next = nextZoneBucket(new Date(next), granularity, timeZone)?.getTime()
+    }
+    grid.push(target)
+  }
+  return grid
+}
+
+// Backend trends are sparse in time (empty buckets dropped, and two series needn't share buckets),
+// but the vendored chart sizes bars from the row count while placing them at their true time, so a
+// gapped axis makes clustered bars overlap. Rebuild a continuous, instant-keyed grid to fix both.
+export const buildChartData = (
+  trendSeries: TrendSeries[],
+  granularity: Granularity,
+  timeZone: string,
+): ChartPoint[] => {
   if (trendSeries.length === 0) return []
 
-  return trendSeries[0].points
-    .map((p, i) => {
-      const date = tsToDate(p.time)
-      if (!date) return null
-      return {
-        date,
-        values: trendSeries.map(s => Number(s.points[i]?.value) || 0),
-      }
-    })
-    .filter((d): d is ChartPoint => d !== null)
+  const valuesByInstant = trendSeries.map(series => {
+    const byInstant = new Map<number, number>()
+    for (const point of series.points) {
+      const date = tsToDate(point.time)
+      if (date) byInstant.set(date.getTime(), Number(point.value) || 0)
+    }
+    return byInstant
+  })
+
+  const instants = [...new Set(valuesByInstant.flatMap(byInstant => [...byInstant.keys()]))].sort((a, b) => a - b)
+  if (instants.length === 0) return []
+
+  return fillBucketGrid(instants, granularity, timeZone).map(ms => ({
+    date: new Date(ms),
+    values: valuesByInstant.map(byInstant => byInstant.get(ms) ?? 0),
+  }))
 }
 
 // Lay a comparison window's points over the current one's buckets, so both shapes read against one
