@@ -109,3 +109,23 @@ export const floorToZoneBucket = (instant: Date, granularity: Granularity, timeZ
     return instant
   }
 }
+
+// Start of the bucket after `instant`'s, at `granularity` in `timeZone`. Day/week/month step the
+// civil calendar so DST days and uneven months stay on the server's toStartOf* boundaries; hour/
+// minute step a fixed span. Null when there's no fixed step (Auto/unknown) — callers leave the axis.
+export const nextZoneBucket = (instant: Date, granularity: Granularity, timeZone: string): Date | null => {
+  if (granularity === Granularity.MINUTE) return new Date(instant.getTime() + 60_000)
+  if (granularity === Granularity.HOUR) return new Date(instant.getTime() + 60 * 60_000)
+  try {
+    const c = zonedCivil(instant, timeZone)
+    // civilToInstant's Date.UTC normalizes overflow, so day+7 / month+1 roll over.
+    const midnight = { hour: 0, minute: 0, second: 0, ms: 0 }
+    if (granularity === Granularity.DAY) return civilToInstant({ ...c, ...midnight, day: c.day + 1 }, timeZone)
+    if (granularity === Granularity.WEEK) return civilToInstant({ ...c, ...midnight, day: c.day + 7 }, timeZone)
+    if (granularity === Granularity.MONTH)
+      return civilToInstant({ ...c, ...midnight, day: 1, month: c.month + 1 }, timeZone)
+    return null
+  } catch {
+    return null
+  }
+}
