@@ -35,6 +35,44 @@ const faviconFromLogo = (): Plugin => {
   }
 }
 
+// The vendored charts hardcode the id of their reveal clip, so two charts of one type on a page
+// emit duplicate ids — and `url(#id)` resolves to the first in document order, leaving every later
+// chart clipped by the first one's rect. Rewritten in the build rather than in the file so
+// src/components/charts stays byte-identical to the registry and a re-add can't revert it.
+// Drop this once bklit scopes the id itself.
+const CHART_CLIP_IDS = {
+  'src/components/charts/line-chart.tsx': 'chart-grow-clip',
+  'src/components/charts/area-chart.tsx': 'chart-area-grow-clip',
+  'src/components/charts/composed-chart.tsx': 'composed-chart-grow-clip',
+}
+
+const scopeChartClipIds = (): Plugin => ({
+  name: 'scope-chart-clip-ids',
+  // Before the react plugin: this rewrites JSX attribute source, not compiled output.
+  enforce: 'pre',
+  transform(code, id) {
+    const entry = Object.entries(CHART_CLIP_IDS).find(([name]) => id.includes(name))
+    if (!entry) return null
+
+    const [file, clipId] = entry
+    // Import shares the directive's line, so `map: null` stays true and stack traces don't shift.
+    const out = code
+      .replace('"use client";', '"use client";import { useId as __useId } from "react";')
+      .replace(`clipPathId="${clipId}"`, 'clipPathId={__useId().replace(/:/g, "")}')
+
+    // Check the output, not the input: either replace no-ops silently, and the result only
+    // misbehaves on a page mounting two of the same chart.
+    if (!out.includes('__useId()')) {
+      throw new Error(`${file}: clipPathId="${clipId}" is gone — renamed upstream, or scoped there (drop this plugin)`)
+    }
+    if (!out.includes('import { useId as __useId }')) {
+      throw new Error(`${file}: no '"use client";' prologue to anchor the useId import`)
+    }
+
+    return { code: out, map: null }
+  },
+})
+
 export default defineConfig({
   // react-draggable (via react-grid-layout) reads process.env.DRAGGABLE_DEBUG at
   // runtime, which throws "process is not defined" in the browser. Statically
@@ -78,5 +116,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), tailwindcss(), faviconFromLogo()],
+  plugins: [scopeChartClipIds(), react(), tailwindcss(), faviconFromLogo()],
 })
