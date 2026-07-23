@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { DetailTooltip, TooltipInline, TooltipInlineItem, tooltipPanelContent } from '@/components/detail-tooltip'
-import { formatCountryName, formatLocationLabel, formatLocationPrimary } from '@/lib/location'
+import { formatCountryName, formatLocationLabel, formatLocationPrimary, regionAddsDetail } from '@/lib/location'
 import { isCountryCode, twemojiFlagSrc } from '@/lib/twemoji'
 import { cn } from '@/lib/utils'
 
@@ -32,7 +32,7 @@ export const CountryFlag = ({ code, className, size = 16 }: CountryFlagProps) =>
 const LocationTooltip = ({ city, region, country }: { city?: string; region?: string; country?: string }) => {
   const countryName = country ? formatCountryName(country) : undefined
   const hasFlag = isCountryCode(country)
-  const showRegion = !!region?.trim() && region.trim().toLowerCase() !== (city ?? '').trim().toLowerCase()
+  const showRegion = regionAddsDetail(city, region)
   const items: ReactNode[] = []
 
   if (city) {

@@ -1,114 +1,55 @@
-import { navigate } from 'wouter/use-browser-location'
-
-import { CountryFlag } from '@/components/country-flag'
 import IdentityAvatar from '@/components/identity-avatar'
-import { formatCountryName } from '@/components/live-map/live-visitors'
 import type { ClusterMapMarker, VisitorMapMarker } from '@/components/live-map/markers'
-import { BrowserLabel, DeviceLabel } from '@/components/platform-label'
 import { getSeriesColor } from '@/lib/event-colors'
+import { formatLocationLabel } from '@/lib/location'
 
-const MarkerPopover = ({
-  marker,
-  selected,
-  profileHref,
-}: {
-  marker: VisitorMapMarker
-  selected: boolean
-  profileHref?: (distinctId: string) => string
-}) => {
-  const country = formatCountryName(marker.iso)
-  const location = [marker.city, marker.region, country].filter(Boolean).join(', ')
-  const color = getSeriesColor(marker.kind).dot
-  // Hover popovers are pointer-events-none peeks; only the selected one is clickable, so the
-  // profile link is offered there — where it can actually be followed.
-  const href = selected ? profileHref?.(marker.distinctId) : undefined
+export const MARKER_SIZE = 32
 
-  return (
-    <div className="w-56 text-xs">
-      <div className="mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-          <span className="truncate font-medium text-foreground">{marker.kind}</span>
-        </div>
-        {marker.page && marker.page !== '—' && <div className="truncate text-muted-foreground">{marker.page}</div>}
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <CountryFlag code={marker.iso} size={14} />
-          <span className="truncate">{location || country}</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-[4rem_minmax(0,1fr)] gap-x-3 gap-y-1 text-muted-foreground">
-        {marker.browser && (
-          <>
-            <span>Browser</span>
-            <span className="flex min-w-0 justify-end">
-              <BrowserLabel browser={marker.browser} iconSize={14} className="text-foreground" />
-            </span>
-          </>
-        )}
-        <span>Device</span>
-        <span className="flex min-w-0 justify-end">
-          <DeviceLabel device={marker.device} iconSize={14} className="text-foreground" />
-        </span>
-      </div>
-      {href && (
-        <a
-          href={href}
-          onClick={e => {
-            // Plain left-click navigates within the SPA; modified/middle clicks keep their
-            // native open-in-new-tab behaviour (href is a real project-scoped route).
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return
-            e.preventDefault()
-            navigate(href)
-          }}
-          className="mt-2.5 flex items-center justify-center gap-1 border-t border-border/40 pt-2.5 font-medium text-link underline-offset-4 hover:underline"
-        >
-          View profile →
-        </a>
-      )}
-    </div>
-  )
+export const clusterSize = (count: number) => {
+  if (count >= 50) return 48
+  if (count >= 20) return 42
+  return 36
+}
+
+// The event's own colour when pinned, neutral when the pointer is on their panel row. Inline because
+// ring utilities can't take a runtime colour.
+const haloFor = (kind: string, selected: boolean, highlighted: boolean) => {
+  if (selected) return `0 0 0 2px var(--background), 0 0 0 4px ${getSeriesColor(kind).dot}`
+  if (highlighted) return '0 0 0 2px var(--background), 0 0 0 3px var(--ring)'
+  return '0 2px 6px rgb(0 0 0 / 12%)'
 }
 
 export const MarkerView = ({
   marker,
   selected,
+  highlighted,
   onSelect,
-  profileHref,
 }: {
   marker: VisitorMapMarker
   selected: boolean
+  highlighted: boolean
   onSelect?: (distinctId: string) => void
-  profileHref?: (distinctId: string) => string
 }) => {
-  const locationLabel = marker.region
-    ? `${marker.region}, ${formatCountryName(marker.iso)}`
-    : formatCountryName(marker.iso)
+  const locationLabel = formatLocationLabel(undefined, marker.region, marker.iso)
 
   return (
-    <div className="group/marker relative">
-      <button
-        type="button"
-        aria-label={`Visitor from ${locationLabel}`}
-        title={locationLabel}
-        onClick={() => onSelect?.(marker.distinctId)}
-        className="block border-0 bg-transparent p-0"
-      >
-        <span
-          className={`relative block rounded-full shadow-md transition-transform duration-200 group-hover/marker:scale-110 ${
-            selected ? 'scale-110 shadow-success/50' : 'shadow-black/10'
-          }`}
-        >
-          <IdentityAvatar id={marker.distinctId} src={marker.avatarUrl} className="block size-8 rounded-full" />
-        </span>
-      </button>
-      <div
-        className={`absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 rounded-xl border border-border/70 bg-background/90 p-3 shadow-[0_12px_32px_rgb(0_0_0/18%)] backdrop-blur-md transition-opacity ${
-          selected ? 'opacity-100' : 'pointer-events-none opacity-0 group-hover/marker:opacity-100'
+    <button
+      type="button"
+      aria-label={`Visitor from ${locationLabel}`}
+      onClick={() => onSelect?.(marker.distinctId)}
+      className="group/marker block border-0 bg-transparent p-0"
+    >
+      {/* Sized off MARKER_SIZE rather than a class — the placement solver reads it as the anchor
+          radius, so a class here would drift out from under the popover. */}
+      <span
+        className={`relative block rounded-full transition-transform duration-200 group-hover/marker:scale-110 ${
+          selected || highlighted ? 'scale-110' : ''
         }`}
+        style={{ width: MARKER_SIZE, height: MARKER_SIZE, boxShadow: haloFor(marker.kind, selected, highlighted) }}
       >
-        <MarkerPopover marker={marker} selected={selected} profileHref={profileHref} />
-      </div>
-    </div>
+        <IdentityAvatar id={marker.distinctId} src={marker.avatarUrl} className="block size-full rounded-full" />
+      </span>
+    </button>
   )
 }
 
@@ -119,17 +60,15 @@ export const ClusterView = ({
   cluster: ClusterMapMarker
   onZoomTo?: (lng: number, lat: number) => void
 }) => {
-  const color = getSeriesColor(cluster.topKind).dot
-  const place = cluster.region ? `${cluster.region}, ${formatCountryName(cluster.iso)}` : formatCountryName(cluster.iso)
-  const size = cluster.count >= 50 ? 48 : cluster.count >= 20 ? 42 : 36
+  const place = formatLocationLabel(undefined, cluster.region, cluster.iso)
+  const size = clusterSize(cluster.count)
 
   return (
     <button
       type="button"
-      title={`${cluster.count} visitors · ${place} — click to zoom in`}
       aria-label={`Zoom to ${cluster.count} visitors near ${place}`}
       onClick={() => onZoomTo?.(cluster.lng, cluster.lat)}
-      style={{ width: size, height: size, borderColor: color }}
+      style={{ width: size, height: size, borderColor: getSeriesColor(cluster.topKind).dot }}
       className="flex items-center justify-center rounded-full border-2 bg-background/90 text-xs font-semibold text-foreground shadow-md backdrop-blur-sm transition-transform duration-200 hover:scale-110"
     >
       {cluster.count}
