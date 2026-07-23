@@ -46,7 +46,7 @@ type ThemeColors = {
 // 1×1 canvas and reading the pixel back, which works regardless of MapLibre's color parser.
 let conversionCtx: CanvasRenderingContext2D | null = null
 
-const cssColorToRgb = (value: string) => {
+export const cssColorToRgb = (value: string) => {
   if (!conversionCtx) {
     const canvas = document.createElement('canvas')
     canvas.width = 1

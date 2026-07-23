@@ -1,31 +1,41 @@
-import { stringHash } from 'facehash'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { COUNTRY_CENTROIDS } from '@/components/country-centroids'
-import { formatPagePath, isMobileVisitor } from '@/components/live-map/live-visitors'
+import {
+  countKinds,
+  describeEvent,
+  type EventIdentity,
+  eventAvatarUrl,
+  eventIdentity,
+  formatPagePath,
+  isMobileVisitor,
+  type KindCount,
+  referrerDomain,
+} from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
 import { structGet } from '@/lib/struct'
-
-export const LIVE_AVATAR_COLORS = [
-  '#f43f5e',
-  '#fb923c',
-  '#f59e0b',
-  '#84cc16',
-  '#10b981',
-  '#06b6d4',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-]
+import { tsToDate } from '@/lib/timestamp'
 
 export type VisitorMapMarker = {
   distinctId: string
+  // Who they are, resolved off the event's traits — the popover shows this instead of the raw id.
+  identity: EventIdentity
   iso: string
   region?: string
   city?: string
   page: string
   kind: string
+  // Headline for the latest event, same as the panel row's — see describeEvent.
+  detail: string
   browser?: string
+  browserVersion?: string
+  os?: string
+  osVersion?: string
   device: string
+  referrer?: string
+  utmSource?: string
+  timezone?: string
+  lastSeen?: Date
+  avatarUrl?: string
   // lat/lng is the visitor's resolved point (GeoIP coords, else region/country centroid); offset is
   // the scatter the map scales down by zoom so coincident faces hold a constant pixel separation and
   // converge on the point as you zoom in.
@@ -41,8 +51,11 @@ export type ClusterMapMarker = {
   groupKey: string
   iso: string
   region?: string
+  city?: string
   count: number
   topKind: string
+  // Full kind mix, count-descending — the badge paints itself with the leader, the popover lists it.
+  kinds: KindCount[]
   lat: number
   lng: number
 }
@@ -55,9 +68,15 @@ export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'clus
 // stays constant. The whole group is rotated by a hash so different places don't all face the same way.
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5))
 
+const seedHash = (value: string) => {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) hash = ((hash << 5) - hash + value.charCodeAt(i)) | 0
+  return Math.abs(hash)
+}
+
 const sunflowerOffset = (i: number, n: number, seed: string): [number, number] => {
   if (n <= 1) return [0, 0]
-  const rot = ((stringHash(seed) & 0xffff) / 0xffff) * 2 * Math.PI
+  const rot = ((seedHash(seed) & 0xffff) / 0xffff) * 2 * Math.PI
   const r = Math.sqrt(i + 0.5)
   const theta = i * GOLDEN_ANGLE + rot
   // 0.8 squishes latitude so the fan reads as a circle on the Mercator projection.
@@ -141,17 +160,28 @@ const centroidOf = (members: Placed[]): [number, number] => {
 const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): VisitorMapMarker => {
   const v = placed.event
   const auto = v.autoProperties
+  const { kind, detail } = describeEvent(v)
   // Fan out faces that share a point; a solo visitor stays exactly where they are.
   const [dLng, dLat] = sunflowerOffset(index, group.members.length, group.key)
   return {
     distinctId: v.distinctId,
+    identity: eventIdentity(v),
     iso: group.iso,
     region: group.region,
     city: structGet(auto, '$city'),
     page: formatPagePath(structGet(auto, '$url')),
-    kind: v.kind || 'event',
+    kind,
+    detail,
     browser: structGet(auto, '$browser'),
+    browserVersion: structGet(auto, '$browserVersion'),
+    os: structGet(auto, '$os'),
+    osVersion: structGet(auto, '$osVersion'),
     device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
+    referrer: referrerDomain(auto),
+    utmSource: structGet(auto, '$utmSource'),
+    timezone: structGet(auto, '$timezone'),
+    lastSeen: tsToDate(v.occurTime) ?? undefined,
+    avatarUrl: eventAvatarUrl(v),
     lng: placed.lng,
     lat: placed.lat,
     offsetLng: dLng,
@@ -159,27 +189,16 @@ const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): Visi
   }
 }
 
-const topKind = (members: Placed[]): string => {
-  const counts = new Map<string, number>()
-  for (const m of members) {
-    const kind = m.event.kind || 'event'
-    counts.set(kind, (counts.get(kind) ?? 0) + 1)
+// Where every visitor sits, clustered or not — the map flies to any of them by distinctId, including
+// one currently collapsed inside a cluster badge. Points only: building whole markers here would
+// duplicate the per-visitor projection `groupsToEntries` already does.
+export const groupsToPoints = (groups: VisitorGroup[]) => {
+  const points = new Map<string, { lng: number; lat: number }>()
+  for (const group of groups) {
+    for (const m of group.members) points.set(m.event.distinctId, { lng: m.lng, lat: m.lat })
   }
-  let best = 'event'
-  let bestCount = -1
-  for (const [kind, count] of counts) {
-    if (count > bestCount) {
-      best = kind
-      bestCount = count
-    }
-  }
-  return best
+  return points
 }
-
-// Flat visitor markers (no clustering) — the map keys these by distinctId to fly to any visitor,
-// including one currently collapsed inside a cluster badge.
-export const groupsToMarkers = (groups: VisitorGroup[]): VisitorMapMarker[] =>
-  groups.flatMap(group => group.members.map((m, i) => visitorMarker(m, group, i)))
 
 // Cluster crowded groups into a single badge; groups at/under the threshold (or explicitly
 // expanded) render their individual faces. Returns a mixed list the map renders directly.
@@ -190,13 +209,16 @@ export const groupsToEntries = (groups: VisitorGroup[], { threshold = 6 }: { thr
     const clustered = group.members.length > threshold
     if (clustered) {
       const [lng, lat] = centroidOf(group.members)
+      const kinds = countKinds(group.members.map(m => m.event))
       entries.push({
         type: 'cluster',
         groupKey: group.key,
         iso: group.iso,
         region: group.region,
+        city: structGet(group.members[0].event.autoProperties, '$city'),
         count: group.members.length,
-        topKind: topKind(group.members),
+        topKind: kinds[0]?.name ?? 'event',
+        kinds,
         lng,
         lat,
       })

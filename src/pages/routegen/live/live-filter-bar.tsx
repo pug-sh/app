@@ -213,7 +213,8 @@ const DeviceToggle = ({
   )
 }
 
-const WindowToggle = ({ windowMs, onChange }: { windowMs: number; onChange: (ms: number) => void }) => (
+// Exported because with the filter bar hidden, the window is the one control that must stay reachable.
+export const WindowToggle = ({ windowMs, onChange }: { windowMs: number; onChange: (ms: number) => void }) => (
   <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
     {LIVE_WINDOW_OPTIONS.map((opt, i) => (
       <span key={opt.ms} className="inline-flex h-full items-center">
@@ -258,7 +259,7 @@ const LiveFilterBar = ({
         <input
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          placeholder="Search event, page, location..."
+          placeholder="Search person, event, page, location..."
           className="h-7 w-full rounded-md border border-border bg-background/60 pr-2 pl-7 text-xs placeholder:text-faint focus:border-foreground/20 focus:outline-none"
         />
       </div>

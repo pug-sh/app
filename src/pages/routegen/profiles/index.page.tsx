@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { ProfileAvatar } from './_avatar'
 import { resolveIdentity } from './_identity'
 import { PropertiesTooltip } from './_properties-tooltip'
+import StatusDot from './_status-dot'
 
 const normalizeProfileId = (profileId: string) => profileId.trim()
 
@@ -325,7 +326,12 @@ const Profiles = () => {
                           contentClassName={tooltipPanelContent}
                           className="items-center gap-3"
                         >
-                          <ProfileAvatar identity={identity} className="size-7 rounded-md text-xs" />
+                          <div className="relative shrink-0">
+                            <ProfileAvatar identity={identity} className="size-7 rounded-md" />
+                            <span className="absolute -right-0.5 -bottom-0.5">
+                              <StatusDot lastSeen={tsToDate(activity?.lastSeen)} className="size-2" />
+                            </span>
+                          </div>
                           <div className="min-w-0">
                             <ProjectLink
                               href={`/profiles/${encodeURIComponent(profileId)}`}
