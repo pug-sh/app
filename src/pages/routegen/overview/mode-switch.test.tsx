@@ -49,14 +49,16 @@ const switchTo = (label: string) => {
 describe('overview mode switch', () => {
   beforeEach(() => setSearch(''))
 
-  // The web default is implicit: rangeIsDefault keeps it out of the URL, so leaving it on the shared
-  // range would clamp product tiles to 24h on a toggle but not on a reload of the same view.
-  it('drops the implicit web window when switching to product', () => {
+  // Both modes default to the last 24 hours now, so the toggle carries that window straight into
+  // product rather than dropping it to the tiles' own longer ranges.
+  it('carries the 24h default into product', () => {
     render(<Overview />)
     expect(screen.getByTestId('web-body')).toBeTruthy()
 
     switchTo('Product analytics')
-    expect(screen.getByTestId('product-body').textContent).toBe('no-window')
+    const shown = Number(screen.getByTestId('product-body').textContent)
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000
+    expect(Math.abs(shown - dayAgo)).toBeLessThan(60_000)
   })
 
   it('keeps an explicitly picked window across the switch', () => {
@@ -68,8 +70,25 @@ describe('overview mode switch', () => {
     expect(screen.getByTestId('product-body').textContent).toBe(String(from.getTime()))
   })
 
-  // Going back re-pins a fresh default, so the picker never reads "Default range" over live data.
-  it('re-pins the default when switching back to web', () => {
+  // The in-app version of the above: change the range from the picker while in web mode, then toggle.
+  // The picked window has to ride across rather than snap back to either default.
+  it('retains a range picked in web mode when switching to product', () => {
+    render(<Overview />)
+
+    fireEvent.click(screen.getByText('time'))
+    fireEvent.click(screen.getByText('Last 7 days'))
+
+    switchTo('Product analytics')
+
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    const expected = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate()).getTime()
+    expect(screen.getByTestId('product-body').textContent).toBe(String(expected))
+  })
+
+  // The 24h default rides through both toggles, so web still reads "Last 24 hours" — never
+  // "Default range" over live data — after a round trip.
+  it('keeps the 24h default across a web → product → web round trip', () => {
     render(<Overview />)
     switchTo('Product analytics')
     switchTo('Web analytics')

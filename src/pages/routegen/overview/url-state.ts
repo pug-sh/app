@@ -13,10 +13,10 @@ const STAT_PARAM = 'stat'
 
 const DEFAULT_WEB_STAT: WebStatId = 'users'
 
-// The default landing window for web analytics: the last 24 hours, hour-bucketed (granularity
-// resolves to HOUR from this range via autoGranularity). One line so the web default policy lives
-// here while the range primitive stays in date-presets.
-export const resolveWebDefaultRange = () => last24HoursRange()
+// The default landing window for both overview modes: the last 24 hours, hour-bucketed (granularity
+// resolves to HOUR from this range via autoGranularity). One line so the default policy lives here
+// while the range primitive stays in date-presets.
+export const resolveOverviewDefaultRange = () => last24HoursRange()
 
 export const readWebStat = (search = window.location.search) => {
   const raw = new URLSearchParams(search).get(STAT_PARAM)

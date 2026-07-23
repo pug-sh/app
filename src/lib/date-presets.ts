@@ -14,8 +14,8 @@ const lastNHours = (n: number): TimeRange => {
   return { from: new Date(now.getTime() - n * 60 * 60 * 1000), to: now }
 }
 
-// Shared by the 'Last 24 hours' preset and the Overview web-analytics default window, so the two
-// never drift and neither hard-codes a preset-label lookup.
+// Shared by the 'Last 24 hours' preset and the Overview default landing window, so the two never
+// drift and neither hard-codes a preset-label lookup.
 export const last24HoursRange = (): TimeRange => ({ ...lastNHours(24), label: 'Last 24 hours' })
 
 const lastNDays = (n: number): TimeRange => {

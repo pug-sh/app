@@ -13,7 +13,7 @@ import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import type { GlobalOverrides } from './global-overrides'
 import OverviewSectionHeader from './overview-section-header'
 import { OverviewTileShell } from './overview-tile-shell'
-import { resolveWebDefaultRange } from './url-state'
+import { resolveOverviewDefaultRange } from './url-state'
 import {
   buildWebStatQuery,
   COUNTRY_PROPERTY,
@@ -140,7 +140,7 @@ const WebAnalyticsMode = ({ schema, selectedStat, onSelectStat, globalTimeRange,
 
   // Resolve one concrete window + granularity for the whole view so every panel agrees. Default to
   // Last 24 hours when no global range is set; Auto resolves to hourly there.
-  const range = useMemo(() => globalTimeRange ?? resolveWebDefaultRange(), [globalTimeRange])
+  const range = useMemo(() => globalTimeRange ?? resolveOverviewDefaultRange(), [globalTimeRange])
   const granularity = globalGranularity ?? autoGranularity(range)
 
   // Cross-filters: clicking any breakdown value (or a country on the map) narrows the whole view.

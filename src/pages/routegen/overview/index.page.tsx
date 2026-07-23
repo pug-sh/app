@@ -22,7 +22,7 @@ import {
   overviewSchemaLoadingAtom,
 } from './overview.atoms'
 import SetupMode from './setup-mode'
-import { type OverviewMode, readWebStat, resolveWebDefaultRange, writeWebStatParam } from './url-state'
+import { type OverviewMode, readWebStat, resolveOverviewDefaultRange, writeWebStatParam } from './url-state'
 import WebAnalyticsMode from './web-analytics-mode'
 
 const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
@@ -42,12 +42,11 @@ const Overview = () => {
   const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [mode, setMode] = useAtom(overviewModeAtom)
   const [webStat, setWebStat] = useState(() => readWebStat())
-  // Web analytics lands on the last 24 hours when no window is pinned; product analytics keeps its
-  // "no explicit window" default (tiles fall back to their own ranges). The persisted mode reads
-  // synchronously here (overviewModeAtom uses getOnInit), so this initial window matches the
-  // restored view on the very first render.
+  // Both modes land on the last 24 hours when no window is pinned. An untouched default stays out of
+  // the URL (see rangeIsDefault below), so a reload and a mode toggle restore the same window instead
+  // of dropping product to its tiles' own longer ranges only after a reload.
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(
-    () => initialOverrides.timeRange ?? (mode === 'web' ? resolveWebDefaultRange() : undefined),
+    () => initialOverrides.timeRange ?? resolveOverviewDefaultRange(),
   )
   // Stores only the user's explicit pick. UNSPECIFIED means "auto-derive from time range"
   // and the derivation happens at the consumption point below, so it stays in sync as the
@@ -74,19 +73,18 @@ const Overview = () => {
     writeWebStatParam(mode, webStat)
   }, [mode, webStat])
 
-  // Switching into web analytics with no window pins the default, so the picker reflects the window
-  // the panels actually query rather than showing "Select time" over live data.
+  // Both modes default to the last 24 hours, so a toggle just carries the current window over. The
+  // one exception: entering web with the range explicitly unset re-pins the default, so the picker
+  // reflects the 24h window the web panels fall back to rather than reading "Default range" over live
+  // data. Product tolerates an unset window (its tiles have their own ranges), so it needs no fixup.
   const handleModeChange = (next: OverviewMode) => {
     setMode(next)
     if (next === 'web' && !globalTimeRange) {
-      const defaultRange = resolveWebDefaultRange()
+      const defaultRange = resolveOverviewDefaultRange()
       setGlobalTimeRange(defaultRange)
       setRangeIsDefault(true)
       setGlobalGranularity(g => clampGranularity(g, defaultRange))
     }
-    // Web's implicit default never reaches the URL, so leaving it set would clamp product tiles to
-    // 24h here but not after a reload. An explicit pick (rangeIsDefault false) carries over.
-    if (next === 'product' && rangeIsDefault) setGlobalTimeRange(undefined)
   }
 
   // Keep range and granularity backend-valid: cap a range too wide for any granularity, then
