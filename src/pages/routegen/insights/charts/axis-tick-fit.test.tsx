@@ -62,7 +62,7 @@ const DAY_CROSSING: ChartPoint[] = Array.from({ length: 25 }, (_, i) => ({
 const dayLabelCount = (container: HTMLElement) =>
   Array.from(container.querySelectorAll('div'))
     .map(el => el.textContent?.trim() ?? '')
-    .filter(text => /^[A-Z][a-z]{2} \d+ \d{2}:\d{2}$/.test(text)).length
+    .filter(text => /^[A-Z][a-z]{2} \d+(?:, \d{4})? \d{2}:\d{2}$/.test(text)).length
 
 // Renders the actual chart, so it fails against the unfixed axis (fixed count -> same labels at any width).
 describe('x-axis thins day-carrying labels to the width', () => {
