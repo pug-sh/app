@@ -58,6 +58,26 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric' })
 }
 
+// The vendored axis spaces a fixed tick count evenly but never checks the labels fit, so wide
+// labels ("Jul 23 18:00") overprint when narrow. Thin `requested` (real labels) to what the width fits.
+const AXIS_LABEL_PX_PER_CHAR = 6.5 // Figtree at text-xs
+const AXIS_LABEL_MIN_GAP_PX = 16
+
+export const fitAxisTicks = (innerWidth: number, dateLabels: readonly string[], requested: number): number => {
+  if (!(innerWidth > 0)) return requested
+
+  // Bar padding rows blank out and never render but still cost a tick — fit the real labels, re-add them.
+  const visible = dateLabels.filter(label => label !== '')
+  if (visible.length === 0) return requested
+  const blanks = dateLabels.length - visible.length
+
+  const widestChars = visible.reduce((max, label) => Math.max(max, label.length), 0)
+  const perLabel = widestChars * AXIS_LABEL_PX_PER_CHAR + AXIS_LABEL_MIN_GAP_PX
+  const capacity = Math.floor(innerWidth / perLabel) + 1
+
+  return Math.max(2, Math.min(requested, capacity)) + blanks
+}
+
 // The hover pill's ticker splits a label on spaces into a month column and a day column, and drops
 // any third token — "Jul 22, 02:00" renders as "Jul 22,". Joining everything after the month with
 // NBSP keeps it one token; it renders identically.
