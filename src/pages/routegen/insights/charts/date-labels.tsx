@@ -4,6 +4,7 @@ import { ChartTooltip as VendoredTooltip } from '@/components/charts/tooltip'
 import type { ChartTooltipProps } from '@/components/charts/tooltip/chart-tooltip'
 import { XAxis as VendoredXAxis, type XAxisProps } from '@/components/charts/x-axis'
 import { PAD_ROW_KEY } from './common'
+import { fitAxisTicks } from './helpers'
 
 // The vendored charts format x labels internally with a browser-local,
 // granularity-blind formatter and expose no prop for it. Bucket labels have to
@@ -42,12 +43,13 @@ const useDateLabelledContext = (surface: keyof DateLabelFormatters) => {
   }, [stable, formatters, surface])
 }
 
-export function XAxis(props: XAxisProps) {
+export function XAxis({ numTicks = 5, ...props }: XAxisProps) {
   const value = useDateLabelledContext('axis')
+  const fittedNumTicks = fitAxisTicks(value.innerWidth, value.dateLabels, numTicks)
 
   return (
     <ChartStableContext.Provider value={value}>
-      <VendoredXAxis {...props} />
+      <VendoredXAxis {...props} numTicks={fittedNumTicks} />
     </ChartStableContext.Provider>
   )
 }

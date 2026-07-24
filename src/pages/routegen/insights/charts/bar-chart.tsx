@@ -13,11 +13,6 @@ import type { ChartPoint } from './types'
 
 const HOUR_MS = 60 * 60 * 1000
 
-// The axis snaps ticks to data rows and always spends one on the first row and one on the
-// last — which are the padding rows, and blank. Asking for two extra keeps as many real
-// bucket labels as the other charts get from the vendored default of 5.
-const PADDED_NUM_TICKS = 7
-
 // Wraps the vendored chart (src/components/charts) — never edit that directory.
 // Series colors, tooltip rows and date labels are ours to inject; the chart
 // supplies the rest.
@@ -88,7 +83,7 @@ export const BarChart = memo(function BarChart({
         stacked={stacked}
       >
         <Grid horizontal />
-        <XAxis numTicks={PADDED_NUM_TICKS} />
+        <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {seriesNames.map((_, si) => (
           <SeriesBar key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} radius={stacked ? 0 : 3} />
