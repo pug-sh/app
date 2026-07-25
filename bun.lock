@@ -14,7 +14,7 @@
         "@dicebear/notionists": "^9.4.2",
         "@fontsource-variable/figtree": "^5.3.0",
         "@fontsource/jetbrains-mono": "^5.2.8",
-        "@hookform/resolvers": "5.4.0",
+        "@hookform/resolvers": "^5.2.2",
         "@number-flow/react": "^0.6.2",
         "@pug-sh/browser": "^0.0.4",
         "@react-oauth/google": "^0.13.5",
