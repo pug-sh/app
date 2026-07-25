@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
-import { useState } from 'react'
+import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
@@ -10,6 +10,7 @@ import { GoogleSignInButton } from '@/auth/google-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { SignInWall } from '@/pages/sign-in-wall'
 
 const authSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -18,41 +19,23 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// Illustrative time-series area that anchors the hero — full-bleed across the canvas
-// so it slides under the form card. Drawn once on load (see .signin-trend-* in
-// index.css). Bold stroke + gradient fill so it reads, not just a faint hairline.
-const HeroTrend = () => {
-  // Sits as a gentle rising wave in the upper part of the band so it clears the
-  // caption + footer that anchor the bottom-left.
-  const line =
-    'M0 138 L40 130 L80 142 L120 114 L160 124 L200 98 L240 108 L280 80 L320 88 L360 60 L400 68 L440 44 L480 36'
-  return (
-    <svg
-      viewBox="0 0 480 220"
-      preserveAspectRatio="none"
-      className="absolute inset-x-0 bottom-0 w-full h-80"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="signin-trend-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="white" stopOpacity={0.32} />
-          <stop offset="100%" stopColor="white" stopOpacity={0.02} />
-        </linearGradient>
-      </defs>
-      <path className="signin-trend-area" d={`${line} L480 220 L0 220 Z`} fill="url(#signin-trend-fill)" />
-      <path
-        className="signin-trend-line"
-        d={line}
-        fill="none"
-        stroke="white"
-        strokeOpacity={0.85}
-        strokeWidth={3}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  )
+// GIS renders its own button at 40px and won't take a height, so it sets the control rhythm
+// here — inputs and the submit button match it rather than the app's h-8 default.
+const controlHeight = 'h-10'
+
+const MODE_COPY = {
+  link: {
+    title: 'Sign in to Pug',
+    blurb: "We'll email you a secure link to sign in or create your account.",
+    submit: 'Email me a sign-in link',
+    toggle: 'Sign in with password',
+  },
+  password: {
+    title: 'Sign in with password',
+    blurb: 'Enter the password you set for your account',
+    submit: 'Sign in',
+    toggle: 'Email me a sign-in link instead',
+  },
 }
 
 const SignIn = () => {
@@ -66,11 +49,22 @@ const SignIn = () => {
   // people who set a password via the in-app SetPassword flow.
   const [mode, setMode] = useState<'link' | 'password'>('link')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [magicLinkLoading, setMagicLinkLoading] = useState(false)
+  // One in-flight action at a time — the three auth paths are mutually exclusive, and Google's
+  // has to be in here or its RPC leaves the rest of the form live for a second submit.
+  const [pending, setPending] = useState<'link' | 'password' | 'google' | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+
+  // The wall is `hidden lg:block`, which still mounts 1500 nodes a phone never paints.
+  // Not useIsMobile: that breaks at 768px, so 768-1023px would pay the cost in full.
+  const [wallVisible, setWallVisible] = useState(() => window.matchMedia('(min-width: 64rem)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 64rem)')
+    const onChange = () => setWallVisible(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const authForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -80,7 +74,7 @@ const SignIn = () => {
   // Password sign-in. handleSubmit runs the full schema (email + password) first.
   const submitPassword = async (data: AuthFormData) => {
     setError('')
-    setLoading(true)
+    setPending('password')
     try {
       const result = await signIn(data)
       if (!result.ok) setError(result.error)
@@ -88,7 +82,7 @@ const SignIn = () => {
       console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
-      setLoading(false)
+      setPending(null)
     }
   }
 
@@ -100,7 +94,7 @@ const SignIn = () => {
     const valid = await authForm.trigger('email')
     if (!valid) return
     const email = authForm.getValues('email')
-    setMagicLinkLoading(true)
+    setPending('link')
     try {
       const res = await requestMagicLink({ email })
       if (!res.ok) {
@@ -108,98 +102,54 @@ const SignIn = () => {
         return
       }
       setMagicLinkEmail(email)
-      setMagicLinkSent(true)
     } catch (err) {
       console.error('magic link request failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
-      setMagicLinkLoading(false)
+      setPending(null)
     }
   }
 
-  const switchMode = (next: 'link' | 'password') => {
-    setMode(next)
+  const toggleMode = () => {
+    setMode(m => (m === 'link' ? 'password' : 'link'))
     setError('')
     authForm.clearErrors()
   }
 
-  const authBusy = loading || magicLinkLoading
+  const authBusy = pending !== null
+  const copy = MODE_COPY[mode]
 
   return (
-    <div className="min-h-screen flex bg-[oklch(0.63_0.13_265)] relative overflow-hidden">
-      {/* Trend spans the full canvas and slides under the form card — no hard cut at the seam. */}
-      <HeroTrend />
-      {/* Left — analytics hero, directly on the blue canvas. The product, quietly breathing. */}
-      <div className="hidden lg:flex lg:w-1/2 relative z-10 text-primary-foreground">
-        {/* Solid base so the caption + footer stay legible over the trend. */}
-        <div
-          className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[oklch(0.63_0.13_265)] to-transparent"
-          aria-hidden
-        />
-        <div className="relative z-10 flex flex-col justify-between w-full p-12">
-          <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="" className="w-10 h-10" />
-            <span className="text-xl font-medium tracking-tight">Pug</span>
-          </div>
-
-          <div className="max-w-md">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] opacity-60">Product analytics</p>
-            <h2 className="mt-4 text-4xl font-medium leading-[1.1] tracking-tight">
-              See what your
-              <br />
-              users actually do.
-            </h2>
-            <p className="mt-4 max-w-sm text-sm opacity-70 leading-relaxed">
-              Track events, funnels, and retention — and turn product behavior into decisions you can ship.
-            </p>
-          </div>
-
-          <p className="text-xs opacity-70">
-            by{' '}
-            <a
-              href="https://tshoka.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium underline-offset-4 hover:underline"
-            >
-              tshoka
-            </a>
-          </p>
-        </div>
-      </div>
-
-      {/* Right — form on an inset card so it pops against the blue and leads. On mobile the
-          card fills the screen edge-to-edge (covering the blue + trend); the inset framing
-          (blue gutter + rounded corners) is a desktop-only treatment.
-          min-w-0: this is a flex item, so its default min-width:auto floors it at its
-          content's min-content — the GIS button's fixed 384px width — and it can't shrink
-          below that, overflowing (clipped right) on phones narrower than ~432px. min-w-0
-          lets it shrink so the form column tracks the viewport (GoogleSignInButton drops its
-          own overflow clip in reliance on this). */}
-      <div className="flex-1 lg:w-1/2 lg:p-4 relative z-10 min-w-0">
-        <div className="flex h-full w-full items-center justify-center bg-background p-6 lg:rounded-3xl lg:p-8">
+    // auth-surface lifts the page's whole surface ramp a step above the app canvas in light
+    // mode; both halves read it, so the wall's cards and vignette come along.
+    <div className="auth-surface min-h-screen bg-background lg:flex">
+      {/* Left — the form, directly on the canvas. No card and no colour change at the midpoint:
+          the wall vignettes into this same background, so the halves share one surface.
+          min-w-0 lets this flex item shrink below the GIS button's width instead of overflowing. */}
+      <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col px-6 py-10 lg:min-h-screen lg:w-1/2">
+        <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
-            <div className="lg:hidden flex items-center gap-3 mb-10">
-              <img src="/logo.svg" alt="" className="w-9 h-9" />
-              <span className="text-lg font-medium tracking-tight">Pug</span>
+            <div className="mb-8 flex items-center justify-center gap-2.5">
+              <img src="/logo.svg" alt="" className="h-8 w-8" />
+              <span className="text-lg font-medium tracking-tight text-display-foreground">Pug</span>
             </div>
 
-            {magicLinkSent ? (
-              <div>
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
-                  <MailCheck className="w-5 h-5 text-link" />
+            {magicLinkEmail ? (
+              <div className="text-center">
+                <div className="mx-auto mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <MailCheck className="h-5 w-5 text-link" />
                 </div>
                 <h1 className="text-2xl font-medium tracking-tight text-display-foreground">Check your inbox</h1>
-                <p className="text-sm text-muted-foreground mt-1.5">
+                <p className="mt-2 text-sm text-muted-foreground">
                   We sent a sign-in link to{' '}
-                  <span className="font-medium text-foreground break-all">{magicLinkEmail}</span>. Click it to continue
+                  <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>. Click it to continue
                   — it expires in 15 minutes.
                 </p>
                 <button
                   type="button"
-                  className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6"
+                  className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
                   onClick={() => {
-                    setMagicLinkSent(false)
+                    setMagicLinkEmail('')
                     setError('')
                   }}
                 >
@@ -208,22 +158,23 @@ const SignIn = () => {
               </div>
             ) : (
               <>
-                <h1 className="text-2xl font-medium tracking-tight text-display-foreground">
-                  {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
+                <h1 className="text-center text-3xl font-medium tracking-tight text-display-foreground">
+                  {copy.title}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1.5 mb-6">
-                  {mode === 'link'
-                    ? "We'll email you a secure link to sign in or create your account."
-                    : 'Enter the password you set for your account'}
-                </p>
+                <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
                 {googleOAuthEnabled && (
                   <>
-                    <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
-                    <div className="flex items-center gap-3 my-5">
-                      <div className="flex-1 h-px bg-border" />
+                    <GoogleSignInButton
+                      disabled={authBusy}
+                      onBegin={() => setError('')}
+                      onLoadingChange={busy => setPending(busy ? 'google' : null)}
+                      onError={setError}
+                    />
+                    <div className="my-5 flex items-center gap-3">
+                      <div className="h-px flex-1 bg-border" />
                       <span className="text-xs text-muted-foreground">or continue with email</span>
-                      <div className="flex-1 h-px bg-border" />
+                      <div className="h-px flex-1 bg-border" />
                     </div>
                   </>
                 )}
@@ -241,14 +192,21 @@ const SignIn = () => {
                 >
                   <Field data-invalid={!!authForm.formState.errors.email}>
                     <FieldLabel htmlFor="email">Email</FieldLabel>
-                    <Input
-                      {...authForm.register('email')}
-                      id="email"
-                      type="email"
-                      placeholder="you@company.com"
-                      aria-invalid={!!authForm.formState.errors.email}
-                      autoComplete="email"
-                    />
+                    <div className="relative">
+                      <Mail
+                        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint"
+                        aria-hidden
+                      />
+                      <Input
+                        {...authForm.register('email')}
+                        id="email"
+                        type="email"
+                        placeholder="you@company.com"
+                        className={`${controlHeight} pl-9`}
+                        aria-invalid={!!authForm.formState.errors.email}
+                        autoComplete="email"
+                      />
+                    </div>
                     {authForm.formState.errors.email && <FieldError errors={[authForm.formState.errors.email]} />}
                   </Field>
 
@@ -260,28 +218,36 @@ const SignIn = () => {
                           type="button"
                           onClick={handleMagicLink}
                           disabled={authBusy}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                          className="text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                         >
                           Forgot?
                         </button>
                       </div>
                       <div className="relative">
+                        <Lock
+                          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint"
+                          aria-hidden
+                        />
                         <Input
                           {...authForm.register('password')}
                           id="password"
                           type={showPassword ? 'text' : 'password'}
                           placeholder="••••••••"
-                          className="pr-9"
+                          className={`${controlHeight} pr-9 pl-9`}
                           aria-invalid={!!authForm.formState.errors.password}
                           autoComplete="current-password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                          tabIndex={-1}
+                          className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
                         >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" aria-hidden />
+                          ) : (
+                            <Eye className="h-4 w-4" aria-hidden />
+                          )}
                         </button>
                       </div>
                       {authForm.formState.errors.password && (
@@ -290,44 +256,27 @@ const SignIn = () => {
                     </Field>
                   )}
 
-                  {error && <p className="text-sm text-negative bg-destructive/5 rounded-md px-3 py-2">{error}</p>}
+                  {error && <p className="rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
 
-                  <Button type="submit" className="w-full" disabled={authBusy}>
-                    {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}
-                    {mode === 'link' ? 'Email me a sign-in link' : 'Sign in'}
+                  <Button type="submit" className={`${controlHeight} w-full`} disabled={authBusy}>
+                    {pending === mode && <Loader2 className="animate-spin" />}
+                    {copy.submit}
                   </Button>
                 </form>
 
-                {googleOAuthEnabled ? (
+                <div className="mt-6 text-center">
                   <button
                     type="button"
-                    onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
+                    onClick={toggleMode}
                     disabled={authBusy}
-                    className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6 disabled:opacity-50"
+                    className="text-sm font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
                   >
-                    {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                    {copy.toggle}
                   </button>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3 my-4">
-                      <div className="flex-1 h-px bg-border" />
-                      <span className="text-xs text-muted-foreground">or</span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
-                      disabled={authBusy}
-                    >
-                      {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
-                    </Button>
-                  </>
-                )}
+                </div>
 
                 {demoEnabled && (
-                  <div className="mt-6 text-center">
+                  <div className="mt-3 text-center">
                     <button
                       type="button"
                       onClick={() => navigate('/demo')}
@@ -342,7 +291,23 @@ const SignIn = () => {
             )}
           </div>
         </div>
+
+        <p className="text-center text-xs text-faint">
+          by{' '}
+          <a
+            href="https://tshoka.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline-offset-4 hover:underline"
+          >
+            tshoka
+          </a>
+        </p>
       </div>
+
+      {/* Right — the product itself, drifting. Desktop only: it's decoration, and the rotated
+          wall has no useful small-screen form. */}
+      <div className="relative hidden lg:block lg:w-1/2">{wallVisible && <SignInWall />}</div>
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 
 export const AuthShell = ({ children }: { children: ReactNode }) => (
-  <div className="min-h-screen flex items-center justify-center p-8">
+  // auth-surface: shared with sign-in, which links straight here — without it light mode
+  // steps between two grounds mid-flow.
+  <div className="auth-surface min-h-screen bg-background flex items-center justify-center p-8">
     <div className="w-full max-w-sm">
       <div className="flex items-center gap-3 mb-8">
         <img src="/logo.svg" alt="" className="w-9 h-9" />
