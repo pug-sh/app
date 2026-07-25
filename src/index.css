@@ -342,46 +342,26 @@
   z-index: 30 !important;
 }
 
-/* Sign-in hero — one-time draw of the analytics trend line on load.
-   540 ≈ the trend path length; dash-draw isn't expressible as a Tailwind utility. */
-@keyframes signin-trend-draw {
+/* Sign-in card wall — each column renders the deck twice, so translating -50% loops seamlessly.
+   Cards carry their own bottom margin rather than a flex gap on the track: a gap adds one extra
+   space the doubled list doesn't repeat, which puts the loop point off by that much and jumps. */
+@keyframes signin-wall-drift {
   from {
-    stroke-dashoffset: 540;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes signin-fade-rise {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
     transform: translateY(0);
   }
+  to {
+    transform: translateY(-50%);
+  }
 }
 
-.signin-trend-line {
-  stroke-dasharray: 540;
-  stroke-dashoffset: 540;
-  animation: signin-trend-draw 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
-}
-
-.signin-trend-area {
-  opacity: 0;
-  animation: signin-fade-rise 0.7s ease-out 1.2s forwards;
+.signin-wall-track {
+  animation-name: signin-wall-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .signin-trend-line {
-    stroke-dashoffset: 0;
-    animation: none;
-  }
-  .signin-trend-area {
-    opacity: 1;
+  .signin-wall-track {
     animation: none;
   }
 }
