@@ -358,6 +358,7 @@
   --negative: oklch(0.491 0.14 25);
   --border: oklch(0.916 0.006 265);
   --input: oklch(0.916 0.006 265);
+
   color: var(--foreground);
 }
 
