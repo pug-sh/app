@@ -11,10 +11,12 @@ const defaultButtonWidth = 384
 export const GoogleSignInButton = ({
   disabled,
   onBegin,
+  onLoadingChange,
   onError,
 }: {
   disabled: boolean
   onBegin?: () => void
+  onLoadingChange?: (loading: boolean) => void
   onError: (message: string) => void
 }) => {
   const completeGoogleOAuth = useSetAtom(completeGoogleOAuthAtom)
@@ -22,8 +24,8 @@ export const GoogleSignInButton = ({
   const containerRef = useRef<HTMLDivElement>(null)
   const [buttonWidth, setButtonWidth] = useState(defaultButtonWidth)
 
-  // Measure in a layout effect (before paint) so the GIS button never flashes at the 384px
-  // default on narrow screens; the ResizeObserver keeps it in sync on later resizes.
+  // The container below renders unconditionally — only its child swaps — so the node this
+  // observes outlives every busy cycle. Layout-phase so the button never flashes at 384px.
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -36,13 +38,18 @@ export const GoogleSignInButton = ({
     return () => observer.disconnect()
   }, [])
 
+  const setBusy = (next: boolean) => {
+    setLoading(next)
+    onLoadingChange?.(next)
+  }
+
   const handleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) {
       console.error('Google sign-in returned no credential')
       onError('Google sign-in could not be completed. Try again.')
       return
     }
-    setLoading(true)
+    setBusy(true)
     try {
       const result = await completeGoogleOAuth({ credential: response.credential })
       if (!result.ok) onError(result.error)
@@ -50,39 +57,41 @@ export const GoogleSignInButton = ({
       console.error('google oauth complete failed', err)
       onError('Something went wrong. Please try again.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  const busy = disabled || loading
-
-  if (busy) {
-    return (
-      <div className="flex h-10 w-full items-center justify-center gap-2 rounded border border-input bg-background text-sm text-muted-foreground opacity-50">
-        {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-        Continue with Google
-      </div>
-    )
-  }
-
-  // No overflow clip here: the GIS button renders at buttonWidth, and the column's min-w-0
-  // (in sign-in.tsx) lets it track the viewport, so the button can't force page overflow.
-  // Leaving it un-clipped keeps the button's own rounded corners + outline border intact —
-  // an overflow-hidden clip on the container shaved the button's right corners in responsive mode.
+  // No clip on this container — GIS clamps its own width to [200, 400], so a narrower container
+  // shaves the button's corners and outline. The radius goes on the button itself, in index.css.
   return (
-    <div ref={containerRef} className="min-h-10 w-full">
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={() => {
-          console.error('Google Identity Services reported a sign-in error')
-          onError('Google sign-in failed. Try again.')
-        }}
-        click_listener={onBegin}
-        theme="outline"
-        size="large"
-        text="continue_with"
-        width={buttonWidth}
-      />
+    <div ref={containerRef} className="google-signin-button min-h-10 w-full">
+      {disabled || loading ? (
+        <button
+          type="button"
+          disabled
+          aria-busy={loading}
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-input bg-background text-sm text-muted-foreground opacity-50"
+        >
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          Continue with Google
+        </button>
+      ) : (
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={() => {
+            console.error('Google Identity Services reported a sign-in error')
+            onError('Google sign-in failed. Try again.')
+          }}
+          click_listener={onBegin}
+          // Light in both modes on purpose: GIS's two filled themes (filled_black, filled_blue)
+          // both back the G with a hard white tile, which reads worse than the white button.
+          theme="outline"
+          size="large"
+          text="continue_with"
+          logo_alignment="center"
+          width={buttonWidth}
+        />
+      )}
     </div>
   )
 }

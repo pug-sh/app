@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
@@ -19,9 +19,24 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// GIS renders its own button at 40px and can't be restyled, so it sets the control
-// rhythm here — inputs and the submit button match it rather than the app's h-8 default.
+// GIS renders its own button at 40px and won't take a height, so it sets the control rhythm
+// here — inputs and the submit button match it rather than the app's h-8 default.
 const controlHeight = 'h-10'
+
+const MODE_COPY = {
+  link: {
+    title: 'Sign in to Pug',
+    blurb: "We'll email you a secure link to sign in or create your account.",
+    submit: 'Email me a sign-in link',
+    toggle: 'Sign in with password',
+  },
+  password: {
+    title: 'Sign in with password',
+    blurb: 'Enter the password you set for your account',
+    submit: 'Sign in',
+    toggle: 'Email me a sign-in link instead',
+  },
+}
 
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
@@ -34,11 +49,22 @@ const SignIn = () => {
   // people who set a password via the in-app SetPassword flow.
   const [mode, setMode] = useState<'link' | 'password'>('link')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [magicLinkLoading, setMagicLinkLoading] = useState(false)
+  // One in-flight action at a time — the three auth paths are mutually exclusive, and Google's
+  // has to be in here or its RPC leaves the rest of the form live for a second submit.
+  const [pending, setPending] = useState<'link' | 'password' | 'google' | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
+  // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+
+  // The wall is `hidden lg:block`, which still mounts 1500 nodes a phone never paints.
+  // Not useIsMobile: that breaks at 768px, so 768-1023px would pay the cost in full.
+  const [wallVisible, setWallVisible] = useState(() => window.matchMedia('(min-width: 64rem)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 64rem)')
+    const onChange = () => setWallVisible(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   const authForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -48,7 +74,7 @@ const SignIn = () => {
   // Password sign-in. handleSubmit runs the full schema (email + password) first.
   const submitPassword = async (data: AuthFormData) => {
     setError('')
-    setLoading(true)
+    setPending('password')
     try {
       const result = await signIn(data)
       if (!result.ok) setError(result.error)
@@ -56,7 +82,7 @@ const SignIn = () => {
       console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
-      setLoading(false)
+      setPending(null)
     }
   }
 
@@ -68,7 +94,7 @@ const SignIn = () => {
     const valid = await authForm.trigger('email')
     if (!valid) return
     const email = authForm.getValues('email')
-    setMagicLinkLoading(true)
+    setPending('link')
     try {
       const res = await requestMagicLink({ email })
       if (!res.ok) {
@@ -76,32 +102,30 @@ const SignIn = () => {
         return
       }
       setMagicLinkEmail(email)
-      setMagicLinkSent(true)
     } catch (err) {
       console.error('magic link request failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
-      setMagicLinkLoading(false)
+      setPending(null)
     }
   }
 
-  const switchMode = (next: 'link' | 'password') => {
-    setMode(next)
+  const toggleMode = () => {
+    setMode(m => (m === 'link' ? 'password' : 'link'))
     setError('')
     authForm.clearErrors()
   }
 
-  const authBusy = loading || magicLinkLoading
+  const authBusy = pending !== null
+  const copy = MODE_COPY[mode]
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
+    // auth-surface lifts the page's whole surface ramp a step above the app canvas in light
+    // mode; both halves read it, so the wall's cards and vignette come along.
+    <div className="auth-surface min-h-screen bg-background lg:flex">
       {/* Left — the form, directly on the canvas. No card and no colour change at the midpoint:
           the wall vignettes into this same background, so the halves share one surface.
-          min-w-0: on lg this is a flex item, so its default min-width:auto floors it at its
-          content's min-content — the GIS button's fixed 384px width — and it can't shrink below
-          that, overflowing (clipped right) on phones narrower than ~432px. min-w-0 lets the
-          column track the viewport (GoogleSignInButton drops its own overflow clip in reliance
-          on this). */}
+          min-w-0 lets this flex item shrink below the GIS button's width instead of overflowing. */}
       <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col px-6 py-10 lg:min-h-screen lg:w-1/2">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
@@ -110,7 +134,7 @@ const SignIn = () => {
               <span className="text-lg font-medium tracking-tight text-display-foreground">Pug</span>
             </div>
 
-            {magicLinkSent ? (
+            {magicLinkEmail ? (
               <div className="text-center">
                 <div className="mx-auto mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <MailCheck className="h-5 w-5 text-link" />
@@ -125,7 +149,7 @@ const SignIn = () => {
                   type="button"
                   className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
                   onClick={() => {
-                    setMagicLinkSent(false)
+                    setMagicLinkEmail('')
                     setError('')
                   }}
                 >
@@ -135,17 +159,18 @@ const SignIn = () => {
             ) : (
               <>
                 <h1 className="text-center text-3xl font-medium tracking-tight text-display-foreground">
-                  {mode === 'link' ? 'Sign in to Pug' : 'Sign in with password'}
+                  {copy.title}
                 </h1>
-                <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">
-                  {mode === 'link'
-                    ? "We'll email you a secure link to sign in or create your account."
-                    : 'Enter the password you set for your account'}
-                </p>
+                <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
                 {googleOAuthEnabled && (
                   <>
-                    <GoogleSignInButton disabled={authBusy} onBegin={() => setError('')} onError={setError} />
+                    <GoogleSignInButton
+                      disabled={authBusy}
+                      onBegin={() => setError('')}
+                      onLoadingChange={busy => setPending(busy ? 'google' : null)}
+                      onError={setError}
+                    />
                     <div className="my-5 flex items-center gap-3">
                       <div className="h-px flex-1 bg-border" />
                       <span className="text-xs text-muted-foreground">or continue with email</span>
@@ -168,7 +193,10 @@ const SignIn = () => {
                   <Field data-invalid={!!authForm.formState.errors.email}>
                     <FieldLabel htmlFor="email">Email</FieldLabel>
                     <div className="relative">
-                      <Mail className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" aria-hidden />
+                      <Mail
+                        className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint"
+                        aria-hidden
+                      />
                       <Input
                         {...authForm.register('email')}
                         id="email"
@@ -196,7 +224,10 @@ const SignIn = () => {
                         </button>
                       </div>
                       <div className="relative">
-                        <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint" aria-hidden />
+                        <Lock
+                          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-faint"
+                          aria-hidden
+                        />
                         <Input
                           {...authForm.register('password')}
                           id="password"
@@ -223,26 +254,20 @@ const SignIn = () => {
 
                   {error && <p className="rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
 
-                  {/* The only saturated thing on the page — the accent-tinted shadow is what
-                      makes it the single obvious next step. */}
-                  <Button
-                    type="submit"
-                    className={`${controlHeight} w-full shadow-lg shadow-primary/25`}
-                    disabled={authBusy}
-                  >
-                    {(mode === 'link' ? magicLinkLoading : loading) && <Loader2 className="animate-spin" />}
-                    {mode === 'link' ? 'Email me a sign-in link' : 'Sign in'}
+                  <Button type="submit" className={`${controlHeight} w-full`} disabled={authBusy}>
+                    {pending === mode && <Loader2 className="animate-spin" />}
+                    {copy.submit}
                   </Button>
                 </form>
 
                 <div className="mt-6 text-center">
                   <button
                     type="button"
-                    onClick={() => switchMode(mode === 'link' ? 'password' : 'link')}
+                    onClick={toggleMode}
                     disabled={authBusy}
                     className="text-sm font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
                   >
-                    {mode === 'link' ? 'Sign in with password' : 'Email me a sign-in link instead'}
+                    {copy.toggle}
                   </button>
                 </div>
 
@@ -278,9 +303,7 @@ const SignIn = () => {
 
       {/* Right — the product itself, drifting. Desktop only: it's decoration, and the rotated
           wall has no useful small-screen form. */}
-      <div className="relative hidden lg:block lg:w-1/2">
-        <SignInWall />
-      </div>
+      <div className="relative hidden lg:block lg:w-1/2">{wallVisible && <SignInWall />}</div>
     </div>
   )
 }

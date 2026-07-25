@@ -178,7 +178,8 @@
 }
 
 :root {
-  /* Shift these together — moving one alone collides with its neighbour. */
+  /* Shift these together — moving one alone collides with its neighbour. A third light-mode
+     ramp shadows these on the auth pages — re-solve `.auth-surface` too whenever this moves. */
   --background: oklch(0.943 0.005 265);
   --foreground: oklch(0.365 0.006 265);
   /* Large text (text-2xl+) — lighter so 36px numerals don't out-weigh their own labels. */
@@ -337,20 +338,53 @@
   --chart-scale-pattern-color: oklch(0.145 0 0);
 }
 
+/* Auth surface (sign-in, magic-link, demo) — light mode only, a third ground shadowing :root.
+   The canvas is tuned to be read in fragments between tiles; a full-screen field of it, with
+   nothing lighter beside it, reads as gray paper. The ten tokens below are re-solved against
+   the new ground and hold the app's ratios to within 0.01 — re-solve them whenever :root moves.
+   `color` is re-anchored too: overriding --foreground only reaches elements that resolve it, and
+   Label/Input set no colour class, so without this they inherit :root ink and land a step dark.
+   Deliberately NOT re-solved: --popover, --secondary/--muted/--accent, --ring. Nothing on these
+   pages uses them; --popover at 0.958 is *darker* than this ground, so a popover added here
+   would invert the elevation ramp. Re-solve them at that point. */
+:root:not(.dark) .auth-surface {
+  --background: oklch(0.985 0.002 265);
+  --card: oklch(0.998 0.002 265);
+  --foreground: oklch(0.395 0.006 265);
+  --display-foreground: oklch(0.438 0.006 265);
+  --muted-foreground: oklch(0.519 0.008 265);
+  --faint: oklch(0.642 0.008 265);
+  --link: oklch(0.484 0.18 265);
+  --negative: oklch(0.491 0.14 25);
+  --border: oklch(0.916 0.006 265);
+  --input: oklch(0.916 0.006 265);
+  color: var(--foreground);
+}
+
 /* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */
 .live-visitor-marker:hover {
   z-index: 30 !important;
 }
 
-/* Sign-in card wall — each column renders the deck twice, so translating -50% loops seamlessly.
-   Cards carry their own bottom margin rather than a flex gap on the track: a gap adds one extra
-   space the doubled list doesn't repeat, which puts the loop point off by that much and jumps. */
+/* GIS exposes no radius prop — `shape` only offers its own 4px or a full pill — and its class
+   names are obfuscated, so role=button is the one stable hook. overflow clips the hover overlay,
+   which GIS draws square at inset 0. Unlayered on purpose: GIS injects its own unlayered styles.
+   If GIS ever renders a second role=button (One Tap, FedCM) this silently stops applying. */
+.google-signin-button [role="button"] {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Sign-in card wall — each column renders the deck --wall-copies times and scrolls by exactly
+   one copy, so the loop distance has to track the count (set from the TSX) rather than a literal.
+   Cards carry their own bottom margin rather than a flex gap on the track: N cards yield 2N-1
+   gaps where the repeating unit needs 2N, so -50% lands half a gap short and jumps. */
 @keyframes signin-wall-drift {
   from {
     transform: translateY(0);
   }
   to {
-    transform: translateY(-50%);
+    transform: translateY(calc(-100% / var(--wall-copies)));
   }
 }
 

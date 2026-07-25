@@ -1,18 +1,22 @@
 import { useAtomValue } from 'jotai'
-import { Fragment, type ReactNode } from 'react'
+import { type CSSProperties, Fragment, memo, type ReactNode } from 'react'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
-import { getSeriesColor } from '@/lib/event-colors'
+import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 
 // Decorative stand-ins for real dashboard tiles — hand-drawn SVG, never the vendored charts:
 // this sits behind a rotation at low contrast, so it must not pull in a chart runtime or any data.
 
-const sparkPath = (points: number[], w = 104, h = 30) => {
+// Must match the viewBox on the <svg> that renders the path.
+const SPARK_W = 104
+const SPARK_H = 30
+
+const sparkPath = (points: number[]) => {
   const min = Math.min(...points)
   const span = Math.max(...points) - min || 1
   return points
     .map(
       (p, i) =>
-        `${i ? 'L' : 'M'}${((i / (points.length - 1)) * w).toFixed(1)} ${(h - ((p - min) / span) * h).toFixed(1)}`,
+        `${i ? 'L' : 'M'}${((i / (points.length - 1)) * SPARK_W).toFixed(1)} ${(SPARK_H - ((p - min) / span) * SPARK_H).toFixed(1)}`,
     )
     .join(' ')
 }
@@ -54,25 +58,25 @@ const TrendCard = ({
           {delta}
         </span>
       </div>
-      <svg viewBox="0 0 104 30" preserveAspectRatio="none" className="mt-2 h-8 w-full" aria-hidden>
-        <path d={`${line} L104 30 L0 30 Z`} fill={c.fill} />
+      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} preserveAspectRatio="none" className="mt-2 h-8 w-full" aria-hidden>
+        <path d={`${line} L${SPARK_W} ${SPARK_H} L0 ${SPARK_H} Z`} fill={c.fill} />
         <path d={line} fill="none" stroke={c.line} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </Shell>
   )
 }
 
-const FunnelCard = ({ label, steps }: { label: string; steps: { name: string; pct: number }[] }) => {
+const FunnelCard = ({ label, steps }: { label: string; steps: number[] }) => {
   const c = getSeriesColor('checkout_started')
   return (
     <Shell>
       <Kicker>Funnel</Kicker>
       <p className="mt-1 mb-2 text-sm text-foreground">{label}</p>
       <div className="space-y-1.5">
-        {steps.map(s => (
-          <div key={s.name} className="flex items-center gap-2">
-            <div className="h-3 rounded-sm" style={{ width: `${s.pct}%`, backgroundColor: c.line, opacity: 0.75 }} />
-            <span className="text-xs text-muted-foreground tabular-nums">{s.pct}%</span>
+        {steps.map((pct, i) => (
+          <div key={`${i}-${pct}`} className="flex items-center gap-2">
+            <div className="h-3 rounded-sm" style={{ width: `${pct}%`, backgroundColor: c.line, opacity: 0.75 }} />
+            <span className="text-xs text-muted-foreground tabular-nums">{pct}%</span>
           </div>
         ))}
       </div>
@@ -100,7 +104,9 @@ const TopKCard = ({ label, rows }: { label: string; rows: { name: string; pct: n
     <p className="mt-1 mb-2 text-sm text-foreground">{label}</p>
     <div className="space-y-1.5">
       {rows.map((r, i) => {
-        const c = getSeriesColor(r.name, i)
+        // Indexed, not name-based: breakdown values carry no semantic identity, and these three
+        // hash to one bucket in the fallback palette (CLAUDE.md names this exact trio).
+        const c = getIndexedColor(i)
         return (
           <div key={r.name} className="relative flex items-center justify-between rounded-sm px-1.5 py-0.5">
             <div
@@ -147,7 +153,9 @@ const EventCard = ({
 }
 
 // One deck; each column takes it at a different rotation so no two columns read alike.
-const DECK = [
+// Built per render, not hoisted: a hoisted element is referentially stable, so React bails out
+// of re-rendering it and the inline getSeriesColor() fills freeze on a theme toggle.
+const buildDeck = () => [
   <TrendCard
     key="t1"
     event="signup"
@@ -157,16 +165,7 @@ const DECK = [
     points={[8, 11, 9, 14, 13, 18, 17, 23, 26]}
   />,
   <EventCard key="e1" event="page_view" property="$browser" value="Chrome" time="2m ago" />,
-  <FunnelCard
-    key="f1"
-    label="Checkout"
-    steps={[
-      { name: 'view', pct: 100 },
-      { name: 'cart', pct: 62 },
-      { name: 'pay', pct: 38 },
-      { name: 'done', pct: 24 },
-    ]}
-  />,
+  <FunnelCard key="f1" label="Checkout" steps={[100, 62, 38, 24]} />,
   <EventCard key="e2" event="checkout_completed" property="$os" value="iOS" time="5m ago" />,
   <RetentionCard
     key="r1"
@@ -201,24 +200,30 @@ const DECK = [
   />,
 ]
 
-const rotateDeck = (offset: number) => [...DECK.slice(offset), ...DECK.slice(0, offset)]
+// Each column renders the deck COPIES times and the track scrolls by exactly one copy, so the
+// loop is seamless only while one copy is taller than the column. A copy is ~1325px and the
+// column is 150vh, so 2 copies drained visibly above a ~883px window; 3 clears any real display.
+const COPIES = [0, 1, 2]
 
 // Slow and desynchronised — this is a background, so nothing should read as busy.
-// Five columns: rotating -35° needs about 1100px of wall to cover a half-viewport panel's
-// corners, and four at this width don't reach it.
+// Five columns: at 1440x900, rotating -35° needs ~1100px of wall to cover the panel's corners,
+// which four at this width don't reach. Wider viewports need more; the edge fade covers the rest.
 const COLUMNS = [
-  { offset: 0, duration: '84s', delay: '0s', reverse: false },
-  { offset: 2, duration: '68s', delay: '-19s', reverse: true },
-  { offset: 4, duration: '96s', delay: '-8s', reverse: false },
-  { offset: 6, duration: '74s', delay: '-31s', reverse: true },
-  { offset: 8, duration: '88s', delay: '-44s', reverse: false },
+  { offset: 0, duration: '84s', delay: '0s', direction: 'normal' },
+  { offset: 2, duration: '68s', delay: '-19s', direction: 'reverse' },
+  { offset: 4, duration: '96s', delay: '-8s', direction: 'normal' },
+  { offset: 6, duration: '74s', delay: '-31s', direction: 'reverse' },
+  { offset: 8, duration: '88s', delay: '-44s', direction: 'normal' },
 ]
 
-export const SignInWall = () => {
+// memo: this is an unmemoized child of SignIn, so without it every keystroke-free form
+// interaction re-renders 150 cards. The theme subscription below still re-renders it on toggle.
+export const SignInWall = memo(() => {
   // Subscribing to the theme is what re-renders the deck on toggle, so the inline
   // getSeriesColor() fills re-resolve; the glow also wants more presence on dark.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const glow = resolvedTheme === 'dark' ? '22%' : '14%'
+  const deck = buildDeck()
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
@@ -233,20 +238,23 @@ export const SignInWall = () => {
       <div className="absolute inset-0 flex items-center justify-center [transform:rotate(-35deg)_scale(1.25)]">
         <div className="flex gap-4">
           {COLUMNS.map(col => {
-            const cards = rotateDeck(col.offset)
+            const cards = [...deck.slice(col.offset), ...deck.slice(0, col.offset)]
             return (
               <div key={col.offset} className="h-[150vh] w-[192px] overflow-hidden">
                 <div
                   className="signin-wall-track flex flex-col"
-                  style={{
-                    animationDuration: col.duration,
-                    animationDelay: col.delay,
-                    animationDirection: col.reverse ? 'reverse' : 'normal',
-                  }}
+                  style={
+                    {
+                      animationDuration: col.duration,
+                      animationDelay: col.delay,
+                      animationDirection: col.direction,
+                      // The keyframe scrolls by one copy: calc(-100% / copies). Kept in CSS so the
+                      // count and the loop distance can't drift apart.
+                      '--wall-copies': COPIES.length,
+                    } as CSSProperties
+                  }
                 >
-                  {/* Two copies, each in its own keyed fragment — rendered as bare siblings the
-                      deck's keys would collide across the pair. */}
-                  {[0, 1].map(copy => (
+                  {COPIES.map(copy => (
                     <Fragment key={copy}>{cards}</Fragment>
                   ))}
                 </div>
@@ -256,10 +264,8 @@ export const SignInWall = () => {
         </div>
       </div>
 
-      {/* Fade every edge into the canvas so the wall has no seam with the form column. Each
-          edge holds fully opaque for a band before it ramps: starting the ramp at the container
-          edge leaves the glow part-masked exactly there, which reads as a crisp vertical line
-          against the form half. */}
+      {/* Each edge holds opaque for a band before it ramps: starting the ramp at the container
+          edge leaves the glow part-masked there, which reads as a crisp line against the form. */}
       <div
         className="absolute inset-0"
         style={{
@@ -269,4 +275,5 @@ export const SignInWall = () => {
       />
     </div>
   )
-}
+})
+SignInWall.displayName = 'SignInWall'
