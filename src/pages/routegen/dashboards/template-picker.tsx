@@ -46,7 +46,7 @@ export const InlineTemplatePicker = ({ onSelect, onCancel, context }: InlineTemp
                       key={template.id}
                       type="button"
                       onClick={() => onSelect(template)}
-                      className="flex items-start gap-3 rounded-lg border border-border/60 bg-background p-3 text-left transition-colors hover:border-border hover:bg-muted/40"
+                      className="flex items-start gap-3 rounded-lg border border-border/60 bg-card p-3 text-left transition-colors hover:border-border hover:bg-muted"
                     >
                       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
                         <Icon className="size-4" />

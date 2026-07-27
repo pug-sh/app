@@ -36,7 +36,7 @@ const CopyButton = ({ value }: { value: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div>
-    <p className="text-2xl font-medium tabular-nums text-display-foreground">{value.toLocaleString()}</p>
+    <p className="text-2xl tabular-nums">{value.toLocaleString()}</p>
     <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
   </div>
 )
@@ -91,9 +91,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
             </span>
           </div>
           <div className="min-w-0 space-y-1">
-            <span className={cn('block truncate text-xl font-medium', identity.isFallback && 'font-mono')}>
-              {identity.name}
-            </span>
+            <span className={cn('block truncate text-xl', identity.isFallback && 'font-mono')}>{identity.name}</span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               {profile.externalId && profile.externalId !== identity.name && (
                 <span className="group flex min-w-0 items-center gap-1.5">

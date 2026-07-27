@@ -514,34 +514,38 @@ const Insights = () => {
         </div>
       </div>
 
-      <InsightsContent
-        error={error}
-        retry={retry}
-        unknownResultCase={unknownResultCase}
-        resultCase={result.case}
-        resultSeriesCount={resultSeriesCount}
-        isRetention={isRetention}
-        isTrends={isTrends}
-        hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
-        chartData={chartData}
-        seriesNames={seriesNames}
-        seriesColors={seriesColors}
-        seriesAggregations={seriesAggregations}
-        viewMode={viewMode}
-        granularity={granularity}
-        breakdowns={breakdowns}
-        breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
-        retentionSeriesList={retentionSeriesList}
-        retentionLabels={retentionLabels}
-        retentionCohorts={retentionCohorts}
-        funnelSeriesData={funnelSeriesData}
-        isTopK={isTopK}
-        topKRows={topKRows}
-        topKDimension={topK.dimension}
-        topKMetric={topK.metric}
-        topKOmitOthers={topK.omitOthers}
-        topKIncompleteReason={topKIncomplete}
-      />
+      {/* Same tile shell as the overview and dashboard tiles — the chart is the page's one
+          object, so it sits on the elevated surface rather than flush on the canvas. */}
+      <div className="rounded-lg border border-border/60 bg-card p-4">
+        <InsightsContent
+          error={error}
+          retry={retry}
+          unknownResultCase={unknownResultCase}
+          resultCase={result.case}
+          resultSeriesCount={resultSeriesCount}
+          isRetention={isRetention}
+          isTrends={isTrends}
+          hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
+          chartData={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          seriesAggregations={seriesAggregations}
+          viewMode={viewMode}
+          granularity={granularity}
+          breakdowns={breakdowns}
+          breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
+          retentionSeriesList={retentionSeriesList}
+          retentionLabels={retentionLabels}
+          retentionCohorts={retentionCohorts}
+          funnelSeriesData={funnelSeriesData}
+          isTopK={isTopK}
+          topKRows={topKRows}
+          topKDimension={topK.dimension}
+          topKMetric={topK.metric}
+          topKOmitOthers={topK.omitOthers}
+          topKIncompleteReason={topKIncomplete}
+        />
+      </div>
     </Page>
   )
 }

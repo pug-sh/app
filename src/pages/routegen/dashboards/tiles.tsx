@@ -50,7 +50,7 @@ export const TileShell = ({
     <div
       className={[
         'group relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg p-4',
-        borderless ? '' : 'border border-border/60 bg-background',
+        borderless ? '' : 'border border-border/60 bg-card',
       ].join(' ')}
     >
       {accent ? (
@@ -65,11 +65,7 @@ export const TileShell = ({
         <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
           {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
           <div className="min-w-0 flex-1">
-            <h3
-              className={
-                isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base font-medium'
-              }
-            >
+            <h3 className={isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base'}>
               {tile.displayName}
             </h3>
             {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}

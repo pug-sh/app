@@ -213,9 +213,7 @@ const AppSidebar = () => {
                   <span className="truncate text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     {activeOrg?.displayName ?? 'Workspace'}
                   </span>
-                  <span className="truncate font-medium text-foreground">
-                    {activeProject?.displayName ?? 'Select project'}
-                  </span>
+                  <span className="truncate text-foreground">{activeProject?.displayName ?? 'Select project'}</span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
               </PopoverTrigger>
