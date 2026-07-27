@@ -51,10 +51,10 @@ const SelectOrg = () => {
         <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
           <div className="flex items-center gap-3">
             <img src="/logo.svg" alt="" className="w-10 h-10" />
-            <span className="text-xl font-medium tracking-tight">Pug</span>
+            <span className="text-xl tracking-tight">Pug</span>
           </div>
           <div className="max-w-sm">
-            <p className="text-3xl font-medium leading-tight tracking-tight text-display-foreground">
+            <p className="text-3xl leading-tight tracking-tight">
               Pick where to
               <br />
               get started.
@@ -80,7 +80,7 @@ const SelectOrg = () => {
             <span className="text-lg font-medium tracking-tight">Pug</span>
           </div>
 
-          <h1 className="text-2xl font-medium tracking-tight text-display-foreground">Choose an organization</h1>
+          <h1 className="text-2xl tracking-tight">Choose an organization</h1>
           <p className="text-sm text-muted-foreground mt-1.5 mb-8">You belong to several. Pick one to continue.</p>
 
           <div className="flex items-center gap-2 mb-2">

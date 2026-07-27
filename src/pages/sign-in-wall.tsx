@@ -53,7 +53,7 @@ const TrendCard = ({
       <Kicker>Trends</Kicker>
       <p className="mt-1 text-sm text-foreground">{label}</p>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className="text-lg text-display-foreground tabular-nums">{value}</span>
+        <span className="text-lg tabular-nums">{value}</span>
         <span className="text-xs tabular-nums" style={{ color: c.line }}>
           {delta}
         </span>

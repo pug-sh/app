@@ -62,12 +62,10 @@ export const DashboardHeader = ({
           onChange={next => onPatchMeta({ displayName: next })}
           placeholder={UNTITLED_DASHBOARD_NAME}
           autoFocus={autoFocusName}
-          className="min-h-12 flex-1 text-3xl font-medium tracking-tight outline-hidden text-display-foreground"
+          className="min-h-12 flex-1 text-3xl tracking-tight outline-hidden"
         />
       ) : (
-        <h1 className="min-h-12 text-3xl font-medium tracking-tight text-display-foreground">
-          {dashboard.displayName || UNTITLED_DASHBOARD_NAME}
-        </h1>
+        <h1 className="min-h-12 text-3xl tracking-tight">{dashboard.displayName || UNTITLED_DASHBOARD_NAME}</h1>
       )}
       {editing ? (
         <InlineEditableText

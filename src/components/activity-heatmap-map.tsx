@@ -26,18 +26,18 @@ const opacityForValue = (value: number, min: number, max: number) => {
   return 0.16 + t * 0.74
 }
 
-const fillColorExpr = (primary: string, muted: string): ExpressionSpecification => [
+const fillColorExpr = (dataHue: string, muted: string): ExpressionSpecification => [
   'case',
   ['boolean', ['feature-state', 'hasData'], false],
-  primary,
+  dataHue,
   muted,
 ]
 
 // Selected countries get a bold accent outline; everything else the faint neutral border.
-const lineColorExpr = (primary: string, border: string): ExpressionSpecification => [
+const lineColorExpr = (dataHue: string, border: string): ExpressionSpecification => [
   'case',
   ['boolean', ['feature-state', 'selected'], false],
-  primary,
+  dataHue,
   border,
 ]
 
@@ -91,14 +91,14 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
     const map = mapRef.current
     if (!map || !ready || !worldCountries) return
 
-    const { primary, mutedForeground, border } = resolveThemeColors()
+    const { dataHue, mutedForeground, border } = resolveThemeColors()
     map.addSource(SOURCE, { type: 'geojson', data: worldCountries })
     map.addLayer({
       id: FILL_LAYER,
       type: 'fill',
       source: SOURCE,
       paint: {
-        'fill-color': fillColorExpr(primary, mutedForeground),
+        'fill-color': fillColorExpr(dataHue, mutedForeground),
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'hasData'], false],
@@ -112,7 +112,7 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
       type: 'line',
       source: SOURCE,
       paint: {
-        'line-color': lineColorExpr(primary, border),
+        'line-color': lineColorExpr(dataHue, border),
         'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 2, 0.5],
         'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0.35],
       },
@@ -183,9 +183,9 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready || !map.getLayer(FILL_LAYER)) return
-    const { primary, mutedForeground, border } = resolveThemeColors()
-    map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(primary, mutedForeground))
-    map.setPaintProperty(LINE_LAYER, 'line-color', lineColorExpr(primary, border))
+    const { dataHue, mutedForeground, border } = resolveThemeColors()
+    map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(dataHue, mutedForeground))
+    map.setPaintProperty(LINE_LAYER, 'line-color', lineColorExpr(dataHue, border))
   }, [dark, ready, mapRef, worldCountries])
 
   // Keep the canvas sized to the container.

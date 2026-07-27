@@ -131,7 +131,7 @@ const SignIn = () => {
           <div className="w-full max-w-sm">
             <div className="mb-8 flex items-center justify-center gap-2.5">
               <img src="/logo.svg" alt="" className="h-8 w-8" />
-              <span className="text-lg font-medium tracking-tight text-display-foreground">Pug</span>
+              <span className="text-lg font-medium tracking-tight">Pug</span>
             </div>
 
             {magicLinkEmail ? (
@@ -139,7 +139,7 @@ const SignIn = () => {
                 <div className="mx-auto mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                   <MailCheck className="h-5 w-5 text-link" />
                 </div>
-                <h1 className="text-2xl font-medium tracking-tight text-display-foreground">Check your inbox</h1>
+                <h1 className="text-2xl tracking-tight">Check your inbox</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   We sent a sign-in link to{' '}
                   <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>. Click it to continue
@@ -158,9 +158,7 @@ const SignIn = () => {
               </div>
             ) : (
               <>
-                <h1 className="text-center text-3xl font-medium tracking-tight text-display-foreground">
-                  {copy.title}
-                </h1>
+                <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>
                 <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
                 {googleOAuthEnabled && (

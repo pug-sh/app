@@ -4,7 +4,7 @@ import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashb
 import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { cn } from '@/lib/utils'
 import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from '../insights/helpers'
-import { accentTextClass, toneTextClass } from './accent-palette'
+import { toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
 export type KpiCompare = { series: TrendSeries[]; label: string } | { error: true; label: string }
@@ -71,8 +71,8 @@ export const DeltaBadge = ({
         'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
         'font-medium',
         good
-          ? 'bg-success/15 text-positive dark:bg-success/20'
-          : 'bg-destructive/15 text-negative dark:bg-destructive/20',
+          ? 'bg-success/15 text-positive dark:bg-success/10'
+          : 'bg-destructive/15 text-negative dark:bg-destructive/10',
       )}
     >
       <Icon className="size-3" strokeWidth={2.5} aria-hidden />
@@ -97,7 +97,9 @@ export const KpiTile = ({
   )
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
 
-  const numberColor = tone === null ? accentTextClass(tile.header?.accentColor ?? '') : toneTextClass(tone)
+  // No threshold tone → body ink. The accent strip is the affordance for the header's chosen
+  // color, so data state (tone) stays the only thing that recolors the number.
+  const numberColor = tone === null ? undefined : toneTextClass(tone)
   const delta = prior !== undefined ? formatDelta(current, prior) : null
 
   const sparkPoints = useMemo(() => currentSeries[0]?.points ?? [], [currentSeries])
@@ -126,13 +128,7 @@ export const KpiTile = ({
 
   const summary = (
     <div className="space-y-2">
-      <div
-        className={cn(
-          'tracking-tight tabular-nums',
-          lightMetric ? 'text-4xl font-medium' : 'text-3xl font-bold',
-          numberColor,
-        )}
-      >
+      <div className={cn('tracking-tight tabular-nums', lightMetric ? 'text-4xl' : 'text-3xl', numberColor)}>
         {formatValue(current)}
       </div>
       {compareRow}

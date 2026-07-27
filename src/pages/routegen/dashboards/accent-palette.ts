@@ -27,11 +27,6 @@ export const accentStripClass = (token: string): string => {
   }
 }
 
-// Default big-number color when no threshold tone applies; the accent strip is
-// the affordance for the header's chosen color, the number stays neutral so
-// data state (via tone) and config (via accent) read distinctly.
-export const accentTextClass = (_token: string): string => 'text-display-foreground'
-
 export const toneTextClass = (tone: ThresholdRule_Tone): string => {
   switch (tone) {
     case ThresholdRule_Tone.GOOD:
@@ -43,7 +38,7 @@ export const toneTextClass = (tone: ThresholdRule_Tone): string => {
     case ThresholdRule_Tone.NEUTRAL:
       return 'text-muted-foreground'
     case ThresholdRule_Tone.UNSPECIFIED:
-      return 'text-display-foreground'
+      return 'text-foreground'
   }
 }
 

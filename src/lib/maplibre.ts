@@ -39,6 +39,11 @@ type ThemeColors = {
   primary: string
   border: string
   mutedForeground: string
+  // The choropleth's data hue. --chart-1, not --primary: they are the same colour in light, but
+  // --primary is a *fill* tuned to carry white button text, so in dark it stays deep — and a deep
+  // hue washed over a deep ground at the ramp's low opacities disappears into it. --chart-1 is
+  // the per-mode data band, lifted clear of the canvas in dark.
+  dataHue: string
 }
 
 // MapLibre paint properties accept concrete color strings only — they can't read CSS `var()`,
@@ -71,5 +76,6 @@ export const resolveThemeColors = (): ThemeColors => {
     primary: readVar(styles, '--primary'),
     border: readVar(styles, '--border'),
     mutedForeground: readVar(styles, '--muted-foreground'),
+    dataHue: readVar(styles, '--chart-1'),
   }
 }

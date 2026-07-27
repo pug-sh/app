@@ -66,7 +66,7 @@ export const WebStatTile = ({
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
     return (
-      <div className="flex h-[9.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-background px-4 py-3 text-left">
+      <div className="flex h-[9.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-card px-4 py-3 text-left">
         <span className="truncate text-sm font-medium text-muted-foreground">{stat.label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
           <span className="text-xs text-muted-foreground" title={error}>
@@ -101,8 +101,8 @@ export const WebStatTile = ({
       className={cn(
         'flex h-[9.5rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
         selected
-          ? 'border-primary/50 bg-primary/[0.04]'
-          : 'border-border/60 bg-background hover:border-border hover:bg-muted/20',
+          ? 'border-primary/50 bg-primary/[0.07]'
+          : 'border-border/60 bg-card hover:border-border hover:bg-accent/40',
       )}
     >
       {/* Label with the delta badge pinned to the top-right; big number below. min-h reserves the badge
@@ -113,7 +113,7 @@ export const WebStatTile = ({
       </div>
       <span
         className={cn(
-          'mt-1 text-4xl font-medium tracking-tight tabular-nums text-display-foreground',
+          'mt-1 text-4xl tracking-tight tabular-nums',
           loading && value === undefined && 'animate-pulse opacity-40',
         )}
       >

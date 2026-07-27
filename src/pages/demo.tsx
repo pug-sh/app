@@ -64,7 +64,7 @@ const Demo = () => {
       <AuthShell>
         <div className="text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-medium tracking-tight mb-1">Demo unavailable</h1>
+          <h1 className="text-lg tracking-tight mb-1">Demo unavailable</h1>
           <p className="text-sm text-muted-foreground mb-6">{error}</p>
           <button
             type="button"
@@ -82,7 +82,7 @@ const Demo = () => {
   if (authenticated && !isDemo) {
     return (
       <AuthShell>
-        <h1 className="text-2xl font-medium tracking-tight text-display-foreground">View the live demo?</h1>
+        <h1 className="text-2xl tracking-tight">View the live demo?</h1>
         <p className="text-sm text-muted-foreground mt-1.5 mb-6">
           You're signed in. Viewing the read-only demo will sign you out of your account on this device.
         </p>

@@ -1,9 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource-variable/figtree";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -42,11 +41,10 @@
   --radius-xl: 1rem;
 
   --font-sans: "Figtree Variable", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
-  /* font-medium renders at 400 — Figtree's real 500 reads heavy at our sizes. */
-  --font-weight-medium: 400;
-  --color-display-foreground: var(--display-foreground);
+  /* Three weights carry the whole hierarchy: 400 body, 500 labels, 600 titles + hero numerals. */
+  --font-weight-medium: 500;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -102,12 +100,47 @@
     @apply font-sans;
   }
 
+  /* Headings carry no weight of their own — size, ink and tracking do the work. Weight is
+     reserved for labels/controls (font-medium at 500), which is the one place it reads as
+     emphasis rather than heft. */
   h1,
   h2,
   h3 {
     font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: -0.014em;
+  }
+
+  /* Big numerals need *some* negative tracking — text spacing is drawn for 14px, not a 36px
+     figure — but only enough to close the gaps, or an airy face stops being one. */
+  .text-3xl,
+  .text-4xl,
+  .text-5xl {
+    letter-spacing: -0.018em;
+  }
+
+  /* Display sizes come back down to 400: weight that reads as emphasis at 14px reads as heft at
+     24px+, and size is already carrying the emphasis. Utilities beat @layer base, so a weight class
+     at the call site still wins — the display sites deliberately set none. */
+  .text-xl,
+  .text-2xl,
+  .text-3xl,
+  .text-4xl,
+  .text-5xl {
+    font-weight: 400;
+  }
+
+  /* Markdown headings follow the same rule. */
+  .markdown-body :is(h1, h2, h3) {
+    font-weight: 400;
+  }
+
+  /* <strong>/<b> take the label weight instead of the UA's 700 — the only emphasis weight this
+     system has. Nothing in app code emits them; they arrive from markdown (snarkdown turns
+     `**x**` into <strong>), which is why the UA default was the last bold left on screen. */
+  strong,
+  b {
     font-weight: 500;
-    letter-spacing: -0.013em;
   }
 
   /* Tailwind v4 makes <button> cursor:default (shadcn/ui#6843); this app wants the pointer. */
@@ -121,7 +154,7 @@
   .markdown-body h1,
   .markdown-body h2,
   .markdown-body h3 {
-    @apply mb-2 font-medium tracking-tight text-foreground;
+    @apply mb-2 tracking-tight text-foreground;
   }
 
   .markdown-body h1 {
@@ -182,8 +215,6 @@
      ramp shadows these on the auth pages — re-solve `.auth-surface` too whenever this moves. */
   --background: oklch(0.943 0.005 265);
   --foreground: oklch(0.365 0.006 265);
-  /* Large text (text-2xl+) — lighter so 36px numerals don't out-weigh their own labels. */
-  --display-foreground: oklch(0.409 0.006 265);
   --card: oklch(0.958 0.004 265);
   --card-foreground: oklch(0.365 0.006 265);
   --popover: oklch(0.958 0.004 265);
@@ -258,89 +289,97 @@
 }
 
 .dark {
-  /* Ground sits deep — parking the band mid-scale is what read as washed out. Spacing
-     stays wide: a contrast RATIO is a fraction, so near black light's 1.05:1 step is ~26x
-     less actual luminance and vanishes. Dark needs its own spacing, not light's. */
-  --background: oklch(0.19 0.006 265);
-  --foreground: oklch(0.773 0.003 265);
-  --display-foreground: oklch(0.722 0.003 265);
-  --card: oklch(0.222 0.007 265);
-  --card-foreground: oklch(0.773 0.003 265);
-  --popover: oklch(0.242 0.008 265);
-  --popover-foreground: oklch(0.773 0.003 265);
+  /* Solved against light with APCA, not WCAG. WCAG is polarity-blind: matching it across modes
+     scored both at 9:1 while dark measured 22–32 Lc *below* light on every ink tier, which is the
+     "washed out" everyone kept re-reporting. The ink ladder below hits light's APCA at the top and
+     widens as it descends — a bright top used sparingly, not a bright screen.
+
+     Ground is an ink blue-black, not a grey: chroma rides up as lightness comes down so the deep
+     surfaces read as a material. Ink stays near-neutral so text never takes the cast. */
+  /* EXPERIMENT: canvas pinned to the card tone — one flat plane, regions defined by hairlines
+     rather than by elevation. Revert to 0.175 0.014 to restore the elevated look. */
+  --background: oklch(0.215 0.013 265);
+  --foreground: oklch(0.818 0.004 265);
+  --card: oklch(0.215 0.013 265);
+  --card-foreground: oklch(0.818 0.004 265);
+  --popover: oklch(0.242 0.013 265);
+  --popover-foreground: oklch(0.818 0.004 265);
 
   /* actions */
-  --primary: oklch(0.54 0.16 265); /* deeper + saturated: white text clears AA */
-  --primary-foreground: oklch(0.96 0.005 265);
-  --link: oklch(0.685 0.15 265);
+  --primary: oklch(0.55 0.175 265); /* deep + saturated: white text clears AA */
+  --primary-foreground: oklch(0.985 0.005 265);
+  --link: oklch(0.685 0.135 265);
   /* The floor is --accent keeping its gap over --popover: menu-item hovers render on
      popovers, and closing it further makes them invisible. */
-  --secondary: oklch(0.249 0.009 265);
-  --secondary-foreground: oklch(0.736 0.005 265);
-  --muted: oklch(0.256 0.01 265);
-  /* Don't lift toward the body colour to "fix" contrast — that re-flattens the hierarchy. */
-  --muted-foreground: oklch(0.64 0.006 265);
-  --faint: oklch(0.509 0.006 265);
-  --accent: oklch(0.268 0.012 265);
+  --secondary: oklch(0.252 0.014 265);
+  --secondary-foreground: oklch(0.779 0.005 265);
+  --muted: oklch(0.252 0.014 265);
+  --muted-foreground: oklch(0.709 0.006 265);
+  --faint: oklch(0.605 0.007 265);
+  --accent: oklch(0.285 0.016 265);
   /* Capped below --foreground: solving it flat pushes chip ink past body ink. */
-  --accent-foreground: oklch(0.736 0.005 265);
+  --accent-foreground: oklch(0.779 0.005 265);
 
   /* semantic */
-  --destructive: oklch(0.54 0.18 25); /* deeper + saturated: white text clears AA */
-  --destructive-foreground: oklch(0.96 0.005 25);
-  --success: oklch(0.62 0.14 145);
-  --warning: oklch(0.72 0.12 70);
-  /* Text tier — see :root. Solved against every ground these land on, including a
-     15%/20% tint of their own fill, which is the worst case. */
-  --positive: oklch(0.676 0.16 145);
-  --caution: oklch(0.688 0.16 70);
-  --negative: oklch(0.701 0.16 25);
+  --destructive: oklch(0.55 0.175 25); /* deep + saturated: white text clears AA */
+  --destructive-foreground: oklch(0.985 0.005 25);
+  --success: oklch(0.62 0.15 145);
+  --warning: oklch(0.72 0.14 70);
+  /* Text tier — see :root. Seated at the secondary rung on purpose: a delta badge is a footnote
+     to its number, and body ink now sits above it, so it can't be the loudest thing. Chroma is
+     held well under the fills' — against a near-grayscale UI a saturated hue shouts on colour
+     alone, at any lightness, and five red pills in a KPI row is the whole page's attention. */
+  --positive: oklch(0.71 0.1 145);
+  --caution: oklch(0.72 0.1 70);
+  --negative: oklch(0.7 0.1 25);
 
   /* --border is translucent so it takes the tint of whatever surface it sits on. Keep
-     alpha at 0.20 — call sites dim it further with border-border/30..70. --input stays
+     alpha low — call sites dim it further with border-border/30..70. --input stays
      SOLID: form controls use dark:bg-input/30, and /NN multiplies alpha away. */
-  --border: oklch(0.62 0.02 265 / 0.2);
-  --input: oklch(0.249 0.009 265);
-  --ring: oklch(0.62 0.12 265);
+  --border: oklch(0.68 0.022 265 / 0.22);
+  --input: oklch(0.252 0.014 265);
+  --ring: oklch(0.62 0.15 265);
 
-  /* charts */
-  --chart-1: oklch(0.62 0.12 265);
-  --chart-2: oklch(0.62 0.14 145);
-  --chart-3: oklch(0.68 0.12 70);
-  --chart-4: oklch(0.58 0.1 330);
-  --chart-5: oklch(0.62 0.16 25);
+  /* Chart hues sit a rung below body ink — data reads as data, never as the loudest thing
+     on the page. Same band the JS series palette lifts into (lib/event-colors.ts). */
+  --chart-1: oklch(0.66 0.165 265);
+  --chart-2: oklch(0.672 0.16 145);
+  --chart-3: oklch(0.715 0.15 70);
+  --chart-4: oklch(0.65 0.15 330);
+  --chart-5: oklch(0.666 0.165 25);
 
   /* sidebar */
-  --sidebar: oklch(0.152 0.006 265);
-  --sidebar-foreground: oklch(0.755 0.005 265);
+  --sidebar: oklch(0.158 0.014 265);
+  --sidebar-foreground: oklch(0.8 0.005 265);
   /* Must match --primary — white text on it is sub-AA otherwise. */
-  --sidebar-primary: oklch(0.54 0.16 265);
-  --sidebar-primary-foreground: oklch(0.96 0.005 265);
+  --sidebar-primary: oklch(0.55 0.175 265);
+  --sidebar-primary-foreground: oklch(0.985 0.005 265);
   /* Seated on the sidebar, not pinned to --accent: the sidebar sits below the canvas
      while chips sit above, so one shared value made every nav hover the loudest step.
-     Held below --card so the active pill can never outshine content on the canvas. */
-  --sidebar-accent: oklch(0.199 0.012 265);
-  --sidebar-accent-foreground: oklch(0.736 0.005 265);
-  --sidebar-border: oklch(0.62 0.02 265 / 0.14);
-  --sidebar-ring: oklch(0.62 0.12 265);
+     Held below --card so the active pill can never outshine content on the canvas —
+     the active item is marked by its ink, not by a brighter fill. */
+  --sidebar-accent: oklch(0.205 0.016 265);
+  --sidebar-accent-foreground: oklch(0.86 0.004 265);
+  --sidebar-border: oklch(0.68 0.022 265 / 0.14);
+  --sidebar-ring: oklch(0.62 0.15 265);
   /* Only what genuinely differs per mode — the rest are :root aliases that track the
      theme; redeclaring one here pins it to light. */
-  --chart-crosshair: oklch(0.45 0 0);
-  --chart-marker-background: oklch(0.228 0.008 265);
-  --chart-marker-border: oklch(0.33 0.01 265);
-  --chart-marker-foreground: oklch(0.95 0 0);
+  --chart-crosshair: oklch(0.55 0.02 265);
+  --chart-marker-background: oklch(0.242 0.013 265);
+  --chart-marker-border: oklch(0.36 0.016 265);
+  --chart-marker-foreground: oklch(0.87 0.003 265);
   /* Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface. */
-  --chart-scale-01: oklch(0.225 0.03 270);
-  --chart-scale-02: oklch(0.34 0.04 270);
-  --chart-scale-03: oklch(0.45 0.05 270);
-  --chart-scale-04: oklch(0.56 0.06 270);
-  --chart-scale-05: oklch(0.68 0.07 270);
-  --chart-scale-pattern-color: oklch(0.145 0 0);
+  --chart-scale-01: oklch(0.205 0.028 265);
+  --chart-scale-02: oklch(0.32 0.055 265);
+  --chart-scale-03: oklch(0.44 0.08 265);
+  --chart-scale-04: oklch(0.56 0.105 265);
+  --chart-scale-05: oklch(0.7 0.13 265);
+  --chart-scale-pattern-color: oklch(0.2 0.012 265);
 }
 
 /* Auth surface (sign-in, magic-link, demo) — light mode only, a third ground shadowing :root.
    The canvas is tuned to be read in fragments between tiles; a full-screen field of it, with
-   nothing lighter beside it, reads as gray paper. The ten tokens below are re-solved against
+   nothing lighter beside it, reads as gray paper. The nine tokens below are re-solved against
    the new ground and hold the app's ratios to within 0.01 — re-solve them whenever :root moves.
    `color` is re-anchored too: overriding --foreground only reaches elements that resolve it, and
    Label/Input set no colour class, so without this they inherit :root ink and land a step dark.
@@ -351,7 +390,6 @@
   --background: oklch(0.985 0.002 265);
   --card: oklch(0.998 0.002 265);
   --foreground: oklch(0.395 0.006 265);
-  --display-foreground: oklch(0.438 0.006 265);
   --muted-foreground: oklch(0.519 0.008 265);
   --faint: oklch(0.642 0.008 265);
   --link: oklch(0.484 0.18 265);

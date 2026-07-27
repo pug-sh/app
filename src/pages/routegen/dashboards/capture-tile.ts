@@ -68,6 +68,9 @@ const loadImage = (src: string, width: number, height: number) =>
 // directly in the SVG as a base64 data: URL @font-face (an external url() would not
 // load inside an <img>-loaded SVG). One variable file covers every weight; the latin
 // subset is enough for tile text. Fetched and base64-encoded once, then cached.
+// Keep FONT_FAMILY, the import path and the font-weight range below in step with --font-sans
+// in index.css — each variable face declares its own axis range, and a wrong one renders the
+// export off-weight rather than failing.
 const FONT_FAMILY = 'Figtree Variable'
 const FONT_URL = figtreeWoff2
 let fontFaceCssPromise: Promise<string> | undefined
