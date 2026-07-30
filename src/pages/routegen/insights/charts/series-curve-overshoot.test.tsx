@@ -27,9 +27,10 @@ const seriesPathD = (container: HTMLElement) =>
     .map(p => p.getAttribute('d') ?? '')
     .join(' ')
 
-// Every y the path visits, control points included. happy-dom has no SVG geometry, so
-// read the numbers out of `d` — and a cubic is bounded by its control polygon, so if no
-// control point drops below the baseline the drawn curve can't either.
+// Every y the path visits, control points included — d3 comma-separates consecutive pairs,
+// so the `,` in the class is what picks up the 2nd and 3rd pair of each cubic. happy-dom has
+// no SVG geometry, so read them out of `d`; a cubic is bounded by its control polygon, so no
+// control point below the baseline means no drawn curve below it either.
 const pathYs = (d: string) => Array.from(d.matchAll(/[ML,C]\s*(-?[\d.]+),(-?[\d.]+)/g)).map(m => Number(m[2]))
 
 // The plot bottom is y(0): the y-range is [innerHeight, 0] over a domain pinned at 0.
@@ -71,6 +72,9 @@ describe('series curve', () => {
     expect(Math.max(...ys)).toBeLessThanOrEqual(plotBottom(container))
   }, 30_000)
 
+  // Not a regression for the line fix — Area's upstream default is already monotone, so this
+  // passes with or without the explicit prop. It guards the direction of travel: a re-add that
+  // flips that default would otherwise reintroduce the same bug on the area chart in silence.
   it('keeps an area series that touches 0 above the zero baseline', async () => {
     const { container } = render(
       <AreaChart
