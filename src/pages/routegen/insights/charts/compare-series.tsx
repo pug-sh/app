@@ -2,6 +2,7 @@ import { Area } from '@/components/charts/area'
 import { useChartStable, useYScale } from '@/components/charts/chart-context'
 import { Line } from '@/components/charts/line'
 import { DEFAULT_Y_AXIS_ID } from '@/components/charts/y-axis-scales'
+import { SERIES_CURVE } from './common'
 
 // The compare-vs-prior series, held back until the chart's y-scale has stopped moving.
 //
@@ -38,6 +39,7 @@ export function CompareArea({ dataKey, stroke, strokeWidth = 1.5 }: Props) {
 
   return (
     <Area
+      curve={SERIES_CURVE}
       dashFromIndex={0}
       dataKey={dataKey}
       fill={stroke}
@@ -61,6 +63,7 @@ export function CompareLine({ dataKey, stroke, strokeWidth = 1.5 }: Props) {
   return (
     <Line
       animate={false}
+      curve={SERIES_CURVE}
       dashFromIndex={0}
       dataKey={dataKey}
       fadeEdges={false}
