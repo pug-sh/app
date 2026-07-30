@@ -7,7 +7,7 @@ import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, useVendoredChartPrep } from './common'
+import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
 import { CompareArea } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -60,7 +60,13 @@ export const AreaChart = memo(function AreaChart({
         <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {seriesNames.map((_, si) => (
-          <Area key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} stroke={seriesColors[si]?.line} />
+          <Area
+            key={si}
+            curve={SERIES_CURVE}
+            dataKey={`series${si}`}
+            fill={seriesColors[si]?.line}
+            stroke={seriesColors[si]?.line}
+          />
         ))}
         {/* Last, to match the row order in the prep. compare-series.tsx says why not a bare Area. */}
         {comparison ? <CompareArea dataKey={COMPARE_KEY} stroke={comparison.color.line} /> : null}

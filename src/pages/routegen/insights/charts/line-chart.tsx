@@ -7,7 +7,7 @@ import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, useVendoredChartPrep } from './common'
+import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
 import { CompareLine } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -64,7 +64,14 @@ export const LineChart = memo(function LineChart({
             animate={false} opts out of the vendored point-morph tween, which strands
             the line off-plot on any data change — see line-data-change.test.tsx. */}
         {seriesNames.map((_, si) => (
-          <Line key={si} animate={false} dataKey={`series${si}`} fadeEdges={false} stroke={seriesColors[si]?.line} />
+          <Line
+            key={si}
+            animate={false}
+            curve={SERIES_CURVE}
+            dataKey={`series${si}`}
+            fadeEdges={false}
+            stroke={seriesColors[si]?.line}
+          />
         ))}
         {/* Last, to match the row order in the prep. compare-series.tsx says why not a bare Line. */}
         {comparison ? <CompareLine dataKey={COMPARE_KEY} stroke={comparison.color.line} /> : null}

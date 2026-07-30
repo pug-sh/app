@@ -1,8 +1,16 @@
+import { curveMonotoneX } from '@visx/curve'
 import { useCallback, useMemo } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
 import type { ChartPoint } from './types'
+
+// One curve for every series (line + area). Line defaults to curveNatural, whose spline
+// overshoots the data — and the vendored y-domain pads 10% at the top but pins the floor
+// at 0, so the overshoot is absorbed above and drawn below the axis: a 0/1 series dips to
+// -0.14, ~39px under the zero gridline. Monotone can't overshoot. It is already Area's
+// default; passing it there too keeps the two from drifting apart on a re-add.
+export const SERIES_CURVE = curveMonotoneX
 
 // The vendored charts default to a 40px margin on every side. Nothing draws in the
 // top one (the loading label is inset-0 centered), so it was pure dead space stacked
