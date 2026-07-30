@@ -5,11 +5,8 @@ import type { SeriesColor } from '@/lib/event-colors'
 import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
 import type { ChartPoint } from './types'
 
-// One curve for every series (line + area). Line defaults to curveNatural, whose spline
-// overshoots the data — and the vendored y-domain pads 10% at the top but pins the floor
-// at 0, so the overshoot is absorbed above and drawn below the axis: a 0/1 series dips to
-// -0.14, ~39px under the zero gridline. Monotone can't overshoot. It is already Area's
-// default; passing it there too keeps the two from drifting apart on a re-add.
+// Line defaults to curveNatural, which overshoots — and the y-domain pads the top but pins
+// the floor at 0, so a series touching 0 gets drawn below the axis. Monotone can't overshoot.
 export const SERIES_CURVE = curveMonotoneX
 
 // The vendored charts default to a 40px margin on every side. Nothing draws in the

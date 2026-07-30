@@ -14,8 +14,7 @@ vi.mock('@visx/responsive', () => ({
 
 const COLORS: SeriesColor[] = [{ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }]
 
-// The shape from the bug report: a sparse counter that sits at 0 for long stretches.
-// A natural spline needs a run of equal values next to a spike to overshoot visibly.
+// A natural spline needs a run of zeros next to a spike to overshoot visibly.
 const SPARSE: ChartPoint[] = Array.from({ length: 24 }, (_, i) => ({
   date: new Date(Date.UTC(2026, 6, 29, i)),
   values: [i === 0 || i === 20 || i === 23 ? 1 : 0],
@@ -27,15 +26,12 @@ const seriesPathD = (container: HTMLElement) =>
     .map(p => p.getAttribute('d') ?? '')
     .join(' ')
 
-// Every y the path visits, control points included — d3 comma-separates consecutive pairs,
-// so the `,` in the class is what picks up the 2nd and 3rd pair of each cubic. happy-dom has
-// no SVG geometry, so read them out of `d`; a cubic is bounded by its control polygon, so no
-// control point below the baseline means no drawn curve below it either.
+// Control points included: a cubic can't leave its control polygon. The `,` in the class is
+// what picks up the 2nd and 3rd pair of each cubic — d3 comma-separates them.
 const pathYs = (d: string) => Array.from(d.matchAll(/[ML,C]\s*(-?[\d.]+),(-?[\d.]+)/g)).map(m => Number(m[2]))
 
-// The plot bottom is y(0): the y-range is [innerHeight, 0] over a domain pinned at 0.
-// The grid's fade mask is sized to the plot, which is the one place innerHeight reaches
-// the DOM as a plain number.
+// y(0), since the range is [innerHeight, 0] over a domain pinned at 0. The grid's fade mask
+// is the one place innerHeight reaches the DOM as a number.
 const plotBottom = (container: HTMLElement) => {
   const rect = container.querySelector('mask rect')
   const height = Number(rect?.getAttribute('height'))
@@ -51,9 +47,6 @@ const settle = async (steps = 60) => {
   }
 }
 
-// The vendored Line defaults to curveNatural, which overshoots — and the y-domain pads
-// 10% above the max but pins the floor at 0, so the undershoot is the only half that
-// escapes the plot. Both wrappers pass SERIES_CURVE (monotone) instead.
 describe('series curve', () => {
   it('keeps a line series that touches 0 above the zero baseline', async () => {
     const { container } = render(
@@ -72,9 +65,7 @@ describe('series curve', () => {
     expect(Math.max(...ys)).toBeLessThanOrEqual(plotBottom(container))
   }, 30_000)
 
-  // Not a regression for the line fix — Area's upstream default is already monotone, so this
-  // passes with or without the explicit prop. It guards the direction of travel: a re-add that
-  // flips that default would otherwise reintroduce the same bug on the area chart in silence.
+  // Not a regression — Area already defaults to monotone. Guards a re-add flipping that.
   it('keeps an area series that touches 0 above the zero baseline', async () => {
     const { container } = render(
       <AreaChart
