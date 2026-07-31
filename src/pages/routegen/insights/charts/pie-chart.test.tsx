@@ -61,6 +61,21 @@ describe('PieChart', () => {
     expect(container.querySelector('[data-pie-slice="answered"]')?.getAttribute('opacity')).toBe('0.9')
   })
 
+  it('can hide its legend while preserving accessible slices', () => {
+    render(
+      <PieChart
+        data={data}
+        seriesNames={['loaded', 'answered', 'unused']}
+        seriesColors={COLORS}
+        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
+        hideLegend
+      />,
+    )
+
+    expect(screen.queryByText('loaded')).toBeNull()
+    expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' })).toBeTruthy()
+  })
+
   it('highlights a keyboard-focused slice', () => {
     render(
       <PieChart

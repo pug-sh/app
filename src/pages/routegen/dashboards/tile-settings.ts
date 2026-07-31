@@ -9,6 +9,7 @@ export const DASHBOARD_TILE_VIEW_MODES = [
   { label: 'Area', value: DashboardTileViewMode.AREA },
   { label: 'Bar (grouped)', value: DashboardTileViewMode.BAR_GROUPED },
   { label: 'Bar (stacked)', value: DashboardTileViewMode.BAR_STACKED },
+  { label: 'Pie', value: DashboardTileViewMode.PIE },
   { label: 'Table', value: DashboardTileViewMode.TABLE },
 ] as const
 
@@ -18,6 +19,7 @@ export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | un
     case DashboardTileViewMode.AREA:
     case DashboardTileViewMode.BAR_GROUPED:
     case DashboardTileViewMode.BAR_STACKED:
+    case DashboardTileViewMode.PIE:
     case DashboardTileViewMode.TABLE:
       return mode
     default:
@@ -33,6 +35,8 @@ export const dashboardTileViewModeToViewMode = (mode: DashboardTileViewMode | un
       return 'bar-grouped'
     case DashboardTileViewMode.BAR_STACKED:
       return 'bar-stacked'
+    case DashboardTileViewMode.PIE:
+      return 'pie'
     case DashboardTileViewMode.TABLE:
       return 'table'
     case DashboardTileViewMode.LINE:

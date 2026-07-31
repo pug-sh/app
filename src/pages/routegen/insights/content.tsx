@@ -81,9 +81,9 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
-  // Hides the value·avg·peak SummaryStats row. Named for the legend it originally gated; the
-  // web-analytics main chart opts in via InsightTileView's hideSummary (summing per-bucket session
-  // averages is meaningless there, and the stat cards already carry the accurate scalar).
+  // Hides the value·avg·peak SummaryStats row and the pie chart's label legend. The web-analytics
+  // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
+  // meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
   yTickFormatter?: (value: number) => string
   // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
@@ -190,6 +190,7 @@ export const InsightsContent = memo(function InsightsContent({
           seriesColors={seriesColors}
           aggregations={seriesAggregations}
           compact={compact}
+          hideLegend={hideLegend}
           className={chartClassName}
         />
       )

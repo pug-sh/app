@@ -37,6 +37,7 @@ export const PieChart = ({
   seriesColors,
   aggregations,
   compact = false,
+  hideLegend = false,
   className,
 }: {
   data: ChartPoint[]
@@ -44,6 +45,7 @@ export const PieChart = ({
   seriesColors: SeriesColor[]
   aggregations: AggregationType[]
   compact?: boolean
+  hideLegend?: boolean
   className?: string
 }) => {
   const [activeName, setActiveName] = useState<string | null>(null)
@@ -121,31 +123,33 @@ export const PieChart = ({
         </svg>
       </div>
 
-      <ul className={cn('min-w-0 space-y-1', compact && 'max-h-full overflow-y-auto')}>
-        {slices.map((slice, index) => (
-          <li
-            key={`${index}-${slice.name}`}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              active !== null && active.name !== slice.name && 'opacity-40',
-            )}
-            tabIndex={0}
-            onMouseEnter={() => setActiveName(slice.name)}
-            onMouseLeave={() => setActiveName(null)}
-            onFocus={() => setActiveName(slice.name)}
-            onBlur={() => setActiveName(null)}
-          >
-            <span className="size-2.5 shrink-0 rounded-full" style={{ background: slice.color }} />
-            <span className="min-w-0 flex-1 truncate text-xs" title={slice.name}>
-              {slice.name}
-            </span>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{compactNumber(slice.value)}</span>
-            <span className="w-12 shrink-0 text-right text-xs tabular-nums text-faint">
-              {percent(slice.value, total)}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {hideLegend ? null : (
+        <ul className={cn('min-w-0 space-y-1', compact && 'max-h-full overflow-y-auto')}>
+          {slices.map((slice, index) => (
+            <li
+              key={`${index}-${slice.name}`}
+              className={cn(
+                'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                active !== null && active.name !== slice.name && 'opacity-40',
+              )}
+              tabIndex={0}
+              onMouseEnter={() => setActiveName(slice.name)}
+              onMouseLeave={() => setActiveName(null)}
+              onFocus={() => setActiveName(slice.name)}
+              onBlur={() => setActiveName(null)}
+            >
+              <span className="size-2.5 shrink-0 rounded-full" style={{ background: slice.color }} />
+              <span className="min-w-0 flex-1 truncate text-xs" title={slice.name}>
+                {slice.name}
+              </span>
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{compactNumber(slice.value)}</span>
+              <span className="w-12 shrink-0 text-right text-xs tabular-nums text-faint">
+                {percent(slice.value, total)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
