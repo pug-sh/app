@@ -28,7 +28,7 @@ describe('PieChart', () => {
   })
 
   it('renders positive series as accessible slices and omits empty ones', () => {
-    const { container } = render(
+    render(
       <PieChart
         data={data}
         seriesNames={['loaded', 'answered', 'unused']}
@@ -37,9 +37,10 @@ describe('PieChart', () => {
       />,
     )
 
-    expect(screen.getByRole('img', { name: 'Pie chart' })).toBeTruthy()
-    expect(container.querySelectorAll('[data-pie-slice]')).toHaveLength(2)
-    expect(container.querySelector('[data-pie-slice="unused"]')).toBeNull()
+    expect(screen.getByRole('group', { name: 'Pie chart' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'answered: 12 (28.6%)' })).toBeTruthy()
+    expect(screen.queryByRole('img', { name: /unused/ })).toBeNull()
     expect(screen.getByText('71.4%')).toBeTruthy()
     expect(screen.getByText('28.6%')).toBeTruthy()
   })
@@ -60,6 +61,42 @@ describe('PieChart', () => {
     expect(container.querySelector('[data-pie-slice="answered"]')?.getAttribute('opacity')).toBe('0.9')
   })
 
+  it('highlights a keyboard-focused slice', () => {
+    render(
+      <PieChart
+        data={data}
+        seriesNames={['loaded', 'answered', 'unused']}
+        seriesColors={COLORS}
+        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
+      />,
+    )
+
+    const answered = screen.getByRole('img', { name: 'answered: 12 (28.6%)' })
+    fireEvent.focus(answered)
+
+    expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' }).getAttribute('opacity')).toBe('0.3')
+    expect(answered.getAttribute('opacity')).toBe('0.9')
+  })
+
+  it('clears the active selection when refreshed data removes its slice', () => {
+    const { rerender } = render(
+      <PieChart
+        data={data}
+        seriesNames={['loaded', 'answered', 'unused']}
+        seriesColors={COLORS}
+        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
+      />,
+    )
+
+    fireEvent.focus(screen.getByRole('img', { name: 'answered: 12 (28.6%)' }))
+    rerender(
+      <PieChart data={data} seriesNames={['loaded']} seriesColors={COLORS} aggregations={[AggregationType.TOTAL]} />,
+    )
+
+    expect(screen.getByRole('img', { name: 'loaded: 30 (100.0%)' }).getAttribute('opacity')).toBe('0.9')
+    expect(screen.getByText('loaded').closest('li')?.className).not.toContain('opacity-40')
+  })
+
   it('rejects negative collapsed values instead of drawing misleading geometry', () => {
     render(
       <PieChart
@@ -71,6 +108,6 @@ describe('PieChart', () => {
     )
 
     expect(screen.getByText('Pie charts require non-negative values')).toBeTruthy()
-    expect(screen.queryByRole('img', { name: 'Pie chart' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Pie chart' })).toBeNull()
   })
 })

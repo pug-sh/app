@@ -1,5 +1,5 @@
 import { Pie } from '@visx/shape'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
@@ -46,12 +46,16 @@ export const PieChart = ({
   compact?: boolean
   className?: string
 }) => {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const [activeName, setActiveName] = useState<string | null>(null)
   const collapsed = buildPieSlices(data, seriesNames, seriesColors, aggregations)
   const hasNegativeValue = collapsed.some(slice => slice.value < 0)
   const slices = collapsed.filter(slice => slice.value > 0)
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
-  const active = activeIndex === null ? null : slices[activeIndex]
+  const active = slices.find(slice => slice.name === activeName) ?? null
+
+  useEffect(() => {
+    if (activeName !== null && !active) setActiveName(null)
+  }, [active, activeName])
 
   if (hasNegativeValue) {
     return (
@@ -75,7 +79,7 @@ export const PieChart = ({
         <svg
           viewBox="-160 -160 320 320"
           className={cn('size-full max-h-72 max-w-72', compact && 'max-h-56 max-w-56')}
-          role="img"
+          role="group"
           aria-label="Pie chart"
         >
           <Pie<PieSlice>
@@ -94,15 +98,16 @@ export const PieChart = ({
                   key={`${index}-${arc.data.name}`}
                   d={path(arc) ?? undefined}
                   fill={arc.data.color}
-                  opacity={activeIndex === null || activeIndex === index ? 0.9 : 0.3}
+                  opacity={active === null || active.name === arc.data.name ? 0.9 : 0.3}
                   className="outline-none transition-opacity focus:opacity-100"
                   data-pie-slice={arc.data.name}
                   tabIndex={0}
+                  role="img"
                   aria-label={`${arc.data.name}: ${arc.data.value.toLocaleString()} (${percent(arc.data.value, total)})`}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onMouseLeave={() => setActiveIndex(null)}
-                  onFocus={() => setActiveIndex(index)}
-                  onBlur={() => setActiveIndex(null)}
+                  onMouseEnter={() => setActiveName(arc.data.name)}
+                  onMouseLeave={() => setActiveName(null)}
+                  onFocus={() => setActiveName(arc.data.name)}
+                  onBlur={() => setActiveName(null)}
                 />
               ))
             }
@@ -122,13 +127,13 @@ export const PieChart = ({
             key={`${index}-${slice.name}`}
             className={cn(
               'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              activeIndex !== null && activeIndex !== index && 'opacity-40',
+              active !== null && active.name !== slice.name && 'opacity-40',
             )}
             tabIndex={0}
-            onMouseEnter={() => setActiveIndex(index)}
-            onMouseLeave={() => setActiveIndex(null)}
-            onFocus={() => setActiveIndex(index)}
-            onBlur={() => setActiveIndex(null)}
+            onMouseEnter={() => setActiveName(slice.name)}
+            onMouseLeave={() => setActiveName(null)}
+            onFocus={() => setActiveName(slice.name)}
+            onBlur={() => setActiveName(null)}
           >
             <span className="size-2.5 shrink-0 rounded-full" style={{ background: slice.color }} />
             <span className="min-w-0 flex-1 truncate text-xs" title={slice.name}>

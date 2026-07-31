@@ -115,6 +115,7 @@ describe('InsightsContent pie view', () => {
   it('renders the selected trend series as a pie chart', () => {
     render(<InsightsContent {...base} chartData={LIVE} viewMode="pie" />)
 
-    expect(screen.getByRole('img', { name: 'Pie chart' })).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Pie chart' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'page_view: 6 (100.0%)' })).toBeTruthy()
   })
 })
