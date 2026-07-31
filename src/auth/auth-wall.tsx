@@ -216,9 +216,9 @@ const COLUMNS = [
   { offset: 8, duration: '88s', delay: '-44s', direction: 'normal' },
 ]
 
-// memo: this is an unmemoized child of SignIn, so without it every keystroke-free form
-// interaction re-renders 150 cards. The theme subscription below still re-renders it on toggle.
-export const SignInWall = memo(() => {
+// memo: this is an unmemoized child of AuthSplit, so without it every form interaction on the
+// page re-renders 150 cards. The theme subscription below still re-renders it on toggle.
+export const AuthWall = memo(() => {
   // Subscribing to the theme is what re-renders the deck on toggle, so the inline
   // getSeriesColor() fills re-resolve; the glow also wants more presence on dark.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
@@ -242,7 +242,7 @@ export const SignInWall = memo(() => {
             return (
               <div key={col.offset} className="h-[150vh] w-[192px] overflow-hidden">
                 <div
-                  className="signin-wall-track flex flex-col"
+                  className="auth-wall-track flex flex-col"
                   style={
                     {
                       animationDuration: col.duration,
@@ -276,4 +276,4 @@ export const SignInWall = memo(() => {
     </div>
   )
 })
-SignInWall.displayName = 'SignInWall'
+AuthWall.displayName = 'AuthWall'
