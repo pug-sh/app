@@ -21,6 +21,7 @@ import {
   FunnelChart,
   type FunnelSeriesData,
   LineChart,
+  PieChart,
   RetentionCohort,
   SummaryStats,
   TopKList,
@@ -179,6 +180,17 @@ export const InsightsContent = memo(function InsightsContent({
           seriesColors={seriesColors}
           granularity={granularity}
           timeZone={timeZone}
+        />
+      )
+    if (viewMode === 'pie')
+      return (
+        <PieChart
+          data={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          aggregations={seriesAggregations}
+          compact={compact}
+          className={chartClassName}
         />
       )
     return (

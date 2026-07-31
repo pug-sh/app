@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { AggregationType, Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -108,5 +108,13 @@ describe('InsightsContent compare-vs-prior', () => {
       <InsightsContent {...base} chartData={ZERO} viewMode="bar-grouped" comparison={comparison([40, 50, 60])} />,
     )
     expect(shows(empty.container, EMPTY)).toBe(true)
+  })
+})
+
+describe('InsightsContent pie view', () => {
+  it('renders the selected trend series as a pie chart', () => {
+    render(<InsightsContent {...base} chartData={LIVE} viewMode="pie" />)
+
+    expect(screen.getByRole('img', { name: 'Pie chart' })).toBeTruthy()
   })
 })
