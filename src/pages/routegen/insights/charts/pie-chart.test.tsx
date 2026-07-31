@@ -110,6 +110,18 @@ describe('PieChart', () => {
 
     expect(screen.getByRole('img', { name: 'loaded: 30 (100.0%)' }).getAttribute('opacity')).toBe('0.9')
     expect(screen.getByText('loaded').closest('li')?.className).not.toContain('opacity-40')
+
+    rerender(
+      <PieChart
+        data={data}
+        seriesNames={['loaded', 'answered', 'unused']}
+        seriesColors={COLORS}
+        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
+      />,
+    )
+
+    expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' }).getAttribute('opacity')).toBe('0.9')
+    expect(screen.getByRole('img', { name: 'answered: 12 (28.6%)' }).getAttribute('opacity')).toBe('0.9')
   })
 
   it('rejects negative collapsed values instead of drawing misleading geometry', () => {
