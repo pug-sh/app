@@ -1,9 +1,9 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Eye, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
 import { demoSignInAtom, isAuthenticatedAtom } from '@/auth/auth.atoms'
-import { AuthShell } from '@/auth/auth-shell'
+import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { isDemoSessionAtom } from '@/auth/demo'
 import { Button } from '@/components/ui/button'
 
@@ -61,55 +61,45 @@ const Demo = () => {
 
   if (error) {
     return (
-      <AuthShell>
-        <div className="text-center">
-          <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg tracking-tight mb-1">Demo unavailable</h1>
-          <p className="text-sm text-muted-foreground mb-6">{error}</p>
-          <button
-            type="button"
-            onClick={() => navigate(authenticated ? '/overview' : '/')}
-            className="text-link text-sm font-medium hover:underline underline-offset-4"
-          >
-            {authenticated ? 'Back to my dashboard' : 'Back to sign in'}
-          </button>
-        </div>
-      </AuthShell>
+      <AuthStatus icon={AlertCircle} tone="negative" title="Demo unavailable" description={error}>
+        <button
+          type="button"
+          onClick={() => navigate(authenticated ? '/overview' : '/')}
+          className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
+        >
+          {authenticated ? 'Back to my dashboard' : 'Back to sign in'}
+        </button>
+      </AuthStatus>
     )
   }
 
   // Real user signed in to their own account — confirm before replacing their session.
   if (authenticated && !isDemo) {
     return (
-      <AuthShell>
-        <h1 className="text-2xl tracking-tight">View the live demo?</h1>
-        <p className="text-sm text-muted-foreground mt-1.5 mb-6">
-          You're signed in. Viewing the read-only demo will sign you out of your account on this device.
-        </p>
-        <Button className="w-full" onClick={confirmSwitch} disabled={switching}>
-          {switching && <Loader2 className="animate-spin" />}
-          View read-only demo
-        </Button>
-        <button
-          type="button"
-          onClick={() => navigate('/overview')}
-          disabled={switching}
-          className="text-link font-medium text-sm hover:underline underline-offset-4 mt-6 disabled:opacity-50"
-        >
-          Back to my dashboard
-        </button>
-      </AuthShell>
+      <AuthStatus
+        icon={Eye}
+        title="View the live demo?"
+        description="You're signed in. Viewing the read-only demo will sign you out of your account on this device."
+      >
+        <div className="mt-6 flex flex-col gap-6">
+          <Button className="h-10 w-full" onClick={confirmSwitch} disabled={switching}>
+            {switching && <Loader2 className="animate-spin" />}
+            View read-only demo
+          </Button>
+          <button
+            type="button"
+            onClick={() => navigate('/overview')}
+            disabled={switching}
+            className="text-sm font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
+          >
+            Back to my dashboard
+          </button>
+        </div>
+      </AuthStatus>
     )
   }
 
-  return (
-    <AuthShell>
-      <div className="flex items-center gap-3 text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Starting the demo…</span>
-      </div>
-    </AuthShell>
-  )
+  return <AuthPending label="Starting the demo…" />
 }
 
 export default Demo

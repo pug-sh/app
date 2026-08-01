@@ -1,10 +1,12 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import { AuthSplit } from '@/auth/auth-split'
+import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -238,16 +240,11 @@ const AuthenticatedApp = () => {
 }
 
 const WorkspaceError = ({ message }: { message: string }) => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-      <p className="text-sm font-medium mb-1">Unable to load workspace</p>
-      <p className="text-xs text-muted-foreground mb-4 max-w-xs">{message}</p>
-      <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-        Retry
-      </Button>
-    </div>
-  </div>
+  <AuthStatus icon={AlertCircle} tone="negative" title="Unable to load workspace" description={message}>
+    <Button variant="outline" className="mt-6 h-10" onClick={() => window.location.reload()}>
+      Retry
+    </Button>
+  </AuthStatus>
 )
 
 const App = () => {
@@ -270,6 +267,64 @@ const App = () => {
   // authenticated workspace — skip bootstrap so a logged-in viewer's org/project
   // RPCs never fire on a public page.
   const isSharedRoute = location.startsWith('/shared/')
+  const isMagicLink = location === '/magic-link'
+  const isDemoRoute = location === '/demo'
+  const failed = !!workspaceError || status === 'error'
+
+  // A screen that is unambiguously part of the signed-out flow. Bootstrap is excluded: it is the
+  // one state that straddles, running both between sign-in and the picker and on the way from a
+  // restored session into the dashboard.
+  const onAuthScreen =
+    !isSharedRoute && (isMagicLink || isDemoRoute || !authenticated || failed || status === 'needs-selection')
+
+  // Which of the two bootstraps this is, latched from whether an auth screen came first — a
+  // restored session never shows one, so it boots on the plain spinner and never flashes the wall.
+  const [afterAuthScreen, setAfterAuthScreen] = useState(onAuthScreen)
+  useEffect(() => {
+    if (onAuthScreen) setAfterAuthScreen(true)
+    // Cleared once the app is up, or a cross-tab account switch — which resets bootstrap while the
+    // session stays live — would put the wall back over the dashboard.
+    else if (status === 'ready') setAfterAuthScreen(false)
+  }, [onAuthScreen, status])
+
+  // With onAuthScreen false and the shared route excluded, status can only be 'ready' or a
+  // bootstrap step, so this needs no further narrowing.
+  const onAuthCanvas = onAuthScreen || (!isSharedRoute && status !== 'ready' && afterAuthScreen)
+
+  // Only reached under onAuthCanvas, so the final fallthrough is the bootstrap step.
+  const authScreen = () => {
+    if (isMagicLink) return <MagicLink />
+    // Before the !authenticated branch on purpose: an already-signed-in user must still reach
+    // <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
+    if (isDemoRoute) return <Demo />
+    if (!authenticated) return <SignIn />
+    if (failed) return <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
+    if (status === 'needs-selection') return <SelectOrg />
+    return <AuthPending label="Loading your workspace…" />
+  }
+
+  const content = () => {
+    if (isSharedRoute) {
+      return (
+        <Suspense fallback={<LoadingSpinner />}>
+          <Route path="/shared/:shareId" component={SharedDashboard} />
+        </Suspense>
+      )
+    }
+    // One AuthSplit for every signed-out screen, held at a fixed position so a change of screen
+    // swaps only its children. The pages used to bring their own, which meant React tore the
+    // canvas down between them: the ground changed twice and the wall's drift restarted.
+    // The Suspense sits inside it for the same reason — a page's chunk loads on the canvas.
+    if (onAuthCanvas) {
+      return (
+        <AuthSplit>
+          <Suspense fallback={<AuthPending />}>{authScreen()}</Suspense>
+        </AuthSplit>
+      )
+    }
+    if (status === 'ready') return <AuthenticatedApp />
+    return <LoadingSpinner />
+  }
 
   return (
     <>
@@ -284,35 +339,7 @@ const App = () => {
       */}
       <AnalyticsIdentity awaitWorkspace={!isSharedRoute} />
       {isSharedRoute ? null : <WorkspaceBootstrap />}
-      {location === '/magic-link' ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <MagicLink />
-        </Suspense>
-      ) : location === '/demo' ? (
-        // Matched before the !authenticated branch on purpose: an already-signed-in user must still
-        // reach <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
-        <Suspense fallback={<LoadingSpinner />}>
-          <Demo />
-        </Suspense>
-      ) : isSharedRoute ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <Route path="/shared/:shareId" component={SharedDashboard} />
-        </Suspense>
-      ) : !authenticated ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <SignIn />
-        </Suspense>
-      ) : workspaceError || status === 'error' ? (
-        <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
-      ) : status === 'needs-selection' ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <SelectOrg />
-        </Suspense>
-      ) : status === 'ready' ? (
-        <AuthenticatedApp />
-      ) : (
-        <LoadingSpinner />
-      )}
+      {content()}
       <Toaster position="bottom-right" />
     </>
   )
