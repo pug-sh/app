@@ -303,6 +303,29 @@ const App = () => {
     return <AuthPending label="Loading your workspace…" />
   }
 
+  const content = () => {
+    if (isSharedRoute) {
+      return (
+        <Suspense fallback={<LoadingSpinner />}>
+          <Route path="/shared/:shareId" component={SharedDashboard} />
+        </Suspense>
+      )
+    }
+    // One AuthSplit for every signed-out screen, held at a fixed position so a change of screen
+    // swaps only its children. The pages used to bring their own, which meant React tore the
+    // canvas down between them: the ground changed twice and the wall's drift restarted.
+    // The Suspense sits inside it for the same reason — a page's chunk loads on the canvas.
+    if (onAuthCanvas) {
+      return (
+        <AuthSplit>
+          <Suspense fallback={<AuthPending />}>{authScreen()}</Suspense>
+        </AuthSplit>
+      )
+    }
+    if (status === 'ready') return <AuthenticatedApp />
+    return <LoadingSpinner />
+  }
+
   return (
     <>
       <ThemeSync />
@@ -316,23 +339,7 @@ const App = () => {
       */}
       <AnalyticsIdentity awaitWorkspace={!isSharedRoute} />
       {isSharedRoute ? null : <WorkspaceBootstrap />}
-      {isSharedRoute ? (
-        <Suspense fallback={<LoadingSpinner />}>
-          <Route path="/shared/:shareId" component={SharedDashboard} />
-        </Suspense>
-      ) : onAuthCanvas ? (
-        // One AuthSplit for every signed-out screen, held at a fixed position so a change of screen
-        // swaps only its children. The pages used to bring their own, which meant React tore the
-        // canvas down between them: the ground changed twice and the wall's drift restarted.
-        // The Suspense sits inside it for the same reason — a page's chunk loads on the canvas.
-        <AuthSplit>
-          <Suspense fallback={<AuthPending />}>{authScreen()}</Suspense>
-        </AuthSplit>
-      ) : status === 'ready' ? (
-        <AuthenticatedApp />
-      ) : (
-        <LoadingSpinner />
-      )}
+      {content()}
       <Toaster position="bottom-right" />
     </>
   )

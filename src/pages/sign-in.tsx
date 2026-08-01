@@ -112,27 +112,32 @@ const SignIn = () => {
   return (
     <>
       {magicLinkEmail ? (
-        <AuthStatus
-          icon={MailCheck}
-          title="Check your inbox"
-          description={
-            <>
-              We sent a sign-in link to <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>.
-              Click it to continue — it expires in 15 minutes.
-            </>
-          }
-        >
-          <button
-            type="button"
-            className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
-            onClick={() => {
-              setMagicLinkEmail('')
-              setError('')
-            }}
+        // Click autocapture sends the clicked element's innerText, and the auth canvas sits outside
+        // the <main> marker that blanks it. This screen is the only one on it rendering a real email.
+        <div data-pug-no-capture>
+          <AuthStatus
+            icon={MailCheck}
+            title="Check your inbox"
+            description={
+              <>
+                We sent a sign-in link to{' '}
+                <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>. Click it to continue —
+                it expires in 15 minutes.
+              </>
+            }
           >
-            Use a different email
-          </button>
-        </AuthStatus>
+            <button
+              type="button"
+              className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
+              onClick={() => {
+                setMagicLinkEmail('')
+                setError('')
+              }}
+            >
+              Use a different email
+            </button>
+          </AuthStatus>
+        </div>
       ) : (
         <>
           <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>

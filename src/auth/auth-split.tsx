@@ -6,7 +6,9 @@ import { type ComponentType, lazy, type ReactNode, Suspense, useEffect, useState
 const AuthWall = lazy(async (): Promise<{ default: ComponentType }> => {
   try {
     return { default: (await import('@/auth/auth-wall')).AuthWall }
-  } catch {
+  } catch (err) {
+    // The fallback is deliberate, a module-evaluation bug inside the wall is not — say which happened.
+    console.error('auth wall chunk failed to load', err)
     return { default: () => null }
   }
 })
@@ -20,6 +22,8 @@ export const AuthSplit = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 64rem)')
     const onChange = () => setWallVisible(mq.matches)
+    // Re-read at commit: the initializer ran a paint ago, and only future events land after this.
+    onChange()
     mq.addEventListener('change', onChange)
     return () => mq.removeEventListener('change', onChange)
   }, [])

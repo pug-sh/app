@@ -117,7 +117,8 @@ describe('the auth canvas across a change of screen', () => {
     })
 
     // Reached the app proper, so the spinner above was the bootstrap rather than a stalled render.
-    expect(container.querySelector('[data-pug-no-capture]')).not.toBeNull()
+    // Waited for: landOrg only starts the tail of bootstrap, which still awaits the projects call.
+    await waitFor(() => expect(container.querySelector('[data-pug-no-capture]')).not.toBeNull())
     expect(container.querySelector('.auth-wall-track')).toBeNull()
   })
 })

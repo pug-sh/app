@@ -32,7 +32,8 @@ export const NameChip = ({
       style={{ '--tone': nameHue(seed) } as CSSProperties}
       aria-hidden
     >
-      {seed.charAt(0).toUpperCase()}
+      {/* By code point, not code unit: charAt splits an emoji-led name into a lone surrogate. */}
+      {Array.from(seed)[0]?.toUpperCase()}
     </span>
   )
 }
