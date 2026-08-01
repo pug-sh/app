@@ -17,12 +17,13 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { type CSSProperties, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
+import { NameChip } from '@/components/name-chip'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -48,7 +49,6 @@ import {
   selectOrgAtom,
 } from '@/data/workspace.atoms'
 import { useRouteProjectId } from '@/lib/project-path'
-import { cn } from '@/lib/utils'
 
 const navGroups = [
   {
@@ -79,36 +79,6 @@ const navGroups = [
 // Nav paths hidden during the read-only demo. Settings exposes the shared demo account's
 // email/password + org config; its /settings route is guarded in SettingsLayout as well.
 const DEMO_HIDDEN_PATHS = ['settings']
-
-const getProjectInitial = (projectName?: string | null) => {
-  const normalizedName = projectName?.trim()
-  if (!normalizedName) return 'P'
-  return normalizedName.charAt(0).toUpperCase()
-}
-
-// Same name-hashed hue scheme as profile avatars, but as a washed-out tint —
-// this chip is persistent chrome, not content, so it stays quiet.
-const projectHue = (projectName?: string | null) => {
-  const seed = projectName?.trim() || 'project'
-  let hash = 0
-  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 360
-  return hash
-}
-
-const ProjectChip = ({ name, className }: { name?: string | null; className?: string }) => (
-  <span
-    className={cn(
-      'flex shrink-0 items-center justify-center rounded-md font-medium',
-      'bg-[oklch(0.93_0.035_var(--tone))] text-[oklch(0.45_0.08_var(--tone))]',
-      'dark:bg-[oklch(0.37_0.045_var(--tone))] dark:text-[oklch(0.86_0.05_var(--tone))]',
-      className,
-    )}
-    style={{ '--tone': projectHue(name) } as CSSProperties}
-    aria-hidden
-  >
-    {getProjectInitial(name)}
-  </span>
-)
 
 const AppSidebar = () => {
   const [location, navigate] = useLocation()
@@ -208,7 +178,7 @@ const AppSidebar = () => {
               }}
             >
               <PopoverTrigger render={<SidebarMenuButton size="lg" />}>
-                <ProjectChip name={activeProject?.displayName} className="size-8 text-sm" />
+                <NameChip name={activeProject?.displayName} fallback="P" className="size-8 text-sm" />
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     {activeOrg?.displayName ?? 'Workspace'}
@@ -259,7 +229,7 @@ const AppSidebar = () => {
                         onClick={() => handleSelectProject(proj.id)}
                         className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
                       >
-                        <ProjectChip name={proj.displayName} className="size-5 rounded text-xs" />
+                        <NameChip name={proj.displayName} fallback="P" className="size-5 rounded text-xs" />
                         <span className="min-w-0 flex-1 truncate">{proj.displayName}</span>
                         {selected ? <Check className="size-3.5 shrink-0 text-link" /> : null}
                       </button>

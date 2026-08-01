@@ -414,11 +414,11 @@
   overflow: hidden;
 }
 
-/* Sign-in card wall — each column renders the deck --wall-copies times and scrolls by exactly
+/* Auth card wall — each column renders the deck --wall-copies times and scrolls by exactly
    one copy, so the loop distance has to track the count (set from the TSX) rather than a literal.
    Cards carry their own bottom margin rather than a flex gap on the track: N cards yield 2N-1
    gaps where the repeating unit needs 2N, so -50% lands half a gap short and jumps. */
-@keyframes signin-wall-drift {
+@keyframes auth-wall-drift {
   from {
     transform: translateY(0);
   }
@@ -427,14 +427,14 @@
   }
 }
 
-.signin-wall-track {
-  animation-name: signin-wall-drift;
+.auth-wall-track {
+  animation-name: auth-wall-drift;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .signin-wall-track {
+  .auth-wall-track {
     animation: none;
   }
 }
