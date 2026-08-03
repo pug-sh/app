@@ -44,8 +44,10 @@ const Members = () => {
   const [inviteRole, setInviteRole] = useState<OrgRole>(OrgRole.MEMBER)
   const [inviting, setInviting] = useState(false)
   const [resending, setResending] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState<string | null>(null)
   const [roleStatus, setRoleStatus] = useState<Record<string, 'saving' | 'saved'>>({})
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
+  const [confirmingRevoke, setConfirmingRevoke] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const fetchData = useCallback(async () => {
@@ -133,6 +135,23 @@ const Members = () => {
       toastRPCError(err, 'Failed to resend invitation')
     } finally {
       setResending(null)
+    }
+  }
+
+  const handleRevoke = async (invitationId: string) => {
+    if (!org) return
+    setRevoking(invitationId)
+    try {
+      await orgsRPC.revokeInvite({ orgId: org.id, invitationId })
+      setConfirmingRevoke(null)
+      // Invite/remove above refetch; revoke drops the row locally so fetchData()'s
+      // spinner can't blank the list. A failed revoke leaves the confirm armed to retry.
+      setInvitations(list => list.filter(inv => inv.id !== invitationId))
+      toast.success('Invitation revoked')
+    } catch (err) {
+      toastRPCError(err, 'Failed to revoke invitation')
+    } finally {
+      setRevoking(null)
     }
   }
 
@@ -314,6 +333,7 @@ const Members = () => {
                   <div
                     key={inv.id}
                     className="group flex items-center gap-3 py-2 px-2 -mx-2 rounded-lg transition-colors hover:bg-muted/40"
+                    onMouseLeave={() => setConfirmingRevoke(null)}
                   >
                     <div className="w-7 h-7 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
                       <span className="text-xs font-medium text-muted-foreground">{initials(inv.email)}</span>
@@ -328,7 +348,7 @@ const Members = () => {
                     <Can action="update" resource="invitation">
                       <button
                         onClick={() => handleResend(inv.id)}
-                        disabled={resending === inv.id}
+                        disabled={resending === inv.id || revoking === inv.id}
                         className={`p-1 rounded-md transition-opacity hover:bg-muted text-muted-foreground hover:text-foreground ${
                           resending === inv.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                         }`}
@@ -340,6 +360,28 @@ const Members = () => {
                           <History className="w-3.5 h-3.5" />
                         )}
                       </button>
+                    </Can>
+                    <Can action="delete" resource="invitation">
+                      {revoking === inv.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                      ) : confirmingRevoke === inv.id ? (
+                        <button
+                          onClick={() => handleRevoke(inv.id)}
+                          disabled={resending === inv.id}
+                          className="text-xs font-medium text-negative hover:underline underline-offset-2"
+                        >
+                          Revoke?
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmingRevoke(inv.id)}
+                          disabled={resending === inv.id}
+                          className="p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-negative text-muted-foreground"
+                          title="Revoke invitation"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </Can>
                   </div>
                 ))}
