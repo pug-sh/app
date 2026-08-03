@@ -6,6 +6,7 @@ import type { TimeRange } from '@/components/date-range-picker'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
 import { tilePosition } from './draft-state'
+import { displayPositionToStored, storedPositionToDisplay } from './grid-layout'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
@@ -14,21 +15,15 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Fine uniform grid with a high column count (COLS.lg), so one column ≈ the visual
-// gap (~18px). Horizontally, margin is 0 and a gap between tiles is just an empty
-// column track — adjacent tiles with no empty track sit flush.
-//
+// Standard 12-column grid with a fixed gutter. The API keeps its original 72-unit
+// positions; conversion at this component boundary preserves wire compatibility.
 // Vertically the grid auto-compacts (compactType 'vertical', below): dragging a tile
 // onto another reflows the displaced tile UP into the vacated slot — a true swap —
-// instead of only ever shoving it down. Compaction removes the empty ROW tracks that
-// used to space stacked tiles, so vertical breathing room moves to a margin: the row
-// PITCH is split into a short tile row (GRID_ROW_HEIGHT) plus a gutter (GRID_V_GUTTER).
-// Because the pitch stays 18px, every stored tile position lands exactly where it
-// always did — each tile is simply GRID_V_GUTTER px shorter, and that shaved strip is
-// the gap to the tile below.
+// instead of only ever shoving it down. A two-pixel row plus the 16px gutter keeps
+// the existing 18px vertical pitch, so stored heights retain their visual scale.
 const GRID_PITCH = 18
-const GRID_V_GUTTER = 14
-const GRID_ROW_HEIGHT = GRID_PITCH - GRID_V_GUTTER
+const GRID_GAP = 16
+const GRID_ROW_HEIGHT = GRID_PITCH - GRID_GAP
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -50,7 +45,7 @@ const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H :
 // kind min shrank (e.g. a KPI tile) can still be resized down past a stale min.
 const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
   lg: tiles.map(tile => {
-    const pos = tilePosition(tile)
+    const pos = storedPositionToDisplay(tilePosition(tile))
     const minH = getTileMinHeight(tile)
     return {
       i: tile.id,
@@ -74,7 +69,7 @@ const GridGuides = () => {
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => setColumnWidth(el.clientWidth / COLS.lg)
+    const measure = () => setColumnWidth((el.clientWidth + GRID_GAP) / COLS.lg)
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
@@ -139,7 +134,9 @@ export const DashboardGrid = ({
   // so the ref would still hold the pre-edit layout.
   const persistLayout = (layout: readonly LayoutItem[]) => {
     if (!editable) return
-    onLayoutsChange?.({ lg: layout })
+    onLayoutsChange?.({
+      lg: layout.map(item => ({ ...item, ...displayPositionToStored(item) })),
+    })
   }
 
   const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
@@ -220,7 +217,7 @@ export const DashboardGrid = ({
         cols={COLS}
         layouts={layouts}
         rowHeight={GRID_ROW_HEIGHT}
-        margin={[0, GRID_V_GUTTER]}
+        margin={[GRID_GAP, GRID_GAP]}
         containerPadding={[0, 0]}
         compactType="vertical"
         isDraggable={editable}
@@ -231,8 +228,7 @@ export const DashboardGrid = ({
         onResizeStop={layout => persistLayout(layout)}
       >
         {tiles.map(tile => (
-          // Cards fill their cell (no inset). Horizontally a gap is an empty column
-          // track; vertical spacing is the grid's row gutter (see GRID_PITCH).
+          // Cards fill their cell; react-grid-layout supplies the fixed gutter.
           <div key={tile.id} className="group flex h-full min-h-0 flex-col">
             {renderTileContent(tile)}
           </div>
