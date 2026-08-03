@@ -174,15 +174,26 @@ const LiveVisitorsPage = () => {
     <>
       <span className="sr-only">Live</span>
       <div className="absolute inset-0 overflow-hidden bg-muted/10">
-        {/* Full-screen states only before the first response. After that the map stays mounted
-            across window changes and polls — unmounting it would rebuild the MapLibre instance
-            (style, tiles, world fit) from scratch. */}
+        {/* Never unmounted: gating it on the first response serialized the whole MapLibre load
+            behind an RPC the basemap doesn't need. */}
+        <LiveVisitorMap
+          visitors={filtered}
+          selectedDistinctId={selectedDistinctId}
+          viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
+          onSelectVisitor={select}
+          profileHref={profileHref}
+          journeyFor={journeyFor}
+          highlightedDistinctId={rowHovered}
+          onHoverVisitor={setMapHovered}
+          avoidRef={panelRef}
+        />
+
         {!lastUpdated && !error ? (
-          <div className="flex h-full items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
           </div>
         ) : !lastUpdated && error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/60 text-center backdrop-blur-sm">
             <p className="text-sm text-muted-foreground">{error}</p>
             <Button variant="outline" size="sm" onClick={reload}>
               Retry
@@ -190,18 +201,6 @@ const LiveVisitorsPage = () => {
           </div>
         ) : (
           <>
-            <LiveVisitorMap
-              visitors={filtered}
-              selectedDistinctId={selectedDistinctId}
-              viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
-              onSelectVisitor={select}
-              profileHref={profileHref}
-              journeyFor={journeyFor}
-              highlightedDistinctId={rowHovered}
-              onHoverVisitor={setMapHovered}
-              avoidRef={panelRef}
-            />
-
             <aside
               ref={panelRef}
               className="absolute bottom-4 left-4 z-10 flex max-h-[min(34rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md"
