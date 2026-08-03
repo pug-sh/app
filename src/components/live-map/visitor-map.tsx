@@ -137,8 +137,9 @@ const LiveVisitorMap = ({
 
   const { containerRef, mapRef, ready } = useMaplibreMap({
     style: buildBasemapStyle(dark),
-    center: [0, 10],
-    zoom: 2,
+    // Applied before the style attaches, so the first tiles requested are already the framed ones.
+    bounds: INITIAL_VIEW_BOUNDS,
+    fitBoundsOptions: { padding: viewportPadding },
     minZoom: 1,
     maxZoom: 8,
     renderWorldCopies: false,

@@ -170,191 +170,208 @@ const LiveVisitorsPage = () => {
   // React tree because each marker renders in a detached root with no router/project context.
   const profileHref = (distinctId: string) => `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
 
+  // The map is already up by now, so the pre-first-response state is an overlay on it.
+  const renderFirstLoad = () => {
+    if (error) {
+      return (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/60 text-center backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={reload}>
+            Retry
+          </Button>
+        </div>
+      )
+    }
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  // Nothing to list — either the window is genuinely quiet, or the filters ate it.
+  const renderEmptyList = () => {
+    if (allVisitors.length === 0) {
+      return (
+        <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
+          No activity in the last {windowLabel(windowMs)}.
+        </div>
+      )
+    }
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground">
+        No visitors match these filters.
+        <button type="button" onClick={clearAll} className="text-xs text-primary hover:underline">
+          Clear filters
+        </button>
+      </div>
+    )
+  }
+
   return (
     <>
       <span className="sr-only">Live</span>
       <div className="absolute inset-0 overflow-hidden bg-muted/10">
-        {/* Full-screen states only before the first response. After that the map stays mounted
-            across window changes and polls — unmounting it would rebuild the MapLibre instance
-            (style, tiles, world fit) from scratch. */}
-        {!lastUpdated && !error ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : !lastUpdated && error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-            <p className="text-sm text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={reload}>
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <>
-            <LiveVisitorMap
-              visitors={filtered}
-              selectedDistinctId={selectedDistinctId}
-              viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
-              onSelectVisitor={select}
-              profileHref={profileHref}
-              journeyFor={journeyFor}
-              highlightedDistinctId={rowHovered}
-              onHoverVisitor={setMapHovered}
-              avoidRef={panelRef}
-            />
+        {/* Never unmounted: gating it on the first response serialized the whole MapLibre load
+            behind an RPC the basemap doesn't need. */}
+        <LiveVisitorMap
+          visitors={filtered}
+          selectedDistinctId={selectedDistinctId}
+          viewportPadding={LIVE_MAP_VIEWPORT_PADDING}
+          onSelectVisitor={select}
+          profileHref={profileHref}
+          journeyFor={journeyFor}
+          highlightedDistinctId={rowHovered}
+          onHoverVisitor={setMapHovered}
+          avoidRef={panelRef}
+        />
 
-            <aside
-              ref={panelRef}
-              className="absolute bottom-4 left-4 z-10 flex max-h-[min(34rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md"
-            >
-              {/* Live count + freshness — the single source of "is this still ticking" */}
-              <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <LiveDot />
-                  <span className="flex items-baseline gap-1.5">
-                    <span className="text-base tabular-nums text-foreground">{filtered.length}</span>
-                    {hasActiveFilters && allVisitors.length !== filtered.length && (
-                      <span className="text-xs tabular-nums text-faint">of {allVisitors.length}</span>
-                    )}
-                    {/* Minimized, the chips below take over this label's job — and say it better, since
+        {!lastUpdated && renderFirstLoad()}
+
+        {lastUpdated && (
+          <aside
+            ref={panelRef}
+            className="absolute bottom-4 left-4 z-10 flex max-h-[min(34rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md"
+          >
+            {/* Live count + freshness — the single source of "is this still ticking" */}
+            <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <LiveDot />
+                <span className="flex items-baseline gap-1.5">
+                  <span className="text-base tabular-nums text-foreground">{filtered.length}</span>
+                  {hasActiveFilters && allVisitors.length !== filtered.length && (
+                    <span className="text-xs tabular-nums text-faint">of {allVisitors.length}</span>
+                  )}
+                  {/* Minimized, the chips below take over this label's job — and say it better, since
                         "live now" and a 15m window disagree about what "now" means. */}
-                    {!collapsed && <span className="text-sm text-muted-foreground">live now</span>}
+                  {!collapsed && <span className="text-sm text-muted-foreground">live now</span>}
+                </span>
+                {arrivals > 0 && <span className="text-xs font-medium text-positive tabular-nums">+{arrivals}</span>}
+                {/* The window rides next to the count it qualifies: 33 is meaningless without it. */}
+                {collapsed && (
+                  <span className="shrink-0 pl-0.5">
+                    <WindowToggle windowMs={windowMs} onChange={setWindowMs} />
                   </span>
-                  {arrivals > 0 && <span className="text-xs font-medium text-positive tabular-nums">+{arrivals}</span>}
-                  {/* The window rides next to the count it qualifies: 33 is meaningless without it. */}
-                  {collapsed && (
-                    <span className="shrink-0 pl-0.5">
-                      <WindowToggle windowMs={windowMs} onChange={setWindowMs} />
-                    </span>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                  {loading && <Loader2 className="size-3 animate-spin" />}
-                  {lastUpdated && (
-                    <HoverSwap
-                      primary={`Updated ${formatRelative(lastUpdated)}`}
-                      secondary={formatDateTime(lastUpdated)}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setCollapsed(c => !c)}
-                    aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
-                    className="text-faint hover:text-foreground"
-                  >
-                    {collapsed ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
-                  </button>
-                </div>
+                )}
               </div>
+              <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                {loading && <Loader2 className="size-3 animate-spin" />}
+                {lastUpdated && (
+                  <HoverSwap
+                    primary={`Updated ${formatRelative(lastUpdated)}`}
+                    secondary={formatDateTime(lastUpdated)}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(c => !c)}
+                  aria-label={collapsed ? 'Expand panel' : 'Collapse panel'}
+                  className="text-faint hover:text-foreground"
+                >
+                  {collapsed ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </button>
+              </div>
+            </div>
 
-              {/* Journey withheld on purpose: a minimized panel that unfolds when its one visitor
+            {/* Journey withheld on purpose: a minimized panel that unfolds when its one visitor
                   happens to be the pinned one isn't minimized. */}
-              {collapsed && minimizedVisitor && (
-                <ul className="px-2 pb-2">
-                  <VisitorRow
-                    visitor={minimizedVisitor}
-                    journey={EMPTY_JOURNEY}
-                    stat={stats.get(minimizedVisitor.distinctId)}
-                    selected={minimizedVisitor.distinctId === selectedDistinctId}
-                    highlighted={minimizedVisitor.distinctId === mapHovered}
-                    onClick={() => select(minimizedVisitor.distinctId)}
-                    onHover={setRowHovered}
-                  />
-                </ul>
-              )}
+            {collapsed && minimizedVisitor && (
+              <ul className="px-2 pb-2">
+                <VisitorRow
+                  visitor={minimizedVisitor}
+                  journey={EMPTY_JOURNEY}
+                  stat={stats.get(minimizedVisitor.distinctId)}
+                  selected={minimizedVisitor.distinctId === selectedDistinctId}
+                  highlighted={minimizedVisitor.distinctId === mapHovered}
+                  onClick={() => select(minimizedVisitor.distinctId)}
+                  onHover={setRowHovered}
+                />
+              </ul>
+            )}
 
-              {!collapsed && (
-                <>
-                  <LiveFilterBar
-                    windowMs={windowMs}
-                    onWindowChange={setWindowMs}
-                    search={search}
-                    onSearchChange={setSearch}
-                    kinds={kindCounts}
-                    selectedKinds={selectedKinds}
-                    onToggleKind={toggleKind}
-                    onClearKinds={() => setSelectedKinds(new Set())}
-                    device={device}
-                    onDeviceChange={setDevice}
-                    devices={devices}
-                    countries={countries}
-                    selectedCountry={country}
-                    onCountryChange={setCountry}
-                    hasActiveFilters={hasActiveFilters}
-                    onClearAll={clearAll}
-                  />
+            {!collapsed && (
+              <>
+                <LiveFilterBar
+                  windowMs={windowMs}
+                  onWindowChange={setWindowMs}
+                  search={search}
+                  onSearchChange={setSearch}
+                  kinds={kindCounts}
+                  selectedKinds={selectedKinds}
+                  onToggleKind={toggleKind}
+                  onClearKinds={() => setSelectedKinds(new Set())}
+                  device={device}
+                  onDeviceChange={setDevice}
+                  devices={devices}
+                  countries={countries}
+                  selectedCountry={country}
+                  onCountryChange={setCountry}
+                  hasActiveFilters={hasActiveFilters}
+                  onClearAll={clearAll}
+                />
 
-                  {selectedDistinctId && focus && (
-                    <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
-                      <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <span
-                          className="size-1.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: getSeriesColor(focus.kind).dot }}
-                        />
-                        <span className="truncate">
-                          {selectedLeft ? 'Left · last did ' : 'Focused on '}
-                          <span className="font-medium text-foreground">{focus.kind}</span>
-                          {focus.detail && <span className="text-muted-foreground"> {focus.detail}</span>}
-                        </span>
+                {selectedDistinctId && focus && (
+                  <div className="flex items-center justify-between gap-2 border-b border-border/30 bg-primary/5 px-4 py-2">
+                    <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                      <span
+                        className="size-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: getSeriesColor(focus.kind).dot }}
+                      />
+                      <span className="truncate">
+                        {selectedLeft ? 'Left · last did ' : 'Focused on '}
+                        <span className="font-medium text-foreground">{focus.kind}</span>
+                        {focus.detail && <span className="text-muted-foreground"> {focus.detail}</span>}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDistinctId(null)}
-                        className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="size-3" /> Reset
-                      </button>
-                    </div>
-                  )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDistinctId(null)}
+                      className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-3" /> Reset
+                    </button>
+                  </div>
+                )}
 
-                  {allVisitors.length === 0 ? (
-                    <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
-                      No activity in the last {windowLabel(windowMs)}.
-                    </div>
-                  ) : filtered.length === 0 ? (
-                    <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground">
-                      No visitors match these filters.
-                      <button type="button" onClick={clearAll} className="text-xs text-primary hover:underline">
-                        Clear filters
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* The ul has to stay the flex child — a wrapper broke the min-h-0/flex-1 chain
-                          and collapsed it. */}
-                      <ul
-                        ref={listRef}
-                        onScroll={onListScroll}
-                        className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2"
-                      >
-                        {filtered.map(visitor => (
-                          <VisitorRow
-                            key={visitor.distinctId}
-                            visitor={visitor}
-                            journey={visitor.distinctId === selectedDistinctId ? selectedJourney : EMPTY_JOURNEY}
-                            stat={stats.get(visitor.distinctId)}
-                            selected={visitor.distinctId === selectedDistinctId}
-                            highlighted={visitor.distinctId === mapHovered}
-                            onClick={() => select(visitor.distinctId)}
-                            onHover={setRowHovered}
-                          />
-                        ))}
-                      </ul>
-                      {/* Zero-height anchor so the fade lands over the last rows without taking part
-                          in the flex sizing above it. */}
-                      <div className="relative h-0 shrink-0">
-                        {moreBelow && (
-                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background/90 to-transparent" />
-                        )}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
+                {filtered.length === 0 && renderEmptyList()}
 
-              {/* Outside the collapse: a minimized panel still has to say the feed stopped. */}
-              {error && <div className="border-t border-border/30 px-4 py-2 text-xs text-negative">{error}</div>}
-            </aside>
-          </>
+                {filtered.length > 0 && (
+                  <>
+                    {/* The ul has to stay the flex child — a wrapper broke the min-h-0/flex-1 chain
+                        and collapsed it. */}
+                    <ul
+                      ref={listRef}
+                      onScroll={onListScroll}
+                      className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2"
+                    >
+                      {filtered.map(visitor => (
+                        <VisitorRow
+                          key={visitor.distinctId}
+                          visitor={visitor}
+                          journey={visitor.distinctId === selectedDistinctId ? selectedJourney : EMPTY_JOURNEY}
+                          stat={stats.get(visitor.distinctId)}
+                          selected={visitor.distinctId === selectedDistinctId}
+                          highlighted={visitor.distinctId === mapHovered}
+                          onClick={() => select(visitor.distinctId)}
+                          onHover={setRowHovered}
+                        />
+                      ))}
+                    </ul>
+                    {/* Zero-height anchor so the fade lands over the last rows without taking part
+                        in the flex sizing above it. */}
+                    <div className="relative h-0 shrink-0">
+                      {moreBelow && (
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background/90 to-transparent" />
+                      )}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Outside the collapse: a minimized panel still has to say the feed stopped. */}
+            {error && <div className="border-t border-border/30 px-4 py-2 text-xs text-negative">{error}</div>}
+          </aside>
         )}
       </div>
     </>
