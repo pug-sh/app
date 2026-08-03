@@ -367,6 +367,7 @@ const Members = () => {
                       ) : confirmingRevoke === inv.id ? (
                         <button
                           onClick={() => handleRevoke(inv.id)}
+                          disabled={resending === inv.id}
                           className="text-xs font-medium text-negative hover:underline underline-offset-2"
                         >
                           Revoke?
