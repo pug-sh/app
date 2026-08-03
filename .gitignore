@@ -15,6 +15,13 @@ dist-ssr
 # Proto symlink (points to pug backend)
 proto
 
+# Map assets wired in for local dev by `bun run sync:app` in the pug-maps repo (../maps).
+# The basemap and fonts are symlinks into that repo; the POV data is copied. Every deployed
+# environment loads these from the CDN instead, so none of it belongs in the tree.
+public/basemap-*.pmtiles
+public/fonts
+public/pov/
+
 # Generated proto code (regenerate with: bun run generate)
 # src/api/genproto
 
