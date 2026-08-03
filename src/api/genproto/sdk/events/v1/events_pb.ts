@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file sdk/events/v1/events.proto.
  */
 export const file_sdk_events_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSJFChJCYXRjaENyZWF0ZVJlcXVlc3QSLwoGZXZlbnRzGAEgAygLMhQuc2RrLmV2ZW50cy52MS5FdmVudEIJukgGkgEDEOgHIicKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0itQYKBUV2ZW50Eh0KCGV2ZW50X2lkGAEgASgJQgu6SAjIAQFyA7ABARJBCg9hdXRvX3Byb3BlcnRpZXMYAiADKAsyKC5zZGsuZXZlbnRzLnYxLkV2ZW50LkF1dG9Qcm9wZXJ0aWVzRW50cnkSRQoRY3VzdG9tX3Byb3BlcnRpZXMYAyADKAsyKi5zZGsuZXZlbnRzLnYxLkV2ZW50LkN1c3RvbVByb3BlcnRpZXNFbnRyeRIbCgtkaXN0aW5jdF9pZBgEIAEoCUIGukgDyAEBEikKBGtpbmQYBSABKAlCG7pIGMgBAXITMhFeW2EtekEtWjAtOV8uLV0rJBI2CgpvY2N1cl90aW1lGAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIGukgDyAEBEh8KCnNlc3Npb25faWQYByABKAlCC7pICMgBAXIDsAEBGk8KE0F1dG9Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBGlEKFUN1c3RvbVByb3BlcnRpZXNFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5jb21tb24udjEuUHJvcGVydHlWYWx1ZToCOAE6vQK6SLkCGoMBCiNldmVudC5hdXRvX3Byb3BlcnRpZXNfZG9sbGFyX3ByZWZpeBIoYXV0b19wcm9wZXJ0aWVzIGtleXMgbXVzdCBzdGFydCB3aXRoICckJxoydGhpcy5hdXRvX3Byb3BlcnRpZXMuYWxsKGtleSwga2V5LnN0YXJ0c1dpdGgoJyQnKSkasAEKKGV2ZW50LmN1c3RvbV9wcm9wZXJ0aWVzX25vX2RvbGxhcl9wcmVmaXgSTWN1c3RvbV9wcm9wZXJ0aWVzIGtleXMgbXVzdCBub3Qgc3RhcnQgd2l0aCAnJCcgKHJlc2VydmVkIGZvciBhdXRvLXByb3BlcnRpZXMpGjV0aGlzLmN1c3RvbV9wcm9wZXJ0aWVzLmFsbChrZXksICFrZXkuc3RhcnRzV2l0aCgnJCcpKSJSCgpFdmVudEJhdGNoEiQKBmV2ZW50cxgBIAMoCzIULnNkay5ldmVudHMudjEuRXZlbnQSHgoKcHJvamVjdF9pZBgCIAEoCUIKukgHyAEBcgIQATJlCg1FdmVudHNTZXJ2aWNlElQKC0JhdGNoQ3JlYXRlEiEuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlcXVlc3QaIi5zZGsuZXZlbnRzLnYxLkJhdGNoQ3JlYXRlUmVzcG9uc2VCQVo/Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zZGsvZXZlbnRzL3YxO2V2ZW50c3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp]);
+  fileDesc("ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSKrAwoSQmF0Y2hDcmVhdGVSZXF1ZXN0Ei8KBmV2ZW50cxgBIAMoCzIULnNkay5ldmVudHMudjEuRXZlbnRCCbpIBpIBAxDoBzrjArpI3wIatQEKJmJhdGNoLmNvb2tpZWxlc3NfaWRlbnRpdHlfc2VydmVyX293bmVkEjljb29raWVsZXNzIGV2ZW50cyBtdXN0IG5vdCBzZW5kIGRpc3RpbmN0X2lkIG9yIHNlc3Npb25faWQaUHRoaXMuZXZlbnRzLmFsbChlLCAhZS5jb29raWVsZXNzIHx8IChlLmRpc3RpbmN0X2lkID09ICcnICYmIGUuc2Vzc2lvbl9pZCA9PSAnJykpGqQBCiFiYXRjaC5kaXN0aW5jdF9pZF9yZXNlcnZlZF9wcmVmaXgSQWRpc3RpbmN0X2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gjx0aGlzLmV2ZW50cy5hbGwoZSwgIWUuZGlzdGluY3RfaWQuc3RhcnRzV2l0aCgnY29va2llbGVzcy0nKSkixAEKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0SDwoHZHJvcHBlZBgCIAEoDRJSChFkcm9wcGVkX2J5X3JlYXNvbhgDIAMoCzI3LnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXNwb25zZS5Ecm9wcGVkQnlSZWFzb25FbnRyeRo2ChREcm9wcGVkQnlSZWFzb25FbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKA06AjgBIvUHCgVFdmVudBIdCghldmVudF9pZBgBIAEoCUILukgIyAEBcgOwAQESQQoPYXV0b19wcm9wZXJ0aWVzGAIgAygLMiguc2RrLmV2ZW50cy52MS5FdmVudC5BdXRvUHJvcGVydGllc0VudHJ5EkUKEWN1c3RvbV9wcm9wZXJ0aWVzGAMgAygLMiouc2RrLmV2ZW50cy52MS5FdmVudC5DdXN0b21Qcm9wZXJ0aWVzRW50cnkSEwoLZGlzdGluY3RfaWQYBCABKAkSKQoEa2luZBgFIAEoCUIbukgYyAEBchMyEV5bYS16QS1aMC05Xy4tXSskEjYKCm9jY3VyX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESHAoKc2Vzc2lvbl9pZBgHIAEoCUIIukgFcgOwAQESEgoKY29va2llbGVzcxgIIAEoCBpPChNBdXRvUHJvcGVydGllc0VudHJ5EgsKA2tleRgBIAEoCRInCgV2YWx1ZRgCIAEoCzIYLmNvbW1vbi52MS5Qcm9wZXJ0eVZhbHVlOgI4ARpRChVDdXN0b21Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBOvQDukjwAxqDAQojZXZlbnQuYXV0b19wcm9wZXJ0aWVzX2RvbGxhcl9wcmVmaXgSKGF1dG9fcHJvcGVydGllcyBrZXlzIG11c3Qgc3RhcnQgd2l0aCAnJCcaMnRoaXMuYXV0b19wcm9wZXJ0aWVzLmFsbChrZXksIGtleS5zdGFydHNXaXRoKCckJykpGrABCihldmVudC5jdXN0b21fcHJvcGVydGllc19ub19kb2xsYXJfcHJlZml4Ek1jdXN0b21fcHJvcGVydGllcyBrZXlzIG11c3Qgbm90IHN0YXJ0IHdpdGggJyQnIChyZXNlcnZlZCBmb3IgYXV0by1wcm9wZXJ0aWVzKRo1dGhpcy5jdXN0b21fcHJvcGVydGllcy5hbGwoa2V5LCAha2V5LnN0YXJ0c1dpdGgoJyQnKSkatAEKKWV2ZW50LmlkZW50aXR5X3JlcXVpcmVkX3VubGVzc19jb29raWVsZXNzEkFkaXN0aW5jdF9pZCBhbmQgc2Vzc2lvbl9pZCBhcmUgcmVxdWlyZWQgdW5sZXNzIGNvb2tpZWxlc3MgaXMgdHJ1ZRpEdGhpcy5jb29raWVsZXNzIHx8ICh0aGlzLmRpc3RpbmN0X2lkICE9ICcnICYmIHRoaXMuc2Vzc2lvbl9pZCAhPSAnJykiUgoKRXZlbnRCYXRjaBIkCgZldmVudHMYASADKAsyFC5zZGsuZXZlbnRzLnYxLkV2ZW50Eh4KCnByb2plY3RfaWQYAiABKAlCCrpIB8gBAXICEAEyZQoNRXZlbnRzU2VydmljZRJUCgtCYXRjaENyZWF0ZRIhLnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXF1ZXN0GiIuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlc3BvbnNlQkFaP2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL2V2ZW50cy92MTtldmVudHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message sdk.events.v1.BatchCreateRequest
@@ -42,6 +42,27 @@ export type BatchCreateResponse = Message<"sdk.events.v1.BatchCreateResponse"> &
    * @generated from field: uint32 accepted = 1;
    */
   accepted: number;
+
+  /**
+   * Events the server refused to ingest; accepted + dropped equals the number
+   * sent. A drop is deliberately not an error: a batch may legitimately mix
+   * cookieless and consented events, so failing the request would discard
+   * healthy traffic to report a fault affecting only part of it. That makes
+   * this field the only signal to the caller that anything was lost.
+   *
+   * @generated from field: uint32 dropped = 2;
+   */
+  dropped: number;
+
+  /**
+   * Per-reason breakdown of `dropped`, keyed by a stable reason token. This is
+   * what makes a drop actionable rather than merely visible: `salt_unavailable`
+   * is a server-side fault and the same payload may be retried, whereas
+   * `day_out_of_range` is client clock skew that will drop again on every retry.
+   *
+   * @generated from field: map<string, uint32> dropped_by_reason = 3;
+   */
+  droppedByReason: { [key: string]: number };
 };
 
 /**
@@ -71,6 +92,10 @@ export type Event = Message<"sdk.events.v1.Event"> & {
   customProperties: { [key: string]: PropertyValue };
 
   /**
+   * Empty only when cookieless (event.identity_required_unless_cookieless);
+   * never client-settable to a 'cookieless-'-prefixed value
+   * (batch.distinct_id_reserved_prefix).
+   *
    * @generated from field: string distinct_id = 4;
    */
   distinctId: string;
@@ -88,9 +113,21 @@ export type Event = Message<"sdk.events.v1.Event"> & {
   occurTime?: Timestamp | undefined;
 
   /**
+   * A UUID whenever set; omit entirely in cookieless mode (an explicit "" is
+   * also rejected — set fields must satisfy the uuid rule).
+   *
    * @generated from field: string session_id = 7;
    */
   sessionId: string;
+
+  /**
+   * Cookieless (no-consent) mode: the client stores nothing on the device and
+   * sends no identity; the ingest server derives an ephemeral daily-rotating
+   * distinct_id and a stitched session_id. See docs/architecture/ingestion.md.
+   *
+   * @generated from field: bool cookieless = 8;
+   */
+  cookieless: boolean;
 };
 
 /**
