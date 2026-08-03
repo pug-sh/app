@@ -26,6 +26,7 @@ const {
   activeOrgAtom,
   activeProjectAtom,
   bootstrapStatusAtom,
+  commitProjectsAtom,
   fetchProjectsAtom,
   orgsAtom,
   projectsAtom,
@@ -139,6 +140,36 @@ describe('fetchProjectsAtom', () => {
 
     expect(store.get(projectsAtom)).toEqual([])
     expect(store.get(activeProjectAtom)).toBeNull()
+  })
+})
+
+// The prefetch's commit half: same staleness rule as fetchProjectsAtom, but reachable on its own.
+describe('commitProjectsAtom', () => {
+  it('commits a list for the org that is still active', () => {
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+
+    expect(store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })).toBe(true)
+    expect(store.get(projectsAtom)).toEqual(projectsOfA)
+    expect(store.get(workspaceErrorAtom)).toBeNull()
+  })
+
+  it('drops a list whose org is no longer active', () => {
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(selectOrgAtom, orgB)
+
+    expect(store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })).toBe(false)
+    expect(store.get(projectsAtom)).toEqual([])
+  })
+
+  it('drops a list that lands after the workspace was torn down', () => {
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(resetWorkspaceAtom)
+
+    expect(store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })).toBe(false)
+    expect(store.get(projectsAtom)).toEqual([])
   })
 })
 

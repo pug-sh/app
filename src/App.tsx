@@ -19,12 +19,15 @@ import {
   activeOrgAtom,
   activeProjectAtom,
   bootstrapStatusAtom,
+  commitProjectsAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
   lastOrgIdAtom,
   lastProjectByOrgAtom,
   loadOrgAtom,
+  prefetchProjectsAtom,
   projectsAtom,
+  projectsLoadedAtom,
   rememberLastProjectAtom,
   resetWorkspaceAtom,
   selectOrgAtom,
@@ -99,6 +102,9 @@ export const WorkspaceBootstrap = () => {
   const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
   const fetchProjects = useSetAtom(fetchProjectsAtom)
+  const prefetchProjects = useSetAtom(prefetchProjectsAtom)
+  const commitProjects = useSetAtom(commitProjectsAtom)
+  const projectsLoaded = useAtomValue(projectsLoadedAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
   const lastProjectByOrg = useAtomValue(lastProjectByOrgAtom)
@@ -130,9 +136,18 @@ export const WorkspaceBootstrap = () => {
     let cancelled = false
     ;(async () => {
       if (lastOrgId) {
+        // Both calls need only the org id, so they go out together rather than the list waiting on
+        // the org. prefetchProjects resolves null on a miss; the org-keyed effect below then fetches.
+        const prefetched = prefetchProjects(lastOrgId)
         const org = await loadOrg(lastOrgId)
         if (cancelled) return
         if (org) {
+          // Before 'ready': the org-keyed effect runs off that change and skips on a landed list.
+          const projects = await prefetched
+          if (cancelled) return
+          // Keyed to the org the list was fetched for, not the one that came back: if they differ
+          // the commit is dropped and the effect below refetches, rather than mis-filing the list.
+          if (projects) commitProjects({ orgId: lastOrgId, projects })
           setStatus('ready')
           return
         }
@@ -154,7 +169,7 @@ export const WorkspaceBootstrap = () => {
     return () => {
       cancelled = true
     }
-  }, [status, lastOrgId, loadOrg, fetchOrgs, selectOrg, setStatus])
+  }, [status, lastOrgId, loadOrg, prefetchProjects, commitProjects, fetchOrgs, selectOrg, setStatus])
 
   // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
   // and this effect blanks the active project and refetches the list — so a rename would clear the
@@ -163,9 +178,12 @@ export const WorkspaceBootstrap = () => {
   const activeOrgId = activeOrg?.id
   useEffect(() => {
     if (status !== 'ready' || !activeOrgId) return
+    // Already committed by the restore path's prefetch. A switch still falls through: selectOrg
+    // clears the key alongside the list.
+    if (projectsLoaded) return
     setActiveProject(null)
     fetchProjects()
-  }, [status, activeOrgId, fetchProjects, setActiveProject])
+  }, [status, activeOrgId, projectsLoaded, fetchProjects, setActiveProject])
 
   useEffect(() => {
     if (projects.length === 0) {
