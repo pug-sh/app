@@ -145,6 +145,33 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
   }
 })
 
+// Returns the list rather than committing it: the org may not be active yet when it lands. Null on
+// failure or past the deadline, which keeps a hung call from holding 'ready' on a bare spinner.
+export const PREFETCH_DEADLINE_MS = 2000
+
+export const prefetchProjectsAtom = atom(null, async (get, _set, orgId: string) => {
+  const projectsRPC = get(projectsRPCAtom)
+  const deadline = new Promise<null>(resolve => setTimeout(() => resolve(null), PREFETCH_DEADLINE_MS))
+  try {
+    const resp = await Promise.race([projectsRPC.batchGet({ orgId }), deadline])
+    return resp?.projects ?? null
+  } catch (err) {
+    console.error('prefetchProjects failed:', err)
+    return null
+  }
+})
+
+export const commitProjectsAtom = atom(
+  null,
+  (get, set, { orgId, projects }: { orgId: string; projects: Project[] }) => {
+    if (get(activeOrgAtom)?.id !== orgId) return false
+    set(projectsAtom, projects)
+    set(projectsOrgIdAtom, orgId)
+    set(workspaceErrorAtom, null)
+    return true
+  },
+)
+
 export const activeProjectAtom = atom<Project | null>(null)
 
 // Whether the active org's project list has landed. Read-only view of projectsOrgIdAtom, which stays
