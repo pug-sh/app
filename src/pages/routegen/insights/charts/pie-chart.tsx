@@ -30,6 +30,12 @@ export const buildPieSlices = (
   })
 
 const percent = (value: number, total: number) => `${((value / total) * 100).toFixed(1)}%`
+const labelName = (name: string, maxLength = 16) =>
+  name.length > maxLength ? `${name.slice(0, maxLength - 1)}…` : name
+
+// Labels on very small arcs collide more than they help. Those slices remain
+// named in the legend, through keyboard focus, and in the donut centre.
+const MIN_LABEL_SHARE = 0.08
 
 export const PieChart = ({
   data,
@@ -95,30 +101,61 @@ export const PieChart = ({
             padAngle={0.012}
           >
             {({ arcs, path }) =>
-              arcs.map((arc, index) => (
-                <path
-                  key={`${index}-${arc.data.name}`}
-                  d={path(arc) ?? undefined}
-                  fill={arc.data.color}
-                  opacity={active === null || active.name === arc.data.name ? 0.9 : 0.3}
-                  className="outline-none transition-opacity focus:opacity-100"
-                  data-pie-slice={arc.data.name}
-                  tabIndex={0}
-                  role="img"
-                  aria-label={`${arc.data.name}: ${arc.data.value.toLocaleString()} (${percent(arc.data.value, total)})`}
-                  onMouseEnter={() => setActiveName(arc.data.name)}
-                  onMouseLeave={() => setActiveName(null)}
-                  onFocus={() => setActiveName(arc.data.name)}
-                  onBlur={() => setActiveName(null)}
-                />
-              ))
+              arcs.map((arc, index) => {
+                const [labelX, labelY] = path.centroid(arc)
+                const share = arc.data.value / total
+                return (
+                  <g key={`${index}-${arc.data.name}`}>
+                    <path
+                      d={path(arc) ?? undefined}
+                      fill={arc.data.color}
+                      opacity={active === null || active.name === arc.data.name ? 0.9 : 0.3}
+                      className="outline-none transition-opacity focus:opacity-100"
+                      data-pie-slice={arc.data.name}
+                      tabIndex={0}
+                      role="img"
+                      aria-label={`${arc.data.name}: ${arc.data.value.toLocaleString()} (${percent(arc.data.value, total)})`}
+                      onMouseEnter={() => setActiveName(arc.data.name)}
+                      onMouseLeave={() => setActiveName(null)}
+                      onFocus={() => setActiveName(arc.data.name)}
+                      onBlur={() => setActiveName(null)}
+                    />
+                    {share >= MIN_LABEL_SHARE ? (
+                      <text
+                        x={labelX}
+                        y={labelY}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="pointer-events-none fill-white text-[10px] font-medium"
+                        stroke="rgba(0, 0, 0, 0.45)"
+                        strokeWidth="2.5"
+                        paintOrder="stroke"
+                        aria-hidden
+                        data-pie-label={arc.data.name}
+                      >
+                        <tspan x={labelX} dy="-0.55em">
+                          {labelName(arc.data.name)}
+                        </tspan>
+                        <tspan x={labelX} dy="1.2em" className="tabular-nums">
+                          {percent(arc.data.value, total)}
+                        </tspan>
+                      </text>
+                    ) : null}
+                  </g>
+                )
+              })
             }
           </Pie>
-          <text textAnchor="middle" y="-4" className="fill-foreground text-[22px] font-medium tabular-nums">
-            {compactNumber(active?.value ?? total)}
+          <text
+            textAnchor="middle"
+            y="-4"
+            className="fill-foreground text-[22px] font-medium tabular-nums"
+            data-pie-active-label
+          >
+            {active ? labelName(active.name, 18) : compactNumber(total)}
           </text>
           <text textAnchor="middle" y="18" className="fill-muted-foreground text-xs">
-            {active ? percent(active.value, total) : 'total'}
+            {active ? `${compactNumber(active.value)} · ${percent(active.value, total)}` : 'total'}
           </text>
         </svg>
       </div>
