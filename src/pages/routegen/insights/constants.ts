@@ -50,13 +50,14 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
   return undefined
 }
 
-export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table'
+export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
 
 export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },
   { label: 'Area', value: 'area' },
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
+  { label: 'Pie', value: 'pie' },
   { label: 'Table', value: 'table' },
 ]
 

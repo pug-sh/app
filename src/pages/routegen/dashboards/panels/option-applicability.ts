@@ -22,6 +22,7 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
 
   const isKpi = isTrends && viewMode === DashboardTileViewMode.KPI
   const isChart = isTrends && CHART_VIEW_MODES.has(viewMode)
+  const isPie = isTrends && viewMode === DashboardTileViewMode.PIE
   const isTable = isTrends && viewMode === DashboardTileViewMode.TABLE
 
   return {
@@ -32,6 +33,6 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
     // Cartesian charts have a Y-axis to format.
     showAxisOptions: isChart,
     // The summary-stat row (the "legend") renders above every non-KPI trends view.
-    showLegendOption: isChart || isTable,
+    showLegendOption: isChart || isPie || isTable,
   }
 }
