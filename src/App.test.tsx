@@ -41,10 +41,13 @@ const {
   activeOrgAtom,
   activeProjectAtom,
   bootstrapStatusAtom,
+  lastOrgIdAtom,
   lastProjectByOrgAtom,
+  projectsAtom,
   rememberLastProjectAtom,
   renameOrgAtom,
   selectOrgAtom,
+  workspaceErrorAtom,
 } = await import('@/data/workspace.atoms')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 const { SidebarProvider } = await import('@/components/ui/sidebar')
@@ -275,6 +278,105 @@ describe('landing on the bare app URL', () => {
   })
 })
 
+// Restoring a session used to spend two sequential round trips: the project list waited on the org
+// to come back, though the only thing it needed from it — the id — was already in localStorage.
+describe('restoring the last org', () => {
+  const mountRestore = () => {
+    const store = createStore()
+    store.set(refreshTokenAtom, 'refresh-token')
+    store.set(jwtAtom, jwtFor('cust-1'))
+    store.set(lastOrgIdAtom, 'org-a')
+
+    const { unmount } = render(
+      <Provider store={store}>
+        <Router hook={memoryLocation({ path: '/' }).hook}>
+          <WorkspaceBootstrap />
+        </Router>
+      </Provider>,
+    )
+    return { store, unmount }
+  }
+
+  beforeEach(() => {
+    // Earlier describes leave calls on batchGet, and restoreMocks doesn't touch a vi.fn().
+    batchGet.mockClear()
+    batchGet.mockResolvedValue({ projects })
+  })
+
+  it('asks for the project list without waiting for the org', async () => {
+    let landOrg = (_: unknown) => {}
+    orgsGet.mockReturnValue(new Promise(resolve => (landOrg = resolve)))
+
+    mountRestore()
+
+    await waitFor(() => expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-a' }))
+    await act(async () => landOrg({ org: orgA }))
+  })
+
+  // Green against the sequential code too: it pins the new mechanism, not the old bug. Delete the
+  // commit or the projectsLoaded guard and the second fetch comes back.
+  it('does not fetch the list a second time once the org lands', async () => {
+    orgsGet.mockResolvedValue({ org: orgA })
+
+    const { store } = mountRestore()
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+    expect(batchGet).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to a real fetch when the speculative prefetch fails', async () => {
+    // Rejecting only the first call leaves the fallback free to succeed, so this pins that a
+    // fallback happens at all. Drop the swallow and the bootstrap strands on 'loading-org'.
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    batchGet.mockRejectedValueOnce(new Error('flake'))
+    orgsGet.mockResolvedValue({ org: orgA })
+
+    const { store } = mountRestore()
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+    expect(batchGet).toHaveBeenCalledTimes(2)
+    expect(store.get(workspaceErrorAtom)).toBeNull()
+  })
+
+  it('refetches when the org that comes back is not the one the list was fetched for', async () => {
+    const orgB = create(OrgSchema, { id: 'org-b', displayName: 'Org B' })
+    const projectsOfB = [create(ProjectSchema, { id: 'b1', displayName: 'B First' })]
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects }),
+    )
+    orgsGet.mockResolvedValue({ org: orgB })
+
+    const { store } = mountRestore()
+
+    // Keyed to the org that came back, org-a's list would be filed under org-b and reported landed.
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b1'))
+    expect(batchGet).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops a prefetch that lands after the bootstrap was torn down', async () => {
+    // The stale-org guard can't cover this: an unmount leaves activeOrgAtom set, so the commit
+    // would pass its check. Only the cancelled check stops it.
+    let land = () => {}
+    batchGet.mockReturnValue(
+      new Promise(resolve => {
+        land = () => resolve({ projects })
+      }),
+    )
+    orgsGet.mockResolvedValue({ org: orgA })
+
+    const { store, unmount } = mountRestore()
+    await waitFor(() => expect(store.get(activeOrgAtom)?.id).toBe('org-a'))
+
+    unmount()
+    await act(async () => {
+      land()
+    })
+
+    expect(store.get(projectsAtom)).toEqual([])
+    expect(store.get(bootstrapStatusAtom)).not.toBe('ready')
+  })
+})
+
 // The sidebar switcher does no more than this: set the org, hand the route back to '/'. It used to
 // fetch the target org's projects and pick one itself — a second copy of the bootstrap's restore
 // rule — so what these pin is that the machinery behind '/' really does finish the switch. Rendered
@@ -384,11 +486,18 @@ describe('switching organization', () => {
   // Not a switch, but the same harness: renaming is the other way an Org object gets replaced, and
   // what it must NOT do is look like a switch to the effect that reloads projects.
   it('does not reload the project list when the org is merely renamed', async () => {
-    batchGet.mockResolvedValue({ projects })
+    // Renamed mid-flight: once the list lands, projectsLoaded short-circuits the fetch effect
+    // however it is keyed, so a landed-list version of this passes against object keying too.
+    let land = () => {}
+    batchGet.mockReturnValue(
+      new Promise(resolve => {
+        land = () => resolve({ projects })
+      }),
+    )
     orgsUpdateDisplayName.mockResolvedValue({})
     const store = seedStore()
     mountSwitcher(store)
-    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+    await waitFor(() => expect(batchGet).toHaveBeenCalled())
     const fetches = batchGet.mock.calls.length
 
     await act(async () => {
@@ -399,7 +508,13 @@ describe('switching organization', () => {
     // the fetch effect blanks the active project and refetches — so the sidebar's project list and
     // chip empty out for a round-trip that changed nothing about which projects exist.
     expect(batchGet.mock.calls.length).toBe(fetches)
-    expect(store.get(activeProjectAtom)?.id).toBe('p1')
+
+    // Still resolves once the list lands: asserting only the absence would equally pass against a
+    // fetch effect that had stopped firing altogether.
+    await act(async () => {
+      land()
+    })
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
   })
 })
 
