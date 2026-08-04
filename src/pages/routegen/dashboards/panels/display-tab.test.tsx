@@ -10,6 +10,8 @@ import {
 import { InsightQuerySpecSchema, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DisplayTab } from './display-tab'
 
+vi.mock('@/components/event-filters', () => ({ PropertyPickerList: () => null }))
+
 const trendTile = (viewMode = DashboardTileViewMode.PIE) =>
   create(DashboardTileSchema, {
     viewMode,
