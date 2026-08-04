@@ -44,7 +44,7 @@ const densifyHeatmap = (days: HeatmapDay[]) => {
   })
 }
 
-const eventCount = (n: bigint) => `${Number(n).toLocaleString()} ${n === 1n ? 'event' : 'events'}`
+const eventCount = (n: bigint) => `${n.toLocaleString()} ${n === 1n ? 'event' : 'events'}`
 
 type HeatmapProps = {
   days: HeatmapDay[]
