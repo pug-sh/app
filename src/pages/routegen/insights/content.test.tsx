@@ -132,7 +132,9 @@ describe('InsightsContent pie view', () => {
   it('does not impose the Cartesian minimum height on a compact pie', () => {
     render(<InsightsContent {...base} chartData={LIVE} viewMode="pie" compact />)
 
-    expect(screen.getByRole('group', { name: 'Pie chart' }).getAttribute('class')).not.toContain('min-h-[120px]')
+    const pieWrapper = screen.getByRole('group', { name: 'Pie chart' }).parentElement
+    expect(pieWrapper).not.toBeNull()
+    expect(pieWrapper?.getAttribute('class')).not.toContain('min-h-[120px]')
   })
 
   it('does not show a partial legend when a negative value makes the pie unsupported', () => {

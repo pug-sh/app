@@ -31,7 +31,7 @@ import {
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
-import { dashboardTileViewModeToViewMode } from './tile-settings'
+import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from './tile-settings'
 
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
   return (value: number): string => {
@@ -117,11 +117,15 @@ export const InsightTileView = ({
     if (yAxisFormat === undefined || yAxisFormat === VisualizationOptions_YAxisFormat.UNSPECIFIED) return undefined
     return formatYAxisValue(yAxisFormat)
   }, [yAxisFormat])
-  const legendPosition = tile
-    ? tile.visualization?.legendPosition === VisualizationOptions_LegendPosition.RIGHT
-      ? 'right'
-      : 'bottom'
-    : undefined
+  let legendPosition: 'bottom' | 'right' | undefined
+  if (tile) {
+    const resolvedLegendPosition = resolveDashboardLegendPosition(tile.visualization?.legendPosition)
+    if (resolvedLegendPosition === VisualizationOptions_LegendPosition.RIGHT) {
+      legendPosition = 'right'
+    } else {
+      legendPosition = 'bottom'
+    }
+  }
 
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])

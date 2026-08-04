@@ -68,7 +68,7 @@ export const PieChart = ({
   const [activeName, setActiveName] = useState<string | null>(null)
   const collapsed = buildPieSlices(data, seriesNames, seriesColors, aggregations)
   const hasNegativeValue = collapsed.some(slice => slice.value < 0)
-  const slices = preparePieSlices(data, seriesNames, seriesColors, aggregations)
+  const slices = collapsed.filter(slice => slice.value > 0)
   const total = slices.reduce((sum, slice) => sum + slice.value, 0)
   const active = slices.find(slice => slice.name === activeName) ?? null
 
@@ -140,7 +140,7 @@ export const PieChart = ({
                       y={labelY}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      className="pointer-events-none fill-white text-[10px] font-medium"
+                      className="pointer-events-none fill-white text-xs font-medium"
                       stroke="rgba(0, 0, 0, 0.45)"
                       strokeWidth="2.5"
                       paintOrder="stroke"

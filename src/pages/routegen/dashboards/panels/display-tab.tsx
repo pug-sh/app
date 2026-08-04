@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
-import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
+import { DASHBOARD_TILE_VIEW_MODES, resolveDashboardLegendPosition } from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'
 
@@ -66,11 +66,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
               <OptionChip
                 label="position"
                 options={LEGEND_POSITION_OPTIONS}
-                value={
-                  tile.visualization?.legendPosition === VisualizationOptions_LegendPosition.RIGHT
-                    ? VisualizationOptions_LegendPosition.RIGHT
-                    : VisualizationOptions_LegendPosition.BOTTOM
-                }
+                value={resolveDashboardLegendPosition(tile.visualization?.legendPosition)}
                 onChange={legendPosition => setViz({ legendPosition })}
               />
             )}
