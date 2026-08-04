@@ -4,6 +4,7 @@ import type { TimeRange } from '@/components/date-range-picker'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { EditBar } from '../edit-bar'
 import { DashboardGrid } from '../grid'
+import { dashboardGridModeFromProto, dashboardGridModeToProto } from '../grid-layout'
 import { InlineTemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
@@ -48,6 +49,7 @@ export const DashboardCanvas = ({
     showPicker,
     setShowPicker,
     handleLayoutsChange,
+    patchDraftMeta,
     selectTile,
     deselectTile,
     handlePatchTile,
@@ -61,11 +63,22 @@ export const DashboardCanvas = ({
   } = editor
 
   const tileCount = effectiveDashboard?.tiles.length ?? 0
+  const gridMode = dashboardGridModeFromProto(effectiveDashboard?.gridMode ?? 0)
+  const handleGridModeChange = (mode: Parameters<typeof dashboardGridModeToProto>[0]) => {
+    patchDraftMeta({ gridMode: dashboardGridModeToProto(mode) })
+  }
 
   return (
     <div className="space-y-6">
       {mode === 'edit' ? (
-        <EditBar dirtyCount={dirtyCount} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
+        <EditBar
+          dirtyCount={dirtyCount}
+          saving={saving}
+          gridMode={gridMode}
+          onGridModeChange={handleGridModeChange}
+          onSave={handleSave}
+          onDiscard={handleDiscard}
+        />
       ) : null}
 
       {resumeBanner !== 'none' && storedDraft ? (
@@ -95,6 +108,7 @@ export const DashboardCanvas = ({
               <DashboardGrid
                 tiles={effectiveDashboard?.tiles ?? []}
                 mode={mode}
+                gridMode={gridMode}
                 selectedTileId={selectedTileId}
                 highlightTileId={highlightTileId}
                 globalTimeRange={globalTimeRange}

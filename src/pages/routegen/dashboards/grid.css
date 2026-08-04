@@ -10,11 +10,29 @@
   border-color: color-mix(in oklch, var(--muted-foreground) 70%, transparent);
 }
 
-/* Edit-mode snap-grid: one faint line per standard column/row. background-size is
-   set inline (grid.tsx) to the measured column pitch × row pitch. */
+/* Free mode keeps the original fine line grid. Its horizontal background size
+   is set inline from the measured 72-column pitch. */
 .dashboard-grid-guides {
   --grid-line: color-mix(in oklch, var(--muted-foreground) 12%, transparent);
+  --grid-column: color-mix(in oklch, var(--primary) 4%, transparent);
+}
+
+.dashboard-grid-guides[data-grid-mode="free"] {
   background-image:
     linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+}
+
+/* The standard guide uses real CSS-grid tracks with the same 16px column-gap as
+   react-grid-layout. Shaded tracks make each transparent gutter visible instead
+   of representing the grid with twelve misleading start lines. */
+.dashboard-grid-guides[data-grid-mode="columns-12"] {
+  background-image: linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+  background-size: 100% 18px;
+}
+
+.dashboard-grid-guide-column {
+  background: var(--grid-column);
+  border-right: 1px solid var(--grid-line);
+  border-left: 1px solid var(--grid-line);
 }

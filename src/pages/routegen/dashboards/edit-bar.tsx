@@ -1,15 +1,21 @@
 import { Loader2, Pencil } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import type { DashboardGridMode } from './grid-layout'
 
 export const EditBar = ({
   dirtyCount,
   saving,
+  gridMode,
+  onGridModeChange,
   onSave,
   onDiscard,
 }: {
   dirtyCount: number
   saving: boolean
+  gridMode: DashboardGridMode
+  onGridModeChange: (mode: DashboardGridMode) => void
   onSave: () => void
   onDiscard: () => void
 }) => {
@@ -52,6 +58,22 @@ export const EditBar = ({
       <span className="text-caution text-xs">
         {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
       </span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-caution text-xs">Grid</span>
+        <ToggleGroup
+          aria-label="Grid snapping"
+          variant="outline"
+          size="sm"
+          value={[gridMode]}
+          onValueChange={value => {
+            const nextMode = value[0]
+            if (nextMode === 'free' || nextMode === 'columns-12') onGridModeChange(nextMode)
+          }}
+        >
+          <ToggleGroupItem value="free">Free</ToggleGroupItem>
+          <ToggleGroupItem value="columns-12">12 columns</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       <div className="ml-auto flex items-center gap-2">
         {confirming ? <span className="text-caution text-xs">Discard {dirtyCount} changes?</span> : null}
         <Button

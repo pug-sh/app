@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import {
   type DashboardTile,
   DashboardTileViewMode,
+  VisualizationOptions_LegendPosition,
   VisualizationOptions_YAxisFormat,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -116,6 +117,11 @@ export const InsightTileView = ({
     if (yAxisFormat === undefined || yAxisFormat === VisualizationOptions_YAxisFormat.UNSPECIFIED) return undefined
     return formatYAxisValue(yAxisFormat)
   }, [yAxisFormat])
+  const legendPosition = tile
+    ? tile.visualization?.legendPosition === VisualizationOptions_LegendPosition.RIGHT
+      ? 'right'
+      : 'bottom'
+    : undefined
 
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
@@ -246,6 +252,8 @@ export const InsightTileView = ({
         topKIncompleteReason={topKIncompleteReason}
         // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
+        legendPosition={legendPosition}
+        showPieLabels={tile?.visualization?.hidePieLabels !== true}
         yTickFormatter={yTickFormatter}
         comparison={chartComparison}
         compact={compact}

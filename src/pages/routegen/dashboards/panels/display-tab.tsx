@@ -4,6 +4,7 @@ import {
   type TileHeader,
   TileHeaderSchema,
   type VisualizationOptions,
+  VisualizationOptions_LegendPosition,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { TwemojiIcon } from '@/components/twemoji-icon'
@@ -14,6 +15,11 @@ import { TILE_ICON_PALETTE } from '../tile-icons'
 import { DASHBOARD_TILE_VIEW_MODES } from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'
+
+const LEGEND_POSITION_OPTIONS = [
+  { label: 'Bottom', value: VisualizationOptions_LegendPosition.BOTTOM },
+  { label: 'Right', value: VisualizationOptions_LegendPosition.RIGHT },
+]
 
 type DisplayTabProps = {
   tile: DashboardTile
@@ -30,7 +36,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
   const setViz = (next: Partial<VisualizationOptions>) =>
     onPatch({ visualization: { ...create(VisualizationOptionsSchema, tile.visualization), ...next } })
 
-  const { showViewMode, showKpiOptions } = tileOptionApplicability(tile)
+  const { showViewMode, showKpiOptions, showLegendOption, showPieLabelOption } = tileOptionApplicability(tile)
 
   return (
     <div className="space-y-4">
@@ -42,6 +48,46 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
             value={tile.viewMode}
             onChange={next => onPatch({ viewMode: next })}
           />
+        </Section>
+      ) : null}
+
+      {showLegendOption ? (
+        <Section label="Legend">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 text-xs">
+              <Checkbox
+                id="tile-show-legend"
+                checked={tile.visualization?.hideLegend !== true}
+                onCheckedChange={checked => setViz({ hideLegend: checked !== true })}
+              />
+              <label htmlFor="tile-show-legend">Show legend</label>
+            </div>
+            {tile.visualization?.hideLegend === true ? null : (
+              <OptionChip
+                label="position"
+                options={LEGEND_POSITION_OPTIONS}
+                value={
+                  tile.visualization?.legendPosition === VisualizationOptions_LegendPosition.RIGHT
+                    ? VisualizationOptions_LegendPosition.RIGHT
+                    : VisualizationOptions_LegendPosition.BOTTOM
+                }
+                onChange={legendPosition => setViz({ legendPosition })}
+              />
+            )}
+          </div>
+        </Section>
+      ) : null}
+
+      {showPieLabelOption ? (
+        <Section label="Labels">
+          <div className="flex items-center gap-2 text-xs">
+            <Checkbox
+              id="tile-show-pie-labels"
+              checked={tile.visualization?.hidePieLabels !== true}
+              onCheckedChange={checked => setViz({ hidePieLabels: checked !== true })}
+            />
+            <label htmlFor="tile-show-pie-labels">Show labels</label>
+          </div>
         </Section>
       ) : null}
 

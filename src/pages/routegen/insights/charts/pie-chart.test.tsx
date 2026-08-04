@@ -45,36 +45,23 @@ describe('PieChart', () => {
     expect(document.querySelector('[data-pie-label="answered"]')).toBeTruthy()
   })
 
-  it('highlights a slice from its legend row', () => {
-    const { container } = render(
-      <PieChart
-        data={data}
-        seriesNames={['loaded', 'answered', 'unused']}
-        seriesColors={COLORS}
-        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
-      />,
-    )
-
-    fireEvent.mouseEnter(document.querySelector('[title="answered"]')!.closest('li')!)
-
-    expect(container.querySelector('[data-pie-slice="loaded"]')?.getAttribute('opacity')).toBe('0.3')
-    expect(container.querySelector('[data-pie-slice="answered"]')?.getAttribute('opacity')).toBe('0.9')
-  })
-
-  it('keeps visible slice labels when its detail legend is hidden', () => {
+  it('leaves legend rendering to the shared chart legend', () => {
     render(
       <PieChart
         data={data}
         seriesNames={['loaded', 'answered', 'unused']}
         seriesColors={COLORS}
         aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
-        hideLegend
       />,
     )
 
     expect(screen.queryByRole('list')).toBeNull()
     expect(document.querySelector('[data-pie-label="loaded"]')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' })).toBeTruthy()
+  })
+
+  it('humanizes the server Others label', () => {
+    expect(buildPieSlices(data, ['$others'], COLORS, [AggregationType.TOTAL])[0]?.name).toBe('Others')
   })
 
   it('omits collision-prone labels for small slices without hiding their accessible name', () => {
@@ -84,13 +71,27 @@ describe('PieChart', () => {
         seriesNames={['large', 'small']}
         seriesColors={COLORS}
         aggregations={[AggregationType.TOTAL, AggregationType.TOTAL]}
-        hideLegend
       />,
     )
 
     expect(document.querySelector('[data-pie-label="large"]')).toBeTruthy()
     expect(document.querySelector('[data-pie-label="small"]')).toBeNull()
     expect(screen.getByRole('img', { name: 'small: 1 (1.0%)' })).toBeTruthy()
+  })
+
+  it('can hide visual slice labels without hiding accessible slice names', () => {
+    render(
+      <PieChart
+        data={data}
+        seriesNames={['loaded', 'answered', 'unused']}
+        seriesColors={COLORS}
+        aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
+        showLabels={false}
+      />,
+    )
+
+    expect(document.querySelector('[data-pie-label="loaded"]')).toBeNull()
+    expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' })).toBeTruthy()
   })
 
   it('shows the focused slice name and value in the donut centre', () => {
@@ -100,7 +101,6 @@ describe('PieChart', () => {
         seriesNames={['loaded', 'answered', 'unused']}
         seriesColors={COLORS}
         aggregations={[AggregationType.TOTAL, AggregationType.TOTAL, AggregationType.TOTAL]}
-        hideLegend
       />,
     )
 
@@ -143,7 +143,6 @@ describe('PieChart', () => {
     )
 
     expect(screen.getByRole('img', { name: 'loaded: 30 (100.0%)' }).getAttribute('opacity')).toBe('0.9')
-    expect(document.querySelector('[title="loaded"]')?.closest('li')?.className).not.toContain('opacity-40')
 
     rerender(
       <PieChart

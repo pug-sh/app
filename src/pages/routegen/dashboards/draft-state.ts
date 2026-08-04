@@ -59,13 +59,14 @@ export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard
 })
 
 export type DashboardMetaPatch = Partial<
-  Pick<Dashboard, 'displayName' | 'description' | 'defaultTimeRange' | 'defaultGranularity'>
+  Pick<Dashboard, 'displayName' | 'description' | 'defaultTimeRange' | 'defaultGranularity' | 'gridMode'>
 >
 
-export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => ({
-  ...dashboard,
-  ...patch,
-})
+export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => {
+  const next = cloneForDraft(dashboard)
+  Object.assign(next, patch)
+  return next
+}
 
 // Count the fields that differ between two dashboards (name, description, and
 // each added/removed/changed tile). Drives the dirty-count badge in edit mode.
@@ -75,6 +76,7 @@ export const countDashboardChanges = (a: Dashboard, b: Dashboard): number => {
   if (a.description !== b.description) count++
   if (a.defaultTimeRange !== b.defaultTimeRange) count++
   if (a.defaultGranularity !== b.defaultGranularity) count++
+  if (a.gridMode !== b.gridMode) count++
 
   const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
   const bById = new Map(b.tiles.map(tile => [tile.id, tile]))

@@ -36,6 +36,7 @@ describe('dashboard pie view mode', () => {
       showKpiOptions: false,
       showAxisOptions: false,
       showLegendOption: true,
+      showPieLabelOption: true,
     })
   })
 })

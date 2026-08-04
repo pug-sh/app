@@ -4,9 +4,15 @@ import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashbo
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
+import { BREAKPOINTS, TILE_MIN_H } from './constants'
 import { tilePosition } from './draft-state'
-import { displayPositionToStored, storedPositionToDisplay } from './grid-layout'
+import {
+  type DashboardGridMode,
+  DISPLAY_GRID_COLUMNS,
+  gridPositionForStorage,
+  STORED_GRID_COLUMNS,
+  storedPositionForGrid,
+} from './grid-layout'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
@@ -15,15 +21,28 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Standard 12-column grid with a fixed gutter. The API keeps its original 72-unit
-// positions; conversion at this component boundary preserves wire compatibility.
-// Vertically the grid auto-compacts (compactType 'vertical', below): dragging a tile
-// onto another reflows the displaced tile UP into the vacated slot — a true swap —
-// instead of only ever shoving it down. A two-pixel row plus the 16px gutter keeps
-// the existing 18px vertical pitch, so stored heights retain their visual scale.
+// Both modes retain the same 18px vertical pitch and native 72-unit storage.
+// Free mode is the original fine-grained canvas: 72 horizontal snap points and
+// no imposed horizontal gutter. The standard mode renders those coordinates on
+// 12 columns with a fixed gutter, translating only at the component boundary.
 const GRID_PITCH = 18
-const GRID_GAP = 16
-const GRID_ROW_HEIGHT = GRID_PITCH - GRID_GAP
+const GRID_CONFIG = {
+  free: {
+    columns: STORED_GRID_COLUMNS,
+    horizontalGap: 0,
+    verticalGap: 14,
+    minWidth: 12,
+  },
+  'columns-12': {
+    columns: DISPLAY_GRID_COLUMNS,
+    horizontalGap: 16,
+    verticalGap: 16,
+    minWidth: 2,
+  },
+} as const satisfies Record<
+  DashboardGridMode,
+  { columns: number; horizontalGap: number; verticalGap: number; minWidth: number }
+>
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -43,9 +62,9 @@ const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H :
 // Build react-grid-layout's single-breakpoint layout from each tile's stored
 // position. Min width/height come from the tile kind, not storage, so a tile whose
 // kind min shrank (e.g. a KPI tile) can still be resized down past a stale min.
-const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
+const getLayoutsForTiles = (tiles: DashboardTile[], gridMode: DashboardGridMode): DashboardLayouts => ({
   lg: tiles.map(tile => {
-    const pos = storedPositionToDisplay(tilePosition(tile))
+    const pos = storedPositionForGrid(tilePosition(tile), gridMode)
     const minH = getTileMinHeight(tile)
     return {
       i: tile.id,
@@ -53,42 +72,61 @@ const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
       y: pos.y,
       w: pos.w,
       h: Math.max(pos.h, minH),
-      minW: TILE_MIN_W,
+      minW: GRID_CONFIG[gridMode].minWidth,
       minH,
       static: false,
     }
   }),
 })
 
-// Faint snap-grid behind tiles in edit mode: one line per fine column/row, so the
-// snap targets — and where a tile will sit flush vs leave a gap — are visible.
-const GridGuides = () => {
+// Faint snap-grid behind tiles in edit mode: one line per active column/row, so
+// switching modes also makes the change in available snap targets visible.
+const GridGuides = ({ gridMode }: { gridMode: DashboardGridMode }) => {
   const ref = useRef<HTMLDivElement>(null)
   const [columnWidth, setColumnWidth] = useState(0)
+  const config = GRID_CONFIG[gridMode]
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const measure = () => setColumnWidth((el.clientWidth + GRID_GAP) / COLS.lg)
+    const measure = () => setColumnWidth((el.clientWidth + config.horizontalGap) / config.columns)
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [config.columns, config.horizontalGap])
 
   return (
     <div
       ref={ref}
       aria-hidden
+      data-grid-mode={gridMode}
       className="dashboard-grid-guides pointer-events-none absolute inset-0"
-      style={columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_PITCH}px` } : undefined}
-    />
+      style={
+        gridMode === 'free' && columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_PITCH}px` } : undefined
+      }
+    >
+      {gridMode === 'columns-12' ? (
+        <div
+          className="grid h-full"
+          style={{
+            gridTemplateColumns: `repeat(${config.columns}, minmax(0, 1fr))`,
+            columnGap: config.horizontalGap,
+          }}
+        >
+          {Array.from({ length: config.columns }, (_, index) => (
+            <span key={index} className="dashboard-grid-guide-column" />
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
 export const DashboardGrid = ({
   tiles,
   mode = 'view',
+  gridMode = 'free',
   selectedTileId,
   highlightTileId,
   onDuplicateTile,
@@ -101,6 +139,7 @@ export const DashboardGrid = ({
 }: {
   tiles: DashboardTile[]
   mode?: DashboardMode
+  gridMode?: DashboardGridMode
   // The currently-selected tile id (drives a focus ring in edit mode).
   selectedTileId?: string | null
   // A just-added tile to briefly highlight and scroll into view.
@@ -115,10 +154,11 @@ export const DashboardGrid = ({
   // the public/read-only viewer passes a body that renders pre-computed results.
   renderTile?: (tile: DashboardTile) => ReactNode
 }) => {
-  const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
+  const layouts = useMemo(() => getLayoutsForTiles(tiles, gridMode), [tiles, gridMode])
   const editable = mode === 'edit'
   const isMobile = useIsMobile()
   const highlightRef = useRef<HTMLDivElement>(null)
+  const gridConfig = GRID_CONFIG[gridMode]
 
   // Bring a just-added/duplicated tile into view so it never lands off-screen.
   useEffect(() => {
@@ -135,7 +175,7 @@ export const DashboardGrid = ({
   const persistLayout = (layout: readonly LayoutItem[]) => {
     if (!editable) return
     onLayoutsChange?.({
-      lg: layout.map(item => ({ ...item, ...displayPositionToStored(item) })),
+      lg: layout.map(item => ({ ...item, ...gridPositionForStorage(item, gridMode) })),
     })
   }
 
@@ -210,14 +250,15 @@ export const DashboardGrid = ({
 
   return (
     <div className="relative">
-      {editable ? <GridGuides /> : null}
+      {editable ? <GridGuides gridMode={gridMode} /> : null}
       <ResponsiveGridLayoutWithWidth
+        key={gridMode}
         className="layout dashboard-grid"
         breakpoints={BREAKPOINTS}
-        cols={COLS}
+        cols={{ lg: gridConfig.columns }}
         layouts={layouts}
-        rowHeight={GRID_ROW_HEIGHT}
-        margin={[GRID_GAP, GRID_GAP]}
+        rowHeight={GRID_PITCH - gridConfig.verticalGap}
+        margin={[gridConfig.horizontalGap, gridConfig.verticalGap]}
         containerPadding={[0, 0]}
         compactType="vertical"
         isDraggable={editable}
