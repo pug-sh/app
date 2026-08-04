@@ -1,5 +1,6 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
+import { atomWithRefresh } from 'jotai/utils'
 import { atomFamily } from 'jotai-family'
 import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
@@ -35,17 +36,24 @@ export const profileFamilyAtom = atomFamily((profileId: string) =>
   }),
 )
 
-// Decorative — heatmap is nice-to-have, so a stats failure must not take down the page.
+const isAuthError = (err: unknown) =>
+  err instanceof ConnectError && (err.code === Code.Unauthenticated || err.code === Code.PermissionDenied)
+
+// Decorative — a failure must not take down the page, but stays distinct from an empty response.
+// Refreshable so the heatmap can retry; a plain derived atom would cache the failure for the session.
 export const profileStatsFamilyAtom = atomFamily((profileId: string) =>
-  atom(async get => {
+  atomWithRefresh(async get => {
     const rpc = get(activityRPCAtom)
     const headers = get(projectHeaderAtom)
-    if (!headers) return null
+    if (!headers) return { resp: null, failed: true as const, error: null }
     try {
-      return await rpc.getProfileStats({ distinctId: profileId }, { headers })
+      const resp = await rpc.getProfileStats({ distinctId: profileId }, { headers })
+      return { resp, failed: false as const, error: null }
     } catch (err) {
-      console.warn('GetProfileStats failed; falling back to no stats:', err)
-      return null
+      // Auth failures are session-wide, not a heatmap problem — let the boundary handle them.
+      if (isAuthError(err)) throw err
+      console.error('GetProfileStats failed; rendering the heatmap as unavailable:', err)
+      return { resp: null, failed: true as const, error: err instanceof Error ? err.message : null }
     }
   }),
 )

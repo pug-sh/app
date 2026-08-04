@@ -1,6 +1,6 @@
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import type { ActivityEvent, HeatmapDay } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
@@ -17,6 +17,7 @@ import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { structToEntries } from '@/lib/struct'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
+import { cn } from '@/lib/utils'
 import { resolveInlineProps } from '@/lib/well-known-events'
 import { profileFamilyAtom, profileStatsFamilyAtom } from './_data'
 
@@ -28,21 +29,63 @@ const SectionHeader = ({ title, right }: { title: string; right?: React.ReactNod
   </div>
 )
 
-const Heatmap = ({ days }: { days: HeatmapDay[] }) => {
+const HEATMAP_DAYS = 60
+const DAY_MS = 86_400_000
+
+// The server omits days with no events, so fill the window in — a column's position is its date,
+// and unfilled gaps collapse. Keyed in UTC to match the server's toDate() buckets.
+const densifyHeatmap = (days: HeatmapDay[]) => {
+  const counts = new Map(days.map(d => [d.date, d.count]))
+  const now = new Date()
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (HEATMAP_DAYS - 1) * DAY_MS
+  return Array.from({ length: HEATMAP_DAYS }, (_, i) => {
+    const date = new Date(start + i * DAY_MS).toISOString().slice(0, 10)
+    return { date, count: counts.get(date) ?? 0n }
+  })
+}
+
+const eventCount = (n: bigint) => `${Number(n).toLocaleString()} ${n === 1n ? 'event' : 'events'}`
+
+type HeatmapProps = {
+  days: HeatmapDay[]
+  failed: boolean
+  error: string | null
+  onRetry: () => void
+  retrying: boolean
+}
+
+const Heatmap = ({ days, failed, error, onRetry, retrying }: HeatmapProps) => {
+  if (failed) {
+    return (
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <AlertCircle className="w-3.5 h-3.5" />
+        <span>{error ?? "Couldn't load activity."}</span>
+        <Button variant="outline" size="sm" className="h-6 text-xs" onClick={onRetry} disabled={retrying}>
+          {retrying ? 'Retrying…' : 'Retry'}
+        </Button>
+      </div>
+    )
+  }
   if (days.length === 0) return <p className="text-xs text-muted-foreground">No activity in the last 60 days.</p>
-  const max = days.reduce((m, d) => (d.count > m ? d.count : m), 0n)
-  const maxNum = Number(max) || 1
+
+  const cells = densifyHeatmap(days)
+  const maxNum = Number(cells.reduce((m, d) => (d.count > m ? d.count : m), 0n)) || 1
+  const total = cells.reduce((sum, d) => sum + d.count, 0n)
+
   return (
-    <div className="flex gap-[2px]">
-      {days.map(d => {
-        const v = Number(d.count) / maxNum
-        const opacity = d.count === 0n ? 0.06 : 0.2 + v * 0.8
+    <div
+      className="flex gap-[2px] overflow-x-auto"
+      role="img"
+      aria-label={`Activity over the last ${HEATMAP_DAYS} days: ${eventCount(total)}`}
+    >
+      {cells.map(d => {
+        const empty = d.count === 0n
         return (
           <div
             key={d.date}
-            className="h-8 w-2 rounded-sm bg-link"
-            style={{ opacity }}
-            title={`${d.date} · ${d.count} events`}
+            className={cn('h-8 w-2 shrink-0 rounded-sm', empty ? 'bg-muted' : 'bg-chart-1')}
+            style={empty ? undefined : { opacity: 0.2 + (Number(d.count) / maxNum) * 0.8 }}
+            title={`${d.date} · ${eventCount(d.count)}`}
           />
         )
       })}
@@ -61,6 +104,9 @@ const ProfileOverview = () => {
 const OverviewBody = ({ profileId }: { profileId: string }) => {
   const profile = useAtomValue(profileFamilyAtom(profileId))
   const stats = useAtomValue(profileStatsFamilyAtom(profileId))
+  const refreshStats = useSetAtom(profileStatsFamilyAtom(profileId))
+  // Transition keeps the current body on screen; a bare refresh re-suspends the whole tab.
+  const [retrying, startRetry] = useTransition()
   const project = useAtomValue(activeProjectAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
@@ -105,7 +151,13 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
     <div className="space-y-8">
       <section>
         <SectionHeader title="Activity" right="last 60 days" />
-        <Heatmap days={stats?.heatmap ?? []} />
+        <Heatmap
+          days={stats.resp?.heatmap ?? []}
+          failed={stats.failed}
+          error={stats.error}
+          onRetry={() => startRetry(() => refreshStats())}
+          retrying={retrying}
+        />
       </section>
 
       {topProps.length > 0 && (
