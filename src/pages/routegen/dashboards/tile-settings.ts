@@ -6,9 +6,7 @@ import type { ViewMode } from '../insights/constants'
 
 export const DEFAULT_DASHBOARD_TILE_VIEW_MODE = DashboardTileViewMode.LINE
 
-export const resolveDashboardLegendPosition = (
-  position: VisualizationOptions_LegendPosition | undefined,
-): VisualizationOptions_LegendPosition => {
+export const resolveDashboardLegendPosition = (position: VisualizationOptions_LegendPosition | undefined) => {
   if (position === VisualizationOptions_LegendPosition.RIGHT) {
     return VisualizationOptions_LegendPosition.RIGHT
   }
