@@ -40,6 +40,5 @@ export const buildUpsertRequest = (draft: Dashboard): DashboardsServiceUpsertReq
     description: draft.description,
     defaultTimeRange: draft.defaultTimeRange,
     defaultGranularity: draft.defaultGranularity,
-    gridMode: draft.gridMode,
     tiles: draft.tiles.map(tileToInput),
   })

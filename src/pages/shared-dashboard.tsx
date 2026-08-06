@@ -14,7 +14,6 @@ import { useRouteParams } from '@/lib/route-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboardId]/controls-helpers'
 import { DashboardGrid } from './routegen/dashboards/grid'
-import { dashboardGridModeFromProto } from './routegen/dashboards/grid-layout'
 import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
 import { OptionChip } from './routegen/insights/controls'
@@ -127,7 +126,6 @@ const SharedDashboard = () => {
       ) : (
         <DashboardGrid
           mode="view"
-          gridMode={dashboardGridModeFromProto(data.gridMode)}
           tiles={tiles}
           renderTile={tile => {
             const rendered = renderedById.get(tile.id)
