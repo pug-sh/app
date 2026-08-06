@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJItQBChpDb21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBI5Cghwcm92aWRlchgBIAEoDjIdLnB1YmxpYy5hdXRoLnYxLk9BdXRoUHJvdmlkZXJCCLpIBYIBAhABEhoKCmNyZWRlbnRpYWwYAiABKAlCBrpIA8gBARItCgh0aW1lem9uZRgDIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokEjAKC3Byb3ZpZGVyX2lkGAQgASgJQhu6SBhyFhg/MhJeW2Etel1bYS16MC05Xy1dKiQiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiFgoUR2V0QXV0aENvbmZpZ1JlcXVlc3QinQEKEkF1dGhQcm92aWRlckNvbmZpZxIKCgJpZBgBIAEoCRIuCgR0eXBlGAIgASgOMiAucHVibGljLmF1dGgudjEuQXV0aFByb3ZpZGVyVHlwZRIUCgxkaXNwbGF5X25hbWUYAyABKAkSEQoJY2xpZW50X2lkGAQgASgJEhIKCmlzc3Vlcl91cmwYBSABKAkSDgoGc2NvcGVzGAYgAygJIk4KFUdldEF1dGhDb25maWdSZXNwb25zZRI1Cglwcm92aWRlcnMYASADKAsyIi5wdWJsaWMuYXV0aC52MS5BdXRoUHJvdmlkZXJDb25maWciNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UiEwoRRGVtb1NpZ25JblJlcXVlc3QiTgoSRGVtb1NpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCSpMCg1PQXV0aFByb3ZpZGVyEh8KG09fQVVUSF9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhoKFk9fQVVUSF9QUk9WSURFUl9HT09HTEUQASpyChBBdXRoUHJvdmlkZXJUeXBlEiIKHkFVVEhfUFJPVklERVJfVFlQRV9VTlNQRUNJRklFRBAAEh0KGUFVVEhfUFJPVklERVJfVFlQRV9HT09HTEUQARIbChdBVVRIX1BST1ZJREVSX1RZUEVfT0lEQxACMqIGCgtBdXRoU2VydmljZRJeCg1HZXRBdXRoQ29uZmlnEiQucHVibGljLmF1dGgudjEuR2V0QXV0aENvbmZpZ1JlcXVlc3QaJS5wdWJsaWMuYXV0aC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2UiABJkCg9TaWduSW5XaXRoRW1haWwSJi5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXF1ZXN0GicucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVzcG9uc2UiABJnChBSZXF1ZXN0TWFnaWNMaW5rEicucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QaKC5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVzcG9uc2UiABJqChFDb21wbGV0ZU1hZ2ljTGluaxIoLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBopLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2UiABJwChNDb21wbGV0ZU9BdXRoU2lnbkluEioucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlcXVlc3QaKy5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVzcG9uc2UiABJhCg5SZWZyZXNoU2Vzc2lvbhIlLnB1YmxpYy5hdXRoLnYxLlJlZnJlc2hTZXNzaW9uUmVxdWVzdBomLnB1YmxpYy5hdXRoLnYxLlJlZnJlc2hTZXNzaW9uUmVzcG9uc2UiABJMCgdTaWduT3V0Eh4ucHVibGljLmF1dGgudjEuU2lnbk91dFJlcXVlc3QaHy5wdWJsaWMuYXV0aC52MS5TaWduT3V0UmVzcG9uc2UiABJVCgpEZW1vU2lnbkluEiEucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlcXVlc3QaIi5wdWJsaWMuYXV0aC52MS5EZW1vU2lnbkluUmVzcG9uc2UiAEJAWj5naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3B1YmxpYy9hdXRoL3YxO2F1dGh2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJItQBChpDb21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBI5Cghwcm92aWRlchgBIAEoDjIdLnB1YmxpYy5hdXRoLnYxLk9BdXRoUHJvdmlkZXJCCLpIBYIBAhABEhoKCmNyZWRlbnRpYWwYAiABKAlCBrpIA8gBARItCgh0aW1lem9uZRgDIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokEjAKC3Byb3ZpZGVyX2lkGAQgASgJQhu6SBhyFhg/MhJeW2Etel1bYS16MC05Xy1dKiQiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkikwIKGUNvbXBsZXRlT0lEQ1NpZ25JblJlcXVlc3QSMwoLcHJvdmlkZXJfaWQYASABKAlCHrpIG8gBAXIWGD8yEl5bYS16XVthLXowLTlfLV0qJBIZCgRjb2RlGAIgASgJQgu6SAjIAQFyAxiAQBI4Cg1jb2RlX3ZlcmlmaWVyGAMgASgJQiG6SB7IAQFyGRArGIABMhJeW0EtWmEtejAtOS5ffi1dKyQSIQoMcmVkaXJlY3RfdXJpGAQgASgJQgu6SAjIAQFyAxiAEBIaCgVub25jZRgFIAEoCUILukgIyAEBcgMYgAESLQoIdGltZXpvbmUYBiABKAlCG7pIGHIWGEAyEl5bQS1aYS16MC05XysvLV0qJCJCChpDb21wbGV0ZU9JRENTaWduSW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJIhYKFEdldEF1dGhDb25maWdSZXF1ZXN0Ip0BChJBdXRoUHJvdmlkZXJDb25maWcSCgoCaWQYASABKAkSLgoEdHlwZRgCIAEoDjIgLnB1YmxpYy5hdXRoLnYxLkF1dGhQcm92aWRlclR5cGUSFAoMZGlzcGxheV9uYW1lGAMgASgJEhEKCWNsaWVudF9pZBgEIAEoCRISCgppc3N1ZXJfdXJsGAUgASgJEg4KBnNjb3BlcxgGIAMoCSJOChVHZXRBdXRoQ29uZmlnUmVzcG9uc2USNQoJcHJvdmlkZXJzGAEgAygLMiIucHVibGljLmF1dGgudjEuQXV0aFByb3ZpZGVyQ29uZmlnIjYKFVJlZnJlc2hTZXNzaW9uUmVxdWVzdBIdCg1yZWZyZXNoX3Rva2VuGAEgASgJQga6SAPIAQEiPgoWUmVmcmVzaFNlc3Npb25SZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJIicKDlNpZ25PdXRSZXF1ZXN0EhUKDXJlZnJlc2hfdG9rZW4YASABKAkiEQoPU2lnbk91dFJlc3BvbnNlIhMKEURlbW9TaWduSW5SZXF1ZXN0Ik4KEkRlbW9TaWduSW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkqTAoNT0F1dGhQcm92aWRlchIfChtPX0FVVEhfUFJPVklERVJfVU5TUEVDSUZJRUQQABIaChZPX0FVVEhfUFJPVklERVJfR09PR0xFEAEqUwoQQXV0aFByb3ZpZGVyVHlwZRIiCh5BVVRIX1BST1ZJREVSX1RZUEVfVU5TUEVDSUZJRUQQABIbChdBVVRIX1BST1ZJREVSX1RZUEVfT0lEQxABMpEHCgtBdXRoU2VydmljZRJeCg1HZXRBdXRoQ29uZmlnEiQucHVibGljLmF1dGgudjEuR2V0QXV0aENvbmZpZ1JlcXVlc3QaJS5wdWJsaWMuYXV0aC52MS5HZXRBdXRoQ29uZmlnUmVzcG9uc2UiABJkCg9TaWduSW5XaXRoRW1haWwSJi5wdWJsaWMuYXV0aC52MS5TaWduSW5XaXRoRW1haWxSZXF1ZXN0GicucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVzcG9uc2UiABJnChBSZXF1ZXN0TWFnaWNMaW5rEicucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QaKC5wdWJsaWMuYXV0aC52MS5SZXF1ZXN0TWFnaWNMaW5rUmVzcG9uc2UiABJqChFDb21wbGV0ZU1hZ2ljTGluaxIoLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBopLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlTWFnaWNMaW5rUmVzcG9uc2UiABJwChNDb21wbGV0ZU9BdXRoU2lnbkluEioucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlcXVlc3QaKy5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9BdXRoU2lnbkluUmVzcG9uc2UiABJtChJDb21wbGV0ZU9JRENTaWduSW4SKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU9JRENTaWduSW5SZXF1ZXN0GioucHVibGljLmF1dGgudjEuQ29tcGxldGVPSURDU2lnbkluUmVzcG9uc2UiABJhCg5SZWZyZXNoU2Vzc2lvbhIlLnB1YmxpYy5hdXRoLnYxLlJlZnJlc2hTZXNzaW9uUmVxdWVzdBomLnB1YmxpYy5hdXRoLnYxLlJlZnJlc2hTZXNzaW9uUmVzcG9uc2UiABJMCgdTaWduT3V0Eh4ucHVibGljLmF1dGgudjEuU2lnbk91dFJlcXVlc3QaHy5wdWJsaWMuYXV0aC52MS5TaWduT3V0UmVzcG9uc2UiABJVCgpEZW1vU2lnbkluEiEucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlcXVlc3QaIi5wdWJsaWMuYXV0aC52MS5EZW1vU2lnbkluUmVzcG9uc2UiAEJAWj5naXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3B1YmxpYy9hdXRoL3YxO2F1dGh2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -217,6 +217,70 @@ export const CompleteOAuthSignInResponseSchema: GenMessage<CompleteOAuthSignInRe
   messageDesc(file_public_auth_v1_auth, 7);
 
 /**
+ * @generated from message public.auth.v1.CompleteOIDCSignInRequest
+ */
+export type CompleteOIDCSignInRequest = Message<"public.auth.v1.CompleteOIDCSignInRequest"> & {
+  /**
+   * @generated from field: string provider_id = 1;
+   */
+  providerId: string;
+
+  /**
+   * @generated from field: string code = 2;
+   */
+  code: string;
+
+  /**
+   * @generated from field: string code_verifier = 3;
+   */
+  codeVerifier: string;
+
+  /**
+   * @generated from field: string redirect_uri = 4;
+   */
+  redirectUri: string;
+
+  /**
+   * @generated from field: string nonce = 5;
+   */
+  nonce: string;
+
+  /**
+   * @generated from field: string timezone = 6;
+   */
+  timezone: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOIDCSignInRequest.
+ * Use `create(CompleteOIDCSignInRequestSchema)` to create a new message.
+ */
+export const CompleteOIDCSignInRequestSchema: GenMessage<CompleteOIDCSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 8);
+
+/**
+ * @generated from message public.auth.v1.CompleteOIDCSignInResponse
+ */
+export type CompleteOIDCSignInResponse = Message<"public.auth.v1.CompleteOIDCSignInResponse"> & {
+  /**
+   * @generated from field: string token = 1;
+   */
+  token: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message public.auth.v1.CompleteOIDCSignInResponse.
+ * Use `create(CompleteOIDCSignInResponseSchema)` to create a new message.
+ */
+export const CompleteOIDCSignInResponseSchema: GenMessage<CompleteOIDCSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 9);
+
+/**
  * @generated from message public.auth.v1.GetAuthConfigRequest
  */
 export type GetAuthConfigRequest = Message<"public.auth.v1.GetAuthConfigRequest"> & {
@@ -227,7 +291,7 @@ export type GetAuthConfigRequest = Message<"public.auth.v1.GetAuthConfigRequest"
  * Use `create(GetAuthConfigRequestSchema)` to create a new message.
  */
 export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 8);
+  messageDesc(file_public_auth_v1_auth, 10);
 
 /**
  * @generated from message public.auth.v1.AuthProviderConfig
@@ -269,7 +333,7 @@ export type AuthProviderConfig = Message<"public.auth.v1.AuthProviderConfig"> & 
  * Use `create(AuthProviderConfigSchema)` to create a new message.
  */
 export const AuthProviderConfigSchema: GenMessage<AuthProviderConfig> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 9);
+  messageDesc(file_public_auth_v1_auth, 11);
 
 /**
  * @generated from message public.auth.v1.GetAuthConfigResponse
@@ -286,7 +350,7 @@ export type GetAuthConfigResponse = Message<"public.auth.v1.GetAuthConfigRespons
  * Use `create(GetAuthConfigResponseSchema)` to create a new message.
  */
 export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 10);
+  messageDesc(file_public_auth_v1_auth, 12);
 
 /**
  * @generated from message public.auth.v1.RefreshSessionRequest
@@ -303,7 +367,7 @@ export type RefreshSessionRequest = Message<"public.auth.v1.RefreshSessionReques
  * Use `create(RefreshSessionRequestSchema)` to create a new message.
  */
 export const RefreshSessionRequestSchema: GenMessage<RefreshSessionRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 11);
+  messageDesc(file_public_auth_v1_auth, 13);
 
 /**
  * @generated from message public.auth.v1.RefreshSessionResponse
@@ -329,7 +393,7 @@ export type RefreshSessionResponse = Message<"public.auth.v1.RefreshSessionRespo
  * Use `create(RefreshSessionResponseSchema)` to create a new message.
  */
 export const RefreshSessionResponseSchema: GenMessage<RefreshSessionResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 12);
+  messageDesc(file_public_auth_v1_auth, 14);
 
 /**
  * @generated from message public.auth.v1.SignOutRequest
@@ -349,7 +413,7 @@ export type SignOutRequest = Message<"public.auth.v1.SignOutRequest"> & {
  * Use `create(SignOutRequestSchema)` to create a new message.
  */
 export const SignOutRequestSchema: GenMessage<SignOutRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 13);
+  messageDesc(file_public_auth_v1_auth, 15);
 
 /**
  * @generated from message public.auth.v1.SignOutResponse
@@ -362,7 +426,7 @@ export type SignOutResponse = Message<"public.auth.v1.SignOutResponse"> & {
  * Use `create(SignOutResponseSchema)` to create a new message.
  */
 export const SignOutResponseSchema: GenMessage<SignOutResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 14);
+  messageDesc(file_public_auth_v1_auth, 16);
 
 /**
  * @generated from message public.auth.v1.DemoSignInRequest
@@ -375,7 +439,7 @@ export type DemoSignInRequest = Message<"public.auth.v1.DemoSignInRequest"> & {
  * Use `create(DemoSignInRequestSchema)` to create a new message.
  */
 export const DemoSignInRequestSchema: GenMessage<DemoSignInRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 15);
+  messageDesc(file_public_auth_v1_auth, 17);
 
 /**
  * @generated from message public.auth.v1.DemoSignInResponse
@@ -409,7 +473,7 @@ export type DemoSignInResponse = Message<"public.auth.v1.DemoSignInResponse"> & 
  * Use `create(DemoSignInResponseSchema)` to create a new message.
  */
 export const DemoSignInResponseSchema: GenMessage<DemoSignInResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 16);
+  messageDesc(file_public_auth_v1_auth, 18);
 
 /**
  * @generated from enum public.auth.v1.OAuthProvider
@@ -442,14 +506,9 @@ export enum AuthProviderType {
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: AUTH_PROVIDER_TYPE_GOOGLE = 1;
+   * @generated from enum value: AUTH_PROVIDER_TYPE_OIDC = 1;
    */
-  GOOGLE = 1,
-
-  /**
-   * @generated from enum value: AUTH_PROVIDER_TYPE_OIDC = 2;
-   */
-  OIDC = 2,
+  OIDC = 1,
 }
 
 /**
@@ -504,6 +563,17 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof CompleteOAuthSignInRequestSchema;
     output: typeof CompleteOAuthSignInResponseSchema;
+  },
+  /**
+   * CompleteOIDCSignIn exchanges a browser-issued Authorization Code on the
+   * server, keeping confidential-provider secrets out of the dashboard.
+   *
+   * @generated from rpc public.auth.v1.AuthService.CompleteOIDCSignIn
+   */
+  completeOIDCSignIn: {
+    methodKind: "unary";
+    input: typeof CompleteOIDCSignInRequestSchema;
+    output: typeof CompleteOIDCSignInResponseSchema;
   },
   /**
    * RefreshSession exchanges a valid refresh token for a new access+refresh pair.

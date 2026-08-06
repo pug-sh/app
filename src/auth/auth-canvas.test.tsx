@@ -18,9 +18,6 @@ vi.mock('@/api/rpc', async () => {
   }
 })
 
-// External-provider rendering is beside the point here; keep this test focused on canvas lifetime.
-vi.mock('@/auth/google-sign-in-button', () => ({ GoogleSignInButton: () => null }))
-
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
   trackFeature: vi.fn(),

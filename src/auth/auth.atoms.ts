@@ -56,7 +56,7 @@ export const meAtom = atom<Me | null>(null)
 
 // How the session was obtained. Threaded in rather than inferred so every path that mints a
 // session has to say which it is — a new one is a type error until it answers.
-export type SignInMethod = 'password' | 'magic_link' | 'google' | 'oidc' | 'demo'
+export type SignInMethod = 'password' | 'magic_link' | 'oidc' | 'demo'
 
 // Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
 // all funnel here. The token alone decides identity (the server ignores any caller session). Always
@@ -129,32 +129,44 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
   }
 })
 
-export const completeOAuthAtom = atom(
+export const completeOIDCAtom = atom(
   null,
   async (
     get,
     set,
     {
       providerId,
-      credential,
-      method,
+      code,
+      codeVerifier,
+      redirectURI,
+      nonce,
       displayName,
-    }: { providerId: string; credential: string; method: 'google' | 'oidc'; displayName: string },
+    }: {
+      providerId: string
+      code: string
+      codeVerifier: string
+      redirectURI: string
+      nonce: string
+      displayName: string
+    },
   ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
       // Seed the auto-created default project's reporting zone from the browser on
       // first sign-in (parity with completeMagicLink). Ignored server-side for a
       // returning user; malformed/empty values are coerced to UTC.
-      const resp = await authRPC.completeOAuthSignIn({
+      const resp = await authRPC.completeOIDCSignIn({
         providerId,
-        credential,
+        code,
+        codeVerifier,
+        redirectUri: redirectURI,
+        nonce,
         timezone: browserTimezone(),
       })
-      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method })
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
       return { ok: true }
     } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('completeOAuth unexpected error', error)
+      if (!(error instanceof ConnectError)) console.error('completeOIDC unexpected error', error)
       return {
         ok: false,
         error: mapOAuthConnectError(error, displayName, 'Could not sign you in. Try again from the sign-in page.'),

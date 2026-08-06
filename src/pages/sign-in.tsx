@@ -8,7 +8,6 @@ import { z } from 'zod'
 import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authProvidersAtom, demoEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { AuthStatus } from '@/auth/auth-status'
-import { GoogleSignInButton } from '@/auth/google-sign-in-button'
 import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -21,8 +20,8 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// GIS renders its own button at 40px and won't take a height, so it sets the control rhythm
-// here — inputs and the submit button match it rather than the app's h-8 default.
+// External-provider buttons use 40px controls, so inputs and the submit button
+// match that rhythm rather than the app's h-8 default.
 const controlHeight = 'h-10'
 
 const MODE_COPY = {
@@ -110,7 +109,6 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
-
   return (
     <>
       {magicLinkEmail ? (
@@ -149,23 +147,6 @@ const SignIn = () => {
             <>
               <div className="space-y-2">
                 {authProviders.map(provider => {
-                  if (provider.type === AuthProviderType.GOOGLE) {
-                    return (
-                      <GoogleSignInButton
-                        key={provider.id}
-                        providerId={provider.id}
-                        clientId={provider.clientId}
-                        displayName={provider.displayName}
-                        disabled={authBusy}
-                        onBegin={() => setError('')}
-                        onLoadingChange={busy => setPending(busy ? provider.id : null)}
-                        onError={message => {
-                          setPending(null)
-                          setError(message)
-                        }}
-                      />
-                    )
-                  }
                   if (provider.type === AuthProviderType.OIDC) {
                     return (
                       <OIDCSignInButton

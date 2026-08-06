@@ -3,13 +3,13 @@ import { AlertCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
 import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
-import { authProvidersAtom, completeOAuthAtom } from '@/auth/auth.atoms'
+import { authProvidersAtom, completeOIDCAtom } from '@/auth/auth.atoms'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { clearPendingOIDCProvider, completeOIDCRedirect, pendingOIDCProviderID } from '@/auth/oidc'
 
 const OAuthCallback = () => {
   const providers = useAtomValue(authProvidersAtom)
-  const completeOAuth = useSetAtom(completeOAuthAtom)
+  const completeOIDC = useSetAtom(completeOIDCAtom)
   const [, navigate] = useLocation()
   const started = useRef(false)
   const [error, setError] = useState('')
@@ -19,6 +19,10 @@ const OAuthCallback = () => {
     started.current = true
 
     const providerId = pendingOIDCProviderID()
+    if (providers.length === 0) {
+      setError('Sign-in options could not be loaded. Try again.')
+      return
+    }
     const provider = providers.find(
       candidate => candidate.id === providerId && candidate.type === AuthProviderType.OIDC,
     )
@@ -30,11 +34,10 @@ const OAuthCallback = () => {
 
     void (async () => {
       try {
-        const credential = await completeOIDCRedirect(provider)
-        const result = await completeOAuth({
+        const authorization = await completeOIDCRedirect(provider)
+        const result = await completeOIDC({
           providerId: provider.id,
-          credential,
-          method: 'oidc',
+          ...authorization,
           displayName: provider.displayName,
         })
         if (!result.ok) {
@@ -47,7 +50,7 @@ const OAuthCallback = () => {
         setError(`${provider.displayName} sign-in could not be completed. Try again.`)
       }
     })()
-  }, [completeOAuth, navigate, providers])
+  }, [completeOIDC, navigate, providers])
 
   if (!error) return <AuthPending label="Completing secure sign-in…" />
 
