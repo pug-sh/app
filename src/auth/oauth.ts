@@ -1,7 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 
 // Failure reasons the backend sets on the error trailer; mirror the reason codes emitted by
-// the pug auth handler for public.auth.v1 CompleteOAuthSignIn — keep these in sync with it.
+// the pug auth handler for public.auth.v1 CompleteOIDCSignIn — keep these in sync with it.
 const OAUTH_REASON_INVALID_TOKEN = 'INVALID_TOKEN'
 const OAUTH_REASON_PROVIDER_DISABLED = 'OAUTH_PROVIDER_DISABLED'
 
