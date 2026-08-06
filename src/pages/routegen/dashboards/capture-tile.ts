@@ -2,8 +2,7 @@
 //
 // Technique: clone the node, inline every computed style onto the clone (so it
 // renders identically without the document's stylesheet), wrap it in an SVG
-// <foreignObject>, and load that SVG through an <img>. Recharts renders plain
-// SVG, so nothing taints the canvas and toBlob() stays usable. The <img> stays
+// <foreignObject>, and load that SVG through an <img>. The <img> stays
 // vector — drawing it onto a scaled canvas rasterizes crisply at device
 // resolution. The SVG loads in an isolated document that cannot see the page's
 // @font-face faces, so the UI font is re-supplied by embedding it in the SVG (see
@@ -254,19 +253,14 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
     `<foreignObject x="0" y="0" width="${width}" height="${height}">${serialized}</foreignObject>` +
     '</svg>'
 
-  // Source the SVG from a Blob URL rather than a data: URL — the inlined computed
-  // styles make the markup large, and a percent-encoded data: URL of that size is
-  // the fragile part of this technique (encoding cost + URL length limits).
-  const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
-  try {
-    const img = await loadImage(svgUrl, width, height)
-    return { img, width, height, ...colors }
-  } finally {
-    // loadImage has settled — resolved after onload (bitmap retained independently
-    // of the URL) or rejected on error/timeout (load abandoned). Either way the
-    // object URL is no longer needed.
-    URL.revokeObjectURL(svgUrl)
-  }
+  // Must be a data: URL, never a Blob URL: Chrome drops the canvas origin-clean flag for an
+  // <img>-loaded SVG holding a <foreignObject> sourced from blob: (an empty one is enough), so
+  // composeShareCard's toBlob() then throws SecurityError. encodeURIComponent is what keeps this
+  // safe — it covers UTF-8 tile text and the '#' in the charts' url(#clip) refs, which would
+  // otherwise truncate the URL at a fragment.
+  const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+  const img = await loadImage(svgUrl, width, height)
+  return { img, width, height, ...colors }
 }
 
 // logo.svg bakes in a pale badge plate so the full-color mark reads on any surface.
