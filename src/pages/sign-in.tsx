@@ -5,9 +5,10 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
-import { demoEnabledAtom, googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
+import { authProvidersAtom, demoEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { AuthStatus } from '@/auth/auth-status'
-import { GoogleSignInButton } from '@/auth/google-sign-in-button'
+import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -19,8 +20,8 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// GIS renders its own button at 40px and won't take a height, so it sets the control rhythm
-// here — inputs and the submit button match it rather than the app's h-8 default.
+// External-provider buttons use 40px controls, so inputs and the submit button
+// match that rhythm rather than the app's h-8 default.
 const controlHeight = 'h-10'
 
 const MODE_COPY = {
@@ -41,7 +42,7 @@ const MODE_COPY = {
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
-  const googleOAuthEnabled = useAtomValue(googleOAuthEnabledAtom)
+  const authProviders = useAtomValue(authProvidersAtom)
   const demoEnabled = useAtomValue(demoEnabledAtom)
   const [, navigate] = useLocation()
   // Magic link is the primary path — the backend creates the account on first use,
@@ -49,9 +50,9 @@ const SignIn = () => {
   // people who set a password via the in-app SetPassword flow.
   const [mode, setMode] = useState<'link' | 'password'>('link')
   const [error, setError] = useState('')
-  // One in-flight action at a time — the three auth paths are mutually exclusive, and Google's
-  // has to be in here or its RPC leaves the rest of the form live for a second submit.
-  const [pending, setPending] = useState<'link' | 'password' | 'google' | null>(null)
+  // One in-flight action at a time. The value is either an email method or a
+  // server-configured provider ID, so any number of external buttons share the gate.
+  const [pending, setPending] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
@@ -108,7 +109,6 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
-
   return (
     <>
       {magicLinkEmail ? (
@@ -143,14 +143,31 @@ const SignIn = () => {
           <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>
           <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
-          {googleOAuthEnabled && (
+          {authProviders.length > 0 && (
             <>
-              <GoogleSignInButton
-                disabled={authBusy}
-                onBegin={() => setError('')}
-                onLoadingChange={busy => setPending(busy ? 'google' : null)}
-                onError={setError}
-              />
+              <div className="space-y-2">
+                {authProviders.map(provider => {
+                  if (provider.type === AuthProviderType.OIDC) {
+                    return (
+                      <OIDCSignInButton
+                        key={provider.id}
+                        provider={provider}
+                        disabled={authBusy}
+                        loading={pending === provider.id}
+                        onBegin={() => {
+                          setError('')
+                          setPending(provider.id)
+                        }}
+                        onError={message => {
+                          setPending(null)
+                          setError(message)
+                        }}
+                      />
+                    )
+                  }
+                  return null
+                })}
+              </div>
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />
                 <span className="text-xs text-muted-foreground">or continue with email</span>

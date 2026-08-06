@@ -42,6 +42,7 @@ const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
+const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oauth-callback')
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 
@@ -286,6 +287,7 @@ const App = () => {
   // RPCs never fire on a public page.
   const isSharedRoute = location.startsWith('/shared/')
   const isMagicLink = location === '/magic-link'
+  const isOAuthCallback = location === '/oauth/callback'
   const isDemoRoute = location === '/demo'
   const failed = !!workspaceError || status === 'error'
 
@@ -293,7 +295,8 @@ const App = () => {
   // one state that straddles, running both between sign-in and the picker and on the way from a
   // restored session into the dashboard.
   const onAuthScreen =
-    !isSharedRoute && (isMagicLink || isDemoRoute || !authenticated || failed || status === 'needs-selection')
+    !isSharedRoute &&
+    (isMagicLink || isOAuthCallback || isDemoRoute || !authenticated || failed || status === 'needs-selection')
 
   // Which of the two bootstraps this is, latched from whether an auth screen came first — a
   // restored session never shows one, so it boots on the plain spinner and never flashes the wall.
@@ -312,6 +315,7 @@ const App = () => {
   // Only reached under onAuthCanvas, so the final fallthrough is the bootstrap step.
   const authScreen = () => {
     if (isMagicLink) return <MagicLink />
+    if (isOAuthCallback) return <OAuthCallback />
     // Before the !authenticated branch on purpose: an already-signed-in user must still reach
     // <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
     if (isDemoRoute) return <Demo />

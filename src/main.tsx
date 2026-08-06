@@ -2,7 +2,6 @@ import { Component, type ReactNode, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { initAnalytics } from './analytics/pug'
-import { AppGoogleOAuthProvider } from './auth/google-oauth-provider'
 import { TooltipProvider } from './components/ui/tooltip'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './index.css'
@@ -83,9 +82,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <TooltipProvider>
-        <AppGoogleOAuthProvider>
-          <App />
-        </AppGoogleOAuthProvider>
+        <App />
       </TooltipProvider>
     </ErrorBoundary>
   </StrictMode>,

@@ -12,13 +12,11 @@ const { orgsList, batchGet } = vi.hoisted(() => ({ orgsList: vi.fn(), batchGet: 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
+    authRPCAtom: atom({ getAuthConfig: vi.fn().mockResolvedValue({ providers: [] }) }),
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: vi.fn() }),
   }
 })
-
-// Beside the point here, and GoogleLogin throws outside the provider main.tsx (not App) supplies.
-vi.mock('@/auth/google-sign-in-button', () => ({ GoogleSignInButton: () => null }))
 
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),

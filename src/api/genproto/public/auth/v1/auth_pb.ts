@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJIqQBChpDb21wbGV0ZU9BdXRoU2lnbkluUmVxdWVzdBI7Cghwcm92aWRlchgBIAEoDjIdLnB1YmxpYy5hdXRoLnYxLk9BdXRoUHJvdmlkZXJCCrpIB4IBBBABIAASGgoKY3JlZGVudGlhbBgCIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAMgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQwobQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UiEwoRRGVtb1NpZ25JblJlcXVlc3QiTgoSRGVtb1NpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCSpMCg1PQXV0aFByb3ZpZGVyEh8KG09fQVVUSF9QUk9WSURFUl9VTlNQRUNJRklFRBAAEhoKFk9fQVVUSF9QUk9WSURFUl9HT09HTEUQATLCBQoLQXV0aFNlcnZpY2USZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgAScAoTQ29tcGxldGVPQXV0aFNpZ25JbhIqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0F1dGhTaWduSW5SZXF1ZXN0GisucHVibGljLmF1dGgudjEuQ29tcGxldGVPQXV0aFNpZ25JblJlc3BvbnNlIgASYQoOUmVmcmVzaFNlc3Npb24SJS5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlc3BvbnNlIgASTAoHU2lnbk91dBIeLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXF1ZXN0Gh8ucHVibGljLmF1dGgudjEuU2lnbk91dFJlc3BvbnNlIgASVQoKRGVtb1NpZ25JbhIhLnB1YmxpYy5hdXRoLnYxLkRlbW9TaWduSW5SZXF1ZXN0GiIucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJIpMCChlDb21wbGV0ZU9JRENTaWduSW5SZXF1ZXN0EjMKC3Byb3ZpZGVyX2lkGAEgASgJQh66SBvIAQFyFhg/MhJeW2Etel1bYS16MC05Xy1dKiQSGQoEY29kZRgCIAEoCUILukgIyAEBcgMYgEASOAoNY29kZV92ZXJpZmllchgDIAEoCUIhukgeyAEBchkQKxiAATISXltBLVphLXowLTkuX34tXSskEiEKDHJlZGlyZWN0X3VyaRgEIAEoCUILukgIyAEBcgMYgBASGgoFbm9uY2UYBSABKAlCC7pICMgBAXIDGIABEi0KCHRpbWV6b25lGAYgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiQgoaQ29tcGxldGVPSURDU2lnbkluUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCSIWChRHZXRBdXRoQ29uZmlnUmVxdWVzdCKdAQoSQXV0aFByb3ZpZGVyQ29uZmlnEgoKAmlkGAEgASgJEi4KBHR5cGUYAiABKA4yIC5wdWJsaWMuYXV0aC52MS5BdXRoUHJvdmlkZXJUeXBlEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRIRCgljbGllbnRfaWQYBCABKAkSEgoKaXNzdWVyX3VybBgFIAEoCRIOCgZzY29wZXMYBiADKAkiTgoVR2V0QXV0aENvbmZpZ1Jlc3BvbnNlEjUKCXByb3ZpZGVycxgBIAMoCzIiLnB1YmxpYy5hdXRoLnYxLkF1dGhQcm92aWRlckNvbmZpZyI2ChVSZWZyZXNoU2Vzc2lvblJlcXVlc3QSHQoNcmVmcmVzaF90b2tlbhgBIAEoCUIGukgDyAEBIj4KFlJlZnJlc2hTZXNzaW9uUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCSInCg5TaWduT3V0UmVxdWVzdBIVCg1yZWZyZXNoX3Rva2VuGAEgASgJIhEKD1NpZ25PdXRSZXNwb25zZSITChFEZW1vU2lnbkluUmVxdWVzdCJOChJEZW1vU2lnbkluUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgpwcm9qZWN0X2lkGAMgASgJKlMKEEF1dGhQcm92aWRlclR5cGUSIgoeQVVUSF9QUk9WSURFUl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQVVUSF9QUk9WSURFUl9UWVBFX09JREMQATKfBgoLQXV0aFNlcnZpY2USXgoNR2V0QXV0aENvbmZpZxIkLnB1YmxpYy5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0GiUucHVibGljLmF1dGgudjEuR2V0QXV0aENvbmZpZ1Jlc3BvbnNlIgASZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgASbQoSQ29tcGxldGVPSURDU2lnbkluEikucHVibGljLmF1dGgudjEuQ29tcGxldGVPSURDU2lnbkluUmVxdWVzdBoqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0lEQ1NpZ25JblJlc3BvbnNlIgASYQoOUmVmcmVzaFNlc3Npb24SJS5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlc3BvbnNlIgASTAoHU2lnbk91dBIeLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXF1ZXN0Gh8ucHVibGljLmF1dGgudjEuU2lnbk91dFJlc3BvbnNlIgASVQoKRGVtb1NpZ25JbhIhLnB1YmxpYy5hdXRoLnYxLkRlbW9TaWduSW5SZXF1ZXN0GiIucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -147,65 +147,140 @@ export const CompleteMagicLinkResponseSchema: GenMessage<CompleteMagicLinkRespon
   messageDesc(file_public_auth_v1_auth, 5);
 
 /**
- * @generated from message public.auth.v1.CompleteOAuthSignInRequest
+ * @generated from message public.auth.v1.CompleteOIDCSignInRequest
  */
-export type CompleteOAuthSignInRequest = Message<"public.auth.v1.CompleteOAuthSignInRequest"> & {
+export type CompleteOIDCSignInRequest = Message<"public.auth.v1.CompleteOIDCSignInRequest"> & {
   /**
-   * @generated from field: public.auth.v1.OAuthProvider provider = 1;
+   * @generated from field: string provider_id = 1;
    */
-  provider: OAuthProvider;
+  providerId: string;
 
   /**
-   * Google id_token JWT from @react-oauth/google GoogleLogin onSuccess credential.
-   *
-   * @generated from field: string credential = 2;
+   * @generated from field: string code = 2;
    */
-  credential: string;
+  code: string;
 
   /**
-   * Optional IANA timezone captured from the browser completing sign-in. When the
-   * sign-in provisions a new account (default org + project), it is stored as that
-   * project's reporting_timezone; on a returning sign-in — including one that links
-   * this identity to an existing account — it is ignored. Empty = UTC; a malformed
-   * value is coerced to UTC.
-   *
-   * @generated from field: string timezone = 3;
+   * @generated from field: string code_verifier = 3;
+   */
+  codeVerifier: string;
+
+  /**
+   * @generated from field: string redirect_uri = 4;
+   */
+  redirectUri: string;
+
+  /**
+   * @generated from field: string nonce = 5;
+   */
+  nonce: string;
+
+  /**
+   * @generated from field: string timezone = 6;
    */
   timezone: string;
 };
 
 /**
- * Describes the message public.auth.v1.CompleteOAuthSignInRequest.
- * Use `create(CompleteOAuthSignInRequestSchema)` to create a new message.
+ * Describes the message public.auth.v1.CompleteOIDCSignInRequest.
+ * Use `create(CompleteOIDCSignInRequestSchema)` to create a new message.
  */
-export const CompleteOAuthSignInRequestSchema: GenMessage<CompleteOAuthSignInRequest> = /*@__PURE__*/
+export const CompleteOIDCSignInRequestSchema: GenMessage<CompleteOIDCSignInRequest> = /*@__PURE__*/
   messageDesc(file_public_auth_v1_auth, 6);
 
 /**
- * @generated from message public.auth.v1.CompleteOAuthSignInResponse
+ * @generated from message public.auth.v1.CompleteOIDCSignInResponse
  */
-export type CompleteOAuthSignInResponse = Message<"public.auth.v1.CompleteOAuthSignInResponse"> & {
+export type CompleteOIDCSignInResponse = Message<"public.auth.v1.CompleteOIDCSignInResponse"> & {
   /**
-   * short-lived access JWT — sign-in OR sign-up, decided server-side
-   *
    * @generated from field: string token = 1;
    */
   token: string;
 
   /**
-   * long-lived opaque refresh token
-   *
    * @generated from field: string refresh_token = 2;
    */
   refreshToken: string;
 };
 
 /**
- * Describes the message public.auth.v1.CompleteOAuthSignInResponse.
- * Use `create(CompleteOAuthSignInResponseSchema)` to create a new message.
+ * Describes the message public.auth.v1.CompleteOIDCSignInResponse.
+ * Use `create(CompleteOIDCSignInResponseSchema)` to create a new message.
  */
-export const CompleteOAuthSignInResponseSchema: GenMessage<CompleteOAuthSignInResponse> = /*@__PURE__*/
+export const CompleteOIDCSignInResponseSchema: GenMessage<CompleteOIDCSignInResponse> = /*@__PURE__*/
   messageDesc(file_public_auth_v1_auth, 7);
+
+/**
+ * @generated from message public.auth.v1.GetAuthConfigRequest
+ */
+export type GetAuthConfigRequest = Message<"public.auth.v1.GetAuthConfigRequest"> & {
+};
+
+/**
+ * Describes the message public.auth.v1.GetAuthConfigRequest.
+ * Use `create(GetAuthConfigRequestSchema)` to create a new message.
+ */
+export const GetAuthConfigRequestSchema: GenMessage<GetAuthConfigRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 8);
+
+/**
+ * @generated from message public.auth.v1.AuthProviderConfig
+ */
+export type AuthProviderConfig = Message<"public.auth.v1.AuthProviderConfig"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: public.auth.v1.AuthProviderType type = 2;
+   */
+  type: AuthProviderType;
+
+  /**
+   * @generated from field: string display_name = 3;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string client_id = 4;
+   */
+  clientId: string;
+
+  /**
+   * @generated from field: string issuer_url = 5;
+   */
+  issuerUrl: string;
+
+  /**
+   * @generated from field: repeated string scopes = 6;
+   */
+  scopes: string[];
+};
+
+/**
+ * Describes the message public.auth.v1.AuthProviderConfig.
+ * Use `create(AuthProviderConfigSchema)` to create a new message.
+ */
+export const AuthProviderConfigSchema: GenMessage<AuthProviderConfig> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 9);
+
+/**
+ * @generated from message public.auth.v1.GetAuthConfigResponse
+ */
+export type GetAuthConfigResponse = Message<"public.auth.v1.GetAuthConfigResponse"> & {
+  /**
+   * @generated from field: repeated public.auth.v1.AuthProviderConfig providers = 1;
+   */
+  providers: AuthProviderConfig[];
+};
+
+/**
+ * Describes the message public.auth.v1.GetAuthConfigResponse.
+ * Use `create(GetAuthConfigResponseSchema)` to create a new message.
+ */
+export const GetAuthConfigResponseSchema: GenMessage<GetAuthConfigResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 10);
 
 /**
  * @generated from message public.auth.v1.RefreshSessionRequest
@@ -222,7 +297,7 @@ export type RefreshSessionRequest = Message<"public.auth.v1.RefreshSessionReques
  * Use `create(RefreshSessionRequestSchema)` to create a new message.
  */
 export const RefreshSessionRequestSchema: GenMessage<RefreshSessionRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 8);
+  messageDesc(file_public_auth_v1_auth, 11);
 
 /**
  * @generated from message public.auth.v1.RefreshSessionResponse
@@ -248,7 +323,7 @@ export type RefreshSessionResponse = Message<"public.auth.v1.RefreshSessionRespo
  * Use `create(RefreshSessionResponseSchema)` to create a new message.
  */
 export const RefreshSessionResponseSchema: GenMessage<RefreshSessionResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 9);
+  messageDesc(file_public_auth_v1_auth, 12);
 
 /**
  * @generated from message public.auth.v1.SignOutRequest
@@ -268,7 +343,7 @@ export type SignOutRequest = Message<"public.auth.v1.SignOutRequest"> & {
  * Use `create(SignOutRequestSchema)` to create a new message.
  */
 export const SignOutRequestSchema: GenMessage<SignOutRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 10);
+  messageDesc(file_public_auth_v1_auth, 13);
 
 /**
  * @generated from message public.auth.v1.SignOutResponse
@@ -281,7 +356,7 @@ export type SignOutResponse = Message<"public.auth.v1.SignOutResponse"> & {
  * Use `create(SignOutResponseSchema)` to create a new message.
  */
 export const SignOutResponseSchema: GenMessage<SignOutResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 11);
+  messageDesc(file_public_auth_v1_auth, 14);
 
 /**
  * @generated from message public.auth.v1.DemoSignInRequest
@@ -294,7 +369,7 @@ export type DemoSignInRequest = Message<"public.auth.v1.DemoSignInRequest"> & {
  * Use `create(DemoSignInRequestSchema)` to create a new message.
  */
 export const DemoSignInRequestSchema: GenMessage<DemoSignInRequest> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 12);
+  messageDesc(file_public_auth_v1_auth, 15);
 
 /**
  * @generated from message public.auth.v1.DemoSignInResponse
@@ -328,33 +403,44 @@ export type DemoSignInResponse = Message<"public.auth.v1.DemoSignInResponse"> & 
  * Use `create(DemoSignInResponseSchema)` to create a new message.
  */
 export const DemoSignInResponseSchema: GenMessage<DemoSignInResponse> = /*@__PURE__*/
-  messageDesc(file_public_auth_v1_auth, 13);
+  messageDesc(file_public_auth_v1_auth, 16);
 
 /**
- * @generated from enum public.auth.v1.OAuthProvider
+ * @generated from enum public.auth.v1.AuthProviderType
  */
-export enum OAuthProvider {
+export enum AuthProviderType {
   /**
-   * @generated from enum value: O_AUTH_PROVIDER_UNSPECIFIED = 0;
+   * @generated from enum value: AUTH_PROVIDER_TYPE_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: O_AUTH_PROVIDER_GOOGLE = 1;
+   * @generated from enum value: AUTH_PROVIDER_TYPE_OIDC = 1;
    */
-  GOOGLE = 1,
+  OIDC = 1,
 }
 
 /**
- * Describes the enum public.auth.v1.OAuthProvider.
+ * Describes the enum public.auth.v1.AuthProviderType.
  */
-export const OAuthProviderSchema: GenEnum<OAuthProvider> = /*@__PURE__*/
+export const AuthProviderTypeSchema: GenEnum<AuthProviderType> = /*@__PURE__*/
   enumDesc(file_public_auth_v1_auth, 0);
 
 /**
  * @generated from service public.auth.v1.AuthService
  */
 export const AuthService: GenService<{
+  /**
+   * GetAuthConfig returns the non-secret provider settings the browser needs to
+   * render sign-in options and start Authorization Code + PKCE flows.
+   *
+   * @generated from rpc public.auth.v1.AuthService.GetAuthConfig
+   */
+  getAuthConfig: {
+    methodKind: "unary";
+    input: typeof GetAuthConfigRequestSchema;
+    output: typeof GetAuthConfigResponseSchema;
+  },
   /**
    * @generated from rpc public.auth.v1.AuthService.SignInWithEmail
    */
@@ -380,12 +466,15 @@ export const AuthService: GenService<{
     output: typeof CompleteMagicLinkResponseSchema;
   },
   /**
-   * @generated from rpc public.auth.v1.AuthService.CompleteOAuthSignIn
+   * CompleteOIDCSignIn exchanges a browser-issued Authorization Code on the
+   * server, keeping confidential-provider secrets out of the dashboard.
+   *
+   * @generated from rpc public.auth.v1.AuthService.CompleteOIDCSignIn
    */
-  completeOAuthSignIn: {
+  completeOIDCSignIn: {
     methodKind: "unary";
-    input: typeof CompleteOAuthSignInRequestSchema;
-    output: typeof CompleteOAuthSignInResponseSchema;
+    input: typeof CompleteOIDCSignInRequestSchema;
+    output: typeof CompleteOIDCSignInResponseSchema;
   },
   /**
    * RefreshSession exchanges a valid refresh token for a new access+refresh pair.

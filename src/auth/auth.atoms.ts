@@ -3,24 +3,34 @@ import { atom } from 'jotai'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
-import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
+import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
 import { jwtAtom, refreshTokenAtom } from './jwt.atoms'
-import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
+import { mapOAuthConnectError } from './oauth'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
 export type AuthResult = { ok: true } | { ok: false; error: string }
 
-// Build-time gate for the Google sign-in button (driven by VITE_GOOGLE_CLIENT_ID), exposed as
-// an atom so config reads flow through the store like the rest of auth state.
-export const googleOAuthEnabledAtom = atom(() => isGoogleOAuthEnabled())
+// The server is the single source of truth for external identity providers. This
+// async atom suspends the signed-out canvas briefly while the public config loads.
+export const authProvidersAtom = atom<Promise<AuthProviderConfig[]>>(async get => {
+  try {
+    const response = await get(authRPCAtom).getAuthConfig({})
+    return response.providers
+  } catch (error) {
+    // External provider discovery must not take password or magic-link sign-in
+    // down with it during a rolling upgrade or transient server failure.
+    console.error('Could not load external auth providers', error)
+    return []
+  }
+})
 
 // Build-time gate for the sign-in page's "Explore the live demo" link, driven by VITE_DEMO_ENABLED
 // (not the in-app banner — that follows the active demo session; see isDemoSessionAtom). Exposed as
-// an atom for parity with googleOAuthEnabledAtom.
+// an atom so config reads flow through the store like the rest of auth state.
 export const demoEnabledAtom = atom(() => isDemoEnabled())
 
 export const signInAtom = atom(
@@ -46,7 +56,7 @@ export const meAtom = atom<Me | null>(null)
 
 // How the session was obtained. Threaded in rather than inferred so every path that mints a
 // session has to say which it is — a new one is a type error until it answers.
-export type SignInMethod = 'password' | 'magic_link' | 'google' | 'demo'
+export type SignInMethod = 'password' | 'magic_link' | 'oidc' | 'demo'
 
 // Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
 // all funnel here. The token alone decides identity (the server ignores any caller session). Always
@@ -119,26 +129,47 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
   }
 })
 
-export const completeGoogleOAuthAtom = atom(
+export const completeOIDCAtom = atom(
   null,
-  async (get, set, { credential }: { credential: string }): Promise<AuthResult> => {
+  async (
+    get,
+    set,
+    {
+      providerId,
+      code,
+      codeVerifier,
+      redirectURI,
+      nonce,
+      displayName,
+    }: {
+      providerId: string
+      code: string
+      codeVerifier: string
+      redirectURI: string
+      nonce: string
+      displayName: string
+    },
+  ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
       // Seed the auto-created default project's reporting zone from the browser on
       // first sign-in (parity with completeMagicLink). Ignored server-side for a
       // returning user; malformed/empty values are coerced to UTC.
-      const resp = await authRPC.completeOAuthSignIn({
-        provider: OAuthProvider.GOOGLE,
-        credential,
+      const resp = await authRPC.completeOIDCSignIn({
+        providerId,
+        code,
+        codeVerifier,
+        redirectUri: redirectURI,
+        nonce,
         timezone: browserTimezone(),
       })
-      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'google' })
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
       return { ok: true }
     } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
+      if (!(error instanceof ConnectError)) console.error('completeOIDC unexpected error', error)
       return {
         ok: false,
-        error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
+        error: mapOAuthConnectError(error, displayName, 'Could not sign you in. Try again from the sign-in page.'),
       }
     }
   },
