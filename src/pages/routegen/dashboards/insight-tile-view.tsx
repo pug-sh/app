@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import {
   type DashboardTile,
   DashboardTileViewMode,
+  VisualizationOptions_LegendPosition,
   VisualizationOptions_YAxisFormat,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -30,7 +31,7 @@ import {
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
-import { dashboardTileViewModeToViewMode } from './tile-settings'
+import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from './tile-settings'
 
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
   return (value: number): string => {
@@ -116,6 +117,17 @@ export const InsightTileView = ({
     if (yAxisFormat === undefined || yAxisFormat === VisualizationOptions_YAxisFormat.UNSPECIFIED) return undefined
     return formatYAxisValue(yAxisFormat)
   }, [yAxisFormat])
+  let legendPosition: 'top' | 'bottom' | 'right' | undefined
+  if (tile) {
+    const resolvedLegendPosition = resolveDashboardLegendPosition(tile.visualization?.legendPosition)
+    if (resolvedLegendPosition === VisualizationOptions_LegendPosition.RIGHT) {
+      legendPosition = 'right'
+    } else if (resolvedLegendPosition === VisualizationOptions_LegendPosition.BOTTOM) {
+      legendPosition = 'bottom'
+    } else {
+      legendPosition = 'top'
+    }
+  }
 
   const trendSeries = useMemo(() => (result.case === 'trends' ? [...result.value.series] : []), [result])
   const funnelSeriesList = useMemo(() => (result.case === 'funnel' ? result.value.series : []), [result])
@@ -246,6 +258,8 @@ export const InsightTileView = ({
         topKIncompleteReason={topKIncompleteReason}
         // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
+        legendPosition={legendPosition}
+        showPieLabels={tile?.visualization?.hidePieLabels !== true}
         yTickFormatter={yTickFormatter}
         comparison={chartComparison}
         compact={compact}

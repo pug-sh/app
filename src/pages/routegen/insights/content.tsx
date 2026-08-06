@@ -11,9 +11,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
+import { cn } from '@/lib/utils'
 import {
   AreaChart,
   BarChart,
+  buildPieSlices,
   type ChartComparison,
   type ChartPoint,
   DataTable,
@@ -50,6 +52,8 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts,
   funnelSeriesData,
   hideLegend,
+  legendPosition,
+  showPieLabels = true,
   yTickFormatter,
   comparison,
   isTopK = false,
@@ -81,10 +85,15 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
-  // Hides the value·avg·peak SummaryStats row and the pie chart's label legend. The web-analytics
+  // Hides the shared series-summary legend. The web-analytics
   // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
   // meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
+  // Dashboard tiles explicitly choose top/bottom/right. Standalone insights retain their
+  // established placement: above Cartesian/table views and below pies.
+  legendPosition?: 'top' | 'bottom' | 'right'
+  // Pie-only display option. Labels remain available to assistive technology when hidden visually.
+  showPieLabels?: boolean
   yTickFormatter?: (value: number) => string
   // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
   // take it; bars and the table read the live series alone.
@@ -107,7 +116,24 @@ export const InsightsContent = memo(function InsightsContent({
   const allZero = chartData.every(d => d.values.every(v => v === 0)) && !drawableComparison?.values.some(v => v !== 0)
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
   const drawsComparison = !!drawableComparison && !allZero
-  const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
+  // Cartesian charts keep a small readable floor. A pie must instead honor both dimensions of a
+  // user-resized dashboard tile; forcing 120px can make its square SVG overflow and get clipped.
+  const chartClassName = compact ? cn('h-full w-full', viewMode !== 'pie' && 'min-h-[120px]') : undefined
+  const collapsedPieSlices =
+    viewMode === 'pie' ? buildPieSlices(chartData, seriesNames, seriesColors, seriesAggregations) : EMPTY_ARRAY
+  const pieHasNegativeValue = collapsedPieSlices.some(slice => slice.value < 0)
+  const pieSlices = collapsedPieSlices.filter(slice => slice.value > 0)
+  const pieLegendData: ChartPoint[] =
+    pieSlices.length > 0
+      ? [{ date: chartData[0]?.date ?? new Date(0), values: pieSlices.map(slice => slice.value) }]
+      : EMPTY_ARRAY
+  const pieLegendColors: SeriesColor[] = pieSlices.map(slice => ({
+    line: slice.color,
+    fill: slice.color,
+    dot: slice.color,
+  }))
+  const pieLegendAggregations = pieSlices.map(() => AggregationType.TOTAL)
+  const resolvedLegendPosition = legendPosition ?? (viewMode === 'pie' ? 'bottom' : 'top')
 
   const renderLoadingEmptyState = () => (
     <div
@@ -190,7 +216,7 @@ export const InsightsContent = memo(function InsightsContent({
           seriesColors={seriesColors}
           aggregations={seriesAggregations}
           compact={compact}
-          hideLegend={hideLegend}
+          showLabels={showPieLabels}
           className={chartClassName}
         />
       )
@@ -337,20 +363,43 @@ export const InsightsContent = memo(function InsightsContent({
   }
 
   if (chartData.length > 0) {
+    const legendHidden = hideLegend || pieHasNegativeValue
+    const renderLegend = () => (
+      <SummaryStats
+        series={viewMode === 'pie' ? pieSlices.map(slice => slice.name) : seriesNames}
+        data={viewMode === 'pie' ? pieLegendData : chartData}
+        seriesColors={viewMode === 'pie' ? pieLegendColors : seriesColors}
+        aggregations={viewMode === 'pie' ? pieLegendAggregations : seriesAggregations}
+        compact={compact}
+        showSeriesNames={viewMode === 'pie' || breakdowns.length > 0}
+        lightNumbers={lightNumbers}
+      />
+    )
+    const chart = <div className={compact ? 'h-full min-h-0 min-w-0 flex-1 pt-1' : 'min-w-0'}>{renderChart()}</div>
+
     return (
       <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
-        {hideLegend ? null : (
-          <SummaryStats
-            series={seriesNames}
-            data={chartData}
-            seriesColors={seriesColors}
-            aggregations={seriesAggregations}
-            compact={compact}
-            showSeriesNames={breakdowns.length > 0}
-            lightNumbers={lightNumbers}
-          />
+        {legendHidden || resolvedLegendPosition !== 'right' ? (
+          <>
+            {legendHidden || resolvedLegendPosition !== 'top' ? null : renderLegend()}
+            {chart}
+            {legendHidden || resolvedLegendPosition !== 'bottom' ? null : renderLegend()}
+          </>
+        ) : (
+          <div
+            className={cn(
+              // Position is an explicit display choice, so it must not change as the tile is
+              // resized. Both tracks may shrink: the chart fits its available rectangle and the
+              // legend truncates/scrolls instead of forcing itself below the chart.
+              'grid min-h-0 min-w-0 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4',
+              compact && 'h-full flex-1',
+            )}
+            data-legend-position="right"
+          >
+            {chart}
+            <div className={cn('min-h-0 min-w-0', compact && 'h-full overflow-y-auto')}>{renderLegend()}</div>
+          </div>
         )}
-        <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
         {/* Named here, not by the tile shell, so the caption can't outlive the line it describes. */}
         {drawsComparison ? <p className="shrink-0 text-xs text-faint">Dashed line is the previous period</p> : null}
       </div>

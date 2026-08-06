@@ -4,6 +4,7 @@ import {
   DashboardTileSchema,
   DashboardTileViewMode,
   InsightTileContentSchema,
+  VisualizationOptions_LegendPosition,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightQuerySpecSchema, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tileOptionApplicability } from './panels/option-applicability'
@@ -11,7 +12,26 @@ import {
   DASHBOARD_TILE_VIEW_MODES,
   dashboardTileViewModeToViewMode,
   getInitialDashboardTileViewMode,
+  resolveDashboardLegendPosition,
 } from './tile-settings'
+
+describe('dashboard legend position', () => {
+  it('falls back to top and preserves every explicit position', () => {
+    expect(resolveDashboardLegendPosition(undefined)).toBe(VisualizationOptions_LegendPosition.TOP)
+    expect(resolveDashboardLegendPosition(VisualizationOptions_LegendPosition.UNSPECIFIED)).toBe(
+      VisualizationOptions_LegendPosition.TOP,
+    )
+    expect(resolveDashboardLegendPosition(VisualizationOptions_LegendPosition.TOP)).toBe(
+      VisualizationOptions_LegendPosition.TOP,
+    )
+    expect(resolveDashboardLegendPosition(VisualizationOptions_LegendPosition.BOTTOM)).toBe(
+      VisualizationOptions_LegendPosition.BOTTOM,
+    )
+    expect(resolveDashboardLegendPosition(VisualizationOptions_LegendPosition.RIGHT)).toBe(
+      VisualizationOptions_LegendPosition.RIGHT,
+    )
+  })
+})
 
 describe('dashboard pie view mode', () => {
   it('is selectable, preserved, and mapped to the pie renderer', () => {
@@ -36,6 +56,7 @@ describe('dashboard pie view mode', () => {
       showKpiOptions: false,
       showAxisOptions: false,
       showLegendOption: true,
+      showPieLabelOption: true,
     })
   })
 })

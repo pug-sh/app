@@ -118,4 +118,59 @@ describe('InsightsContent pie view', () => {
     expect(screen.getByRole('group', { name: 'Pie chart' })).toBeTruthy()
     expect(screen.getByRole('img', { name: 'page_view: 6 (100.0%)' })).toBeTruthy()
   })
+
+  it('places the shared series legend below the pie', () => {
+    const { container } = render(<InsightsContent {...base} chartData={LIVE} viewMode="pie" hideLegend={false} />)
+
+    const pie = screen.getByRole('group', { name: 'Pie chart' })
+    const legendLabel = [...container.querySelectorAll('span')].find(element => element.textContent === 'page_view')
+
+    expect(legendLabel).toBeTruthy()
+    expect(pie.compareDocumentPosition(legendLabel as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('does not impose the Cartesian minimum height on a compact pie', () => {
+    render(<InsightsContent {...base} chartData={LIVE} viewMode="pie" compact />)
+
+    const pieWrapper = screen.getByRole('group', { name: 'Pie chart' }).parentElement
+    expect(pieWrapper).not.toBeNull()
+    expect(pieWrapper?.getAttribute('class')).not.toContain('min-h-[120px]')
+  })
+
+  it('does not show a partial legend when a negative value makes the pie unsupported', () => {
+    render(
+      <InsightsContent
+        {...base}
+        chartData={[{ date: at(0), values: [5, -1] }]}
+        viewMode="pie"
+        hideLegend={false}
+        seriesNames={['positive', 'negative']}
+        seriesColors={[COLORS[0]!, COLORS[0]!]}
+        seriesAggregations={[AggregationType.TOTAL, AggregationType.TOTAL]}
+      />,
+    )
+
+    expect(screen.getByText('Pie charts require non-negative values')).toBeTruthy()
+    expect(screen.queryByText('positive')).toBeNull()
+  })
+})
+
+describe('InsightsContent legend placement', () => {
+  it('renders an explicit top legend before the chart', () => {
+    const { container } = render(<InsightsContent {...base} chartData={LIVE} hideLegend={false} legendPosition="top" />)
+
+    expect(shows(container.firstElementChild?.firstElementChild as HTMLElement, 'page_view')).toBe(true)
+  })
+
+  it('keeps the shared legend to the right in a deterministic two-track layout', () => {
+    const { container } = render(
+      <InsightsContent {...base} chartData={LIVE} hideLegend={false} legendPosition="right" />,
+    )
+
+    const layout = container.querySelector('[data-legend-position="right"]')
+    expect(layout).toBeTruthy()
+    expect(layout?.children).toHaveLength(2)
+    expect(layout?.className).toContain('grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')
+    expect(shows(layout as HTMLElement, 'page_view')).toBe(true)
+  })
 })

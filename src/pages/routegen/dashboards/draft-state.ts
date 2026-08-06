@@ -75,7 +75,6 @@ export const countDashboardChanges = (a: Dashboard, b: Dashboard): number => {
   if (a.description !== b.description) count++
   if (a.defaultTimeRange !== b.defaultTimeRange) count++
   if (a.defaultGranularity !== b.defaultGranularity) count++
-
   const aById = new Map(a.tiles.map(tile => [tile.id, tile]))
   const bById = new Map(b.tiles.map(tile => [tile.id, tile]))
   for (const id of new Set([...aById.keys(), ...bById.keys()])) {

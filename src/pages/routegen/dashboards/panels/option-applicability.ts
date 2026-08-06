@@ -32,7 +32,9 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
     showKpiOptions: isKpi,
     // Cartesian charts have a Y-axis to format.
     showAxisOptions: isChart,
-    // The summary-stat row (the "legend") renders above every non-KPI trends view.
+    // The shared series legend renders for every non-KPI trends visualization.
     showLegendOption: isChart || isPie || isTable,
+    // Slice labels are drawn only by the pie renderer.
+    showPieLabelOption: isPie,
   }
 }

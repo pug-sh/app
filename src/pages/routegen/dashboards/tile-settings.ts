@@ -1,7 +1,20 @@
-import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  DashboardTileViewMode,
+  VisualizationOptions_LegendPosition,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { ViewMode } from '../insights/constants'
 
 export const DEFAULT_DASHBOARD_TILE_VIEW_MODE = DashboardTileViewMode.LINE
+
+export const resolveDashboardLegendPosition = (position: VisualizationOptions_LegendPosition | undefined) => {
+  if (position === VisualizationOptions_LegendPosition.BOTTOM) {
+    return VisualizationOptions_LegendPosition.BOTTOM
+  }
+  if (position === VisualizationOptions_LegendPosition.RIGHT) {
+    return VisualizationOptions_LegendPosition.RIGHT
+  }
+  return VisualizationOptions_LegendPosition.TOP
+}
 
 export const DASHBOARD_TILE_VIEW_MODES = [
   { label: 'KPI', value: DashboardTileViewMode.KPI },
