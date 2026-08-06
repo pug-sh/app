@@ -38,11 +38,14 @@ describe('DisplayTab legend options', () => {
     )
   })
 
-  it('offers bottom and right placement on other chart modes', () => {
+  it('defaults to top and offers every explicit placement on other chart modes', () => {
     const onPatch = vi.fn()
     render(<DisplayTab tile={trendTile(DashboardTileViewMode.LINE)} onPatch={onPatch} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /position.*bottom/i }))
+    const position = screen.getByRole('button', { name: /position.*top/i })
+    fireEvent.click(position)
+    expect(screen.getByRole('button', { name: 'Top' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Bottom' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Right' }))
 
     expect(onPatch).toHaveBeenCalledWith(

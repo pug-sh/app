@@ -17,6 +17,7 @@ import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'
 
 const LEGEND_POSITION_OPTIONS = [
+  { label: 'Top', value: VisualizationOptions_LegendPosition.TOP },
   { label: 'Bottom', value: VisualizationOptions_LegendPosition.BOTTOM },
   { label: 'Right', value: VisualizationOptions_LegendPosition.RIGHT },
 ]

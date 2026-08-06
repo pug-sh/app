@@ -156,6 +156,12 @@ describe('InsightsContent pie view', () => {
 })
 
 describe('InsightsContent legend placement', () => {
+  it('renders an explicit top legend before the chart', () => {
+    const { container } = render(<InsightsContent {...base} chartData={LIVE} hideLegend={false} legendPosition="top" />)
+
+    expect(shows(container.firstElementChild?.firstElementChild as HTMLElement, 'page_view')).toBe(true)
+  })
+
   it('keeps the shared legend to the right in a deterministic two-track layout', () => {
     const { container } = render(
       <InsightsContent {...base} chartData={LIVE} hideLegend={false} legendPosition="right" />,

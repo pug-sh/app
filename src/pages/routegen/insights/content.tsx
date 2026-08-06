@@ -89,9 +89,9 @@ export const InsightsContent = memo(function InsightsContent({
   // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
   // meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
-  // Dashboard tiles explicitly choose bottom/right. Standalone insights retain their
+  // Dashboard tiles explicitly choose top/bottom/right. Standalone insights retain their
   // established placement: above Cartesian/table views and below pies.
-  legendPosition?: 'bottom' | 'right'
+  legendPosition?: 'top' | 'bottom' | 'right'
   // Pie-only display option. Labels remain available to assistive technology when hidden visually.
   showPieLabels?: boolean
   yTickFormatter?: (value: number) => string

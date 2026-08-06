@@ -117,13 +117,15 @@ export const InsightTileView = ({
     if (yAxisFormat === undefined || yAxisFormat === VisualizationOptions_YAxisFormat.UNSPECIFIED) return undefined
     return formatYAxisValue(yAxisFormat)
   }, [yAxisFormat])
-  let legendPosition: 'bottom' | 'right' | undefined
+  let legendPosition: 'top' | 'bottom' | 'right' | undefined
   if (tile) {
     const resolvedLegendPosition = resolveDashboardLegendPosition(tile.visualization?.legendPosition)
     if (resolvedLegendPosition === VisualizationOptions_LegendPosition.RIGHT) {
       legendPosition = 'right'
-    } else {
+    } else if (resolvedLegendPosition === VisualizationOptions_LegendPosition.BOTTOM) {
       legendPosition = 'bottom'
+    } else {
+      legendPosition = 'top'
     }
   }
 
