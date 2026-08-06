@@ -291,7 +291,7 @@ Current manual events beyond `feature_used`: `signin` (`method`), `signout`, `ap
 - JWT in `sub` claim = customerID (not email)
 - Org + project auto-created on signup
 - Unauthenticated sign-in: magic link (`/magic-link?token=…`) or Google (`CompleteOAuthSignIn` with GIS id_token via `@react-oauth/google`)
-- Google sign-in: `GoogleLogin` → `completeOAuthSignIn({ provider: GOOGLE, credential })`; requires `VITE_GOOGLE_CLIENT_ID`; hide the button when the client ID is unset
+- External sign-in: fetch safe provider settings from `GetAuthConfig`; Google uses `GoogleLogin`, while generic OIDC uses Authorization Code + PKCE and `/oauth/callback`; both send `providerId` plus the provider ID token to `CompleteOAuthSignIn`
 - Dashboard endpoints need JWT (handled by interceptor)
 - Project-scoped endpoints need JWT + `x-project-id` header
 - SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend

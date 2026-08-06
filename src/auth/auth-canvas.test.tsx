@@ -12,12 +12,13 @@ const { orgsList, batchGet } = vi.hoisted(() => ({ orgsList: vi.fn(), batchGet: 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
+    authRPCAtom: atom({ getAuthConfig: vi.fn().mockResolvedValue({ providers: [] }) }),
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: vi.fn() }),
   }
 })
 
-// Beside the point here, and GoogleLogin throws outside the provider main.tsx (not App) supplies.
+// External-provider rendering is beside the point here; keep this test focused on canvas lifetime.
 vi.mock('@/auth/google-sign-in-button', () => ({ GoogleSignInButton: () => null }))
 
 vi.mock('@/analytics/pug', () => ({

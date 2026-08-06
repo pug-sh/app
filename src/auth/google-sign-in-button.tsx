@@ -1,25 +1,60 @@
-import { type CredentialResponse, GoogleLogin } from '@react-oauth/google'
+import { type CredentialResponse, GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google'
 import { useSetAtom } from 'jotai'
 import { Loader2 } from 'lucide-react'
 import { useLayoutEffect, useRef, useState } from 'react'
-import { completeGoogleOAuthAtom } from '@/auth/auth.atoms'
+import { completeOAuthAtom } from '@/auth/auth.atoms'
 
 // First-render fallback until the layout effect measures the container. max-w-sm (384px)
 // is the widest the sign-in form ever gets, so on desktop this is already correct.
 const defaultButtonWidth = 384
 
 export const GoogleSignInButton = ({
+  providerId,
+  clientId,
+  displayName,
   disabled,
   onBegin,
   onLoadingChange,
   onError,
 }: {
+  providerId: string
+  clientId: string
+  displayName: string
   disabled: boolean
   onBegin?: () => void
   onLoadingChange?: (loading: boolean) => void
   onError: (message: string) => void
 }) => {
-  const completeGoogleOAuth = useSetAtom(completeGoogleOAuthAtom)
+  return (
+    <GoogleOAuthProvider clientId={clientId}>
+      <GoogleSignInButtonInner
+        providerId={providerId}
+        displayName={displayName}
+        disabled={disabled}
+        onBegin={onBegin}
+        onLoadingChange={onLoadingChange}
+        onError={onError}
+      />
+    </GoogleOAuthProvider>
+  )
+}
+
+const GoogleSignInButtonInner = ({
+  providerId,
+  displayName,
+  disabled,
+  onBegin,
+  onLoadingChange,
+  onError,
+}: {
+  providerId: string
+  displayName: string
+  disabled: boolean
+  onBegin?: () => void
+  onLoadingChange?: (loading: boolean) => void
+  onError: (message: string) => void
+}) => {
+  const completeOAuth = useSetAtom(completeOAuthAtom)
   const [loading, setLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const [buttonWidth, setButtonWidth] = useState(defaultButtonWidth)
@@ -51,7 +86,12 @@ export const GoogleSignInButton = ({
     }
     setBusy(true)
     try {
-      const result = await completeGoogleOAuth({ credential: response.credential })
+      const result = await completeOAuth({
+        providerId,
+        credential: response.credential,
+        method: 'google',
+        displayName,
+      })
       if (!result.ok) onError(result.error)
     } catch (err) {
       console.error('google oauth complete failed', err)
