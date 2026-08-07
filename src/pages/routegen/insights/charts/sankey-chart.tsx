@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
@@ -29,6 +29,9 @@ const MAX_GUTTER_RATIO = 0.24
 const MIN_FLOW_HEIGHT = 260
 // Enough room for a label to sit between two columns without reaching the next one.
 const MIN_COLUMN_WIDTH = 170
+// How far the cut-off edge fades. Long enough to read as "this continues", short enough not
+// to dim a row that is fully in view.
+const FADE_PX = 28
 
 const truncateLabel = (text: string, maxPx: number) => {
   const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR)
@@ -47,15 +50,19 @@ export const SankeyChart = ({
   className?: string
 }) => {
   const unitLabel = 'sessions'
-  const containerRef = useRef<HTMLDivElement>(null)
+  // The outer box positions the hover card; the inner one scrolls and carries the fade
+  // mask. Keeping them apart is what stops the mask from dimming the card near an edge.
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
+  const [edges, setEdges] = useState({ above: false, below: false })
   const [hovered, setHovered] = useState<Hover | null>(null)
   // Series colors are theme-adapted, and a module mutation can't invalidate a useMemo —
   // subscribe so the palettes below re-derive on a theme toggle.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
   useEffect(() => {
-    const el = containerRef.current
+    const el = scrollRef.current
     if (!el) return
     const observer = new ResizeObserver(entries => {
       const rect = entries[0]?.contentRect
@@ -63,6 +70,17 @@ export const SankeyChart = ({
     })
     observer.observe(el)
     return () => observer.disconnect()
+  }, [])
+
+  // Which edges have content past them. Compared with a 1px slack because scrollHeight and
+  // clientHeight are rounded independently and can disagree by a subpixel at the bottom,
+  // which would otherwise leave the fade on forever.
+  const syncEdges = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const above = el.scrollTop > 1
+    const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1
+    setEdges(prev => (prev.above === above && prev.below === below ? prev : { above, below }))
   }, [])
 
   const sankeyData = useMemo(() => buildSankeyData(result), [result])
@@ -103,6 +121,22 @@ export const SankeyChart = ({
       height: Math.max(size.height, neededHeight),
     }
   }, [sankeyData, size.width, size.height, gutters])
+
+  // Re-check after the canvas resizes: growing the graph is what makes it scrollable in the
+  // first place, and that happens without a scroll event.
+  useEffect(() => {
+    syncEdges()
+  }, [syncEdges, canvas.height, size.height])
+
+  // Fading the content rather than laying a coloured panel over it means the chart carries
+  // no assumption about the surface behind it — it reads the same on a card, a tile, or the
+  // canvas. Only the edges that actually have content past them fade.
+  const maskImage = useMemo(() => {
+    if (!edges.above && !edges.below) return undefined
+    const from = edges.above ? `transparent 0, #000 ${FADE_PX}px` : '#000 0'
+    const to = edges.below ? `#000 calc(100% - ${FADE_PX}px), transparent 100%` : '#000 100%'
+    return `linear-gradient(to bottom, ${from}, ${to})`
+  }, [edges])
 
   const layout = useMemo(
     () =>
@@ -156,83 +190,83 @@ export const SankeyChart = ({
     return false
   }
 
-  // The card is positioned inside the scroll container, so its coordinates are
-  // content-relative: without the scroll offsets it drifts by however far the flow has been
-  // scrolled.
+  // Measured against the outer box, which does not scroll, so these are simply where the
+  // cursor is. The card lives in that same box, so no scroll offset enters into it.
   const track = (kind: Hover['kind'], index: number) => (event: { clientX: number; clientY: number }) => {
-    const el = containerRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    setHovered({
-      kind,
-      index,
-      x: event.clientX - rect.left + el.scrollLeft,
-      y: event.clientY - rect.top + el.scrollTop,
-    })
+    const rect = viewportRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setHovered({ kind, index, x: event.clientX - rect.left, y: event.clientY - rect.top })
   }
 
   if (sankeyData.links.length === 0) return null
 
   return (
-    <div ref={containerRef} className={`relative min-h-0 overflow-auto ${className}`}>
-      {canvas.width > 0 && canvas.height > 0 ? (
-        <svg width={canvas.width} height={canvas.height} role="img" aria-label="User flow between steps">
-          <g>
-            {layout.links.map((link, index) => (
-              <path
-                key={`${link.source}-${link.target}-${index}`}
-                d={sankeyLinkPath(link)}
-                fill="none"
-                stroke={linkColors[index]}
-                strokeOpacity={isLinkLit(index) ? 0.5 : 0.25}
-                strokeWidth={Math.max(link.thickness, 1)}
-                onMouseMove={track('link', index)}
-                onMouseLeave={() => setHovered(null)}
-              />
-            ))}
-          </g>
+    <div ref={viewportRef} className={`relative min-h-0 ${className}`}>
+      <div
+        ref={scrollRef}
+        className="h-full w-full overflow-auto"
+        onScroll={syncEdges}
+        style={maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined}
+      >
+        {canvas.width > 0 && canvas.height > 0 ? (
+          <svg width={canvas.width} height={canvas.height} role="img" aria-label="User flow between steps">
+            <g>
+              {layout.links.map((link, index) => (
+                <path
+                  key={`${link.source}-${link.target}-${index}`}
+                  d={sankeyLinkPath(link)}
+                  fill="none"
+                  stroke={linkColors[index]}
+                  strokeOpacity={isLinkLit(index) ? 0.5 : 0.25}
+                  strokeWidth={Math.max(link.thickness, 1)}
+                  onMouseMove={track('link', index)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              ))}
+            </g>
 
-          <g>
-            {layout.nodes.map((node, index) => (
-              <rect
-                key={node.id}
-                x={node.x}
-                y={node.y}
-                width={node.width}
-                height={node.height}
-                fill={nodeColors[index]}
-                fillOpacity={hovered?.kind === 'node' && hovered.index === index ? 1 : 0.85}
-                rx={2}
-                onMouseMove={track('node', index)}
-                onMouseLeave={() => setHovered(null)}
-              />
-            ))}
-          </g>
-
-          {/* Labels last so they stay legible over the ribbons they cross. */}
-          <g>
-            {layout.nodes.map((node, index) => {
-              // The first column reads into the left gutter; every other column reads
-              // rightward, which keeps the last column's text inside the right gutter.
-              const onLeft = node.stepDepth === firstDepth
-              return (
-                <text
+            <g>
+              {layout.nodes.map((node, index) => (
+                <rect
                   key={node.id}
-                  x={onLeft ? node.x - LABEL_OFFSET : node.x + node.width + LABEL_OFFSET}
-                  y={node.y + node.height / 2}
-                  textAnchor={onLeft ? 'end' : 'start'}
-                  dominantBaseline="middle"
-                  className="cursor-default fill-foreground text-xs"
+                  x={node.x}
+                  y={node.y}
+                  width={node.width}
+                  height={node.height}
+                  fill={nodeColors[index]}
+                  fillOpacity={hovered?.kind === 'node' && hovered.index === index ? 1 : 0.85}
+                  rx={2}
                   onMouseMove={track('node', index)}
                   onMouseLeave={() => setHovered(null)}
-                >
-                  {truncateLabel(node.name, labelWidth(node.stepDepth))}
-                </text>
-              )
-            })}
-          </g>
-        </svg>
-      ) : null}
+                />
+              ))}
+            </g>
+
+            {/* Labels last so they stay legible over the ribbons they cross. */}
+            <g>
+              {layout.nodes.map((node, index) => {
+                // The first column reads into the left gutter; every other column reads
+                // rightward, which keeps the last column's text inside the right gutter.
+                const onLeft = node.stepDepth === firstDepth
+                return (
+                  <text
+                    key={node.id}
+                    x={onLeft ? node.x - LABEL_OFFSET : node.x + node.width + LABEL_OFFSET}
+                    y={node.y + node.height / 2}
+                    textAnchor={onLeft ? 'end' : 'start'}
+                    dominantBaseline="middle"
+                    className="cursor-default fill-foreground text-xs"
+                    onMouseMove={track('node', index)}
+                    onMouseLeave={() => setHovered(null)}
+                  >
+                    {truncateLabel(node.name, labelWidth(node.stepDepth))}
+                  </text>
+                )
+              })}
+            </g>
+          </svg>
+        ) : null}
+      </div>
 
       {hovered ? (
         <div
@@ -240,7 +274,7 @@ export const SankeyChart = ({
           style={{
             left: hovered.x,
             top: hovered.y,
-            transform: `translate(${hovered.x > canvas.width / 2 ? 'calc(-100% - 8px)' : '8px'}, -50%)`,
+            transform: `translate(${hovered.x > size.width / 2 ? 'calc(-100% - 8px)' : '8px'}, -50%)`,
           }}
         >
           {hoveredLink ? (
