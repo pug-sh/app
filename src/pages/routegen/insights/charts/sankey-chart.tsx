@@ -5,7 +5,7 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { buildSankeyData } from '../user-flow'
-import { layoutSankey, sankeyLinkPath } from './sankey-layout'
+import { layoutSankey, sankeyExtent, sankeyLinkPath } from './sankey-layout'
 
 const NODE_WIDTH = 12
 const NODE_PADDING = 18
@@ -21,6 +21,14 @@ const LABEL_PX_PER_CHAR = 6.6
 const MIN_GUTTER = 72
 // Past this the labels start costing the flow more room than they are worth.
 const MAX_GUTTER_RATIO = 0.24
+
+// Pixels the busiest column's bands get to share, over and above the padding between its
+// nodes. A column pays that padding first, so on a short viewport a 20-node step spends
+// everything on gaps and draws every band as a hairline. Below this the chart grows its own
+// canvas and the container scrolls instead of compressing.
+const MIN_FLOW_HEIGHT = 260
+// Enough room for a label to sit between two columns without reaching the next one.
+const MIN_COLUMN_WIDTH = 170
 
 const truncateLabel = (text: string, maxPx: number) => {
   const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR)
@@ -82,11 +90,25 @@ export const SankeyChart = ({
     }
   }, [sankeyData, size.width])
 
+  // The canvas is the viewport until the graph outgrows it, then it is whatever the graph
+  // needs and the container scrolls. Drawing into the viewport regardless is what turns a
+  // busy flow into hairlines.
+  const canvas = useMemo(() => {
+    const { widestColumn, stepCount } = sankeyExtent(sankeyData)
+    const neededHeight = PADDING_Y * 2 + Math.max(widestColumn - 1, 0) * NODE_PADDING + MIN_FLOW_HEIGHT
+    const neededWidth = gutters.left + gutters.right + NODE_WIDTH + Math.max(stepCount - 1, 0) * MIN_COLUMN_WIDTH
+
+    return {
+      width: Math.max(size.width, neededWidth),
+      height: Math.max(size.height, neededHeight),
+    }
+  }, [sankeyData, size.width, size.height, gutters])
+
   const layout = useMemo(
     () =>
       layoutSankey(sankeyData, {
-        width: size.width,
-        height: size.height,
+        width: canvas.width,
+        height: canvas.height,
         nodeWidth: NODE_WIDTH,
         nodePadding: NODE_PADDING,
         paddingLeft: gutters.left,
@@ -94,7 +116,7 @@ export const SankeyChart = ({
         paddingTop: PADDING_Y,
         paddingBottom: PADDING_Y,
       }),
-    [sankeyData, size.width, size.height, gutters],
+    [sankeyData, canvas, gutters],
   )
 
   const nodeColors = useMemo(
@@ -113,7 +135,7 @@ export const SankeyChart = ({
   // A middle column's label reads into the gap before the next column, which is far wider
   // than a gutter — sizing it by the gutter truncated names that had room to spare.
   const columnXs = [...new Set(layout.nodes.map(node => node.x))].sort((a, b) => a - b)
-  const columnGap = columnXs.length > 1 ? columnXs[1] - columnXs[0] : size.width
+  const columnGap = columnXs.length > 1 ? columnXs[1] - columnXs[0] : canvas.width
   const labelWidth = (depth: number) => {
     if (depth === firstDepth) return gutters.left - LABEL_OFFSET * 2
     if (depth === lastDepth) return gutters.right - LABEL_OFFSET * 2
@@ -134,18 +156,27 @@ export const SankeyChart = ({
     return false
   }
 
+  // The card is positioned inside the scroll container, so its coordinates are
+  // content-relative: without the scroll offsets it drifts by however far the flow has been
+  // scrolled.
   const track = (kind: Hover['kind'], index: number) => (event: { clientX: number; clientY: number }) => {
-    const rect = containerRef.current?.getBoundingClientRect()
-    if (!rect) return
-    setHovered({ kind, index, x: event.clientX - rect.left, y: event.clientY - rect.top })
+    const el = containerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setHovered({
+      kind,
+      index,
+      x: event.clientX - rect.left + el.scrollLeft,
+      y: event.clientY - rect.top + el.scrollTop,
+    })
   }
 
   if (sankeyData.links.length === 0) return null
 
   return (
-    <div ref={containerRef} className={`relative min-h-0 ${className}`}>
-      {size.width > 0 && size.height > 0 ? (
-        <svg width={size.width} height={size.height} role="img" aria-label="User flow between steps">
+    <div ref={containerRef} className={`relative min-h-0 overflow-auto ${className}`}>
+      {canvas.width > 0 && canvas.height > 0 ? (
+        <svg width={canvas.width} height={canvas.height} role="img" aria-label="User flow between steps">
           <g>
             {layout.links.map((link, index) => (
               <path
@@ -209,7 +240,7 @@ export const SankeyChart = ({
           style={{
             left: hovered.x,
             top: hovered.y,
-            transform: `translate(${hovered.x > size.width / 2 ? 'calc(-100% - 8px)' : '8px'}, -50%)`,
+            transform: `translate(${hovered.x > canvas.width / 2 ? 'calc(-100% - 8px)' : '8px'}, -50%)`,
           }}
         >
           {hoveredLink ? (

@@ -49,6 +49,21 @@ export type SankeyLayout = {
 
 const EMPTY: SankeyLayout = { nodes: [], links: [] }
 
+// What the graph is shaped like, before any pixels are decided. The chart sizes its scroll
+// canvas from this: the padding stack between a column's nodes is paid before any of them
+// gets thickness, so a busy column needs height the viewport may not have.
+export const sankeyExtent = (data: SankeyChartData) => {
+  const perColumn = new Map<number, number>()
+  for (const node of data.nodes) perColumn.set(node.stepDepth, (perColumn.get(node.stepDepth) ?? 0) + 1)
+  if (perColumn.size === 0) return { widestColumn: 0, stepCount: 0 }
+
+  const depths = [...perColumn.keys()]
+  return {
+    widestColumn: Math.max(...perColumn.values()),
+    stepCount: Math.max(...depths) - Math.min(...depths) + 1,
+  }
+}
+
 // A one-session node still has to be clickable and visible, so bands and ribbons never
 // round down to nothing.
 const MIN_NODE_HEIGHT = 2

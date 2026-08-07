@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SankeyChartData } from '../user-flow'
-import { layoutSankey } from './sankey-layout'
+import { layoutSankey, sankeyExtent } from './sankey-layout'
 
 const OPTIONS = {
   width: 800,
@@ -72,6 +72,32 @@ describe('layoutSankey vertical scale', () => {
 
     // 60 sessions reach signup and only 30 continue; the node stays as tall as the 60.
     expect(byName(layout, 'signup').height).toBeCloseTo(byName(layout, 'purchase').height * 2, 1)
+  })
+})
+
+describe('sankeyExtent', () => {
+  // The chart multiplies widestColumn by the node padding to decide whether it has to grow
+  // its canvas and scroll. Taking the node total instead of the busiest column would
+  // overstate every multi-column flow and scroll charts that fit fine.
+  it('measures the busiest column, not the whole graph', () => {
+    // 1 node at step 0, 2 at step 1, 1 at step 2 — four nodes, three columns.
+    expect(sankeyExtent(FLOW)).toEqual({ widestColumn: 2, stepCount: 3 })
+  })
+
+  it('counts steps spanned, so a gap in the depths still reserves its column', () => {
+    const sparse: SankeyChartData = {
+      nodes: [
+        { id: 'a', name: 'a', stepDepth: 0, isOthers: false },
+        { id: 'b', name: 'b', stepDepth: 3, isOthers: false },
+      ],
+      links: [{ source: 0, target: 1, value: 1, sourceName: 'a', targetName: 'b' }],
+    }
+
+    expect(sankeyExtent(sparse)).toEqual({ widestColumn: 1, stepCount: 4 })
+  })
+
+  it('reports nothing for an empty graph', () => {
+    expect(sankeyExtent({ nodes: [], links: [] })).toEqual({ widestColumn: 0, stepCount: 0 })
   })
 })
 
