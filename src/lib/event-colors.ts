@@ -275,6 +275,35 @@ const hexToOklch = (hex: string): [number, number, number] => {
   return [okl, Math.hypot(oka, okb), Math.atan2(okb, oka)]
 }
 
+const oklchToLinear = (L: number, C: number, H: number) => {
+  const a = C * Math.cos(H)
+  const b = C * Math.sin(H)
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ]
+}
+
+// Largest chroma that still fits sRGB at this lightness and hue. Without it, an out-of-gamut
+// request is clipped per channel by linearToByte — which silently drops chroma *and* shifts hue,
+// still returning a valid hex. That is what turned every lifted dark series color into a pastel.
+const fitChroma = (L: number, C: number, H: number) => {
+  const fits = (c: number) => oklchToLinear(L, c, H).every(v => v >= -1e-4 && v <= 1 + 1e-4)
+  if (fits(C)) return C
+  let lo = 0
+  let hi = C
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2
+    if (fits(mid)) lo = mid
+    else hi = mid
+  }
+  return lo
+}
+
 const oklchToHex = (L: number, C: number, H: number) => {
   const a = C * Math.cos(H)
   const b = C * Math.sin(H)
@@ -316,19 +345,26 @@ export const setSeriesColorScheme = (isDark: boolean) => {
   darkMode = isDark
 }
 
-// Dark canvas: lift lightness into a legible band, taming extreme chroma.
+// The light cap sits below the dark one because mid-lightness colors on white read as more
+// saturated than lifted ones on a dark ground.
+const DARK_CHROMA_CAP = 0.165
+const LIGHT_CHROMA_CAP = 0.14
+
+// Dark canvas: lift lightness into a legible band, taming extreme chroma. The band is
+// deliberately shallow — a deep ground needs far less lift to separate, and every point of
+// lift spent is chroma the hue can no longer hold (sRGB's cap falls away as you approach
+// white, blue first). Lifting harder is what made these read as pastels rather than colors.
+// The band lands a rung below body ink, so data never out-shouts the type.
 const toDarkHex = memoizeHex(hex => {
   const [L, C, H] = hexToOklch(hex)
-  return oklchToHex(0.62 + 0.3 * L, Math.min(C, 0.16), H)
+  const lifted = 0.54 + 0.22 * L
+  return oklchToHex(lifted, fitChroma(lifted, Math.min(C, DARK_CHROMA_CAP), H), H)
 })
 
 // Light canvas: cap lightness so pale shades read on white, and cap chroma so the
 // most vivid hues (violet/red/magenta at C≈0.21–0.25) don't shout against the
 // near-grayscale UI. Lightness drives contrast, so taming chroma barely moves the
-// ratio (~5:1 holds). Sits below the dark cap (0.16) because mid-lightness colors on
-// white read as more saturated than lifted pastels on dark. A hue already under both
-// caps passes through untouched.
-const LIGHT_CHROMA_CAP = 0.14
+// ratio (~5:1 holds). A hue already under both caps passes through untouched.
 const toLightHex = memoizeHex(hex => {
   const [L, C, H] = hexToOklch(hex)
   if (L <= 0.52 && C <= LIGHT_CHROMA_CAP) return hex
@@ -374,3 +410,10 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0): SeriesCol
 // family hue (every page_view split → blue). Index assignment guarantees
 // adjacent splits get the broad-hue fallback palette in order.
 export const getIndexedColor = (index: number): SeriesColor => themed(FALLBACK_COLORS[index % FALLBACK_COLORS.length])
+
+const HEX6 = /^#[0-9a-f]{6}$/i
+
+// Line and dot at 60% alpha, for a reference series drawn against a live one. Alpha rather than a
+// lighter hex so it recedes on either canvas; a color that isn't a plain hex passes through.
+export const fadedSeriesColor = (sc: SeriesColor): SeriesColor =>
+  HEX6.test(sc.line) ? { ...sc, line: `${sc.line}99`, dot: `${sc.dot}99` } : sc

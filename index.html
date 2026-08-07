@@ -2,12 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- ICO first, SVG second: SVG-capable browsers take the SVG, Safari falls back to the ICO. -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Preconnect external origins so off-site links navigate faster on click -->
     <link rel="preconnect" href="https://tshoka.com" />
     <link rel="preconnect" href="https://pug.sh" />
     <link rel="preconnect" href="https://docs.pug.sh" />
+    <!-- crossorigin: map assets are CORS fetches and won't reuse a plain preconnect. -->
+    <link rel="preconnect" href="https://maps.pug.sh" crossorigin />
     <title>Pug</title>
     <script>
       // Apply dark mode before first paint to prevent flash.

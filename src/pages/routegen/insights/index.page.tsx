@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { trackEvent } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -25,11 +26,10 @@ import {
 } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
+import { DEFAULT_INSIGHTS_RANGE } from '@/lib/date-presets'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
-import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
+import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../events/filter-schema.atoms'
 import type { ChartPoint } from './charts'
@@ -49,7 +49,15 @@ import {
 } from './constants'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls, OptionChip } from './controls'
-import { breakdownLabel, buildChartData, disambiguateLabels, sortFunnelSteps } from './helpers'
+import {
+  breakdownLabel,
+  buildChartData,
+  disambiguateLabels,
+  hasBreakdown,
+  resolveSeriesAggregations,
+  sortFunnelSteps,
+  trendSeriesNames,
+} from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 import { buildUserFlowQuery, DEFAULT_USER_FLOW_CONFIG, isUserFlowConfigValid, type UserFlowConfig } from './user-flow'
@@ -106,7 +114,7 @@ const Insights = () => {
   // Local query state.
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(
-    () => initialFilterState.timeRange ?? INSIGHTS_PRESETS[0].resolve(),
+    () => initialFilterState.timeRange ?? DEFAULT_INSIGHTS_RANGE(),
   )
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
@@ -270,17 +278,25 @@ const Insights = () => {
       const resp = await insightsRPC.query(
         {
           granularity,
-          // Floor `from` to the project-zone bucket boundary so the first bucket is
-          // complete (avoids the partial-bucket "dip" at the chart's left edge).
           timeRange: toProtoTimeRange(
             timeRange
-              ? { from: floorToZoneBucket(timeRange.from, granularity, reportingTimeZone), to: timeRange.to }
+              ? { from: alignRangeStart(timeRange, granularity, reportingTimeZone), to: timeRange.to }
               : undefined,
           ),
           spec,
         },
         { headers },
       )
+      // One event per settled query: useDebouncedQuery re-runs this fn only when queryKey changes,
+      // and the 300ms debounce collapses keystrokes — so no dedup is needed here. Shape only, never
+      // filter values: insightType/counts answer "what kinds of insights get run, how complex"
+      // without carrying a customer's property values (which is why $url drops the query string).
+      trackEvent('insight_queried', {
+        insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
+        eventCount: isTopK ? 1 : validEntries.length,
+        breakdownCount: breakdowns.length,
+        hasGlobalFilters: globalFilters.length > 0,
+      })
       return resp.result
     },
     {
@@ -368,11 +384,7 @@ const Insights = () => {
       return retentionCohorts.map((c, i) => c.cohort || `Cohort ${i + 1}`)
     }
 
-    return trendSeries.map((s, i) => {
-      const bd = breakdownLabel(s.breakdown, '')
-      if (bd) return `${s.eventKind} · ${bd}`
-      return s.eventKind || `Series ${i + 1}`
-    })
+    return trendSeriesNames(trendSeries)
   }, [result.case, retentionCohorts, trendSeries])
 
   const seriesColors = useMemo(() => {
@@ -383,7 +395,7 @@ const Insights = () => {
     // keep the event kind's semantic color.
     if (result.case === 'trends') {
       return trendSeries.map((s, i) =>
-        breakdownLabel(s.breakdown, '') ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
+        hasBreakdown(s.breakdown) ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
       )
     }
     return seriesNames.map((name, i) => getSeriesColor(name, i))
@@ -391,17 +403,16 @@ const Insights = () => {
 
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []
-
-    return trendSeries.map(series => {
-      const entry = validEntries.find(candidate => candidate.kind === series.eventKind)
-      return entry?.aggregation ?? AggregationType.TOTAL
-    })
+    return resolveSeriesAggregations(validEntries, trendSeries)
   }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
     [eventFilters.entries],
   )
-  const chartData = useMemo<ChartPoint[]>(() => buildChartData(trendSeries), [trendSeries])
+  const chartData = useMemo<ChartPoint[]>(
+    () => buildChartData(trendSeries, granularity, reportingTimeZone),
+    [trendSeries, granularity, reportingTimeZone],
+  )
   const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
 
   // Render helpers.
@@ -434,7 +445,7 @@ const Insights = () => {
         )}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} presets={INSIGHTS_PRESETS} />
+          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} />
           <OptionChip label="insight" options={INSIGHT_TYPES} value={insightType} onChange={setInsightType} />
           {isTopK && (
             <TopKControls topK={topK} onChange={setTopK} schema={globalSchema} schemaError={globalSchemaError} />
@@ -485,7 +496,7 @@ const Insights = () => {
                 maxEvents={maxEvents}
               />
               {isRetention && (
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Tooltip>
                     <TooltipTrigger className="inline-flex items-center cursor-help">
                       <CircleHelp className="w-3.5 h-3.5" />
@@ -499,7 +510,7 @@ const Insights = () => {
                 </div>
               )}
               {isTopK && (
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Tooltip>
                     <TooltipTrigger className="inline-flex items-center cursor-help">
                       <CircleHelp className="w-3.5 h-3.5" />
@@ -549,35 +560,40 @@ const Insights = () => {
         </div>
       </div>
 
-      <InsightsContent
-        error={error}
-        retry={retry}
-        unknownResultCase={unknownResultCase}
-        resultCase={result.case}
-        resultSeriesCount={resultSeriesCount}
-        isRetention={isRetention}
-        isTrends={isTrends}
-        isUserFlow={isUserFlow}
-        hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
-        chartData={chartData}
-        seriesNames={seriesNames}
-        seriesColors={seriesColors}
-        seriesAggregations={seriesAggregations}
-        viewMode={viewMode}
-        granularity={granularity}
-        breakdowns={breakdowns}
-        breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
-        retentionSeriesList={retentionSeriesList}
-        retentionLabels={retentionLabels}
-        retentionCohorts={retentionCohorts}
-        funnelSeriesData={funnelSeriesData}
-        userFlowResult={userFlowResult}
-        isTopK={isTopK}
-        topKRows={topKRows}
-        topKDimension={topK.dimension}
-        topKMetric={topK.metric}
-        topKIncompleteReason={topKIncomplete}
-      />
+      {/* Same tile shell as the overview and dashboard tiles — the chart is the page's one
+          object, so it sits on the elevated surface rather than flush on the canvas. */}
+      <div className="rounded-lg border border-border/60 bg-card p-4">
+        <InsightsContent
+          error={error}
+          retry={retry}
+          unknownResultCase={unknownResultCase}
+          resultCase={result.case}
+          resultSeriesCount={resultSeriesCount}
+          isRetention={isRetention}
+          isTrends={isTrends}
+          isUserFlow={isUserFlow}
+          hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
+          chartData={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          seriesAggregations={seriesAggregations}
+          viewMode={viewMode}
+          granularity={granularity}
+          breakdowns={breakdowns}
+          breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
+          retentionSeriesList={retentionSeriesList}
+          retentionLabels={retentionLabels}
+          retentionCohorts={retentionCohorts}
+          funnelSeriesData={funnelSeriesData}
+          userFlowResult={userFlowResult}
+          isTopK={isTopK}
+          topKRows={topKRows}
+          topKDimension={topK.dimension}
+          topKMetric={topK.metric}
+          topKOmitOthers={topK.omitOthers}
+          topKIncompleteReason={topKIncomplete}
+        />
+      </div>
     </Page>
   )
 }

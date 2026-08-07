@@ -24,15 +24,26 @@ export const INITIAL_VIEW_BOUNDS: LngLatBoundsLike = [
 ]
 
 // Frame used by the choropleth so all countries are visible.
+const COUNTRIES_VIEW_LAT: [number, number] = [-60, 85]
 export const COUNTRIES_VIEW_BOUNDS: LngLatBoundsLike = [
-  [-180, -60],
-  [180, 85],
+  [-180, COUNTRIES_VIEW_LAT[0]],
+  [180, COUNTRIES_VIEW_LAT[1]],
 ]
+
+// Width/height of COUNTRIES_VIEW_BOUNDS in Web Mercator; the choropleth caps its canvas to it.
+const mercatorY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360))
+export const COUNTRIES_VIEW_ASPECT =
+  (2 * Math.PI) / (mercatorY(COUNTRIES_VIEW_LAT[1]) - mercatorY(COUNTRIES_VIEW_LAT[0]))
 
 type ThemeColors = {
   primary: string
   border: string
   mutedForeground: string
+  // The choropleth's data hue. --chart-1, not --primary: they are the same colour in light, but
+  // --primary is a *fill* tuned to carry white button text, so in dark it stays deep — and a deep
+  // hue washed over a deep ground at the ramp's low opacities disappears into it. --chart-1 is
+  // the per-mode data band, lifted clear of the canvas in dark.
+  dataHue: string
 }
 
 // MapLibre paint properties accept concrete color strings only — they can't read CSS `var()`,
@@ -40,7 +51,7 @@ type ThemeColors = {
 // 1×1 canvas and reading the pixel back, which works regardless of MapLibre's color parser.
 let conversionCtx: CanvasRenderingContext2D | null = null
 
-const cssColorToRgb = (value: string) => {
+export const cssColorToRgb = (value: string) => {
   if (!conversionCtx) {
     const canvas = document.createElement('canvas')
     canvas.width = 1
@@ -65,5 +76,6 @@ export const resolveThemeColors = (): ThemeColors => {
     primary: readVar(styles, '--primary'),
     border: readVar(styles, '--border'),
     mutedForeground: readVar(styles, '--muted-foreground'),
+    dataHue: readVar(styles, '--chart-1'),
   }
 }

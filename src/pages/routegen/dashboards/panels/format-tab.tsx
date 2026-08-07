@@ -11,7 +11,6 @@ import {
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ThresholdRuleEditor } from '../threshold-rule-editor'
 import { tileOptionApplicability } from './option-applicability'
@@ -59,8 +58,8 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
     onPatch({ thresholds: tile.thresholds.filter((_, i) => i !== index) })
   }
 
-  const { showKpiOptions, showAxisOptions, showLegendOption } = tileOptionApplicability(tile)
-  const hasAnyOption = showKpiOptions || showAxisOptions || showLegendOption
+  const { showKpiOptions, showAxisOptions } = tileOptionApplicability(tile)
+  const hasAnyOption = showKpiOptions || showAxisOptions
 
   return (
     <div className="space-y-4">
@@ -91,42 +90,6 @@ export const FormatTab = ({ tile, onPatch }: FormatTabProps) => {
             value={viz?.yAxisFormat ?? VisualizationOptions_YAxisFormat.UNSPECIFIED}
             onChange={fmt => setViz({ yAxisFormat: fmt })}
           />
-        </Section>
-      ) : null}
-
-      {showAxisOptions ? (
-        <Section label="Axis options">
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="tile-log-scale"
-                checked={viz?.logScale === true}
-                onCheckedChange={checked => setViz({ logScale: checked === true })}
-              />
-              <label htmlFor="tile-log-scale">Log scale</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="tile-zero-baseline"
-                checked={viz?.zeroBaseline === true}
-                onCheckedChange={checked => setViz({ zeroBaseline: checked === true })}
-              />
-              <label htmlFor="tile-zero-baseline">Zero baseline</label>
-            </div>
-          </div>
-        </Section>
-      ) : null}
-
-      {showLegendOption ? (
-        <Section label="Legend">
-          <div className="flex items-center gap-2 text-xs">
-            <Checkbox
-              id="tile-hide-legend"
-              checked={viz?.hideLegend === true}
-              onCheckedChange={checked => setViz({ hideLegend: checked === true })}
-            />
-            <label htmlFor="tile-hide-legend">Hide legend</label>
-          </div>
         </Section>
       ) : null}
 

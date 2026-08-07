@@ -45,7 +45,12 @@ const BreakdownTile = ({
       events: [
         create(EventQuerySchema, {
           event: create(EventFilterSchema, { kind: eventKind }),
-          aggregation: AggregationType.TOTAL,
+          // These tiles ask what platform users are on and where they came from — questions about
+          // people, so count people rather than occurrences, which would weight by activity and let
+          // one busy user outweigh a hundred quiet ones. Per bucket, necessarily: a range-wide
+          // unique count isn't recoverable from a trends series (SERIES_COLLAPSE), so the summary
+          // reads as an average per bucket.
+          aggregation: AggregationType.UNIQUE_USERS,
         }),
       ],
       breakdowns: [create(BreakdownSchema, { property: breakdownProperty })],

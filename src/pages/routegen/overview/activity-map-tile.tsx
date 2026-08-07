@@ -32,7 +32,7 @@ export function ActivityMapTile({ schema, primary, globalTimeRange, globalGranul
       footer={activityMapFooter(query, resolvedKey ?? countryKey)}
       meta={
         countries.length > 0 ? (
-          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {countries.length} {countries.length === 1 ? 'country' : 'countries'}
           </span>
         ) : null

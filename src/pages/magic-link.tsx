@@ -1,9 +1,9 @@
 import { useSetAtom } from 'jotai'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
 import { completeMagicLinkAtom } from '@/auth/auth.atoms'
-import { AuthShell } from '@/auth/auth-shell'
+import { AuthPending, AuthStatus } from '@/auth/auth-status'
 
 const MagicLink = () => {
   const token = new URLSearchParams(window.location.search).get('token') ?? ''
@@ -25,45 +25,38 @@ const MagicLink = () => {
     })()
   }, [token, completeMagicLink, navigate])
 
+  const backToSignIn = (
+    <button
+      type="button"
+      onClick={() => navigate('/')}
+      className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
+    >
+      Back to sign in
+    </button>
+  )
+
   if (!token) {
     return (
-      <AuthShell>
-        <div className="text-center">
-          <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-medium tracking-tight mb-1">Invalid link</h1>
-          <p className="text-sm text-muted-foreground">This link is missing its token. Request a new one.</p>
-        </div>
-      </AuthShell>
+      <AuthStatus
+        icon={AlertCircle}
+        tone="negative"
+        title="Invalid link"
+        description="This link is missing its token. Request a new one."
+      >
+        {backToSignIn}
+      </AuthStatus>
     )
   }
 
   if (error) {
     return (
-      <AuthShell>
-        <div className="text-center">
-          <AlertCircle className="w-10 h-10 mx-auto mb-4 text-muted-foreground opacity-30" />
-          <h1 className="text-lg font-medium tracking-tight mb-1">Couldn't sign you in</h1>
-          <p className="text-sm text-muted-foreground mb-6">{error}</p>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="text-link text-sm font-medium hover:underline underline-offset-4 cursor-pointer"
-          >
-            Back to sign in
-          </button>
-        </div>
-      </AuthShell>
+      <AuthStatus icon={AlertCircle} tone="negative" title="Couldn't sign you in" description={error}>
+        {backToSignIn}
+      </AuthStatus>
     )
   }
 
-  return (
-    <AuthShell>
-      <div className="flex items-center gap-3 text-muted-foreground">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Signing you in…</span>
-      </div>
-    </AuthShell>
-  )
+  return <AuthPending label="Signing you in…" />
 }
 
 export default MagicLink

@@ -52,6 +52,6 @@ export const TooltipInlineItem = ({
   <span className="flex items-center gap-1.5 whitespace-nowrap">
     {icon ? <span className="inline-flex shrink-0 items-center">{icon}</span> : null}
     <span className="font-medium text-foreground">{label}</span>
-    {version ? <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{version}</span> : null}
+    {version ? <span className="font-mono text-xs text-muted-foreground tabular-nums">{version}</span> : null}
   </span>
 )

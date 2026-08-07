@@ -18,7 +18,7 @@ const passwordSchema = z
   .object({
     password: z
       .string()
-      .min(8, 'Password must be at least 8 characters')
+      .min(6, 'Password must be at least 6 characters')
       .max(72, 'Password must be at most 72 characters'),
     confirm: z.string().min(1, 'Please confirm your password'),
   })
@@ -97,7 +97,7 @@ const Account = () => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -124,9 +124,7 @@ const Account = () => {
               {saving ? <Loader2 className="animate-spin" /> : <Lock className="w-4 h-4" />}
               Set password
             </Button>
-            {saved && (
-              <span className="text-xs text-green-600 dark:text-green-400 animate-in fade-in">Password updated</span>
-            )}
+            {saved && <span className="text-xs text-positive animate-in fade-in">Password updated</span>}
           </div>
         </form>
       </section>

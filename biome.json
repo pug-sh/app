@@ -1,7 +1,16 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.14/schema.json",
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/builds", "!**/dist", "!**/src/gen", "!**/src/api/genproto/**"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/builds",
+      "!**/dist",
+      "!**/src/gen",
+      "!**/src/api/genproto/**",
+      "!**/src/components/charts/**",
+      "!**/src/components/shimmering-text.tsx"
+    ]
   },
   "formatter": {
     "enabled": true,

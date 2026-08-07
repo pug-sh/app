@@ -38,9 +38,7 @@ export const UserFlowControls = ({
         {isProperty ? (
           <Popover open={propertyOpen} onOpenChange={setPropertyOpen}>
             <PopoverTrigger className="inline-flex h-7 cursor-pointer items-center overflow-hidden rounded-md border border-border text-xs transition-colors hover:bg-muted/40">
-              <span className="flex h-full items-center bg-muted/50 px-2 text-[11px] text-muted-foreground">
-                property
-              </span>
+              <span className="flex h-full items-center bg-muted/50 px-2 text-xs text-muted-foreground">property</span>
               <span className={cn('flex h-full items-center px-2', !config.nodeProperty && 'text-muted-foreground')}>
                 {config.nodeProperty || 'Select property'}
               </span>

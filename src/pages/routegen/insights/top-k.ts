@@ -24,6 +24,9 @@ export type TopKState = {
   metric: AggregationType
   metricProperty: string
   limit: number
+  // Drop the trailing synthetic $others overflow bucket and return only the top
+  // `limit` rows.
+  omitOthers: boolean
 }
 
 export const TOP_K_DIMENSIONS = [
@@ -55,6 +58,7 @@ export const DEFAULT_TOP_K: TopKState = {
   metric: AggregationType.TOTAL,
   metricProperty: '',
   limit: 10,
+  omitOthers: false,
 }
 
 // Works for both TopKState and the TopKQuery proto message (same field names).
@@ -88,6 +92,7 @@ export const buildTopKQuery = (topK: TopKState, scope?: EventFilterEntry): TopKQ
     metric: topK.metric,
     metricProperty: NUMERIC_AGGREGATIONS.has(topK.metric) ? topK.metricProperty : '',
     limit: topK.limit,
+    omitOthers: topK.omitOthers,
   })
 
 const normalizeMetric = (dimension: TopKQuery_Dimension, metric: AggregationType) => {
@@ -105,6 +110,7 @@ export const normalizeTopKState = (raw: {
   metric?: unknown
   metricProperty?: unknown
   limit?: unknown
+  omitOthers?: unknown
 }): TopKState => {
   const dimension =
     typeof raw.dimension === 'number' && TOP_K_DIMENSION_VALUES.includes(raw.dimension)
@@ -125,6 +131,7 @@ export const normalizeTopKState = (raw: {
     metric,
     metricProperty: NUMERIC_AGGREGATIONS.has(metric) ? metricProperty : '',
     limit: typeof raw.limit === 'number' && TOP_K_LIMIT_VALUES.includes(raw.limit) ? raw.limit : DEFAULT_TOP_K.limit,
+    omitOthers: typeof raw.omitOthers === 'boolean' ? raw.omitOthers : DEFAULT_TOP_K.omitOthers,
   }
 }
 
@@ -142,13 +149,20 @@ const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
 // Coverage math for the ranked list. `showShare` stays false unless the metric is
 // additive and every value is non-negative — SUM/MIN over a signed property can be
-// negative, which would render nonsensical "% of total" figures.
-export const topKShareInfo = (rows: Pick<TopKRow, 'value' | 'isOthers'>[], metric: AggregationType) => {
+// negative, which would render nonsensical "% of total" figures. It is also false
+// when `omitOthers` dropped the overflow bucket: the hidden values are gone rather
+// than aggregated, so the grand total — and thus any share-of-total — is unknown
+// (a bare row count can't tell "all values fit" apart from "the rest were dropped").
+export const topKShareInfo = (
+  rows: Pick<TopKRow, 'value' | 'isOthers'>[],
+  metric: AggregationType,
+  omitOthers = false,
+) => {
   const total = rows.reduce((sum, row) => sum + row.value, 0)
   const othersRow = rows.find(row => row.isOthers)
   const rankedCount = rows.length - (othersRow ? 1 : 0)
   const allNonNegative = rows.every(row => row.value >= 0)
-  const showShare = SHARE_METRICS.has(metric) && total > 0 && allNonNegative
+  const showShare = !omitOthers && SHARE_METRICS.has(metric) && total > 0 && allNonNegative
   const othersShare = othersRow && total > 0 ? clamp01(othersRow.value / total) : null
   return { total, rankedCount, showShare, othersShare }
 }

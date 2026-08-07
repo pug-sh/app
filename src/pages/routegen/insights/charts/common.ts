@@ -1,109 +1,110 @@
-import { useMemo } from 'react'
-import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { ChartConfig } from '@/components/ui/chart'
+import { curveMonotoneX } from '@visx/curve'
+import { useCallback, useMemo } from 'react'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
-import { compactNumber } from '@/lib/format'
-import { computeYMax, formatAxisDate, formatTooltipDate } from './helpers'
-import type { ChartPoint, InsightsDatum } from './types'
+import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
+import type { ChartPoint } from './types'
 
-export const buildChartConfig = (seriesNames: string[], seriesColors: SeriesColor[]): ChartConfig =>
-  seriesNames.reduce<ChartConfig>((acc, name, si) => {
-    acc[`series${si}`] = {
-      label: name,
-      color: seriesColors[si]?.line,
-    }
-    return acc
-  }, {})
+// Line defaults to curveNatural, which overshoots — and the y-domain pads the top but pins
+// the floor at 0, so a series touching 0 gets drawn below the axis. Monotone can't overshoot.
+export const SERIES_CURVE = curveMonotoneX
 
-export const buildChartData = (
-  data: ChartPoint[],
-  seriesNames: string[],
-  granularity: Granularity,
-  timeZone: string,
-): InsightsDatum[] => {
-  let warned = false
-  return data.map(point => {
-    if (!warned && point.values.length !== seriesNames.length) {
-      console.error(
-        'Chart data misalignment: expected',
-        seriesNames.length,
-        'values per point, got',
-        point.values.length,
-      )
-      warned = true
-    }
+// The vendored charts default to a 40px margin on every side. Nothing draws in the
+// top one (the loading label is inset-0 centered), so it was pure dead space stacked
+// on top of the y-domain's own ~10% headroom. 8px is the floor, not taste: the topmost
+// tick label sits half above its gridline and nothing clips it. Sides keep the default —
+// they hold the axis labels. Partial: the chart merges it over DEFAULT_MARGIN.
+export const CHART_MARGIN = { top: 8 }
 
-    const row: InsightsDatum = {
-      axisLabel: formatAxisDate(point.date, granularity, timeZone),
-      tooltipLabel: formatTooltipDate(point.date, granularity, timeZone),
-    }
+// Marks a row added only to pad the x-domain (see the bar wrapper). Padding rows carry
+// a date and nothing else, so they draw no bar — but they are still real rows to the
+// axis, which would label them, so the date-label override blanks them by this key.
+export const PAD_ROW_KEY = '__pad'
 
-    seriesNames.forEach((_, si) => {
-      row[`series${si}`] = point.values[si] ?? 0
-    })
+// Prefixed like PAD_ROW_KEY so it can't collide with a `series${i}` index.
+export const COMPARE_KEY = '__compare'
 
-    return row
-  })
-}
+// The compare-vs-prior window. `values` is already laid over this window's buckets by the caller
+// (alignComparisonValues), one per row of `data`.
+export type ChartComparison = { label: string; values: number[]; color: SeriesColor }
 
-export const formatTooltipLabel = (_: unknown, payload: Array<Record<string, unknown>> = []) => {
-  const entry = payload[0] as { payload?: InsightsDatum } | undefined
-  return entry?.payload?.tooltipLabel ?? ''
-}
-
-export const useChartPrep = (
+// Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
+// real Date — the wrappers inject the formatted labels via the context override.
+export const useVendoredChartPrep = (
   data: ChartPoint[],
   seriesNames: string[],
   seriesColors: SeriesColor[],
   granularity: Granularity,
   timeZone: string,
-  stacked?: boolean,
-) => ({
-  chartConfig: useMemo(() => buildChartConfig(seriesNames, seriesColors), [seriesNames, seriesColors]),
-  chartData: useMemo(
-    () => buildChartData(data, seriesNames, granularity, timeZone),
-    [data, seriesNames, granularity, timeZone],
-  ),
-  yMax: useMemo(() => computeYMax(data, stacked), [data, stacked]),
-})
+  comparison?: ChartComparison,
+) => {
+  const chartData = useMemo(() => {
+    let warned = false
+    return data.map((point, index) => {
+      if (!warned && point.values.length !== seriesNames.length) {
+        console.error(
+          'Chart data misalignment: expected',
+          seriesNames.length,
+          'values per point, got',
+          point.values.length,
+        )
+        warned = true
+      }
 
-export const SHARED_MARGIN = { top: 12, right: 8, left: 0, bottom: 8 }
+      const row: Record<string, unknown> = { date: point.date }
+      seriesNames.forEach((_, si) => {
+        row[`series${si}`] = point.values[si] ?? 0
+      })
+      if (comparison) row[COMPARE_KEY] = comparison.values[index] ?? 0
+      return row
+    })
+  }, [data, seriesNames, comparison])
 
-export const COMPACT_CHART_AXIS_CLASS =
-  '[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground/70 [&_.recharts-cartesian-axis-tick_text]:text-[11px]'
+  // Without this the tooltip prints the raw dataKey ("series0") — the vendored
+  // chart has no equivalent of recharts' chartConfig label map.
+  //
+  // Comparison row last: the tooltip colors its hover dots from these rows by position, and its own
+  // order is child order.
+  const tooltipRows = useCallback(
+    (point: Record<string, unknown>) => {
+      const rows = seriesNames.map((name, si) => ({
+        color: seriesColors[si]?.line ?? '',
+        label: name,
+        value: Number(point[`series${si}`] ?? 0).toLocaleString(),
+      }))
+      if (comparison) {
+        rows.push({
+          color: comparison.color.line,
+          label: comparison.label,
+          value: Number(point[COMPARE_KEY] ?? 0).toLocaleString(),
+        })
+      }
+      return rows
+    },
+    [seriesNames, seriesColors, comparison],
+  )
 
-export const SHARED_X_AXIS = {
-  dataKey: 'axisLabel' as const,
-  tickLine: false,
-  axisLine: false,
-  minTickGap: 24,
-  interval: 'preserveStartEnd' as const,
-}
+  // Bucket labels must render in the project's reporting zone to match the
+  // server-computed bucket boundaries, and vary by granularity. The axis and the
+  // hover pill want different detail: the axis stays terse to fit, while the pill
+  // has to say which day an hour bucket lands on (an hourly range spans up to 14).
+  const axisNeedsDay = useMemo(
+    () =>
+      granularity === Granularity.HOUR &&
+      spansMultipleDays(
+        data.map(p => p.date),
+        timeZone,
+      ),
+    [data, granularity, timeZone],
+  )
 
-type YAxisOptions = {
-  logScale?: boolean
-  zeroBaseline?: boolean
-  tickFormatter?: (value: number) => string
-}
+  const dateLabelFormatters = useMemo(
+    () => ({
+      axis: (date: Date) => formatAxisDate(date, granularity, timeZone, axisNeedsDay),
+      tooltip: (date: Date) => formatTooltipDate(date, granularity, timeZone),
+    }),
+    [granularity, timeZone, axisNeedsDay],
+  )
 
-export const sharedYAxis = (yMax: number, opts?: YAxisOptions) => {
-  const base = {
-    tickLine: false,
-    axisLine: false,
-    width: 44,
-    // A custom formatter (percent, duration) maps fractional values to readable
-    // ticks, so don't force integer ticks — that would collapse a 0–1 ratio axis.
-    allowDecimals: opts?.tickFormatter !== undefined,
-    tickFormatter: opts?.tickFormatter ?? compactNumber,
-  }
-  // Log scale can't include 0, so float the min and let recharts pick it.
-  if (opts?.logScale) {
-    return { ...base, scale: 'log' as const, domain: [1, 'auto'] as [number, string], allowDataOverflow: true }
-  }
-  // Only drop the zero floor when the caller explicitly opts out — the Insights
-  // page passes no options and keeps the historical zero-based axis.
-  if (opts?.zeroBaseline === false) {
-    return { ...base, domain: ['auto', yMax] as [string, number] }
-  }
-  return { ...base, domain: [0, yMax] as [number, number] }
+  return { chartData, tooltipRows, dateLabelFormatters }
 }

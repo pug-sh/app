@@ -1,10 +1,12 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef } from 'react'
 import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
-import { BREAKPOINTS, COLS, TILE_MIN_H, TILE_MIN_W } from './constants'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { BREAKPOINTS, TILE_MIN_H } from './constants'
 import { tilePosition } from './draft-state'
+import { DISPLAY_GRID_COLUMNS, displayPositionToStored, storedPositionToDisplay } from './grid-layout'
 import { DashboardTileBody } from './tiles'
 import type { TileType } from './types'
 
@@ -13,13 +15,12 @@ import './grid.css'
 
 const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
 
-// Fine uniform grid. react-grid-layout runs with margin 0 and a high column count
-// (COLS.lg), so one column ≈ one row ≈ the visual gap (~18px). Cards fill their
-// cells with no inset; a gap between tiles is simply an empty track, and two tiles
-// with no empty track between them sit flush — continuous. compactType is null so
-// tiles stay exactly where they are placed (no auto-stacking that would swallow
-// the empty gap tracks).
-const GRID_ROW_HEIGHT = 18
+// The editor renders a familiar 12-column grid with fixed gutters while the API
+// continues to store positions in its existing 72-unit coordinate system.
+const GRID_PITCH = 18
+const GRID_HORIZONTAL_GAP = 16
+const GRID_VERTICAL_GAP = 16
+const GRID_MIN_WIDTH = 2
 
 export type DashboardLayouts = ResponsiveLayouts<keyof typeof BREAKPOINTS>
 
@@ -41,7 +42,7 @@ const getTileMinHeight = (tile: DashboardTile) => (isKpiTile(tile) ? KPI_MIN_H :
 // kind min shrank (e.g. a KPI tile) can still be resized down past a stale min.
 const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
   lg: tiles.map(tile => {
-    const pos = tilePosition(tile)
+    const pos = storedPositionToDisplay(tilePosition(tile))
     const minH = getTileMinHeight(tile)
     return {
       i: tile.id,
@@ -49,36 +50,30 @@ const getLayoutsForTiles = (tiles: DashboardTile[]): DashboardLayouts => ({
       y: pos.y,
       w: pos.w,
       h: Math.max(pos.h, minH),
-      minW: TILE_MIN_W,
+      minW: GRID_MIN_WIDTH,
       minH,
       static: false,
     }
   }),
 })
 
-// Faint snap-grid behind tiles in edit mode: one line per fine column/row, so the
-// snap targets — and where a tile will sit flush vs leave a gap — are visible.
+// Shaded tracks make each transparent gutter visible instead of representing
+// the grid with twelve misleading start lines.
 const GridGuides = () => {
-  const ref = useRef<HTMLDivElement>(null)
-  const [columnWidth, setColumnWidth] = useState(0)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const measure = () => setColumnWidth(el.clientWidth / COLS.lg)
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
   return (
-    <div
-      ref={ref}
-      aria-hidden
-      className="dashboard-grid-guides pointer-events-none absolute inset-0"
-      style={columnWidth > 0 ? { backgroundSize: `${columnWidth}px ${GRID_ROW_HEIGHT}px` } : undefined}
-    />
+    <div aria-hidden className="dashboard-grid-guides pointer-events-none absolute inset-0">
+      <div
+        className="grid h-full"
+        style={{
+          gridTemplateColumns: `repeat(${DISPLAY_GRID_COLUMNS}, minmax(0, 1fr))`,
+          columnGap: GRID_HORIZONTAL_GAP,
+        }}
+      >
+        {Array.from({ length: DISPLAY_GRID_COLUMNS }, (_, index) => (
+          <span key={index} className="dashboard-grid-guide-column" />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -113,6 +108,7 @@ export const DashboardGrid = ({
 }) => {
   const layouts = useMemo(() => getLayoutsForTiles(tiles), [tiles])
   const editable = mode === 'edit'
+  const isMobile = useIsMobile()
   const highlightRef = useRef<HTMLDivElement>(null)
 
   // Bring a just-added/duplicated tile into view so it never lands off-screen.
@@ -129,7 +125,9 @@ export const DashboardGrid = ({
   // so the ref would still hold the pre-edit layout.
   const persistLayout = (layout: readonly LayoutItem[]) => {
     if (!editable) return
-    onLayoutsChange?.({ lg: layout })
+    onLayoutsChange?.({
+      lg: layout.map(item => ({ ...item, ...displayPositionToStored(item) })),
+    })
   }
 
   const handleTileSelect = (tile: DashboardTile) => (event: React.MouseEvent) => {
@@ -145,18 +143,74 @@ export const DashboardGrid = ({
     onSelectTile(tile.id)
   }
 
+  // The inner tile node, shared by the desktop grid and the mobile stack.
+  // Selection, the highlight ref, and the click handler live here — not on the
+  // grid-item root: react-grid-layout clones the root (wrapping it in
+  // <DraggableCore>/<Resizable>) and overwrites its onMouseDown and ref with its
+  // own. Props nested here are never clobbered.
+  const renderTileContent = (tile: DashboardTile) => (
+    <div
+      ref={highlightTileId === tile.id ? highlightRef : undefined}
+      onMouseDown={handleTileSelect(tile)}
+      className={[
+        'min-h-0 flex-1',
+        selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
+        highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
+      ].join(' ')}
+    >
+      {renderTile ? (
+        renderTile(tile)
+      ) : (
+        <DashboardTileBody
+          tile={tile}
+          editing={editable}
+          onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
+          globalTimeRange={globalTimeRange}
+          globalGranularity={globalGranularity}
+          onDuplicate={editable ? onDuplicateTile : undefined}
+        />
+      )}
+    </div>
+  )
+
+  // Narrow viewports can't honor the proportional dashboard layout — a half-width
+  // tile would be ~180px, a KPI ~60px. Stack every tile full-width in reading
+  // order (top-to-bottom, then left-to-right) at its authored height, bypassing
+  // react-grid-layout entirely. Keyed off the viewport (not the grid container),
+  // so opening the edit config rail never trips it; drag/resize is desktop-only.
+  if (isMobile) {
+    const ordered = [...tiles].sort((a, b) => {
+      const pa = tilePosition(a)
+      const pb = tilePosition(b)
+      return pa.y - pb.y || pa.x - pb.x
+    })
+    return (
+      <div className="flex flex-col gap-4">
+        {ordered.map(tile => {
+          const pos = tilePosition(tile)
+          const height = Math.max(pos.h, getTileMinHeight(tile)) * GRID_PITCH
+          return (
+            <div key={tile.id} className="group flex flex-col" style={{ height }}>
+              {renderTileContent(tile)}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       {editable ? <GridGuides /> : null}
       <ResponsiveGridLayoutWithWidth
         className="layout dashboard-grid"
         breakpoints={BREAKPOINTS}
-        cols={COLS}
+        cols={{ lg: DISPLAY_GRID_COLUMNS }}
         layouts={layouts}
-        rowHeight={GRID_ROW_HEIGHT}
-        margin={[0, 0]}
+        rowHeight={GRID_PITCH - GRID_VERTICAL_GAP}
+        margin={[GRID_HORIZONTAL_GAP, GRID_VERTICAL_GAP]}
         containerPadding={[0, 0]}
-        compactType={null}
+        compactType="vertical"
         isDraggable={editable}
         isResizable={editable}
         draggableCancel="button, a, input, textarea, [contenteditable='true'], [data-no-drag='true'], .react-resizable-handle"
@@ -165,35 +219,9 @@ export const DashboardGrid = ({
         onResizeStop={layout => persistLayout(layout)}
       >
         {tiles.map(tile => (
-          // Cards fill their cell (no inset). A gap is an empty track; two tiles
-          // with no empty track between them sit flush (continuous).
+          // Cards fill their cell; react-grid-layout supplies the fixed gutter.
           <div key={tile.id} className="group flex h-full min-h-0 flex-col">
-            {/* Selection, the highlight ref, and the click handler live on this
-              inner node, not the grid-item root: react-grid-layout clones the root
-              (wrapping it in <DraggableCore>/<Resizable>) and overwrites its
-              onMouseDown and ref with its own. Props nested here are never clobbered. */}
-            <div
-              ref={highlightTileId === tile.id ? highlightRef : undefined}
-              onMouseDown={handleTileSelect(tile)}
-              className={[
-                'min-h-0 flex-1',
-                selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
-                highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
-              ].join(' ')}
-            >
-              {renderTile ? (
-                renderTile(tile)
-              ) : (
-                <DashboardTileBody
-                  tile={tile}
-                  editing={editable}
-                  onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
-                  globalTimeRange={globalTimeRange}
-                  globalGranularity={globalGranularity}
-                  onDuplicate={editable ? onDuplicateTile : undefined}
-                />
-              )}
-            </div>
+            {renderTileContent(tile)}
           </div>
         ))}
       </ResponsiveGridLayoutWithWidth>

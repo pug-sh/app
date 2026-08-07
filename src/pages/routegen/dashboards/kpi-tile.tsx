@@ -3,7 +3,8 @@ import { useId, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { cn } from '@/lib/utils'
-import { accentTextClass, toneTextClass } from './accent-palette'
+import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from '../insights/helpers'
+import { toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
 export type KpiCompare = { series: TrendSeries[]; label: string } | { error: true; label: string }
@@ -11,39 +12,67 @@ export type KpiCompare = { series: TrendSeries[]; label: string } | { error: tru
 type KpiTileProps = {
   tile: DashboardTile
   currentSeries: TrendSeries[]
+  // Resolves a series to the aggregation that produced it. Applies to `compare`'s series too, which
+  // is why it's a function: that's a different query's result and shares nothing but the spec.
+  aggregationFor: SeriesAggregationResolver
   compare?: KpiCompare
   formatValue: (value: number) => string
   metadata?: string
   lightMetric?: boolean
 }
 
-// Sum all points across all series. KPI tiles aren't designed for multi-series
-// queries, but if the underlying spec yields multiple series we collapse to a
-// single number rather than render nothing. Returns NaN when there are no
-// series at all so the renderer can distinguish "no data" from a true zero.
-const summarize = (series: TrendSeries[]): number => {
+// KPI tiles aren't designed for multi-series queries, but if the underlying spec
+// yields multiple series we collapse to a single number rather than render
+// nothing. Returns NaN when there are no series at all so the renderer can
+// distinguish "no data" from a true zero.
+//
+// Each series is asked what produced it rather than being read off a position, so the comparison
+// window — a separate query, with its own series — summarizes correctly instead of borrowing the
+// current window's order. Only counts sum; SERIES_COLLAPSE decides.
+const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResolver) => {
   if (series.length === 0) return Number.NaN
-  return series.reduce((seriesAcc, s) => seriesAcc + s.points.reduce((pointAcc, p) => pointAcc + p.value, 0), 0)
+  return series.reduce(
+    (acc, entry) =>
+      acc +
+      collapseValues(
+        entry.points.map(point => point.value),
+        SERIES_COLLAPSE[aggregationFor(entry)],
+      ),
+    0,
+  )
 }
 
-const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
+// Exported so the web-analytics stat tiles show the identical increasing/decreasing badge — one
+// source of truth for the delta visual across both overview modes.
+export const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
   if (!Number.isFinite(current)) return null
   const pct = ((current - prior) / Math.abs(prior)) * 100
   return { pct, label: `${Math.abs(pct).toFixed(1)}%` }
 }
 
-const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
-  const positive = pct >= 0
-  const Icon = positive ? TrendingUp : TrendingDown
+export const DeltaBadge = ({
+  pct,
+  label,
+  lowerIsBetter = false,
+}: {
+  pct: number
+  label: string
+  lowerIsBetter?: boolean
+}) => {
+  const rising = pct >= 0
+  const Icon = rising ? TrendingUp : TrendingDown
+  // The arrow follows the number, the color follows whether that direction is good. They diverge for
+  // lower-is-better metrics like bounce rate, where a climbing value is a regression, not a win.
+  const good = lowerIsBetter ? pct <= 0 : pct >= 0
   return (
     <span
       className={cn(
         'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
         'font-medium',
-        positive
-          ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
-          : 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-400',
+        good
+          ? 'bg-success/15 text-positive dark:bg-success/10'
+          : 'bg-destructive/15 text-negative dark:bg-destructive/10',
       )}
     >
       <Icon className="size-3" strokeWidth={2.5} aria-hidden />
@@ -52,12 +81,25 @@ const DeltaBadge = ({ pct, label }: { pct: number; label: string }) => {
   )
 }
 
-export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, lightMetric }: KpiTileProps) => {
-  const current = useMemo(() => summarize(currentSeries), [currentSeries])
-  const prior = useMemo(() => (compare && 'series' in compare ? summarize(compare.series) : undefined), [compare])
+export const KpiTile = ({
+  tile,
+  currentSeries,
+  aggregationFor,
+  compare,
+  formatValue,
+  metadata,
+  lightMetric,
+}: KpiTileProps) => {
+  const current = useMemo(() => summarize(currentSeries, aggregationFor), [currentSeries, aggregationFor])
+  const prior = useMemo(
+    () => (compare && 'series' in compare ? summarize(compare.series, aggregationFor) : undefined),
+    [compare, aggregationFor],
+  )
   const tone = useMemo(() => evaluateThresholds(current, tile.thresholds), [current, tile.thresholds])
 
-  const numberColor = tone === null ? accentTextClass(tile.header?.accentColor ?? '') : toneTextClass(tone)
+  // No threshold tone → body ink. The accent strip is the affordance for the header's chosen
+  // color, so data state (tone) stays the only thing that recolors the number.
+  const numberColor = tone === null ? undefined : toneTextClass(tone)
   const delta = prior !== undefined ? formatDelta(current, prior) : null
 
   const sparkPoints = useMemo(() => currentSeries[0]?.points ?? [], [currentSeries])
@@ -66,11 +108,7 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, l
   // Sparkline hue tracks the trend vs the comparison period; neutral when there
   // is nothing to compare against.
   const sparkColor =
-    prior === undefined || !Number.isFinite(prior)
-      ? 'text-muted-foreground/70'
-      : current >= prior
-        ? 'text-emerald-500'
-        : 'text-red-500'
+    prior === undefined || !Number.isFinite(prior) ? 'text-faint' : current >= prior ? 'text-positive' : 'text-negative'
 
   const contextParts = [compare && 'series' in compare ? compare.label : null, metadata].filter(Boolean)
 
@@ -90,13 +128,7 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, l
 
   const summary = (
     <div className="space-y-2">
-      <div
-        className={cn(
-          'tracking-tight tabular-nums',
-          lightMetric ? 'text-4xl font-medium' : 'text-3xl font-bold',
-          numberColor,
-        )}
-      >
+      <div className={cn('tracking-tight tabular-nums', lightMetric ? 'text-4xl' : 'text-3xl', numberColor)}>
         {formatValue(current)}
       </div>
       {compareRow}
@@ -122,11 +154,16 @@ export const KpiTile = ({ tile, currentSeries, compare, formatValue, metadata, l
 // Area sparkline: a soft gradient fill (trend color → transparent) under a
 // constant-width line. preserveAspectRatio="none" lets it stretch to the tile
 // width; vectorEffect keeps the stroke crisp despite the non-uniform scale.
-const Sparkline = ({ points }: { points: { value: number }[] }) => {
+// Exported so the web-analytics stat cards render the identical sparkline.
+//
+// baseline='min' scales to the data's own range (default — emphasizes shape). baseline='zero'
+// anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
+// amplified to full height; the web stat cards use this to match the 0-based main chart.
+export const Sparkline = ({ points, baseline = 'min' }: { points: { value: number }[]; baseline?: 'min' | 'zero' }) => {
   const gradientId = `spark-${useId().replace(/:/g, '')}`
   const values = points.map(p => p.value)
-  const min = Math.min(...values)
   const max = Math.max(...values)
+  const min = baseline === 'zero' ? Math.min(0, ...values) : Math.min(...values)
   const range = max - min || 1
   const w = 100
   const h = 32

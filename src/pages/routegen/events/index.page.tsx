@@ -1,7 +1,8 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, X } from 'lucide-react'
+import { AlertCircle, ChevronDown, ChevronRight, List, Loader2, RefreshCw, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { trackFeature } from '@/analytics/pug'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
@@ -24,7 +25,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { formatRelative } from '@/hooks/use-relative-time'
+import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { defaultRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet, structToEntries } from '@/lib/struct'
@@ -66,7 +67,7 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 align-middle">
           <Badge
             variant="secondary"
-            className="text-[11px] font-medium px-2 py-0.5"
+            className="text-xs font-medium px-2 py-0.5"
             style={{ backgroundColor: colors.fill, color: colors.dot }}
           >
             {event.kind}
@@ -91,26 +92,32 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 align-middle">
           <InlineEventProps {...inlineResult} />
         </td>
-        <td className="py-2.5 pr-2 text-right whitespace-nowrap align-middle overflow-hidden">
-          <ProjectLink
-            href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
-            onClick={e => e.stopPropagation()}
-            className="text-xs font-mono text-link hover:underline underline-offset-4"
-          >
-            {event.distinctId}
-          </ProjectLink>
-          {event.sessionId && (
-            <>
-              <span className="text-muted-foreground/40"> / </span>
-              <ProjectLink
-                href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
-                onClick={e => e.stopPropagation()}
-                className="text-xs font-mono text-link hover:underline underline-offset-4"
-              >
-                {event.sessionId.slice(0, 8)}
-              </ProjectLink>
-            </>
-          )}
+        <td className="py-2.5 pr-2 align-middle overflow-hidden">
+          <div className="flex items-center justify-end">
+            <ProjectLink
+              href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
+              onClick={e => e.stopPropagation()}
+              // underline-offset-2, not the usual 4: `truncate` clips at the content box, and on a
+              // text-xs line box an offset-4 underline lands past the bottom edge and never renders.
+              className="text-xs font-mono text-link hover:underline underline-offset-2 truncate min-w-0"
+              title={event.distinctId}
+            >
+              {event.distinctId}
+            </ProjectLink>
+            {event.sessionId && (
+              <>
+                <span className="shrink-0 text-muted-foreground/40"> / </span>
+                <ProjectLink
+                  href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
+                  onClick={e => e.stopPropagation()}
+                  className="shrink-0 text-xs font-mono text-link hover:underline underline-offset-2"
+                  title={event.sessionId}
+                >
+                  {event.sessionId.slice(0, 8)}
+                </ProjectLink>
+              </>
+            )}
+          </div>
         </td>
         <td className="py-2.5 w-5 align-middle text-right">
           {hasMore &&
@@ -163,6 +170,8 @@ const EventExplorer = () => {
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const lastUpdatedLabel = useRelativeTime(lastUpdated)
 
   const filterRef = useRef<HTMLDivElement>(null)
   const [filterH, setFilterH] = useState(0)
@@ -203,7 +212,10 @@ const EventExplorer = () => {
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
+          // Only a fresh load restamps this. "Load more" appends older rows below rows still fetched
+          // at the original time, so bumping it there would overstate how current the list is.
           setEvents(resp.events)
+          setLastUpdated(new Date())
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
@@ -222,6 +234,15 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
+  // Refetches page one, dropping any pages loaded via "Load more" — same reset the Retry buttons do.
+  // trackFeature sits here rather than in fetchEvents() because that also runs on mount and on every
+  // filter change; only this handler is a deliberate click. Named explicitly since an icon-only
+  // button autocaptures as tag `svg` with no text.
+  const handleRefresh = () => {
+    trackFeature({ featureId: 'events.refresh', featureName: 'Refresh events' })
+    fetchEvents()
+  }
+
   if (!project) return <NoProject title="Events" icon={List} />
 
   return (
@@ -233,6 +254,26 @@ const EventExplorer = () => {
       >
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
+          {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
+              ml-4 keeps the icon off the picker chip: butted straight against it, it reads as one of
+              the chip's own controls rather than an action on the table. The timestamp is the only
+              confirmation a refresh returning no new rows can give — it resets to "just now" when
+              nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
+          <div className="ml-4 flex items-center gap-2 text-xs text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleRefresh}
+              disabled={loading}
+              aria-label="Refresh events"
+              className="text-muted-foreground"
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            </Button>
+            {lastUpdated && (
+              <HoverSwap primary={`Updated ${lastUpdatedLabel}`} secondary={formatDateTime(lastUpdated)} />
+            )}
+          </div>
         </div>
         <EventFilterBar
           filtersAtom={eventFilters.filtersAtom}
@@ -243,9 +284,9 @@ const EventExplorer = () => {
         <div className="flex items-center gap-2 flex-wrap">
           {userFilter && (
             <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-              <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">user</span>
+              <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">user</span>
               <Popover>
-                <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer">
+                <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">
                   {userFilter}
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-52 p-2">
@@ -266,7 +307,7 @@ const EventExplorer = () => {
               <button
                 type="button"
                 onClick={() => setUserFilter('')}
-                className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+                className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -300,24 +341,27 @@ const EventExplorer = () => {
         </div>
       ) : events.length > 0 ? (
         <>
-          <table className="w-full table-fixed">
-            <thead className="sticky z-9 bg-background" style={{ top: filterH }}>
-              <tr className="border-b border-border text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
-                <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
-                <th className="py-2 pr-2 text-left font-medium w-32">Location</th>
-                <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
-                <th className="py-2 pr-2 text-left font-medium">Properties</th>
-                <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
-                <th className="w-5" />
-              </tr>
-            </thead>
-            <tbody>
-              {events.map(event => (
-                <EventRow key={event.eventId} event={event} />
-              ))}
-            </tbody>
-          </table>
+          {/* Only clip keeps overflow-y visible for the sticky header; below xl, reach beats sticking. */}
+          <div className="overflow-x-auto xl:overflow-x-clip">
+            <table className="w-full min-w-[960px] table-fixed">
+              <thead className="static z-9 bg-background xl:sticky" style={{ top: filterH }}>
+                <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <th className="py-2 pr-2 text-left font-medium w-24">Time</th>
+                  <th className="py-2 pr-2 text-left font-medium w-44">Event</th>
+                  <th className="py-2 pr-2 text-left font-medium w-32">Location</th>
+                  <th className="py-2 pr-2 text-left font-medium w-44">Platform</th>
+                  <th className="py-2 pr-2 text-left font-medium">Properties</th>
+                  <th className="py-2 pr-2 text-right font-medium w-36">User / Session</th>
+                  <th className="w-5" />
+                </tr>
+              </thead>
+              <tbody>
+                {events.map(event => (
+                  <EventRow key={event.eventId} event={event} />
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">

@@ -17,13 +17,13 @@ export const TileHeaderEdit = ({
 }) => (
   <div className="mb-2 flex items-start gap-2 pr-8">
     <span
-      className="tile-drag-handle mt-0.5 shrink-0 cursor-grab text-muted-foreground/50 active:cursor-grabbing"
+      className="tile-drag-handle mt-0.5 shrink-0 cursor-grab text-faint active:cursor-grabbing"
       aria-label="Drag to move tile"
     >
       <GripVertical className="size-4" />
     </span>
     {hideTitle ? (
-      <span className="mt-0.5 text-muted-foreground/50 text-xs italic">Title hidden</span>
+      <span className="mt-0.5 text-faint text-xs italic">Title hidden</span>
     ) : (
       <div className="min-w-0 flex-1">
         <InlineEditableText

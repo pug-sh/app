@@ -1,41 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/jetbrains-mono/400.css";
-@import "@fontsource/jetbrains-mono/500.css";
-
-/* Self-hosted Apfel Grotezk. We deliberately do NOT ship the 500 (Mittel) cut:
-   the UI uses font-medium (500) widely, and at our text sizes the Mittel weight
-   read too heavy. With no 500 face, the font-matching algorithm renders 500
-   requests as the 400 Regular cut, giving a lighter, flatter weight throughout.
-   Satt (600) and Fett (700) remain for genuine emphasis. */
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Regular.woff) format("woff");
-}
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 600;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Satt.woff) format("woff");
-}
-@font-face {
-  font-family: "Apfel Grotezk";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 700;
-  src:
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff2) format("woff2"),
-    url(/fonts/apfel-grotezk/ApfelGrotezk-Fett.woff) format("woff");
-}
+@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -49,6 +16,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-link: var(--link);
+  --color-faint: var(--faint);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -62,15 +30,21 @@
   --color-ring: var(--ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-positive: var(--positive);
+  --color-caution: var(--caution);
+  --color-negative: var(--negative);
 
+  /* Hardcoded, not derived from --radius — rounded-md/lg read these, so retune the ramp. */
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --font-sans: "Apfel Grotezk", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Figtree Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
+  /* Three weights carry the whole hierarchy: 400 body, 500 labels, 600 titles + hero numerals. */
+  --font-weight-medium: 500;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -87,6 +61,29 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Keep the single prefix — the registry installer writes var(----chart-grid),
+     which silently kills every utility built on these. */
+  --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
+  --color-chart-scale-05: var(--chart-scale-05);
+  --color-chart-scale-04: var(--chart-scale-04);
+  --color-chart-scale-03: var(--chart-scale-03);
+  --color-chart-scale-02: var(--chart-scale-02);
+  --color-chart-scale-01: var(--chart-scale-01);
+  --color-chart-label: var(--chart-label);
+  --color-chart-marker-foreground: var(--chart-marker-foreground);
+  --color-chart-marker-border: var(--chart-marker-border);
+  --color-chart-marker-background: var(--chart-marker-background);
+  --color-chart-tooltip-muted: var(--chart-tooltip-muted);
+  --color-chart-tooltip-foreground: var(--chart-tooltip-foreground);
+  --color-chart-tooltip-background: var(--chart-tooltip-background);
+  --color-chart-brush-border: var(--chart-brush-border);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-crosshair: var(--chart-crosshair);
+  --color-chart-line-secondary: var(--chart-line-secondary);
+  --color-chart-line-primary: var(--chart-line-primary);
+  --color-chart-foreground-muted: var(--chart-foreground-muted);
+  --color-chart-foreground: var(--chart-foreground);
+  --color-chart-background: var(--chart-background);
 }
 
 @layer base {
@@ -103,21 +100,61 @@
     @apply font-sans;
   }
 
+  /* Headings carry no weight of their own — size, ink and tracking do the work. Weight is
+     reserved for labels/controls (font-medium at 500), which is the one place it reads as
+     emphasis rather than heft. */
   h1,
   h2,
   h3 {
     font-family: var(--font-heading);
+    font-weight: 400;
+    letter-spacing: -0.014em;
+  }
+
+  /* Big numerals need *some* negative tracking — text spacing is drawn for 14px, not a 36px
+     figure — but only enough to close the gaps, or an airy face stops being one. */
+  .text-3xl,
+  .text-4xl,
+  .text-5xl {
+    letter-spacing: -0.018em;
+  }
+
+  /* Display sizes come back down to 400: weight that reads as emphasis at 14px reads as heft at
+     24px+, and size is already carrying the emphasis. Utilities beat @layer base, so a weight class
+     at the call site still wins — the display sites deliberately set none. */
+  .text-xl,
+  .text-2xl,
+  .text-3xl,
+  .text-4xl,
+  .text-5xl {
+    font-weight: 400;
+  }
+
+  /* Markdown headings follow the same rule. */
+  .markdown-body :is(h1, h2, h3) {
+    font-weight: 400;
+  }
+
+  /* <strong>/<b> take the label weight instead of the UA's 700 — the only emphasis weight this
+     system has. Nothing in app code emits them; they arrive from markdown (snarkdown turns
+     `**x**` into <strong>), which is why the UA default was the last bold left on screen. */
+  strong,
+  b {
     font-weight: 500;
-    letter-spacing: -0.013em;
+  }
+
+  /* Tailwind v4 makes <button> cursor:default (shadcn/ui#6843); this app wants the pointer. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
 
 @layer components {
-  /* Dashboard markdown tile typography and element spacing */
   .markdown-body h1,
   .markdown-body h2,
   .markdown-body h3 {
-    @apply mb-2 font-medium tracking-tight text-foreground;
+    @apply mb-2 tracking-tight text-foreground;
   }
 
   .markdown-body h1 {
@@ -174,100 +211,193 @@
 }
 
 :root {
-  --background: oklch(0.98 0.002 250);
-  --foreground: oklch(0.22 0.02 260);
-  --card: oklch(0.995 0.0015 260);
-  --card-foreground: oklch(0.15 0.02 260);
-  --popover: oklch(0.995 0.0015 260);
-  --popover-foreground: oklch(0.15 0.02 260);
+  /* Shift these together — moving one alone collides with its neighbour. A third light-mode
+     ramp shadows these on the auth pages — re-solve `.auth-surface` too whenever this moves. */
+  --background: oklch(0.943 0.005 265);
+  --foreground: oklch(0.365 0.006 265);
+  --card: oklch(0.958 0.004 265);
+  --card-foreground: oklch(0.365 0.006 265);
+  --popover: oklch(0.958 0.004 265);
+  --popover-foreground: oklch(0.365 0.006 265);
   --primary: oklch(0.55 0.18 265);
   --primary-foreground: oklch(0.98 0.005 265);
-  /* Brand/blue color used AS text on the canvas (links, primary-tinted icons).
-     Decoupled from --primary so dark mode can lighten it without lightening the
-     button fill. Light mode reads fine, so it tracks --primary here. */
-  --link: oklch(0.55 0.18 265);
-  --secondary: oklch(0.94 0.01 260);
-  --secondary-foreground: oklch(0.25 0.02 260);
-  --muted: oklch(0.94 0.01 260);
-  --muted-foreground: oklch(0.55 0.02 260);
-  --accent: oklch(0.94 0.01 260);
-  --accent-foreground: oklch(0.25 0.02 260);
+  /* Blue used AS text (links, tinted icons). Decoupled from --primary so each mode can
+     tune it without moving the button fill. */
+  --link: oklch(0.456 0.18 265);
+  --secondary: oklch(0.911 0.008 265);
+  --secondary-foreground: oklch(0.402 0.008 265);
+  --muted: oklch(0.911 0.008 265);
+  /* Coupled to the surface ramp — retune whenever it moves. */
+  --muted-foreground: oklch(0.49 0.008 265);
+  /* Fourth ink tier (text-faint) — timestamps, counts, hints. Solid, not alpha:
+     alpha composites to a different weight per mode. */
+  --faint: oklch(0.611 0.008 265);
+  --accent: oklch(0.911 0.008 265);
+  --accent-foreground: oklch(0.402 0.008 265);
   --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.98 0.005 25);
-  --border: oklch(0.88 0.01 260);
-  --input: oklch(0.88 0.01 260);
+  --border: oklch(0.876 0.006 265);
+  --input: oklch(0.876 0.006 265);
   --ring: oklch(0.55 0.18 265);
   --success: oklch(0.6 0.17 145);
   --warning: oklch(0.7 0.15 70);
-  /* charts — hued to match the semantic palette (blue/green/amber/magenta/red),
-     tuned a touch darker than dark mode so each series reads on the light bg */
+  /* Text tier for the three semantic fills above — same split as --link vs --primary,
+     since a fill and colored text pull lightness in opposite directions. Chroma is held
+     at the insights palette's cap so these don't shout against the near-grayscale UI. */
+  --positive: oklch(0.431 0.14 145);
+  --caution: oklch(0.451 0.14 70);
+  --negative: oklch(0.462 0.14 25);
+  /* charts — semantic hues, a touch darker than dark mode to read on the light bg */
   --chart-1: oklch(0.55 0.18 265);
   --chart-2: oklch(0.6 0.17 145);
   --chart-3: oklch(0.7 0.15 70);
   --chart-4: oklch(0.55 0.16 330);
   --chart-5: oklch(0.58 0.2 25);
   --radius: 0.625rem;
-  /* sidebar — slightly recessed from background, sharing the cool tint */
-  --sidebar: oklch(0.965 0.003 260);
-  --sidebar-foreground: oklch(0.15 0.02 260);
+  /* sidebar */
+  --sidebar: oklch(0.926 0.005 265);
+  --sidebar-foreground: oklch(0.353 0.006 265);
   --sidebar-primary: oklch(0.55 0.18 265);
   --sidebar-primary-foreground: oklch(0.98 0.005 265);
-  --sidebar-accent: oklch(0.94 0.01 260);
-  --sidebar-accent-foreground: oklch(0.25 0.02 260);
-  --sidebar-border: oklch(0.9 0.008 260);
+  --sidebar-accent: oklch(0.911 0.008 265);
+  --sidebar-accent-foreground: oklch(0.402 0.008 265);
+  --sidebar-border: oklch(0.886 0.005 265);
   --sidebar-ring: oklch(0.55 0.18 265);
+  /* Aliases, declared once: `.dark` toggles on the same element `:root` matches, so these
+     track the theme on their own. Pinning the registry's own values breaks the grid. */
+  --chart-background: var(--background);
+  --chart-foreground: var(--foreground);
+  --chart-foreground-muted: var(--muted-foreground);
+  --chart-label: var(--muted-foreground);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-crosshair: oklch(0.4 0.1828 274.34);
+  --chart-grid: var(--border);
+  --chart-brush-border: var(--border);
+  --chart-tooltip-background: var(--popover);
+  --chart-tooltip-foreground: var(--popover-foreground);
+  --chart-tooltip-muted: var(--muted-foreground);
+  --chart-marker-background: oklch(0.97 0.005 265);
+  --chart-marker-border: oklch(0.85 0.01 265);
+  --chart-marker-foreground: oklch(0.3 0.01 265);
+  --chart-scale-01: oklch(0.98 0.003 106);
+  --chart-scale-02: oklch(0.92 0.008 106);
+  --chart-scale-03: oklch(0.82 0.015 106);
+  --chart-scale-04: oklch(0.68 0.02 106);
+  --chart-scale-05: oklch(0.55 0.025 106);
+  --chart-scale-pattern-color: oklch(0.96 0.005 106);
 }
 
 .dark {
-  /* surfaces — #242424 base, gentle blue tint, quiet layering */
-  --background: oklch(0.26 0.004 265);
-  --foreground: oklch(0.91 0.005 265); /* lifted from 0.87: body contrast toward light-mode parity (~12:1) */
-  --card: oklch(0.29 0.005 265);
-  --card-foreground: oklch(0.91 0.005 265);
-  --popover: oklch(0.3 0.006 265);
-  --popover-foreground: oklch(0.91 0.005 265);
+  /* Solved against light with APCA, not WCAG. WCAG is polarity-blind: matching it across modes
+     scored both at 9:1 while dark measured 22–32 Lc *below* light on every ink tier, which is the
+     "washed out" everyone kept re-reporting. The ink ladder below hits light's APCA at the top and
+     widens as it descends — a bright top used sparingly, not a bright screen.
 
-  /* actions — understated, not shouty */
-  --primary: oklch(0.54 0.16 265); /* deeper + saturated: white text clears AA */
-  --primary-foreground: oklch(0.96 0.005 265);
-  /* Brand/blue text on the canvas (links, primary-tinted icons). Lighter than the
-     --primary fill so it clears AA as text (~5.5:1) while the fill stays dark for
-     white button text. See --link in :root. */
-  --link: oklch(0.7 0.16 265);
-  --secondary: oklch(0.31 0.005 265);
-  --secondary-foreground: oklch(0.78 0.005 265);
-  --muted: oklch(0.31 0.005 265);
-  --muted-foreground: oklch(0.76 0.008 265); /* lifted from 0.69: muted is used heavily; ~7:1 */
-  --accent: oklch(0.33 0.006 265);
-  --accent-foreground: oklch(0.82 0.005 265);
+     Ground is an ink blue-black, not a grey: chroma rides up as lightness comes down so the deep
+     surfaces read as a material. Ink stays near-neutral so text never takes the cast. */
+  /* EXPERIMENT: canvas pinned to the card tone — one flat plane, regions defined by hairlines
+     rather than by elevation. Revert to 0.175 0.014 to restore the elevated look. */
+  --background: oklch(0.215 0.013 265);
+  --foreground: oklch(0.818 0.004 265);
+  --card: oklch(0.215 0.013 265);
+  --card-foreground: oklch(0.818 0.004 265);
+  --popover: oklch(0.242 0.013 265);
+  --popover-foreground: oklch(0.818 0.004 265);
 
-  /* semantic — softened for dark bg */
-  --destructive: oklch(0.54 0.18 25); /* deeper + saturated: white text clears AA */
-  --destructive-foreground: oklch(0.96 0.005 25);
-  --success: oklch(0.62 0.14 145);
-  --warning: oklch(0.72 0.12 70);
+  /* actions */
+  --primary: oklch(0.55 0.175 265); /* deep + saturated: white text clears AA */
+  --primary-foreground: oklch(0.985 0.005 265);
+  --link: oklch(0.685 0.135 265);
+  /* The floor is --accent keeping its gap over --popover: menu-item hovers render on
+     popovers, and closing it further makes them invisible. */
+  --secondary: oklch(0.252 0.014 265);
+  --secondary-foreground: oklch(0.779 0.005 265);
+  --muted: oklch(0.252 0.014 265);
+  --muted-foreground: oklch(0.709 0.006 265);
+  --faint: oklch(0.605 0.007 265);
+  --accent: oklch(0.285 0.016 265);
+  /* Capped below --foreground: solving it flat pushes chip ink past body ink. */
+  --accent-foreground: oklch(0.779 0.005 265);
 
-  /* chrome — borders barely there */
-  --border: oklch(0.34 0.006 265);
-  --input: oklch(0.32 0.006 265);
-  --ring: oklch(0.62 0.12 265);
+  /* semantic */
+  --destructive: oklch(0.55 0.175 25); /* deep + saturated: white text clears AA */
+  --destructive-foreground: oklch(0.985 0.005 25);
+  --success: oklch(0.62 0.15 145);
+  --warning: oklch(0.72 0.14 70);
+  /* Text tier — see :root. Seated at the secondary rung on purpose: a delta badge is a footnote
+     to its number, and body ink now sits above it, so it can't be the loudest thing. Chroma is
+     held well under the fills' — against a near-grayscale UI a saturated hue shouts on colour
+     alone, at any lightness, and five red pills in a KPI row is the whole page's attention. */
+  --positive: oklch(0.71 0.1 145);
+  --caution: oklch(0.72 0.1 70);
+  --negative: oklch(0.7 0.1 25);
 
-  /* charts — muted, distinct hues */
-  --chart-1: oklch(0.62 0.12 265);
-  --chart-2: oklch(0.62 0.14 145);
-  --chart-3: oklch(0.68 0.12 70);
-  --chart-4: oklch(0.58 0.1 330);
-  --chart-5: oklch(0.62 0.16 25);
+  /* --border is translucent so it takes the tint of whatever surface it sits on. Keep
+     alpha low — call sites dim it further with border-border/30..70. --input stays
+     SOLID: form controls use dark:bg-input/30, and /NN multiplies alpha away. */
+  --border: oklch(0.68 0.022 265 / 0.22);
+  --input: oklch(0.252 0.014 265);
+  --ring: oklch(0.62 0.15 265);
 
-  /* sidebar — slightly recessed from background */
-  --sidebar: oklch(0.23 0.005 265);
-  --sidebar-foreground: oklch(0.87 0.005 265);
-  --sidebar-primary: oklch(0.62 0.12 265);
-  --sidebar-primary-foreground: oklch(0.96 0.005 265);
-  --sidebar-accent: oklch(0.3 0.006 265);
-  --sidebar-accent-foreground: oklch(0.82 0.005 265);
-  --sidebar-border: oklch(0.3 0.005 265);
-  --sidebar-ring: oklch(0.62 0.12 265);
+  /* Chart hues sit a rung below body ink — data reads as data, never as the loudest thing
+     on the page. Same band the JS series palette lifts into (lib/event-colors.ts). */
+  --chart-1: oklch(0.66 0.165 265);
+  --chart-2: oklch(0.672 0.16 145);
+  --chart-3: oklch(0.715 0.15 70);
+  --chart-4: oklch(0.65 0.15 330);
+  --chart-5: oklch(0.666 0.165 25);
+
+  /* sidebar */
+  --sidebar: oklch(0.158 0.014 265);
+  --sidebar-foreground: oklch(0.8 0.005 265);
+  /* Must match --primary — white text on it is sub-AA otherwise. */
+  --sidebar-primary: oklch(0.55 0.175 265);
+  --sidebar-primary-foreground: oklch(0.985 0.005 265);
+  /* Seated on the sidebar, not pinned to --accent: the sidebar sits below the canvas
+     while chips sit above, so one shared value made every nav hover the loudest step.
+     Held below --card so the active pill can never outshine content on the canvas —
+     the active item is marked by its ink, not by a brighter fill. */
+  --sidebar-accent: oklch(0.205 0.016 265);
+  --sidebar-accent-foreground: oklch(0.86 0.004 265);
+  --sidebar-border: oklch(0.68 0.022 265 / 0.14);
+  --sidebar-ring: oklch(0.62 0.15 265);
+  /* Only what genuinely differs per mode — the rest are :root aliases that track the
+     theme; redeclaring one here pins it to light. */
+  --chart-crosshair: oklch(0.55 0.02 265);
+  --chart-marker-background: oklch(0.242 0.013 265);
+  --chart-marker-border: oklch(0.36 0.016 265);
+  --chart-marker-foreground: oklch(0.87 0.003 265);
+  /* Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface. */
+  --chart-scale-01: oklch(0.205 0.028 265);
+  --chart-scale-02: oklch(0.32 0.055 265);
+  --chart-scale-03: oklch(0.44 0.08 265);
+  --chart-scale-04: oklch(0.56 0.105 265);
+  --chart-scale-05: oklch(0.7 0.13 265);
+  --chart-scale-pattern-color: oklch(0.2 0.012 265);
+}
+
+/* Auth surface (sign-in, magic-link, demo) — light mode only, a third ground shadowing :root.
+   The canvas is tuned to be read in fragments between tiles; a full-screen field of it, with
+   nothing lighter beside it, reads as gray paper. The nine tokens below are re-solved against
+   the new ground and hold the app's ratios to within 0.01 — re-solve them whenever :root moves.
+   `color` is re-anchored too: overriding --foreground only reaches elements that resolve it, and
+   Label/Input set no colour class, so without this they inherit :root ink and land a step dark.
+   Deliberately NOT re-solved: --popover, --secondary/--muted/--accent, --ring. Nothing on these
+   pages uses them; --popover at 0.958 is *darker* than this ground, so a popover added here
+   would invert the elevation ramp. Re-solve them at that point. */
+:root:not(.dark) .auth-surface {
+  --background: oklch(0.985 0.002 265);
+  --card: oklch(0.998 0.002 265);
+  --foreground: oklch(0.395 0.006 265);
+  --muted-foreground: oklch(0.519 0.008 265);
+  --faint: oklch(0.642 0.008 265);
+  --link: oklch(0.484 0.18 265);
+  --negative: oklch(0.491 0.14 25);
+  --border: oklch(0.916 0.006 265);
+  --input: oklch(0.916 0.006 265);
+
+  color: var(--foreground);
 }
 
 /* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */
@@ -275,46 +405,88 @@
   z-index: 30 !important;
 }
 
-/* Sign-in hero — one-time draw of the analytics trend line on load.
-   540 ≈ the trend path length; dash-draw isn't expressible as a Tailwind utility. */
-@keyframes signin-trend-draw {
-  from {
-    stroke-dashoffset: 540;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+/* GIS exposes no radius prop — `shape` only offers its own 4px or a full pill — and its class
+   names are obfuscated, so role=button is the one stable hook. overflow clips the hover overlay,
+   which GIS draws square at inset 0. Unlayered on purpose: GIS injects its own unlayered styles.
+   If GIS ever renders a second role=button (One Tap, FedCM) this silently stops applying. */
+.google-signin-button [role="button"] {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-@keyframes signin-fade-rise {
+/* Auth card wall — each column renders the deck --wall-copies times and scrolls by exactly
+   one copy, so the loop distance has to track the count (set from the TSX) rather than a literal.
+   Cards carry their own bottom margin rather than a flex gap on the track: N cards yield 2N-1
+   gaps where the repeating unit needs 2N, so -50% lands half a gap short and jumps. */
+@keyframes auth-wall-drift {
   from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
     transform: translateY(0);
   }
+  to {
+    transform: translateY(calc(-100% / var(--wall-copies)));
+  }
 }
 
-.signin-trend-line {
-  stroke-dasharray: 540;
-  stroke-dashoffset: 540;
-  animation: signin-trend-draw 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
-}
-
-.signin-trend-area {
-  opacity: 0;
-  animation: signin-fade-rise 0.7s ease-out 1.2s forwards;
+.auth-wall-track {
+  animation-name: auth-wall-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .signin-trend-line {
-    stroke-dashoffset: 0;
+  .auth-wall-track {
     animation: none;
   }
-  .signin-trend-area {
-    opacity: 1;
-    animation: none;
-  }
+}
+
+/* sugar-high palette for the SDK setup snippets. Structural tokens reuse the theme vars so
+   they adapt for free; only keyword/string/class are tuned per theme. */
+.sugar-high {
+  --sh-identifier: var(--foreground);
+  --sh-property: var(--foreground);
+  --sh-entity: var(--foreground);
+  --sh-jsxliterals: var(--foreground);
+  --sh-sign: var(--muted-foreground);
+  --sh-comment: var(--muted-foreground);
+  --sh-keyword: oklch(0.55 0.16 18);
+  --sh-string: oklch(0.5 0.1 160);
+  --sh-class: oklch(0.52 0.12 255);
+}
+
+.dark .sugar-high {
+  --sh-keyword: oklch(0.77 0.13 18);
+  --sh-string: oklch(0.8 0.11 160);
+  --sh-class: oklch(0.8 0.1 255);
+}
+
+/* Thin scrollbars — the platform default is chunky against these surfaces. Styling
+   ::-webkit-scrollbar makes Chromium ignore scrollbar-width, so the two engines never
+   double up; Firefox takes the standard properties. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--muted-foreground) 32%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklch, var(--muted-foreground) 28%, transparent);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--muted-foreground) 45%, transparent);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }

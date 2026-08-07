@@ -58,13 +58,33 @@ const zoneOffsetMs = (timeZone: string, instant: Date) => {
   return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - instant.getTime()
 }
 
-// The UTC instant for a wall-clock time (h:00:00) on y-mo-d in `timeZone`. Refines
-// the offset once so it stays correct across a DST boundary.
-const wallToInstant = (timeZone: string, y: number, mo: number, d: number, h: number) => {
-  const guess = Date.UTC(y, mo - 1, d, h, 0, 0)
+// A wall-clock time in some zone. Month is 1-12, matching zonedParts.
+export interface ZonedCivil {
+  year: number
+  month: number
+  day: number
+  hour: number
+  minute: number
+  second: number
+  ms: number
+}
+
+// Use instead of the local getters when a decision is about the calendar, not the instant.
+export const zonedCivil = (instant: Date, timeZone: string): ZonedCivil => {
+  const p = zonedParts(timeZone, instant)
+  // Every IANA offset is a whole number of minutes, so sub-second is zone-invariant.
+  return { ...p, ms: instant.getMilliseconds() } as ZonedCivil
+}
+
+// Refines the offset once so it stays correct across a DST boundary.
+export const civilToInstant = (c: ZonedCivil, timeZone: string) => {
+  const guess = Date.UTC(c.year, c.month - 1, c.day, c.hour, c.minute, c.second, c.ms)
   const refined = guess - zoneOffsetMs(timeZone, new Date(guess - zoneOffsetMs(timeZone, new Date(guess))))
   return new Date(refined)
 }
+
+const wallToInstant = (timeZone: string, y: number, mo: number, d: number, h: number) =>
+  civilToInstant({ year: y, month: mo, day: d, hour: h, minute: 0, second: 0, ms: 0 }, timeZone)
 
 // Floor `instant` to the start of its bucket at `granularity`, computed in `timeZone`,
 // matching the server's ClickHouse bucket functions (week = Sunday start, per
@@ -87,5 +107,25 @@ export const floorToZoneBucket = (instant: Date, granularity: Granularity, timeZ
     return instant
   } catch {
     return instant
+  }
+}
+
+// Start of the bucket after `instant`'s, at `granularity` in `timeZone`. Day/week/month step the
+// civil calendar so DST days and uneven months stay on the server's toStartOf* boundaries; hour/
+// minute step a fixed span. Null when there's no fixed step (Auto/unknown) — callers leave the axis.
+export const nextZoneBucket = (instant: Date, granularity: Granularity, timeZone: string): Date | null => {
+  if (granularity === Granularity.MINUTE) return new Date(instant.getTime() + 60_000)
+  if (granularity === Granularity.HOUR) return new Date(instant.getTime() + 60 * 60_000)
+  try {
+    const c = zonedCivil(instant, timeZone)
+    // civilToInstant's Date.UTC normalizes overflow, so day+7 / month+1 roll over.
+    const midnight = { hour: 0, minute: 0, second: 0, ms: 0 }
+    if (granularity === Granularity.DAY) return civilToInstant({ ...c, ...midnight, day: c.day + 1 }, timeZone)
+    if (granularity === Granularity.WEEK) return civilToInstant({ ...c, ...midnight, day: c.day + 7 }, timeZone)
+    if (granularity === Granularity.MONTH)
+      return civilToInstant({ ...c, ...midnight, day: 1, month: c.month + 1 }, timeZone)
+    return null
+  } catch {
+    return null
   }
 }

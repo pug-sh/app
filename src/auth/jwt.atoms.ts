@@ -1,5 +1,6 @@
 import { atom, getDefaultStore } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { isDemoSessionAtom } from './demo'
 
 // Shared with transport.ts — both read the same localStorage keys.
 export const JWT_KEY = 'pug:jwt'
@@ -7,7 +8,9 @@ export const JWT_KEY = 'pug:jwt'
 // the refresh token is exchanged for a fresh pair via AuthService.RefreshSession.
 export const REFRESH_KEY = 'pug:refresh'
 
-// Read synchronously so the first render already knows the auth state (no sign-in flash).
+// Read synchronously so the first render already knows the auth state (no sign-in flash), and so the
+// customer id is resolved before the default project pick runs — deferring to onMount would reopen
+// the race lastProjectByOrgAtom's getOnInit exists to close (see workspace.atoms).
 const readStored = (key: string): string => {
   try {
     const raw = localStorage.getItem(key)
@@ -49,6 +52,16 @@ export const jwtDataAtom = atom(get => {
   }
 })
 
+// The signed-in customer, as a primitive. jwtDataAtom rebuilds its object on every recompute, so a
+// subscriber that only cares about identity would re-render on each hourly token refresh, and an
+// effect keyed on it would refire — a refresh re-mints the same `sub`, so this stays put across one.
+//
+// Deliberately expiry-*independent*: jwtDataAtom parses `sub` without consulting `exp`, so a cold
+// load holding a stale access token still resolves an identity. The last-project restore keys on
+// this, and runs before the transport has re-minted anything — hardening either atom to reject an
+// expired token would break that restore silently.
+export const customerIdAtom = atom(get => get(jwtDataAtom)?.customerId)
+
 // Persist a freshly issued token pair from outside React (transport refresh) or
 // inside it (sign-in atoms). Uses the default Jotai store so all subscribers
 // re-render and atomWithStorage syncs localStorage automatically.
@@ -58,10 +71,12 @@ export const setSessionTokens = ({ accessToken, refreshToken }: { accessToken: s
   store.set(refreshTokenAtom, refreshToken)
 }
 
-// Clear the whole session (both tokens). Called when a refresh ultimately fails
-// or on explicit sign-out.
+// Clear the whole session (both tokens + the demo marker). Called when a refresh ultimately fails
+// or on explicit sign-out — the demo marker must die with the session so it can't bleed into the
+// next login (parity with signOutAtom / applySessionAtom).
 export const clearSession = () => {
   const store = getDefaultStore()
   store.set(jwtAtom, '')
   store.set(refreshTokenAtom, '')
+  store.set(isDemoSessionAtom, false)
 }

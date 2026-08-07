@@ -1,61 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Sankey, type SankeyLinkProps, type SankeyNodeProps, Tooltip } from 'recharts'
+import { useAtomValue } from 'jotai'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { ChartContainer } from '@/components/ui/chart'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { buildSankeyData } from '../user-flow'
+import { layoutSankey, sankeyLinkPath } from './sankey-layout'
 
-const createSankeyNode = (chartWidth: number) => {
-  const SankeyNode = ({ x, y, width, height, payload }: SankeyNodeProps) => {
-    const name = String(payload?.name ?? '')
-    const color = getSeriesColor(name).line
-    const labelOnRight = x + width / 2 < chartWidth / 2
-
-    return (
-      <g>
-        <rect x={x} y={y} width={width} height={height} fill={color} fillOpacity={0.85} rx={2} />
-        <text
-          x={labelOnRight ? x + width + 6 : x - 6}
-          y={y + height / 2}
-          textAnchor={labelOnRight ? 'start' : 'end'}
-          dominantBaseline="middle"
-          className="fill-foreground text-[11px]"
-        >
-          {name}
-        </text>
-      </g>
-    )
-  }
-  return SankeyNode
-}
-
-const SankeyLink = ({
-  sourceX,
-  targetX,
-  sourceY,
-  targetY,
-  sourceControlX,
-  targetControlX,
-  linkWidth,
-  payload,
-}: SankeyLinkProps) => {
-  const sourceName = String(payload?.source?.name ?? '')
-  const color = getSeriesColor(sourceName).line
-
-  return (
-    <path
-      d={`
-        M${sourceX},${sourceY}
-        C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}
-      `}
-      fill="none"
-      stroke={color}
-      strokeOpacity={0.25}
-      strokeWidth={Math.max(linkWidth, 1)}
-    />
-  )
-}
+const NODE_WIDTH = 12
+const NODE_PADDING = 18
+// Gutters for the labels that sit outside the first and last columns.
+const PADDING_X = 104
+const PADDING_Y = 16
 
 export const SankeyChart = ({
   result,
@@ -66,81 +22,132 @@ export const SankeyChart = ({
 }) => {
   const unitLabel = 'sessions'
   const containerRef = useRef<HTMLDivElement>(null)
-  const [chartWidth, setChartWidth] = useState(0)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  const [hovered, setHovered] = useState<{ index: number; x: number; y: number } | null>(null)
+  // Series colors are theme-adapted, and a module mutation can't invalidate a useMemo —
+  // subscribe so the palettes below re-derive on a theme toggle.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
     const observer = new ResizeObserver(entries => {
-      setChartWidth(entries[0]?.contentRect.width ?? 0)
+      const rect = entries[0]?.contentRect
+      setSize({ width: rect?.width ?? 0, height: rect?.height ?? 0 })
     })
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
 
-  const chartData = useMemo(() => {
-    const { nodes, links } = buildSankeyData(result)
-    return {
-      nodes: nodes.map(node => ({
-        ...node,
-        color: getSeriesColor(node.name).line,
-      })),
-      links,
-    }
-  }, [result])
+  const sankeyData = useMemo(() => buildSankeyData(result), [result])
 
-  const chartConfig = useMemo(
+  const layout = useMemo(
     () =>
-      Object.fromEntries(
-        chartData.nodes.map((node, index) => [String(index), { label: node.name, color: node.color }]),
-      ),
-    [chartData.nodes],
+      layoutSankey(sankeyData, {
+        width: size.width,
+        height: size.height,
+        nodeWidth: NODE_WIDTH,
+        nodePadding: NODE_PADDING,
+        paddingLeft: PADDING_X,
+        paddingRight: PADDING_X,
+        paddingTop: PADDING_Y,
+        paddingBottom: PADDING_Y,
+      }),
+    [sankeyData, size.width, size.height],
   )
 
-  const SankeyNode = useMemo(() => createSankeyNode(chartWidth), [chartWidth])
-  const renderNode = useCallback((props: SankeyNodeProps) => <SankeyNode {...props} />, [SankeyNode])
-  const renderLink = useCallback((props: SankeyLinkProps) => <SankeyLink {...props} />, [])
+  const nodeColors = useMemo(
+    () => layout.nodes.map(node => getSeriesColor(node.name).line),
+    [layout.nodes, resolvedTheme],
+  )
+  const linkColors = useMemo(
+    () => layout.links.map(link => getSeriesColor(link.sourceName).line),
+    [layout.links, resolvedTheme],
+  )
 
-  if (chartData.links.length === 0) return null
+  const firstDepth = layout.nodes.length > 0 ? Math.min(...layout.nodes.map(node => node.stepDepth)) : 0
+  const hoveredLink = hovered === null ? undefined : layout.links[hovered.index]
+
+  if (sankeyData.links.length === 0) return null
 
   return (
-    <div ref={containerRef} className="h-full w-full min-h-0">
-      <ChartContainer config={chartConfig} className={className}>
-        <Sankey
-          data={chartData}
-          node={renderNode}
-          link={renderLink}
-          nodePadding={18}
-          nodeWidth={12}
-          margin={{ top: 16, right: 120, bottom: 16, left: 120 }}
-          // align="left" pins each node to its longest-path depth, which in the
-          // step-indexed graph equals its server-assigned step. The default
-          // "justify" instead yanks every terminal node (a session that ended) to
-          // the last column, producing the long arcs the old single-node-per-event
-          // model suffered. Sort (default true) relaxes node order to cut crossings.
-          align="left"
-        >
-          <Tooltip
-            content={({ active, payload }) => {
-              if (!active || !payload?.length) return null
-              const item = payload[0]?.payload as
-                | { source?: { name?: string }; target?: { name?: string }; value?: number }
-                | undefined
-              if (!item?.source || !item?.target) return null
+    <div ref={containerRef} className={`relative min-h-0 ${className}`}>
+      {size.width > 0 && size.height > 0 ? (
+        <svg width={size.width} height={size.height} role="img" aria-label="User flow between steps">
+          <g>
+            {layout.links.map((link, index) => (
+              <path
+                key={`${link.source}-${link.target}-${index}`}
+                d={sankeyLinkPath(link)}
+                fill="none"
+                stroke={linkColors[index]}
+                strokeOpacity={hovered?.index === index ? 0.5 : 0.25}
+                strokeWidth={Math.max(link.thickness, 1)}
+                onMouseMove={event => {
+                  const rect = containerRef.current?.getBoundingClientRect()
+                  if (!rect) return
+                  setHovered({ index, x: event.clientX - rect.left, y: event.clientY - rect.top })
+                }}
+                onMouseLeave={() => setHovered(null)}
+              />
+            ))}
+          </g>
+
+          <g>
+            {layout.nodes.map((node, index) => (
+              <rect
+                key={node.id}
+                x={node.x}
+                y={node.y}
+                width={node.width}
+                height={node.height}
+                fill={nodeColors[index]}
+                fillOpacity={0.85}
+                rx={2}
+              />
+            ))}
+          </g>
+
+          {/* Labels last so they stay legible over the ribbons they cross. */}
+          <g>
+            {layout.nodes.map(node => {
+              // The first column reads into the left gutter; every other column reads
+              // rightward, which keeps the last column's text inside the right gutter.
+              const onLeft = node.stepDepth === firstDepth
               return (
-                <div className="rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs shadow-sm">
-                  <p className="font-medium text-foreground">
-                    {item.source.name} → {item.target.name}
-                  </p>
-                  <p className="mt-0.5 font-mono tabular-nums text-muted-foreground">
-                    {compactNumber(item.value ?? 0)} {unitLabel}
-                  </p>
-                </div>
+                <text
+                  key={node.id}
+                  x={onLeft ? node.x - 6 : node.x + node.width + 6}
+                  y={node.y + node.height / 2}
+                  textAnchor={onLeft ? 'end' : 'start'}
+                  dominantBaseline="middle"
+                  className="fill-foreground text-xs"
+                >
+                  {node.name}
+                </text>
               )
-            }}
-          />
-        </Sankey>
-      </ChartContainer>
+            })}
+          </g>
+        </svg>
+      ) : null}
+
+      {hovered && hoveredLink ? (
+        <div
+          className="pointer-events-none absolute z-10 rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs shadow-sm"
+          style={{
+            left: hovered.x,
+            top: hovered.y,
+            transform: `translate(${hovered.x > size.width / 2 ? '-100%' : '0'}, -50%)`,
+          }}
+        >
+          <p className="font-medium text-foreground">
+            {hoveredLink.sourceName} → {hoveredLink.targetName}
+          </p>
+          <p className="mt-0.5 font-mono tabular-nums text-muted-foreground">
+            {compactNumber(hoveredLink.value)} {unitLabel}
+          </p>
+        </div>
+      ) : null}
     </div>
   )
 }

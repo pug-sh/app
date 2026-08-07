@@ -1,6 +1,7 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, PanelsTopLeft, Plus, Search } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Can } from '@/auth/can'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
@@ -105,7 +106,11 @@ const Dashboards = () => {
         <DashboardsPlaceholder
           icon={PanelsTopLeft}
           title="No dashboards yet"
-          action={<NewDashboardButton creating={creating} onClick={handleCreateDashboard} />}
+          action={
+            <Can action="create" resource="dashboard">
+              <NewDashboardButton creating={creating} onClick={handleCreateDashboard} />
+            </Can>
+          }
         />
       )
     }
@@ -136,7 +141,11 @@ const Dashboards = () => {
     <Page
       title="Dashboards"
       description="Track the metrics and notes your team checks repeatedly"
-      actions={<NewDashboardButton creating={creating} onClick={handleCreateDashboard} />}
+      actions={
+        <Can action="create" resource="dashboard">
+          <NewDashboardButton creating={creating} onClick={handleCreateDashboard} />
+        </Can>
+      }
     >
       <div className="space-y-4">
         {dashboards.length > 0 ? (

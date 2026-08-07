@@ -49,7 +49,7 @@ export const MultiValueEditor = ({
           {values.map(v => (
             <span
               key={v}
-              className="inline-flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded max-w-full"
+              className="inline-flex items-center gap-1 text-xs font-mono bg-muted px-1.5 py-0.5 rounded max-w-full"
             >
               <span className="truncate" title={v}>
                 {v}
@@ -183,7 +183,7 @@ export const BetweenValueEditor = ({
           className={cn(filterInputCls, 'flex-1 min-w-0')}
           autoFocus
         />
-        <span className="text-[11px] text-muted-foreground shrink-0">–</span>
+        <span className="text-xs text-muted-foreground shrink-0">–</span>
         <input
           ref={maxRef}
           placeholder="Max"

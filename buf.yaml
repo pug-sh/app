@@ -3,4 +3,3 @@ deps:
   - buf.build/bufbuild/protovalidate
 modules:
   - path: proto
-    name: buf.build/fivebits/pug

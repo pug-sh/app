@@ -3,7 +3,11 @@ import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
-import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  ComparePeriod,
+  type DashboardTile,
+  type DashboardTileViewMode,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   type Granularity,
   InsightType,
@@ -15,8 +19,8 @@ import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { floorToZoneBucket } from '@/lib/timezone'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { isUserFlowConfigValid, parseUserFlowConfig } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
@@ -24,9 +28,11 @@ import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
 import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
 
-// User-flow and top-k specs carry no events: user-flow runs once its flow config is
-// valid, top-k as soon as the ranking config is complete. Everything else needs at
-// least one event and (for trends) a resolved numeric-aggregation property.
+// User-flow, top-k and session specs all carry no events: user-flow runs once its flow
+// config is valid, top-k as soon as the ranking config is complete, and session
+// (web-analytics) specs as soon as `spec.session` is present — the event-count gate would
+// never let them run. Everything else needs at least one event and (for trends) a
+// resolved numeric-aggregation property.
 const queryReady = (query: QueryRequest) => {
   const spec = query.spec
   if (spec?.insightType === InsightType.USER_FLOW) {
@@ -35,7 +41,7 @@ const queryReady = (query: QueryRequest) => {
   if (spec?.insightType === InsightType.TOP_K) {
     return !topKSpecIncompleteReason(spec)
   }
-  return (spec?.events.length ?? 0) > 0 && !specHasIncompleteNumericAggregation(spec)
+  return (!!spec?.session || (spec?.events.length ?? 0) > 0) && !specHasIncompleteNumericAggregation(spec)
 }
 
 export const DashboardInsightContent = ({
@@ -46,9 +52,11 @@ export const DashboardInsightContent = ({
   timeRangeOverride,
   granularityOverride,
   queryKeyPrefix,
+  comparePrior = false,
   compact = false,
   kpiMetadata,
   lightMetrics = false,
+  hideSummary = false,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -59,11 +67,15 @@ export const DashboardInsightContent = ({
   timeRangeOverride?: TimeRange
   granularityOverride?: Granularity
   queryKeyPrefix: string
+  // Run the prior-period query and draw it dashed. Overrides any tile.compare; used by tile-less
+  // callers (the overview web chart) that have no ComparePeriod setting of their own.
+  comparePrior?: boolean
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
+  // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
+  hideSummary?: boolean
 }) => {
-  const resolvedViewMode = tile?.viewMode ?? viewMode
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
@@ -90,18 +102,27 @@ export const DashboardInsightContent = ({
     [granularityOverride, query],
   )
 
+  // The window actually sent. Compare-vs-prior derives from this and not the raw range, so the two
+  // periods stay equal-length and adjacent rather than overlapping by the flooring slice.
+  const alignedTimeRange = useMemo(
+    () => ({ from: alignRangeStart(effectiveTimeRange, effectiveGranularity, timeZone), to: effectiveTimeRange.to }),
+    [effectiveTimeRange, effectiveGranularity, timeZone],
+  )
+
+  // The prior period shifts the aligned window, but names its unit off the unaligned one.
+  const compareWindow = useMemo(
+    () => ({ queried: alignedTimeRange, selected: effectiveTimeRange, timeZone }),
+    [alignedTimeRange, effectiveTimeRange, timeZone],
+  )
+
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
-    // Floor `from` to the bucket boundary in the project zone so the first bucket is
-    // complete — otherwise a mid-bucket window start renders as a partial "dip" at the
-    // chart's left edge (the server buckets in this same zone).
-    const from = floorToZoneBucket(effectiveTimeRange.from, effectiveGranularity, timeZone)
     return create(QueryRequestSchema, {
       ...query,
       granularity: effectiveGranularity,
-      timeRange: create(TimeRangeSchema, toProtoTimeRange({ from, to: effectiveTimeRange.to })),
+      timeRange: create(TimeRangeSchema, toProtoTimeRange(alignedTimeRange)),
     })
-  }, [effectiveGranularity, effectiveTimeRange, query, timeZone])
+  }, [effectiveGranularity, alignedTimeRange, query])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
@@ -119,9 +140,10 @@ export const DashboardInsightContent = ({
     { enabled: !!effectiveQuery && !!headers && queryReady(effectiveQuery), debounceMs: 0 },
   )
 
+  const compareSetting = comparePrior ? ComparePeriod.PRIOR : (tile?.compare ?? ComparePeriod.UNSPECIFIED)
   const comparisonQuery = useMemo(
-    () => (tile ? buildComparisonQuery(effectiveQuery, effectiveTimeRange, tile.compare) : undefined),
-    [effectiveQuery, effectiveTimeRange, tile],
+    () => buildComparisonQuery(effectiveQuery, compareWindow, compareSetting),
+    [effectiveQuery, compareWindow, compareSetting],
   )
   const comparisonQueryKey = stringifyQueryKey({
     prefix: `${queryKeyPrefix}::compare`,
@@ -140,16 +162,15 @@ export const DashboardInsightContent = ({
 
   const comparisonResult = comparisonData ?? { case: undefined, value: undefined }
 
-  // Compare-vs-prior issues a second query shifted back by the window length; the
-  // delta is computed inside KpiTile. Only assembled for KPI tiles.
+  // Gated on the query rather than the view mode, so both readers — the KPI delta and the dashed
+  // chart series — get it, and neither can be handed a window that wasn't queried.
   const compare = useMemo<KpiCompare | undefined>(() => {
-    if (!(tile && resolvedViewMode === DashboardTileViewMode.KPI) || !comparisonQuery) return undefined
-    const compareLabel = formatComparePeriodLabel(effectiveTimeRange)
-    if (comparisonError) return { error: true, label: compareLabel ?? '' }
-    if (comparisonResult.case === 'trends')
-      return { series: [...comparisonResult.value.series], label: compareLabel ?? '' }
+    if (!comparisonQuery) return undefined
+    const compareLabel = formatComparePeriodLabel(compareWindow)
+    if (comparisonError) return { error: true, label: compareLabel }
+    if (comparisonResult.case === 'trends') return { series: [...comparisonResult.value.series], label: compareLabel }
     return undefined
-  }, [tile, resolvedViewMode, comparisonQuery, comparisonError, comparisonResult, effectiveTimeRange])
+  }, [comparisonQuery, comparisonError, comparisonResult, compareWindow])
 
   return (
     <InsightTileView
@@ -161,9 +182,11 @@ export const DashboardInsightContent = ({
       error={error}
       onRetry={retry}
       compare={compare}
+      comparePrior={comparePrior}
       compact={compact}
       kpiMetadata={kpiMetadata}
       lightMetrics={lightMetrics}
+      hideSummary={hideSummary}
     />
   )
 }

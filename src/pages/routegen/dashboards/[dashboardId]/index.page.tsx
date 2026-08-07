@@ -1,16 +1,19 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { LayoutGrid } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams } from 'wouter'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { trackEvent } from '@/analytics/pug'
 import type { Dashboard } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { readTimeGranularityQueryParams, writeTimeGranularityQueryParams } from '@/hooks/use-filter-query-params'
+import { isDashboardTimeRangePreset, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { autoGranularity, clampGranularity, clampRange, resolveTileGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
+import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import { deleteDashboardAtom, fetchDashboardAtom, setDashboardVisibilityAtom } from '../dashboard.atoms'
@@ -20,8 +23,15 @@ import { DashboardCanvas } from './dashboard-canvas'
 import { DashboardHeader } from './dashboard-header'
 import { useDashboardEditor } from './use-dashboard-editor'
 
+// "Auto" derives from the range; an explicit saved pick is clamped to that range's cap. The two
+// helpers use deliberately different ladders, so this must not collapse into one call.
+const resolveDefaultGranularity = (dashboard: Dashboard, range: TimeRange) => {
+  if (dashboard.defaultGranularity === Granularity.UNSPECIFIED) return autoGranularity(range)
+  return clampGranularity(dashboard.defaultGranularity, range)
+}
+
 const DashboardDetail = () => {
-  const { dashboardId } = useParams<{ dashboardId: string }>()
+  const { dashboardId } = useRouteParams<{ dashboardId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const fetchDashboard = useSetAtom(fetchDashboardAtom)
   const deleteDashboard = useSetAtom(deleteDashboardAtom)
@@ -53,6 +63,18 @@ const DashboardDetail = () => {
     if (project) loadDashboard()
   }, [loadDashboard, project])
 
+  // "Which dashboard was opened", which page_view can't answer: sanitizeUrl masks the id out of
+  // $url (a shared dashboard's id is a bearer credential), so the id has to ride as a property
+  // instead. The ref guard fires once per distinct dashboard id, so a refetch or StrictMode's
+  // double-effect (same id) is collapsed, while navigating to another dashboard (new id) re-fires —
+  // it dedups on the id itself, no remount required.
+  const trackedViewRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!dashboard || trackedViewRef.current === dashboard.id) return
+    trackedViewRef.current = dashboard.id
+    trackEvent('dashboard_viewed', { dashboardId: dashboard.id })
+  }, [dashboard])
+
   // Global time + granularity controls, mirrored to the URL query string.
   const initialGlobalOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange | undefined>(() => initialGlobalOverrides.timeRange)
@@ -65,11 +87,41 @@ const DashboardDetail = () => {
     writeTimeGranularityQueryParams({ timeRange: globalTimeRange, granularity: globalGranularity })
   }, [globalGranularity, globalTimeRange])
 
-  const handleGlobalTimeRangeChange = useCallback((range: TimeRange | undefined) => {
-    const clamped = clampRange(range)
-    setGlobalTimeRange(clamped)
-    setGlobalGranularity(g => clampGranularity(g, clamped))
-  }, [])
+  // Seed the global range/granularity from the dashboard's saved default the first time it
+  // loads — but only when the user didn't arrive with an explicit range in the URL (a
+  // shared/bookmarked link wins), and only once per dashboard (so it never clobbers a pick
+  // made afterward, including after a save). With no saved default the controls stay empty
+  // and each tile falls back to its own range.
+  const seededDashboardIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!dashboard || seededDashboardIdRef.current === dashboard.id) return
+    seededDashboardIdRef.current = dashboard.id
+    if (initialGlobalOverrides.timeRange || !isDashboardTimeRangePreset(dashboard.defaultTimeRange)) return
+    const range = resolveDashboardTimeRangePreset(dashboard.defaultTimeRange)
+    setGlobalTimeRange(range)
+    // Keep a URL granularity if present; else honor the saved default granularity (clamped to
+    // the range's cap), else derive it from the range ("Auto").
+    if (initialGlobalOverrides.granularity === undefined) {
+      setGlobalGranularity(resolveDefaultGranularity(dashboard, range))
+    }
+  }, [dashboard, initialGlobalOverrides])
+
+  // Clearing the range restores the dashboard's saved default. The seed effect above only fires
+  // once per id, so without this tiles drop to the hardcoded 7-day fallback and never come back.
+  const handleGlobalTimeRangeChange = useCallback(
+    (range: TimeRange | undefined) => {
+      if (!range && dashboard && isDashboardTimeRangePreset(dashboard.defaultTimeRange)) {
+        const restored = resolveDashboardTimeRangePreset(dashboard.defaultTimeRange)
+        setGlobalTimeRange(restored)
+        setGlobalGranularity(resolveDefaultGranularity(dashboard, restored))
+        return
+      }
+      const clamped = clampRange(range)
+      setGlobalTimeRange(clamped)
+      setGlobalGranularity(g => clampGranularity(g, clamped))
+    },
+    [dashboard],
+  )
 
   // Resolve "Auto" to a concrete granularity before handing it to tiles — otherwise tiles fall back
   // to their own saved granularity against the global range, which may exceed its cap.

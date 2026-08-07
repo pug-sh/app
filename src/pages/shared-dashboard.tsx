@@ -1,8 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { Bell, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
-import { useParams } from 'wouter'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { SharedDashboardsServiceQueryRequestSchema } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -10,8 +9,8 @@ import { sharedDashboardsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import LoadingSpinner from '@/components/loading-spinner'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
-import { INSIGHTS_PRESETS } from '@/lib/date-presets'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
+import { useRouteParams } from '@/lib/route-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboardId]/controls-helpers'
 import { DashboardGrid } from './routegen/dashboards/grid'
@@ -19,13 +18,14 @@ import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
 import { OptionChip } from './routegen/insights/controls'
 
+// This route renders standalone, outside the <main> that carries the marker in App.tsx, and it is
+// entirely a customer's data — their dashboard, tile titles, and event names, shown to the public.
+// It needs its own boundary or click capture would read all of it back out.
 const Shell = ({ children }: { children: ReactNode }) => (
-  <div className="min-h-screen overflow-auto">
+  <div className="min-h-screen overflow-auto" data-pug-no-capture>
     <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-8 flex items-center gap-3">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
-          <Bell className="size-4.5 text-primary-foreground" />
-        </div>
+        <img src="/logo.svg" alt="" className="size-9" />
         <span className="text-lg font-medium tracking-tight">Pug</span>
       </div>
       {children}
@@ -34,7 +34,7 @@ const Shell = ({ children }: { children: ReactNode }) => (
 )
 
 const SharedDashboard = () => {
-  const { shareId } = useParams<{ shareId: string }>()
+  const { shareId } = useRouteParams<{ shareId: string }>()
   const sharedRPC = useAtomValue(sharedDashboardsRPCAtom)
 
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
@@ -105,17 +105,11 @@ const SharedDashboard = () => {
     <Shell>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl font-medium tracking-tight">{data.displayName}</h1>
+          <h1 className="text-3xl tracking-tight">{data.displayName}</h1>
           {data.description ? <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{data.description}</p> : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <DateRangePicker
-            value={timeRange}
-            onChange={handleTimeRangeChange}
-            presets={INSIGHTS_PRESETS}
-            allowUnset
-            unsetLabel="Select time"
-          />
+          <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} allowUnset unsetLabel="Default range" />
           <OptionChip
             label="granularity"
             icon={Clock}

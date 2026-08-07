@@ -1,17 +1,19 @@
 import { useAtomValue } from 'jotai'
 import { Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useLocation, useParams } from 'wouter'
+import { useLocation } from 'wouter'
 import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
 import Page from '@/components/layout/page'
 import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { useRouteParams } from '@/lib/route-params'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { ProfileAvatar } from '../_avatar'
 import { resolveIdentity } from '../_identity'
+import StatusDot from '../_status-dot'
 import { profileFamilyAtom } from './_data'
 
 const TABS = [
@@ -21,20 +23,11 @@ const TABS = [
   { suffix: '/properties', label: 'Properties' },
 ] as const
 
-const StatusDot = ({ lastSeen }: { lastSeen: Date | null }) => {
-  if (!lastSeen) {
-    return <span className="inline-block size-2.5 rounded-full bg-muted-foreground/30 ring-2 ring-background" />
-  }
-  const minsAgo = (Date.now() - lastSeen.getTime()) / 60_000
-  const color = minsAgo < 5 ? 'bg-emerald-500' : minsAgo < 60 * 24 ? 'bg-amber-500' : 'bg-muted-foreground/30'
-  return <span className={cn('inline-block size-2.5 rounded-full ring-2 ring-background', color)} />
-}
-
 const CopyButton = ({ value }: { value: string }) => (
   <button
     type="button"
     onClick={() => navigator.clipboard.writeText(value)}
-    className="opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+    className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 text-muted-foreground hover:text-foreground"
     aria-label="Copy"
   >
     <Copy className="w-3 h-3" />
@@ -43,20 +36,20 @@ const CopyButton = ({ value }: { value: string }) => (
 
 const Stat = ({ label, value }: { label: string; value: number }) => (
   <div>
-    <p className="text-2xl font-medium tabular-nums">{value.toLocaleString()}</p>
-    <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
+    <p className="text-2xl tabular-nums">{value.toLocaleString()}</p>
+    <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
   </div>
 )
 
 const Meta = ({ label, children }: { label?: string; children: ReactNode }) => (
   <span className="flex items-center gap-1.5">
-    {label && <span className="text-muted-foreground/60">{label}</span>}
+    {label && <span className="text-faint">{label}</span>}
     {children}
   </span>
 )
 
 const ProfileShell = ({ children }: { children: ReactNode }) => {
-  const { profileId = '' } = useParams<{ profileId: string }>()
+  const { profileId = '' } = useRouteParams<{ profileId: string }>()
   const profile = useAtomValue(profileFamilyAtom(profileId))
   const [location] = useLocation()
 
@@ -89,30 +82,32 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
 
   const header = (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
           <div className="relative shrink-0">
-            <ProfileAvatar identity={identity} className="size-10 rounded-md text-sm" />
+            <ProfileAvatar identity={identity} className="size-10 rounded-md" />
             <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>
           </div>
           <div className="min-w-0 space-y-1">
-            <span className={cn('block truncate text-xl font-medium', identity.isFallback && 'font-mono')}>
-              {identity.name}
-            </span>
+            <span className={cn('block truncate text-xl', identity.isFallback && 'font-mono')}>{identity.name}</span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
               {profile.externalId && profile.externalId !== identity.name && (
-                <span className="group flex items-center gap-1.5">
-                  <span className="text-muted-foreground/60">ext</span>
-                  <span className="font-mono">{profile.externalId}</span>
+                <span className="group flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-faint">ext</span>
+                  <span className="min-w-0 truncate font-mono" title={profile.externalId}>
+                    {profile.externalId}
+                  </span>
                   <CopyButton value={profile.externalId} />
                 </span>
               )}
               {profile.id && profile.id !== identity.name && (
-                <span className="group flex items-center gap-1.5">
-                  <span className="text-muted-foreground/60">distinct</span>
-                  <span className="font-mono">{profile.id.slice(0, 12)}…</span>
+                <span className="group flex min-w-0 items-center gap-1.5">
+                  <span className="shrink-0 text-faint">distinct</span>
+                  <span className="min-w-0 truncate font-mono" title={profile.id}>
+                    {profile.id.slice(0, 12)}…
+                  </span>
                   <CopyButton value={profile.id} />
                 </span>
               )}

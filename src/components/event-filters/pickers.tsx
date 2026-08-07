@@ -63,9 +63,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(pk.count)}
-                </span>
+                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -83,9 +81,7 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="truncate">{pk.name}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(pk.count)}
-                </span>
+                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -156,9 +152,7 @@ const EventPopoverList = ({
                   style={{ backgroundColor: customColor ?? colors.dot }}
                 />
                 <span className="flex-1 truncate">{ev.name}</span>
-                <span className="text-[10px] text-muted-foreground/50 tabular-nums shrink-0">
-                  {compactNumber(ev.count)}
-                </span>
+                <span className="text-xs text-faint tabular-nums shrink-0">{compactNumber(ev.count)}</span>
               </CommandItem>
             )
           })}
@@ -193,7 +187,7 @@ export const EventChip = ({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           className={cn(
-            'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+            'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
             'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
             open && 'border-foreground/20 text-foreground',
           )}
@@ -220,9 +214,9 @@ export const EventChip = ({
 
   return (
     <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">event</span>
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">event</span>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors cursor-pointer">
+        <PopoverTrigger className="px-2 h-full flex items-center gap-1.5 hover:bg-muted/40 transition-colors">
           <span className="w-1 h-1 rounded-full shrink-0" style={{ backgroundColor: color ?? colors?.dot }} />
           {value}
         </PopoverTrigger>
@@ -243,7 +237,7 @@ export const EventChip = ({
       <button
         type="button"
         onClick={() => onChange('')}
-        className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+        className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
       >
         <X className="w-3 h-3" />
       </button>
@@ -253,12 +247,12 @@ export const EventChip = ({
 
 export const BreakdownChip = ({ property, onRemove }: { property: string; onRemove: () => void }) => (
   <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
-    <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">break by</span>
+    <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">break by</span>
     <span className="px-2 h-full flex items-center font-mono">{property}</span>
     <button
       type="button"
       onClick={onRemove}
-      className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+      className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
     >
       <X className="w-3 h-3" />
     </button>
@@ -288,7 +282,7 @@ export const BreakdownBuilder = ({
       <span
         className={cn(
           'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
-          'text-muted-foreground/50 cursor-not-allowed',
+          'text-faint cursor-not-allowed',
         )}
         title={disabled.reason}
       >
@@ -302,7 +296,7 @@ export const BreakdownBuilder = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
           'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
           open && 'border-foreground/20 text-foreground',
         )}

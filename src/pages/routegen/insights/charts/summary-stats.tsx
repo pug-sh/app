@@ -3,15 +3,10 @@ import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { collapseValues, SERIES_COLLAPSE } from '../helpers'
 import type { ChartPoint } from './types'
 
 type DetailStat = { label: string; value: string }
-
-const breakdownDisplayName = (name: string) => {
-  const sep = name.indexOf(' · ')
-  if (sep >= 0) return name.slice(sep + 3)
-  return '(direct)'
-}
 
 export const SummaryStats = ({
   series,
@@ -34,12 +29,16 @@ export const SummaryStats = ({
   return (
     <div
       className={cn(
-        'grid grid-cols-2',
+        // Width-driven columns: tiles and the insights panel size independently of the
+        // viewport, so fit as many fixed-width tracks as the container allows rather than
+        // capping at a viewport breakpoint. min(100%, …) keeps a single track from
+        // overflowing a very narrow tile.
+        'grid',
         compact && showSeriesNames
-          ? 'mb-0 gap-x-4 gap-y-2'
+          ? 'mb-0 grid-cols-[repeat(auto-fill,minmax(min(100%,8rem),1fr))] gap-x-4 gap-y-2'
           : compact
-            ? 'mb-0 gap-x-5 gap-y-4'
-            : 'mb-1 gap-4 sm:grid-cols-4',
+            ? 'mb-0 grid-cols-[repeat(auto-fill,minmax(min(100%,9rem),1fr))] gap-x-5 gap-y-4'
+            : 'mb-1 grid-cols-[repeat(auto-fill,minmax(min(100%,12rem),1fr))] gap-4',
       )}
     >
       {series.map((name, si) => {
@@ -50,28 +49,30 @@ export const SummaryStats = ({
         const max = Math.max(...vals, 0)
         const aggregation = aggregations[si] ?? AggregationType.TOTAL
 
-        let headline = total
+        const collapse = SERIES_COLLAPSE[aggregation]
+        const headline = collapseValues(vals, collapse)
+
+        // Which two figures give the headline context isn't derivable from the collapse rule — an
+        // averaged headline wants different neighbours depending on whether it averages counts of
+        // people or averages of averages — so it stays a ladder. AVG is checked ahead of the
+        // collapse it shares with the user counts.
         let stats: DetailStat[] = [
           { label: 'avg', value: compactNumber(Math.round(avg)) },
           { label: 'peak', value: compactNumber(max) },
         ]
-
         if (aggregation === AggregationType.AVG) {
-          headline = avg
           stats = [
             { label: 'min', value: compactNumber(min) },
             { label: 'max', value: compactNumber(max) },
           ]
-        } else if (aggregation === AggregationType.MIN) {
-          headline = min
-          stats = [
-            { label: 'avg', value: compactNumber(Math.round(avg)) },
-            { label: 'peak', value: compactNumber(max) },
-          ]
         } else if (aggregation === AggregationType.MAX) {
-          headline = max
           stats = [
             { label: 'avg', value: compactNumber(Math.round(avg)) },
+            { label: 'floor', value: compactNumber(min) },
+          ]
+        } else if (collapse === 'avg') {
+          stats = [
+            { label: 'peak', value: compactNumber(max) },
             { label: 'floor', value: compactNumber(min) },
           ]
         }
@@ -83,7 +84,7 @@ export const SummaryStats = ({
               <span className={cn('shrink-0 whitespace-nowrap text-sm tabular-nums text-foreground', inlineWeight)}>
                 {compactNumber(headline)}
               </span>
-              <span className="truncate text-xs text-muted-foreground">{breakdownDisplayName(name)}</span>
+              <span className="truncate text-xs text-muted-foreground">{name}</span>
             </div>
           )
         }
@@ -110,11 +111,11 @@ export const SummaryStats = ({
                 {compactNumber(headline)}
               </p>
             </div>
-            <p className="truncate text-[11px] leading-none">
+            <p className="truncate text-xs leading-none">
               {stats.map((stat, i) => (
                 <Fragment key={stat.label}>
                   {i > 0 && <span className="text-muted-foreground/30"> · </span>}
-                  <span className="text-muted-foreground/60">{stat.label}</span>
+                  <span className="text-faint">{stat.label}</span>
                   <span className="ml-0.5 text-muted-foreground tabular-nums">{stat.value}</span>
                 </Fragment>
               ))}

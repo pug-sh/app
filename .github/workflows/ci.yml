@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A PR that gets a second push doesn't need the first run's answer.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install
+        # Fails rather than resolves if bun.lock disagrees with package.json, so CI can't
+        # quietly test a different dependency tree than the one committed.
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        # `biome ci` rather than `bun run lint`, which is `biome check --write` — a formatter that
+        # fixes what it finds reports success on a branch that was never formatted.
+        run: bun run lint:ci
+
+      - name: Typecheck and build
+        # `tsc -b && vite build`. tsc covers the test files too (tsconfig.app.json includes all of
+        # src), so a broken test type fails here rather than at the next person's `bun run build`.
+        # No proto symlink needed: generated clients are committed, and only `bun run generate`
+        # reads proto/.
+        run: bun run build
+
+      - name: Test
+        run: bun run test

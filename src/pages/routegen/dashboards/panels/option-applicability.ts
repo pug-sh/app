@@ -23,6 +23,7 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
 
   const isKpi = isTrends && viewMode === DashboardTileViewMode.KPI
   const isChart = isTrends && CHART_VIEW_MODES.has(viewMode)
+  const isPie = isTrends && viewMode === DashboardTileViewMode.PIE
   const isTable = isTrends && viewMode === DashboardTileViewMode.TABLE
 
   return {
@@ -31,9 +32,11 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
     showViewMode: isTrends || isUserFlow,
     // KPI big-number tiles: thresholds, value format, sparkline.
     showKpiOptions: isKpi,
-    // Cartesian charts have a Y-axis to scale / baseline.
+    // Cartesian charts have a Y-axis to format.
     showAxisOptions: isChart,
-    // The summary-stat row (the "legend") renders above every non-KPI trends view.
-    showLegendOption: isChart || isTable,
+    // The shared series legend renders for every non-KPI trends visualization.
+    showLegendOption: isChart || isPie || isTable,
+    // Slice labels are drawn only by the pie renderer.
+    showPieLabelOption: isPie,
   }
 }

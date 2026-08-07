@@ -12,15 +12,19 @@ import {
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
+import { cn } from '@/lib/utils'
 import {
   AreaChart,
   BarChart,
+  buildPieSlices,
+  type ChartComparison,
   type ChartPoint,
   DataTable,
   FunnelBreakdownView,
   FunnelChart,
   type FunnelSeriesData,
   LineChart,
+  PieChart,
   RetentionCohort,
   SankeyChart,
   SummaryStats,
@@ -51,14 +55,16 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts,
   funnelSeriesData,
   userFlowResult,
-  logScale,
-  zeroBaseline,
   hideLegend,
+  legendPosition,
+  showPieLabels = true,
   yTickFormatter,
+  comparison,
   isTopK = false,
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
   topKMetric = AggregationType.TOTAL,
+  topKOmitOthers = false,
   topKIncompleteReason = null,
   compact = false,
   lightNumbers = false,
@@ -85,14 +91,24 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   userFlowResult?: UserFlowResult
-  logScale?: boolean
-  zeroBaseline?: boolean
+  // Hides the shared series-summary legend. The web-analytics
+  // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
+  // meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
+  // Dashboard tiles explicitly choose top/bottom/right. Standalone insights retain their
+  // established placement: above Cartesian/table views and below pies.
+  legendPosition?: 'top' | 'bottom' | 'right'
+  // Pie-only display option. Labels remain available to assistive technology when hidden visually.
+  showPieLabels?: boolean
   yTickFormatter?: (value: number) => string
+  // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
+  // take it; bars and the table read the live series alone.
+  comparison?: ChartComparison
   isTopK?: boolean
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
   topKMetric?: AggregationType
+  topKOmitOthers?: boolean
   topKIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
@@ -100,9 +116,30 @@ export const InsightsContent = memo(function InsightsContent({
   // Bucket labels render in the project's reporting zone so they match the
   // server-computed bucket boundaries (the server buckets in this same zone).
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
-  const allZero = chartData.every(d => d.values.every(v => v === 0))
+  // Only the line-shaped views draw the comparison, so only they may let it stand in for live data.
+  const drawableComparison = comparison && (viewMode === 'line' || viewMode === 'area') ? comparison : undefined
+  // A zero window still draws when the prior one isn't: a collapse to zero is what compare is for.
+  const allZero = chartData.every(d => d.values.every(v => v === 0)) && !drawableComparison?.values.some(v => v !== 0)
   const hasFunnelData = funnelSeriesData.some(s => s.steps.some(step => step.count > 0))
-  const chartClassName = compact ? 'h-full min-h-[120px] w-full' : undefined
+  const drawsComparison = !!drawableComparison && !allZero
+  // Cartesian charts keep a small readable floor. A pie must instead honor both dimensions of a
+  // user-resized dashboard tile; forcing 120px can make its square SVG overflow and get clipped.
+  const chartClassName = compact ? cn('h-full w-full', viewMode !== 'pie' && 'min-h-[120px]') : undefined
+  const collapsedPieSlices =
+    viewMode === 'pie' ? buildPieSlices(chartData, seriesNames, seriesColors, seriesAggregations) : EMPTY_ARRAY
+  const pieHasNegativeValue = collapsedPieSlices.some(slice => slice.value < 0)
+  const pieSlices = collapsedPieSlices.filter(slice => slice.value > 0)
+  const pieLegendData: ChartPoint[] =
+    pieSlices.length > 0
+      ? [{ date: chartData[0]?.date ?? new Date(0), values: pieSlices.map(slice => slice.value) }]
+      : EMPTY_ARRAY
+  const pieLegendColors: SeriesColor[] = pieSlices.map(slice => ({
+    line: slice.color,
+    fill: slice.color,
+    dot: slice.color,
+  }))
+  const pieLegendAggregations = pieSlices.map(() => AggregationType.TOTAL)
+  const resolvedLegendPosition = legendPosition ?? (viewMode === 'pie' ? 'bottom' : 'top')
 
   const showUserFlow = isUserFlow || resultCase === 'userFlow'
 
@@ -143,7 +180,7 @@ export const InsightsContent = memo(function InsightsContent({
   const renderTruncationNotice = (count: number) => {
     if (breakdowns.length === 0 || count < breakdownResponseLimit) return null
     return (
-      <p className="text-[11px] text-muted-foreground mt-2">
+      <p className="text-xs text-muted-foreground mt-2">
         Showing top {breakdownResponseLimit} — additional breakdown values may be hidden.
       </p>
     )
@@ -158,10 +195,9 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
-          logScale={logScale}
-          zeroBaseline={zeroBaseline}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )
@@ -172,10 +208,9 @@ export const InsightsContent = memo(function InsightsContent({
           seriesNames={seriesNames}
           seriesColors={seriesColors}
           granularity={granularity}
-          logScale={logScale}
-          zeroBaseline={zeroBaseline}
           yTickFormatter={yTickFormatter}
           timeZone={timeZone}
+          comparison={drawableComparison}
           className={chartClassName}
         />
       )
@@ -189,6 +224,18 @@ export const InsightsContent = memo(function InsightsContent({
           timeZone={timeZone}
         />
       )
+    if (viewMode === 'pie')
+      return (
+        <PieChart
+          data={chartData}
+          seriesNames={seriesNames}
+          seriesColors={seriesColors}
+          aggregations={seriesAggregations}
+          compact={compact}
+          showLabels={showPieLabels}
+          className={chartClassName}
+        />
+      )
     return (
       <BarChart
         data={chartData}
@@ -197,8 +244,6 @@ export const InsightsContent = memo(function InsightsContent({
         granularity={granularity}
         timeZone={timeZone}
         stacked={viewMode === 'bar-stacked'}
-        logScale={logScale}
-        zeroBaseline={zeroBaseline}
         yTickFormatter={yTickFormatter}
         className={chartClassName}
       />
@@ -209,20 +254,19 @@ export const InsightsContent = memo(function InsightsContent({
     if (funnelSeriesData.length === 0) return renderLoadingEmptyState()
     if (!hasFunnelData) return renderNoEvents()
 
-    const funnelBody =
-      breakdowns.length > 0 ? (
+    if (breakdowns.length > 0) {
+      const breakdownBody = (
         <>
           <FunnelBreakdownView series={funnelSeriesData} />
           {renderTruncationNotice(funnelSeriesData.length)}
         </>
-      ) : (
-        <FunnelChart series={funnelSeriesData} compact={compact} />
       )
-
-    if (compact) {
-      return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
+      if (compact) return <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">{breakdownBody}</div>
+      return breakdownBody
     }
 
+    const funnelBody = <FunnelChart series={funnelSeriesData} compact={compact} />
+    if (compact) return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
     return funnelBody
   }
 
@@ -242,7 +286,15 @@ export const InsightsContent = memo(function InsightsContent({
       )
     }
     if (topKRows.length > 0) {
-      return <TopKList rows={topKRows} dimension={topKDimension} metric={topKMetric} compact={compact} />
+      return (
+        <TopKList
+          rows={topKRows}
+          dimension={topKDimension}
+          metric={topKMetric}
+          omitOthers={topKOmitOthers}
+          compact={compact}
+        />
+      )
     }
     if (resultCase === 'topK') return renderNoEvents()
     return renderLoadingEmptyState()
@@ -334,20 +386,45 @@ export const InsightsContent = memo(function InsightsContent({
   }
 
   if (chartData.length > 0) {
+    const legendHidden = hideLegend || pieHasNegativeValue
+    const renderLegend = () => (
+      <SummaryStats
+        series={viewMode === 'pie' ? pieSlices.map(slice => slice.name) : seriesNames}
+        data={viewMode === 'pie' ? pieLegendData : chartData}
+        seriesColors={viewMode === 'pie' ? pieLegendColors : seriesColors}
+        aggregations={viewMode === 'pie' ? pieLegendAggregations : seriesAggregations}
+        compact={compact}
+        showSeriesNames={viewMode === 'pie' || breakdowns.length > 0}
+        lightNumbers={lightNumbers}
+      />
+    )
+    const chart = <div className={compact ? 'h-full min-h-0 min-w-0 flex-1 pt-1' : 'min-w-0'}>{renderChart()}</div>
+
     return (
       <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
-        {hideLegend ? null : (
-          <SummaryStats
-            series={seriesNames}
-            data={chartData}
-            seriesColors={seriesColors}
-            aggregations={seriesAggregations}
-            compact={compact}
-            showSeriesNames={breakdowns.length > 0}
-            lightNumbers={lightNumbers}
-          />
+        {legendHidden || resolvedLegendPosition !== 'right' ? (
+          <>
+            {legendHidden || resolvedLegendPosition !== 'top' ? null : renderLegend()}
+            {chart}
+            {legendHidden || resolvedLegendPosition !== 'bottom' ? null : renderLegend()}
+          </>
+        ) : (
+          <div
+            className={cn(
+              // Position is an explicit display choice, so it must not change as the tile is
+              // resized. Both tracks may shrink: the chart fits its available rectangle and the
+              // legend truncates/scrolls instead of forcing itself below the chart.
+              'grid min-h-0 min-w-0 grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-4',
+              compact && 'h-full flex-1',
+            )}
+            data-legend-position="right"
+          >
+            {chart}
+            <div className={cn('min-h-0 min-w-0', compact && 'h-full overflow-y-auto')}>{renderLegend()}</div>
+          </div>
         )}
-        <div className={compact ? 'min-h-0 flex-1 pt-1' : undefined}>{renderChart()}</div>
+        {/* Named here, not by the tile shell, so the caption can't outlive the line it describes. */}
+        {drawsComparison ? <p className="shrink-0 text-xs text-faint">Dashed line is the previous period</p> : null}
       </div>
     )
   }

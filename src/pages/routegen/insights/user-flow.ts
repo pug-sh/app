@@ -145,12 +145,11 @@ export type SankeyChartData = {
 // The overflow bucket is identified by is_others (never by id/label string).
 const nodeLabel = (node: UserFlowNode) => (node.isOthers ? 'Others' : node.label || node.id)
 
-// recharts' Sankey assigns node depth by recursing through every target with no
-// cycle detection, so one back-edge triggers infinite recursion ("too much
-// recursion"). The step-indexed server response is a strict DAG (every edge goes
-// depth d → d+1), so this keeps every link — a no-op on correct data. It remains
-// as a defensive guard against a stale/pre-migration server still emitting the
-// old page-collapsed, cyclic graph, so the chart degrades instead of crashing.
+// The step-indexed server response is a strict DAG (every edge goes depth d → d+1),
+// so this keeps every link — a no-op on correct data. It remains as a defensive
+// guard against a stale/pre-migration server still emitting the old page-collapsed,
+// cyclic graph: a back-edge there would draw a ribbon running backwards across the
+// columns, so dropping it degrades the chart instead of garbling it.
 const guardAcyclic = (links: SankeyLinkDatum[]): SankeyLinkDatum[] => {
   const adj = new Map<number, number[]>()
   const canReach = (from: number, to: number) => {

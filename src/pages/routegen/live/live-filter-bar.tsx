@@ -29,8 +29,7 @@ type Props = {
   onClearAll: () => void
 }
 
-const triggerClass =
-  'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[11px] transition-colors cursor-pointer'
+const triggerClass = 'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors'
 
 const KindFilter = ({
   kinds,
@@ -66,7 +65,7 @@ const KindFilter = ({
               e.stopPropagation()
               onClear()
             }}
-            className="text-muted-foreground/60 hover:text-foreground"
+            className="text-faint hover:text-foreground"
           >
             <X className="size-3" />
           </span>
@@ -91,9 +90,7 @@ const KindFilter = ({
                     <Check className={cn('size-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
                     <span className="size-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                     <span className="flex-1 truncate">{k.name}</span>
-                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/50">
-                      {compactNumber(k.count)}
-                    </span>
+                    <span className="shrink-0 text-xs tabular-nums text-faint">{compactNumber(k.count)}</span>
                   </CommandItem>
                 )
               })}
@@ -136,7 +133,7 @@ const CountryFilter = ({
               e.stopPropagation()
               onChange(null)
             }}
-            className="text-muted-foreground/60 hover:text-foreground"
+            className="text-faint hover:text-foreground"
           >
             <X className="size-3" />
           </span>
@@ -160,7 +157,7 @@ const CountryFilter = ({
                 >
                   <Check className={cn('size-3 shrink-0', selected === c.country ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex-1 truncate">{formatCountryName(c.country)}</span>
-                  <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/50">{c.count}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-faint">{c.count}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -194,7 +191,7 @@ const DeviceToggle = ({
   )
 
   return (
-    <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-[11px]">
+    <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
       {segment('all', 'All')}
       <span className="h-full w-px bg-border" />
       {segment(
@@ -216,8 +213,9 @@ const DeviceToggle = ({
   )
 }
 
-const WindowToggle = ({ windowMs, onChange }: { windowMs: number; onChange: (ms: number) => void }) => (
-  <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-[11px]">
+// Exported because with the filter bar hidden, the window is the one control that must stay reachable.
+export const WindowToggle = ({ windowMs, onChange }: { windowMs: number; onChange: (ms: number) => void }) => (
+  <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
     {LIVE_WINDOW_OPTIONS.map((opt, i) => (
       <span key={opt.ms} className="inline-flex h-full items-center">
         {i > 0 && <span className="h-full w-px bg-border" />}
@@ -257,12 +255,12 @@ const LiveFilterBar = ({
   <div className="flex flex-col gap-2 border-y border-border/30 bg-muted/20 px-3 py-2">
     <div className="flex items-center gap-2">
       <div className="relative flex-1">
-        <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 size-3 text-muted-foreground/60" />
+        <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2 size-3 text-faint" />
         <input
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          placeholder="Search event, page, location..."
-          className="h-7 w-full rounded-md border border-border bg-background/60 pr-2 pl-7 text-xs placeholder:text-muted-foreground/60 focus:border-foreground/20 focus:outline-none"
+          placeholder="Search person, event, page, location..."
+          className="h-7 w-full rounded-md border border-border bg-background/60 pr-2 pl-7 text-xs placeholder:text-faint focus:border-foreground/20 focus:outline-none"
         />
       </div>
       <WindowToggle windowMs={windowMs} onChange={onWindowChange} />
@@ -275,7 +273,7 @@ const LiveFilterBar = ({
         <button
           type="button"
           onClick={onClearAll}
-          className="inline-flex h-7 items-center gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+          className="inline-flex h-7 items-center gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
         >
           <X className="size-3" /> Clear
         </button>

@@ -39,7 +39,7 @@ const TimelineEventItem = ({
         <div className="flex items-center gap-3">
           <Badge
             variant="secondary"
-            className="text-[11px] font-medium px-2 py-0.5 shrink-0"
+            className="text-xs font-medium px-2 py-0.5 shrink-0"
             style={{ backgroundColor: colors.fill, color: colors.dot }}
           >
             {event.kind}

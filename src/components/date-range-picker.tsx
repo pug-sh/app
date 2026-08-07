@@ -2,7 +2,7 @@ import { CalendarDays } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ACTIVITY_PRESETS, fmtDate } from '@/lib/date-presets'
+import { fmtDate, TIME_RANGE_PRESETS } from '@/lib/date-presets'
 import { cn } from '@/lib/utils'
 
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
@@ -10,6 +10,8 @@ const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 export interface TimeRange {
   from: Date
   to: Date
+  // Set only when the range came from a preset, so the chip can name it instead of showing dates.
+  label?: string
 }
 
 export interface DatePreset {
@@ -21,7 +23,7 @@ export function DateRangePicker({
   value,
   onChange,
   allowUnset,
-  presets = ACTIVITY_PRESETS,
+  presets = TIME_RANGE_PRESETS,
   unsetLabel = 'All time',
 }: {
   value: TimeRange | undefined
@@ -65,12 +67,12 @@ export function DateRangePicker({
     }
   }
 
-  const label = value ? `${fmtDate(value.from)} – ${fmtDate(value.to)}` : unsetLabel
+  const label = value ? (value.label ?? `${fmtDate(value.from)} – ${fmtDate(value.to)}`) : unsetLabel
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs gap-1">
           <CalendarDays className="w-3 h-3" />
           time
         </span>
@@ -82,7 +84,7 @@ export function DateRangePicker({
             type="button"
             onClick={() => setEditing('from')}
             className={cn(
-              'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
+              'text-xs px-2 py-1 rounded-md transition-colors',
               editing === 'from'
                 ? 'bg-primary/10 text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground',
@@ -95,7 +97,7 @@ export function DateRangePicker({
             type="button"
             onClick={() => setEditing('to')}
             className={cn(
-              'text-xs px-2 py-1 rounded-md transition-colors cursor-pointer',
+              'text-xs px-2 py-1 rounded-md transition-colors',
               editing === 'to'
                 ? 'bg-primary/10 text-foreground font-medium'
                 : 'text-muted-foreground hover:text-foreground',
@@ -105,7 +107,7 @@ export function DateRangePicker({
           </button>
         </div>
         <div className="flex">
-          <div className="border-r border-border/50 py-1.5 px-1 w-[160px] flex flex-col gap-0.5">
+          <div className="border-r border-border/50 py-1.5 px-1 w-[260px] flex flex-col gap-0.5">
             {presets.map(preset => {
               const display = preset.resolve()
               return (
@@ -113,13 +115,13 @@ export function DateRangePicker({
                   key={preset.label}
                   type="button"
                   onClick={() => {
-                    onChange(preset.resolve())
+                    onChange({ ...preset.resolve(), label: preset.label })
                     setOpen(false)
                   }}
-                  className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                  className="flex items-baseline justify-between gap-3 px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                 >
-                  {preset.label}
-                  <span className="block text-[11px] text-muted-foreground/50">
+                  <span className="whitespace-nowrap">{preset.label}</span>
+                  <span className="shrink-0 whitespace-nowrap text-faint tabular-nums">
                     {fmtDate(display.from)} – {fmtDate(display.to)}
                   </span>
                 </button>
@@ -132,7 +134,7 @@ export function DateRangePicker({
                   onChange(undefined)
                   setOpen(false)
                 }}
-                className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                className="px-2.5 py-1 text-xs text-left rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               >
                 {unsetLabel}
               </button>

@@ -51,7 +51,7 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
   return undefined
 }
 
-export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'table' | 'sankey'
+export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table' | 'sankey'
 // `sankey` is persisted on dashboard tiles (DashboardTileViewMode.SANKEY). User-flow charts render
 // from `resultCase === 'userFlow'`, not from viewMode.
 
@@ -60,6 +60,7 @@ export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Area', value: 'area' },
   { label: 'Bar (grouped)', value: 'bar-grouped' },
   { label: 'Bar (stacked)', value: 'bar-stacked' },
+  { label: 'Pie', value: 'pie' },
   { label: 'Table', value: 'table' },
 ]
 

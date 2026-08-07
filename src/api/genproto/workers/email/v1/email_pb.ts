@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file workers/email/v1/email.proto.
  */
 export const file_workers_email_v1_email: GenFile = /*@__PURE__*/
-  fileDesc("Chx3b3JrZXJzL2VtYWlsL3YxL2VtYWlsLnByb3RvEhB3b3JrZXJzLmVtYWlsLnYxIp0BCghFbWFpbEpvYhJFChFvcmdfbWVtYmVyX2ludml0ZRgDIAEoCzIoLndvcmtlcnMuZW1haWwudjEuT3JnTWVtYmVySW52aXRlUGF5bG9hZEgAEjgKCm1hZ2ljX2xpbmsYBSABKAsyIi53b3JrZXJzLmVtYWlsLnYxLk1hZ2ljTGlua1BheWxvYWRIAEIQCgdwYXlsb2FkEgW6SAIIASJpChZPcmdNZW1iZXJJbnZpdGVQYXlsb2FkEhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEh0KDWludml0YXRpb25faWQYAiABKAlCBrpIA8gBARIVCgV0b2tlbhgDIAEoCUIGukgDyAEBIkQKEE1hZ2ljTGlua1BheWxvYWQSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAESFQoFdG9rZW4YAiABKAlCBrpIA8gBAUJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvZW1haWwvdjE7ZW1haWx3b3JrZXJ2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
+  fileDesc("Chx3b3JrZXJzL2VtYWlsL3YxL2VtYWlsLnByb3RvEhB3b3JrZXJzLmVtYWlsLnYxIowCCghFbWFpbEpvYhJFChFvcmdfbWVtYmVyX2ludml0ZRgDIAEoCzIoLndvcmtlcnMuZW1haWwudjEuT3JnTWVtYmVySW52aXRlUGF5bG9hZEgAEjgKCm1hZ2ljX2xpbmsYBSABKAsyIi53b3JrZXJzLmVtYWlsLnYxLk1hZ2ljTGlua1BheWxvYWRIABIfCgtkaXNwYXRjaF9pZBgGIAEoCUIKukgHyAEBcgIQAUIQCgdwYXlsb2FkEgW6SAIIAUoECAEQAkoECAIQA0oECAQQBVIVc2lnbnVwX3ZlcmlmeV93ZWxjb21lUg5wYXNzd29yZF9yZXNldFITdmVyaWZpY2F0aW9uX3Jlc2VuZCJpChZPcmdNZW1iZXJJbnZpdGVQYXlsb2FkEhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEh0KDWludml0YXRpb25faWQYAiABKAlCBrpIA8gBARIVCgV0b2tlbhgDIAEoCUIGukgDyAEBIkQKEE1hZ2ljTGlua1BheWxvYWQSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAESFQoFdG9rZW4YAiABKAlCBrpIA8gBAUJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3dvcmtlcnMvZW1haWwvdjE7ZW1haWx3b3JrZXJ2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate]);
 
 /**
  * @generated from message workers.email.v1.EmailJob
@@ -33,6 +33,14 @@ export type EmailJob = Message<"workers.email.v1.EmailJob"> & {
     value: MagicLinkPayload;
     case: "magicLink";
   } | { case: undefined; value?: undefined };
+
+  /**
+   * Identifies one send attempt (the email_action_tokens row id) and is the
+   * provider idempotency key: fresh per issuance, stable across NATS retries.
+   *
+   * @generated from field: string dispatch_id = 6;
+   */
+  dispatchId: string;
 };
 
 /**

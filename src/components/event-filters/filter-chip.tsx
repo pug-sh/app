@@ -69,17 +69,17 @@ export const FilterChip = ({
   return (
     <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">
       {filter.source === PropertySource.PROFILE && (
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] border-r border-border/40">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs border-r border-border/40">
           Profile
         </span>
       )}
-      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-[11px]">
+      <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center font-mono text-xs">
         {filter.property}
       </span>
-      <span className="px-1.5 text-muted-foreground/70 h-full flex items-center text-[10px]">{op?.symbol}</span>
+      <span className="px-1.5 text-faint h-full flex items-center text-xs">{op?.symbol}</span>
       {valueLabel !== null && (
         <Popover open={editOpen} onOpenChange={handleEditOpenChange}>
-          <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors cursor-pointer">
+          <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">
             <span className="max-w-56 truncate" title={valueLabel || '...'}>
               {valueLabel || '...'}
             </span>
@@ -134,7 +134,7 @@ export const FilterChip = ({
       <button
         type="button"
         onClick={onRemove}
-        className="px-1.5 h-full flex items-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+        className="px-1.5 h-full flex items-center text-faint hover:text-foreground hover:bg-muted/40 transition-colors"
       >
         <X className="w-3 h-3" />
       </button>

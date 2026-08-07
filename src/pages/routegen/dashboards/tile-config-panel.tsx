@@ -15,6 +15,9 @@ export type TileConfigPanelProps = {
   onToggleCollapse: () => void
   onClose: () => void
   onPatch: (patch: Partial<DashboardTile>) => void
+  // Insight-spec edits (the Data tab) bypass undo history — that tab owns its own
+  // editor state, so a recorded undo would desync it. See patchSelectedTileSilent.
+  onPatchSpec: (patch: Partial<DashboardTile>) => void
   onDelete: () => void
   onDuplicate: () => void
 }
@@ -25,6 +28,7 @@ export const TileConfigPanel = ({
   onToggleCollapse,
   onClose,
   onPatch,
+  onPatchSpec,
   onDelete,
   onDuplicate,
 }: TileConfigPanelProps) => {
@@ -32,7 +36,7 @@ export const TileConfigPanel = ({
 
   if (collapsed) {
     return (
-      <aside className="flex h-full w-10 shrink-0 flex-col items-center border-border/60 border-l bg-background py-3">
+      <aside className="sticky top-16 flex max-h-[calc(100svh-5rem)] w-10 shrink-0 flex-col items-center self-start border-border/60 border-l bg-background py-3">
         <Button size="icon-xs" variant="ghost" onClick={onToggleCollapse} aria-label="Expand panel">
           <PanelRightOpen className="size-4" />
         </Button>
@@ -41,7 +45,7 @@ export const TileConfigPanel = ({
   }
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-border/60 border-l bg-background">
+    <aside className="sticky top-16 flex max-h-[calc(100svh-5rem)] w-80 shrink-0 flex-col self-start border-border/60 border-l bg-background">
       <div className="flex items-center justify-between gap-2 border-border/60 border-b px-4 py-3">
         {tile ? (
           <div className="min-w-0 flex-1">
@@ -88,7 +92,7 @@ export const TileConfigPanel = ({
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-4">
-            {tab === 'data' ? <DataTab tile={tile} onPatch={onPatch} /> : null}
+            {tab === 'data' ? <DataTab tile={tile} onPatch={onPatchSpec} /> : null}
             {tab === 'display' ? <DisplayTab tile={tile} onPatch={onPatch} /> : null}
             {tab === 'format' ? <FormatTab tile={tile} onPatch={onPatch} /> : null}
           </div>
@@ -97,7 +101,7 @@ export const TileConfigPanel = ({
             <Button size="sm" variant="ghost" onClick={onDuplicate}>
               Duplicate
             </Button>
-            <Button size="sm" variant="ghost" className="text-destructive" onClick={onDelete}>
+            <Button size="sm" variant="ghost" className="text-negative" onClick={onDelete}>
               Delete
             </Button>
           </div>

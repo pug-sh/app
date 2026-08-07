@@ -57,7 +57,7 @@ export const UserFlowScopeControls = ({
           : null}
         {scope.kind ? <FilterBuilder schema={scopedSchema} schemaError={scopedSchemaError} onAdd={addFilter} /> : null}
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         Scope limits which events can become nodes. Leave empty to include all events.
       </p>
     </div>

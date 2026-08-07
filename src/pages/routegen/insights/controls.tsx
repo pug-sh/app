@@ -40,8 +40,8 @@ export const OptionChip = <T extends string | number>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px] gap-1">
+      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
+        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs gap-1">
           {Icon && <Icon className="w-3 h-3" />}
           {label}
         </span>
@@ -62,7 +62,7 @@ export const OptionChip = <T extends string | number>({
               optionClassName = 'bg-muted text-foreground font-medium'
             }
             if (disabled) {
-              optionClassName = 'text-muted-foreground/40'
+              optionClassName = 'text-faint'
             }
             const button = (
               <button
@@ -162,8 +162,8 @@ const RowAggregationPropertyPicker = memo(
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 cursor-pointer hover:bg-muted/40 transition-colors">
-          <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-[11px]">property</span>
+        <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
+          <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">property</span>
           <span className={cn('px-2 h-full flex items-center', !value && 'text-muted-foreground')}>
             {value || 'Select numeric property'}
           </span>

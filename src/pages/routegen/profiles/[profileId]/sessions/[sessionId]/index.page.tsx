@@ -1,7 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams } from 'wouter'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { LocationLabel } from '@/components/country-flag'
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { resolveBrowserDevicon, resolveDeviceDevicon, resolveOsDevicon } from '@/lib/devicon-map'
 import { getSeriesColor } from '@/lib/event-colors'
+import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, tsToDate } from '@/lib/timestamp'
 
@@ -70,13 +70,13 @@ const SessionSummary = ({
     <div className="mb-5 pb-4 border-b border-border space-y-4">
       {/* Header row */}
       <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded-full bg-violet-500/10 flex items-center justify-center shrink-0">
-          <Timer className="w-5 h-5 text-violet-500" />
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <Timer className="w-5 h-5 text-link" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium">Session</p>
-            <Badge variant="secondary" className="font-mono text-[10px]">
+            <Badge variant="secondary" className="font-mono text-xs">
               {sessionId.slice(0, 16)}
             </Badge>
           </div>
@@ -94,19 +94,19 @@ const SessionSummary = ({
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Duration</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Duration</p>
           <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Events</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Events</p>
           <p className="text-sm font-medium tabular-nums">{events.length}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Entry</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Entry</p>
           <p className="text-sm font-medium truncate">{entryEvent ?? '—'}</p>
         </div>
         <div>
-          <p className="text-[10px] text-muted-foreground mb-0.5">Exit</p>
+          <p className="text-xs text-muted-foreground mb-0.5">Exit</p>
           <p className="text-sm font-medium truncate">{exitEvent ?? '—'}</p>
         </div>
       </div>
@@ -166,7 +166,7 @@ const SessionSummary = ({
 // ── Main Component ──────────────────────────────────────────────────────────
 
 const SessionView = () => {
-  const { profileId, sessionId } = useParams<{ profileId: string; sessionId: string }>()
+  const { profileId, sessionId } = useRouteParams<{ profileId: string; sessionId: string }>()
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)

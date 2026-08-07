@@ -12,7 +12,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file sdk/profiles/v1/profiles.proto.
  */
 export const file_sdk_profiles_v1_profiles: GenFile = /*@__PURE__*/
-  fileDesc("Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSKeAQoPSWRlbnRpZnlSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCgxhbm9ueW1vdXNfaWQYAyABKAlCE7pIEHIOGP8BMgleJHxeYW5vbi0SGgoJZGV2aWNlX2lkGAQgASgJQge6SARyAhgkIhIKEElkZW50aWZ5UmVzcG9uc2UiqwEKFlByb2ZpbGVJZGVudGlmeU1lc3NhZ2USHwoLZXh0ZXJuYWxfaWQYASABKAlCCrpIB8gBAXICEAESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeCgpwcm9qZWN0X2lkGAMgASgJQgq6SAfIAQFyAhABEhQKDGFub255bW91c19pZBgEIAEoCRIRCglkZXZpY2VfaWQYBSABKAkyZQoSUHJvZmlsZXNTREtTZXJ2aWNlEk8KCElkZW50aWZ5EiAuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVxdWVzdBohLnNkay5wcm9maWxlcy52MS5JZGVudGlmeVJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL3Byb2ZpbGVzL3YxO3Nka3Byb2ZpbGVzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_struct]);
+  fileDesc("Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSKmAgoPSWRlbnRpZnlSZXF1ZXN0EqIBCgtleHRlcm5hbF9pZBgBIAEoCUKMAbpIiAG6AYEBChtleHRlcm5hbF9pZC5yZXNlcnZlZF9wcmVmaXgSQWV4dGVybmFsX2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gh8hdGhpcy5zdGFydHNXaXRoKCdjb29raWVsZXNzLScpyAEBEicKBnRyYWl0cxgCIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKQoMYW5vbnltb3VzX2lkGAMgASgJQhO6SBByDhj/ATIJXiR8XmFub24tEhoKCWRldmljZV9pZBgEIAEoCUIHukgEcgIYJCISChBJZGVudGlmeVJlc3BvbnNlIrMCChZQcm9maWxlSWRlbnRpZnlNZXNzYWdlEqYBCgtleHRlcm5hbF9pZBgBIAEoCUKQAbpIjAG6AYEBChtleHRlcm5hbF9pZC5yZXNlcnZlZF9wcmVmaXgSQWV4dGVybmFsX2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gh8hdGhpcy5zdGFydHNXaXRoKCdjb29raWVsZXNzLScpyAEBcgIQARInCgZ0cmFpdHMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eh4KCnByb2plY3RfaWQYAyABKAlCCrpIB8gBAXICEAESFAoMYW5vbnltb3VzX2lkGAQgASgJEhEKCWRldmljZV9pZBgFIAEoCTJlChJQcm9maWxlc1NES1NlcnZpY2USTwoISWRlbnRpZnkSIC5zZGsucHJvZmlsZXMudjEuSWRlbnRpZnlSZXF1ZXN0GiEuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zZGsvcHJvZmlsZXMvdjE7c2RrcHJvZmlsZXN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_struct]);
 
 /**
  * @generated from message sdk.profiles.v1.IdentifyRequest
@@ -20,6 +20,12 @@ export const file_sdk_profiles_v1_profiles: GenFile = /*@__PURE__*/
 export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
   /**
    * Stable user identifier (e.g. email, database ID).
+   * The 'cookieless-' prefix is server-owned: ingest mints those ids and the
+   * reserved-prefix rule on BatchCreateRequest.distinct_id already refuses them
+   * from clients. external_id needs the same guard because post-identify events
+   * are keyed by external_id, so an id accepted here comes back as a distinct_id
+   * that the batch rule then rejects — and because that rule is `all()`, one such
+   * user fails the WHOLE batch, taking unrelated users' events with it.
    *
    * @generated from field: string external_id = 1;
    */
@@ -79,6 +85,10 @@ export const IdentifyResponseSchema: GenMessage<IdentifyResponse> = /*@__PURE__*
  */
 export type ProfileIdentifyMessage = Message<"sdk.profiles.v1.ProfileIdentifyMessage"> & {
   /**
+   * Mirrors IdentifyRequest.external_id: the worker re-validates this envelope,
+   * so the reserved prefix is enforced at both stages rather than trusting that
+   * the value only ever arrives from an already-validated request.
+   *
    * @generated from field: string external_id = 1;
    */
   externalId: string;

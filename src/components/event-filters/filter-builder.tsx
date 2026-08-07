@@ -123,7 +123,7 @@ export const FilterBuilder = ({
   }
 
   const breadcrumb = (
-    <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-[10px] text-muted-foreground">
+    <div className="flex items-center gap-1 px-3 pt-2 pb-1 text-xs text-muted-foreground">
       {step !== 'property' && (
         <>
           <button
@@ -134,7 +134,7 @@ export const FilterBuilder = ({
               setProp('')
               setOp(FilterOperator.EQUALS)
             }}
-            className="hover:text-foreground cursor-pointer"
+            className="hover:text-foreground"
           >
             {valueMode === 'userId' ? 'Identity' : 'Property'}
           </button>
@@ -147,7 +147,7 @@ export const FilterBuilder = ({
       {step === 'value' && valueMode === 'property' && (
         <>
           <ChevronRight className="w-2.5 h-2.5" />
-          <button type="button" onClick={() => setStep('operator')} className="hover:text-foreground cursor-pointer">
+          <button type="button" onClick={() => setStep('operator')} className="hover:text-foreground">
             {opMeta?.label}
           </button>
         </>
@@ -159,7 +159,7 @@ export const FilterBuilder = ({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         className={cn(
-          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs cursor-pointer',
+          'inline-flex items-center gap-1 border border-dashed border-border rounded-md px-2 h-7 text-xs',
           'text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors',
           open && 'border-foreground/20 text-foreground',
         )}
@@ -190,9 +190,9 @@ export const FilterBuilder = ({
                 key={o.value}
                 type="button"
                 onClick={() => pickOperator(o.value)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted/50 cursor-pointer"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted/50"
               >
-                <span className="inline-flex h-4 w-5 shrink-0 items-center justify-center font-mono text-[11px] text-muted-foreground">
+                <span className="inline-flex h-4 w-5 shrink-0 items-center justify-center font-mono text-xs text-muted-foreground">
                   {o.symbol}
                 </span>
                 <span>{o.label}</span>

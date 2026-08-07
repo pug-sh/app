@@ -22,3 +22,13 @@ export const structGet = (s: JsonObject | undefined, key: string) => {
   if (!s || !(key in s)) return undefined
   return jsonValueToString(s[key])
 }
+
+// First non-empty value among keys, in priority order — the app's answer to customers naming the
+// same trait differently. `accept` keeps scanning past a present but unusable value.
+export const structFirst = (s: JsonObject | undefined, keys: string[], accept?: (value: string) => boolean) => {
+  for (const key of keys) {
+    const value = structGet(s, key)
+    if (value && (!accept || accept(value))) return value
+  }
+  return undefined
+}
