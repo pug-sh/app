@@ -75,6 +75,35 @@ describe('layoutSankey vertical scale', () => {
   })
 })
 
+describe('layoutSankey flow accounting', () => {
+  // The hover card reads these to say "N continued, M ended", and picks a different
+  // sentence for the two ends of the flow — so zero has to mean "no such side", not "no
+  // data". Collapsing them into one value would make an entry node look like a dead end.
+  it('reports an entry node as outbound-only', () => {
+    const entry = byName(layoutSankey(FLOW, OPTIONS), 'page_view')
+
+    expect(entry.inflow).toBe(0)
+    expect(entry.outflow).toBe(100)
+    expect(entry.value).toBe(100)
+  })
+
+  it('reports a terminal node as inbound-only', () => {
+    const terminal = byName(layoutSankey(FLOW, OPTIONS), 'bounce')
+
+    expect(terminal.inflow).toBe(40)
+    expect(terminal.outflow).toBe(0)
+  })
+
+  it('keeps both sides on a node that sheds sessions', () => {
+    const middle = byName(layoutSankey(FLOW, OPTIONS), 'signup')
+
+    // 60 arrived, 30 continued, so 30 ended here.
+    expect(middle.inflow).toBe(60)
+    expect(middle.outflow).toBe(30)
+    expect(middle.inflow - middle.outflow).toBe(30)
+  })
+})
+
 describe('layoutSankey ribbons', () => {
   it('keeps every ribbon inside the band of the node it leaves', () => {
     const layout = layoutSankey(FLOW, OPTIONS)

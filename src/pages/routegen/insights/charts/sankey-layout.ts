@@ -22,6 +22,10 @@ export type SankeyLayoutOptions = {
 export type LaidOutNode = SankeyNodeDatum & {
   // Sessions represented by this node — the larger of its inbound and outbound flow.
   value: number
+  // Kept separately so a reader can show what arrived vs what carried on. They differ by
+  // the sessions that ended here, which is the number a drop-off question is asking for.
+  inflow: number
+  outflow: number
   x: number
   y: number
   width: number
@@ -130,6 +134,8 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
       laidOutNodes[index] = {
         ...nodes[index],
         value: weights[index],
+        inflow: inflow[index],
+        outflow: outflow[index],
         x,
         y,
         width: options.nodeWidth,
