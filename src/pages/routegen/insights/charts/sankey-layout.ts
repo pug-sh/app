@@ -2,10 +2,12 @@ import type { SankeyChartData, SankeyLinkDatum, SankeyNodeDatum } from '../user-
 
 // Sankey geometry, kept free of React so it can be unit-tested directly.
 //
-// The expensive half of a Sankey layout is deciding which column each node belongs in.
-// The server already did it: every node carries stepDepth (its 0-based step in the
-// session's event sequence) and every link spans depth d -> d+1. So this walks columns
-// rather than recursing the graph, and there is no depth inference to get wrong.
+// The expensive half of a Sankey layout is deciding which column each node belongs in. The
+// server already did it: every node carries stepDepth (its step in the session's event sequence)
+// and every link spans depth d -> d+1. So this walks columns rather than recursing the graph, and
+// never derives a node's column from the shape of the graph. What it does derive is the
+// horizontal *spread*, which is normalised against the smallest depth present rather than
+// assuming the first column is depth 0.
 
 export type SankeyLayoutOptions = {
   width: number
@@ -22,8 +24,11 @@ export type SankeyLayoutOptions = {
 export type LaidOutNode = SankeyNodeDatum & {
   // Sessions represented by this node — the larger of its inbound and outbound flow.
   value: number
-  // Kept separately so a reader can show what arrived vs what carried on. They differ by
-  // the sessions that ended here, which is the number a drop-off question is asking for.
+  // Kept separately so a reader can show what arrived vs what carried on. Where a node has both
+  // sides, inflow - outflow is the sessions that ended here — the number a drop-off question is
+  // asking for. It is not a drop-off at the two ends of the flow: an entry node has inflow 0 and
+  // a terminal node outflow 0, so the subtraction is meaningless there and the caller says
+  // "Entry point" / "Flow ends here" instead.
   inflow: number
   outflow: number
   x: number
@@ -97,11 +102,16 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
     else columns.set(depth, [index])
   }
   const depths = [...columns.keys()].sort((a, b) => a - b)
-  const lastDepth = depths[depths.length - 1]
+  const firstDepth = depths[0]
+  // Span, not maximum: a flow whose depths start at 2 still has its first column at the left
+  // edge. sankeyExtent measures the same way, and the two disagreeing would leave a third of the
+  // canvas blank with every ribbon running backwards.
+  const depthSpan = depths[depths.length - 1] - firstDepth
 
-  // Biggest flow first, with the synthetic overflow bucket pinned to the bottom of its
-  // column. Ordering is derived from the data alone, so it stays put across refetches
-  // instead of reshuffling as counts drift.
+  // Biggest flow first, with the synthetic overflow bucket pinned to the bottom of its column.
+  // Ordering is a pure function of the payload — two clients render the same column identically,
+  // and the tie-break on name keeps equal-weight nodes from swapping — but it does re-rank when
+  // the counts themselves change between refetches.
   for (const depth of depths) {
     const column = columns.get(depth)
     if (!column) continue
@@ -128,36 +138,8 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
   const scale = heaviestColumn > 0 ? Math.max(plotHeight - gutters, 1) / heaviestColumn : 0
 
   const columnX = (depth: number) => {
-    if (lastDepth <= 0) return options.paddingLeft
-    return options.paddingLeft + (plotWidth - options.nodeWidth) * (depth / lastDepth)
-  }
-
-  const laidOutNodes = new Array<LaidOutNode>(nodes.length)
-  for (const depth of depths) {
-    const column = columns.get(depth)
-    if (!column) continue
-
-    let stackHeight = Math.max(column.length - 1, 0) * options.nodePadding
-    for (const index of column) stackHeight += Math.max(weights[index] * scale, MIN_NODE_HEIGHT)
-
-    // Lighter columns are centred rather than top-aligned, so the flow reads as a band
-    // narrowing through the page instead of sagging away from a fixed top edge.
-    let y = options.paddingTop + Math.max((plotHeight - stackHeight) / 2, 0)
-    const x = columnX(depth)
-    for (const index of column) {
-      const height = Math.max(weights[index] * scale, MIN_NODE_HEIGHT)
-      laidOutNodes[index] = {
-        ...nodes[index],
-        value: weights[index],
-        inflow: inflow[index],
-        outflow: outflow[index],
-        x,
-        y,
-        width: options.nodeWidth,
-        height,
-      }
-      y += height + options.nodePadding
-    }
+    if (depthSpan <= 0) return options.paddingLeft
+    return options.paddingLeft + (plotWidth - options.nodeWidth) * ((depth - firstDepth) / depthSpan)
   }
 
   // Ribbons stack inside each node's band in the order of the counterpart node's
@@ -177,6 +159,48 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
   const sourceY = new Array<number>(links.length).fill(0)
   const targetY = new Array<number>(links.length).fill(0)
   const thickness = links.map(link => Math.max(link.value * scale, MIN_LINK_THICKNESS))
+
+  // Both floors round *up*, and they round up independently: a node worth a fraction of a pixel
+  // becomes MIN_NODE_HEIGHT while each of its links becomes MIN_LINK_THICKNESS. Twenty
+  // near-zero links off a 2px node stack 20px of ribbon into a 2px band and spill over the
+  // nodes above and below. So a band is at least as tall as the thicker of the two stacks it
+  // has to anchor — the node is what has to give, not the ribbons.
+  const stackHeight = (linkIndexes: number[] | undefined) => {
+    if (!linkIndexes) return 0
+    let total = 0
+    for (const linkIndex of linkIndexes) total += thickness[linkIndex]
+    return total
+  }
+  const nodeHeights = weights.map((weight, index) =>
+    Math.max(weight * scale, MIN_NODE_HEIGHT, stackHeight(outgoing.get(index)), stackHeight(incoming.get(index))),
+  )
+
+  const laidOutNodes = new Array<LaidOutNode>(nodes.length)
+  for (const depth of depths) {
+    const column = columns.get(depth)
+    if (!column) continue
+
+    let columnHeight = Math.max(column.length - 1, 0) * options.nodePadding
+    for (const index of column) columnHeight += nodeHeights[index]
+
+    // Lighter columns are centred rather than top-aligned, so the flow reads as a band
+    // narrowing through the page instead of sagging away from a fixed top edge.
+    let y = options.paddingTop + Math.max((plotHeight - columnHeight) / 2, 0)
+    const x = columnX(depth)
+    for (const index of column) {
+      laidOutNodes[index] = {
+        ...nodes[index],
+        value: weights[index],
+        inflow: inflow[index],
+        outflow: outflow[index],
+        x,
+        y,
+        width: options.nodeWidth,
+        height: nodeHeights[index],
+      }
+      y += nodeHeights[index] + options.nodePadding
+    }
+  }
 
   for (const [nodeIndex, linkIndexes] of outgoing) {
     const node = laidOutNodes[nodeIndex]
@@ -216,7 +240,10 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
     ]
   })
 
-  return { nodes: laidOutNodes.filter(Boolean), links: laidOutLinks }
+  // Not filtered: link.source/target are indices into this array, and the chart compares them
+  // against positions in it. Dropping an element would silently renumber every link — wrong
+  // ribbons, wrong hover, no error. Every node lands in exactly one column, so it is dense.
+  return { nodes: laidOutNodes, links: laidOutLinks }
 }
 
 // Cubic with both control points at the horizontal midpoint: the ribbon leaves and enters

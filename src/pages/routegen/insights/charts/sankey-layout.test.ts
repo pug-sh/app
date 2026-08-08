@@ -76,9 +76,9 @@ describe('layoutSankey vertical scale', () => {
 })
 
 describe('sankeyExtent', () => {
-  // The chart multiplies widestColumn by the node padding to decide whether it has to grow
-  // its canvas and scroll. Taking the node total instead of the busiest column would
-  // overstate every multi-column flow and scroll charts that fit fine.
+  // The chart reserves padding for widestColumn - 1 gaps when deciding whether it has to grow
+  // its canvas and scroll. Taking the node total instead of the busiest column would overstate
+  // every multi-column flow and scroll charts that fit fine.
   it('measures the busiest column, not the whole graph', () => {
     // 1 node at step 0, 2 at step 1, 1 at step 2 — four nodes, three columns.
     expect(sankeyExtent(FLOW)).toEqual({ widestColumn: 2, stepCount: 3 })
@@ -130,6 +130,64 @@ describe('layoutSankey flow accounting', () => {
   })
 })
 
+describe('layoutSankey skewed flow', () => {
+  // One dominant path plus a long tail of near-zero ones. The tail links each round up to
+  // MIN_LINK_THICKNESS while the tail *nodes* round up to MIN_NODE_HEIGHT independently, so a
+  // band sized only by its weight is far too short to anchor the ribbons attached to it.
+  const skewed: SankeyChartData = {
+    nodes: [
+      { id: 'a0', name: 'page_view', stepDepth: 0, isOthers: false },
+      { id: 'big', name: 'checkout', stepDepth: 1, isOthers: false },
+      ...Array.from({ length: 20 }, (_, i) => ({
+        id: `t${i}`,
+        name: `tail_${i}`,
+        stepDepth: 1,
+        isOthers: false,
+      })),
+    ],
+    links: [
+      { source: 0, target: 1, value: 100_000, sourceName: 'page_view', targetName: 'checkout' },
+      ...Array.from({ length: 20 }, (_, i) => ({
+        source: 0,
+        target: i + 2,
+        value: 1,
+        sourceName: 'page_view',
+        targetName: `tail_${i}`,
+      })),
+    ],
+  }
+
+  it('grows a band to hold the ribbons it anchors', () => {
+    const layout = layoutSankey(skewed, OPTIONS)
+
+    for (const node of layout.nodes) {
+      const outbound = layout.links.filter(l => l.source === layout.nodes.indexOf(node))
+      const stacked = outbound.reduce((sum, l) => sum + l.thickness, 0)
+      expect(node.height).toBeGreaterThanOrEqual(stacked - 0.001)
+    }
+  })
+
+  it('keeps every ribbon inside its source band even when the flow is lopsided', () => {
+    const layout = layoutSankey(skewed, OPTIONS)
+    const source = byName(layout, 'page_view')
+
+    for (const link of layout.links) {
+      expect(link.sourceY - link.thickness / 2).toBeGreaterThanOrEqual(source.y - 0.001)
+      expect(link.sourceY + link.thickness / 2).toBeLessThanOrEqual(source.y + source.height + 0.001)
+    }
+  })
+
+  it('keeps every ribbon inside its target band', () => {
+    const layout = layoutSankey(skewed, OPTIONS)
+
+    for (const link of layout.links) {
+      const target = layout.nodes[link.target]
+      expect(link.targetY - link.thickness / 2).toBeGreaterThanOrEqual(target.y - 0.001)
+      expect(link.targetY + link.thickness / 2).toBeLessThanOrEqual(target.y + target.height + 0.001)
+    }
+  })
+})
+
 describe('layoutSankey ribbons', () => {
   it('keeps every ribbon inside the band of the node it leaves', () => {
     const layout = layoutSankey(FLOW, OPTIONS)
@@ -151,8 +209,10 @@ describe('layoutSankey ribbons', () => {
 })
 
 describe('layoutSankey degenerate input', () => {
-  // The chart mounts before the ResizeObserver reports, so a zero-sized pass happens on
-  // every render and must not produce NaN geometry.
+  // Not reachable from SankeyChart today — its canvas floors at MIN_FLOW_HEIGHT and the
+  // gutters, so layoutSankey never sees 0x0. These pin the pure function's own contract, so a
+  // future caller that does hand it an unmeasured box gets an empty layout rather than NaN
+  // geometry that renders as invisible garbage.
   it('returns nothing when the container has no size yet', () => {
     expect(layoutSankey(FLOW, { ...OPTIONS, width: 0, height: 0 })).toEqual({ nodes: [], links: [] })
   })
