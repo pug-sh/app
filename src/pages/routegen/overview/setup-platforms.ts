@@ -12,15 +12,20 @@ import nodejsIcon from 'devicon/icons/nodejs/nodejs-original.svg?url'
 // SDK omits it: the secret private key is project-scoped, and track() takes the distinctId first
 // since a server has no ambient user.
 //
+// Only the web snippet seeds `trackingConsent: 'granted'`, because it's the only one that calls
+// identify(), which silently no-ops under the SDK's 'cookieless' default.
+//
 // The `script` platform is the same @pug-sh/browser SDK loaded from the CDN with no bundler: the
 // loader snippet (stubs the API, queues early calls, then pug.init) and the one-tag install
 // (declarative data-* attributes, for pages under a strict CSP that forbids inline script). Both
 // derive from the README's "Script tag (CDN)" section. The loader snippet is verbatim — only the
-// project ID and public key are interpolated. The one-tag install is that snippet minus its
-// data-options attribute: the README seeds trackingConsent { default: 'denied' } to demo a
-// consent-first setup, but this quickstart omits it so consent stays the SDK default ('granted')
-// and first events actually flow — the setup screen polls until they do, so keep data-options
-// dropped when syncing from the README. Docs links deep-link into the one tabbed SDK page via
+// project ID and public key are interpolated. Re-sync the method list on any SDK release that
+// adds a public method: one missing from the stub isn't queued, it's a TypeError on a page that
+// calls it before the bundle lands. The one-tag install is that snippet minus its data-options
+// attribute: the README seeds trackingConsent to demo a consent-first setup, but this quickstart
+// omits it so consent stays at the SDK default ('cookieless'), under which events still flow —
+// the setup screen polls until they do, so keep data-options dropped when syncing from the
+// README. Docs links deep-link into the one tabbed SDK page via
 // ?platform= (docs.pug.sh/docs/sdks); the CDN install is documented under the web SDK tab.
 
 const DOCS_BASE = 'https://docs.pug.sh/docs/sdks'
@@ -32,7 +37,7 @@ const DOCS_BASE = 'https://docs.pug.sh/docs/sdks'
 // Web tab's unpinned `npm install` drifts ahead of it. Unlike sdk-web, nothing here gates this
 // version against the SDK release, so the bump is manual. Pre-1.0 pins the exact version; at 1.0
 // this becomes a rolling `v1` alias.
-const PUG_CDN_VERSION = 'v0.0.4'
+const PUG_CDN_VERSION = 'v0.1.0'
 const PUG_CDN_URL = `https://cdn.pugs.dev/${PUG_CDN_VERSION}/pug.min.js`
 
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
@@ -79,7 +84,8 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
         credential: 'public',
         code: (projectId, publicKey) => `import { init, identify, track } from '@pug-sh/browser'
 
-init('${projectId}', { apiKey: '${publicKey}' })
+// Using a consent banner? Drop trackingConsent and call setTrackingConsent('granted') from it
+init('${projectId}', { apiKey: '${publicKey}', trackingConsent: 'granted' })
 
 // Tie events to a user once they sign in
 identify('user_123', { email: 'ada@example.com', plan: 'pro' })
@@ -102,8 +108,8 @@ track('signed_up', { plan: 'pro' })`,
     if (w.pug) { if (!w.pug._q) console.warn('[Pug SDK] window.pug already defined by another script; not loaded.'); return; }
     var q = [];
     var pug = (w.pug = { _q: q, _v: 1 });
-    var methods = ('init track identify reset destroy setAutoCapture optInTracking optOutTracking ' +
-      'isTrackingEnabled getTrackingConsent rotate ready').split(' ');
+    var methods = ('init track identify reset destroy setAutoCapture setTrackingConsent optInTracking ' +
+      'optOutTracking isTrackingEnabled getTrackingConsent isConsentPending rotate ready').split(' ');
     methods.forEach(function (m) {
       pug[m] = function () { if (q.length < 1000) q.push([m, [].slice.call(arguments)]); };
     });
