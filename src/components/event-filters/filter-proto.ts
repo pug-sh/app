@@ -18,6 +18,15 @@ export const fromProtoFilter = (filter: PropertyFilter): ActiveFilter => {
   if (arity === 'list') {
     return { property, source, operator, kind: 'multi', values }
   }
+  // No arity means this build has no entry for the operator — protobuf-es keeps an unrecognised
+  // open-enum value, so a spec written by another build reaches here intact. Read the arm from
+  // whichever payload the message actually carries rather than assuming `single`: the round trip
+  // back through toProtoFilters dispatches on `kind`, so guessing wrong emits `values: []` and the
+  // filter silently stops filtering — every number goes *up*, and the Data tab persists that
+  // rewrite on the patch path that records no undo step.
+  if (values.length > 0) {
+    return { property, source, operator, kind: 'multi', values }
+  }
   return { property, source, operator, kind: 'single', value: filter.value ?? '' }
 }
 
