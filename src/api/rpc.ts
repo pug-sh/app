@@ -1,6 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { atom } from 'jotai'
-import { publicTransportAtom, transportAtom } from '@/network/transport'
+import { assistantTransportAtom, publicTransportAtom, transportAtom } from '@/network/transport'
+import { DashboardAssistantService } from './genproto/ai/dashboards/v1/assistant_pb'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OrgEmailProvidersService } from './genproto/dashboard/orgemailproviders/v1/orgemailproviders_pb'
@@ -29,3 +30,6 @@ export const dashboardsRPCAtom = atom(get => createClient(DashboardsService, get
 export const insightsRPCAtom = atom(get => createClient(InsightsService, get(transportAtom)))
 export const activityRPCAtom = atom(get => createClient(ActivityService, get(transportAtom)))
 export const profilesRPCAtom = atom(get => createClient(ProfilesService, get(transportAtom)))
+
+// AI — separate service, project-scoped (JWT auth + x-project-id, no protovalidate)
+export const dashboardAssistantRPCAtom = atom(get => createClient(DashboardAssistantService, get(assistantTransportAtom)))
