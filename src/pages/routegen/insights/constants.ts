@@ -51,9 +51,12 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
   return undefined
 }
 
-export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table' | 'sankey'
-// `sankey` is persisted on dashboard tiles (DashboardTileViewMode.SANKEY). User-flow charts render
-// from `resultCase === 'userFlow'`, not from viewMode.
+// Every member here is a trends chart that `renderChart` can draw. There is deliberately no
+// 'sankey': user-flow charts render from `resultCase === 'userFlow'`, not from viewMode, so a
+// member for them would be a value the chart switch has no branch for — which is exactly how a
+// trends tile set to Sankey ended up silently drawing bars. DashboardTileViewMode.SANKEY still
+// exists for persistence; it maps to the default here.
+export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
 
 export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
   { label: 'Line', value: 'line' },

@@ -24,9 +24,11 @@ export const DASHBOARD_TILE_VIEW_MODES = [
   { label: 'Bar (stacked)', value: DashboardTileViewMode.BAR_STACKED },
   { label: 'Pie', value: DashboardTileViewMode.PIE },
   { label: 'Table', value: DashboardTileViewMode.TABLE },
-  { label: 'Sankey', value: DashboardTileViewMode.SANKEY },
 ] as const
 
+// Sankey is deliberately absent from the list above: it is the only view a user-flow tile can
+// take, and no other insight type can render it. Offering it beside the trends views let a
+// trends tile be set to Sankey, which silently drew a bar chart.
 export const USER_FLOW_TILE_VIEW_MODES = [{ label: 'Sankey', value: DashboardTileViewMode.SANKEY }] as const
 
 export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | undefined): DashboardTileViewMode => {
@@ -57,8 +59,11 @@ export const dashboardTileViewModeToViewMode = (mode: DashboardTileViewMode | un
       return 'pie'
     case DashboardTileViewMode.TABLE:
       return 'table'
+    // SANKEY has no ViewMode of its own — the Sankey renders off `resultCase === 'userFlow'`,
+    // never off viewMode, so this value is never read for a user-flow tile. It maps to the
+    // default so a tile left on SANKEY after switching away from user flow degrades to a line
+    // chart rather than falling through the chart switch into bars.
     case DashboardTileViewMode.SANKEY:
-      return 'sankey'
     case DashboardTileViewMode.LINE:
     default:
       return 'line'

@@ -18,6 +18,7 @@ import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '..
 import { InsightsRowAggregationControls, OptionChip } from '../../insights/controls'
 import { UserFlowControls } from '../../insights/user-flow-controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
+import { DEFAULT_DASHBOARD_TILE_VIEW_MODE } from '../tile-settings'
 import { InsightFields } from './insight-fields'
 import { Section } from './section'
 
@@ -88,8 +89,12 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     const patch: Partial<DashboardTile> = {
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
     }
-    if (insightType === InsightType.USER_FLOW && tile.viewMode !== DashboardTileViewMode.SANKEY) {
-      patch.viewMode = DashboardTileViewMode.SANKEY
+    // Both directions, or the tile strands: Sankey is the only view user flow can take, and the
+    // only one no other insight type can render. Switching away used to leave viewMode on SANKEY.
+    if (insightType === InsightType.USER_FLOW) {
+      if (tile.viewMode !== DashboardTileViewMode.SANKEY) patch.viewMode = DashboardTileViewMode.SANKEY
+    } else if (tile.viewMode === DashboardTileViewMode.SANKEY) {
+      patch.viewMode = DEFAULT_DASHBOARD_TILE_VIEW_MODE
     }
     onPatch(patch)
     // Exclude `tile` and `onPatch`: this fires only on editor-state changes, not

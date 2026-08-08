@@ -77,3 +77,36 @@ describe('DisplayTab legend options', () => {
     expect(screen.queryByRole('checkbox', { name: 'Show labels' })).toBeNull()
   })
 })
+
+// Sankey is the one view mode that renders off the result case rather than off viewMode, so
+// `renderChart` has no branch for it. While it sat in the shared list a trends tile could be set
+// to Sankey and silently drew a grouped bar chart under a chip that read "Sankey".
+describe('DisplayTab view-mode options', () => {
+  const userFlowTile = () =>
+    create(DashboardTileSchema, {
+      viewMode: DashboardTileViewMode.SANKEY,
+      content: {
+        case: 'insight',
+        value: create(InsightTileContentSchema, {
+          spec: create(InsightQuerySpecSchema, { insightType: InsightType.USER_FLOW }),
+        }),
+      },
+    })
+
+  it('never offers Sankey to a tile that cannot render it', () => {
+    render(<DisplayTab tile={trendTile(DashboardTileViewMode.LINE)} onPatch={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /view.*line/i }))
+
+    expect(screen.getByRole('button', { name: 'Bar (grouped)' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sankey' })).toBeNull()
+  })
+
+  it('offers Sankey to a user-flow tile', () => {
+    render(<DisplayTab tile={userFlowTile()} onPatch={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /view.*sankey/i }))
+
+    expect(screen.getByRole('button', { name: 'Sankey' })).toBeTruthy()
+  })
+})
