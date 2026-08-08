@@ -36,6 +36,7 @@ export const INSIGHT_TYPES = [
   { label: 'Trends', value: InsightType.TRENDS },
   { label: 'Funnel', value: InsightType.FUNNEL },
   { label: 'Retention', value: InsightType.RETENTION },
+  { label: 'User flow', value: InsightType.USER_FLOW },
   { label: 'Top K', value: InsightType.TOP_K },
 ] as const
 
@@ -50,6 +51,11 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
   return undefined
 }
 
+// Every member here is a trends chart that `renderChart` can draw. There is deliberately no
+// 'sankey': content.tsx routes a user-flow chart on its insight type or result case, before the
+// chart switch is reached, so a member for them would be a value that switch has no branch for —
+// which is exactly how a trends tile set to Sankey ended up silently drawing bars.
+// DashboardTileViewMode.SANKEY still exists for persistence; it maps to the default here.
 export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
 
 export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
@@ -67,6 +73,7 @@ export const EMPTY_ARRAY: never[] = []
 export const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.TRENDS) return 'Analyze event trends'
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
+  if (insightType === InsightType.USER_FLOW) return 'Explore how sessions move between events'
   if (insightType === InsightType.TOP_K) return 'Rank top events, property values, or users'
   return 'Analyze step-by-step conversion'
 }

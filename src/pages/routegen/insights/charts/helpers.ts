@@ -63,7 +63,9 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
 // Measured off Figtree at text-xs, worst case: an all-digit clock ("00:00") runs 7.0px/char, well
 // above the ~4.9px of a label with spaces. Fitting to the average overprints exactly the labels
 // that are hardest to read, so this tracks the widest, not the mean. Re-measure on a face change.
-const AXIS_LABEL_PX_PER_CHAR = 7.0
+// Exported because the Sankey sizes its label gutters off the same figure — CLAUDE.md requires a
+// re-measure per face, and two private copies is one of them silently keeping the old value.
+export const AXIS_LABEL_PX_PER_CHAR = 7.0
 const AXIS_LABEL_MIN_GAP_PX = 16
 
 export const fitAxisTicks = (innerWidth: number, dateLabels: readonly string[], requested: number): number => {

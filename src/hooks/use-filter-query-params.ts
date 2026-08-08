@@ -6,8 +6,20 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
 import { normalizeTopKState, type TopKState } from '@/pages/routegen/insights/top-k'
+import {
+  DEFAULT_USER_FLOW_CONFIG,
+  parseSerializedUserFlowConfig,
+  serializeUserFlowConfig,
+  type UserFlowConfig,
+} from '@/pages/routegen/insights/user-flow'
 
-const VALID_INSIGHT_TYPES = [InsightType.TRENDS, InsightType.FUNNEL, InsightType.RETENTION, InsightType.TOP_K]
+const VALID_INSIGHT_TYPES = [
+  InsightType.TRENDS,
+  InsightType.FUNNEL,
+  InsightType.RETENTION,
+  InsightType.USER_FLOW,
+  InsightType.TOP_K,
+]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [
   AggregationType.TOTAL,
@@ -42,6 +54,7 @@ const GRANULARITY_PARAM = 'gr'
 const TIME_FROM_PARAM = 'tf'
 const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
+const USER_FLOW_PARAM = 'uf'
 const TOP_K_PARAM = 'tk'
 
 export const BREAKDOWN_MAX = 5
@@ -254,11 +267,27 @@ export const readFilterQueryParams = (search = window.location.search) => {
   // of silently falling back to the default ranking.
   if (hasTk && params.get(TOP_K_PARAM) && !topK) warnings.push('ranking')
 
+  const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
+  const rawUserFlow = parseJSONParam(params.get(USER_FLOW_PARAM))
+  const restoredUserFlow = parseSerializedUserFlowConfig(rawUserFlow)
+  const userFlowConfig = restoredUserFlow ?? DEFAULT_USER_FLOW_CONFIG
+  // Same rule as `tk` above. This has to be collected before `parseWarning` is assembled — it
+  // used to sit below it, so a warning pushed here could never reach the toast.
+  if (params.get(USER_FLOW_PARAM) && !restoredUserFlow) warnings.push('user flow')
+
   const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
-  const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
-
-  return { eventFilters, propFilters, insightType, granularity, timeRange, breakdowns, topK, parseWarning }
+  return {
+    eventFilters,
+    propFilters,
+    insightType,
+    granularity,
+    timeRange,
+    breakdowns,
+    userFlowConfig,
+    topK,
+    parseWarning,
+  }
 }
 
 export const writeFilterQueryParams = (
@@ -269,6 +298,7 @@ export const writeFilterQueryParams = (
     granularity?: Granularity
     timeRange?: TimeRange
     breakdowns?: string[]
+    userFlowConfig?: UserFlowConfig
     topK?: TopKState
   },
 ) => {
@@ -283,6 +313,13 @@ export const writeFilterQueryParams = (
   setJSONParam(BREAKDOWNS_PARAM, opts?.breakdowns ?? [])
 
   setOrDelete(url, INSIGHT_TYPE_PARAM, opts?.insightType !== undefined ? String(opts.insightType) : undefined)
+  setOrDelete(
+    url,
+    USER_FLOW_PARAM,
+    opts?.insightType === InsightType.USER_FLOW && opts.userFlowConfig
+      ? JSON.stringify(serializeUserFlowConfig(opts.userFlowConfig))
+      : undefined,
+  )
   setOrDelete(url, TOP_K_PARAM, opts?.topK ? JSON.stringify(opts.topK) : undefined)
   setTimeGranularityParams(url, opts)
 
