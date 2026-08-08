@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { z } from 'zod'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
+import { EventFilterSchema, type PropertyFilter } from '@/api/genproto/common/v1/filters_pb'
 import {
   type UserFlowNode,
   UserFlowQuery_GroupBy,
@@ -53,14 +53,18 @@ const userFlowConfigShape = z.object({
   scope: userFlowScopeSchema,
 })
 
-// Mirrors the CEL constraint on UserFlowQuery.node_property.
+// Mirrors the spec-level CEL rule `insight_query_spec.user_flow_property_required`, which pairs
+// `node_property.size() > 0` with this pattern. Deliberately NOT the field-level constraint on
+// UserFlowQuery.node_property — that one ends in `*`, so it also admits the empty string an
+// event-kind flow sends, and copying it here would let an unsendable spec reach the wire.
 const NODE_PROPERTY_PATTERN = /^\$?[a-zA-Z0-9_.-]+$/
 
-// Why this config can't run yet, or null when it can. One source of truth for three consumers —
-// the query gate, the schema below, and the message the user reads — so a flow can never be
-// blocked without the UI being able to say why. This is the shape topKIncompleteReason
-// established; user flow previously returned a bare boolean, so a tile that couldn't run fell
-// through to "adjust the query above" on a dashboard that has no query above.
+// Why this config can't run yet, or null when it can. One source of truth for the query gate
+// (`isUserFlowConfigValid`), the dashboard replay path (`userFlowSpecIncompleteReason`) and the
+// message the user reads — so a flow can never be blocked without the UI being able to say why.
+// This is the shape topKIncompleteReason established; user flow previously returned a bare
+// boolean, so a tile that couldn't run fell through to "adjust the query above" on a dashboard
+// that has no query above.
 export const userFlowIncompleteReason = (config: UserFlowConfig): string | null => {
   if (config.nodeKind !== UserFlowQuery_NodeKind.PROPERTY) return null
   const property = config.nodeProperty.trim()
@@ -71,26 +75,27 @@ export const userFlowIncompleteReason = (config: UserFlowConfig): string | null 
   return null
 }
 
-// Runnable — the shape plus the constraints the backend enforces, so an incomplete config is
-// caught here rather than coming back as a protovalidate error from the wire.
-export const userFlowConfigSchema = userFlowConfigShape.superRefine((config, ctx) => {
-  const reason = userFlowIncompleteReason(config)
-  if (reason) ctx.addIssue({ code: z.ZodIssueCode.custom, message: reason, path: ['nodeProperty'] })
-})
-
-// Both entry points below funnel their enums through these, so a stored spec and a shared URL
-// can't disagree about what an out-of-range value means. groupBy is pinned rather than read:
-// GroupBy has only UNSPECIFIED and SESSION today, and everything downstream — the "sessions" unit
-// label, the node summaries — assumes sessions. Sending UNSPECIFIED would let the server pick.
+// Both entry points below funnel nodeKind through this, so a stored spec and a shared URL can't
+// disagree about what an out-of-range value means.
 const normalizeNodeKind = (kind: UserFlowQuery_NodeKind | undefined) =>
   kind === UserFlowQuery_NodeKind.PROPERTY ? UserFlowQuery_NodeKind.PROPERTY : UserFlowQuery_NodeKind.EVENT_KIND
 
-export const parseUserFlowConfig = (query?: {
+// A stored spec's user-flow query, as it arrives from the proto: every field optional, and scope
+// filters still in wire form.
+type UserFlowQueryInit = {
   nodeKind?: UserFlowQuery_NodeKind
   nodeProperty?: string
   groupBy?: UserFlowQuery_GroupBy
-  scope?: { kind?: string; filters?: Parameters<typeof fromProtoFilter>[0][] }
-}): UserFlowConfig => ({
+  scope?: { kind?: string; filters?: PropertyFilter[] }
+}
+
+// groupBy is pinned to SESSION at both parse boundaries rather than read from the input: GroupBy
+// has only UNSPECIFIED and SESSION today, and everything downstream — the "sessions" unit label,
+// the node summaries — assumes sessions, while UNSPECIFIED would let the server pick. Note the pin
+// lives in the two parsers, not in a helper: buildUserFlowQuery and serializeUserFlowConfig both
+// pass config.groupBy through verbatim, so a config built by some future path that skips both
+// parsers would not be covered. Add a real GroupBy member and this needs revisiting.
+export const parseUserFlowConfig = (query?: UserFlowQueryInit): UserFlowConfig => ({
   nodeKind: normalizeNodeKind(query?.nodeKind),
   nodeProperty: query?.nodeProperty ?? '',
   groupBy: UserFlowQuery_GroupBy.SESSION,
@@ -124,7 +129,7 @@ export const parseSerializedUserFlowConfig = (value: unknown): UserFlowConfig | 
 export const isUserFlowConfigValid = (config: UserFlowConfig) => userFlowIncompleteReason(config) === null
 
 // The dashboard replay path, which holds a stored spec rather than editor state.
-export const userFlowSpecIncompleteReason = (spec?: { userFlow?: Parameters<typeof parseUserFlowConfig>[0] }) => {
+export const userFlowSpecIncompleteReason = (spec?: { userFlow?: UserFlowQueryInit }) => {
   if (!spec?.userFlow) return 'Configure the flow to start'
   return userFlowIncompleteReason(parseUserFlowConfig(spec.userFlow))
 }
@@ -158,6 +163,13 @@ export type SankeyNodeDatum = {
   isOthers: boolean
 }
 
+// source/target are *indices into the sibling nodes array*, not ids — the layout reads them
+// positionally on every pass, and `noUncheckedIndexedAccess` is off, so the type asserts the
+// invariant rather than merely failing to express it. buildSankeyData is the only producer that
+// establishes it (both endpoints resolved through nodeIndex before the datum is built) and it also
+// guarantees `nodes[target].stepDepth === nodes[source].stepDepth + 1`. Hand-construct at your
+// peril: an out-of-range index does not throw, it silently drops the ribbon in layoutSankey's
+// final flatMap and leaves the flow accounting wrong.
 export type SankeyLinkDatum = {
   source: number
   target: number
@@ -169,6 +181,29 @@ export type SankeyLinkDatum = {
 export type SankeyChartData = {
   nodes: SankeyNodeDatum[]
   links: SankeyLinkDatum[]
+}
+
+// What `buildSankeyData` produces: the drawable graph, plus how much of the response it could not
+// represent. Both counts have to travel with the data rather than only reaching a log, because the
+// flow accounting downstream is derived from the survivors alone and stays internally consistent
+// while understating — there is nothing in the rendered chart for a reader to be suspicious of.
+export type SankeyGraph = SankeyChartData & {
+  droppedLinks: number
+  collapsedNodes: number
+}
+
+// Why this graph cannot be trusted in full, or null when it can. The chart renders it as a caption
+// so the numbers are never read as exact.
+export const sankeyIncompleteReason = ({ droppedLinks, collapsedNodes }: SankeyGraph) => {
+  const parts = []
+  if (droppedLinks > 0) {
+    parts.push(`${droppedLinks} ${droppedLinks === 1 ? 'transition' : 'transitions'} could not be drawn`)
+  }
+  if (collapsedNodes > 0) {
+    parts.push(`${collapsedNodes} duplicate ${collapsedNodes === 1 ? 'step was' : 'steps were'} merged`)
+  }
+  if (parts.length === 0) return null
+  return `${parts.join(' and ')} — flow totals may be incomplete`
 }
 
 // The overflow bucket is identified by is_others (never by id/label string).
@@ -187,41 +222,51 @@ const nodeLabel = (node: UserFlowNode) => (node.isOthers ? 'Others' : node.label
 const spansOneStep = (nodes: SankeyNodeDatum[], link: SankeyLinkDatum) =>
   nodes[link.target].stepDepth === nodes[link.source].stepDepth + 1
 
-export const buildSankeyData = (result: UserFlowResult): SankeyChartData => {
+export const buildSankeyData = (result: UserFlowResult): SankeyGraph => {
   const nodeIndex = new Map<string, number>()
+  let collapsedNodes = 0
   const nodes = result.nodes.map((node, index) => {
+    // Ids are contracted unique per (depth, label), so a duplicate is a server bug — and the only
+    // one that misattributes rather than omits. The map is last-wins, so two steps collapse into
+    // one and every link that named the first is silently re-pointed at the second, drawing a real
+    // ribbon into a differently-labelled node. It costs no dropped link, so counting drops alone
+    // reports a clean graph.
+    if (nodeIndex.has(node.id)) collapsedNodes++
     nodeIndex.set(node.id, index)
     return { id: node.id, name: nodeLabel(node), stepDepth: node.depth, isOthers: node.isOthers }
   })
 
-  let dropped = 0
+  let droppedLinks = 0
   const links = result.links.flatMap(link => {
     const source = nodeIndex.get(link.source)
     const target = nodeIndex.get(link.target)
     if (source === undefined || target === undefined) {
-      dropped++
+      droppedLinks++
       return []
     }
     const value = Number(link.value)
     if (!Number.isFinite(value) || value <= 0) {
-      dropped++
+      droppedLinks++
       return []
     }
     const datum = { source, target, value, sourceName: nodes[source].name, targetName: nodes[target].name }
     if (!spansOneStep(nodes, datum)) {
-      dropped++
+      droppedLinks++
       return []
     }
     return [datum]
   })
 
-  // Dropping a link is not cosmetic: the node summaries derive "continued" and "ended" by
-  // subtracting outbound flow from inbound, over exactly these survivors. Quietly losing one
+  // Losing either of these is not cosmetic: the node summaries derive "continued" and "ended" by
+  // subtracting outbound flow from inbound, over exactly these survivors. Quietly dropping a link
   // overstates the drop-off at its source, and the chart stays internally consistent while doing
-  // it — so say something rather than let a wrong number be read as a fact.
-  if (dropped > 0) {
-    console.warn(`user flow: dropped ${dropped} of ${result.links.length} links; transition counts may understate`)
+  // it. The console line is a breadcrumb for whoever chases the mismatch; the counts on the return
+  // are what let the UI tell the person reading the chart, which is the part that matters.
+  if (droppedLinks > 0 || collapsedNodes > 0) {
+    console.warn(
+      `user flow: dropped ${droppedLinks} of ${result.links.length} links, ${collapsedNodes} duplicate node ids`,
+    )
   }
 
-  return { nodes, links }
+  return { nodes, links, droppedLinks, collapsedNodes }
 }
