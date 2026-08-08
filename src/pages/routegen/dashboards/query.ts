@@ -17,12 +17,7 @@ import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
 import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
-import {
-  buildUserFlowQuery,
-  DEFAULT_USER_FLOW_CONFIG,
-  parseUserFlowConfig,
-  type UserFlowConfig,
-} from '../insights/user-flow'
+import { buildUserFlowQuery, parseUserFlowConfig, type UserFlowConfig } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
 export type InsightEditorState = {
@@ -124,14 +119,18 @@ export const buildInsightSpec = ({
   validEntries,
   propFilters,
   breakdowns,
-  userFlowConfig = DEFAULT_USER_FLOW_CONFIG,
+  userFlowConfig,
   topK,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
   breakdowns: string[]
-  userFlowConfig?: UserFlowConfig
+  // Required, unlike topK: defaulting it would substitute a *valid* event-kind flow for a caller
+  // that forgot to pass one, producing a runnable-looking spec nobody asked for. The read gate
+  // catches an incomplete config and explains it; it cannot catch a plausible wrong one.
+  // InsightEditorState always carries one, so no caller has to invent it.
+  userFlowConfig: UserFlowConfig
   topK?: TopKState
 }) => {
   const filterGroups =

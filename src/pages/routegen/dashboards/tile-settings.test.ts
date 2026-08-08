@@ -33,6 +33,19 @@ describe('dashboard legend position', () => {
   })
 })
 
+// The display picker stops a *new* tile reaching this combination, but viewMode and insightType
+// are independent fields on one persisted message, so a tile saved before the picker was split —
+// or written straight to the API — still arrives here.
+describe('dashboard sankey view mode', () => {
+  it('is preserved on read but never selects a chart of its own', () => {
+    expect(DASHBOARD_TILE_VIEW_MODES).not.toContainEqual({ label: 'Sankey', value: DashboardTileViewMode.SANKEY })
+    expect(getInitialDashboardTileViewMode(DashboardTileViewMode.SANKEY)).toBe(DashboardTileViewMode.SANKEY)
+    // Degrades to a line chart rather than falling through the chart switch into grouped bars,
+    // which is what a trends tile left on SANKEY used to draw under a chip reading "Sankey".
+    expect(dashboardTileViewModeToViewMode(DashboardTileViewMode.SANKEY)).toBe('line')
+  })
+})
+
 describe('dashboard pie view mode', () => {
   it('is selectable, preserved, and mapped to the pie renderer', () => {
     expect(DASHBOARD_TILE_VIEW_MODES).toContainEqual({ label: 'Pie', value: DashboardTileViewMode.PIE })

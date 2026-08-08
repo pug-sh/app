@@ -13,7 +13,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
-import { DASHBOARD_TILE_VIEW_MODES, resolveDashboardLegendPosition, USER_FLOW_TILE_VIEW_MODES } from '../tile-settings'
+import {
+  DASHBOARD_TILE_VIEW_MODES,
+  DEFAULT_DASHBOARD_TILE_VIEW_MODE,
+  resolveDashboardLegendPosition,
+  USER_FLOW_TILE_VIEW_MODES,
+} from '../tile-settings'
 import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'
 
@@ -40,6 +45,14 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
 
   const isUserFlow = tile.content.case === 'insight' && tile.content.value.spec?.insightType === InsightType.USER_FLOW
   const viewModeOptions = isUserFlow ? USER_FLOW_TILE_VIEW_MODES : DASHBOARD_TILE_VIEW_MODES
+  // viewMode and insightType are independent fields on one persisted message, so a tile saved by
+  // an older build (or written straight to the API) can hold a combination this list has no entry
+  // for. OptionChip falls back to String(value) on a miss, which puts a bare enum number — "view
+  // 7" — on screen. Show what the tile actually renders as instead; the Data tab reconciles the
+  // stored value the next time any editor state changes.
+  const viewModeValue = viewModeOptions.some(option => option.value === tile.viewMode)
+    ? tile.viewMode
+    : (viewModeOptions[0]?.value ?? DEFAULT_DASHBOARD_TILE_VIEW_MODE)
   const { showViewMode, showKpiOptions, showLegendOption, showPieLabelOption } = tileOptionApplicability(tile)
 
   return (
@@ -49,7 +62,7 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
           <OptionChip
             label="view"
             options={viewModeOptions}
-            value={tile.viewMode}
+            value={viewModeValue}
             onChange={next => onPatch({ viewMode: next })}
           />
         </Section>

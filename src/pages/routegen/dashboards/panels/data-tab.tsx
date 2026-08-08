@@ -27,6 +27,14 @@ type DataTabProps = {
   onPatch: (patch: Partial<DashboardTile>) => void
 }
 
+// Each insight type puts something different in this section, and "Events" is actively wrong for
+// the two that carry none.
+const sectionLabel = (insightType: InsightType) => {
+  if (insightType === InsightType.TOP_K) return 'Ranking'
+  if (insightType === InsightType.USER_FLOW) return 'Flow'
+  return 'Events'
+}
+
 const COMPARE_OPTIONS = [
   { label: 'No compare', value: ComparePeriod.UNSPECIFIED },
   { label: 'Prior period', value: ComparePeriod.PRIOR },
@@ -70,10 +78,21 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     resetEntries(entries.slice(0, cap))
   }, [insightType, store, filtersAtom, resetEntries])
 
+  const isUserFlow = insightType === InsightType.USER_FLOW
+
+  // User flow narrows by its scope event, if it has one; every other insight type narrows by the
+  // events in its rows. Reading the rows for a user-flow tile would intersect property keys across
+  // event rows it no longer displays and never sends — silently truncating the property list with
+  // the event bar that would explain it off screen. Same rule as the Insights page.
+  const schemaEventKinds = () => {
+    if (!isUserFlow) return eventFilters.entries.map(entry => entry.kind)
+    return userFlowConfig.scope.kind ? [userFlowConfig.scope.kind] : []
+  }
+
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
-    selectedEventKinds: eventFilters.entries.map(entry => entry.kind),
+    selectedEventKinds: schemaEventKinds(),
   })
 
   useEffect(() => {
@@ -102,6 +121,14 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     // mutation of the same tile from outside the panel will not re-seed local
     // editor state — DataTab is keyed by tile.id so cross-tile switches do
     // re-seed cleanly.
+    //
+    // The viewMode reconciliation above reads `tile.viewMode` as a decision input, not just as a
+    // guard, so it is worth being explicit that the exclusion is still safe: React rebuilds this
+    // closure every render and only *runs* the newest one, so the read is never stale, and the
+    // silent patch lands synchronously in the draft the `tile` prop derives from. What the
+    // exclusion does mean is that the reconciliation is fire-and-forget — a viewMode changed from
+    // outside this tab is not corrected until some editor state here changes. Harmless only
+    // because the Display tab offers a user-flow tile no view but Sankey.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
   }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, userFlowConfig, topK])
 
@@ -148,7 +175,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
         />
       </Section>
 
-      <Section label={insightType === InsightType.TOP_K ? 'Ranking' : 'Events'}>
+      <Section label={sectionLabel(insightType)}>
         {insightType === InsightType.USER_FLOW ? (
           <UserFlowControls
             config={userFlowConfig}
