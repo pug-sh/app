@@ -5,7 +5,12 @@ import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
-import { AggregationType, Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  Granularity,
+  InsightType,
+  UserFlowQuery_NodeKind,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
@@ -60,13 +65,7 @@ import {
 } from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
-import {
-  buildUserFlowQuery,
-  DEFAULT_USER_FLOW_CONFIG,
-  isUserFlowConfigValid,
-  type UserFlowConfig,
-  userFlowIncompleteReason,
-} from './user-flow'
+import { buildUserFlowQuery, isUserFlowConfigValid, userFlowIncompleteReason } from './user-flow'
 import { UserFlowControls } from './user-flow-controls'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
@@ -125,9 +124,8 @@ const Insights = () => {
   const [insightType, setInsightType] = useState(() => getInitialInsightType(initialFilterState.insightType))
   const [granularity, setGranularity] = useState(() => getInitialGranularity(initialFilterState.granularity))
   const [viewMode, setViewMode] = useState<ViewMode>('line')
-  const [userFlowConfig, setUserFlowConfig] = useState<UserFlowConfig>(
-    () => initialFilterState.userFlowConfig ?? DEFAULT_USER_FLOW_CONFIG,
-  )
+  // readFilterQueryParams always resolves this, falling back to the default itself.
+  const [userFlowConfig, setUserFlowConfig] = useState(() => initialFilterState.userFlowConfig)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
@@ -309,11 +307,19 @@ const Insights = () => {
       // and the 300ms debounce collapses keystrokes — so no dedup is needed here. Shape only, never
       // filter values: insightType/counts answer "what kinds of insights get run, how complex"
       // without carrying a customer's property values (which is why $url drops the query string).
+      // Counts describe what was *sent*, not what the editor happens to be holding. User flow sends
+      // no events and no breakdowns (the backend rejects both), so reporting the rows left over
+      // from a previous insight type biased the shape by whatever preceded it. nodeKind is the
+      // dimension that actually distinguishes one user-flow query from another, and it is a
+      // category rather than a value.
       trackEvent('insight_queried', {
         insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
-        eventCount: isTopK ? 1 : validEntries.length,
-        breakdownCount: breakdowns.length,
+        eventCount: isUserFlow ? 0 : isTopK ? 1 : validEntries.length,
+        breakdownCount: isUserFlow ? 0 : breakdowns.length,
         hasGlobalFilters: globalFilters.length > 0,
+        ...(isUserFlow
+          ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
+          : {}),
       })
       return resp.result
     },

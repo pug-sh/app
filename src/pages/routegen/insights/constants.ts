@@ -52,10 +52,10 @@ export const eventEntryCap = (insightType: InsightType): number | undefined => {
 }
 
 // Every member here is a trends chart that `renderChart` can draw. There is deliberately no
-// 'sankey': user-flow charts render from `resultCase === 'userFlow'`, not from viewMode, so a
-// member for them would be a value the chart switch has no branch for — which is exactly how a
-// trends tile set to Sankey ended up silently drawing bars. DashboardTileViewMode.SANKEY still
-// exists for persistence; it maps to the default here.
+// 'sankey': content.tsx routes a user-flow chart on its insight type or result case, before the
+// chart switch is reached, so a member for them would be a value that switch has no branch for —
+// which is exactly how a trends tile set to Sankey ended up silently drawing bars.
+// DashboardTileViewMode.SANKEY still exists for persistence; it maps to the default here.
 export type ViewMode = 'line' | 'area' | 'bar-grouped' | 'bar-stacked' | 'pie' | 'table'
 
 export const VIEW_MODES: readonly { label: string; value: ViewMode }[] = [
