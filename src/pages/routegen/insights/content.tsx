@@ -31,7 +31,7 @@ import {
   TopKList,
 } from './charts'
 import { EMPTY_ARRAY, type ViewMode } from './constants'
-import { buildSankeyData } from './user-flow'
+import { buildSankeyData, sankeyIncompleteReason } from './user-flow'
 
 export const InsightsContent = memo(function InsightsContent({
   error,
@@ -151,7 +151,9 @@ export const InsightsContent = memo(function InsightsContent({
   const userFlowData = useMemo(() => (userFlowResult ? buildSankeyData(userFlowResult) : undefined), [userFlowResult])
 
   const emptyStateHint = () => {
-    if (showUserFlow) return 'Adjust the query above to explore transitions'
+    // A dashboard tile has no query above it, which is the whole reason userFlowIncompleteReason
+    // exists — so the loading branch must not reintroduce the sentence that fix removed.
+    if (showUserFlow) return compact ? 'Loading flow' : 'Adjust the query above to explore transitions'
     if (isTopK) return 'Loading ranking'
     return 'Pick an event above to start'
   }
@@ -290,11 +292,38 @@ export const InsightsContent = memo(function InsightsContent({
       )
     }
     if (!userFlowResult || !userFlowData) return renderLoadingEmptyState()
+
     // Ask the built graph, not the response: buildSankeyData drops links whose endpoints don't
-    // resolve or whose value isn't positive, so a non-empty response can still have nothing to
-    // draw. Guarding on the raw count let that case fall through to a chart with no chart in it.
-    if (userFlowData.links.length === 0) return renderNoEvents()
-    return <SankeyChart data={userFlowData} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
+    // resolve, whose count isn't positive, or that don't advance exactly one step, so a non-empty
+    // response can still have nothing to draw. Guarding on the raw count let that case fall
+    // through to a chart with no chart in it.
+    const degraded = sankeyIncompleteReason(userFlowData)
+    if (userFlowData.links.length === 0) {
+      // "No transitions recorded in this period" is only true when the server sent none. Saying it
+      // over transitions we merely failed to read tells the reader their sessions are single-event
+      // bounces — a wrong, actionable conclusion, and the worst thing this chart can claim.
+      if (!degraded) return renderNoEvents()
+      return (
+        <div
+          className={
+            compact
+              ? 'flex h-full min-h-32 items-center justify-center text-muted-foreground'
+              : 'flex h-48 items-center justify-center text-muted-foreground'
+          }
+        >
+          <p className="max-w-xs text-center text-sm">This flow could not be drawn — {degraded}</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <SankeyChart data={userFlowData} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
+        {/* The chart is internally consistent about numbers that understate, so there is nothing in
+            it to be suspicious of. Same slot and treatment as the breakdown truncation notice. */}
+        {degraded ? <p className="mt-2 text-xs text-muted-foreground">{degraded}</p> : null}
+      </>
+    )
   }
 
   const renderTopKContent = () => {
