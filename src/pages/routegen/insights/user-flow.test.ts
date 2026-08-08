@@ -253,4 +253,19 @@ describe('buildUserFlowQuery', () => {
   it('omits the scope entirely when no event is chosen', () => {
     expect(buildUserFlowQuery(DEFAULT_USER_FLOW_CONFIG).scope).toBeUndefined()
   })
+
+  // The gate trims before testing the pattern, so a padded name is judged runnable. Sending it
+  // verbatim then fails the CEL rule the pattern mirrors — the local check exists precisely to
+  // stop that reaching the wire. scope.kind is already trimmed on the way out; this matches it.
+  // Not reachable from the property picker, but a shared URL carries whatever it was given.
+  it('trims a padded property name so the gate and the wire agree', () => {
+    const padded: UserFlowConfig = {
+      ...DEFAULT_USER_FLOW_CONFIG,
+      nodeKind: UserFlowQuery_NodeKind.PROPERTY,
+      nodeProperty: '  $utm_source  ',
+    }
+
+    expect(userFlowIncompleteReason(padded)).toBeNull()
+    expect(buildUserFlowQuery(padded).nodeProperty).toBe('$utm_source')
+  })
 })

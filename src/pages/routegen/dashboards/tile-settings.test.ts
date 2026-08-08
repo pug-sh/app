@@ -38,7 +38,14 @@ describe('dashboard legend position', () => {
 // or written straight to the API — still arrives here.
 describe('dashboard sankey view mode', () => {
   it('is preserved on read but never selects a chart of its own', () => {
-    expect(DASHBOARD_TILE_VIEW_MODES).not.toContainEqual({ label: 'Sankey', value: DashboardTileViewMode.SANKEY })
+    // On the value, not the whole entry: a deep match against { label, value } also pins the label,
+    // so re-adding Sankey under a different one would leave this green while the tile is selectable
+    // again. Widened first because the list is `as const` — TS narrows its value union to the seven
+    // members it holds, which makes a direct comparison against SANKEY a provably-false TS2367. That
+    // compile error is the real guarantee; this assertion is what survives the list losing `as
+    // const`, which would take the compile-time proof with it.
+    const options: readonly { value: DashboardTileViewMode }[] = DASHBOARD_TILE_VIEW_MODES
+    expect(options.some(option => option.value === DashboardTileViewMode.SANKEY)).toBe(false)
     expect(getInitialDashboardTileViewMode(DashboardTileViewMode.SANKEY)).toBe(DashboardTileViewMode.SANKEY)
     // Degrades to a line chart rather than falling through the chart switch into grouped bars,
     // which is what a trends tile left on SANKEY used to draw under a chip reading "Sankey".

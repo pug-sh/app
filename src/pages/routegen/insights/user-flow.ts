@@ -138,7 +138,11 @@ export const buildUserFlowQuery = (config: UserFlowConfig) => {
   const scopeKind = config.scope.kind.trim()
   return create(UserFlowQuerySchema, {
     nodeKind: config.nodeKind,
-    nodeProperty: config.nodeKind === UserFlowQuery_NodeKind.PROPERTY ? config.nodeProperty : '',
+    // Trimmed for the same reason scope.kind is: userFlowIncompleteReason trims before testing
+    // NODE_PROPERTY_PATTERN, so a padded name is judged runnable here and then rejected by the CEL
+    // rule that pattern mirrors. Sending it verbatim is the one way this local gate can pass and
+    // the wire still fail.
+    nodeProperty: config.nodeKind === UserFlowQuery_NodeKind.PROPERTY ? config.nodeProperty.trim() : '',
     groupBy: config.groupBy,
     scope: scopeKind
       ? create(EventFilterSchema, {
