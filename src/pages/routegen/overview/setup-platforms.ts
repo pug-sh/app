@@ -12,6 +12,9 @@ import nodejsIcon from 'devicon/icons/nodejs/nodejs-original.svg?url'
 // SDK omits it: the secret private key is project-scoped, and track() takes the distinctId first
 // since a server has no ambient user.
 //
+// Only the web snippet seeds `trackingConsent: 'granted'`, because it's the only one that calls
+// identify(), which silently no-ops under the SDK's 'cookieless' default.
+//
 // The `script` platform is the same @pug-sh/browser SDK loaded from the CDN with no bundler: the
 // loader snippet (stubs the API, queues early calls, then pug.init) and the one-tag install
 // (declarative data-* attributes, for pages under a strict CSP that forbids inline script). Both
@@ -79,18 +82,16 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
       {
         label: 'Initialize & track',
         credential: 'public',
-        code: (projectId, publicKey) => `import { init, identify, setTrackingConsent, track } from '@pug-sh/browser'
+        code: (projectId, publicKey) => `import { init, identify, track } from '@pug-sh/browser'
 
-init('${projectId}', { apiKey: '${publicKey}' })
-
-// Track what they do
-track('signed_up', { plan: 'pro' })
-
-// identify() is a no-op until consent is granted — call this from your banner
-setTrackingConsent('granted')
+// Using a consent banner? Drop trackingConsent and call setTrackingConsent('granted') from it
+init('${projectId}', { apiKey: '${publicKey}', trackingConsent: 'granted' })
 
 // Tie events to a user once they sign in
-identify('user_123', { email: 'ada@example.com', plan: 'pro' })`,
+identify('user_123', { email: 'ada@example.com', plan: 'pro' })
+
+// Track what they do
+track('signed_up', { plan: 'pro' })`,
       },
     ],
   },
