@@ -25,7 +25,10 @@ const addOp = (displayName: string, violations: string[] = []) =>
 
 const updateOp = (tileId: string, displayName: string, violations: string[] = []) =>
   create(TileOpSchema, {
-    op: { case: 'update', value: { tileId, tile: { displayName, content: { case: 'markdown', value: { body: 'y' } } } } },
+    op: {
+      case: 'update',
+      value: { tileId, tile: { displayName, content: { case: 'markdown', value: { body: 'y' } } } },
+    },
     violations,
   } as never)
 

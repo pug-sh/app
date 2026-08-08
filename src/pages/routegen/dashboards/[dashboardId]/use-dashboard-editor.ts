@@ -13,6 +13,7 @@ import { canAtom } from '@/auth/permissions'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom } from '../../events/filter-schema.atoms'
+import { applyOpToDashboard, nextFlaggedIds } from '../assistant-ops'
 import { pendingEditDashboardIdAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import {
   appendDraftTile,
@@ -27,7 +28,6 @@ import { clearDraftKey, draftAtomFamily } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
 import type { DashboardLayouts } from '../grid'
 import { buildTemplateContext, type TileTemplate } from '../templates'
-import { applyOpToDashboard, nextFlaggedIds } from '../assistant-ops'
 import { buildUpsertRequest } from '../upsert-dashboard'
 import { useEditorShortcuts } from '../use-editor-shortcuts'
 
