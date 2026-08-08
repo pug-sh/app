@@ -4,6 +4,7 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import type { SankeyChartData } from '../user-flow'
+import { AXIS_LABEL_PX_PER_CHAR } from './helpers'
 import { layoutSankey, sankeyExtent, sankeyLinkPath } from './sankey-layout'
 
 const NODE_WIDTH = 12
@@ -12,14 +13,21 @@ const PADDING_Y = 16
 // Gap between a node and its label.
 const LABEL_OFFSET = 6
 
-// An UPPER bound on per-character width at text-xs, not an average — the same figure the axis
-// fitter calibrates to for this face. It has to be an upper bound because the gutter and the
-// truncation threshold are both derived from it, so they cancel: the longest label is sized a
-// gutter of exactly its own width and can therefore never be ellipsized. Under an average, a
-// wider-than-average name silently overflowed past the SVG edge with no ellipsis to show for it;
-// over an upper bound, it always fits. Truncation then only fires when MAX_GUTTER_RATIO caps the
-// gutter, which is the case it is actually for. **Re-measure on a font change.**
-const LABEL_PX_PER_CHAR = 7.0
+// An UPPER bound on per-character width at text-xs, not an average — shared with the axis fitter
+// so the two cannot be re-measured apart. It has to be an upper bound because the gutter and the
+// truncation threshold are both derived from it, so on the **end columns** they cancel exactly:
+// widestAt() sizes a gutter of chars * PX_PER_CHAR (+ the offsets labelWidth then subtracts back),
+// so the longest name in those columns is never ellipsized. Under an average, a wider-than-average
+// name silently overflowed past the SVG edge with no ellipsis to show for it.
+//
+// The cancellation does NOT extend to middle columns: those read into the gap before the next
+// column (labelWidth's third branch), which is set by column spacing and knows nothing about label
+// length. At the MIN_COLUMN_WIDTH floor that is 146px, so a middle name past ~20 characters is
+// ellipsized — expected, and the second reason truncation fires alongside the MAX_GUTTER_RATIO cap.
+//
+// **Re-measure on a font change**, against the widest realistic label rather than a typical one:
+// the 7.0 is Figtree's all-digit clock, and uppercase-heavy property values run wider still.
+const LABEL_PX_PER_CHAR = AXIS_LABEL_PX_PER_CHAR
 const MIN_GUTTER = 72
 // Past this the labels start costing the flow more room than they are worth.
 const MAX_GUTTER_RATIO = 0.24
@@ -35,10 +43,14 @@ const MIN_COLUMN_WIDTH = 170
 // to dim a row that is fully in view.
 const FADE_PX = 28
 
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
+
 const truncateLabel = (text: string, maxPx: number) => {
-  // The epsilon is not cosmetic: a gutter sized as chars * PX_PER_CHAR divides back by the same
-  // constant, and binary floating point can land just under the integer, so a name the gutter was
-  // sized exactly for would be ellipsized anyway.
+  // The epsilon is insurance, not a fix for an observed failure: a gutter sized as
+  // chars * PX_PER_CHAR divides back by the same constant, and at 7.0 that round-trips exactly for
+  // every realistic length. It exists because the constant is re-measured per font (6.5 / 7.2 /
+  // 6.7 / 7.0 so far), and a non-dyadic one can land a hair under the integer — ellipsizing a name
+  // the gutter was sized exactly for. Don't delete it after failing to reproduce the bug.
   const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR + 1e-6)
   if (text.length <= maxChars) return text
   if (maxChars <= 1) return '…'
@@ -76,6 +88,15 @@ export const SankeyChart = ({
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  // The hovered index is captured against a layout that a refetch rebuilds, and useDebouncedQuery
+  // keeps serving the old response until the new one lands, so the stale chart stays interactive.
+  // A resting cursor fires no mousemove to correct the index, and one that is still *in range*
+  // reports a different node's figures under the old node's name — the resolved-datum guard below
+  // only catches indices past the end. Clear it when the data changes.
+  useEffect(() => {
+    setHovered(null)
+  }, [sankeyData])
 
   // Which edges have content past them. Compared with a 1px slack because scrollHeight and
   // clientHeight are rounded independently and can disagree by a subpixel at the bottom,
@@ -125,12 +146,6 @@ export const SankeyChart = ({
     }
   }, [sankeyData, size.width, size.height, gutters])
 
-  // Re-check after the canvas resizes: growing the graph is what makes it scrollable in the
-  // first place, and that happens without a scroll event.
-  useEffect(() => {
-    syncEdges()
-  }, [syncEdges, canvas.height, size.height])
-
   // Fading the content rather than laying a coloured panel over it means the chart carries
   // no assumption about the surface behind it — it reads the same on a card, a tile, or the
   // canvas. Only the edges that actually have content past them fade.
@@ -156,6 +171,18 @@ export const SankeyChart = ({
     [sankeyData, canvas, gutters],
   )
 
+  // What the layout actually used, which is the estimate unless a lopsided column's band floors
+  // pushed a column past it. Sizing the SVG from the estimate is what clipped those bands, and
+  // because the scroll container measures the SVG, scrolling could not reach them either.
+  const drawnHeight = Math.max(canvas.height, layout.contentHeight)
+
+  // Re-check after the drawn height changes: growing the graph is what makes it scrollable in the
+  // first place, and that happens without a scroll event. Keyed on the height actually drawn, not
+  // the estimated one — a column that overflows only changes the former.
+  useEffect(() => {
+    syncEdges()
+  }, [syncEdges, drawnHeight, size.height])
+
   const nodeColors = useMemo(
     () => layout.nodes.map(node => getSeriesColor(node.name).line),
     [layout.nodes, resolvedTheme],
@@ -168,6 +195,7 @@ export const SankeyChart = ({
   const depths = layout.nodes.map(node => node.stepDepth)
   const firstDepth = depths.length > 0 ? Math.min(...depths) : 0
   const lastDepth = depths.length > 0 ? Math.max(...depths) : 0
+  const stepCount = depths.length > 0 ? lastDepth - firstDepth + 1 : 0
 
   // A middle column's label reads into the gap before the next column, which is far wider
   // than a gutter — sizing it by the gutter truncated names that had room to spare.
@@ -213,12 +241,12 @@ export const SankeyChart = ({
         onScroll={syncEdges}
         style={maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined}
       >
-        {canvas.width > 0 && canvas.height > 0 ? (
+        {canvas.width > 0 && drawnHeight > 0 ? (
           <svg
             width={canvas.width}
-            height={canvas.height}
+            height={drawnHeight}
             role="img"
-            aria-label={`User flow: ${layout.links.length} transitions across ${lastDepth - firstDepth + 1} steps`}
+            aria-label={`User flow: ${plural(layout.links.length, 'transition')} across ${plural(stepCount, 'step')}`}
           >
             <g>
               {layout.links.map((link, index) => (
@@ -280,8 +308,9 @@ export const SankeyChart = ({
 
       {/* The chart is role="img", so assistive technology never reaches the shapes inside it, and
           every ribbon and node is pointer-driven — there is nothing to tab to. This carries the
-          same figures the hover card shows, as text, which is the only route to them without a
-          mouse. Ordered by volume so the largest paths are read first. */}
+          hover card's *link* figures as text, which is the only route to them without a mouse.
+          Ordered by volume so the largest paths are read first. The card's per-node summary (step
+          number, and the continued/ended split) has no equivalent here yet. */}
       <ul className="sr-only">
         {[...layout.links]
           .sort((a, b) => b.value - a.value)
@@ -315,24 +344,43 @@ export const SankeyChart = ({
             </>
           ) : null}
 
-          {hoveredNode ? <NodeSummary node={hoveredNode} unitLabel={unitLabel} /> : null}
+          {hoveredNode ? (
+            <NodeSummary
+              node={hoveredNode}
+              unitLabel={unitLabel}
+              isEntryColumn={hoveredNode.stepDepth === firstDepth}
+              isTerminalColumn={hoveredNode.stepDepth === lastDepth}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>
   )
 }
 
-// Entry and terminal nodes have only one side, so each gets the sentence that is true for
-// it rather than a "0 continued" that reads like a bug.
+// Entry and terminal nodes have only one side, so each gets the sentence that is true for it
+// rather than a "0 continued" that reads like a bug.
+//
+// Every sentence here is qualified, because a missing side does not only mean "end of the flow".
+// buildSankeyData drops links it cannot draw, and a node whose inbound was dropped has inflow 0
+// while sitting mid-funnel — so position in the flow decides whether a missing side is a fact
+// about the data or a gap in it. Unqualified, this relabelled a middle step as the funnel's
+// start, and reported "All continued" over a step that shed sessions. Where the two disagree, say
+// nothing and let the chart's caption carry it.
 const NodeSummary = ({
   node,
   unitLabel,
+  isEntryColumn,
+  isTerminalColumn,
 }: {
   node: { name: string; stepDepth: number; inflow: number; outflow: number; value: number }
   unitLabel: string
+  isEntryColumn: boolean
+  isTerminalColumn: boolean
 }) => {
-  const ended = Math.max(node.inflow - node.outflow, 0)
-  const share = node.inflow > 0 ? Math.round((node.outflow / node.inflow) * 100) : null
+  const bothSides = node.inflow > 0 && node.outflow > 0
+  const ended = node.inflow - node.outflow
+  const share = node.inflow > 0 ? Math.round((node.outflow / node.inflow) * 100) : 0
 
   return (
     <>
@@ -341,16 +389,16 @@ const NodeSummary = ({
       <p className="mt-1 font-mono tabular-nums text-foreground">
         {compactNumber(node.value)} {unitLabel}
       </p>
-      {node.inflow === 0 ? <p className="mt-0.5 text-muted-foreground">Entry point</p> : null}
-      {node.inflow > 0 && node.outflow === 0 ? <p className="mt-0.5 text-muted-foreground">Flow ends here</p> : null}
-      {node.inflow > 0 && node.outflow > 0 && ended > 0 ? (
+      {isEntryColumn && node.inflow === 0 ? <p className="mt-0.5 text-muted-foreground">Entry point</p> : null}
+      {isTerminalColumn && node.inflow > 0 && node.outflow === 0 ? (
+        <p className="mt-0.5 text-muted-foreground">Flow ends here</p>
+      ) : null}
+      {bothSides && ended > 0 ? (
         <p className="mt-0.5 font-mono tabular-nums text-muted-foreground">
-          {compactNumber(node.outflow)} continued{share === null ? '' : ` (${share}%)`} · {compactNumber(ended)} ended
+          {compactNumber(node.outflow)} continued ({share}%) · {compactNumber(ended)} ended
         </p>
       ) : null}
-      {node.inflow > 0 && node.outflow > 0 && ended === 0 ? (
-        <p className="mt-0.5 text-muted-foreground">All continued</p>
-      ) : null}
+      {bothSides && ended === 0 ? <p className="mt-0.5 text-muted-foreground">All continued</p> : null}
     </>
   )
 }

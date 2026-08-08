@@ -50,9 +50,15 @@ export type LaidOutLink = SankeyLinkDatum & {
 export type SankeyLayout = {
   nodes: LaidOutNode[]
   links: LaidOutLink[]
+  // The height this layout actually occupies, padding included. Usually `options.height`, but the
+  // band floors below are applied *after* `scale` has been derived from that height, so they can
+  // only push a column past it. The caller must draw into this, not into what it measured — an
+  // SVG sized to the measurement clips the overflow, and since the scroll container's
+  // scrollHeight matches the SVG, there is no way to scroll to what was cut off.
+  contentHeight: number
 }
 
-const EMPTY: SankeyLayout = { nodes: [], links: [] }
+const EMPTY: SankeyLayout = { nodes: [], links: [], contentHeight: 0 }
 
 // What the graph is shaped like, before any pixels are decided. The chart sizes its scroll
 // canvas from this: the padding stack between a column's nodes is paid before any of them
@@ -104,8 +110,9 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
   const depths = [...columns.keys()].sort((a, b) => a - b)
   const firstDepth = depths[0]
   // Span, not maximum: a flow whose depths start at 2 still has its first column at the left
-  // edge. sankeyExtent measures the same way, and the two disagreeing would leave a third of the
-  // canvas blank with every ribbon running backwards.
+  // edge. sankeyExtent measures the same way, and the two disagreeing would compress the columns
+  // rightward and leave a third of the canvas blank. (Ribbons stay left-to-right regardless —
+  // every mapping of depth to x is monotonic, and spansOneStep guarantees target = source + 1.)
   const depthSpan = depths[depths.length - 1] - firstDepth
 
   // Biggest flow first, with the synthetic overflow bucket pinned to the bottom of its column.
@@ -175,17 +182,30 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
     Math.max(weight * scale, MIN_NODE_HEIGHT, stackHeight(outgoing.get(index)), stackHeight(incoming.get(index))),
   )
 
+  // Every column is measured before any is placed. The floors above can push a column past
+  // plotHeight, and the box the columns are centred in has to be the same one for all of them —
+  // centring the heavy column in its own overflowing height and the light ones in the original
+  // plotHeight would tear the flow apart vertically.
+  const columnHeights = new Map<number, number>()
+  for (const depth of depths) {
+    const column = columns.get(depth)
+    if (!column) continue
+    let columnHeight = Math.max(column.length - 1, 0) * options.nodePadding
+    for (const index of column) columnHeight += nodeHeights[index]
+    columnHeights.set(depth, columnHeight)
+  }
+  const usedPlotHeight = Math.max(plotHeight, ...columnHeights.values())
+
   const laidOutNodes = new Array<LaidOutNode>(nodes.length)
   for (const depth of depths) {
     const column = columns.get(depth)
     if (!column) continue
 
-    let columnHeight = Math.max(column.length - 1, 0) * options.nodePadding
-    for (const index of column) columnHeight += nodeHeights[index]
+    const columnHeight = columnHeights.get(depth) ?? 0
 
     // Lighter columns are centred rather than top-aligned, so the flow reads as a band
     // narrowing through the page instead of sagging away from a fixed top edge.
-    let y = options.paddingTop + Math.max((plotHeight - columnHeight) / 2, 0)
+    let y = options.paddingTop + Math.max((usedPlotHeight - columnHeight) / 2, 0)
     const x = columnX(depth)
     for (const index of column) {
       laidOutNodes[index] = {
@@ -243,7 +263,11 @@ export const layoutSankey = (data: SankeyChartData, options: SankeyLayoutOptions
   // Not filtered: link.source/target are indices into this array, and the chart compares them
   // against positions in it. Dropping an element would silently renumber every link — wrong
   // ribbons, wrong hover, no error. Every node lands in exactly one column, so it is dense.
-  return { nodes: laidOutNodes, links: laidOutLinks }
+  return {
+    nodes: laidOutNodes,
+    links: laidOutLinks,
+    contentHeight: options.paddingTop + usedPlotHeight + options.paddingBottom,
+  }
 }
 
 // Cubic with both control points at the horizontal midpoint: the ribbon leaves and enters

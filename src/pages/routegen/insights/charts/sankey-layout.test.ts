@@ -53,6 +53,24 @@ describe('layoutSankey columns', () => {
     expect(byName(layout, 'page_view').x).toBe(OPTIONS.paddingLeft)
     expect(byName(layout, 'purchase').x + OPTIONS.nodeWidth).toBe(OPTIONS.width - OPTIONS.paddingRight)
   })
+
+  // Every other fixture starts at stepDepth 0, which is exactly the case where normalising
+  // against the smallest depth and normalising against zero agree — so they cannot tell the two
+  // apart. sankeyExtent already measures the span, and the two disagreeing is what would leave a
+  // third of the canvas blank.
+  it('anchors the first column at the left edge even when the depths start late', () => {
+    const offset: SankeyChartData = {
+      nodes: [
+        { id: 'a2', name: 'page_view', stepDepth: 2, isOthers: false },
+        { id: 'b3', name: 'signup', stepDepth: 3, isOthers: false },
+      ],
+      links: [{ source: 0, target: 1, value: 10, sourceName: 'page_view', targetName: 'signup' }],
+    }
+    const layout = layoutSankey(offset, OPTIONS)
+
+    expect(byName(layout, 'page_view').x).toBe(OPTIONS.paddingLeft)
+    expect(byName(layout, 'signup').x + OPTIONS.nodeWidth).toBe(OPTIONS.width - OPTIONS.paddingRight)
+  })
 })
 
 describe('layoutSankey vertical scale', () => {
@@ -130,33 +148,59 @@ describe('layoutSankey flow accounting', () => {
   })
 })
 
-describe('layoutSankey skewed flow', () => {
-  // One dominant path plus a long tail of near-zero ones. The tail links each round up to
-  // MIN_LINK_THICKNESS while the tail *nodes* round up to MIN_NODE_HEIGHT independently, so a
-  // band sized only by its weight is far too short to anchor the ribbons attached to it.
-  const skewed: SankeyChartData = {
-    nodes: [
-      { id: 'a0', name: 'page_view', stepDepth: 0, isOthers: false },
-      { id: 'big', name: 'checkout', stepDepth: 1, isOthers: false },
-      ...Array.from({ length: 20 }, (_, i) => ({
-        id: `t${i}`,
-        name: `tail_${i}`,
-        stepDepth: 1,
-        isOthers: false,
-      })),
-    ],
-    links: [
-      { source: 0, target: 1, value: 100_000, sourceName: 'page_view', targetName: 'checkout' },
-      ...Array.from({ length: 20 }, (_, i) => ({
-        source: 0,
-        target: i + 2,
-        value: 1,
-        sourceName: 'page_view',
-        targetName: `tail_${i}`,
-      })),
-    ],
-  }
+// One dominant path plus a long tail of near-zero ones. The tail links each round up to
+// MIN_LINK_THICKNESS while the tail *nodes* round up to MIN_NODE_HEIGHT independently, so a
+// band sized only by its weight is far too short to anchor the ribbons attached to it.
+const skewed: SankeyChartData = {
+  nodes: [
+    { id: 'a0', name: 'page_view', stepDepth: 0, isOthers: false },
+    { id: 'big', name: 'checkout', stepDepth: 1, isOthers: false },
+    ...Array.from({ length: 20 }, (_, i) => ({
+      id: `t${i}`,
+      name: `tail_${i}`,
+      stepDepth: 1,
+      isOthers: false,
+    })),
+  ],
+  links: [
+    { source: 0, target: 1, value: 100_000, sourceName: 'page_view', targetName: 'checkout' },
+    ...Array.from({ length: 20 }, (_, i) => ({
+      source: 0,
+      target: i + 2,
+      value: 1,
+      sourceName: 'page_view',
+      targetName: `tail_${i}`,
+    })),
+  ],
+}
 
+// The mirror image of `skewed`: a long tail of near-zero sources converging on one node. The
+// outbound floor cannot see this shape at all — every tail node has a single ribbon, which any
+// 2px band holds — so only the *inbound* stack floor keeps the sink's band tall enough.
+const converging: SankeyChartData = {
+  nodes: [
+    ...Array.from({ length: 20 }, (_, i) => ({
+      id: `s${i}`,
+      name: `source_${i}`,
+      stepDepth: 0,
+      isOthers: false,
+    })),
+    { id: 'big', name: 'bulk', stepDepth: 0, isOthers: false },
+    { id: 'sink', name: 'checkout', stepDepth: 1, isOthers: false },
+  ],
+  links: [
+    ...Array.from({ length: 20 }, (_, i) => ({
+      source: i,
+      target: 21,
+      value: 1,
+      sourceName: `source_${i}`,
+      targetName: 'checkout',
+    })),
+    { source: 20, target: 21, value: 100_000, sourceName: 'bulk', targetName: 'checkout' },
+  ],
+}
+
+describe('layoutSankey skewed flow', () => {
   it('grows a band to hold the ribbons it anchors', () => {
     const layout = layoutSankey(skewed, OPTIONS)
 
@@ -188,6 +232,57 @@ describe('layoutSankey skewed flow', () => {
   })
 })
 
+describe('layoutSankey converging flow', () => {
+  // `skewed` is pure fan-out, so it cannot see the inbound half of the band floor: every tail
+  // node there has one inbound ribbon, which the 2px minimum already holds. Deleting
+  // stackHeight(incoming) from nodeHeights left that whole suite green. This is the shape that
+  // catches it — twenty 1px ribbons converging on a band worth a fraction of a pixel.
+  it('grows a band to hold the ribbons arriving at it', () => {
+    const layout = layoutSankey(converging, OPTIONS)
+    const sink = byName(layout, 'checkout')
+    const stacked = layout.links.reduce((sum, link) => sum + link.thickness, 0)
+
+    expect(sink.height).toBeGreaterThanOrEqual(stacked - 0.001)
+  })
+
+  it('keeps every ribbon inside the band it arrives at', () => {
+    const layout = layoutSankey(converging, OPTIONS)
+    const sink = byName(layout, 'checkout')
+
+    for (const link of layout.links) {
+      expect(link.targetY - link.thickness / 2).toBeGreaterThanOrEqual(sink.y - 0.001)
+      expect(link.targetY + link.thickness / 2).toBeLessThanOrEqual(sink.y + sink.height + 0.001)
+    }
+  })
+})
+
+describe('layoutSankey canvas fit', () => {
+  // The band floors round *up*, and they are applied after `scale` has already been derived from
+  // the height the caller measured — so a lopsided column can end up taller than the box it was
+  // measured for. The chart draws into an SVG of exactly that height and the container's
+  // scrollHeight matches it, so anything past the bottom edge is clipped with no way to scroll to
+  // it. The layout has to report the height it actually used.
+  it('reports a canvas tall enough to hold every band it laid out', () => {
+    const layout = layoutSankey(skewed, OPTIONS)
+    const lowestBand = Math.max(...layout.nodes.map(node => node.y + node.height))
+
+    expect(layout.contentHeight).toBeGreaterThanOrEqual(lowestBand + OPTIONS.paddingBottom)
+  })
+
+  it('leaves the canvas alone when the flow already fits', () => {
+    expect(layoutSankey(FLOW, OPTIONS).contentHeight).toBe(OPTIONS.height)
+  })
+
+  // Growing for the busiest column must not strand the lighter ones at the old centre.
+  it('centres every column in the grown canvas, not the measured one', () => {
+    const layout = layoutSankey(skewed, OPTIONS)
+    const source = byName(layout, 'page_view')
+    const plotMiddle = (layout.contentHeight - OPTIONS.paddingTop - OPTIONS.paddingBottom) / 2
+
+    expect(source.y + source.height / 2).toBeCloseTo(OPTIONS.paddingTop + plotMiddle, 1)
+  })
+})
+
 describe('layoutSankey ribbons', () => {
   it('keeps every ribbon inside the band of the node it leaves', () => {
     const layout = layoutSankey(FLOW, OPTIONS)
@@ -213,16 +308,26 @@ describe('layoutSankey degenerate input', () => {
   // gutters, so layoutSankey never sees 0x0. These pin the pure function's own contract, so a
   // future caller that does hand it an unmeasured box gets an empty layout rather than NaN
   // geometry that renders as invisible garbage.
+  // contentHeight is 0 rather than options.height so a caller that maxes its own estimate against
+  // it can't be talked into growing a canvas for a layout that drew nothing.
   it('returns nothing when the container has no size yet', () => {
-    expect(layoutSankey(FLOW, { ...OPTIONS, width: 0, height: 0 })).toEqual({ nodes: [], links: [] })
+    expect(layoutSankey(FLOW, { ...OPTIONS, width: 0, height: 0 })).toEqual({
+      nodes: [],
+      links: [],
+      contentHeight: 0,
+    })
   })
 
   it('returns nothing when the gutters exceed the width', () => {
-    expect(layoutSankey(FLOW, { ...OPTIONS, width: 120 })).toEqual({ nodes: [], links: [] })
+    expect(layoutSankey(FLOW, { ...OPTIONS, width: 120 })).toEqual({ nodes: [], links: [], contentHeight: 0 })
   })
 
   it('returns nothing when there are no links to draw', () => {
-    expect(layoutSankey({ nodes: FLOW.nodes, links: [] }, OPTIONS)).toEqual({ nodes: [], links: [] })
+    expect(layoutSankey({ nodes: FLOW.nodes, links: [] }, OPTIONS)).toEqual({
+      nodes: [],
+      links: [],
+      contentHeight: 0,
+    })
   })
 })
 
