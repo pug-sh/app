@@ -30,9 +30,12 @@ export const UserFlowScopeControls = ({
           value={scope.kind}
           onChange={kind => {
             const trimmed = kind.trim()
+            // Filters are scoped to the event kind they were built against, so they only survive
+            // a no-op change. Carrying them to a different kind would send property filters the
+            // new event may not have — silently changing the result, or failing validation.
             onChange({
               kind: trimmed,
-              filters: trimmed ? scope.filters : [],
+              filters: trimmed === scope.kind.trim() ? scope.filters : [],
             })
           }}
           events={events ?? []}

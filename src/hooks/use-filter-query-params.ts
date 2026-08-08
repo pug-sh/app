@@ -267,11 +267,15 @@ export const readFilterQueryParams = (search = window.location.search) => {
   // of silently falling back to the default ranking.
   if (hasTk && params.get(TOP_K_PARAM) && !topK) warnings.push('ranking')
 
-  const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
-
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
   const rawUserFlow = parseJSONParam(params.get(USER_FLOW_PARAM))
-  const userFlowConfig = parseSerializedUserFlowConfig(rawUserFlow) ?? DEFAULT_USER_FLOW_CONFIG
+  const restoredUserFlow = parseSerializedUserFlowConfig(rawUserFlow)
+  const userFlowConfig = restoredUserFlow ?? DEFAULT_USER_FLOW_CONFIG
+  // Same rule as `tk` above. This has to be collected before `parseWarning` is assembled — it
+  // used to sit below it, so a warning pushed here could never reach the toast.
+  if (params.get(USER_FLOW_PARAM) && !restoredUserFlow) warnings.push('user flow')
+
+  const parseWarning = warnings.length > 0 ? `Could not restore ${warnings.join(' and ')} from URL` : null
 
   return {
     eventFilters,

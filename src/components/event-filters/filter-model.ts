@@ -1,4 +1,5 @@
-import type { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import { z } from 'zod'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 
 export type ActiveFilter =
@@ -6,6 +7,23 @@ export type ActiveFilter =
   | { property: string; source: PropertySource; operator: FilterOperator; kind: 'multi'; values: string[] }
   | { property: string; source: PropertySource; operator: FilterOperator; kind: 'presence' }
   | { property: string; source: PropertySource; operator: FilterOperator; kind: 'range'; min: string; max: string }
+
+// Validates a filter arriving from outside the app — a shared URL, a stored tile spec. The arity
+// has to be checked per arm, not just the discriminant: `toProtoFilters` switches on `kind` and
+// reads the payload that arm implies, so a `multi` filter with no `values` produces a filter
+// message with an undefined field and a query that is wrong rather than rejected.
+const activeFilterFields = {
+  property: z.string().min(1),
+  source: z.nativeEnum(PropertySource),
+  operator: z.nativeEnum(FilterOperator),
+}
+
+export const activeFilterSchema = z.discriminatedUnion('kind', [
+  z.object({ ...activeFilterFields, kind: z.literal('single'), value: z.string() }),
+  z.object({ ...activeFilterFields, kind: z.literal('multi'), values: z.array(z.string()) }),
+  z.object({ ...activeFilterFields, kind: z.literal('presence') }),
+  z.object({ ...activeFilterFields, kind: z.literal('range'), min: z.string(), max: z.string() }),
+])
 
 export const FILTER_OPERATORS: readonly {
   value: FilterOperator
