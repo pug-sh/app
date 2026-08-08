@@ -42,4 +42,16 @@ describe('maskEventUrls', () => {
 
     expect(masked.customProperties).toEqual({ action: 42 })
   })
+
+  // `form.action` reflects raw attribute text when the browser can't parse it, so this is reachable
+  // — and a throw here costs the whole event, not just the one URL.
+  it('blanks a URL too malformed to parse', () => {
+    const masked = maskEventUrls(
+      event({ $url: 'http://[', $referrer: 'https://%' }, { action: 'http://a b' }, 'form_submit'),
+    )
+
+    expect(masked.autoProperties.$url).toBe('')
+    expect(masked.autoProperties.$referrer).toBe('')
+    expect(masked.customProperties).toEqual({ action: '' })
+  })
 })

@@ -51,11 +51,16 @@ export const sanitizeUrl = (raw: string) => {
   // '' is a referrer-less page view — resolving it against the origin would fabricate a self-referral.
   if (!raw) return raw
 
-  const url = new URL(raw, window.location.origin)
-  url.search = ''
-  url.hash = ''
-  url.pathname = maskPath(url.pathname)
-  return url.toString()
+  try {
+    const url = new URL(raw, window.location.origin)
+    url.search = ''
+    url.hash = ''
+    url.pathname = maskPath(url.pathname)
+    return url.toString()
+  } catch {
+    // A URL we can't parse is one we can't mask, so it's dropped rather than passed through.
+    return ''
+  }
 }
 
 // Every URL the SDK sends. The first two are auto-properties present on every event; a form's
