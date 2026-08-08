@@ -22,7 +22,7 @@ import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { topKSpecIncompleteReason } from '../insights/top-k'
-import { isUserFlowConfigValid, parseUserFlowConfig } from '../insights/user-flow'
+import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
@@ -36,7 +36,7 @@ import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregati
 const queryReady = (query: QueryRequest) => {
   const spec = query.spec
   if (spec?.insightType === InsightType.USER_FLOW) {
-    return isUserFlowConfigValid(parseUserFlowConfig(spec.userFlow))
+    return !userFlowSpecIncompleteReason(spec)
   }
   if (spec?.insightType === InsightType.TOP_K) {
     return !topKSpecIncompleteReason(spec)

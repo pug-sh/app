@@ -60,7 +60,13 @@ import {
 } from './helpers'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
-import { buildUserFlowQuery, DEFAULT_USER_FLOW_CONFIG, isUserFlowConfigValid, type UserFlowConfig } from './user-flow'
+import {
+  buildUserFlowQuery,
+  DEFAULT_USER_FLOW_CONFIG,
+  isUserFlowConfigValid,
+  type UserFlowConfig,
+  userFlowIncompleteReason,
+} from './user-flow'
 import { UserFlowControls } from './user-flow-controls'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
@@ -139,6 +145,13 @@ const Insights = () => {
 
   const isUserFlow = insightType === InsightType.USER_FLOW
 
+  // User flow narrows the property schema by its scope event, if it has one; every other insight
+  // type narrows by the events in its rows.
+  const schemaEventKinds = () => {
+    if (!isUserFlow) return eventFilters.entries.map(e => e.kind)
+    return userFlowConfig.scope.kind ? [userFlowConfig.scope.kind] : []
+  }
+
   // Keep range and granularity backend-valid: cap a range too wide for any granularity to the
   // supported max, then bump a too-fine granularity (e.g. Hour over 30 days) to the finest that
   // still fits — both combinations would otherwise be rejected by the backend.
@@ -165,11 +178,7 @@ const Insights = () => {
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
-    selectedEventKinds: isUserFlow
-      ? userFlowConfig.scope.kind
-        ? [userFlowConfig.scope.kind]
-        : []
-      : eventFilters.entries.map(e => e.kind),
+    selectedEventKinds: schemaEventKinds(),
   })
 
   useEffect(() => {
@@ -216,6 +225,15 @@ const Insights = () => {
   )
 
   const topKIncomplete = isTopK ? topKIncompleteReason(topK) : null
+  const userFlowIncomplete = isUserFlow ? userFlowIncompleteReason(userFlowConfig) : null
+
+  // Each insight type is "configured enough to run" for a different reason: user flow and top-k
+  // carry no event rows at all, so the row count can't gate them.
+  const queryConfigured = () => {
+    if (isUserFlow) return userFlowReady
+    if (isTopK) return !topKIncomplete
+    return validEntries.length > 0 && !hasIncompleteNumericAggregation
+  }
 
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
@@ -224,7 +242,7 @@ const Insights = () => {
     granularity,
     propFilters,
     breakdowns,
-    userFlowConfig,
+    userFlowConfig: isUserFlow ? userFlowConfig : undefined,
     topK: isTopK ? topK : undefined,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
@@ -300,14 +318,7 @@ const Insights = () => {
       return resp.result
     },
     {
-      enabled:
-        !!project &&
-        !!timeRange &&
-        (isUserFlow
-          ? userFlowReady
-          : isTopK
-            ? !topKIncomplete
-            : validEntries.length > 0 && !hasIncompleteNumericAggregation),
+      enabled: !!project && !!timeRange && queryConfigured(),
     },
   )
 
@@ -592,6 +603,7 @@ const Insights = () => {
           topKMetric={topK.metric}
           topKOmitOthers={topK.omitOthers}
           topKIncompleteReason={topKIncomplete}
+          userFlowIncompleteReason={userFlowIncomplete}
         />
       </div>
     </Page>

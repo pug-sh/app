@@ -29,6 +29,7 @@ import {
   trendSeriesNames,
 } from '../insights/helpers'
 import { topKSpecIncompleteReason } from '../insights/top-k'
+import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
 import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from './tile-settings'
@@ -163,6 +164,7 @@ export const InsightTileView = ({
   const isUserFlow = spec?.insightType === InsightType.USER_FLOW
   const isTopK = spec?.insightType === InsightType.TOP_K
   const topKIncompleteReason = isTopK ? topKSpecIncompleteReason(spec) : null
+  const userFlowIncompleteReason = isUserFlow ? userFlowSpecIncompleteReason(spec) : null
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
@@ -262,6 +264,7 @@ export const InsightTileView = ({
         topKMetric={spec?.topK?.metric}
         topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}
+        userFlowIncompleteReason={userFlowIncompleteReason}
         // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
         legendPosition={legendPosition}
