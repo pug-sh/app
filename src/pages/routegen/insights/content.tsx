@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { TrendingUp } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import {
   AggregationType,
   type Granularity,
@@ -31,6 +31,7 @@ import {
   TopKList,
 } from './charts'
 import { EMPTY_ARRAY, type ViewMode } from './constants'
+import { buildSankeyData } from './user-flow'
 
 export const InsightsContent = memo(function InsightsContent({
   error,
@@ -66,6 +67,7 @@ export const InsightsContent = memo(function InsightsContent({
   topKMetric = AggregationType.TOTAL,
   topKOmitOthers = false,
   topKIncompleteReason = null,
+  userFlowIncompleteReason = null,
   compact = false,
   lightNumbers = false,
 }: {
@@ -110,6 +112,8 @@ export const InsightsContent = memo(function InsightsContent({
   topKMetric?: AggregationType
   topKOmitOthers?: boolean
   topKIncompleteReason?: string | null
+  // Why the user-flow query isn't running, when it isn't. Mirrors topKIncompleteReason.
+  userFlowIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
 }) {
@@ -142,6 +146,15 @@ export const InsightsContent = memo(function InsightsContent({
   const resolvedLegendPosition = legendPosition ?? (viewMode === 'pie' ? 'bottom' : 'top')
 
   const showUserFlow = isUserFlow || resultCase === 'userFlow'
+  // Built once here so the empty-state decision below and the chart itself agree on which links
+  // are drawable.
+  const userFlowData = useMemo(() => (userFlowResult ? buildSankeyData(userFlowResult) : undefined), [userFlowResult])
+
+  const emptyStateHint = () => {
+    if (showUserFlow) return 'Adjust the query above to explore transitions'
+    if (isTopK) return 'Loading ranking'
+    return 'Pick an event above to start'
+  }
 
   const renderLoadingEmptyState = () => (
     <div
@@ -153,13 +166,7 @@ export const InsightsContent = memo(function InsightsContent({
     >
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
-      <p className="text-xs">
-        {showUserFlow
-          ? 'Adjust the query above to explore transitions'
-          : isTopK
-            ? 'Loading ranking'
-            : 'Pick an event above to start'}
-      </p>
+      <p className="text-xs">{emptyStateHint()}</p>
     </div>
   )
 
@@ -271,9 +278,23 @@ export const InsightsContent = memo(function InsightsContent({
   }
 
   const renderUserFlowContent = () => {
-    if (!userFlowResult) return renderLoadingEmptyState()
-    if (userFlowResult.links.length === 0) return renderNoEvents()
-    return <SankeyChart result={userFlowResult} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
+    if (userFlowIncompleteReason) {
+      return (
+        <div
+          className={
+            compact ? 'flex h-full min-h-32 items-center justify-center' : 'flex h-48 items-center justify-center'
+          }
+        >
+          <p className="text-sm text-muted-foreground">{userFlowIncompleteReason}</p>
+        </div>
+      )
+    }
+    if (!userFlowResult || !userFlowData) return renderLoadingEmptyState()
+    // Ask the built graph, not the response: buildSankeyData drops links whose endpoints don't
+    // resolve or whose value isn't positive, so a non-empty response can still have nothing to
+    // draw. Guarding on the raw count let that case fall through to a chart with no chart in it.
+    if (userFlowData.links.length === 0) return renderNoEvents()
+    return <SankeyChart data={userFlowData} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
   }
 
   const renderTopKContent = () => {

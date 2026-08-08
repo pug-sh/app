@@ -1,10 +1,9 @@
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { UserFlowResult } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
-import { buildSankeyData } from '../user-flow'
+import type { SankeyChartData } from '../user-flow'
 import { layoutSankey, sankeyExtent, sankeyLinkPath } from './sankey-layout'
 
 const NODE_WIDTH = 12
@@ -13,11 +12,14 @@ const PADDING_Y = 16
 // Gap between a node and its label.
 const LABEL_OFFSET = 6
 
-// Only used to size the label gutters and to decide when a name needs an ellipsis — event
-// names are lowercase and underscored, so they run narrower than the all-digit worst case
-// the axis fitter calibrates against. An underestimate clips a character, not the layout,
-// and the hover card carries the untruncated name either way.
-const LABEL_PX_PER_CHAR = 6.6
+// An UPPER bound on per-character width at text-xs, not an average — the same figure the axis
+// fitter calibrates to for this face. It has to be an upper bound because the gutter and the
+// truncation threshold are both derived from it, so they cancel: the longest label is sized a
+// gutter of exactly its own width and can therefore never be ellipsized. Under an average, a
+// wider-than-average name silently overflowed past the SVG edge with no ellipsis to show for it;
+// over an upper bound, it always fits. Truncation then only fires when MAX_GUTTER_RATIO caps the
+// gutter, which is the case it is actually for. **Re-measure on a font change.**
+const LABEL_PX_PER_CHAR = 7.0
 const MIN_GUTTER = 72
 // Past this the labels start costing the flow more room than they are worth.
 const MAX_GUTTER_RATIO = 0.24
@@ -34,7 +36,10 @@ const MIN_COLUMN_WIDTH = 170
 const FADE_PX = 28
 
 const truncateLabel = (text: string, maxPx: number) => {
-  const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR)
+  // The epsilon is not cosmetic: a gutter sized as chars * PX_PER_CHAR divides back by the same
+  // constant, and binary floating point can land just under the integer, so a name the gutter was
+  // sized exactly for would be ellipsized anyway.
+  const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR + 1e-6)
   if (text.length <= maxChars) return text
   if (maxChars <= 1) return '…'
   return `${text.slice(0, maxChars - 1)}…`
@@ -43,10 +48,10 @@ const truncateLabel = (text: string, maxPx: number) => {
 type Hover = { kind: 'link' | 'node'; index: number; x: number; y: number }
 
 export const SankeyChart = ({
-  result,
+  data: sankeyData,
   className = 'h-[420px] w-full',
 }: {
-  result: UserFlowResult
+  data: SankeyChartData
   className?: string
 }) => {
   const unitLabel = 'sessions'
@@ -82,8 +87,6 @@ export const SankeyChart = ({
     const below = el.scrollTop + el.clientHeight < el.scrollHeight - 1
     setEdges(prev => (prev.above === above && prev.below === below ? prev : { above, below }))
   }, [])
-
-  const sankeyData = useMemo(() => buildSankeyData(result), [result])
 
   // Only the end columns read into a gutter, so they are the only ones that size it. Both
   // are measured independently — a long name on the left shouldn't cost the right column
@@ -198,8 +201,10 @@ export const SankeyChart = ({
     setHovered({ kind, index, x: event.clientX - rect.left, y: event.clientY - rect.top })
   }
 
-  if (sankeyData.links.length === 0) return null
-
+  // No early return before the tree below: the ResizeObserver attaches to `scrollRef` from a
+  // mount-only effect, so a render that skipped the container left the observer holding a
+  // detached node and `size` frozen at 0 for the rest of the instance's life. The caller decides
+  // whether there is anything worth drawing; this component always mounts its box.
   return (
     <div ref={viewportRef} className={`relative min-h-0 ${className}`}>
       <div
@@ -209,7 +214,12 @@ export const SankeyChart = ({
         style={maskImage ? { maskImage, WebkitMaskImage: maskImage } : undefined}
       >
         {canvas.width > 0 && canvas.height > 0 ? (
-          <svg width={canvas.width} height={canvas.height} role="img" aria-label="User flow between steps">
+          <svg
+            width={canvas.width}
+            height={canvas.height}
+            role="img"
+            aria-label={`User flow: ${layout.links.length} transitions across ${lastDepth - firstDepth + 1} steps`}
+          >
             <g>
               {layout.links.map((link, index) => (
                 <path
@@ -218,7 +228,7 @@ export const SankeyChart = ({
                   fill="none"
                   stroke={linkColors[index]}
                   strokeOpacity={isLinkLit(index) ? 0.5 : 0.25}
-                  strokeWidth={Math.max(link.thickness, 1)}
+                  strokeWidth={link.thickness}
                   onMouseMove={track('link', index)}
                   onMouseLeave={() => setHovered(null)}
                 />
@@ -268,7 +278,24 @@ export const SankeyChart = ({
         ) : null}
       </div>
 
-      {hovered ? (
+      {/* The chart is role="img", so assistive technology never reaches the shapes inside it, and
+          every ribbon and node is pointer-driven — there is nothing to tab to. This carries the
+          same figures the hover card shows, as text, which is the only route to them without a
+          mouse. Ordered by volume so the largest paths are read first. */}
+      <ul className="sr-only">
+        {[...layout.links]
+          .sort((a, b) => b.value - a.value)
+          .map((link, index) => (
+            <li key={`flow-${link.source}-${link.target}-${index}`}>
+              {link.sourceName} to {link.targetName}: {compactNumber(link.value)} {unitLabel}
+            </li>
+          ))}
+      </ul>
+
+      {/* Gated on the resolved datum, not just on `hovered`: a refetch or resize rebuilds the
+          layout, and a stored index past the end of the new arrays otherwise rendered an empty
+          bordered card floating over the chart. */}
+      {hovered && (hoveredLink || hoveredNode) ? (
         <div
           className="pointer-events-none absolute z-10 rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs shadow-sm"
           style={{
