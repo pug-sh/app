@@ -63,7 +63,7 @@ const DeviceCell = ({ device, os, osVersion }: { device: string; os?: string; os
 type VisitorProps = {
   marker: VisitorMapMarker
   journey: ActivityEvent[]
-  profileHref?: (distinctId: string) => string
+  profileHref?: (distinctId: string) => string | undefined
   // The pinned visitor aged out of the live window — their marker is gone, so the popover holds the
   // last thing they did rather than vanishing mid-read.
   left?: boolean
@@ -174,14 +174,19 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
         </Section>
       )}
 
-      {href && (
-        <Link
-          href={href}
-          className="flex items-center justify-center gap-1 rounded-b-xl border-t border-border/40 px-3 py-2 font-medium text-link underline-offset-4 hover:bg-accent/60 hover:underline"
-        >
-          View profile →
-        </Link>
-      )}
+      {profileHref &&
+        (href ? (
+          <Link
+            href={href}
+            className="flex items-center justify-center gap-1 rounded-b-xl border-t border-border/40 px-3 py-2 font-medium text-link underline-offset-4 hover:bg-accent/60 hover:underline"
+          >
+            View profile →
+          </Link>
+        ) : (
+          <div className="rounded-b-xl border-t border-border/40 px-3 py-2 text-center text-muted-foreground">
+            Cookieless visitor — no profile
+          </div>
+        ))}
     </div>
   )
 }

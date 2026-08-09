@@ -20,6 +20,7 @@ import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
+import { isCookielessId } from '@/lib/cookieless'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet } from '@/lib/struct'
 import { formatDateTime } from '@/lib/timestamp'
@@ -168,7 +169,9 @@ const LiveVisitorsPage = () => {
   const focus = selectedVisitor ? describeEvent(selectedVisitor) : selectedSnapshot.current
   // Project-scoped profile route for the map popover's "View profile" link. Built here in the
   // React tree because each marker renders in a detached root with no router/project context.
-  const profileHref = (distinctId: string) => `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
+  // Undefined swaps the popover's "View profile" footer for a no-profile note (map-popover.tsx).
+  const profileHref = (distinctId: string) =>
+    isCookielessId(distinctId) ? undefined : `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
 
   // The map is already up by now, so the pre-first-response state is an overlay on it.
   const renderFirstLoad = () => {
