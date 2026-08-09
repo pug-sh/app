@@ -26,6 +26,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { isCookielessId } from '@/lib/cookieless'
 import { defaultRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet, structToEntries } from '@/lib/struct'
@@ -36,7 +37,43 @@ import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '
 
 // ── Event Row ───────────────────────────────────────────────────────────────
 
-const EventRow = ({ event }: { event: ActivityEvent }) => {
+const IdCell = ({
+  href,
+  label,
+  title,
+  className,
+}: {
+  href?: string
+  label: string
+  title: string
+  className?: string
+}) => {
+  if (!href) {
+    return (
+      <span
+        className={cn('text-xs font-mono text-muted-foreground', className)}
+        title={title}
+        onClick={e => e.stopPropagation()}
+      >
+        {label}
+      </span>
+    )
+  }
+  return (
+    <ProjectLink
+      href={href}
+      onClick={e => e.stopPropagation()}
+      // underline-offset-2, not the usual 4: the truncating caller clips at the content box, and
+      // on a text-xs line box an offset-4 underline lands past the bottom edge and never renders.
+      className={cn('text-xs font-mono text-link hover:underline underline-offset-2', className)}
+      title={title}
+    >
+      {label}
+    </ProjectLink>
+  )
+}
+
+export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const [expanded, setExpanded] = useState(false)
   const d = tsToDate(event.occurTime)
   const autoProps = structToEntries(event.autoProperties)
@@ -51,6 +88,8 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
   const region = structGet(event.autoProperties, '$region')
+  const cookieless = isCookielessId(event.distinctId)
+  const noProfile = cookieless ? ' — cookieless, no profile' : ''
 
   return (
     <>
@@ -94,27 +133,26 @@ const EventRow = ({ event }: { event: ActivityEvent }) => {
         </td>
         <td className="py-2.5 pr-2 align-middle overflow-hidden">
           <div className="flex items-center justify-end">
-            <ProjectLink
-              href={`/profiles/${encodeURIComponent(event.distinctId)}/events`}
-              onClick={e => e.stopPropagation()}
-              // underline-offset-2, not the usual 4: `truncate` clips at the content box, and on a
-              // text-xs line box an offset-4 underline lands past the bottom edge and never renders.
-              className="text-xs font-mono text-link hover:underline underline-offset-2 truncate min-w-0"
-              title={event.distinctId}
-            >
-              {event.distinctId}
-            </ProjectLink>
+            <IdCell
+              href={cookieless ? undefined : `/profiles/${encodeURIComponent(event.distinctId)}/events`}
+              label={event.distinctId}
+              title={event.distinctId + noProfile}
+              className="truncate min-w-0"
+            />
             {event.sessionId && (
               <>
                 <span className="shrink-0 text-muted-foreground/40"> / </span>
-                <ProjectLink
-                  href={`/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`}
-                  onClick={e => e.stopPropagation()}
-                  className="shrink-0 text-xs font-mono text-link hover:underline underline-offset-2"
-                  title={event.sessionId}
-                >
-                  {event.sessionId.slice(0, 8)}
-                </ProjectLink>
+                {/* Suppressed too: the session route renders inside ProfileShell, same dead end. */}
+                <IdCell
+                  href={
+                    cookieless
+                      ? undefined
+                      : `/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`
+                  }
+                  label={event.sessionId.slice(0, 8)}
+                  title={event.sessionId + noProfile}
+                  className="shrink-0"
+                />
               </>
             )}
           </div>
