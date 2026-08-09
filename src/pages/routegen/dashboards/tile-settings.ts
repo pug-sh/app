@@ -26,6 +26,13 @@ export const DASHBOARD_TILE_VIEW_MODES = [
   { label: 'Table', value: DashboardTileViewMode.TABLE },
 ] as const
 
+// Sankey is deliberately absent from the list above: it is the only view a user-flow tile can
+// take, and no other insight type can render it. Offering it beside the trends views let a
+// trends tile be set to Sankey, which silently drew a bar chart. A one-option picker looks
+// redundant, but it names the tile's view the same way every other tile's does, and it is where
+// further flow layouts would land.
+export const USER_FLOW_TILE_VIEW_MODES = [{ label: 'Sankey', value: DashboardTileViewMode.SANKEY }] as const
+
 export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | undefined): DashboardTileViewMode => {
   switch (mode) {
     case DashboardTileViewMode.LINE:
@@ -34,6 +41,8 @@ export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | un
     case DashboardTileViewMode.BAR_STACKED:
     case DashboardTileViewMode.PIE:
     case DashboardTileViewMode.TABLE:
+      return mode
+    case DashboardTileViewMode.SANKEY:
       return mode
     default:
       return DEFAULT_DASHBOARD_TILE_VIEW_MODE
@@ -52,6 +61,13 @@ export const dashboardTileViewModeToViewMode = (mode: DashboardTileViewMode | un
       return 'pie'
     case DashboardTileViewMode.TABLE:
       return 'table'
+    // SANKEY has no ViewMode of its own — content.tsx dispatches a user-flow tile on its insight
+    // type or result case *before* reaching the chart switch, so the mapping never selects the
+    // chart for one. It is still read: insight-tile-view computes effectiveViewMode for every
+    // tile, and content.tsx uses it for sizing and legend placement above that dispatch. Mapping
+    // to the default is what makes a tile left on SANKEY after switching away from user flow
+    // degrade to a line chart rather than falling through the switch into bars.
+    case DashboardTileViewMode.SANKEY:
     case DashboardTileViewMode.LINE:
     default:
       return 'line'

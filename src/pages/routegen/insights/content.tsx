@@ -1,12 +1,13 @@
 import { useAtomValue } from 'jotai'
 import { TrendingUp } from 'lucide-react'
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import {
   AggregationType,
   type Granularity,
   type RetentionSeries,
   TopKQuery_Dimension,
   type TopKRow,
+  type UserFlowResult,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
@@ -25,10 +26,12 @@ import {
   LineChart,
   PieChart,
   RetentionCohort,
+  SankeyChart,
   SummaryStats,
   TopKList,
 } from './charts'
 import { EMPTY_ARRAY, type ViewMode } from './constants'
+import { buildSankeyData, sankeyIncompleteReason } from './user-flow'
 
 export const InsightsContent = memo(function InsightsContent({
   error,
@@ -38,6 +41,7 @@ export const InsightsContent = memo(function InsightsContent({
   resultSeriesCount,
   isRetention,
   isTrends,
+  isUserFlow,
   hasIncompleteNumericAggregation,
   chartData,
   seriesNames,
@@ -51,6 +55,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels,
   retentionCohorts,
   funnelSeriesData,
+  userFlowResult,
   hideLegend,
   legendPosition,
   showPieLabels = true,
@@ -62,6 +67,7 @@ export const InsightsContent = memo(function InsightsContent({
   topKMetric = AggregationType.TOTAL,
   topKOmitOthers = false,
   topKIncompleteReason = null,
+  userFlowIncompleteReason = null,
   compact = false,
   lightNumbers = false,
 }: {
@@ -72,6 +78,7 @@ export const InsightsContent = memo(function InsightsContent({
   resultSeriesCount: number
   isRetention: boolean
   isTrends: boolean
+  isUserFlow: boolean
   hasIncompleteNumericAggregation: boolean
   chartData: ChartPoint[]
   seriesNames: string[]
@@ -85,6 +92,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionLabels: string[]
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
+  userFlowResult?: UserFlowResult
   // Hides the shared series-summary legend. The web-analytics
   // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
   // meaningless there, and the stat cards already carry the accurate scalar).
@@ -104,6 +112,8 @@ export const InsightsContent = memo(function InsightsContent({
   topKMetric?: AggregationType
   topKOmitOthers?: boolean
   topKIncompleteReason?: string | null
+  // Why the user-flow query isn't running, when it isn't. Mirrors topKIncompleteReason.
+  userFlowIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
 }) {
@@ -135,6 +145,19 @@ export const InsightsContent = memo(function InsightsContent({
   const pieLegendAggregations = pieSlices.map(() => AggregationType.TOTAL)
   const resolvedLegendPosition = legendPosition ?? (viewMode === 'pie' ? 'bottom' : 'top')
 
+  const showUserFlow = isUserFlow || resultCase === 'userFlow'
+  // Built once here so the empty-state decision below and the chart itself agree on which links
+  // are drawable.
+  const userFlowData = useMemo(() => (userFlowResult ? buildSankeyData(userFlowResult) : undefined), [userFlowResult])
+
+  const emptyStateHint = () => {
+    // A dashboard tile has no query above it, which is the whole reason userFlowIncompleteReason
+    // exists — so the loading branch must not reintroduce the sentence that fix removed.
+    if (showUserFlow) return compact ? 'Loading flow' : 'Adjust the query above to explore transitions'
+    if (isTopK) return 'Loading ranking'
+    return 'Pick an event above to start'
+  }
+
   const renderLoadingEmptyState = () => (
     <div
       className={
@@ -145,7 +168,7 @@ export const InsightsContent = memo(function InsightsContent({
     >
       <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
       <p className="text-sm font-medium mb-1">No data yet</p>
-      <p className="text-xs">{isTopK ? 'Loading ranking' : 'Pick an event above to start'}</p>
+      <p className="text-xs">{emptyStateHint()}</p>
     </div>
   )
 
@@ -157,7 +180,9 @@ export const InsightsContent = memo(function InsightsContent({
           : 'flex h-48 items-center justify-center text-muted-foreground'
       }
     >
-      <p className="text-sm">No events recorded in this period</p>
+      <p className="text-sm">
+        {showUserFlow ? 'No transitions recorded in this period' : 'No events recorded in this period'}
+      </p>
     </div>
   )
 
@@ -252,6 +277,53 @@ export const InsightsContent = memo(function InsightsContent({
     const funnelBody = <FunnelChart series={funnelSeriesData} compact={compact} />
     if (compact) return <div className="flex h-full min-h-0 flex-col">{funnelBody}</div>
     return funnelBody
+  }
+
+  const renderUserFlowContent = () => {
+    if (userFlowIncompleteReason) {
+      return (
+        <div
+          className={
+            compact ? 'flex h-full min-h-32 items-center justify-center' : 'flex h-48 items-center justify-center'
+          }
+        >
+          <p className="text-sm text-muted-foreground">{userFlowIncompleteReason}</p>
+        </div>
+      )
+    }
+    if (!userFlowResult || !userFlowData) return renderLoadingEmptyState()
+
+    // Ask the built graph, not the response: buildSankeyData drops links whose endpoints don't
+    // resolve, whose count isn't positive, or that don't advance exactly one step, so a non-empty
+    // response can still have nothing to draw. Guarding on the raw count let that case fall
+    // through to a chart with no chart in it.
+    const degraded = sankeyIncompleteReason(userFlowData)
+    if (userFlowData.links.length === 0) {
+      // "No transitions recorded in this period" is only true when the server sent none. Saying it
+      // over transitions we merely failed to read tells the reader their sessions are single-event
+      // bounces — a wrong, actionable conclusion, and the worst thing this chart can claim.
+      if (!degraded) return renderNoEvents()
+      return (
+        <div
+          className={
+            compact
+              ? 'flex h-full min-h-32 items-center justify-center text-muted-foreground'
+              : 'flex h-48 items-center justify-center text-muted-foreground'
+          }
+        >
+          <p className="max-w-xs text-center text-sm">This flow could not be drawn — {degraded}</p>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <SankeyChart data={userFlowData} className={compact ? 'h-full min-h-[120px] w-full' : undefined} />
+        {/* The chart is internally consistent about numbers that understate, so there is nothing in
+            it to be suspicious of. Same slot and treatment as the breakdown truncation notice. */}
+        {degraded ? <p className="mt-2 text-xs text-muted-foreground">{degraded}</p> : null}
+      </>
+    )
   }
 
   const renderTopKContent = () => {
@@ -350,6 +422,7 @@ export const InsightsContent = memo(function InsightsContent({
     )
   }
 
+  if (showUserFlow) return renderUserFlowContent()
   if (isTopK) return renderTopKContent()
   if (isRetention) return renderRetentionContent()
   if (!isTrends) return renderFunnelContent()
