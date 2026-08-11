@@ -19,7 +19,7 @@ const OAuthCallback = () => {
     started.current = true
 
     const providerId = pendingOIDCProviderID()
-    if (providers.length === 0) {
+    if (!providers) {
       setError('Sign-in options could not be loaded. Try again.')
       return
     }
@@ -35,11 +35,7 @@ const OAuthCallback = () => {
     void (async () => {
       try {
         const authorization = await completeOIDCRedirect(provider)
-        const result = await completeOIDC({
-          providerId: provider.id,
-          ...authorization,
-          displayName: provider.displayName,
-        })
+        const result = await completeOIDC({ provider, ...authorization })
         if (!result.ok) {
           setError(result.error)
           return

@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
@@ -20,8 +20,6 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// External-provider buttons use 40px controls, so inputs and the submit button
-// match that rhythm rather than the app's h-8 default.
 const controlHeight = 'h-10'
 
 const MODE_COPY = {
@@ -56,6 +54,18 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false)
   // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+
+  const oidcProviders = authProviders?.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
+
+  // A provider redirect leaves the page with `pending` set; bfcache restores it that way on Back,
+  // which would leave every control disabled.
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setPending(null)
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
 
   const authForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -143,30 +153,25 @@ const SignIn = () => {
           <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>
           <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
-          {authProviders.length > 0 && (
+          {oidcProviders.length > 0 && (
             <>
               <div className="space-y-2">
-                {authProviders.map(provider => {
-                  if (provider.type === AuthProviderType.OIDC) {
-                    return (
-                      <OIDCSignInButton
-                        key={provider.id}
-                        provider={provider}
-                        disabled={authBusy}
-                        loading={pending === provider.id}
-                        onBegin={() => {
-                          setError('')
-                          setPending(provider.id)
-                        }}
-                        onError={message => {
-                          setPending(null)
-                          setError(message)
-                        }}
-                      />
-                    )
-                  }
-                  return null
-                })}
+                {oidcProviders.map(provider => (
+                  <OIDCSignInButton
+                    key={provider.id}
+                    provider={provider}
+                    disabled={authBusy}
+                    loading={pending === provider.id}
+                    onBegin={() => {
+                      setError('')
+                      setPending(provider.id)
+                    }}
+                    onError={message => {
+                      setPending(null)
+                      setError(message)
+                    }}
+                  />
+                ))}
               </div>
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />

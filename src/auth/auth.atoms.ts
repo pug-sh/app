@@ -14,23 +14,21 @@ import { mapOAuthConnectError } from './oauth'
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
 export type AuthResult = { ok: true } | { ok: false; error: string }
 
-// The server is the single source of truth for external identity providers. This
-// async atom suspends the signed-out canvas briefly while the public config loads.
-export const authProvidersAtom = atom<Promise<AuthProviderConfig[]>>(async get => {
+// Suspends the signed-out canvas briefly while the public config loads.
+export const authProvidersAtom = atom(async get => {
   try {
     const response = await get(authRPCAtom).getAuthConfig({})
     return response.providers
   } catch (error) {
-    // External provider discovery must not take password or magic-link sign-in
-    // down with it during a rolling upgrade or transient server failure.
+    // Swallowed so provider discovery can't take password or magic-link sign-in down with it.
+    // null rather than []: an empty list means "none configured", and sign-in hides SSO on that.
     console.error('Could not load external auth providers', error)
-    return []
+    return null
   }
 })
 
-// Build-time gate for the sign-in page's "Explore the live demo" link, driven by VITE_DEMO_ENABLED
-// (not the in-app banner — that follows the active demo session; see isDemoSessionAtom). Exposed as
-// an atom so config reads flow through the store like the rest of auth state.
+// Build-time gate for the sign-in page's "Explore the live demo" link — not the in-app banner,
+// which follows the active demo session (see isDemoSessionAtom).
 export const demoEnabledAtom = atom(() => isDemoEnabled())
 
 export const signInAtom = atom(
@@ -58,7 +56,7 @@ export const meAtom = atom<Me | null>(null)
 // session has to say which it is — a new one is a type error until it answers.
 export type SignInMethod = 'password' | 'magic_link' | 'oidc' | 'demo'
 
-// Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
+// Applies a freshly issued session token pair — password sign-in, magic link, OIDC, and the demo
 // all funnel here. The token alone decides identity (the server ignores any caller session). Always
 // clear meAtom — email isn't in the JWT and must be refetched for the new identity.
 //
@@ -135,28 +133,24 @@ export const completeOIDCAtom = atom(
     get,
     set,
     {
-      providerId,
+      provider,
       code,
       codeVerifier,
       redirectURI,
       nonce,
-      displayName,
     }: {
-      providerId: string
+      provider: AuthProviderConfig
       code: string
       codeVerifier: string
       redirectURI: string
       nonce: string
-      displayName: string
     },
   ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
-      // Seed the auto-created default project's reporting zone from the browser on
-      // first sign-in (parity with completeMagicLink). Ignored server-side for a
-      // returning user; malformed/empty values are coerced to UTC.
+      // timezone seeds the auto-created project's reporting zone (parity with completeMagicLink).
       const resp = await authRPC.completeOIDCSignIn({
-        providerId,
+        providerId: provider.id,
         code,
         codeVerifier,
         redirectUri: redirectURI,
@@ -166,11 +160,7 @@ export const completeOIDCAtom = atom(
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
       return { ok: true }
     } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('completeOIDC unexpected error', error)
-      return {
-        ok: false,
-        error: mapOAuthConnectError(error, displayName, 'Could not sign you in. Try again from the sign-in page.'),
-      }
+      return { ok: false, error: mapOAuthConnectError(error, provider.displayName) }
     }
   },
 )

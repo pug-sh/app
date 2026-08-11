@@ -28,6 +28,18 @@ const provider = {
   scopes: ['openid', 'profile', 'email'],
 } as AuthProviderConfig
 
+// Sized to the CompleteOIDCSignInRequest constraints (code_verifier min_len 43, nonce min_len 16).
+const codeVerifier = 'a'.repeat(43)
+const nonce = '2ec3f0a1-6b1e-4f0e-9d0a-6a1c3b5d7e9f'
+
+const storedState = () => ({
+  authority: provider.issuerUrl,
+  client_id: provider.clientId,
+  redirect_uri: `${window.location.origin}/oauth/callback`,
+  code_verifier: codeVerifier,
+  nonce,
+})
+
 describe('OIDC redirect lifecycle', () => {
   beforeEach(() => {
     sessionStorage.clear()
@@ -52,43 +64,59 @@ describe('OIDC redirect lifecycle', () => {
     expect(oidc.clearStaleState.mock.invocationCallOrder[0]).toBeLessThan(
       oidc.signinRedirect.mock.invocationCallOrder[0],
     )
-    expect(oidc.signinRedirect).toHaveBeenCalledWith({ nonce: expect.any(String) })
+    // The callback page finds the provider by this key; without it every sign-in dead-ends.
+    expect(pendingOIDCProviderID()).toBe(provider.id)
+    // CompleteOIDCSignInRequest.nonce is min_len 16, so a shorter one never reaches the server.
+    expect(oidc.signinRedirect.mock.calls[0][0].nonce.length).toBeGreaterThanOrEqual(16)
   })
 
   it('returns the code and original PKCE values without exchanging tokens in the browser', async () => {
-    const redirectURI = `${window.location.origin}/oauth/callback`
     oidc.readSigninResponseState.mockResolvedValue({
       response: { code: 'authorization-code', error: null },
-      state: {
-        authority: provider.issuerUrl,
-        client_id: provider.clientId,
-        redirect_uri: redirectURI,
-        code_verifier: 'code-verifier',
-        nonce: 'request-nonce',
-      },
+      state: storedState(),
     })
     sessionStorage.setItem('pug.oidc.pending-provider', provider.id)
 
     await expect(completeOIDCRedirect(provider)).resolves.toEqual({
       code: 'authorization-code',
-      codeVerifier: 'code-verifier',
-      redirectURI,
-      nonce: 'request-nonce',
+      codeVerifier,
+      redirectURI: `${window.location.origin}/oauth/callback`,
+      nonce,
     })
     expect(pendingOIDCProviderID()).toBe('')
     expect(oidc.readSigninResponseState).toHaveBeenCalledWith(window.location.href, true)
   })
 
-  it('rejects a callback whose stored request does not match the selected provider', async () => {
+  it('surfaces a rejection from the identity provider', async () => {
+    oidc.readSigninResponseState.mockResolvedValue({
+      response: { code: null, error: 'access_denied' },
+      state: storedState(),
+    })
+
+    await expect(completeOIDCRedirect(provider)).rejects.toThrow('The identity provider rejected the sign-in request')
+  })
+
+  // sessionStorage cleared between the redirect and the return (new tab, Safari ITP) — without the
+  // guard the app posts an undefined verifier and the server rejects it as a malformed request.
+  it('rejects a callback missing its PKCE verifier', async () => {
     oidc.readSigninResponseState.mockResolvedValue({
       response: { code: 'authorization-code', error: null },
-      state: {
-        authority: 'https://attacker.example.com',
-        client_id: provider.clientId,
-        redirect_uri: `${window.location.origin}/oauth/callback`,
-        code_verifier: 'code-verifier',
-        nonce: 'request-nonce',
-      },
+      state: { ...storedState(), code_verifier: undefined },
+    })
+
+    await expect(completeOIDCRedirect(provider)).rejects.toThrow(
+      'OIDC response did not include the required authorization values',
+    )
+  })
+
+  it.each([
+    ['authority', { authority: 'https://attacker.example.com' }],
+    ['client_id', { client_id: 'someone-else' }],
+    ['redirect_uri', { redirect_uri: 'https://attacker.example.com/oauth/callback' }],
+  ])('rejects a callback whose stored %s does not match the selected provider', async (_field, override) => {
+    oidc.readSigninResponseState.mockResolvedValue({
+      response: { code: 'authorization-code', error: null },
+      state: { ...storedState(), ...override },
     })
     sessionStorage.setItem('pug.oidc.pending-provider', provider.id)
 

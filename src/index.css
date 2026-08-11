@@ -405,15 +405,6 @@
   z-index: 30 !important;
 }
 
-/* GIS exposes no radius prop — `shape` only offers its own 4px or a full pill — and its class
-   names are obfuscated, so role=button is the one stable hook. overflow clips the hover overlay,
-   which GIS draws square at inset 0. Unlayered on purpose: GIS injects its own unlayered styles.
-   If GIS ever renders a second role=button (One Tap, FedCM) this silently stops applying. */
-.google-signin-button [role="button"] {
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
 /* Auth card wall — each column renders the deck --wall-copies times and scrolls by exactly
    one copy, so the loop distance has to track the count (set from the TSX) rather than a literal.
    Cards carry their own bottom margin rather than a flex gap on the track: N cards yield 2N-1

@@ -1,10 +1,12 @@
-import { OidcClient, UserManager, WebStorageStateStore } from 'oidc-client-ts'
+import { OidcClient, UserManager, type UserManagerSettings, WebStorageStateStore } from 'oidc-client-ts'
 import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 
 const callbackPath = '/oauth/callback'
 const pendingProviderKey = 'pug.oidc.pending-provider'
 
-const settingsFor = (provider: AuthProviderConfig) => ({
+// Annotated: without a target type the object literal gets no excess-property check, so a typo in
+// any optional key silently falls back to the library default (scope → "openid", store → local).
+const settingsFor = (provider: AuthProviderConfig): UserManagerSettings => ({
   authority: provider.issuerUrl,
   client_id: provider.clientId,
   redirect_uri: `${window.location.origin}${callbackPath}`,
