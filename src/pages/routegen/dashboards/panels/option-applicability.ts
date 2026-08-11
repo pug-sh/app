@@ -18,6 +18,7 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
   const isTrends =
     tile.content.case === 'insight' &&
     (insightType === undefined || insightType === InsightType.UNSPECIFIED || insightType === InsightType.TRENDS)
+  const isUserFlow = tile.content.case === 'insight' && insightType === InsightType.USER_FLOW
   const viewMode = tile.viewMode
 
   const isKpi = isTrends && viewMode === DashboardTileViewMode.KPI
@@ -26,13 +27,16 @@ export const tileOptionApplicability = (tile: DashboardTile) => {
   const isTable = isTrends && viewMode === DashboardTileViewMode.TABLE
 
   return {
-    // The view-mode picker only changes anything for trends.
-    showViewMode: isTrends,
+    // The view-mode picker changes the chart type for trends; user-flow tiles pick
+    // between flow layouts (currently just Sankey).
+    showViewMode: isTrends || isUserFlow,
     // KPI big-number tiles: thresholds, value format, sparkline.
     showKpiOptions: isKpi,
     // Cartesian charts have a Y-axis to format.
     showAxisOptions: isChart,
-    // The summary-stat row (the "legend") renders above every non-KPI trends view.
+    // The shared series legend renders for every non-KPI trends visualization.
     showLegendOption: isChart || isPie || isTable,
+    // Slice labels are drawn only by the pie renderer.
+    showPieLabelOption: isPie,
   }
 }

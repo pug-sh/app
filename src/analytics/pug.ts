@@ -8,7 +8,7 @@
 // every click in local dev.
 
 import { identify, init, reset, type TrackFn, track } from '@pug-sh/browser'
-import { sanitizeUrl } from './sanitize-url'
+import { maskEventUrls } from './sanitize-url'
 
 const projectId = import.meta.env.VITE_PUG_PROJECT_ID
 const publicKey = import.meta.env.VITE_PUG_PUBLIC_KEY
@@ -40,7 +40,12 @@ export const initAnalytics = () => {
     // .pug.sh cookie, no console noise, and no write-probe guessing. On app.pug.sh the SDK confirms
     // the host ends with .pug.sh before using it.
     crossSubdomainTracking: { domain: 'pug.sh' },
-    sanitizeUrl,
+    // The SDK defaults to 'cookieless': no identifier is written to the device and identify() is a
+    // no-op, which would make the cross-subdomain cookie above dead config and leave every signed-in
+    // session anonymous. Stated explicitly because this is our own product behind a login, not a
+    // marketing page — the funnel is the reason both surfaces are instrumented at all.
+    trackingConsent: 'granted',
+    beforeSend: maskEventUrls,
   })
 
   // autoCapture is left at its default (everything on) deliberately, clicks included. What keeps
@@ -52,7 +57,7 @@ export const initAnalytics = () => {
 }
 
 // Gated passthrough. Typed as TrackFn so call sites keep the SDK's well-known-event autocomplete
-// and property checking; unknown event names still fall through to the loose overload.
+// and property checking; unknown event names still fall through to loose props.
 export const trackEvent: TrackFn = (kind: string, props?: Parameters<TrackFn>[1], opts?: Parameters<TrackFn>[2]) => {
   if (!enabled) return
   track(kind, props, opts)

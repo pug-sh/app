@@ -54,7 +54,10 @@ describe('the auth canvas across a change of screen', () => {
       </Provider>,
     )
 
-    await screen.findByText('Sign in to Pug')
+    // Generous for the same reason as the picker below: the sign-in form is behind App's lazy
+    // boundary and vitest transforms it on first import. The default 1s clears easily on an idle
+    // machine and misses once the suite runs enough files in parallel to contend for CPU.
+    await screen.findByText('Sign in to Pug', {}, { timeout: 5000 })
     // Awaited, not read straight off: the wall is its own lazy chunk, so it arrives a tick behind
     // the form. Without this the test is vacuous — happy-dom reports 1024px so the wall's own media
     // query matches and it renders; a narrower default would leave both queries null and toBe would
