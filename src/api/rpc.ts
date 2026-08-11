@@ -12,8 +12,9 @@ import { ActivityService } from './genproto/shared/activity/v1/activity_pb'
 import { InsightsService } from './genproto/shared/insights/v1/insights_pb'
 import { ProfilesService } from './genproto/shared/profiles/v1/profiles_pb'
 
-// Public (unauthenticated)
-export const authRPCAtom = atom(get => createClient(AuthService, get(transportAtom)))
+// Public (unauthenticated) — every method is credential-free, and on the authenticated transport a
+// 401 from CompleteOIDCSignIn would refresh-and-retry, replaying a single-use authorization code.
+export const authRPCAtom = atom(get => createClient(AuthService, get(publicTransportAtom)))
 // Shared dashboards are read by anonymous visitors — use the credential-free
 // transport so a logged-in viewer's JWT is never attached to the public read path.
 export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboardsService, get(publicTransportAtom)))
