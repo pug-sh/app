@@ -24,7 +24,11 @@ export const OptionChip = <T extends string | number>({
 }) => {
   const [open, setOpen] = useState(false)
   const current = options.find(o => o.value === value)
-  const widestLabel = Math.max(...options.map(option => option.label.length), current?.label.length ?? 0)
+  // A value absent from options renders raw, so the stable width has to measure what is
+  // actually on screen — measuring only the option labels lets a longer fallback push the
+  // chip past the width that was supposed to be stable.
+  const displayLabel = current?.label ?? String(value)
+  const widestLabel = Math.max(...options.map(option => option.label.length), displayLabel.length)
   const valueMinWidth = stableWidth ? `${widestLabel}ch` : undefined
 
   return (
@@ -35,7 +39,7 @@ export const OptionChip = <T extends string | number>({
           {label}
         </span>
         <span className="px-2 h-full flex items-center" style={{ minWidth: valueMinWidth }}>
-          {current?.label ?? String(value)}
+          {displayLabel}
         </span>
       </PopoverTrigger>
       <PopoverContent align="start" className={cn(stableWidth ? 'w-(--anchor-width)' : 'w-auto', 'p-1')}>
