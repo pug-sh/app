@@ -468,7 +468,7 @@ export const AuthService: GenService<{
     output: typeof CompleteMagicLinkResponseSchema;
   },
   /**
-   * CompleteOIDCSignIn exchanges a browser-issued Authorization Code on the
+   * CompleteOIDCSignIn exchanges a browser-supplied Authorization Code on the
    * server, keeping confidential-provider secrets out of the dashboard.
    *
    * @generated from rpc public.auth.v1.AuthService.CompleteOIDCSignIn
