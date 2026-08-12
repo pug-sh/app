@@ -10,7 +10,7 @@ import { OptionChip } from '@/components/option-chip'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
-import { activeOrgAtom, projectsAtom } from '@/data/workspace.atoms'
+import { activeOrgAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { BarChart } from '../../insights/charts'
@@ -23,12 +23,14 @@ import {
   lastNUtcDays,
   RANGE_OPTIONS,
   type RangeDays,
+  unmeteredTailDays,
   usageSeriesColors,
+  validDate,
 } from './usage-helpers'
 
 // The window a response was fetched with, carried alongside it: deriving the series from the
 // picker instead would describe the new range with the old response for the whole round-trip.
-type Loaded = { usage: GetUsageResponse; range: { from: Date; to: Date }; days: number }
+type Loaded = { usage: GetUsageResponse; range: { from: Date; to: Date }; days: RangeDays }
 
 // An empty half-open window, so buildUsageSeries's day loop never runs and every field comes back
 // empty whatever the response holds. Only read while `loaded` is null — the series memo sits above
@@ -42,17 +44,70 @@ const LOAD_TIMEOUT_MS = 20_000
 
 const EMPTY_STATE_CLASS = 'flex flex-col items-center justify-center py-16 text-muted-foreground'
 
-// Unreadable rows are reported, never folded into the "no events" state: this is a metering
-// surface, and a page that says zero when the server said something else is worse than one that
-// admits it could not read the answer.
-const EmptyWindow = ({ malformed }: { malformed: number }) => {
-  if (malformed > 0) {
+// Three answers the proto distinguishes and this page must not flatten into one (usage.proto, on
+// usage_computed_at): no stamp at all means the meter has never run for this org; a stamp EARLIER
+// than period_start means it has not reached this period yet, so used_events is a placeholder zero
+// rather than a measurement, and the proto says to render it as "computing"; only a stamp inside
+// the period makes the number a total. Rendering either of the first two as "0" states a billing
+// figure the server never claimed. The fourth case is ours rather than the proto's — a negative
+// total is not a number this page will put on screen.
+type PeriodState =
+  | { kind: 'never' }
+  | { kind: 'unreadable'; meteredAt: Date }
+  | { kind: 'computing'; meteredAt: Date }
+  | { kind: 'metered'; meteredAt: Date }
+
+const periodState = (usedEvents: bigint, meteredAt: Date | null, periodStart: Date | null): PeriodState => {
+  if (!meteredAt) return { kind: 'never' }
+  if (usedEvents < 0n) return { kind: 'unreadable', meteredAt }
+  if (periodStart && meteredAt < periodStart) return { kind: 'computing', meteredAt }
+  return { kind: 'metered', meteredAt }
+}
+
+const PeriodTotal = ({ state, usedEvents }: { state: PeriodState; usedEvents: bigint }) => {
+  if (state.kind === 'metered') {
+    return <span className="text-4xl tabular-nums">{usedEvents.toLocaleString()}</span>
+  }
+  if (state.kind === 'computing') {
+    return <span className="text-4xl text-muted-foreground">Computing</span>
+  }
+  return <span className="text-4xl text-muted-foreground">Unknown</span>
+}
+
+const PeriodNote = ({ state }: { state: PeriodState }) => {
+  if (state.kind === 'never') {
+    return <>Usage has never been metered for this organization, so there is no count to show — not a zero.</>
+  }
+  if (state.kind === 'unreadable') {
+    return (
+      <>
+        The server reported a negative total for this period, so there is no count to show — not a zero. Last metered{' '}
+        {formatUtcStamp(state.meteredAt)}.
+      </>
+    )
+  }
+  if (state.kind === 'computing') {
+    return (
+      <>
+        The meter has not reached this period yet, so there is no total for it — not a zero. Last metered{' '}
+        {formatUtcStamp(state.meteredAt)}.
+      </>
+    )
+  }
+  return <>Last metered {formatUtcStamp(state.meteredAt)}</>
+}
+
+// Refused rows are reported, never folded into the "no events" state: this is a metering surface,
+// and a page that says zero when the server said something else is worse than one that admits it
+// could not read the answer.
+const EmptyWindow = ({ malformed, outOfWindow }: { malformed: number; outOfWindow: number }) => {
+  const unusable = malformed + outOfWindow
+  if (unusable > 0) {
     return (
       <div className={EMPTY_STATE_CLASS}>
         <p className="text-sm font-medium mb-1">Usage could not be read for this window</p>
         <p className="text-xs">
-          {malformed === 1 ? '1 row was' : `${malformed} rows were`} unreadable, so there is no total to show — not a
-          zero.
+          {unusable === 1 ? '1 row was' : `${unusable} rows were`} unusable, so there is no total to show — not a zero.
         </p>
       </div>
     )
@@ -65,9 +120,30 @@ const EmptyWindow = ({ malformed }: { malformed: number }) => {
   )
 }
 
+// Reported next to the totals they actually affect, rather than at the top of the page: `malformed`
+// and `outOfWindow` describe the daily series only, and the period figure above comes from a
+// different field entirely.
+const RejectedRows = ({ malformed, outOfWindow }: { malformed: number; outOfWindow: number }) => (
+  <>
+    {malformed > 0 && (
+      <p className="mb-2 text-xs text-caution">
+        {malformed === 1 ? '1 usage row' : `${malformed} usage rows`} could not be read and{' '}
+        {malformed === 1 ? 'is' : 'are'} missing from the totals below.
+      </p>
+    )}
+    {outOfWindow > 0 && (
+      <p className="mb-2 text-xs text-caution">
+        {outOfWindow === 1 ? '1 usage row' : `${outOfWindow} usage rows`} fell outside the requested window and{' '}
+        {outOfWindow === 1 ? 'is' : 'are'} missing from the totals below.
+      </p>
+    )}
+  </>
+)
+
 const Usage = () => {
   const org = useAtomValue(activeOrgAtom)
   const projects = useAtomValue(projectsAtom)
+  const projectsLoaded = useAtomValue(projectsLoadedAtom)
   const usageRPC = useAtomValue(usageRPCAtom)
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
@@ -76,17 +152,21 @@ const Usage = () => {
   const [error, setError] = useState<string | null>(null)
   const [fetching, setFetching] = useState(false)
 
-  // Range changes and Retry both fire on top of the mount effect. Without this a superseded
+  // Range changes, Refresh and Retry all fire on top of the mount effect. Without this a superseded
   // response wins the race and paints a window the range chip no longer names — and its `finally`
   // clears the spinner while the current request is still running.
   const latestRequestRef = useRef(0)
 
   const load = useCallback(async () => {
-    if (!org) {
+    // Claimed before any early return below, so a request already in flight can never still count
+    // as the latest and paint its numbers over this one's error.
+    const requestId = ++latestRequestRef.current
+    if (!org?.id) {
       setError('No organization selected')
+      // Bumping the id above orphaned any in-flight `finally`, so clear the flag here instead.
+      setFetching(false)
       return
     }
-    const requestId = ++latestRequestRef.current
     // Read off the clock per call, not per mount, or a tab left open overnight refreshes into
     // yesterday's window and today's events can never arrive.
     const range = lastNUtcDays(rangeDays)
@@ -127,11 +207,17 @@ const Usage = () => {
     load()
   }
 
-  // Labelled rather than bare, since the same fallback covers a deleted project and the window
-  // before projectsAtom fills — when every row would otherwise be an unexplained id fragment.
+  // "Unknown project" asserts deleted, which is wrong for the far more common case: this page can
+  // mount before App's project fetch has run, and every row would accuse the org of deleting
+  // projects it still has. projectsLoadedAtom is the only thing that tells the two apart.
   const projectName = useCallback(
-    (id: string) => projects.find(p => p.id === id)?.displayName ?? `Unknown project (${id.slice(0, 8)}…)`,
-    [projects],
+    (id: string) => {
+      const known = projects.find(p => p.id === id)?.displayName
+      if (known) return known
+      if (!projectsLoaded) return `Project ${id.slice(0, 8)}…`
+      return `Unknown project (${id.slice(0, 8)}…)`
+    },
+    [projects, projectsLoaded],
   )
 
   const series = useMemo(
@@ -140,15 +226,18 @@ const Usage = () => {
   )
 
   // A response the page cannot fully read is a server-side defect worth a line in the console, not
-  // just a banner — the reader can report the count, but only this names the org.
+  // just a banner — the reader can report the count, but only this names the org and the rows.
   useEffect(() => {
-    if (series.malformed > 0) {
-      console.error(`usage: ${series.malformed} unreadable cell(s) in response for org ${org?.id ?? 'unknown'}`)
-    }
-  }, [series.malformed, org])
+    if (series.malformed === 0 && series.outOfWindow === 0) return
+    console.error(
+      `usage: ${series.malformed} unreadable and ${series.outOfWindow} out-of-window cell(s) in response for org ${org?.id ?? 'unknown'}`,
+      series.rejected,
+    )
+  }, [series.malformed, series.outOfWindow, series.rejected, org])
+
   // resolvedTheme: getIndexedColor reads a module-level scheme the theme toggle mutates, which
   // can't invalidate a memo on its own.
-  const seriesColors = useMemo(() => usageSeriesColors(series.names.length), [series.names.length, resolvedTheme])
+  const seriesColors = useMemo(() => usageSeriesColors(series.names), [series.names, resolvedTheme])
 
   if (!loaded) {
     if (!error) return <LoadingSpinner />
@@ -162,22 +251,15 @@ const Usage = () => {
     )
   }
 
-  // protobuf-es surfaces an absent used_events as 0n with no undefined to test, and the server sets
-  // the two fields together or not at all — so the stamp, never the count, decides whether there is
-  // an answer.
-  const meteredAt = tsToDate(loaded.usage.usageComputedAt)
-  const periodStart = tsToDate(loaded.usage.periodStart)
-  const periodEnd = tsToDate(loaded.usage.periodEnd)
+  const meteredAt = validDate(tsToDate(loaded.usage.usageComputedAt))
+  const periodStart = validDate(tsToDate(loaded.usage.periodStart))
+  const periodEnd = validDate(tsToDate(loaded.usage.periodEnd))
+  const period = periodState(loaded.usage.usedEvents, meteredAt, periodStart)
+  const unmeteredDays = unmeteredTailDays(loaded.range, meteredAt)
 
   return (
     <div className="space-y-8 max-w-4xl">
       {error && <p className="text-xs text-negative">{error} — showing the last data that loaded.</p>}
-      {series.malformed > 0 && series.projectTotals.length > 0 && (
-        <p className="text-xs text-caution">
-          {series.malformed === 1 ? '1 usage row' : `${series.malformed} usage rows`} could not be read and{' '}
-          {series.malformed === 1 ? 'is' : 'are'} missing from the totals below.
-        </p>
-      )}
       <section>
         <SectionHeader
           title="Events this period"
@@ -185,22 +267,14 @@ const Usage = () => {
         />
 
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          {meteredAt ? (
-            <span className="text-4xl tabular-nums">{loaded.usage.usedEvents.toLocaleString()}</span>
-          ) : (
-            <span className="text-4xl text-muted-foreground">Unknown</span>
-          )}
+          <PeriodTotal state={period} usedEvents={loaded.usage.usedEvents} />
           {periodStart && periodEnd && (
             <span className="text-xs text-muted-foreground">{formatPeriod(periodStart, periodEnd)}</span>
           )}
         </div>
 
         <p className="mt-2 text-xs text-muted-foreground">
-          {meteredAt ? (
-            <>Last metered {formatUtcStamp(meteredAt)}</>
-          ) : (
-            <>Usage has never been metered for this organization, so there is no count to show — not a zero.</>
-          )}
+          <PeriodNote state={period} />
         </p>
       </section>
 
@@ -208,11 +282,14 @@ const Usage = () => {
         <div className="mb-4 flex items-center justify-between gap-2">
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Daily events</span>
           <div className="flex items-center gap-2">
+            {/* Driven by the window on screen, not the pending pick — a chip naming a range the
+                numbers beneath it didn't come from is the same lie `Loaded.days` exists to prevent.
+                It catches up when the response lands, and never moves if the request fails. */}
             <OptionChip
               label="range"
               icon={CalendarRange}
               options={RANGE_OPTIONS}
-              value={rangeDays}
+              value={loaded.days}
               onChange={days => {
                 setRangeDays(days)
                 trackFeature({ featureId: 'usage.range', featureName: 'Usage range' })
@@ -224,8 +301,10 @@ const Usage = () => {
           </div>
         </div>
 
+        <RejectedRows malformed={series.malformed} outOfWindow={series.outOfWindow} />
+
         {series.projectTotals.length === 0 ? (
-          <EmptyWindow malformed={series.malformed} />
+          <EmptyWindow malformed={series.malformed} outOfWindow={series.outOfWindow} />
         ) : (
           <>
             <BarChart
@@ -240,6 +319,13 @@ const Usage = () => {
               {series.windowTotal.toLocaleString()} events over the last {loaded.days} days — a different window from
               the period total above.
             </p>
+            {unmeteredDays > 0 && meteredAt && (
+              <p className="mt-2 text-xs text-caution">
+                The meter last ran {formatUtcStamp(meteredAt)}, so the last{' '}
+                {unmeteredDays === 1 ? 'day' : `${unmeteredDays} days`} of this chart{' '}
+                {unmeteredDays === 1 ? 'is' : 'are'} unmetered — not zero.
+              </p>
+            )}
           </>
         )}
       </section>
