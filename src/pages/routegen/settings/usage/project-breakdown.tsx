@@ -42,9 +42,8 @@ const ProjectBreakdown = ({
             <tr key={project.projectId} className="border-b border-border/50 transition-colors hover:bg-muted/40">
               <td className="py-2">
                 <span className="flex items-center gap-2">
-                  {/* Neutral past the charted set: those rows have no series of their own, and
-                      lending them the folded band's hue reads as a peer of whichever charted
-                      project sits nearest it in the palette. */}
+                  {/* Neutral past the charted set: the only spare hue is the folded band's, which
+                      would read as this row being that series. */}
                   <span
                     className={cn('size-2 shrink-0 rounded-full', i >= chartedCount && 'bg-faint')}
                     style={i < chartedCount ? { backgroundColor: colors[i]?.line } : undefined}

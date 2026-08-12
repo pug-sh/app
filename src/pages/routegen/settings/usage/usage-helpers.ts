@@ -15,8 +15,7 @@ export const lastNUtcDays = (days: number) => {
   return { from: new Date(end - days * DAY_MS), to: new Date(end) }
 }
 
-// All under the request's 400-day cap and inside the meter's ~13-month retention, so a filled gap
-// below is a metered zero rather than a pruned day.
+// All under the request's 400-day cap and inside the meter's ~13-month retention.
 export const RANGE_OPTIONS = [
   { label: '30 days', value: 30 },
   { label: '90 days', value: 90 },
@@ -32,8 +31,6 @@ const DAY_FMT = utcFormat({ month: 'short', day: 'numeric', year: 'numeric' })
 const DAY_NO_YEAR_FMT = utcFormat({ month: 'short', day: 'numeric' })
 const STAMP_FMT = utcFormat({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
 
-export const formatUtcDay = (d: Date) => DAY_FMT.format(d)
-
 export const formatUtcStamp = (d: Date) => `${STAMP_FMT.format(d)} UTC`
 
 // periodEnd is exclusive — the 1st of the next month.
@@ -48,7 +45,11 @@ export type ProjectTotal = { projectId: string; name: string; total: number }
 const utcDayKey = (d: Date) => d.toISOString().slice(0, 10)
 
 // Cells are per (project, day) and a day a project sent nothing has no row at all. Emits one point
-// per UTC day across the whole window — unfilled gaps would space the bars by row index.
+// per UTC day across the whole window — the vendored bar width is innerWidth/(rows−1), so a
+// missing row widens every bar until they overdraw.
+//
+// Cells outside `range` are dropped rather than counted, so the totals below can never describe a
+// wider window than the points do — the two disagree otherwise while a range change is in flight.
 export const buildUsageSeries = (
   daily: UsageDay[],
   range: { from: Date; to: Date },
@@ -56,10 +57,14 @@ export const buildUsageSeries = (
 ) => {
   const totals = new Map<string, number>()
   const byDay = new Map<string, Map<string, number>>()
+  const fromMs = floorUtcDay(range.from).getTime()
+  const toMs = range.to.getTime()
 
   for (const cell of daily) {
     const day = tsToDate(cell.day)
     if (!day) continue
+    const dayMs = floorUtcDay(day).getTime()
+    if (dayMs < fromMs || dayMs >= toMs) continue
     const count = Number(cell.eventCount)
     totals.set(cell.projectId, (totals.get(cell.projectId) ?? 0) + count)
 
@@ -83,7 +88,7 @@ export const buildUsageSeries = (
   if (folded.length > 0) names.push(OTHERS_LABEL)
 
   const points: ChartPoint[] = []
-  for (let t = floorUtcDay(range.from).getTime(); t < range.to.getTime(); t += DAY_MS) {
+  for (let t = fromMs; t < toMs; t += DAY_MS) {
     const row = byDay.get(utcDayKey(new Date(t)))
     const values = charted.map(p => row?.get(p.projectId) ?? 0)
     if (folded.length > 0) values.push(folded.reduce((sum, p) => sum + (row?.get(p.projectId) ?? 0), 0))
