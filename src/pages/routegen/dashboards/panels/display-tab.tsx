@@ -8,9 +8,9 @@ import {
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { OptionChip } from '@/components/option-chip'
 import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Checkbox } from '@/components/ui/checkbox'
-import { OptionChip } from '../../insights/controls'
 import { ACCENT_TOKENS, accentStripClass } from '../accent-palette'
 import { TILE_ICON_PALETTE } from '../tile-icons'
 import {

@@ -17,6 +17,7 @@ import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterC
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
+import { OptionChip } from '@/components/option-chip'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -53,7 +54,7 @@ import {
   type ViewMode,
 } from './constants'
 import { InsightsContent } from './content'
-import { InsightsRowAggregationControls, OptionChip } from './controls'
+import { InsightsRowAggregationControls } from './controls'
 import {
   breakdownLabel,
   buildChartData,

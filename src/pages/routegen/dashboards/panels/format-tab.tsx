@@ -10,8 +10,8 @@ import {
   VisualizationOptions_YAxisFormat,
   VisualizationOptionsSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { OptionChip } from '@/components/option-chip'
 import { Button } from '@/components/ui/button'
-import { OptionChip } from '../../insights/controls'
 import { ThresholdRuleEditor } from '../threshold-rule-editor'
 import { tileOptionApplicability } from './option-applicability'
 import { Section } from './section'

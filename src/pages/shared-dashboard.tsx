@@ -8,6 +8,7 @@ import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { sharedDashboardsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import LoadingSpinner from '@/components/loading-spinner'
+import { OptionChip } from '@/components/option-chip'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { useRouteParams } from '@/lib/route-params'
@@ -16,7 +17,6 @@ import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboard
 import { DashboardGrid } from './routegen/dashboards/grid'
 import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
-import { OptionChip } from './routegen/insights/controls'
 
 // This route renders standalone, outside the <main> that carries the marker in App.tsx, and it is
 // entirely a customer's data — their dashboard, tile titles, and event names, shown to the public.
