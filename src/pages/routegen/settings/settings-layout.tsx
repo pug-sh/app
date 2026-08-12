@@ -1,24 +1,28 @@
 import { useAtomValue } from 'jotai'
 import { type ReactNode, useEffect } from 'react'
 import { useLocation } from 'wouter'
+import { useCan } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
+import type { Resource } from '@/auth/permissions'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import ProjectLink from '@/components/project-link'
 import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
 
-const SETTINGS_TABS = [
+const SETTINGS_TABS: { path: string; label: string; resource?: Resource }[] = [
   { path: 'general', label: 'General' },
   { path: 'api-keys', label: 'API Keys' },
+  { path: 'usage', label: 'Usage', resource: 'usage' },
   { path: 'account', label: 'Account' },
   { path: 'organization', label: 'Organization' },
-] as const
+]
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const [location, navigate] = useLocation()
   const { projectId } = useRouteParams<{ projectId: string }>()
   const isDemo = useAtomValue(isDemoSessionAtom)
+  const can = useCan()
 
   // Settings is hidden in the read-only demo — it exposes the shared demo account's email/password
   // and org config. The sidebar entry is dropped (DEMO_HIDDEN_PATHS in sidebar.tsx); this guards a
@@ -37,7 +41,7 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
     <Page title="Settings" description="Manage project settings">
       <div className="border-b border-border mb-8">
         <nav className="-mb-px flex gap-6">
-          {SETTINGS_TABS.map(tab => {
+          {SETTINGS_TABS.filter(tab => !tab.resource || can('read', tab.resource)).map(tab => {
             const isActive = tab.path === activeTab
             return (
               <ProjectLink

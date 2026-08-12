@@ -29,6 +29,7 @@ export type Resource =
   | 'insight'
   | 'activity'
   | 'profile'
+  | 'usage'
 
 // Mirror of authz.Action (resources.go).
 const ACTIONS = ['create', 'read', 'update', 'delete'] as const
@@ -62,6 +63,9 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     insight: ['read'],
     activity: ['read'],
     profile: ['read'],
+    // Read-only for every role: the meter writes the usage tables, no RPC does. On the viewer
+    // floor because the person who notices a spike is rarely the admin.
+    usage: ['read'],
   },
   // Inherits VIEWER's reads (org/member/project + analytics) via INHERITS; adds full CRUD on
   // the analytics objects.
