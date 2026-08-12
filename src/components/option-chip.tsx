@@ -24,9 +24,8 @@ export const OptionChip = <T extends string | number>({
 }) => {
   const [open, setOpen] = useState(false)
   const current = options.find(o => o.value === value)
-  const valueMinWidth = stableWidth
-    ? `${Math.max(...options.map(option => option.label.length), current?.label.length ?? 0)}ch`
-    : undefined
+  const widestLabel = Math.max(...options.map(option => option.label.length), current?.label.length ?? 0)
+  const valueMinWidth = stableWidth ? `${widestLabel}ch` : undefined
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

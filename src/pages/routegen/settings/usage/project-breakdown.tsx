@@ -17,18 +17,14 @@ const ProjectBreakdown = ({
   if (projectTotals.length === 0) return null
 
   const folded = projectTotals.length - chartedCount
+  let description = 'Over the selected window.'
+  if (folded > 0) {
+    description = `Over the selected window. The last ${folded} are charted together as one series.`
+  }
 
   return (
     <section>
-      <SectionHeader
-        title="By project"
-        count={projectTotals.length}
-        description={
-          folded > 0
-            ? `Over the selected window. The last ${folded} are charted together as one series.`
-            : 'Over the selected window.'
-        }
-      />
+      <SectionHeader title="By project" count={projectTotals.length} description={description} />
       <table className="w-full text-sm">
         <thead>
           <tr className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
