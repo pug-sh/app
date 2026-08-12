@@ -42,10 +42,11 @@ export const OptionChip = <T extends string | number>({
         <div className="flex flex-col gap-0.5">
           {options.map(opt => {
             const rawReason = isOptionDisabled?.(opt.value)
-            // Treat a blank/whitespace reason as "enabled" so a disabled option can never
-            // render an empty tooltip.
-            const disabledReason = rawReason?.trim() ? rawReason : null
-            const disabled = disabledReason !== null
+            // A returned string means disabled, even a blank one — the tooltip is the explanation,
+            // not the constraint, so a caller that fumbles its message must not thereby re-enable
+            // an option it meant to block. Null is the only "enabled" answer.
+            const disabled = rawReason != null
+            const disabledReason = rawReason?.trim() ? rawReason : 'Not available for the current selection'
             let optionClassName = 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             if (opt.value === value) {
               optionClassName = 'bg-muted text-foreground font-medium'

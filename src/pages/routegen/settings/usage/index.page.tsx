@@ -13,7 +13,7 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom, projectsAtom } from '@/data/workspace.atoms'
 import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
 import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
-import { BarChart } from '../../insights/charts/bar-chart'
+import { BarChart } from '../../insights/charts'
 import ProjectBreakdown from './project-breakdown'
 import {
   buildUsageSeries,
@@ -22,6 +22,7 @@ import {
   formatUtcStamp,
   lastNUtcDays,
   RANGE_OPTIONS,
+  type RangeDays,
   usageSeriesColors,
 } from './usage-helpers'
 
@@ -29,8 +30,40 @@ import {
 // picker instead would describe the new range with the old response for the whole round-trip.
 type Loaded = { usage: GetUsageResponse; range: { from: Date; to: Date }; days: number }
 
+// An empty half-open window, so buildUsageSeries's day loop never runs and every field comes back
+// empty whatever the response holds. Only read while `loaded` is null — the series memo sits above
+// the early return, so it has to be given something.
 const NO_RANGE = { from: new Date(0), to: new Date(0) }
 const LOAD_FAILED = 'Failed to load usage'
+
+// Connect applies no deadline of its own, so without this a stalled socket leaves the promise
+// pending and the page on a bare spinner with nothing to retry. Surfaces as DeadlineExceeded.
+const LOAD_TIMEOUT_MS = 20_000
+
+const EMPTY_STATE_CLASS = 'flex flex-col items-center justify-center py-16 text-muted-foreground'
+
+// Unreadable rows are reported, never folded into the "no events" state: this is a metering
+// surface, and a page that says zero when the server said something else is worse than one that
+// admits it could not read the answer.
+const EmptyWindow = ({ malformed }: { malformed: number }) => {
+  if (malformed > 0) {
+    return (
+      <div className={EMPTY_STATE_CLASS}>
+        <p className="text-sm font-medium mb-1">Usage could not be read for this window</p>
+        <p className="text-xs">
+          {malformed === 1 ? '1 row was' : `${malformed} rows were`} unreadable, so there is no total to show — not a
+          zero.
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className={EMPTY_STATE_CLASS}>
+      <p className="text-sm font-medium mb-1">No metered events in this window</p>
+      <p className="text-xs">A day with no events is stored as no row at all.</p>
+    </div>
+  )
+}
 
 const Usage = () => {
   const org = useAtomValue(activeOrgAtom)
@@ -38,13 +71,14 @@ const Usage = () => {
   const usageRPC = useAtomValue(usageRPCAtom)
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
-  const [rangeDays, setRangeDays] = useState(DEFAULT_RANGE_DAYS)
+  const [rangeDays, setRangeDays] = useState<RangeDays>(DEFAULT_RANGE_DAYS)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [fetching, setFetching] = useState(false)
 
-  // Range changes and Retry both fire on top of the mount effect, so a superseded response would
-  // otherwise paint a chart the axis disagrees with.
+  // Range changes and Retry both fire on top of the mount effect. Without this a superseded
+  // response wins the race and paints a window the range chip no longer names — and its `finally`
+  // clears the spinner while the current request is still running.
   const latestRequestRef = useRef(0)
 
   const load = useCallback(async () => {
@@ -56,36 +90,47 @@ const Usage = () => {
     // Read off the clock per call, not per mount, or a tab left open overnight refreshes into
     // yesterday's window and today's events can never arrive.
     const range = lastNUtcDays(rangeDays)
+    const protoRange = toProtoTimeRange(range)
     setFetching(true)
+
+    // Only the call is guarded. Widen this and a programming error in the state updates below
+    // reaches the reader as "Failed to load usage" — a network message, with a retry that cannot
+    // fix it — instead of the error boundary.
+    let resp: GetUsageResponse
     try {
-      const resp = await usageRPC.getUsage({ orgId: org.id, range: toProtoTimeRange(range) })
-      if (requestId !== latestRequestRef.current) return
-      setLoaded({ usage: resp, range, days: rangeDays })
-      setError(null)
+      resp = await usageRPC.getUsage({ orgId: org.id, range: protoRange }, { timeoutMs: LOAD_TIMEOUT_MS })
     } catch (err) {
       if (requestId !== latestRequestRef.current) return
       // Keeps `loaded`: a flaky refresh should leave the data on screen, not drop the reader back
       // to a bare error page whose only control retries the query that just failed.
       setError(rpcErrorMessage(err, LOAD_FAILED))
       toastRPCError(err, LOAD_FAILED)
+      return
     } finally {
       if (requestId === latestRequestRef.current) setFetching(false)
     }
+
+    if (requestId !== latestRequestRef.current) return
+    setLoaded({ usage: resp, range, days: rangeDays })
+    setError(null)
   }, [usageRPC, org, rangeDays])
 
   useEffect(() => {
     load()
   }, [load])
 
-  // Tracked here rather than in load(), which also runs on mount and on every range change. Named
-  // explicitly since an icon-only button autocaptures as tag `svg` with no text.
+  // trackFeature sits here rather than in load() because that also runs on mount and on every range
+  // change; only this handler is a deliberate click. Named explicitly since an icon-only button
+  // autocaptures as tag `svg` with no text.
   const refresh = () => {
     trackFeature({ featureId: 'usage.refresh', featureName: 'Refresh usage' })
     load()
   }
 
+  // Labelled rather than bare, since the same fallback covers a deleted project and the window
+  // before projectsAtom fills — when every row would otherwise be an unexplained id fragment.
   const projectName = useCallback(
-    (id: string) => projects.find(p => p.id === id)?.displayName ?? `${id.slice(0, 8)}…`,
+    (id: string) => projects.find(p => p.id === id)?.displayName ?? `Unknown project (${id.slice(0, 8)}…)`,
     [projects],
   )
 
@@ -93,6 +138,14 @@ const Usage = () => {
     () => buildUsageSeries(loaded?.usage.daily ?? [], loaded?.range ?? NO_RANGE, projectName),
     [loaded, projectName],
   )
+
+  // A response the page cannot fully read is a server-side defect worth a line in the console, not
+  // just a banner — the reader can report the count, but only this names the org.
+  useEffect(() => {
+    if (series.malformed > 0) {
+      console.error(`usage: ${series.malformed} unreadable cell(s) in response for org ${org?.id ?? 'unknown'}`)
+    }
+  }, [series.malformed, org])
   // resolvedTheme: getIndexedColor reads a module-level scheme the theme toggle mutates, which
   // can't invalidate a memo on its own.
   const seriesColors = useMemo(() => usageSeriesColors(series.names.length), [series.names.length, resolvedTheme])
@@ -109,8 +162,9 @@ const Usage = () => {
     )
   }
 
-  // usedEvents is a plain int64 that reads 0 when absent, and the two fields are set together or
-  // not at all — so the stamp, never the count, decides whether there is an answer.
+  // protobuf-es surfaces an absent used_events as 0n with no undefined to test, and the server sets
+  // the two fields together or not at all — so the stamp, never the count, decides whether there is
+  // an answer.
   const meteredAt = tsToDate(loaded.usage.usageComputedAt)
   const periodStart = tsToDate(loaded.usage.periodStart)
   const periodEnd = tsToDate(loaded.usage.periodEnd)
@@ -118,6 +172,12 @@ const Usage = () => {
   return (
     <div className="space-y-8 max-w-4xl">
       {error && <p className="text-xs text-negative">{error} — showing the last data that loaded.</p>}
+      {series.malformed > 0 && series.projectTotals.length > 0 && (
+        <p className="text-xs text-caution">
+          {series.malformed === 1 ? '1 usage row' : `${series.malformed} usage rows`} could not be read and{' '}
+          {series.malformed === 1 ? 'is' : 'are'} missing from the totals below.
+        </p>
+      )}
       <section>
         <SectionHeader
           title="Events this period"
@@ -165,10 +225,7 @@ const Usage = () => {
         </div>
 
         {series.projectTotals.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <p className="text-sm font-medium mb-1">No metered events in this window</p>
-            <p className="text-xs">A day with no events is stored as no row at all.</p>
-          </div>
+          <EmptyWindow malformed={series.malformed} />
         ) : (
           <>
             <BarChart
@@ -187,12 +244,7 @@ const Usage = () => {
         )}
       </section>
 
-      <ProjectBreakdown
-        projectTotals={series.projectTotals}
-        windowTotal={series.windowTotal}
-        chartedCount={series.chartedCount}
-        colors={seriesColors}
-      />
+      <ProjectBreakdown projectTotals={series.projectTotals} windowTotal={series.windowTotal} colors={seriesColors} />
     </div>
   )
 }

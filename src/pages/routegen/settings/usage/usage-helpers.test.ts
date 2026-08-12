@@ -11,6 +11,11 @@ const WESTERN = 'America/Los_Angeles'
 const cell = (day: string, projectId: string, eventCount: number) =>
   ({ day: timestampFromDate(new Date(day)), projectId, eventCount: BigInt(eventCount) }) as UsageDay
 
+// Builds the shapes a well-behaved server never sends: an unset stamp, or one so far out of range
+// that protobuf-es hands back an Invalid Date rather than throwing.
+const rawCell = (day: unknown, projectId: string, eventCount: number) =>
+  ({ day, projectId, eventCount: BigInt(eventCount) }) as UsageDay
+
 const range = (from: string, to: string) => ({ from: new Date(from), to: new Date(to) })
 
 const named = (id: string) => `Project ${id}`
@@ -64,7 +69,7 @@ describe('buildUsageSeries', () => {
     )
 
     expect(series.windowTotal).toBe(50)
-    expect(series.projectTotals).toEqual([{ projectId: 'a', name: 'Project a', total: 50 }])
+    expect(series.projectTotals).toEqual([{ projectId: 'a', name: 'Project a', total: 50, seriesIndex: 0 }])
   })
 
   it('keeps each project in its own series on a shared day', () => {
@@ -89,14 +94,28 @@ describe('buildUsageSeries', () => {
     expect(series.projectTotals.map(p => p.projectId)).toEqual(['big', 'small'])
   })
 
-  it('breaks equal totals by name, so colors survive a reload', () => {
+  // Names are deliberately inverted against ids here, so the assertion discriminates between the
+  // two possible tie-break keys instead of passing on either. It has to be the id: projectName
+  // returns an id fragment until projectsAtom fills, so a name-keyed sort reorders mid-page —
+  // which is the reload stability this is supposed to provide.
+  it('breaks equal totals by project id, which is stable before names load', () => {
+    const inverted = (id: string) => (id === 'zulu' ? 'Alpha Corp' : 'Zulu Corp')
     const series = buildUsageSeries(
       [cell('2026-08-01T00:00:00Z', 'zulu', 5), cell('2026-08-01T00:00:00Z', 'alpha', 5)],
       range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'),
-      named,
+      inverted,
     )
 
     expect(series.projectTotals.map(p => p.projectId)).toEqual(['alpha', 'zulu'])
+  })
+
+  it('numbers charted projects by series and leaves folded ones unnumbered', () => {
+    const daily = Array.from({ length: 8 }, (_, i) => cell('2026-08-01T00:00:00Z', `p${i}`, 100 - i))
+    const series = buildUsageSeries(daily, range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'), named)
+
+    // Six charted series, then the folded band — so a row can find its own color without the
+    // caller re-deriving it from array position.
+    expect(series.projectTotals.map(p => p.seriesIndex)).toEqual([0, 1, 2, 3, 4, 5, null, null])
   })
 
   it('folds projects past the charted maximum into one series', () => {
@@ -134,14 +153,79 @@ describe('buildUsageSeries', () => {
   })
 })
 
+// This is a metering surface, so a cell the page cannot read has to be counted rather than dropped:
+// dropped silently, a bad response understates the total, and a wholly bad one renders the "no
+// metered events" empty state — the page asserting zero usage while the server said otherwise.
+describe('buildUsageSeries — unreadable cells', () => {
+  it('counts a cell with no timestamp instead of dropping it silently', () => {
+    const series = buildUsageSeries(
+      [rawCell(undefined, 'a', 5_000_000), cell('2026-08-01T00:00:00Z', 'b', 10)],
+      range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'),
+      named,
+    )
+
+    expect(series.malformed).toBe(1)
+    expect(series.windowTotal).toBe(10)
+  })
+
+  it('reports malformed even when every cell is unreadable, so zero is never asserted', () => {
+    const series = buildUsageSeries(
+      [rawCell(undefined, 'a', 5_000_000)],
+      range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'),
+      named,
+    )
+
+    // projectTotals is empty either way — `malformed` is the only thing separating "no events"
+    // from "we could not read the events".
+    expect(series.projectTotals).toEqual([])
+    expect(series.malformed).toBe(1)
+  })
+
+  it('survives a timestamp too large to be a date, rather than throwing mid-render', () => {
+    // Seconds expressed in microseconds. protobuf-es returns an Invalid Date here instead of
+    // throwing, and an Invalid Date is truthy — so it passes a `!day` guard, defeats the range
+    // comparison (NaN is false both ways) and only blows up later, inside toISOString().
+    const daily = [rawCell({ seconds: 1754006400000000n, nanos: 0 }, 'a', 7)]
+
+    expect(() => buildUsageSeries(daily, range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'), named)).not.toThrow()
+
+    const series = buildUsageSeries(daily, range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'), named)
+    expect(series.malformed).toBe(1)
+    expect(series.windowTotal).toBe(0)
+  })
+
+  it('rejects a negative count rather than subtracting it from the window total', () => {
+    const series = buildUsageSeries(
+      [cell('2026-08-01T00:00:00Z', 'a', -50), cell('2026-08-01T00:00:00Z', 'b', 100)],
+      range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'),
+      named,
+    )
+
+    // Counted, the share column divides by 50 and reports a negative percentage.
+    expect(series.malformed).toBe(1)
+    expect(series.windowTotal).toBe(100)
+  })
+
+  it('reports nothing malformed for a clean response', () => {
+    const series = buildUsageSeries(
+      [cell('2026-08-01T00:00:00Z', 'a', 10)],
+      range('2026-08-01T00:00:00Z', '2026-08-02T00:00:00Z'),
+      named,
+    )
+
+    expect(series.malformed).toBe(0)
+  })
+})
+
 describe('formatPeriod', () => {
   it('names the last day of the period, not the exclusive bound', () => {
     const label = formatPeriod(new Date('2026-08-01T00:00:00Z'), new Date('2026-09-01T00:00:00Z'))
     expect(label).toBe('Aug 1 – Aug 31, 2026')
   })
 
-  // Re-imported inside the zone: the formatters are built at module load, so the already-imported
-  // ones above are pinned to the runner's zone and would pass here whatever they were built with.
+  // Re-imported inside the zone: the formatters are built at import time, so this is the only way
+  // to construct them under a non-UTC zone. Drop the `timeZone: 'UTC'` pin in utcFormat and this
+  // goes red — the top-level import above stays green on a UTC runner either way.
   it('holds the UTC boundary west of UTC', async () => {
     await inZoneAsync(WESTERN, async () => {
       vi.resetModules()
