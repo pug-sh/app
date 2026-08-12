@@ -10,12 +10,15 @@ import ProjectLink from '@/components/project-link'
 import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
 
-const SETTINGS_TABS: { path: string; label: string; resource?: Resource }[] = [
-  { path: 'general', label: 'General' },
-  { path: 'api-keys', label: 'API Keys' },
-  { path: 'usage', label: 'Usage', resource: 'usage' },
-  { path: 'account', label: 'Account' },
-  { path: 'organization', label: 'Organization' },
+// Tabs are reached through a project URL but do not all scope to one: usage and organization are
+// org-wide and account is per-customer, so each carries its own description rather than inheriting
+// a page-level one that would be wrong for three of the five.
+const SETTINGS_TABS: { path: string; label: string; description: string; resource?: Resource }[] = [
+  { path: 'general', label: 'General', description: 'Name and timezone for this project' },
+  { path: 'api-keys', label: 'API Keys', description: 'SDK keys for this project' },
+  { path: 'usage', label: 'Usage', description: 'Event usage across this organization', resource: 'usage' },
+  { path: 'account', label: 'Account', description: 'Your personal account settings' },
+  { path: 'organization', label: 'Organization', description: 'Organizations you belong to' },
 ]
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
@@ -35,14 +38,14 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
 
   // Active tab comes from the URL segment after /settings/ (source of truth, not state).
   const currentTab = location.match(/\/settings\/([^/]+)/)?.[1]
-  const activeTab = SETTINGS_TABS.find(tab => tab.path === currentTab)?.path ?? 'general'
+  const activeTab = SETTINGS_TABS.find(tab => tab.path === currentTab) ?? SETTINGS_TABS[0]
 
   return (
-    <Page title="Settings" description="Manage project settings">
+    <Page title="Settings" description={activeTab.description}>
       <div className="border-b border-border mb-8">
         <nav className="-mb-px flex gap-6">
           {SETTINGS_TABS.filter(tab => !tab.resource || can('read', tab.resource)).map(tab => {
-            const isActive = tab.path === activeTab
+            const isActive = tab.path === activeTab.path
             return (
               <ProjectLink
                 key={tab.path}
