@@ -16,7 +16,10 @@ const extractRPCErrorMessage = (err: ConnectError) => {
   return raw.replace(/^\[[^\]]+\]\s*/, '').trim() || err.message
 }
 
+export const rpcErrorMessage = (err: unknown, fallback: string) =>
+  err instanceof ConnectError ? extractRPCErrorMessage(err) : fallback
+
 export const toastRPCError = (err: unknown, fallback: string) => {
   console.error(fallback + ':', err)
-  toast.error(err instanceof ConnectError ? extractRPCErrorMessage(err) : fallback)
+  toast.error(rpcErrorMessage(err, fallback))
 }

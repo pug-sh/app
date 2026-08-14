@@ -37,5 +37,10 @@ jobs:
         # reads proto/.
         run: bun run build
 
+      # Pinned rather than inherited: the usage tests assert UTC bucketing by contrasting it with a
+      # western zone, and their comments claim CI runs in UTC. That was only ever true because
+      # GitHub's runners default to it.
       - name: Test
         run: bun run test
+        env:
+          TZ: UTC
