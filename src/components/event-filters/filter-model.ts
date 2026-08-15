@@ -1,11 +1,34 @@
-import type { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import { z } from 'zod'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 
-export type ActiveFilter =
-  | { property: string; source: PropertySource; operator: FilterOperator; kind: 'single'; value: string }
-  | { property: string; source: PropertySource; operator: FilterOperator; kind: 'multi'; values: string[] }
-  | { property: string; source: PropertySource; operator: FilterOperator; kind: 'presence' }
-  | { property: string; source: PropertySource; operator: FilterOperator; kind: 'range'; min: string; max: string }
+// Validates a filter arriving from outside the app — a shared URL, a stored tile spec. The payload
+// has to be checked per arm, not just the discriminant: `toProtoFilters` switches on `kind` and
+// reads the fields that arm implies, so a `multi` filter with no `values` produces a filter message
+// with an undefined field and a query that is wrong rather than rejected. Note this validates the
+// payload against the *kind*, not the kind against the operator's arity — `parseActiveFilter` in
+// `use-filter-query-params.ts` cross-checks that, and the backend's PropertyFilter CEL rules reject
+// a mismatch outright.
+const activeFilterFields = {
+  property: z.string().min(1),
+  source: z.nativeEnum(PropertySource),
+  operator: z.nativeEnum(FilterOperator),
+}
+
+export const activeFilterSchema = z.discriminatedUnion('kind', [
+  z.object({ ...activeFilterFields, kind: z.literal('single'), value: z.string() }),
+  z.object({ ...activeFilterFields, kind: z.literal('multi'), values: z.array(z.string()) }),
+  z.object({ ...activeFilterFields, kind: z.literal('presence') }),
+  z.object({ ...activeFilterFields, kind: z.literal('range'), min: z.string(), max: z.string() }),
+])
+
+// Derived, not declared alongside the schema. As two hand-written declarations they drifted in one
+// direction silently: adding an arm to the union only broke `toProtoFilters`' exhaustive switch, and
+// adding the missing `case` compiled clean with the schema still four-armed. A filter of the new
+// kind then failed `safeParse` and — because the parse covers the whole config — discarded the
+// user's entire user-flow setup behind "Could not restore user flow from URL", which is the bug the
+// restorable/runnable split exists to prevent. One declaration makes that unrepresentable.
+export type ActiveFilter = z.infer<typeof activeFilterSchema>
 
 export const FILTER_OPERATORS: readonly {
   value: FilterOperator

@@ -1,26 +1,37 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { atom } from 'jotai'
+import { atom, type Getter, type Setter } from 'jotai'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
-import { OAuthProvider } from '@/api/genproto/public/auth/v1/auth_pb'
+import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
-import { jwtAtom, refreshTokenAtom } from './jwt.atoms'
-import { isGoogleOAuthEnabled, mapOAuthConnectError } from './oauth'
+import { customerIdAtom, jwtAtom, refreshTokenAtom } from './jwt.atoms'
+import { mapOAuthConnectError } from './oauth'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
 export type AuthResult = { ok: true } | { ok: false; error: string }
 
-// Build-time gate for the Google sign-in button (driven by VITE_GOOGLE_CLIENT_ID), exposed as
-// an atom so config reads flow through the store like the rest of auth state.
-export const googleOAuthEnabledAtom = atom(() => isGoogleOAuthEnabled())
+// A ConnectError's own fields survive console serialization; the whole error doesn't.
+const connectDetail = (err: unknown) => (err instanceof ConnectError ? { code: err.code, message: err.message } : err)
 
-// Build-time gate for the sign-in page's "Explore the live demo" link, driven by VITE_DEMO_ENABLED
-// (not the in-app banner — that follows the active demo session; see isDemoSessionAtom). Exposed as
-// an atom for parity with googleOAuthEnabledAtom.
+// Suspends the signed-out canvas briefly while the public config loads.
+export const authProvidersAtom = atom(async get => {
+  try {
+    const response = await get(authRPCAtom).getAuthConfig({})
+    return response.providers
+  } catch (error) {
+    // Swallowed so provider discovery can't take password or magic-link sign-in down with it.
+    // null rather than []: an empty list means "none configured", and sign-in hides SSO on that.
+    console.error('Could not load external auth providers', error)
+    return null
+  }
+})
+
+// Build-time gate for the sign-in page's "Explore the live demo" link — not the in-app banner,
+// which follows the active demo session (see isDemoSessionAtom).
 export const demoEnabledAtom = atom(() => isDemoEnabled())
 
 export const signInAtom = atom(
@@ -40,17 +51,33 @@ export const signInAtom = atom(
 )
 
 export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
+type MeStatus = 'idle' | 'loading' | 'ready' | 'error'
 
-// Current signed-in customer. email is NOT in the JWT, so it must come from GetMe.
-export const meAtom = atom<Me | null>(null)
+// Current signed-in customer. email is NOT in the JWT, so it must come from GetMe. Keyed by customer
+// (the projectsOrgIdAtom pattern) so a switch invalidates both without anyone remembering to — a
+// teardown back to the *same* customer still needs the explicit clear.
+const meResultAtom = atom<Me | null>(null)
+const meStatusRawAtom = atom<MeStatus>('idle')
+const meCustomerAtom = atom<string | undefined>(undefined)
+
+const meIsCurrent = (get: Getter) => get(meCustomerAtom) === get(customerIdAtom)
+
+export const meAtom = atom(get => (meIsCurrent(get) ? get(meResultAtom) : null))
+export const meStatusAtom = atom(get => (meIsCurrent(get) ? get(meStatusRawAtom) : 'idle'))
+
+const clearMe = (set: Setter) => {
+  set(meResultAtom, null)
+  set(meStatusRawAtom, 'idle')
+  set(meCustomerAtom, undefined)
+}
 
 // How the session was obtained. Threaded in rather than inferred so every path that mints a
 // session has to say which it is — a new one is a type error until it answers.
-export type SignInMethod = 'password' | 'magic_link' | 'google' | 'demo'
+export type SignInMethod = 'password' | 'magic_link' | 'oidc' | 'demo'
 
-// Applies a freshly issued session token pair — password sign-in, magic link, OAuth, and the demo
+// Applies a freshly issued session token pair — password sign-in, magic link, OIDC, and the demo
 // all funnel here. The token alone decides identity (the server ignores any caller session). Always
-// clear meAtom — email isn't in the JWT and must be refetched for the new identity.
+// clear the me state — email isn't in the JWT and must be refetched for the new identity.
 //
 // Does NOT reset the workspace when the new token names a different account: WorkspaceBootstrap
 // watches customerIdAtom and does it for every switch, in-tab and cross-tab alike (see App.tsx).
@@ -62,7 +89,7 @@ const applySessionAtom = atom(
   (_get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
     set(jwtAtom, token)
     set(refreshTokenAtom, refreshToken)
-    set(meAtom, null)
+    clearMe(set)
     // The demo marker is derived from the method and written in the same pass as the token, so a
     // real login clears a prior demo's banner and a demo login sets it. Deriving it (rather than
     // clearing here and letting demoSignInAtom set it true afterwards) removes the window where a
@@ -73,16 +100,45 @@ const applySessionAtom = atom(
   },
 )
 
+// Connect applies no deadline of its own, so without this a hung call parks the status on 'loading'
+// for the life of the page. Surfaces as DeadlineExceeded through the catch below.
+const GET_ME_DEADLINE_MS = 10_000
+
 export const fetchMeAtom = atom(null, async (get, set) => {
+  const customerId = get(customerIdAtom)
   const customersRPC = get(customersRPCAtom)
+  // Or the previous account's address stays readable under the new key while the request runs.
+  if (get(meCustomerAtom) !== customerId) set(meResultAtom, null)
+  set(meCustomerAtom, customerId)
+  set(meStatusRawAtom, 'loading')
+  // A response outlives its request: switch account mid-flight and committing it would key one
+  // customer's email to another.
+  const stale = () => get(customerIdAtom) !== customerId
+
+  // Abandoning has to release the key, not just decline to write. 'loading' left standing under a
+  // customer nobody is fetching for is invisible — the reads below mask it — right up until the
+  // session returns to that customer, and then it unmasks as a state no one owns: too far along to
+  // trigger a refetch, never far enough to open the identify gate. Only release what we still hold;
+  // a newer call for another customer has its own 'loading' in there.
+  const abandon = () => {
+    if (get(meCustomerAtom) === customerId) clearMe(set)
+    return null
+  }
+
   try {
-    const resp = await customersRPC.getMe({})
+    const resp = await customersRPC.getMe({}, { timeoutMs: GET_ME_DEADLINE_MS })
+    if (stale()) return abandon()
     const me = { customerId: resp.customerId, email: resp.email, emailVerified: resp.emailVerified }
-    set(meAtom, me)
+    set(meResultAtom, me)
+    set(meStatusRawAtom, 'ready')
     return me
   } catch (err) {
-    if (!(err instanceof ConnectError)) console.error('fetchMe unexpected error', err)
-    set(meAtom, null)
+    // Logged whatever the type, unlike the sign-in atoms above: both callers discard the return, so
+    // a ConnectError (Unauthenticated from a transient refresh) would otherwise leave no trace.
+    console.error('fetchMe failed', connectDetail(err))
+    if (stale()) return abandon()
+    // Result left as-is: a failed refresh of the same customer keeps the address it already had.
+    set(meStatusRawAtom, 'error')
     return null
   }
 })
@@ -99,7 +155,7 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
   }
 })
 
-// Magic-link sign-in or sign-up; session handling (token pair, meAtom reset, demo marker) is
+// Magic-link sign-in or sign-up; session handling (token pair, me state reset, demo marker) is
 // delegated to applySessionAtom. The workspace reset is not its job — WorkspaceBootstrap watches
 // customerIdAtom and rebuilds on a switch (see App.tsx).
 export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }): Promise<AuthResult> => {
@@ -119,27 +175,40 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
   }
 })
 
-export const completeGoogleOAuthAtom = atom(
+export const completeOIDCAtom = atom(
   null,
-  async (get, set, { credential }: { credential: string }): Promise<AuthResult> => {
+  async (
+    get,
+    set,
+    {
+      provider,
+      code,
+      codeVerifier,
+      redirectURI,
+      nonce,
+    }: {
+      provider: AuthProviderConfig
+      code: string
+      codeVerifier: string
+      redirectURI: string
+      nonce: string
+    },
+  ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
-      // Seed the auto-created default project's reporting zone from the browser on
-      // first sign-in (parity with completeMagicLink). Ignored server-side for a
-      // returning user; malformed/empty values are coerced to UTC.
-      const resp = await authRPC.completeOAuthSignIn({
-        provider: OAuthProvider.GOOGLE,
-        credential,
+      // timezone seeds the auto-created project's reporting zone (parity with completeMagicLink).
+      const resp = await authRPC.completeOIDCSignIn({
+        providerId: provider.id,
+        code,
+        codeVerifier,
+        redirectUri: redirectURI,
+        nonce,
         timezone: browserTimezone(),
       })
-      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'google' })
+      set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
       return { ok: true }
     } catch (error) {
-      if (!(error instanceof ConnectError)) console.error('completeGoogleOAuth unexpected error', error)
-      return {
-        ok: false,
-        error: mapOAuthConnectError(error, 'Could not sign you in. Try again from the sign-in page.'),
-      }
+      return { ok: false, error: mapOAuthConnectError(error, provider.displayName) }
     }
   },
 )
@@ -167,8 +236,7 @@ export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> =
     if (error instanceof ConnectError && error.code === Code.Unavailable) {
       return { ok: false, error: "The live demo isn't available right now." }
     }
-    const detail = error instanceof ConnectError ? { code: error.code, message: error.message } : error
-    console.error('demoSignIn failed', detail)
+    console.error('demoSignIn failed', connectDetail(error))
     return { ok: false, error: 'Could not start the demo. Please try again.' }
   }
 })
@@ -203,7 +271,7 @@ export const signOutAtom = atom(null, async (get, set) => {
   }
   set(jwtAtom, '')
   set(refreshTokenAtom, '')
-  set(meAtom, null)
+  clearMe(set)
   set(isDemoSessionAtom, false)
   set(resetWorkspaceAtom)
 })

@@ -39,10 +39,10 @@ const Account = () => {
   const [saved, setSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // The Account tab is the first consumer of fetchMeAtom — load the current user's
-  // email on mount. fetchMe (a Jotai setter) is stable, so this runs once; we don't
-  // depend on `me` (that would make a mount-only fetch reactive to later meAtom
-  // writes, e.g. sign-out).
+  // The only GetMe on a build with analytics unconfigured, and in a demo session — the identity
+  // sync's fetch is gated on both — so this can't be dropped as a duplicate of it. fetchMe (a
+  // Jotai setter) is stable, so this runs once; we don't depend on `me` (that would make a
+  // mount-only fetch reactive to later writes, e.g. sign-out).
   useEffect(() => {
     fetchMe()
   }, [fetchMe])

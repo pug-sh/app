@@ -8,11 +8,14 @@ import ProjectLink from '@/components/project-link'
 import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
 
+// Not every tab scopes to the project URL it is reached through — usage and organization are
+// org-wide, account is per-customer — so each carries its own description.
 const SETTINGS_TABS = [
-  { path: 'general', label: 'General' },
-  { path: 'api-keys', label: 'API Keys' },
-  { path: 'account', label: 'Account' },
-  { path: 'organization', label: 'Organization' },
+  { path: 'general', label: 'General', description: 'Name and timezone for this project' },
+  { path: 'api-keys', label: 'API Keys', description: 'SDK keys for this project' },
+  { path: 'usage', label: 'Usage', description: 'Event usage across this organization' },
+  { path: 'account', label: 'Account', description: 'Your personal account settings' },
+  { path: 'organization', label: 'Organization', description: 'Organizations you belong to' },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
@@ -31,14 +34,14 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
 
   // Active tab comes from the URL segment after /settings/ (source of truth, not state).
   const currentTab = location.match(/\/settings\/([^/]+)/)?.[1]
-  const activeTab = SETTINGS_TABS.find(tab => tab.path === currentTab)?.path ?? 'general'
+  const activeTab = SETTINGS_TABS.find(tab => tab.path === currentTab) ?? SETTINGS_TABS[0]
 
   return (
-    <Page title="Settings" description="Manage project settings">
+    <Page title="Settings" description={activeTab.description}>
       <div className="border-b border-border mb-8">
         <nav className="-mb-px flex gap-6">
           {SETTINGS_TABS.map(tab => {
-            const isActive = tab.path === activeTab
+            const isActive = tab.path === activeTab.path
             return (
               <ProjectLink
                 key={tab.path}

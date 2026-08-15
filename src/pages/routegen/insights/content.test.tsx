@@ -1,7 +1,13 @@
+import { create } from '@bufbuild/protobuf'
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { AggregationType, Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import {
+  AggregationType,
+  Granularity,
+  type UserFlowResult,
+  UserFlowResultSchema,
+} from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import type { ChartPoint } from './charts/types'
 import { InsightsContent } from './content'
@@ -47,6 +53,7 @@ const base = {
   resultSeriesCount: 1,
   isRetention: false,
   isTrends: true,
+  isUserFlow: false,
   hasIncompleteNumericAggregation: false,
   seriesNames: ['page_view'],
   seriesColors: COLORS,
@@ -108,6 +115,92 @@ describe('InsightsContent compare-vs-prior', () => {
       <InsightsContent {...base} chartData={ZERO} viewMode="bar-grouped" comparison={comparison([40, 50, 60])} />,
     )
     expect(shows(empty.container, EMPTY)).toBe(true)
+  })
+})
+
+// A user-flow response can be non-empty and still have nothing drawable, because buildSankeyData
+// drops links whose endpoints don't resolve, whose count isn't positive, or that don't advance
+// exactly one step. What the reader is told about that is the whole point of these.
+describe('InsightsContent user flow', () => {
+  const flow = (nodes: unknown[], links: unknown[]) =>
+    create(UserFlowResultSchema, { nodes, links } as never) as UserFlowResult
+
+  const WHOLE = flow(
+    [
+      { id: 'a0', depth: 0, label: 'home' },
+      { id: 'b1', depth: 1, label: 'search' },
+    ],
+    [{ source: 'a0', target: 'b1', value: 40n }],
+  )
+
+  // Every link here skips a step, so all of them drop — the shape a backend that switched to
+  // 1-based depths would produce.
+  const ALL_DROPPED = flow(
+    [
+      { id: 'a0', depth: 1, label: 'home' },
+      { id: 'b1', depth: 3, label: 'search' },
+    ],
+    [{ source: 'a0', target: 'b1', value: 9999n }],
+  )
+
+  // A user-flow query sends no events, so there is no trend series behind it.
+  const userFlow = { ...base, chartData: [], isTrends: false, isUserFlow: true, resultCase: 'userFlow' }
+
+  it('draws the flow when there is something to draw', () => {
+    const { container } = render(<InsightsContent {...userFlow} userFlowResult={WHOLE} />)
+
+    expect(container.querySelector('svg')).toBeTruthy()
+    expect(shows(container, 'No transitions recorded in this period')).toBe(false)
+  })
+
+  it('says nothing happened only when nothing did', () => {
+    const { container } = render(<InsightsContent {...userFlow} userFlowResult={flow([], [])} />)
+
+    expect(shows(container, 'No transitions recorded in this period')).toBe(true)
+  })
+
+  // The damaging case. "No transitions recorded in this period" over a response carrying 9,999
+  // sessions tells a growth manager their traffic is single-event bounces. It is the one sentence
+  // this feature must never emit about data it merely failed to read.
+  it('does not claim an empty period when the transitions were dropped', () => {
+    const { container } = render(<InsightsContent {...userFlow} userFlowResult={ALL_DROPPED} />)
+
+    expect(shows(container, 'No transitions recorded in this period')).toBe(false)
+    expect(shows(container, 'could not be drawn')).toBe(true)
+  })
+
+  it('captions a partly-drawn flow so its totals are not read as exact', () => {
+    const partial = flow(
+      [
+        { id: 'a0', depth: 0, label: 'home' },
+        { id: 'b1', depth: 1, label: 'search' },
+        { id: 'c9', depth: 9, label: 'ghost' },
+      ],
+      [
+        { source: 'a0', target: 'b1', value: 40n },
+        { source: 'a0', target: 'c9', value: 7n },
+      ],
+    )
+    const { container } = render(<InsightsContent {...userFlow} userFlowResult={partial} />)
+
+    expect(container.querySelector('svg')).toBeTruthy()
+    expect(shows(container, 'flow totals may be incomplete')).toBe(true)
+  })
+
+  // A tile that cannot run has to say why: it renders on a dashboard with no query above it.
+  it('says why the flow is not running instead of hinting at a query bar', () => {
+    const { container } = render(
+      <InsightsContent {...userFlow} userFlowIncompleteReason="Select a property to group the flow by" />,
+    )
+
+    expect(shows(container, 'Select a property to group the flow by')).toBe(true)
+    expect(shows(container, 'Adjust the query above')).toBe(false)
+  })
+
+  it('does not hint at a query bar while a tile is still loading', () => {
+    const { container } = render(<InsightsContent {...userFlow} compact />)
+
+    expect(shows(container, 'Adjust the query above')).toBe(false)
   })
 })
 

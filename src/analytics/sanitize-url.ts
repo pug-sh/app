@@ -1,4 +1,4 @@
-// URL redaction for the SDK's `$url` / `$referrer` / form-action capture.
+// URL redaction for the SDK's `$url` / `$referrer` / form-action capture, wired through `beforeSend`.
 //
 // This dashboard is not a normal integration: almost everything it renders belongs to someone
 // else. A profileId is a *customer's* end-user distinct ID — frequently their email — so an
@@ -7,8 +7,10 @@
 // and /magic-link's `token` is a live sign-in credential. None of it may leave the device.
 //
 // Runs synchronously on every event, so it stays allocation-light and side-effect-free. The SDK
-// fails closed around it (a throw or non-string drops the URL to '' rather than sending it raw),
-// so correctness here is about *what* we keep, not about defending the call.
+// fails closed around it, but harder than the removed `sanitizeUrl` hook did: a throw now drops
+// the whole event rather than blanking the one URL, so nothing here may throw on its input.
+
+import type { BeforeSendEvent } from '@pug-sh/browser'
 
 // Static children of /dashboards that are routes, not IDs. Without this, /dashboards/new — a real
 // page whose usage we want to see — would be masked into the :dashboardId bucket and vanish.
@@ -46,9 +48,33 @@ const maskPath = (pathname: string) => {
 // window.location.search directly and never routes them through this function (see track.ts),
 // so the acquisition funnel from pug.sh survives intact.
 export const sanitizeUrl = (raw: string) => {
-  const url = new URL(raw, window.location.origin)
-  url.search = ''
-  url.hash = ''
-  url.pathname = maskPath(url.pathname)
-  return url.toString()
+  // '' is a referrer-less page view — resolving it against the origin would fabricate a self-referral.
+  if (!raw) return raw
+
+  try {
+    const url = new URL(raw, window.location.origin)
+    url.search = ''
+    url.hash = ''
+    url.pathname = maskPath(url.pathname)
+    return url.toString()
+  } catch {
+    // A URL we can't parse is one we can't mask, so it's dropped rather than passed through.
+    return ''
+  }
+}
+
+// Every URL the SDK sends. The first two are auto-properties present on every event; a form's
+// action is a custom property on form_submit, whose values are typed as the caller's own — hence
+// the typeof narrowing. The SDK's own `redactUrlParams` pass has already run, but it only blanks
+// known-sensitive param *values*; the structural masking above is ours alone.
+export const maskEventUrls = (event: BeforeSendEvent) => {
+  event.autoProperties.$url = sanitizeUrl(event.autoProperties.$url)
+  event.autoProperties.$referrer = sanitizeUrl(event.autoProperties.$referrer)
+
+  const action = event.customProperties.action
+  if (event.kind === 'form_submit' && typeof action === 'string') {
+    event.customProperties.action = sanitizeUrl(action)
+  }
+
+  return event
 }

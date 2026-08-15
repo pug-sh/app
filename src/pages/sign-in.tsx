@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
-import { demoEnabledAtom, googleOAuthEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
+import { authProvidersAtom, demoEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { AuthStatus } from '@/auth/auth-status'
-import { GoogleSignInButton } from '@/auth/google-sign-in-button'
+import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -19,8 +20,6 @@ const authSchema = z.object({
 
 type AuthFormData = z.infer<typeof authSchema>
 
-// GIS renders its own button at 40px and won't take a height, so it sets the control rhythm
-// here — inputs and the submit button match it rather than the app's h-8 default.
 const controlHeight = 'h-10'
 
 const MODE_COPY = {
@@ -41,7 +40,7 @@ const MODE_COPY = {
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
-  const googleOAuthEnabled = useAtomValue(googleOAuthEnabledAtom)
+  const authProviders = useAtomValue(authProvidersAtom)
   const demoEnabled = useAtomValue(demoEnabledAtom)
   const [, navigate] = useLocation()
   // Magic link is the primary path — the backend creates the account on first use,
@@ -49,12 +48,24 @@ const SignIn = () => {
   // people who set a password via the in-app SetPassword flow.
   const [mode, setMode] = useState<'link' | 'password'>('link')
   const [error, setError] = useState('')
-  // One in-flight action at a time — the three auth paths are mutually exclusive, and Google's
-  // has to be in here or its RPC leaves the rest of the form live for a second submit.
-  const [pending, setPending] = useState<'link' | 'password' | 'google' | null>(null)
+  // One in-flight action at a time. The value is either an email method or a
+  // server-configured provider ID, so any number of external buttons share the gate.
+  const [pending, setPending] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+
+  const oidcProviders = authProviders?.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
+
+  // A provider redirect leaves the page with `pending` set; bfcache restores it that way on Back,
+  // which would leave every control disabled.
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setPending(null)
+    }
+    window.addEventListener('pageshow', onShow)
+    return () => window.removeEventListener('pageshow', onShow)
+  }, [])
 
   const authForm = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
@@ -108,7 +119,6 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
-
   return (
     <>
       {magicLinkEmail ? (
@@ -143,14 +153,26 @@ const SignIn = () => {
           <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>
           <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
 
-          {googleOAuthEnabled && (
+          {oidcProviders.length > 0 && (
             <>
-              <GoogleSignInButton
-                disabled={authBusy}
-                onBegin={() => setError('')}
-                onLoadingChange={busy => setPending(busy ? 'google' : null)}
-                onError={setError}
-              />
+              <div className="space-y-2">
+                {oidcProviders.map(provider => (
+                  <OIDCSignInButton
+                    key={provider.id}
+                    provider={provider}
+                    disabled={authBusy}
+                    loading={pending === provider.id}
+                    onBegin={() => {
+                      setError('')
+                      setPending(provider.id)
+                    }}
+                    onError={message => {
+                      setPending(null)
+                      setError(message)
+                    }}
+                  />
+                ))}
+              </div>
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-border" />
                 <span className="text-xs text-muted-foreground">or continue with email</span>

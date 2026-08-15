@@ -1,10 +1,11 @@
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { useEffect, useRef } from 'react'
+import { fetchMeAtom, meAtom, meStatusAtom } from '@/auth/auth.atoms'
 import { isDemoSessionAtom } from '@/auth/demo'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
 import { activeOrgAtom, activeProjectAtom, workspaceSettledAtom } from '@/data/workspace.atoms'
-import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
+import { analyticsEnabled, type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 
 // Keeps the SDK's identity in step with the session. Mounted from App.tsx alongside ThemeSync,
 // which is the pattern for a null-rendering effect that syncs a module to atom state.
@@ -25,11 +26,26 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const project = useAtomValue(activeProjectAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
   const workspaceSettled = useAtomValue(workspaceSettledAtom)
+  const me = useAtomValue(meAtom)
+  const meStatus = useAtomValue(meStatusAtom)
+  const fetchMe = useSetAtom(fetchMeAtom)
 
   // What we last sent. customerId is tracked apart from the traits so the three transitions that
   // matter can be told apart: signed-out boot vs sign-out, a trait refresh vs an account switch.
   const sentCustomerId = useRef<string | null>(null)
   const sentTraits = useRef<string | null>(null)
+
+  // True exactly when the effect below issues a GetMe, so the identify gate knows whether there is
+  // an email on its way to wait for. One expression rather than two: state them separately and a
+  // guard added to the fetch leaves the gate waiting for a call that is no longer made.
+  const emailExpected = Boolean(customerId) && awaitWorkspace && !isDemo && analyticsEnabled
+
+  // Triggered off 'idle', not a ref of who we last fetched for: a teardown back to the same account
+  // (demo round-trip, re-auth) resets the status, and a ref would skip it for the life of the page.
+  useEffect(() => {
+    if (!emailExpected || meStatus !== 'idle') return
+    fetchMe()
+  }, [emailExpected, meStatus, fetchMe])
 
   useEffect(() => {
     if (!customerId) {
@@ -73,7 +89,12 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     // before this fires is absorbed by the next one.
     if (awaitWorkspace && !workspaceSettled) return
 
+    // 'error' has to open this, or one failed GetMe leaves the session anonymous until something
+    // else happens to call fetchMe — and the only thing that does is the Account tab's mount.
+    if (emailExpected && meStatus !== 'ready' && meStatus !== 'error') return
+
     const traits: CustomerTraits = {
+      ...(me?.email && { email: me.email }),
       ...(org && { orgId: org.id, orgName: org.displayName, role: roleLabel(org.role) }),
       ...(project && { projectId: project.id, projectName: project.displayName }),
     }
@@ -86,7 +107,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     sentTraits.current = nextTraits
 
     identifyCustomer(customerId, traits)
-  }, [customerId, org, project, isDemo, awaitWorkspace, workspaceSettled])
+  }, [customerId, org, project, isDemo, awaitWorkspace, workspaceSettled, emailExpected, me, meStatus])
 
   return null
 }

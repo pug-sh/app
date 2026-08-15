@@ -3,10 +3,11 @@ import { useMemo, useState } from 'react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { TopKQuery_Dimension } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { PropertyPickerList } from '@/components/event-filters'
+import { OptionChip } from '@/components/option-chip'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
-import { filterNumericSchema, OptionChip } from './controls'
+import { filterNumericSchema } from './controls'
 import { TOP_K_DIMENSIONS, TOP_K_LIMITS, TOP_K_USER_FORBIDDEN_METRICS, type TopKState } from './top-k'
 
 const TopKPropertyChip = ({

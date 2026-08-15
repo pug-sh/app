@@ -6,8 +6,8 @@ import {
   ThresholdRule_Tone,
   ThresholdRuleSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { OptionChip } from '@/components/option-chip'
 import { Button } from '@/components/ui/button'
-import { OptionChip } from '../insights/controls'
 import { toneSwatchClass } from './accent-palette'
 
 const OPERATOR_OPTIONS = [

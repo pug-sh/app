@@ -16,7 +16,7 @@ type Props = {
   visitors: ActivityEvent[]
   selectedDistinctId?: string | null
   onSelectVisitor?: (distinctId: string) => void
-  profileHref?: (distinctId: string) => string
+  profileHref?: (distinctId: string) => string | undefined
   journeyFor?: (distinctId: string) => ActivityEvent[]
   // Whoever the panel's pointer is on — rings their marker so a row can be located on the map.
   highlightedDistinctId?: string | null
