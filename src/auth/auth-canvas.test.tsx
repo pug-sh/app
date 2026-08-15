@@ -24,7 +24,7 @@ vi.mock('@/analytics/pug', () => ({
   identifyCustomer: vi.fn(),
   resetIdentity: vi.fn(),
   initAnalytics: vi.fn(),
-  isAnalyticsEnabled: () => false,
+  analyticsEnabled: false,
 }))
 
 const App = (await import('@/App')).default
