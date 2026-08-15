@@ -289,6 +289,8 @@ Answering "what are users clicking" is `trackFeature(featureId, featureName)` �
 
 Current manual events beyond `feature_used`: `signin` (`method`), `signout`, `api_key_created`/`api_key_revoked`, `insight_queried` (shape only — type + counts, no filter values; fired inside the debounced query fn, one per settled query), `dashboard_viewed` (`dashboardId`, deduped by ref), `copied` (`context` label).
 
+**Identity is the customerId, and the signed-in email is a trait on it — don't swap them.** A profile is keyed by `(project, externalId)` with no rename path (the only merge is anonymous→identified, on the first `identify()`), so an address as the external ID strands the profile whenever someone changes theirs; post-identify it is also the distinct ID on every event and sits in plaintext in the identity cookie shared across `.pug.sh`. As a trait it still identifies the person and stays filterable, but note it does **not** become the profile's label: `resolveIdentity` (`profiles/_identity.ts`) resolves that from a *name* trait only, falling back to the external ID, and renders `email` on the secondary line — so with no name trait in `GetMe`, our own dogfood profiles head with the customerId. The email isn't in the JWT, so `analytics/identity.tsx` owns a `GetMe` and holds the first `identify()` until it lands — gated on `analyticsEnabled`, since a request is the one thing there that isn't already a no-op on an unconfigured build, and matched against the current `customerId`, since a cross-tab sign-in moves the JWT without clearing `meAtom`.
+
 ### Backend Auth Model
 
 - JWT in `sub` claim = customerID (not email)

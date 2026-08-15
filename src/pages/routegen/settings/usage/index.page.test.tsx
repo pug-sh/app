@@ -24,7 +24,7 @@ vi.mock('@/analytics/pug', () => ({
   identifyCustomer: vi.fn(),
   resetIdentity: vi.fn(),
   initAnalytics: vi.fn(),
-  isAnalyticsEnabled: () => false,
+  analyticsEnabled: false,
 }))
 
 // happy-dom reports the chart container as 0x0, and the chart renders nothing at that size. No

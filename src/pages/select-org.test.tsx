@@ -22,7 +22,7 @@ vi.mock('@/analytics/pug', () => ({
   identifyCustomer: vi.fn(),
   resetIdentity: vi.fn(),
   initAnalytics: vi.fn(),
-  isAnalyticsEnabled: () => false,
+  analyticsEnabled: false,
 }))
 
 const { orgsAtom } = await import('@/data/workspace.atoms')
