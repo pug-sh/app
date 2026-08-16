@@ -40,9 +40,11 @@ export const TrafficRankedList = ({
   return (
     <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden">
       {dimensionLabel && (
-        <div className="sticky top-0 z-20 mb-1 flex items-center gap-2 border-b border-border/50 bg-background px-2 pt-0.5 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+        <div className="sticky top-0 z-20 mb-1 flex items-center gap-2 border-b border-border/50 bg-card px-2 pt-0.5 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
           <span className="min-w-0 flex-1 truncate">{dimensionLabel}</span>
-          <span className="flex w-20 shrink-0 justify-end">{metricControl}</span>
+          {/* min-w, not w: a long metric name ("Screen views") right-aligns over the value column and
+              borrows space from the dimension label rather than wrapping to a second line. */}
+          <span className="flex min-w-20 shrink-0 items-center justify-end whitespace-nowrap">{metricControl}</span>
           {showShare && <span className="w-11 shrink-0 text-right">%</span>}
         </div>
       )}

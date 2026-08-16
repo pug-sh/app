@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Loader2 } from 'lucide-react'
+import { ArrowLeftRight, Loader2 } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { AggregationType, type Granularity, type SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { CountryFlag } from '@/components/country-flag'
@@ -7,7 +7,7 @@ import { Devicon } from '@/components/devicon'
 import { DomainFavicon } from '@/components/domain-favicon'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type DeviconName, resolveBrowserDevicon, resolveDeviceModelDevicon, resolveOsDevicon } from '@/lib/devicon-map'
 import { formatCountryName } from '@/lib/location'
 import { cn } from '@/lib/utils'
@@ -87,7 +87,10 @@ const propertyMetrics = (kind: NavEvent['kind']) =>
 
 type MetricOption = ReturnType<typeof propertyMetrics>[number]
 
-const MetricSelect = ({
+// The column header names what the column measures, so it swaps in place instead of opening a menu
+// over the rows it re-ranks. `uppercase` is explicit: a <button> doesn't inherit text-transform, so
+// without it this is the one header cell rendering in sentence case.
+const MetricToggle = ({
   value,
   options,
   onChange,
@@ -96,33 +99,29 @@ const MetricSelect = ({
   options: readonly MetricOption[]
   onChange: (metric: AggregationType) => void
 }) => {
-  const [open, setOpen] = useState(false)
+  const index = Math.max(
+    options.findIndex(option => option.metric === value),
+    0,
+  )
+  const next = options[(index + 1) % options.length]
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center gap-0.5 rounded-sm transition-colors hover:text-foreground">
-        {options.find(option => option.metric === value)?.label ?? 'Value'}
-        <ChevronDown className="size-3" />
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-36 p-1">
-        {options.map(option => (
+    <Tooltip>
+      <TooltipTrigger
+        render={
           <button
-            key={option.metric}
             type="button"
-            onClick={() => {
-              onChange(option.metric)
-              setOpen(false)
-            }}
-            className={cn(
-              'flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-xs transition-colors hover:bg-muted/60',
-              option.metric === value ? 'text-foreground' : 'text-muted-foreground',
-            )}
+            onClick={() => onChange(next.metric)}
+            // Negative margins keep the label flush with the numbers below and the row height steady
+            // across tabs, while the hover pill still reads as a control.
+            className="-my-0.5 -mr-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase transition-colors hover:bg-muted/60 hover:text-foreground"
           >
-            {option.label}
-            {option.metric === value && <Check className="size-3.5" />}
+            <ArrowLeftRight className="size-3 opacity-70" />
+            {options[index].label}
           </button>
-        ))}
-      </PopoverContent>
-    </Popover>
+        }
+      />
+      <TooltipContent className="text-xs">Show {next.label.toLowerCase()}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -253,7 +252,7 @@ export const TrafficBreakdownPanel = ({
   let metricControl: ReactNode = 'Count'
   if (tab.source === 'property') {
     metricControl = (
-      <MetricSelect
+      <MetricToggle
         value={propertyMetric ?? tab.metric}
         options={propertyMetrics(nav.kind)}
         onChange={metric => setMetricByTab(prev => ({ ...prev, [tab.id]: metric }))}
