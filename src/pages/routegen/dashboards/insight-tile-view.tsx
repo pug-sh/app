@@ -271,7 +271,7 @@ export const InsightTileView = ({
         topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}
         userFlowIncompleteReason={userFlowIncompleteReason}
-        // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
+        // hideLegend is the SummaryStats gate; the traffic chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
         legendPosition={legendPosition}
         showPieLabels={tile?.visualization?.hidePieLabels !== true}

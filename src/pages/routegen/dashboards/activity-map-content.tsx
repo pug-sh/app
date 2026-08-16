@@ -58,7 +58,7 @@ export const useActivityMapData = ({
   )
   const effectiveQuery = useMemo(() => {
     if (!query) return undefined
-    // Aligned the same way as useWebQuery / DashboardInsightContent so the map's window matches
+    // Aligned the same way as useTrafficQuery / DashboardInsightContent so the map's window matches
     // the sibling tiles' exactly.
     return create(QueryRequestSchema, {
       ...query,

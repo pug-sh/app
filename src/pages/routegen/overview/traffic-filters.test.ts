@@ -9,64 +9,95 @@ import {
   filterValueLabel,
   filterValues,
   hasFilter,
-  readWebFilters,
+  readTrafficFilters,
   removeFilter,
   toggleFilter,
   toggleSingleFilter,
-} from './web-filters'
+} from './traffic-filters'
 
 const AUTO = PropertySource.AUTO
 const single = (property: string, value: string) => createFilter(property, AUTO, FilterOperator.EQUALS, value)
 const multi = (property: string, values: string[]) => createFilter(property, AUTO, FilterOperator.IN, values)
 
 // `pf` is shared with Insights, which can author the full filter grammar. These helpers read a
-// filter's arity and never its operator, so anything outside AUTO + EQUALS/IN degrades silently —
-// see isWebFilter. Restoring has to drop those and say it did.
-describe('readWebFilters', () => {
+// filter's arity and never its operator, so anything outside an event-property source with
+// EQUALS/IN degrades silently — see isTrafficFilter. Restoring has to drop those and say it did.
+describe('readTrafficFilters', () => {
   const pf = (...filters: unknown[]) => `?pf=${encodeURIComponent(JSON.stringify(filters))}`
 
+  // The mobile screens panel filters on `screenName`, a custom event property, so a CUSTOM-source
+  // filter has to survive the round trip — restored as AUTO-only it would drop off every reload.
+  it('restores a custom-property filter, not just auto-properties', () => {
+    const screen = createFilter('screenName', PropertySource.CUSTOM, FilterOperator.EQUALS, '/home')
+    const restored = readTrafficFilters(pf(screen))
+    expect(restored.filters).toEqual([screen])
+    expect(restored.parseWarning).toBeNull()
+  })
+
+  // screenName is the only custom key any panel ranks. Admitting the whole CUSTOM source lets an
+  // Insights-authored filter narrow every number on the page with no chip that can toggle it off.
+  it('drops a custom filter on a key no panel ranks', () => {
+    const restored = readTrafficFilters(pf(createFilter('plan', PropertySource.CUSTOM, FilterOperator.EQUALS, 'pro')))
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
+  it('drops a profile filter, which no panel can unset', () => {
+    const restored = readTrafficFilters(pf(createFilter('plan', PropertySource.PROFILE, FilterOperator.EQUALS, 'pro')))
+    expect(restored.filters).toEqual([])
+    expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
+  })
+
   it('keeps representable filters and warns about nothing', () => {
-    const restored = readWebFilters(pf(single('$country', 'IN'), multi('$browser', ['Chrome', 'Firefox'])))
+    const restored = readTrafficFilters(pf(single('$country', 'IN'), multi('$browser', ['Chrome', 'Firefox'])))
     expect(restored.filters).toEqual([single('$country', 'IN'), multi('$browser', ['Chrome', 'Firefox'])])
     expect(restored.parseWarning).toBeNull()
   })
 
   it('drops an exclusion, which would otherwise render as a selected inclusion', () => {
-    const restored = readWebFilters(pf(createFilter('$pathname', AUTO, FilterOperator.NOT_EQUALS, '/docs')))
+    const restored = readTrafficFilters(pf(createFilter('$pathname', AUTO, FilterOperator.NOT_EQUALS, '/docs')))
     expect(restored.filters).toEqual([])
     expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
   })
 
   it('drops a presence filter, which would narrow every query with no chip to remove it', () => {
-    const restored = readWebFilters(pf(createFilter('$utmSource', AUTO, FilterOperator.IS_SET)))
+    const restored = readTrafficFilters(pf(createFilter('$utmSource', AUTO, FilterOperator.IS_SET)))
     expect(restored.filters).toEqual([])
     expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
   })
 
   it('keeps only the first filter per property, since every lookup here is a .find', () => {
-    const restored = readWebFilters(pf(single('$os', 'macOS'), single('$os', 'Windows')))
+    const restored = readTrafficFilters(pf(single('$os', 'macOS'), single('$os', 'Windows')))
     expect(restored.filters).toEqual([single('$os', 'macOS')])
     expect(restored.parseWarning).toBe('Could not restore 1 filter from URL')
   })
 
   it('counts unparseable entries alongside unrepresentable ones', () => {
-    const restored = readWebFilters(pf({ nonsense: true }, createFilter('$city', AUTO, FilterOperator.IS_SET)))
+    const restored = readTrafficFilters(pf({ nonsense: true }, createFilter('$city', AUTO, FilterOperator.IS_SET)))
     expect(restored.filters).toEqual([])
     expect(restored.parseWarning).toBe('Could not restore 2 filters from URL')
   })
 
   it('treats a present-but-unusable pf as one drop', () => {
-    expect(readWebFilters('?pf={not-json').parseWarning).toBe('Could not restore 1 filter from URL')
+    expect(readTrafficFilters('?pf={not-json').parseWarning).toBe('Could not restore 1 filter from URL')
   })
 
   it('is silent when there is no pf at all', () => {
-    const restored = readWebFilters('')
+    const restored = readTrafficFilters('')
     expect(restored.filters).toEqual([])
     expect(restored.parseWarning).toBeNull()
   })
 })
 
 describe('toggleFilter', () => {
+  // Source follows the key shape: `$`-prefixed is an auto-property, anything else a custom one. The
+  // screens panel ranks `screenName`, so filing it as AUTO would misplace the key in the Insights
+  // picker a shared `pf` link lands in.
+  it('sources a custom property as CUSTOM and an auto-property as AUTO', () => {
+    expect(toggleFilter([], 'screenName', '/home')[0].source).toBe(PropertySource.CUSTOM)
+    expect(toggleFilter([], '$country', 'IN')[0].source).toBe(AUTO)
+  })
+
   it('adds a single EQUALS filter, and toggling the same value clears it', () => {
     const once = toggleFilter([], '$browser', 'Chrome')
     expect(once).toEqual([single('$browser', 'Chrome')])

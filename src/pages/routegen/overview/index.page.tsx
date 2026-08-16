@@ -22,13 +22,13 @@ import {
   overviewSchemaLoadingAtom,
 } from './overview.atoms'
 import SetupMode from './setup-mode'
-import { type OverviewMode, readWebStat, resolveOverviewDefaultRange, writeWebStatParam } from './url-state'
-import WebAnalyticsMode from './web-analytics-mode'
+import TrafficAnalyticsMode from './traffic-analytics-mode'
+import { type OverviewMode, readTrafficStat, resolveOverviewDefaultRange, writeTrafficStatParam } from './url-state'
 
 const GLOBAL_GRANULARITIES = [{ label: 'Auto', value: Granularity.UNSPECIFIED }, ...GRANULARITIES] as const
 
 const MODE_OPTIONS = [
-  { label: 'Web analytics', value: 'web' },
+  { label: 'Traffic analytics', value: 'traffic' },
   { label: 'Product analytics', value: 'product' },
 ] as const satisfies readonly { label: string; value: OverviewMode }[]
 
@@ -41,7 +41,7 @@ const Overview = () => {
 
   const initialOverrides = useMemo(() => readTimeGranularityQueryParams(), [])
   const [mode, setMode] = useAtom(overviewModeAtom)
-  const [webStat, setWebStat] = useState(() => readWebStat())
+  const [trafficStat, setTrafficStat] = useState(() => readTrafficStat())
   // Both modes land on the last 24 hours when no window is pinned. An untouched default stays out of
   // the URL (see rangeIsDefault below), so a reload and a mode toggle restore the same window instead
   // of dropping product to its tiles' own longer ranges only after a reload.
@@ -54,7 +54,7 @@ const Overview = () => {
   const [globalGranularity, setGlobalGranularity] = useState<Granularity>(
     () => initialOverrides.granularity ?? Granularity.UNSPECIFIED,
   )
-  // An untouched default stays out of the URL, the way the web stat does: pinning tf/tt would
+  // An untouched default stays out of the URL, the way the traffic stat does: pinning tf/tt would
   // freeze a rolling window into every shared link, and drop the preset name on reload.
   const [rangeIsDefault, setRangeIsDefault] = useState(() => !initialOverrides.timeRange)
 
@@ -70,16 +70,16 @@ const Overview = () => {
   }, [globalGranularity, globalTimeRange, rangeIsDefault])
 
   useEffect(() => {
-    writeWebStatParam(mode, webStat)
-  }, [mode, webStat])
+    writeTrafficStatParam(mode, trafficStat)
+  }, [mode, trafficStat])
 
   // Both modes default to the last 24 hours, so a toggle just carries the current window over. The
-  // one exception: entering web with the range explicitly unset re-pins the default, so the picker
-  // reflects the 24h window the web panels fall back to rather than reading "Default range" over live
-  // data. Product tolerates an unset window (its tiles have their own ranges), so it needs no fixup.
+  // one exception: entering traffic with the range explicitly unset re-pins the default, so the picker
+  // reflects the 24h window the traffic panels fall back to rather than reading "Default range" over
+  // live data. Product tolerates an unset window (its tiles have their own ranges), so it needs no fixup.
   const handleModeChange = (next: OverviewMode) => {
     setMode(next)
-    if (next === 'web' && !globalTimeRange) {
+    if (next === 'traffic' && !globalTimeRange) {
       const defaultRange = resolveOverviewDefaultRange()
       setGlobalTimeRange(defaultRange)
       setRangeIsDefault(true)
@@ -101,13 +101,13 @@ const Overview = () => {
   const hasEvents = (schema?.events.length ?? 0) > 0
   const tileGranularityOverride = resolveTileGranularity(globalGranularity, globalTimeRange)
 
-  // Web vs product analytics body, once the schema has loaded (the caller narrows it non-null).
+  // Traffic vs product analytics body, once the schema has loaded (the caller narrows it non-null).
   const renderAnalyticsBody = (loadedSchema: NonNullable<typeof schema>) =>
-    mode === 'web' ? (
-      <WebAnalyticsMode
+    mode === 'traffic' ? (
+      <TrafficAnalyticsMode
         schema={loadedSchema}
-        selectedStat={webStat}
-        onSelectStat={setWebStat}
+        selectedStat={trafficStat}
+        onSelectStat={setTrafficStat}
         globalTimeRange={globalTimeRange}
         globalGranularity={tileGranularityOverride}
       />

@@ -31,7 +31,7 @@ import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregati
 
 // User-flow, top-k, map and session specs all carry no events: user-flow runs once its flow
 // config is valid, top-k as soon as the ranking config is complete, map as soon as its measure
-// resolves, and session (web-analytics) specs as soon as `spec.session` is present — the
+// resolves, and session (traffic-analytics) specs as soon as `spec.session` is present — the
 // event-count gate would never let them run. Everything else needs at least one event and (for
 // trends) a resolved numeric-aggregation property.
 const queryReady = (query: QueryRequest) => {
@@ -72,7 +72,7 @@ export const DashboardInsightContent = ({
   granularityOverride?: Granularity
   queryKeyPrefix: string
   // Run the prior-period query and draw it dashed. Overrides any tile.compare; used by tile-less
-  // callers (the overview web chart) that have no ComparePeriod setting of their own.
+  // callers (the overview traffic chart) that have no ComparePeriod setting of their own.
   comparePrior?: boolean
   compact?: boolean
   kpiMetadata?: string

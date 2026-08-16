@@ -672,7 +672,13 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
   audio_completed: { schema: AudioCompletedPropertiesSchema, headlines: ['audio_id'], format: fmtField('audio_id') },
 
   // navigation (additional)
-  screen_view: { schema: ScreenViewPropertiesSchema, headlines: ['screen_name'], format: fmtField('screen_name') },
+  // Both spellings: the proto field is screen_name, but the Flutter and React Native SDKs send
+  // screenName and ingest passes custom-property keys through unmapped.
+  screen_view: {
+    schema: ScreenViewPropertiesSchema,
+    headlines: ['screenName', 'screen_name'],
+    format: fmtFirst('screenName', 'screen_name'),
+  },
 
   // support
   feedback_submitted: {

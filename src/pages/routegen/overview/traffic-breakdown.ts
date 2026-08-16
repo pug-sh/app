@@ -1,7 +1,7 @@
 import type { TopKRow, TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { breakdownLabel, collapseValues, EMPTY_VALUE_LABEL } from '../insights/helpers'
 
-// One row of a web-analytics breakdown list, already resolved to a display label and a single value.
+// One row of a traffic breakdown list, already resolved to a display label and a single value.
 // Produced from either a top-K result (event-grain) or a collapsed session breakdown (Entry/Exit),
 // so the list renderer never has to know which query fed it.
 export type RankedRow = {
@@ -14,7 +14,7 @@ export type RankedRow = {
 }
 
 // Top-K rows arrive metric-descending with the synthetic $others bucket (flagged by isOthers, not by
-// label) last. Web breakdowns only use the PROPERTY and EVENT_KIND dimensions, so there is no profile
+// label) last. Traffic breakdowns only use the PROPERTY and EVENT_KIND dimensions, so there is no profile
 // row to resolve — dimensionValue is the label, with the empty bucket shown as "(none)".
 export const topKToRankedRows = (rows: readonly TopKRow[]) =>
   rows.map((row, index) => {

@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import { DataPointSchema, TopKRowSchema, TrendSeriesSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { rankSessionBreakdown, topKToRankedRows } from './web-breakdown'
+import { rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
 
 describe('topKToRankedRows', () => {
   it('maps dimension values and mutes $others and the empty bucket', () => {

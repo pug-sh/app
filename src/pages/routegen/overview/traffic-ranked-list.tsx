@@ -2,12 +2,12 @@ import type { ReactNode } from 'react'
 import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import type { RankedRow } from './web-breakdown'
+import type { RankedRow } from './traffic-breakdown'
 
-// Ranked list for the web-analytics breakdown panels, in the "row is the bar" style: each row carries a
+// Ranked list for the traffic breakdown panels, in the "row is the bar" style: each row carries a
 // left-anchored fill sized to its share of the top value, the label reading over it and the value +
 // share pinned right. Takes resolved RankedRows, so top-K and session breakdowns render identically.
-export const WebRankedList = ({
+export const TrafficRankedList = ({
   rows,
   showShare = false,
   onRowClick,

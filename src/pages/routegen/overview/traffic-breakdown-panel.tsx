@@ -12,28 +12,39 @@ import { type DeviconName, resolveBrowserDevicon, resolveDeviceModelDevicon, res
 import { formatCountryName } from '@/lib/location'
 import { cn } from '@/lib/utils'
 import { OverviewTileShell } from './overview-tile-shell'
-import { useWebQuery } from './use-web-query'
+import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
+import { filtersExcept, hasFilter } from './traffic-filters'
+import {
+  buildEventKindTopKQuery,
+  buildSessionBreakdownQuery,
+  buildTopKBreakdownQuery,
+  getTrafficStat,
+  type NavEvent,
+} from './traffic-queries'
+import { TrafficRankedList } from './traffic-ranked-list'
+import { useTrafficQuery } from './use-traffic-query'
 import { utmSourceDomain } from './utm-source-domains'
-import { buildEventKindTopKQuery, buildSessionBreakdownQuery, buildTopKBreakdownQuery } from './web-analytics-queries'
-import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './web-breakdown'
-import { filtersExcept, hasFilter } from './web-filters'
-import { WebRankedList } from './web-ranked-list'
 
 const SESSION_BREAKDOWN_LIMIT = 50
 
-// Brand-icon resolver per device dimension: a $browser / $os / $device value → a devicon name, or null
-// when the brand isn't recognized. $device ranks raw UA models ("Pixel 8", "Mac") with no OS column to
-// lean on, so it classifies the model string directly (see resolveDeviceModelDevicon).
+// $device ranks raw UA models ("Pixel 8") with no OS column to lean on, so it classifies the model
+// string directly rather than going through resolveDeviceDevicon.
 const DEVICON_RESOLVERS: Record<'browser' | 'os' | 'device', (value?: string) => DeviconName | null> = {
   browser: resolveBrowserDevicon,
   os: resolveOsDevicon,
   device: resolveDeviceModelDevicon,
 }
 
-// A tab is one ranked view within a panel: `property` ranks an auto-property via top-K, `eventKind`
-// ranks event kinds, `session` ranks entry/exit pages. Plain data (no closures) so a panel's tab list
-// stays a module constant. `valueKind` picks the leading glyph its values render with (see
-// renderLeading in the panel below).
+const OS_LABELS: Record<string, string> = {
+  ios: 'iOS',
+  android: 'Android',
+  macos: 'macOS',
+  windows: 'Windows',
+  linux: 'Linux',
+  fuchsia: 'Fuchsia',
+}
+
+// Plain data (no closures) so a panel's tab list stays a module constant.
 export type BreakdownTab = { id: string; label: string } & (
   | {
       source: 'property'
@@ -54,34 +65,46 @@ export type BreakdownPanelConfig = {
 // The auto-property a tab's rows filter on, or undefined for event-kind rows (not cross-filterable).
 const tabFilterProperty = (tab: BreakdownTab) => (tab.source === 'eventKind' ? undefined : tab.property)
 
-const buildTabQuery = (tab: BreakdownTab, filters: readonly ActiveFilter[], propertyMetric?: AggregationType) => {
-  if (tab.source === 'property') return buildTopKBreakdownQuery(tab.property, propertyMetric ?? tab.metric, filters)
+const buildTabQuery = (
+  navEvent: string,
+  tab: BreakdownTab,
+  filters: readonly ActiveFilter[],
+  propertyMetric?: AggregationType,
+) => {
+  if (tab.source === 'property') {
+    return buildTopKBreakdownQuery(navEvent, tab.property, propertyMetric ?? tab.metric, filters)
+  }
   if (tab.source === 'eventKind') return buildEventKindTopKQuery(filters)
-  return buildSessionBreakdownQuery(tab.metric, tab.property, filters)
+  return buildSessionBreakdownQuery(navEvent, tab.metric, tab.property, filters)
 }
 
-// Property breakdowns can be ranked by unique visitors or raw pageviews; the picker in each panel's
-// column header switches between them. Session (Entry/Exit) and event-kind tabs have a fixed metric.
-const PROPERTY_METRICS = [
-  { metric: AggregationType.UNIQUE_USERS, label: 'Visitors' },
-  { metric: AggregationType.TOTAL, label: 'Views' },
-] as const
+// Labels come from the stat row's table so a mobile project reads "Users / Screen views" here too.
+const propertyMetrics = (kind: NavEvent['kind']) =>
+  [
+    { metric: AggregationType.UNIQUE_USERS, label: getTrafficStat('users').label[kind] },
+    { metric: AggregationType.TOTAL, label: getTrafficStat('pageviews').label[kind] },
+  ] as const
 
-const metricLabel = (metric: AggregationType) =>
-  PROPERTY_METRICS.find(option => option.metric === metric)?.label ?? 'Value'
+type MetricOption = ReturnType<typeof propertyMetrics>[number]
 
-// Compact metric picker rendered in a breakdown column header, inheriting the header's uppercase muted
-// styling. Two options, so a flat single-level popover (per the no-nested-menus design direction).
-const MetricSelect = ({ value, onChange }: { value: AggregationType; onChange: (metric: AggregationType) => void }) => {
+const MetricSelect = ({
+  value,
+  options,
+  onChange,
+}: {
+  value: AggregationType
+  options: readonly MetricOption[]
+  onChange: (metric: AggregationType) => void
+}) => {
   const [open, setOpen] = useState(false)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className="inline-flex items-center gap-0.5 rounded-sm transition-colors hover:text-foreground">
-        {metricLabel(value)}
+        {options.find(option => option.metric === value)?.label ?? 'Value'}
         <ChevronDown className="size-3" />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-36 p-1">
-        {PROPERTY_METRICS.map(option => (
+        {options.map(option => (
           <button
             key={option.metric}
             type="button"
@@ -134,8 +157,9 @@ const GlyphSlot = ({ children, className }: { children?: ReactNode; className?: 
   <span className={cn('inline-flex w-4 shrink-0 items-center justify-center', className)}>{children}</span>
 )
 
-export const WebBreakdownPanel = ({
+export const TrafficBreakdownPanel = ({
   config,
+  nav,
   range,
   granularity,
   queryKeyPrefix,
@@ -144,6 +168,7 @@ export const WebBreakdownPanel = ({
   onEventClick,
 }: {
   config: BreakdownPanelConfig
+  nav: NavEvent
   range: TimeRange
   granularity: Granularity
   queryKeyPrefix: string
@@ -165,15 +190,19 @@ export const WebBreakdownPanel = ({
   // Apply page filters except this panel's own dimension, so every value of it stays visible and
   // togglable while the rest of the filter set still narrows the list.
   const queryFilters = useMemo(() => filtersExcept(filters, selfProperty), [filters, selfProperty])
-  const baseQuery = useMemo(() => buildTabQuery(tab, queryFilters, propertyMetric), [tab, queryFilters, propertyMetric])
-  const { result, error, retry } = useWebQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
+  const baseQuery = useMemo(
+    () => buildTabQuery(nav.name, tab, queryFilters, propertyMetric),
+    [nav, tab, queryFilters, propertyMetric],
+  )
+  const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
 
-  // useDebouncedQuery keeps the previous `data` across a key change, and a panel's `property` tabs all
-  // share a `source`, so `result` alone can't say which tab produced it. Pin each result to the tab
-  // that was active when it landed. Not `loading`: that's set in an effect, so it still reads false on
-  // the render the switch happens on — long enough to paint the old tab's rows under the new one.
-  const [seen, setSeen] = useState({ result, tab: tab.id })
-  if (seen.result !== result) setSeen({ result, tab: tab.id })
+  // useDebouncedQuery keeps the previous `data` across a key change, so `result` alone can't say what
+  // produced it. Pin it to what the column *means* — panel, tab and metric, but not the filters, so a
+  // same-shape refetch keeps its rows and filtering doesn't flicker. Not `loading`: that's set in an
+  // effect, so it still reads false on the render the switch happens on.
+  const shape = `${nav.name}:${config.title}:${tab.id}:${propertyMetric ?? ''}`
+  const [seen, setSeen] = useState({ result, shape })
+  if (seen.result !== result) setSeen({ result, shape })
 
   const rows = useMemo<RankedRow[]>(() => {
     if (tab.source === 'session') {
@@ -182,10 +211,9 @@ export const WebBreakdownPanel = ({
     return result.case === 'topK' ? topKToRankedRows(result.value.rows) : []
   }, [tab.source, result])
 
-  // Rows belonging to the tab we just left, or nothing fetched yet. Either way this tab has no answer
-  // to show: the old rows would read as its data, and an empty list would claim "No data" over a live
-  // query. A same-tab refetch keeps its rows (result survives), so filtering doesn't flicker.
-  const pending = seen.tab !== tab.id || result.case === undefined
+  // Rows answering a question this column is no longer asking, or nothing fetched yet: showing them
+  // would read as this column's data, and an empty list would claim "No data" over a live query.
+  const pending = seen.shape !== shape || result.case === undefined
 
   // Property rows cross-filter the view; event-kind rows drill through (no filter, so no active state).
   let onRowClick: ((row: RankedRow) => void) | undefined
@@ -212,20 +240,22 @@ export const WebBreakdownPanel = ({
     )
     formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
   } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
-    // $browser / $os / $device values are already display names; just lead with the brand devicon.
     const resolve = DEVICON_RESOLVERS[valueKind]
     renderLeading = row => {
       const icon = row.muted ? null : resolve(row.label)
       return <GlyphSlot>{icon ? <Devicon name={icon} size={16} /> : null}</GlyphSlot>
     }
+    // Ingest only fills an auto-property that's absent, so the mobile SDKs' own lowercase $os
+    // ("ios", "android") reaches us unnormalized while the UA parser's is title-cased.
+    if (valueKind === 'os') formatLabel = row => (row.muted ? row.label : (OS_LABELS[row.label] ?? row.label))
   }
 
-  // The value column's header: a visitor/pageview picker for property tabs, a static label otherwise.
   let metricControl: ReactNode = 'Count'
   if (tab.source === 'property') {
     metricControl = (
       <MetricSelect
         value={propertyMetric ?? tab.metric}
+        options={propertyMetrics(nav.kind)}
         onChange={metric => setMetricByTab(prev => ({ ...prev, [tab.id]: metric }))}
       />
     )
@@ -255,7 +285,7 @@ export const WebBreakdownPanel = ({
             <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
           </div>
         ) : (
-          <WebRankedList
+          <TrafficRankedList
             rows={rows}
             showShare={isTopK}
             onRowClick={onRowClick}
