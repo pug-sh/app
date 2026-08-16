@@ -68,8 +68,11 @@ export const parseMapFromSpec = (spec?: InsightQuerySpec): MapState => {
 // A MAP insight answers in top-k rows keyed by ISO alpha-2 (the server rewrites it to a top-k over
 // $country). is_others never appears — the map query omits the bucket — but it is filtered anyway
 // rather than trusted, since a bucket row would resolve to no country and silently vanish.
+//
+// Zero and negative values are kept: SUM/AVG/MIN/MAX are legitimate map metrics, and the heatmap
+// normalizes over min..max, so a country whose profit is 0 or negative still shades.
 export const countryCountsFromTopKRows = (rows: readonly TopKRow[]): CountryActivity[] =>
   rows
-    .filter(row => !row.isOthers && row.dimensionValue && row.value > 0)
+    .filter(row => !row.isOthers && row.dimensionValue && Number.isFinite(row.value))
     .map(row => ({ iso: row.dimensionValue.toUpperCase(), count: row.value }))
     .sort((a, b) => b.count - a.count || a.iso.localeCompare(b.iso))

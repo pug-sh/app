@@ -80,11 +80,19 @@ describe('countryCountsFromTopKRows', () => {
     ])
   })
 
-  it('drops the $others bucket, empty codes and non-positive counts', () => {
+  it('drops the $others bucket and empty codes', () => {
     // The map query omits the bucket, so this only fires on a hand-built or migrated spec — but a
     // bucket row would resolve to no country and vanish without explanation.
-    expect(countryCountsFromTopKRows([row('IN', 3), row('$others', 40, true), row('', 7), row('FR', 0)])).toEqual([
+    expect(countryCountsFromTopKRows([row('IN', 3), row('$others', 40, true), row('', 7)])).toEqual([
       { iso: 'IN', count: 3 },
+    ])
+  })
+
+  it('keeps zero and negative values — SUM/AVG/MIN/MAX produce them legitimately', () => {
+    expect(countryCountsFromTopKRows([row('FR', 0), row('DE', -12), row('IN', 3)])).toEqual([
+      { iso: 'IN', count: 3 },
+      { iso: 'FR', count: 0 },
+      { iso: 'DE', count: -12 },
     ])
   })
 })

@@ -329,14 +329,15 @@ const Insights = () => {
       // filter values: insightType/counts answer "what kinds of insights get run, how complex"
       // without carrying a customer's property values (which is why $url drops the query string).
       // Counts describe what was *sent*, not what the editor happens to be holding. User flow sends
-      // no events and no breakdowns (the backend rejects both), so reporting the rows left over
-      // from a previous insight type biased the shape by whatever preceded it. nodeKind is the
+      // neither events nor breakdowns, and top-k/map send no breakdowns (the backend rejects them),
+      // so reporting the rows left over from a previous insight type biased the shape by whatever
+      // preceded it. nodeKind is the
       // dimension that actually distinguishes one user-flow query from another, and it is a
       // category rather than a value.
       trackEvent('insight_queried', {
         insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
         eventCount: isUserFlow ? 0 : isTopK || isMap ? 1 : validEntries.length,
-        breakdownCount: isUserFlow || isMap ? 0 : breakdowns.length,
+        breakdownCount: isUserFlow || isMap || isTopK ? 0 : breakdowns.length,
         hasGlobalFilters: globalFilters.length > 0,
         ...(isUserFlow
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
