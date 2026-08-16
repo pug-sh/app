@@ -5,15 +5,17 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import { readPropFiltersParam } from '@/hooks/use-filter-query-params'
 import { formatCountryName } from '@/lib/location'
 
-// Web-analytics cross-filters reuse the Insights property-filter model wholesale: they're
-// `ActiveFilter`s on auto-properties, persisted via the shared `pf` URL param and turned into proto
-// filter groups by `toProtoFilters`. Same-property values are kept as one filter — EQUALS for a
-// single value, IN for several — so the set ANDs across properties and ORs within one, and the `pf`
-// param means the same thing here as on the Insights page.
+// Traffic cross-filters reuse the Insights property-filter model wholesale, down to the shared `pf`
+// URL param. Same-property values are kept as one filter — EQUALS for one, IN for several.
 
-const AUTO = PropertySource.AUTO
+// A plain event property, not an auto-property: the Flutter and React Native SDKs both send it as
+// `screenName`. The one non-`$` key this view ranks and filters on.
+export const SCREEN_NAME_PROPERTY = 'screenName'
 
-// Values a filter currently selects (single → [value], multi → values, presence/range → none).
+// The backend resolves either off the event, but the source is what a restored `pf` filter
+// round-trips through and what Insights reads to place the key in its picker.
+const sourceOf = (property: string) => (property.startsWith('$') ? PropertySource.AUTO : PropertySource.CUSTOM)
+
 const valuesOf = (filter: ActiveFilter) => {
   if (filter.kind === 'single') return [filter.value]
   if (filter.kind === 'multi') return filter.values
@@ -21,28 +23,25 @@ const valuesOf = (filter: ActiveFilter) => {
 }
 
 const makeFilter = (property: string, values: string[]) => {
-  if (values.length === 1) return createFilter(property, AUTO, FilterOperator.EQUALS, values[0])
-  return createFilter(property, AUTO, FilterOperator.IN, values)
+  const source = sourceOf(property)
+  if (values.length === 1) return createFilter(property, source, FilterOperator.EQUALS, values[0])
+  return createFilter(property, source, FilterOperator.IN, values)
 }
 
-// Everything below reads a filter's *arity* (valuesOf) and never its operator, and finds a property's
-// filter with `.find`. That's the whole sublanguage this view can represent: AUTO source, EQUALS or IN,
-// one filter per property. `pf` is shared with Insights, which authors the rest of the grammar
-// legitimately — and each of those degrades silently here. A NOT_EQUALS chips and highlights as if it
-// were an inclusion, and the next click on that dimension rewrites it into one. An is-set produces no
-// chip at all, so it narrows every number on the page with nothing on screen to remove. A second filter
-// on the same property is invisible past the first. So restore only what this view can actually show.
-const isWebFilter = (filter: ActiveFilter) =>
-  filter.source === AUTO &&
+// `pf` is shared with Insights, which legitimately authors filters this view can't show: a NOT_EQUALS
+// chips as if it were an inclusion, an is-set narrows every number with no chip to remove it by, and a
+// key no panel ranks can't be toggled off at all. Restore only what a panel can undo, warn about the rest.
+const isTrafficFilter = (filter: ActiveFilter) =>
+  (filter.source === PropertySource.AUTO ||
+    (filter.source === PropertySource.CUSTOM && filter.property === SCREEN_NAME_PROPERTY)) &&
   (filter.operator === FilterOperator.EQUALS || filter.operator === FilterOperator.IN) &&
   valuesOf(filter).length > 0
 
-// Restore cross-filters from the URL, keeping only the representable ones and reporting the rest.
-export const readWebFilters = (search?: string) => {
+export const readTrafficFilters = (search?: string) => {
   const { filters, dropped } = readPropFiltersParam(search)
   const seen = new Set<string>()
   const kept = filters.filter(filter => {
-    if (!isWebFilter(filter) || seen.has(filter.property)) return false
+    if (!isTrafficFilter(filter) || seen.has(filter.property)) return false
     seen.add(filter.property)
     return true
   })
@@ -53,8 +52,7 @@ export const readWebFilters = (search?: string) => {
   }
 }
 
-// Rebuild the list with `property`'s values set to `next`, preserving position; drops the filter
-// entirely when `next` is empty.
+// Preserves position; drops the filter entirely when `next` is empty.
 const withValues = (filters: readonly ActiveFilter[], existing: ActiveFilter, property: string, next: string[]) =>
   filters.flatMap(filter => {
     if (filter !== existing) return [filter]
@@ -62,7 +60,6 @@ const withValues = (filters: readonly ActiveFilter[], existing: ActiveFilter, pr
     return []
   })
 
-// Clicking a value toggles it within its property's filter.
 export const toggleFilter = (filters: readonly ActiveFilter[], property: string, value: string) => {
   const existing = filters.find(filter => filter.property === property)
   if (!existing) return [...filters, makeFilter(property, [value])]
@@ -103,31 +100,32 @@ export const filterValues = (filters: readonly ActiveFilter[], property: string)
 export const hasFilter = (filters: readonly ActiveFilter[], property: string, value: string) =>
   filterValues(filters, property).includes(value)
 
-// Filters minus those on `exceptProperty`. A breakdown panel drops its own dimension so every value
-// of it stays visible and togglable while the page's other filters still apply.
+// A breakdown panel drops its own dimension so every value of it stays visible and togglable.
 export const filtersExcept = (filters: readonly ActiveFilter[], exceptProperty?: string) =>
   exceptProperty ? filters.filter(filter => filter.property !== exceptProperty) : [...filters]
 
-// Proto filter-group fields to spread into an InsightQuerySpec — a single AND group over the shared
-// `toProtoFilters` output, identical to the Insights page's buildInsightSpec. Empty in → no groups.
+// One AND group, identical to the Insights page's buildInsightSpec. Empty in → no groups.
 export const filterGroupFields = (filters: readonly ActiveFilter[]) => ({
   filterGroups: filters.length > 0 ? [{ filters: toProtoFilters(filters), operator: LogicalOperator.AND }] : [],
   filterGroupsOperator: LogicalOperator.AND,
 })
 
-// One removable chip per selected value (a multi filter expands to several chips).
 export const filterChips = (filters: readonly ActiveFilter[]) =>
   filters.flatMap(filter => valuesOf(filter).map(value => ({ property: filter.property, value })))
 
-// Human labels for the filter chips. Falls back to the raw key (minus the `$`) for anything unmapped.
 const PROPERTY_LABELS: Record<string, string> = {
   $pathname: 'Page',
+  [SCREEN_NAME_PROPERTY]: 'Screen',
+  $referrerDomain: 'Referrer',
   $country: 'Country',
   $region: 'Region',
   $city: 'City',
   $browser: 'Browser',
   $os: 'OS',
   $device: 'Device',
+  // Distinct from $device: a `pf` link can carry both, and two chips reading "Device" can't be told apart.
+  $deviceModel: 'Device model',
+  $appVersion: 'App version',
   $utmSource: 'Source',
   $utmMedium: 'Medium',
   $utmCampaign: 'Campaign',
@@ -135,8 +133,6 @@ const PROPERTY_LABELS: Record<string, string> = {
 
 export const filterPropertyLabel = (property: string) => PROPERTY_LABELS[property] ?? property.replace(/^\$/, '')
 
-// Display text for a filter value. $country is stored as an ISO alpha-2 code but shown as its country
-// name — keeping the chips consistent with the Countries breakdown, which does the same. Every other
-// property shows the value verbatim (the stored value is always the raw filter key).
+// $country is stored as an ISO alpha-2 code, shown as its name — matching the Countries breakdown.
 export const filterValueLabel = (property: string, value: string) =>
   property === '$country' ? formatCountryName(value) : value

@@ -14,14 +14,14 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 // panel's rows memo, keyed on `result`) don't see a fresh object identity on every in-flight render.
 const EMPTY_RESULT = { case: undefined, value: undefined }
 
-// Run a web-analytics query against a concrete window. Mirrors DashboardInsightContent's fetch path
+// Run a traffic-analytics query against a concrete window. Mirrors DashboardInsightContent's fetch path
 // (project header, zone-bucket flooring, content-keyed debounce) but returns the raw result oneof so
 // callers can read the segmentation total / top-k rows / trends series directly — InsightTileView
-// renders neither segmentation scalars nor ranked lists, which is why the web view fetches its own.
+// renders neither segmentation scalars nor ranked lists, which is why the traffic view fetches its own.
 //
 // `baseQuery` must be memoized by the caller (build it from stable primitives): this hook folds the
 // window + granularity in and content-keys the debounce, so a stable baseQuery means no refetch loop.
-export const useWebQuery = (
+export const useTrafficQuery = (
   baseQuery: QueryRequest,
   range: TimeRange,
   granularity: Granularity,

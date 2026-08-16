@@ -37,7 +37,7 @@ const eventSpec = (kind: string, aggregation: AggregationType) =>
 
 // A session spec carries no event rows — spec.session is set instead — so reading only spec.events
 // left every series unclaimed: a console.error per render and a TOTAL fallback that summed a rate
-// across buckets. All four web-analytics session stats went through here.
+// across buckets. All four traffic-analytics session stats went through here.
 describe('specAggregationResolver on session specs', () => {
   afterEach(() => vi.restoreAllMocks())
 

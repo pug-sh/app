@@ -8,22 +8,30 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { type Bindings, pickBindings } from './tile-bindings'
 import type { OverviewMode } from './url-state'
 
-// The Web vs Product analytics view. A durable per-browser preference (like theme) rather than URL
-// state, so it survives reloads and new tabs and stays out of shared links. Every session defaults to
-// Web analytics, the demo included. getOnInit puts the stored value on the first synchronous render:
-// the overview page seeds its initial time-range window from the mode in a useState initializer,
-// before any mount effect could hydrate it.
-const storedOverviewModeAtom = atomWithStorage<OverviewMode>('pug:overviewMode', 'web', undefined, {
+// A durable per-browser preference (like theme) rather than URL state, so it survives reloads and
+// stays out of shared links. getOnInit puts the stored value on the first synchronous render: the
+// overview page seeds its time-range window from the mode in a useState initializer.
+//
+// Typed as the string it actually is: browsers that used the view before the rename hold 'web', so
+// reading it as an OverviewMode would type-lie.
+const storedOverviewModeAtom = atomWithStorage('pug:overviewMode', 'traffic', undefined, {
   getOnInit: true,
 })
 
-// Wrapped only to track the switch; the read passes straight through.
+const isOverviewMode = (value: string): value is OverviewMode => value === 'traffic' || value === 'product'
+
+// Ids predate the web → traffic rename; renaming one would end the shipped series and restart it at
+// zero with no backfill, so only the name follows the UI.
+const MODE_FEATURE_ID: Record<OverviewMode, string> = { traffic: 'overview.mode.web', product: 'overview.mode.product' }
+
 export const overviewModeAtom = atom(
-  get => get(storedOverviewModeAtom),
+  get => {
+    const stored = get(storedOverviewModeAtom)
+    return isOverviewMode(stored) ? stored : 'traffic'
+  },
   (_get, set, next: OverviewMode) => {
-    // On the atom rather than the toggle, so any future entry point counts too. The destination rides
-    // in the featureId: trackFeature takes no props, and the id is what a breakdown groups by.
-    trackFeature({ featureId: `overview.mode.${next}`, featureName: `Switch to ${next} analytics` })
+    // On the atom rather than the toggle, so any future entry point counts too.
+    trackFeature({ featureId: MODE_FEATURE_ID[next], featureName: `Switch to ${next} analytics` })
     set(storedOverviewModeAtom, next)
   },
 )

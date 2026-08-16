@@ -340,7 +340,7 @@ export const writeFilterQueryParams = (
   replaceUrlIfChanged(url)
 }
 
-// Narrow read/write for just the property-filters (`pf`) param. The Overview web-analytics view
+// Narrow read/write for just the property-filters (`pf`) param. The Overview traffic-analytics view
 // persists property filters but none of the other insights params, so it can't use the full
 // read/writeFilterQueryParams (which own ef/it/bd/tk/tf/tt/gr too). Same param, JSON shape, and
 // per-entry validation — so a `pf` written here means exactly what the Insights page reads.

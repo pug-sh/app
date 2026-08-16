@@ -9,32 +9,47 @@ import { alignRangeStart } from '@/lib/granularity'
 import { cn } from '@/lib/utils'
 import { priorPeriodRange } from '../dashboards/compare-query'
 import { DeltaBadge, formatDelta, Sparkline } from '../dashboards/kpi-tile'
-import { useWebQuery } from './use-web-query'
-import { buildWebStatQuery, formatWebStatValue, getWebStat, type WebStatId } from './web-analytics-queries'
+import {
+  buildTrafficStatQuery,
+  formatTrafficStatValue,
+  getTrafficStat,
+  type NavEvent,
+  type TrafficStatId,
+} from './traffic-queries'
+import { useTrafficQuery } from './use-traffic-query'
 
 // A single headline stat: the exact window scalar (SegmentationResult.total) for its metric, a
 // compare-vs-prior delta badge (matching the product KPI tiles), and a sparkline of the metric over
 // the window. The selected tile drives the main chart and reads in the accent color.
-export const WebStatTile = ({
+export const TrafficStatTile = ({
   statId,
+  nav,
   selected,
   onSelect,
   range,
   granularity,
   filters,
 }: {
-  statId: WebStatId
+  statId: TrafficStatId
+  nav: NavEvent
   selected: boolean
-  onSelect: (id: WebStatId) => void
+  onSelect: (id: TrafficStatId) => void
   range: TimeRange
   granularity: Granularity
   filters: readonly ActiveFilter[]
 }) => {
-  const stat = getWebStat(statId)
+  const stat = getTrafficStat(statId)
+  const label = stat.label[nav.kind]
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
-  const scalarQuery = useMemo(() => buildWebStatQuery(statId, InsightType.SEGMENTATION, filters), [statId, filters])
-  const trendQuery = useMemo(() => buildWebStatQuery(statId, InsightType.TRENDS, filters), [statId, filters])
-  // Derived from the window useWebQuery actually sends, not the raw one, so the delta compares two
+  const scalarQuery = useMemo(
+    () => buildTrafficStatQuery(nav.name, statId, InsightType.SEGMENTATION, filters),
+    [nav, statId, filters],
+  )
+  const trendQuery = useMemo(
+    () => buildTrafficStatQuery(nav.name, statId, InsightType.TRENDS, filters),
+    [nav, statId, filters],
+  )
+  // Derived from the window useTrafficQuery actually sends, not the raw one, so the delta compares two
   // equal-length adjacent periods (see DashboardInsightContent).
   const alignedRange = useMemo(
     () => ({ from: alignRangeStart(range, granularity, timeZone), to: range.to }),
@@ -45,19 +60,24 @@ export const WebStatTile = ({
     [alignedRange, range, timeZone],
   )
 
-  const { result, error, retry, loading } = useWebQuery(scalarQuery, range, granularity, `overview-web-stat-${statId}`)
-  const { result: priorResult, retry: retryPrior } = useWebQuery(
+  const { result, error, retry, loading } = useTrafficQuery(
+    scalarQuery,
+    range,
+    granularity,
+    `overview-traffic-stat-${statId}`,
+  )
+  const { result: priorResult, retry: retryPrior } = useTrafficQuery(
     scalarQuery,
     priorRange,
     granularity,
-    `overview-web-stat-${statId}-prev`,
+    `overview-traffic-stat-${statId}-prev`,
     false,
   )
-  const { result: trendResult, retry: retryTrend } = useWebQuery(
+  const { result: trendResult, retry: retryTrend } = useTrafficQuery(
     trendQuery,
     range,
     granularity,
-    `overview-web-spark-${statId}`,
+    `overview-traffic-spark-${statId}`,
   )
 
   // The scalar query drives the headline number; when it fails the tile has nothing to show, so
@@ -67,7 +87,7 @@ export const WebStatTile = ({
   if (error) {
     return (
       <div className="flex h-[9.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-card px-4 py-3 text-left">
-        <span className="truncate text-sm font-medium text-muted-foreground">{stat.label}</span>
+        <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
           <span className="text-xs text-muted-foreground" title={error}>
             Failed to load
@@ -108,7 +128,7 @@ export const WebStatTile = ({
       {/* Label with the delta badge pinned to the top-right; big number below. min-h reserves the badge
           row so numbers stay aligned across tiles whether or not a delta is present. */}
       <div className="flex min-h-[1.375rem] items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{stat.label}</span>
+        <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{label}</span>
         {delta ? <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} /> : null}
       </div>
       <span
@@ -117,7 +137,7 @@ export const WebStatTile = ({
           loading && value === undefined && 'animate-pulse opacity-40',
         )}
       >
-        {value !== undefined ? formatWebStatValue(statId, value) : '—'}
+        {value !== undefined ? formatTrafficStatValue(statId, value) : '—'}
       </span>
 
       {/* Sparkline fills the remaining height, bleeding to the card's bottom/side edges; accent-colored

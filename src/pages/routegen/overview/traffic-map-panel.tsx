@@ -5,27 +5,29 @@ import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { useActivityMapData } from '../dashboards/activity-map-content'
 import { OverviewTileShell } from './overview-tile-shell'
-import { buildCountryMapQuery, COUNTRY_PROPERTY } from './web-analytics-queries'
-import { filtersExcept, filterValues } from './web-filters'
+import { filtersExcept, filterValues } from './traffic-filters'
+import { buildCountryMapQuery, COUNTRY_PROPERTY, type NavEvent } from './traffic-queries'
 
-// The choropleth, matching the breakdown panels' shell. Clicking a country cross-filters the page;
-// its own $country filter is excluded from the map query so every country stays visible and clickable.
-export const WebMapPanel = ({
+// Clicking a country cross-filters the page; its own $country filter is excluded from the map query
+// so every country stays visible and clickable.
+export const TrafficMapPanel = ({
+  nav,
+  footer,
   range,
   granularity,
   filters,
   onAddFilter,
   queryKeyPrefix,
 }: {
+  nav: NavEvent
+  footer: string
   range: TimeRange
   granularity: Granularity
   filters: readonly ActiveFilter[]
   onAddFilter: (property: string, value: string) => void
   queryKeyPrefix: string
 }) => {
-  const query = useMemo(() => buildCountryMapQuery(filtersExcept(filters, COUNTRY_PROPERTY)), [filters])
-  // Excluded from the query above (so all countries stay clickable) but passed to the map to outline
-  // the active pick.
+  const query = useMemo(() => buildCountryMapQuery(nav.name, filtersExcept(filters, COUNTRY_PROPERTY)), [nav, filters])
   const selectedCountries = useMemo(() => filterValues(filters, COUNTRY_PROPERTY), [filters])
   const { countries, loading, error, retry } = useActivityMapData({
     query,
@@ -38,11 +40,7 @@ export const WebMapPanel = ({
   return (
     // Height follows width so the ~1.41:1 world frame fills the tile at any viewport; capped so
     // ultrawide gets margins rather than a 900px-tall tile.
-    <OverviewTileShell
-      title="Map"
-      footer="pageviews by country"
-      className="h-auto w-full aspect-[1.2] max-h-[720px] min-h-[420px]"
-    >
+    <OverviewTileShell title="Map" footer={footer} className="h-auto w-full aspect-[1.2] max-h-[720px] min-h-[420px]">
       <ActivityMapView
         countries={countries}
         loading={loading}

@@ -41,7 +41,7 @@ export const SERIES_COLLAPSE = {
 // Session counts add across buckets (a session lands in exactly one, keyed on its start — the same
 // reasoning rankSessionBreakdown sums on); an average and a rate don't add at all. Bucket-weighted
 // averaging is the only reading a series affords; the exact window figure is the separate scalar
-// query the web stat tiles show. Total over SessionMetric, as SERIES_COLLAPSE is over AggregationType.
+// query the traffic stat tiles show. Total over SessionMetric, as SERIES_COLLAPSE is over AggregationType.
 const SESSION_METRIC_AGGREGATION = {
   // Rejected by buf.validate before it can be sent; here so the map stays a compile-time check.
   [SessionMetric.UNSPECIFIED]: AggregationType.TOTAL,

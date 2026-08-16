@@ -1,11 +1,11 @@
 import { X } from 'lucide-react'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
-import { filterChips, filterPropertyLabel, filterValueLabel } from './web-filters'
+import { filterChips, filterPropertyLabel, filterValueLabel } from './traffic-filters'
 
 // Active cross-filters, shown as removable chips (one per selected value, so a multi-value IN filter
 // expands to several). Clicking a chip clears that value; "Clear all" resets the view. Renders
 // nothing when unfiltered.
-export const WebFilterBar = ({
+export const TrafficFilterBar = ({
   filters,
   onRemove,
   onClear,

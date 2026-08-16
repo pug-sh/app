@@ -11,7 +11,7 @@ vi.mock('@/api/rpc', async () => {
   return { insightsRPCAtom: atom({ query }) }
 })
 
-// useWebQuery reads both of these off the active project, which no test bootstraps.
+// useTrafficQuery reads both of these off the active project, which no test bootstraps.
 vi.mock('@/data/workspace.atoms', async importOriginal => {
   const actual = await importOriginal<typeof import('@/data/workspace.atoms')>()
   const { atom } = await import('jotai')
@@ -23,9 +23,9 @@ vi.mock('@/data/workspace.atoms', async importOriginal => {
 })
 
 // Type-only, so it's erased and can't defeat the mocks above by evaluating the module early.
-import type { BreakdownPanelConfig } from './web-breakdown-panel'
+import type { BreakdownPanelConfig } from './traffic-breakdown-panel'
 
-const { WebBreakdownPanel } = await import('./web-breakdown-panel')
+const { TrafficBreakdownPanel } = await import('./traffic-breakdown-panel')
 
 // Two `property` tabs, which is the case that breaks: they share `source: 'property'`, so the rows
 // memo's deps can't tell them apart. No `valueKind`, to keep flag/devicon assets out of the render.
@@ -66,8 +66,9 @@ const deferredQuery = () => {
 
 const renderPanel = () =>
   render(
-    <WebBreakdownPanel
+    <TrafficBreakdownPanel
       config={CONFIG}
+      nav={{ kind: 'page_view', name: 'page_view' }}
       range={RANGE}
       granularity={Granularity.DAY}
       queryKeyPrefix="test-panel"
@@ -80,7 +81,7 @@ beforeEach(() => {
   query.mockReset()
 })
 
-describe('WebBreakdownPanel', () => {
+describe('TrafficBreakdownPanel', () => {
   it('does not claim "No data" while the first query is still in flight', async () => {
     const settleFirst = deferredQuery()
     renderPanel()

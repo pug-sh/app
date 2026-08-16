@@ -97,7 +97,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   userFlowResult?: UserFlowResult
-  // Hides the shared series-summary legend. The web-analytics
+  // Hides the shared series-summary legend. The traffic-analytics
   // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
   // meaningless there, and the stat cards already carry the accurate scalar).
   hideLegend?: boolean
