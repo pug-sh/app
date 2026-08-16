@@ -36,7 +36,7 @@ Proto definitions live in `proto/` — a gitignored symlink to the pug backend c
 
 ## Architecture
 
-### State Management — Jotai atoms everywhere
+### State Management — Jotai atoms for shared state
 
 All *shared* state is Jotai atoms. No React Context, no Redux. Pattern:
 
