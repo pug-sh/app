@@ -7,6 +7,7 @@ import {
   type InsightQuerySpec,
   InsightQuerySpecSchema,
   InsightType,
+  MapQuerySchema,
   QueryRequestSchema,
   SessionMetric,
   SessionQuerySchema,
@@ -195,15 +196,14 @@ export const buildSessionBreakdownQuery = (
   )
 
 // Pageviews-by-country for the map, with active cross-filters applied (the map's own $country filter
-// is excluded by the caller so all countries stay visible/clickable). Mirrors the dashboards'
-// buildCountryBreakdownQuery shape so useActivityMapData can read it.
+// is excluded by the caller so all countries stay visible/clickable). MAP fixes the dimension to
+// $country server-side, so unlike a TRENDS breakdown it carries no top-N to truncate the tail and it
+// rides the top-K rollup fast path when unfiltered.
 export const buildCountryMapQuery = (filters: readonly ActiveFilter[] = []) =>
   webQuery(
     create(InsightQuerySpecSchema, {
-      insightType: InsightType.TRENDS,
-      events: [create(EventQuerySchema, { event: pageViewScope(), aggregation: AggregationType.TOTAL })],
-      breakdowns: [create(BreakdownSchema, { property: COUNTRY_PROPERTY })],
-      breakdownLimit: DEFAULT_BREAKDOWN_LIMIT,
+      insightType: InsightType.MAP,
+      map: create(MapQuerySchema, { scope: pageViewScope(), metric: AggregationType.TOTAL }),
       ...filterGroupFields(filters),
     }),
   )

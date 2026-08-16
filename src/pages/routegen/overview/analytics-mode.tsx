@@ -152,7 +152,6 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           <div className="grid min-h-0 grid-cols-1 gap-3.5 lg:h-[440px] lg:grid-cols-5">
             <div className="h-[440px] min-h-0 overflow-hidden lg:col-span-2 lg:h-full">
               <ActivityMapTile
-                schema={schema}
                 primary={bindings.primary}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={globalGranularity}

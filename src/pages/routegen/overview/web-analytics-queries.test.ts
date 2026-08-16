@@ -14,7 +14,6 @@ import {
   buildSessionBreakdownQuery,
   buildTopKBreakdownQuery,
   buildWebStatQuery,
-  COUNTRY_PROPERTY,
   formatWebStatValue,
   WEB_PRIMARY_KIND,
   WEB_STATS,
@@ -121,13 +120,19 @@ describe('cross-filters reach every query', () => {
 
 // The map query has no test of its own elsewhere, and useActivityMapData reads its shape positionally.
 describe('buildCountryMapQuery', () => {
-  it('is TRENDS over page_view with exactly one country breakdown', () => {
+  it('is MAP scoped to page_view', () => {
     const spec = buildCountryMapQuery().spec!
-    expect(spec.insightType).toBe(InsightType.TRENDS)
-    expect(spec.events[0].event?.kind).toBe(WEB_PRIMARY_KIND)
-    expect(spec.events[0].aggregation).toBe(AggregationType.TOTAL)
-    expect(spec.breakdowns).toHaveLength(1)
-    expect(spec.breakdowns[0].property).toBe(COUNTRY_PROPERTY)
+    expect(spec.insightType).toBe(InsightType.MAP)
+    expect(spec.map?.scope?.kind).toBe(WEB_PRIMARY_KIND)
+    expect(spec.map?.metric).toBe(AggregationType.TOTAL)
+  })
+
+  // The server rejects a MAP spec carrying either (map_no_events / map_no_breakdowns), so a
+  // stray field here is a failed query, not a wider one.
+  it('carries no events and no breakdowns', () => {
+    const spec = buildCountryMapQuery().spec!
+    expect(spec.events).toHaveLength(0)
+    expect(spec.breakdowns).toHaveLength(0)
   })
 })
 

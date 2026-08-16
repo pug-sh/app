@@ -33,6 +33,10 @@ export const DASHBOARD_TILE_VIEW_MODES = [
 // further flow layouts would land.
 export const USER_FLOW_TILE_VIEW_MODES = [{ label: 'Sankey', value: DashboardTileViewMode.SANKEY }] as const
 
+// Same reasoning as Sankey above: the only view a map tile can take, kept as a named picker rather
+// than no picker at all. A second entry lands here if the ranked country table ever becomes a view.
+export const MAP_TILE_VIEW_MODES = [{ label: 'Map', value: DashboardTileViewMode.MAP }] as const
+
 export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | undefined): DashboardTileViewMode => {
   switch (mode) {
     case DashboardTileViewMode.LINE:
@@ -43,6 +47,7 @@ export const getInitialDashboardTileViewMode = (mode: DashboardTileViewMode | un
     case DashboardTileViewMode.TABLE:
       return mode
     case DashboardTileViewMode.SANKEY:
+    case DashboardTileViewMode.MAP:
       return mode
     default:
       return DEFAULT_DASHBOARD_TILE_VIEW_MODE
@@ -61,13 +66,14 @@ export const dashboardTileViewModeToViewMode = (mode: DashboardTileViewMode | un
       return 'pie'
     case DashboardTileViewMode.TABLE:
       return 'table'
-    // SANKEY has no ViewMode of its own — content.tsx dispatches a user-flow tile on its insight
-    // type or result case *before* reaching the chart switch, so the mapping never selects the
-    // chart for one. It is still read: insight-tile-view computes effectiveViewMode for every
-    // tile, and content.tsx uses it for sizing and legend placement above that dispatch. Mapping
-    // to the default is what makes a tile left on SANKEY after switching away from user flow
+    // SANKEY and MAP have no ViewMode of their own — a user-flow or map tile is dispatched on its
+    // insight type (or result case) *before* the chart switch is reached, so the mapping never
+    // selects the chart for one. It is still read: insight-tile-view computes effectiveViewMode for
+    // every tile, and content.tsx uses it for sizing and legend placement above that dispatch.
+    // Mapping to the default is what makes a tile left on one of these after switching insight type
     // degrade to a line chart rather than falling through the switch into bars.
     case DashboardTileViewMode.SANKEY:
+    case DashboardTileViewMode.MAP:
     case DashboardTileViewMode.LINE:
     default:
       return 'line'

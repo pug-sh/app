@@ -56,6 +56,10 @@ export type UsageDay = Message<"dashboard.usage.v1.UsageDay"> & {
   /**
    * UTC midnight starting the day the events were recorded.
    *
+   * This is a DATE carried as an instant, so format it in UTC. A client west of
+   * UTC that renders it in local time (`new Date(day)` in a browser, say) shows
+   * the PREVIOUS day for every cell.
+   *
    * @generated from field: google.protobuf.Timestamp day = 1;
    */
   day?: Timestamp | undefined;
@@ -84,7 +88,9 @@ export const UsageDaySchema: GenMessage<UsageDay> = /*@__PURE__*/
 export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & {
   /**
    * Distinct events recorded across all of the org's projects this period.
-   * ABSENT whenever usage_computed_at is — never render it as 0.
+   * ABSENT until the meter has actually summed this period — never render its
+   * absence as 0. Present implies usage_computed_at is present; the reverse does
+   * not hold.
    *
    * @generated from field: int64 used_events = 1;
    */
@@ -101,23 +107,25 @@ export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & 
   periodEnd?: Timestamp | undefined;
 
   /**
-   * When the meter last ran for this org. ABSENT means it never has — there is no
-   * answer at all, which a deployment not running `pug cron usage` must render as
-   * "unknown" rather than "0". A period the meter has not reached yet (the 1st of
-   * a month, before the first pass) keeps the previous period's stamp.
+   * When the meter last ran for this org, in any period. ABSENT means it never
+   * has — there is no answer at all, which a deployment not running
+   * `pug cron usage` must render as "unknown" rather than "0".
    *
-   * That carries one consequence clients must handle: when usage_computed_at is
-   * EARLIER than period_start, used_events is not a measurement of this period --
-   * it is a placeholder zero for a period nothing has counted yet. Render it as
-   * "computing" rather than as a total. The gap is normally minutes, but it grows
-   * without bound if the meter stops running.
+   * Present WITH used_events absent is the third state: the meter is alive but has
+   * not reached this period yet (the 1st of a month, before the first pass, when
+   * this stamp is still the previous period's). Render that as "computing". The
+   * two fields carry the distinction on their own — no comparison against
+   * period_start is required, and none should be relied on.
    *
    * @generated from field: google.protobuf.Timestamp usage_computed_at = 4;
    */
   usageComputedAt?: Timestamp | undefined;
 
   /**
-   * Per-project daily counts over the requested window, oldest first.
+   * Per-project daily counts over the requested window, oldest first, capped at
+   * 10,000 rows. A row is (day x project), so a wide window on an org with many
+   * projects can reach the cap and lose its newest days; narrow the range if the
+   * series looks short.
    *
    * @generated from field: repeated dashboard.usage.v1.UsageDay daily = 5;
    */
@@ -140,7 +148,8 @@ export const UsageService: GenService<{
    * month, plus the per-project daily series behind it. The numbers come from a
    * scheduled meter whose cadence the deployment sets, so read usage_computed_at
    * for how stale they are rather than assuming one. Both used_events and
-   * usage_computed_at are absent if the meter has never run.
+   * usage_computed_at are absent if the meter has never run; usage_computed_at
+   * alone is present while it is alive but has not summed this period yet.
    *
    * @generated from rpc dashboard.usage.v1.UsageService.GetUsage
    */

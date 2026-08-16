@@ -17,6 +17,7 @@ import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '../../insights/constants'
 import { InsightsRowAggregationControls } from '../../insights/controls'
+import { MapControls } from '../../insights/map-controls'
 import { UserFlowControls } from '../../insights/user-flow-controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
 import { DEFAULT_DASHBOARD_TILE_VIEW_MODE } from '../tile-settings'
@@ -33,8 +34,19 @@ type DataTabProps = {
 const sectionLabel = (insightType: InsightType) => {
   if (insightType === InsightType.TOP_K) return 'Ranking'
   if (insightType === InsightType.USER_FLOW) return 'Flow'
+  if (insightType === InsightType.MAP) return 'Map'
   return 'Events'
 }
+
+// The view a tile is pinned to by its insight type: the type's only renderer, and one no other
+// insight type can draw. Keyed off the type so the two directions of the reconciliation below
+// (pin on switch-to, release on switch-away) cannot fall out of step.
+const PINNED_VIEW_MODE: Partial<Record<InsightType, DashboardTileViewMode>> = {
+  [InsightType.USER_FLOW]: DashboardTileViewMode.SANKEY,
+  [InsightType.MAP]: DashboardTileViewMode.MAP,
+}
+
+const PINNED_VIEW_MODES = new Set(Object.values(PINNED_VIEW_MODE))
 
 const COMPARE_OPTIONS = [
   { label: 'No compare', value: ComparePeriod.UNSPECIFIED },
@@ -66,9 +78,10 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const [breakdowns, setBreakdowns] = useState<string[]>(defaults.breakdowns)
   const [userFlowConfig, setUserFlowConfig] = useState(defaults.userFlowConfig)
   const [topK, setTopK] = useState(defaults.topK)
+  const [map, setMap] = useState(defaults.map)
 
   // Truncate leftover event rows when switching to an insight type with a smaller
-  // event cap (retention = 2, top-k = 1). See eventEntryCap.
+  // event cap (retention = 2, top-k and map = 1). See eventEntryCap.
   const store = useStore()
   const { filtersAtom, reset: resetEntries } = eventFilters
   useEffect(() => {
@@ -105,15 +118,18 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       breakdowns,
       userFlowConfig,
       topK,
+      map,
     })
     const patch: Partial<DashboardTile> = {
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
     }
-    // Both directions, or the tile strands: Sankey is the only view user flow can take, and the
-    // only one no other insight type can render. Switching away used to leave viewMode on SANKEY.
-    if (insightType === InsightType.USER_FLOW) {
-      if (tile.viewMode !== DashboardTileViewMode.SANKEY) patch.viewMode = DashboardTileViewMode.SANKEY
-    } else if (tile.viewMode === DashboardTileViewMode.SANKEY) {
+    // Both directions, or the tile strands: Sankey and Map are each the only view their insight
+    // type can take, and the only one no other insight type can render. Switching away used to
+    // leave viewMode on SANKEY.
+    const pinnedViewMode = PINNED_VIEW_MODE[insightType]
+    if (pinnedViewMode !== undefined) {
+      if (tile.viewMode !== pinnedViewMode) patch.viewMode = pinnedViewMode
+    } else if (PINNED_VIEW_MODES.has(tile.viewMode)) {
       patch.viewMode = DEFAULT_DASHBOARD_TILE_VIEW_MODE
     }
     onPatch(patch)
@@ -131,7 +147,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     // outside this tab is not corrected until some editor state here changes. Harmless only
     // because the Display tab offers a user-flow tile no view but Sankey.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
-  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, userFlowConfig, topK])
+  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, userFlowConfig, topK, map])
 
   const addBreakdown = (property: string) => {
     setBreakdowns(current => (current.includes(property) || current.length >= 5 ? current : [...current, property]))
@@ -185,6 +201,11 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
             schemaError={schemaError}
             events={schema?.events}
           />
+        ) : null}
+        {insightType === InsightType.MAP ? (
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <MapControls map={map} onChange={setMap} schema={globalSchema} schemaError={globalSchemaError} />
+          </div>
         ) : null}
         <InsightFields
           insightType={insightType}
