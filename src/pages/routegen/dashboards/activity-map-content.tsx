@@ -1,25 +1,22 @@
 import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { Globe, Loader2 } from 'lucide-react'
 import { useMemo } from 'react'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { type Granularity, type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
-import ActivityHeatmapMap from '@/components/activity-heatmap-map'
+import { ActivityMapView } from '@/components/activity-map-view'
 import type { TimeRange } from '@/components/date-range-picker'
-import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
-import { countryCountsFromTrendSeries } from './activity-map'
+import { countryCountsFromTopKRows } from '../insights/map'
 import { getInitialGranularity, getProtoRange } from './query'
 
 export type ActivityMapDataProps = {
   query: QueryRequest | undefined
-  countryKey: string | null | undefined
   defaultTimeRange: TimeRangePreset | undefined
   timeRangeOverride?: TimeRange
   granularityOverride?: Granularity
@@ -28,7 +25,6 @@ export type ActivityMapDataProps = {
 
 export const useActivityMapData = ({
   query,
-  countryKey,
   defaultTimeRange,
   timeRangeOverride,
   granularityOverride,
@@ -61,7 +57,7 @@ export const useActivityMapData = ({
     [granularityOverride, query],
   )
   const effectiveQuery = useMemo(() => {
-    if (!query || !countryKey) return undefined
+    if (!query) return undefined
     // Aligned the same way as useWebQuery / DashboardInsightContent so the map's window matches
     // the sibling tiles' exactly.
     return create(QueryRequestSchema, {
@@ -75,7 +71,7 @@ export const useActivityMapData = ({
         }),
       ),
     })
-  }, [countryKey, effectiveGranularity, effectiveTimeRange, query, timeZone])
+  }, [effectiveGranularity, effectiveTimeRange, query, timeZone])
 
   const projectId = headers?.['x-project-id'] ?? ''
   const queryKey = stringifyQueryKey({
@@ -91,80 +87,18 @@ export const useActivityMapData = ({
       const resp = await insightsRPC.query(effectiveQuery, { headers })
       return resp.result
     },
-    { enabled: !!effectiveQuery && !!headers && !!countryKey, debounceMs: 0 },
+    { enabled: !!effectiveQuery && !!headers, debounceMs: 0 },
   )
 
-  const countries = useMemo(
-    () =>
-      data?.case === 'trends' && countryKey ? countryCountsFromTrendSeries([...data.value.series], countryKey) : [],
-    [countryKey, data],
-  )
+  const countries = useMemo(() => (data?.case === 'topK' ? countryCountsFromTopKRows(data.value.rows) : []), [data])
 
   return {
     countries,
     loading,
     error,
     retry,
-    countryKey,
     effectiveQuery,
   }
-}
-
-type ActivityMapViewProps = {
-  countries: ReturnType<typeof useActivityMapData>['countries']
-  loading: boolean
-  error: string | null
-  retry: () => void
-  className?: string
-  onCountrySelect?: (alpha2: string) => void
-  selected?: readonly string[]
-}
-
-export const ActivityMapView = ({
-  countries,
-  loading,
-  error,
-  retry,
-  className,
-  onCountrySelect,
-  selected,
-}: ActivityMapViewProps) => {
-  const stateClass = className ?? 'absolute inset-0'
-
-  if (loading && countries.length === 0) {
-    return (
-      <div className={`${stateClass} flex items-center justify-center`}>
-        <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className={`${stateClass} flex flex-col items-center justify-center gap-2 text-center`}>
-        <Globe className="size-7 opacity-15" />
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => retry()}>
-          Retry
-        </Button>
-      </div>
-    )
-  }
-
-  if (countries.length === 0) {
-    return (
-      <div className={`${stateClass} flex flex-col items-center justify-center text-center`}>
-        <Globe className="mb-2 size-7 opacity-15" />
-        <p className="text-sm text-muted-foreground">No location data yet</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className={stateClass}>
-      <ActivityHeatmapMap countries={countries} onCountrySelect={onCountrySelect} selected={selected} />
-    </div>
-  )
 }
 
 export const ActivityMapContent = (props: ActivityMapDataProps) => {

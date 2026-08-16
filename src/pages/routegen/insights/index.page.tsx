@@ -64,6 +64,8 @@ import {
   sortFunnelSteps,
   trendSeriesNames,
 } from './helpers'
+import { buildMapQuery, DEFAULT_MAP, mapIncompleteReason } from './map'
+import { MapControls } from './map-controls'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 import { buildUserFlowQuery, isUserFlowConfigValid, userFlowIncompleteReason } from './user-flow'
@@ -130,6 +132,7 @@ const Insights = () => {
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
+  const [map, setMap] = useState(() => initialFilterState.map ?? DEFAULT_MAP)
 
   const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
@@ -189,6 +192,7 @@ const Insights = () => {
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTopK = insightType === InsightType.TOP_K
+  const isMap = insightType === InsightType.MAP
   const isTimeSeriesInsight = isTrends || isRetention
   const userFlowReady = isUserFlowConfigValid(userFlowConfig)
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
@@ -202,6 +206,7 @@ const Insights = () => {
       breakdowns,
       userFlowConfig: isUserFlow ? userFlowConfig : undefined,
       topK: isTopK ? topK : undefined,
+      map: isMap ? map : undefined,
     })
   }, [
     eventFilters.entries,
@@ -214,6 +219,8 @@ const Insights = () => {
     userFlowConfig,
     isTopK,
     topK,
+    isMap,
+    map,
   ])
 
   const hasIncompleteNumericAggregation = useMemo(
@@ -224,13 +231,15 @@ const Insights = () => {
   )
 
   const topKIncomplete = isTopK ? topKIncompleteReason(topK) : null
+  const mapIncomplete = isMap ? mapIncompleteReason(map) : null
   const userFlowIncomplete = isUserFlow ? userFlowIncompleteReason(userFlowConfig) : null
 
-  // Each insight type is "configured enough to run" for a different reason: user flow and top-k
-  // carry no event rows at all, so the row count can't gate them.
+  // Each insight type is "configured enough to run" for a different reason: user flow, top-k and
+  // map carry no event rows at all, so the row count can't gate them.
   const queryConfigured = () => {
     if (isUserFlow) return userFlowReady
     if (isTopK) return !topKIncomplete
+    if (isMap) return !mapIncomplete
     return validEntries.length > 0 && !hasIncompleteNumericAggregation
   }
 
@@ -243,6 +252,7 @@ const Insights = () => {
     breakdowns,
     userFlowConfig: isUserFlow ? userFlowConfig : undefined,
     topK: isTopK ? topK : undefined,
+    map: isMap ? map : undefined,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
   })
@@ -258,40 +268,50 @@ const Insights = () => {
     async () => {
       const globalFilters = toProtoFilters(propFilters)
       const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
-      // Top-k specs carry no events/breakdowns (the backend rejects them); the
-      // scope event rides inside topK instead.
-      const spec = isTopK
-        ? {
-            insightType,
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-            topK: buildTopKQuery(topK, validEntries[0]),
-          }
-        : {
-            insightType,
-            events: isUserFlow
-              ? []
-              : validEntries.map(entry => ({
-                  event: {
-                    kind: entry.kind,
-                    filters: toProtoFilters(entry.filters),
-                  },
-                  aggregation:
-                    insightType === InsightType.TRENDS
-                      ? (entry.aggregation ?? AggregationType.TOTAL)
-                      : AggregationType.TOTAL,
-                  aggregationProperty: getAggregationProperty({
-                    insightType,
-                    aggregation: entry.aggregation,
-                    aggregationProperty: entry.aggregationProperty,
-                  }),
-                })),
-            userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-            breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
-            breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
-          }
+      // Top-k and map specs carry no events/breakdowns (the backend rejects them); the scope
+      // event rides inside topK / map instead.
+      let spec
+      if (isTopK) {
+        spec = {
+          insightType,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          topK: buildTopKQuery(topK, validEntries[0]),
+        }
+      } else if (isMap) {
+        spec = {
+          insightType,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          map: buildMapQuery(map, validEntries[0]),
+        }
+      } else {
+        spec = {
+          insightType,
+          events: isUserFlow
+            ? []
+            : validEntries.map(entry => ({
+                event: {
+                  kind: entry.kind,
+                  filters: toProtoFilters(entry.filters),
+                },
+                aggregation:
+                  insightType === InsightType.TRENDS
+                    ? (entry.aggregation ?? AggregationType.TOTAL)
+                    : AggregationType.TOTAL,
+                aggregationProperty: getAggregationProperty({
+                  insightType,
+                  aggregation: entry.aggregation,
+                  aggregationProperty: entry.aggregationProperty,
+                }),
+              })),
+          userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
+          breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
+        }
+      }
       const resp = await insightsRPC.query(
         {
           granularity,
@@ -315,8 +335,8 @@ const Insights = () => {
       // category rather than a value.
       trackEvent('insight_queried', {
         insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
-        eventCount: isUserFlow ? 0 : isTopK ? 1 : validEntries.length,
-        breakdownCount: isUserFlow ? 0 : breakdowns.length,
+        eventCount: isUserFlow ? 0 : isTopK || isMap ? 1 : validEntries.length,
+        breakdownCount: isUserFlow || isMap ? 0 : breakdowns.length,
         hasGlobalFilters: globalFilters.length > 0,
         ...(isUserFlow
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
@@ -468,6 +488,7 @@ const Insights = () => {
           {isTopK && (
             <TopKControls topK={topK} onChange={setTopK} schema={globalSchema} schemaError={globalSchemaError} />
           )}
+          {isMap && <MapControls map={map} onChange={setMap} schema={globalSchema} schemaError={globalSchemaError} />}
           {isTimeSeriesInsight && (
             <>
               <OptionChip
@@ -507,7 +528,7 @@ const Insights = () => {
                 events={schema?.events}
                 schema={schema}
                 schemaError={schemaError}
-                showLetters={!isTopK}
+                showLetters={!isTopK && !isMap}
                 seriesColors={eventFilterColors}
                 getEventColor={getEventColorDot}
                 renderRowExtra={renderRowExtra}
@@ -527,18 +548,18 @@ const Insights = () => {
                   <span>Retention supports up to 2 events (A = cohort, B = return).</span>
                 </div>
               )}
-              {isTopK && (
+              {(isTopK || isMap) && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Tooltip>
                     <TooltipTrigger className="inline-flex items-center cursor-help">
                       <CircleHelp className="w-3.5 h-3.5" />
                     </TooltipTrigger>
                     <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                      Optionally scope the ranking to a single event (with per-event filters). Without a scope, all
-                      events participate.
+                      Optionally scope {isMap ? 'the map' : 'the ranking'} to a single event (with per-event filters).
+                      Without a scope, all events participate.
                     </TooltipContent>
                   </Tooltip>
-                  <span>Event scope is optional — leave empty to rank across all events.</span>
+                  <span>Event scope is optional — leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
                 </div>
               )}
             </>
@@ -555,8 +576,8 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
-          {!isTopK && !isUserFlow && (
+          {/* Breakdowns don't apply to top-k or map (the dimension is the breakdown) or user flow. */}
+          {!isTopK && !isMap && !isUserFlow && (
             <>
               {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
               {breakdowns.map(prop => (
@@ -604,6 +625,8 @@ const Insights = () => {
           retentionCohorts={retentionCohorts}
           funnelSeriesData={funnelSeriesData}
           userFlowResult={userFlowResult}
+          isMap={isMap}
+          mapIncompleteReason={mapIncomplete}
           isTopK={isTopK}
           topKRows={topKRows}
           topKDimension={topK.dimension}

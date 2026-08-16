@@ -28,6 +28,7 @@ import {
   specAggregationResolver,
   trendSeriesNames,
 } from '../insights/helpers'
+import { mapSpecIncompleteReason } from '../insights/map'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
@@ -163,7 +164,9 @@ export const InsightTileView = ({
   const isRetention = spec?.insightType === InsightType.RETENTION
   const isUserFlow = spec?.insightType === InsightType.USER_FLOW
   const isTopK = spec?.insightType === InsightType.TOP_K
+  const isMap = spec?.insightType === InsightType.MAP
   const topKIncompleteReason = isTopK ? topKSpecIncompleteReason(spec) : null
+  const mapIncompleteReason = isMap ? mapSpecIncompleteReason(spec) : null
   const userFlowIncompleteReason = isUserFlow ? userFlowSpecIncompleteReason(spec) : null
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
@@ -210,8 +213,9 @@ export const InsightTileView = ({
   // KPI tiles short-circuit the chart pipeline. The compare delta (when present) is
   // assembled by the caller — the public render has no comparison, so `compare` is
   // undefined and KpiTile degrades to a no-delta sparkline. Top-k results are not
-  // series-shaped, so they always render through the ranked list regardless of view mode.
-  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK) {
+  // series-shaped, so they always render through the ranked list regardless of view mode — and a
+  // map is not series-shaped either.
+  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK && !isMap) {
     return (
       <div className="h-full min-h-0 overflow-hidden">
         <KpiTile
@@ -258,6 +262,8 @@ export const InsightTileView = ({
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
+        isMap={isMap}
+        mapIncompleteReason={mapIncompleteReason}
         isTopK={isTopK}
         topKRows={topKRows}
         topKDimension={spec?.topK?.dimension}

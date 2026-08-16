@@ -9,6 +9,7 @@ import {
   type TopKRow,
   type UserFlowResult,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { ActivityMapView } from '@/components/activity-map-view'
 import { Button } from '@/components/ui/button'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { getSeriesColor, type SeriesColor } from '@/lib/event-colors'
@@ -31,6 +32,7 @@ import {
   TopKList,
 } from './charts'
 import { EMPTY_ARRAY, type ViewMode } from './constants'
+import { countryCountsFromTopKRows } from './map'
 import { buildSankeyData, sankeyIncompleteReason } from './user-flow'
 
 export const InsightsContent = memo(function InsightsContent({
@@ -61,6 +63,8 @@ export const InsightsContent = memo(function InsightsContent({
   showPieLabels = true,
   yTickFormatter,
   comparison,
+  isMap = false,
+  mapIncompleteReason = null,
   isTopK = false,
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
@@ -106,6 +110,10 @@ export const InsightsContent = memo(function InsightsContent({
   // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
   // take it; bars and the table read the live series alone.
   comparison?: ChartComparison
+  // A map reads the same top-k rows, keyed by country. Dispatched on the insight type, so a map
+  // never falls through to the ranked list its result shape would otherwise select.
+  isMap?: boolean
+  mapIncompleteReason?: string | null
   isTopK?: boolean
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
@@ -350,6 +358,28 @@ export const InsightsContent = memo(function InsightsContent({
     return renderLoadingEmptyState()
   }
 
+  const renderMapContent = () => {
+    if (mapIncompleteReason) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
+          <p className="text-sm">{mapIncompleteReason}</p>
+        </div>
+      )
+    }
+    return (
+      <ActivityMapView
+        countries={countryCountsFromTopKRows(topKRows)}
+        loading={resultCase !== 'topK'}
+        error={null}
+        retry={retry}
+        // The choropleth sizes to its container, and the page has no tile height to inherit — so it
+        // gets the same width-driven world frame the overview map panel uses.
+        className={compact ? 'relative h-full min-h-0 overflow-hidden' : 'relative aspect-[1.2] max-h-[720px] w-full'}
+      />
+    )
+  }
+
   const renderRetentionContent = () => {
     if (retentionSeriesList.length === 0) return renderLoadingEmptyState()
     if (breakdowns.length > 0) {
@@ -423,6 +453,7 @@ export const InsightsContent = memo(function InsightsContent({
   }
 
   if (showUserFlow) return renderUserFlowContent()
+  if (isMap) return renderMapContent()
   if (isTopK) return renderTopKContent()
   if (isRetention) return renderRetentionContent()
   if (!isTrends) return renderFunnelContent()

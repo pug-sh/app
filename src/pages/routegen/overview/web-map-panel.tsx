@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { ActivityMapView } from '@/components/activity-map-view'
 import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
-import { ActivityMapView, useActivityMapData } from '../dashboards/activity-map-content'
+import { useActivityMapData } from '../dashboards/activity-map-content'
 import { OverviewTileShell } from './overview-tile-shell'
 import { buildCountryMapQuery, COUNTRY_PROPERTY } from './web-analytics-queries'
 import { filtersExcept, filterValues } from './web-filters'
@@ -28,7 +29,6 @@ export const WebMapPanel = ({
   const selectedCountries = useMemo(() => filterValues(filters, COUNTRY_PROPERTY), [filters])
   const { countries, loading, error, retry } = useActivityMapData({
     query,
-    countryKey: COUNTRY_PROPERTY,
     defaultTimeRange: undefined,
     timeRangeOverride: range,
     granularityOverride: granularity,

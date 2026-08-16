@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
 import { COUNTRIES_VIEW_ASPECT, COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
 import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
+import type { CountryActivity } from './activity-map-view'
 
 type Props = {
-  countries: { iso: string; count: number }[]
+  countries: readonly CountryActivity[]
   // When set, clicking a country that has data invokes this with its alpha-2 ISO (e.g. "IN").
   onCountrySelect?: (alpha2: string) => void
   // Alpha-2 ISO codes to highlight as selected (a bold accent outline). Empty/undefined = none.
