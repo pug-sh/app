@@ -13,6 +13,13 @@ describe('pickBindings', () => {
     expect(pickBindings(events(['screen_view', 12], ['page_view', 900]))?.primary).toBe('page_view')
   })
 
+  // On an exact tie the schema's event order can't decide either, or product mode binds to
+  // screen_view while traffic mode's resolveNavEvent picks page_view for the same project.
+  it('breaks an equal-count tie on candidate order, whichever way the schema lists them', () => {
+    expect(pickBindings(events(['page_view', 500], ['screen_view', 500]))?.primary).toBe('page_view')
+    expect(pickBindings(events(['screen_view', 500], ['page_view', 500]))?.primary).toBe('page_view')
+  })
+
   it('falls back to the busiest non-autocapture event when there is no navigation event', () => {
     expect(pickBindings(events(['click', 5_000], ['purchase', 40]))?.primary).toBe('purchase')
   })
