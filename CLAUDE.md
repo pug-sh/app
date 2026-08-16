@@ -38,11 +38,13 @@ Proto definitions live in `proto/` — a gitignored symlink to the pug backend c
 
 ### State Management — Jotai atoms everywhere
 
-All state is Jotai atoms. No React Context, no Redux. Pattern:
+All *shared* state is Jotai atoms. No React Context, no Redux. Pattern:
 
 - **RPC clients** are atoms: `atom(get => createClient(Service, get(transportAtom)))` in `src/api/rpc.ts`
 - **Async operations** use write atoms: `atom(null, async (get, set) => { ... })`
 - **Persistent state** uses `atomWithStorage` (JWT token, theme preference)
+
+State only one page reads is not shared state and stays in `useState` — see Page Decomposition below.
 
 ### ConnectRPC Transport
 
