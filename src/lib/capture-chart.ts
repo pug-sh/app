@@ -31,6 +31,11 @@ const inlineComputedStyles = (source: Element, target: Element, unclip: Set<Elem
   // the full content lays out in the snapshot instead of the scrolled-into-view
   // slice — otherwise horizontally/vertically scrollable tiles export clipped.
   if (unclip.has(source)) openOverflow(style)
+  // The width pinned above leaves no slack, so a label that fits on screen still ellipsizes here.
+  if (computed.textOverflow === 'ellipsis' && source.scrollWidth <= source.clientWidth) {
+    style.setProperty('text-overflow', 'clip')
+    style.setProperty('overflow', 'visible', 'important')
+  }
 
   const sourceChildren = source.children
   const targetChildren = target.children
@@ -334,15 +339,15 @@ const EXPORT_SCALE = 3
 const MAX_CANVAS_DIM = 16384
 const MAX_CANVAS_AREA = MAX_CANVAS_DIM * MAX_CANVAS_DIM
 
-const CARD_PAD = 20
-const CARD_RADIUS = 16
+// Matches the app's tile chrome the captured region sits in: p-4 around it, mb-3 under the title.
+const CARD_PAD = 16
 const TITLE_SIZE = 16
 const META_SIZE = 13
-const HEADER_GAP = 16 // between header row and chart
+const HEADER_GAP = 12 // between header row and chart
 const META_GAP = 14 // min space between title and meta
 const BRAND_LOGO = 18
 const BRAND_TEXT_SIZE = 13
-const BRAND_GAP_Y = 16 // vertical: chart bottom to brand row
+const BRAND_GAP_Y = 10 // vertical: chart bottom to brand row
 const BRAND_GAP_X = 7 // horizontal: between prefix, logo, and brand text
 
 export type ShareCardOptions = {
@@ -403,16 +408,13 @@ export const composeShareCard = async ({
   if (!ctx) throw new Error('Canvas 2D context unavailable')
   ctx.scale(safeScale, safeScale)
 
-  // Flat, edge-to-edge card: the surface fills the image, with a hairline border
-  // and rounded corners (the tiny corner nubs stay transparent). No frame, no
-  // shadow — it reads as a clean product snapshot, matching the app's flat look.
-  ctx.beginPath()
-  ctx.roundRect(0.5, 0.5, cardW - 1, cardH - 1, CARD_RADIUS)
+  // Square, unlike the app's soft-cornered tiles: a rounded corner would leave whatever the PNG is
+  // pasted onto showing through as a bright notch.
   ctx.fillStyle = card.surface
-  ctx.fill()
+  ctx.fillRect(0, 0, cardW, cardH)
   ctx.strokeStyle = card.border
   ctx.lineWidth = 1
-  ctx.stroke()
+  ctx.strokeRect(0.5, 0.5, cardW - 1, cardH - 1)
 
   // Header: title (left) and time range (right), on a shared baseline.
   if (hasHeader) {
