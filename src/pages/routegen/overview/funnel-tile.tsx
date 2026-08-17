@@ -1,14 +1,7 @@
-import { create } from '@bufbuild/protobuf'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import {
-  EventQuerySchema,
-  InsightQuerySpecSchema,
-  InsightType,
-  QueryRequestSchema,
-} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import { buildFunnelQuery } from './analytics-queries'
 import type { GlobalOverrides } from './global-overrides'
 import { type Bindings, composeFunnelSteps } from './tile-bindings'
 
@@ -20,12 +13,7 @@ const FunnelTile = ({ bindings, globalTimeRange, globalGranularity }: Props) => 
   const steps = composeFunnelSteps(bindings)
   if (steps.length < 2) return null
 
-  const query = create(QueryRequestSchema, {
-    spec: create(InsightQuerySpecSchema, {
-      insightType: InsightType.FUNNEL,
-      events: steps.map(kind => create(EventQuerySchema, { event: create(EventFilterSchema, { kind }) })),
-    }),
-  })
+  const query = buildFunnelQuery(steps)
 
   return (
     <div className="flex h-[480px] min-h-0 flex-col rounded-lg border border-border/60 bg-card p-4">

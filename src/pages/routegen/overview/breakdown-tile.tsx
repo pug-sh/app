@@ -11,6 +11,7 @@ import {
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import { INCLUDE_COOKIELESS } from './cookieless'
 import type { GlobalOverrides } from './global-overrides'
 import { OverviewTileShell } from './overview-tile-shell'
 
@@ -55,6 +56,7 @@ const BreakdownTile = ({
       ],
       breakdowns: [create(BreakdownSchema, { property: breakdownProperty })],
       breakdownLimit: BREAKDOWN_LIMIT,
+      ...INCLUDE_COOKIELESS,
     }),
   })
 

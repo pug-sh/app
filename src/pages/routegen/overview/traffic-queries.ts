@@ -1,11 +1,10 @@
-import { create } from '@bufbuild/protobuf'
+import { create, type MessageInitShape } from '@bufbuild/protobuf'
 import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import {
   AggregationType,
   BreakdownSchema,
   EventQuerySchema,
-  type InsightQuerySpec,
   InsightQuerySpecSchema,
   InsightType,
   MapQuerySchema,
@@ -19,6 +18,7 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { resolveKind } from '@/lib/event-aliases'
 import { compactNumber } from '@/lib/format'
 import { COUNTRY_PROPERTY } from '../dashboards/activity-map'
+import { INCLUDE_COOKIELESS } from './cookieless'
 import { filterGroupFields } from './traffic-filters'
 
 // Shared with the dashboards activity map so the query and useActivityMapData can't disagree.
@@ -133,8 +133,10 @@ const measureSpecFields = (navEvent: string, measure: StatMeasure) => {
   return { session: create(SessionQuerySchema, { metric: measure.metric, scope: navScope(navEvent) }) }
 }
 
-// Wrap a built InsightQuerySpec in the shared QueryRequest envelope, so no builder repeats it.
-const trafficQuery = (spec: InsightQuerySpec) => create(QueryRequestSchema, { spec })
+// Wrap a spec in the shared QueryRequest envelope, so no builder repeats it. Takes the init shape and
+// not a built message: spreading a message strips the prototype protobuf-es reads field defaults off.
+const trafficQuery = (spec: MessageInitShape<typeof InsightQuerySpecSchema>) =>
+  create(QueryRequestSchema, { spec: { ...spec, ...INCLUDE_COOKIELESS } })
 
 // SEGMENTATION yields the exact window scalar (SegmentationResult.total) for the stat tiles; TRENDS
 // yields the bucketed series that drives the main chart.
@@ -144,13 +146,11 @@ export const buildTrafficStatQuery = (
   insightType: InsightType.SEGMENTATION | InsightType.TRENDS,
   filters: readonly ActiveFilter[] = [],
 ) =>
-  trafficQuery(
-    create(InsightQuerySpecSchema, {
-      insightType,
-      ...measureSpecFields(navEvent, getTrafficStat(id).measure),
-      ...filterGroupFields(filters),
-    }),
-  )
+  trafficQuery({
+    insightType,
+    ...measureSpecFields(navEvent, getTrafficStat(id).measure),
+    ...filterGroupFields(filters),
+  })
 
 // --- Breakdown panel queries -------------------------------------------------
 
@@ -165,33 +165,29 @@ export const buildTopKBreakdownQuery = (
   filters: readonly ActiveFilter[] = [],
   limit = DEFAULT_BREAKDOWN_LIMIT,
 ) =>
-  trafficQuery(
-    create(InsightQuerySpecSchema, {
-      insightType: InsightType.TOP_K,
-      topK: create(TopKQuerySchema, {
-        dimension: TopKQuery_Dimension.PROPERTY,
-        property,
-        scope: navScope(navEvent),
-        metric,
-        limit,
-      }),
-      ...filterGroupFields(filters),
+  trafficQuery({
+    insightType: InsightType.TOP_K,
+    topK: create(TopKQuerySchema, {
+      dimension: TopKQuery_Dimension.PROPERTY,
+      property,
+      scope: navScope(navEvent),
+      metric,
+      limit,
     }),
-  )
+    ...filterGroupFields(filters),
+  })
 
 // Ranked top-K over event kinds ("top events"), across all events (no navigation scope).
 export const buildEventKindTopKQuery = (filters: readonly ActiveFilter[] = [], limit = DEFAULT_BREAKDOWN_LIMIT) =>
-  trafficQuery(
-    create(InsightQuerySpecSchema, {
-      insightType: InsightType.TOP_K,
-      topK: create(TopKQuerySchema, {
-        dimension: TopKQuery_Dimension.EVENT_KIND,
-        metric: AggregationType.TOTAL,
-        limit,
-      }),
-      ...filterGroupFields(filters),
+  trafficQuery({
+    insightType: InsightType.TOP_K,
+    topK: create(TopKQuerySchema, {
+      dimension: TopKQuery_Dimension.EVENT_KIND,
+      metric: AggregationType.TOTAL,
+      limit,
     }),
-  )
+    ...filterGroupFields(filters),
+  })
 
 // Session ENTRY/EXIT breakdown (first-touch/last-touch page or screen). Must be TRENDS with exactly
 // one breakdown (backend CEL session_page_metrics_require_trends_breakdown); it returns a series per
@@ -203,26 +199,22 @@ export const buildSessionBreakdownQuery = (
   filters: readonly ActiveFilter[] = [],
   limit = DEFAULT_BREAKDOWN_LIMIT,
 ) =>
-  trafficQuery(
-    create(InsightQuerySpecSchema, {
-      insightType: InsightType.TRENDS,
-      session: create(SessionQuerySchema, { metric, scope: navScope(navEvent) }),
-      breakdowns: [create(BreakdownSchema, { property })],
-      breakdownLimit: limit,
-      ...filterGroupFields(filters),
-    }),
-  )
+  trafficQuery({
+    insightType: InsightType.TRENDS,
+    session: create(SessionQuerySchema, { metric, scope: navScope(navEvent) }),
+    breakdowns: [create(BreakdownSchema, { property })],
+    breakdownLimit: limit,
+    ...filterGroupFields(filters),
+  })
 
 // Views-by-country for the map (the caller excludes its own $country filter so all countries stay
 // clickable). MAP fixes the dimension to $country server-side, so it carries no top-N to truncate.
 export const buildCountryMapQuery = (navEvent: string, filters: readonly ActiveFilter[] = []) =>
-  trafficQuery(
-    create(InsightQuerySpecSchema, {
-      insightType: InsightType.MAP,
-      map: create(MapQuerySchema, { scope: navScope(navEvent), metric: AggregationType.TOTAL }),
-      ...filterGroupFields(filters),
-    }),
-  )
+  trafficQuery({
+    insightType: InsightType.MAP,
+    map: create(MapQuerySchema, { scope: navScope(navEvent), metric: AggregationType.TOTAL }),
+    ...filterGroupFields(filters),
+  })
 
 // --- Value formatting --------------------------------------------------------
 
