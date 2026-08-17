@@ -139,4 +139,6 @@ export const fmtDate = (d: Date) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
+export const fmtDateRange = (range: TimeRange) => `${fmtDate(range.from)} – ${fmtDate(range.to)}`
+
 export const defaultRange = thisMonth

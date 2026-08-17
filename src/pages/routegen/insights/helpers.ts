@@ -4,11 +4,15 @@ import {
   type FunnelSeries,
   type Granularity,
   type InsightQuerySpec,
+  InsightType,
   SessionMetric,
+  TopKQuery_Dimension,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { tsToDate } from '@/lib/timestamp'
 import { nextZoneBucket } from '@/lib/timezone'
+import { INSIGHT_TYPES } from './constants'
+import type { TopKState } from './top-k'
 
 // How a series' per-bucket values collapse into the one number a KPI or a summary headline shows.
 //
@@ -177,6 +181,58 @@ export const trendSeriesNames = (trendSeries: TrendSeries[]) => {
     if (showEventKind && series.eventKind) return `${series.eventKind} · ${value}`
     return value
   })
+}
+
+// An insight has no user-given name the way a dashboard tile does, so name it by what it plots.
+export const shareCardTitle = ({
+  insightType,
+  eventKinds,
+  topK,
+}: {
+  insightType: InsightType
+  eventKinds: string[]
+  topK: Pick<TopKState, 'dimension' | 'property'>
+}) => {
+  const typeLabel = INSIGHT_TYPES.find(t => t.value === insightType)?.label ?? 'Insight'
+  // Top-k's subject is its dimension, not the optional scope event.
+  if (insightType === InsightType.TOP_K) {
+    if (topK.dimension === TopKQuery_Dimension.USER) return 'Top users'
+    if (topK.dimension !== TopKQuery_Dimension.PROPERTY) return 'Top events'
+    return topK.property ? `Top ${topK.property}` : typeLabel
+  }
+  const events = [...new Set(eventKinds.filter(Boolean))]
+  if (events.length === 0) return typeLabel
+  return `${typeLabel} · ${events.join(', ')}`
+}
+
+const RESULT_CASE_BY_TYPE: Partial<Record<InsightType, string>> = {
+  [InsightType.TRENDS]: 'trends',
+  [InsightType.FUNNEL]: 'funnel',
+  [InsightType.RETENTION]: 'retention',
+  [InsightType.USER_FLOW]: 'userFlow',
+  [InsightType.TOP_K]: 'topK',
+}
+
+// The query hook holds the previous result across a requery, so a card captured then would carry a
+// title and date range describing data its image doesn't show. Matching the case to the type is
+// what excludes it.
+export const canShareInsight = ({
+  insightType,
+  resultCase,
+  drawnCount,
+  loading,
+  error,
+}: {
+  insightType: InsightType
+  resultCase?: string
+  drawnCount: number
+  loading: boolean
+  error: string | null
+}) => {
+  if (loading || error) return false
+  // The map paints into a WebGL canvas, which a DOM snapshot copies as a blank rectangle.
+  if (insightType === InsightType.MAP) return false
+  return drawnCount > 0 && resultCase === RESULT_CASE_BY_TYPE[insightType]
 }
 
 export const disambiguateLabels = (labels: string[]) => {

@@ -1,14 +1,12 @@
 import { useAtomValue } from 'jotai'
 import { Check, Copy, Download, ImageOff, Loader2, Share } from 'lucide-react'
-import { type RefObject, useEffect, useRef, useState } from 'react'
+import { type ReactElement, type RefObject, useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
-import { cn } from '@/lib/utils'
 import {
   type CapturedChart,
   captureElementToImage,
@@ -16,7 +14,7 @@ import {
   copyImageToClipboard,
   downloadBlob,
   loadBrandLogo,
-} from './capture-tile'
+} from '@/lib/capture-chart'
 
 const BRAND_PREFIX = 'Powered by'
 const BRAND_TEXT = 'pug.sh'
@@ -28,22 +26,24 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
-// View-mode-only hover affordance: snapshots the chart, then opens a popover (not
-// a modal) to preview a share card — edit the title and download or copy it as a
-// PNG. `targetRef` points at the chart region to capture; the button lives outside
-// it so it never lands in its own screenshot. `meta` is the time-range label
-// shown in the card's top-right corner.
-export const ShareTileButton = ({
-  tile,
+// Previews a share card of the chart, downloadable as a PNG. `targetRef` must point outside this
+// button, or it lands in its own screenshot.
+export const ShareChartButton = ({
   targetRef,
+  defaultTitle,
   meta,
+  fallbackName,
+  trigger,
 }: {
-  tile: DashboardTile
-  targetRef: RefObject<HTMLDivElement | null>
+  targetRef: RefObject<HTMLElement | null>
+  defaultTitle: string
   meta: string
+  fallbackName: string
+  trigger?: ReactElement
 }) => {
   const [open, setOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
+  const [composing, setComposing] = useState(false)
   const [title, setTitle] = useState('')
   const [showBranding, setShowBranding] = useState(true)
   const [fontFamily, setFontFamily] = useState('sans-serif')
@@ -57,6 +57,7 @@ export const ShareTileButton = ({
   // theme that was in effect when the popover opened — the mark follows suit.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
 
+  const fieldId = useId()
   const previewUrlRef = useRef<string | null>(null)
   const copyResetRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -74,10 +75,11 @@ export const ShareTileButton = ({
     [],
   )
 
-  // Recompose the preview whenever the title, capture, or logo changes.
+  // Until a recompose lands, the buttons would act on the previous composition under the new title.
   useEffect(() => {
     if (!open || !capture) return
     let cancelled = false
+    setComposing(true)
     composeShareCard({
       card: capture,
       title,
@@ -95,7 +97,12 @@ export const ShareTileButton = ({
       .catch(error => {
         if (cancelled) return
         console.error('Failed to compose share card', error)
+        setComposedBlob(null)
+        setPreview(null)
         toast.error(error instanceof Error ? error.message : 'Could not render share image')
+      })
+      .finally(() => {
+        if (!cancelled) setComposing(false)
       })
     return () => {
       cancelled = true
@@ -109,6 +116,7 @@ export const ShareTileButton = ({
       setComposedBlob(null)
       setPreview(null)
       setCapturing(false)
+      setComposing(false)
       setCopied(false)
       return
     }
@@ -120,23 +128,23 @@ export const ShareTileButton = ({
       return
     }
 
-    setTitle(tile.displayName.trim() || 'Chart')
+    setTitle(defaultTitle.trim() || 'Chart')
     setFontFamily(window.getComputedStyle(node).fontFamily)
-    loadBrandLogo(resolvedTheme).then(setLogo, () => setLogo(null))
+    loadBrandLogo(resolvedTheme).then(setLogo)
 
     setCapturing(true)
     try {
       setCapture(await captureElementToImage(node))
     } catch (error) {
       console.error('Failed to capture chart', error)
-      toast.error('Could not capture chart image')
+      toast.error(error instanceof Error ? error.message : 'Could not capture chart image')
       setOpen(false)
     } finally {
       setCapturing(false)
     }
   }
 
-  const filename = () => `${slugify(title) || `chart-${tile.id}`}.png`
+  const filename = () => `${slugify(title) || slugify(fallbackName) || 'chart'}.png`
 
   const handleDownload = () => {
     if (!composedBlob) return
@@ -156,28 +164,20 @@ export const ShareTileButton = ({
     copyResetRef.current = setTimeout(() => setCopied(false), 1500)
   }
 
-  const ready = Boolean(composedBlob) && !capturing
+  const ready = Boolean(composedBlob) && !capturing && !composing
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Share chart"
-            title="Share chart"
-            data-no-drag="true"
-            onMouseDown={event => event.stopPropagation()}
-            className={cn(
-              'absolute top-4 right-4 z-20 transition-opacity focus-visible:opacity-100 group-hover:opacity-100',
-              open ? 'opacity-100' : 'opacity-0',
-            )}
-          />
+          trigger ?? (
+            <Button variant="outline" size="sm">
+              <Share className="size-4" />
+              Share
+            </Button>
+          )
         }
-      >
-        <Share className="size-4" />
-      </PopoverTrigger>
+      />
 
       <PopoverContent align="end" className="w-80">
         <PopoverHeader>
@@ -185,11 +185,11 @@ export const ShareTileButton = ({
         </PopoverHeader>
 
         <div className="space-y-1">
-          <label htmlFor={`share-title-${tile.id}`} className="text-xs font-medium text-muted-foreground">
+          <label htmlFor={`share-title-${fieldId}`} className="text-xs font-medium text-muted-foreground">
             Title
           </label>
           <Input
-            id={`share-title-${tile.id}`}
+            id={`share-title-${fieldId}`}
             value={title}
             onChange={event => setTitle(event.target.value)}
             placeholder="Chart title"
@@ -199,11 +199,11 @@ export const ShareTileButton = ({
 
         <div className="flex items-center gap-2">
           <Checkbox
-            id={`share-brand-${tile.id}`}
+            id={`share-brand-${fieldId}`}
             checked={showBranding}
             onCheckedChange={value => setShowBranding(value === true)}
           />
-          <label htmlFor={`share-brand-${tile.id}`} className="cursor-pointer select-none text-xs font-medium">
+          <label htmlFor={`share-brand-${fieldId}`} className="cursor-pointer select-none text-xs font-medium">
             Show pug.sh branding
           </label>
         </div>

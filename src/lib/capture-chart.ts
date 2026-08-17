@@ -223,10 +223,18 @@ const measureFullSize = (node: HTMLElement, unclip: Set<Element>) => {
   }
 }
 
+// The clone/inline/serialize path is synchronous and LOAD_TIMEOUT_MS only covers the <img> load
+// after it, so a year of daily retention cohorts (~133k cells) freezes the tab. 25k clears 90 days.
+const MAX_CAPTURE_ELEMENTS = 25_000
+
 // Rasterize a DOM node (the chart region, current theme, as-is) into a vector SVG
 // <img>, and resolve the theme colors used to draw the surrounding card. The chart
 // itself is never re-themed.
 export const captureElementToImage = async (node: HTMLElement): Promise<CapturedChart> => {
+  if (node.querySelectorAll('*').length > MAX_CAPTURE_ELEMENTS) {
+    throw new Error('This view is too detailed to export — narrow the date range or use a coarser granularity')
+  }
+
   // Scrollable tiles (retention heatmaps, data tables) clip their content to the
   // visible box. Find those scroll regions plus the wrapper chain up to `node` so
   // the snapshot lays the full content out instead of exporting the scrolled slice.

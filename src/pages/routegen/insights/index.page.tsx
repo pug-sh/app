@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
@@ -18,6 +18,7 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { OptionChip } from '@/components/option-chip'
+import { ShareChartButton } from '@/components/share-chart-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -32,7 +33,7 @@ import {
 } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { DEFAULT_INSIGHTS_RANGE } from '@/lib/date-presets'
+import { DEFAULT_INSIGHTS_RANGE, fmtDateRange } from '@/lib/date-presets'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
@@ -58,9 +59,11 @@ import { InsightsRowAggregationControls } from './controls'
 import {
   breakdownLabel,
   buildChartData,
+  canShareInsight,
   disambiguateLabels,
   hasBreakdown,
   resolveSeriesAggregations,
+  shareCardTitle,
   sortFunnelSteps,
   trendSeriesNames,
 } from './helpers'
@@ -457,6 +460,12 @@ const Insights = () => {
   // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
 
+  const chartRef = useRef<HTMLDivElement>(null)
+  let drawnCount = resultSeriesCount
+  if (result.case === 'topK') drawnCount = topKRows.length
+  if (result.case === 'userFlow') drawnCount = result.value.nodes.length
+  const canShare = canShareInsight({ insightType, resultCase: result.case, drawnCount, loading, error })
+
   const renderRowExtra = useMemo(() => {
     if (!isTrends) return undefined
 
@@ -476,7 +485,20 @@ const Insights = () => {
   if (!project) return <NoProject title="Insights" icon={TrendingUp} />
 
   return (
-    <Page title="Insights" description={getPageDescription(insightType)}>
+    <Page
+      title="Insights"
+      description={getPageDescription(insightType)}
+      actions={
+        canShare ? (
+          <ShareChartButton
+            targetRef={chartRef}
+            defaultTitle={shareCardTitle({ insightType, eventKinds: schemaEventKinds(), topK })}
+            meta={timeRange ? fmtDateRange(timeRange) : ''}
+            fallbackName="insight"
+          />
+        ) : null
+      }
+    >
       <div
         className={cn(
           '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
@@ -603,39 +625,41 @@ const Insights = () => {
       {/* Same tile shell as the overview and dashboard tiles — the chart is the page's one
           object, so it sits on the elevated surface rather than flush on the canvas. */}
       <div className="rounded-lg border border-border/60 bg-card p-4">
-        <InsightsContent
-          error={error}
-          retry={retry}
-          unknownResultCase={unknownResultCase}
-          resultCase={result.case}
-          resultSeriesCount={resultSeriesCount}
-          isRetention={isRetention}
-          isTrends={isTrends}
-          isUserFlow={isUserFlow}
-          hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
-          chartData={chartData}
-          seriesNames={seriesNames}
-          seriesColors={seriesColors}
-          seriesAggregations={seriesAggregations}
-          viewMode={viewMode}
-          granularity={granularity}
-          breakdowns={breakdowns}
-          breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
-          retentionSeriesList={retentionSeriesList}
-          retentionLabels={retentionLabels}
-          retentionCohorts={retentionCohorts}
-          funnelSeriesData={funnelSeriesData}
-          userFlowResult={userFlowResult}
-          isMap={isMap}
-          mapIncompleteReason={mapIncomplete}
-          isTopK={isTopK}
-          topKRows={topKRows}
-          topKDimension={topK.dimension}
-          topKMetric={topK.metric}
-          topKOmitOthers={topK.omitOthers}
-          topKIncompleteReason={topKIncomplete}
-          userFlowIncompleteReason={userFlowIncomplete}
-        />
+        <div ref={chartRef}>
+          <InsightsContent
+            error={error}
+            retry={retry}
+            unknownResultCase={unknownResultCase}
+            resultCase={result.case}
+            resultSeriesCount={resultSeriesCount}
+            isRetention={isRetention}
+            isTrends={isTrends}
+            isUserFlow={isUserFlow}
+            hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
+            chartData={chartData}
+            seriesNames={seriesNames}
+            seriesColors={seriesColors}
+            seriesAggregations={seriesAggregations}
+            viewMode={viewMode}
+            granularity={granularity}
+            breakdowns={breakdowns}
+            breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
+            retentionSeriesList={retentionSeriesList}
+            retentionLabels={retentionLabels}
+            retentionCohorts={retentionCohorts}
+            funnelSeriesData={funnelSeriesData}
+            userFlowResult={userFlowResult}
+            isMap={isMap}
+            mapIncompleteReason={mapIncomplete}
+            isTopK={isTopK}
+            topKRows={topKRows}
+            topKDimension={topK.dimension}
+            topKMetric={topK.metric}
+            topKOmitOthers={topK.omitOthers}
+            topKIncompleteReason={topKIncomplete}
+            userFlowIncompleteReason={userFlowIncomplete}
+          />
+        </div>
       </div>
     </Page>
   )
