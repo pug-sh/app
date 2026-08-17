@@ -189,6 +189,8 @@ describe('canShareInsight', () => {
     drawnCount: 1,
     loading: false,
     error: null,
+    queryKey: '{"timeRange":"7d"}',
+    resultKey: '{"timeRange":"7d"}',
   }
 
   it('offers a share of a drawn result', () => {
@@ -199,6 +201,15 @@ describe('canShareInsight', () => {
   // refetch, and a zero-count result renders an empty state rather than a chart.
   it('refuses a result left over from the previously selected insight type', () => {
     expect(canShareInsight({ ...shareable, insightType: InsightType.FUNNEL })).toBe(false)
+  })
+
+  // The case matches and loading is still false for a render, so the keys are the only tell.
+  it('refuses a result left over from the previous query of the same type', () => {
+    expect(canShareInsight({ ...shareable, queryKey: '{"timeRange":"30d"}' })).toBe(false)
+  })
+
+  it('refuses before the first result lands', () => {
+    expect(canShareInsight({ ...shareable, resultKey: undefined })).toBe(false)
   })
 
   it('refuses while a requery is in flight', () => {

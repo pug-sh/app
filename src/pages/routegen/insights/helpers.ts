@@ -214,22 +214,27 @@ const RESULT_CASE_BY_TYPE: Partial<Record<InsightType, string>> = {
 }
 
 // The query hook holds the previous result across a requery, so a card captured then would carry a
-// title and date range describing data its image doesn't show. Matching the case to the type is
-// what excludes it.
+// title and date range describing data its image doesn't show. Matching the case to the type
+// excludes a type switch; the keys also catch a same-type requery, where the case still matches and
+// `loading` is a render behind (it flips in an effect).
 export const canShareInsight = ({
   insightType,
   resultCase,
   drawnCount,
   loading,
   error,
+  queryKey,
+  resultKey,
 }: {
   insightType: InsightType
   resultCase?: string
   drawnCount: number
   loading: boolean
   error: string | null
+  queryKey: string
+  resultKey?: string
 }) => {
-  if (loading || error) return false
+  if (loading || error || resultKey !== queryKey) return false
   // The map paints into a WebGL canvas, which a DOM snapshot copies as a blank rectangle.
   if (insightType === InsightType.MAP) return false
   return drawnCount > 0 && resultCase === RESULT_CASE_BY_TYPE[insightType]

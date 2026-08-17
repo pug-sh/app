@@ -43,14 +43,13 @@ export const ShareChartButton = ({
 }) => {
   const [open, setOpen] = useState(false)
   const [capturing, setCapturing] = useState(false)
-  const [composing, setComposing] = useState(false)
   const [title, setTitle] = useState('')
   const [showBranding, setShowBranding] = useState(true)
   const [fontFamily, setFontFamily] = useState('sans-serif')
   const [capture, setCapture] = useState<CapturedChart | null>(null)
   const [logo, setLogo] = useState<HTMLImageElement | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const [composedBlob, setComposedBlob] = useState<Blob | null>(null)
+  const [composed, setComposed] = useState<{ key: string; capture: CapturedChart; blob: Blob } | null>(null)
   const [copied, setCopied] = useState(false)
 
   // The capture reads live computed styles, so the whole card is composed in the
@@ -60,6 +59,11 @@ export const ShareChartButton = ({
   const fieldId = useId()
   const previewUrlRef = useRef<string | null>(null)
   const copyResetRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const sessionRef = useRef(0)
+
+  // Every input the composition is drawn from. `ready` matches it against the composition on hand,
+  // so a title edit disables the buttons in the same render — the recompose only starts in an effect.
+  const composeKey = JSON.stringify([title, meta, fontFamily, showBranding, Boolean(logo)])
 
   const setPreview = (url: string | null) => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
@@ -75,11 +79,9 @@ export const ShareChartButton = ({
     [],
   )
 
-  // Until a recompose lands, the buttons would act on the previous composition under the new title.
   useEffect(() => {
     if (!open || !capture) return
     let cancelled = false
-    setComposing(true)
     composeShareCard({
       card: capture,
       title,
@@ -91,32 +93,31 @@ export const ShareChartButton = ({
     })
       .then(blob => {
         if (cancelled) return
-        setComposedBlob(blob)
+        setComposed({ key: composeKey, capture, blob })
         setPreview(URL.createObjectURL(blob))
       })
       .catch(error => {
         if (cancelled) return
         console.error('Failed to compose share card', error)
-        setComposedBlob(null)
+        setComposed(null)
         setPreview(null)
         toast.error(error instanceof Error ? error.message : 'Could not render share image')
-      })
-      .finally(() => {
-        if (!cancelled) setComposing(false)
       })
     return () => {
       cancelled = true
     }
-  }, [open, capture, title, meta, fontFamily, logo, showBranding])
+  }, [open, capture, composeKey, title, meta, fontFamily, logo, showBranding])
 
   const handleOpenChange = async (next: boolean) => {
+    // A capture in flight when the popover closes still settles. Stamp each open so an abandoned one
+    // can't land its result — or its failure's setOpen(false) — on the session that replaced it.
+    const session = ++sessionRef.current
     setOpen(next)
     if (!next) {
       setCapture(null)
-      setComposedBlob(null)
+      setComposed(null)
       setPreview(null)
       setCapturing(false)
-      setComposing(false)
       setCopied(false)
       return
     }
@@ -130,31 +131,37 @@ export const ShareChartButton = ({
 
     setTitle(defaultTitle.trim() || 'Chart')
     setFontFamily(window.getComputedStyle(node).fontFamily)
-    loadBrandLogo(resolvedTheme).then(setLogo)
+    loadBrandLogo(resolvedTheme).then(loaded => {
+      if (sessionRef.current === session) setLogo(loaded)
+    })
 
     setCapturing(true)
     try {
-      setCapture(await captureElementToImage(node))
+      const captured = await captureElementToImage(node)
+      if (sessionRef.current === session) setCapture(captured)
     } catch (error) {
       console.error('Failed to capture chart', error)
+      if (sessionRef.current !== session) return
       toast.error(error instanceof Error ? error.message : 'Could not capture chart image')
       setOpen(false)
     } finally {
-      setCapturing(false)
+      if (sessionRef.current === session) setCapturing(false)
     }
   }
+
+  const ready = !capturing && composed?.key === composeKey && composed?.capture === capture
 
   const filename = () => `${slugify(title) || slugify(fallbackName) || 'chart'}.png`
 
   const handleDownload = () => {
-    if (!composedBlob) return
-    downloadBlob(composedBlob, filename())
+    if (!ready || !composed) return
+    downloadBlob(composed.blob, filename())
     toast.success('Chart image downloaded')
   }
 
   const handleCopy = async () => {
-    if (!composedBlob) return
-    if (!(await copyImageToClipboard(composedBlob))) {
+    if (!ready || !composed) return
+    if (!(await copyImageToClipboard(composed.blob))) {
       toast.error('Clipboard not available')
       return
     }
@@ -163,8 +170,6 @@ export const ShareChartButton = ({
     clearTimeout(copyResetRef.current)
     copyResetRef.current = setTimeout(() => setCopied(false), 1500)
   }
-
-  const ready = Boolean(composedBlob) && !capturing && !composing
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>

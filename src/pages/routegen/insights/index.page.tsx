@@ -263,6 +263,7 @@ const Insights = () => {
   // Remote query execution.
   const {
     data: queryResult,
+    dataKey: resultKey,
     loading,
     error,
     retry,
@@ -464,7 +465,15 @@ const Insights = () => {
   let drawnCount = resultSeriesCount
   if (result.case === 'topK') drawnCount = topKRows.length
   if (result.case === 'userFlow') drawnCount = result.value.nodes.length
-  const canShare = canShareInsight({ insightType, resultCase: result.case, drawnCount, loading, error })
+  const canShare = canShareInsight({
+    insightType,
+    resultCase: result.case,
+    drawnCount,
+    loading,
+    error,
+    queryKey,
+    resultKey,
+  })
 
   const renderRowExtra = useMemo(() => {
     if (!isTrends) return undefined
