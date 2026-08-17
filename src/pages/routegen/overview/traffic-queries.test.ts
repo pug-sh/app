@@ -172,6 +172,31 @@ describe('cross-filters reach every query', () => {
   })
 })
 
+// Without the flag a wholly-cookieless referrer drops off the Visitors panels instead of ranking.
+describe('cookieless visitors reach every query', () => {
+  const included = (query: { spec?: { includeCookieless: boolean } }) => query.spec?.includeCookieless
+
+  it('stat queries include them', () => {
+    expect(included(buildTrafficStatQuery('page_view', 'users', InsightType.SEGMENTATION))).toBe(true)
+  })
+
+  it('top-k property breakdowns include them', () => {
+    expect(included(buildTopKBreakdownQuery('page_view', '$referrerDomain', AggregationType.UNIQUE_USERS))).toBe(true)
+  })
+
+  it('event-kind breakdowns include them', () => {
+    expect(included(buildEventKindTopKQuery())).toBe(true)
+  })
+
+  it('session entry/exit breakdowns include them', () => {
+    expect(included(buildSessionBreakdownQuery('page_view', SessionMetric.ENTRY, '$pathname'))).toBe(true)
+  })
+
+  it('the country map includes them', () => {
+    expect(included(buildCountryMapQuery('page_view'))).toBe(true)
+  })
+})
+
 // The map query has no test of its own elsewhere, and useActivityMapData reads its shape positionally.
 describe('buildCountryMapQuery', () => {
   it('is MAP scoped to the navigation event', () => {
