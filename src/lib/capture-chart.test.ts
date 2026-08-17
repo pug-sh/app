@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
-import { captureElementToImage } from './capture-tile'
+import { captureElementToImage } from './capture-chart'
 
 // Chrome drops the canvas origin-clean flag for an <img>-loaded SVG holding a <foreignObject>
 // sourced from a blob: URL, so the share card's toBlob() throws SecurityError. happy-dom rasterizes

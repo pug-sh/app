@@ -16,6 +16,7 @@ import {
 import {
   alignComparisonValues,
   buildChartData,
+  canShareInsight,
   collapseValues,
   SERIES_COLLAPSE,
   specAggregationResolver,
@@ -178,5 +179,52 @@ describe('alignComparisonValues', () => {
   // bucketCount 1 is the degenerate case the index scale divides by zero on.
   it('survives a single bucket', () => {
     expect(alignComparisonValues(points(7, 8, 9), 1)).toEqual([7])
+  })
+})
+
+describe('canShareInsight', () => {
+  const shareable = {
+    insightType: InsightType.TRENDS,
+    resultCase: 'trends',
+    drawnCount: 1,
+    loading: false,
+    error: null,
+    queryKey: '{"timeRange":"7d"}',
+    resultKey: '{"timeRange":"7d"}',
+  }
+
+  it('offers a share of a drawn result', () => {
+    expect(canShareInsight(shareable)).toBe(true)
+  })
+
+  // The three staleness cases: useDebouncedQuery holds the old result across a type switch and a
+  // refetch, and a zero-count result renders an empty state rather than a chart.
+  it('refuses a result left over from the previously selected insight type', () => {
+    expect(canShareInsight({ ...shareable, insightType: InsightType.FUNNEL })).toBe(false)
+  })
+
+  // The case matches and loading is still false for a render, so the keys are the only tell.
+  it('refuses a result left over from the previous query of the same type', () => {
+    expect(canShareInsight({ ...shareable, queryKey: '{"timeRange":"30d"}' })).toBe(false)
+  })
+
+  it('refuses before the first result lands', () => {
+    expect(canShareInsight({ ...shareable, resultKey: undefined })).toBe(false)
+  })
+
+  it('refuses while a requery is in flight', () => {
+    expect(canShareInsight({ ...shareable, loading: true })).toBe(false)
+  })
+
+  it('refuses an empty result', () => {
+    expect(canShareInsight({ ...shareable, drawnCount: 0 })).toBe(false)
+  })
+
+  it('refuses a map, which snapshots blank from its WebGL canvas', () => {
+    expect(canShareInsight({ ...shareable, insightType: InsightType.MAP, resultCase: 'topK' })).toBe(false)
+  })
+
+  it('refuses a failed query', () => {
+    expect(canShareInsight({ ...shareable, error: 'boom' })).toBe(false)
   })
 })

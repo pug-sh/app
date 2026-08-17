@@ -1,18 +1,18 @@
 import { create } from '@bufbuild/protobuf'
-import { Copy, MoreHorizontal, TrendingUp } from 'lucide-react'
+import { Copy, MoreHorizontal, Share, TrendingUp } from 'lucide-react'
 import { type ReactNode, type RefObject, useRef } from 'react'
 import snarkdown from 'snarkdown'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { ShareChartButton } from '@/components/share-chart-button'
 import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { fmtDate, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { fmtDateRange, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { accentStripClass } from './accent-palette'
 import { DashboardInsightContent } from './insight-tile-content'
 import { getProtoRange } from './query'
-import { ShareTileButton } from './share-tile-button'
 import { TileHeaderEdit } from './tile-header-edit'
 
 const escapeMarkdownHTML = (value: string) =>
@@ -131,7 +131,7 @@ const formatTileMeta = (tile: DashboardTile, globalTimeRange?: TimeRange) => {
   if (tile.content.case !== 'insight') return ''
   const query = create(QueryRequestSchema, { spec: tile.content.value.spec })
   const range = globalTimeRange ?? resolveDashboardTimeRangePreset(undefined, getProtoRange(query.timeRange))
-  return `${fmtDate(range.from)} – ${fmtDate(range.to)}`
+  return fmtDateRange(range)
 }
 
 export const DashboardTileBody = ({
@@ -171,7 +171,25 @@ export const DashboardTileBody = ({
         )}
       </div>
       {canShare ? (
-        <ShareTileButton tile={tile} targetRef={chartRef} meta={formatTileMeta(tile, globalTimeRange)} />
+        <ShareChartButton
+          targetRef={chartRef}
+          defaultTitle={tile.displayName}
+          meta={formatTileMeta(tile, globalTimeRange)}
+          fallbackName={`chart-${tile.id}`}
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Share chart"
+              title="Share chart"
+              data-no-drag="true"
+              onMouseDown={event => event.stopPropagation()}
+              className="absolute top-4 right-4 z-20 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
+            >
+              <Share className="size-4" />
+            </Button>
+          }
+        />
       ) : null}
       {onDuplicate ? (
         <DropdownMenu>
