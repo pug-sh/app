@@ -82,6 +82,7 @@ export const DashboardGrid = ({
   mode = 'view',
   selectedTileId,
   highlightTileId,
+  flaggedTileIds,
   onDuplicateTile,
   onSelectTile,
   onPatchTile,
@@ -96,6 +97,9 @@ export const DashboardGrid = ({
   selectedTileId?: string | null
   // A just-added tile to briefly highlight and scroll into view.
   highlightTileId?: string | null
+  // Tiles the assistant could not make valid — outlined so they're findable
+  // without opening each one.
+  flaggedTileIds?: Set<string>
   onDuplicateTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
   onPatchTile?: (tileId: string, patch: Partial<DashboardTile>) => void
@@ -156,6 +160,7 @@ export const DashboardGrid = ({
         'min-h-0 flex-1',
         selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
         highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
+        flaggedTileIds?.has(tile.id) ? 'rounded-lg outline outline-2 outline-caution/60 outline-offset-2' : '',
       ].join(' ')}
     >
       {renderTile ? (

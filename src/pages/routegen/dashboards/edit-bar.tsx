@@ -1,17 +1,24 @@
-import { Loader2, Pencil } from 'lucide-react'
+import { Loader2, Pencil, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { aiAssistantEnabled } from '@/network/transport'
 
 export const EditBar = ({
   dirtyCount,
   saving,
   onSave,
   onDiscard,
+  assistantOpen,
+  onToggleAssistant,
+  flaggedCount,
 }: {
   dirtyCount: number
   saving: boolean
   onSave: () => void
   onDiscard: () => void
+  assistantOpen: boolean
+  onToggleAssistant: () => void
+  flaggedCount: number
 }) => {
   const [confirming, setConfirming] = useState(false)
   const barRef = useRef<HTMLDivElement>(null)
@@ -54,6 +61,17 @@ export const EditBar = ({
       </span>
       <div className="ml-auto flex items-center gap-2">
         {confirming ? <span className="text-caution text-xs">Discard {dirtyCount} changes?</span> : null}
+        {aiAssistantEnabled ? (
+          <Button
+            size="sm"
+            variant={assistantOpen ? 'secondary' : 'ghost'}
+            onClick={onToggleAssistant}
+            disabled={saving}
+          >
+            <Sparkles className="size-3.5" />
+            Ask AI
+          </Button>
+        ) : null}
         <Button
           size="sm"
           variant="ghost"
@@ -63,7 +81,16 @@ export const EditBar = ({
         >
           {confirming ? 'Confirm discard' : 'Discard'}
         </Button>
-        <Button size="sm" onClick={onSave} disabled={saving || dirtyCount === 0}>
+        <Button
+          size="sm"
+          onClick={onSave}
+          disabled={saving || dirtyCount === 0 || flaggedCount > 0}
+          title={
+            flaggedCount > 0
+              ? `Fix ${flaggedCount} flagged tile${flaggedCount === 1 ? '' : 's'} before saving`
+              : undefined
+          }
+        >
           {saving ? <Loader2 className="size-4 animate-spin" /> : null}
           Save
         </Button>

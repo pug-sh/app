@@ -7,6 +7,7 @@ import { DashboardGrid } from '../grid'
 import { InlineTemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
+import { DashboardAssistantPanel } from './dashboard-assistant-panel'
 import { ResumeBanner } from './resume-banner'
 import type { useDashboardEditor } from './use-dashboard-editor'
 
@@ -58,6 +59,10 @@ export const DashboardCanvas = ({
     removeSelectedTile,
     duplicateSelectedTile,
     templateContext,
+    flaggedTileIds,
+    assistantOpen,
+    toggleAssistant,
+    applyTileOp,
   } = editor
 
   const tileCount = effectiveDashboard?.tiles.length ?? 0
@@ -65,7 +70,15 @@ export const DashboardCanvas = ({
   return (
     <div className="space-y-6">
       {mode === 'edit' ? (
-        <EditBar dirtyCount={dirtyCount} saving={saving} onSave={handleSave} onDiscard={handleDiscard} />
+        <EditBar
+          dirtyCount={dirtyCount}
+          saving={saving}
+          onSave={handleSave}
+          onDiscard={handleDiscard}
+          assistantOpen={assistantOpen}
+          onToggleAssistant={toggleAssistant}
+          flaggedCount={flaggedTileIds.size}
+        />
       ) : null}
 
       {resumeBanner !== 'none' && storedDraft ? (
@@ -97,6 +110,7 @@ export const DashboardCanvas = ({
                 mode={mode}
                 selectedTileId={selectedTileId}
                 highlightTileId={highlightTileId}
+                flaggedTileIds={flaggedTileIds}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={tileGranularityOverride}
                 onLayoutsChange={handleLayoutsChange}
@@ -126,7 +140,14 @@ export const DashboardCanvas = ({
               )
             ) : null}
           </div>
-          {mode === 'edit' && tileCount > 0 ? (
+          {mode === 'edit' && assistantOpen && effectiveDashboard ? (
+            <DashboardAssistantPanel
+              draft={effectiveDashboard}
+              onApplyOp={applyTileOp}
+              onOpenTile={selectTile}
+              onClose={toggleAssistant}
+            />
+          ) : mode === 'edit' && tileCount > 0 ? (
             <TileConfigPanel
               key={selectedTile?.id ?? '__none__'}
               tile={selectedTile}

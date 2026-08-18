@@ -2,6 +2,7 @@ import { create, equals } from '@bufbuild/protobuf'
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import type { TileOp } from '@/api/genproto/ai/dashboards/v1/assistant_pb'
 import {
   type Dashboard,
   DashboardSchema,
@@ -12,6 +13,7 @@ import { canAtom } from '@/auth/permissions'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom } from '../../events/filter-schema.atoms'
+import { applyOpToDashboard, nextFlaggedIds } from '../assistant-ops'
 import { pendingEditDashboardIdAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import {
   appendDraftTile,
@@ -60,6 +62,8 @@ export const useDashboardEditor = ({
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
+  const [flaggedTileIds, setFlaggedTileIds] = useState<Set<string>>(new Set())
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
   const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
@@ -166,6 +170,8 @@ export const useDashboardEditor = ({
       setMode('edit')
       setSelectedTileId(dashboard.tiles[0]?.id ?? null)
       setAutoFocusName(opts?.focusName ?? false)
+      setFlaggedTileIds(new Set())
+      setAssistantOpen(false)
     },
     [dashboard, canEdit, setStoredDraft, resetHistory],
   )
@@ -176,6 +182,8 @@ export const useDashboardEditor = ({
     clearDraftKey(dashboardId)
     setMode('view')
     setSelectedTileId(null)
+    setFlaggedTileIds(new Set())
+    setAssistantOpen(false)
   }, [dashboardId, setStoredDraft])
 
   // A freshly created dashboard records its id in pendingEditDashboardIdAtom; once
@@ -195,6 +203,10 @@ export const useDashboardEditor = ({
 
   const handleSave = useCallback(async () => {
     if (!storedDraft || !dashboardId) return
+    if (flaggedTileIds.size > 0) {
+      toast.error(`Fix ${flaggedTileIds.size} flagged tile${flaggedTileIds.size === 1 ? '' : 's'} before saving`)
+      return
+    }
     if (!storedDraft.draft.displayName.trim()) {
       toast.error('Dashboard name is required')
       return
@@ -212,7 +224,7 @@ export const useDashboardEditor = ({
     } finally {
       setSaving(false)
     }
-  }, [dashboardId, setDashboard, setStoredDraft, storedDraft, upsertDashboard])
+  }, [dashboardId, flaggedTileIds, setDashboard, setStoredDraft, storedDraft, upsertDashboard])
 
   const handleDiscard = useCallback(() => {
     exitEditMode()
@@ -230,6 +242,8 @@ export const useDashboardEditor = ({
     resetHistory()
     setMode('edit')
     setSelectedTileId(storedDraft.draft.tiles[0]?.id ?? null)
+    setFlaggedTileIds(new Set())
+    setAssistantOpen(false)
   }, [storedDraft, canEdit, resetHistory])
 
   const handleLayoutsChange = useCallback(
@@ -264,6 +278,7 @@ export const useDashboardEditor = ({
       if (!selectedTileId) return
       const key = `tile:${selectedTileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, selectedTileId, patch), key)
+      setFlaggedTileIds(current => nextFlaggedIds(current, selectedTileId, false))
     },
     [selectedTileId, commitDraft],
   )
@@ -297,31 +312,43 @@ export const useDashboardEditor = ({
     (tileId: string, patch: Partial<DashboardTile>) => {
       const key = `tile:${tileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, tileId, patch), key)
+      setFlaggedTileIds(current => nextFlaggedIds(current, tileId, false))
     },
     [commitDraft],
   )
 
   // Selecting a tile reveals the config rail so its settings are visible even if
-  // the rail was previously collapsed.
+  // the rail was previously collapsed, and closes the assistant panel — the two
+  // share one right-rail slot.
   const selectTile = useCallback((tileId: string) => {
     setSelectedTileId(tileId)
     setRailCollapsed(false)
+    setAssistantOpen(false)
+  }, [])
+
+  const toggleAssistant = useCallback(() => {
+    setAssistantOpen(open => !open)
+    setSelectedTileId(null)
   }, [])
 
   const deselectTile = useCallback(() => setSelectedTileId(null), [])
 
   const highlightTimerRef = useRef<number | null>(null)
+  const pulseHighlight = useCallback((tileId: string) => {
+    setHighlightTileId(tileId)
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightTileId(current => (current === tileId ? null : current)),
+      1200,
+    )
+  }, [])
+
   const focusNewTile = useCallback(
     (tileId: string) => {
       selectTile(tileId)
-      setHighlightTileId(tileId)
-      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-      highlightTimerRef.current = window.setTimeout(
-        () => setHighlightTileId(current => (current === tileId ? null : current)),
-        1200,
-      )
+      pulseHighlight(tileId)
     },
-    [selectTile],
+    [selectTile, pulseHighlight],
   )
 
   useEffect(
@@ -329,6 +356,24 @@ export const useDashboardEditor = ({
       if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
     },
     [],
+  )
+
+  // Applies one streamed TileOp to the draft. Deliberately does NOT select/focus
+  // the tile the way template-add or duplication do — the assistant panel must
+  // stay open across the whole conversation, and selecting a tile would close it
+  // (see selectTile above). A brief highlight pulse is enough feedback; jumping
+  // to the tile is an explicit action from the panel's "open tile" link instead.
+  const applyTileOp = useCallback(
+    (op: TileOp): string | undefined => {
+      if (!storedDraft) return undefined
+      const { dashboard: nextDashboard, tileId } = applyOpToDashboard(storedDraft.draft, op)
+      if (tileId === undefined) return undefined
+      commitDraft(() => nextDashboard)
+      setFlaggedTileIds(current => nextFlaggedIds(current, tileId, op.violations.length > 0))
+      if (op.op.case !== 'remove') pulseHighlight(tileId)
+      return tileId
+    },
+    [storedDraft, commitDraft, pulseHighlight],
   )
 
   const duplicateTile = useCallback(
@@ -416,5 +461,9 @@ export const useDashboardEditor = ({
     duplicateSelectedTile,
     handleSelectTemplate,
     templateContext,
+    flaggedTileIds,
+    assistantOpen,
+    toggleAssistant,
+    applyTileOp,
   }
 }
