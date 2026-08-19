@@ -1,0 +1,39 @@
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # Skips the window where a compromised version is published and yanked. Only default-days is
+    # documented for bun; the semver-specific variants are ambiguous for this ecosystem.
+    cooldown:
+      default-days: 5
+    groups:
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      # Runtime, codegen and the committed clients in src/api/genproto are version-coupled — a
+      # split bump can leave generated code out of step with the protobuf runtime.
+      connectrpc:
+        patterns: ['@connectrpc/*', '@bufbuild/*']
+      # The v4 vite plugin tracks the core version.
+      tailwind:
+        patterns: ['tailwindcss', '@tailwindcss/*']
+      # Dependencies of the vendored charts, which we can't hand-patch. One reviewable PR beats
+      # drifting the zone a package at a time.
+      visx:
+        patterns: ['@visx/*']
+      # A font bump is a design change — the weight axis and cap height are load-bearing.
+      fontsource:
+        patterns: ['@fontsource-variable/*']
+      dev-tooling:
+        patterns: ['vitest', '@vitest/*', 'happy-dom', '@testing-library/*', 'knip', '@biomejs/biome']
+    ignore:
+      # Must move in lockstep with pug.sh: the identity envelope is shared across the .pug.sh
+      # cookie, so an unattended bump splits every visitor into two profiles.
+      - dependency-name: '@pug-sh/browser'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
