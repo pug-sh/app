@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { inZone } from '@/test/timezone'
-import { TIME_RANGE_PRESETS } from './date-presets'
+import { defaultRange, refreshTimeRange, TIME_RANGE_PRESETS } from './date-presets'
 import { GRANULARITY_MAX_RANGE_MS } from './granularity'
 
 // lastNMonths is module-private, so these go through the preset list that exposes it. Dates are
@@ -83,5 +83,48 @@ describe('lastNHours', () => {
       const range = resolvePreset('Last 24 hours')
       expect(range.to.getTime() - range.from.getTime()).toBe(24 * HOUR_MS)
     })
+  })
+})
+
+const pick = (label: string) => ({ ...resolvePreset(label), label })
+
+describe('refreshTimeRange', () => {
+  it('re-resolves a labelled preset against the current clock', () => {
+    at(2026, 7, 19, 10)
+    const picked = pick('Last 24 hours')
+
+    at(2026, 7, 19, 14)
+    expect(refreshTimeRange(picked)).toEqual({
+      from: new Date(2026, 7, 18, 14),
+      to: new Date(2026, 7, 19, 14),
+      label: 'Last 24 hours',
+    })
+  })
+
+  it('leaves an unset range alone', () => {
+    at(2026, 7, 19, 14)
+    expect(refreshTimeRange(undefined)).toBeUndefined()
+  })
+
+  it('leaves a hand-picked range alone', () => {
+    at(2026, 7, 19, 14)
+    const custom = { from: new Date(2026, 6, 1), to: new Date(2026, 6, 8) }
+    expect(refreshTimeRange(custom)).toBe(custom)
+  })
+
+  it('leaves a label no preset claims alone', () => {
+    at(2026, 7, 19, 14)
+    const renamed = { ...pick('Last 24 hours'), label: 'Past day' }
+    expect(refreshTimeRange(renamed)).toBe(renamed)
+  })
+
+  // The label is the only handle refreshTimeRange has. Drop it from the default and the events page
+  // silently goes back to re-querying the window it loaded in.
+  it('re-resolves the events page default', () => {
+    at(2026, 7, 19, 10)
+    const initial = defaultRange()
+
+    at(2026, 7, 19, 14)
+    expect(refreshTimeRange(initial)?.to).toEqual(new Date(2026, 7, 19, 14))
   })
 })
