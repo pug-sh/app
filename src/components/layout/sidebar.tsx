@@ -37,6 +37,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
 import {
@@ -92,6 +93,7 @@ const AppSidebar = () => {
   const signOut = useSetAtom(signOutAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
   const [theme, setTheme] = useAtom(themeAtom)
+  const { setOpenMobile } = useSidebar()
 
   const routeProjectId = useRouteProjectId()
   const currentProjectId = routeProjectId ?? activeProject?.id ?? null
@@ -112,6 +114,10 @@ const AppSidebar = () => {
     refreshOrgs()
   }, [refreshOrgs])
 
+  // On mobile the sidebar is a sheet over the page, so any click that commits a page dismisses it.
+  // Unguarded by isMobile: desktop renders no sheet, and clearing the flag survives a rotation back.
+  const closeMobileSidebar = () => setOpenMobile(false)
+
   const closeSwitcher = () => {
     setSwitcherOpen(false)
     setCreating(false)
@@ -125,6 +131,7 @@ const AppSidebar = () => {
       setActiveProject(project)
       navigate(`/p/${project.id}/${pagePath.startsWith('dashboards/') ? 'dashboards' : pagePath}`)
     }
+    closeMobileSidebar()
     closeSwitcher()
   }
 
@@ -144,6 +151,7 @@ const AppSidebar = () => {
       selectOrg(target)
       navigate('/', { replace: true })
     }
+    closeMobileSidebar()
     closeSwitcher()
   }
 
@@ -153,7 +161,10 @@ const AppSidebar = () => {
     try {
       const project = await createProject(newProjectName.trim())
       closeSwitcher()
-      if (project) navigate(`/p/${project.id}/overview`)
+      if (project) {
+        navigate(`/p/${project.id}/overview`)
+        closeMobileSidebar()
+      }
     } catch {
       toast.error('Failed to create project')
       setSaving(false)
@@ -301,7 +312,12 @@ const AppSidebar = () => {
                     pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path))
                   return (
                     <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton render={<Link href={href} />} isActive={isActive} tooltip={item.label}>
+                      <SidebarMenuButton
+                        render={<Link href={href} />}
+                        isActive={isActive}
+                        tooltip={item.label}
+                        onClick={closeMobileSidebar}
+                      >
                         <item.icon />
                         <span>{item.label}</span>
                       </SidebarMenuButton>
