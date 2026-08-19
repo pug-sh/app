@@ -5,7 +5,6 @@ import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { type Granularity, type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
-import { ActivityMapView } from '@/components/activity-map-view'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
@@ -15,7 +14,7 @@ import { toProtoTimeRange } from '@/lib/timestamp'
 import { countryCountsFromTopKRows } from '../insights/map'
 import { getInitialGranularity, getProtoRange } from './query'
 
-export type ActivityMapDataProps = {
+type ActivityMapDataProps = {
   query: QueryRequest | undefined
   defaultTimeRange: TimeRangePreset | undefined
   timeRangeOverride?: TimeRange
@@ -99,9 +98,4 @@ export const useActivityMapData = ({
     retry,
     effectiveQuery,
   }
-}
-
-export const ActivityMapContent = (props: ActivityMapDataProps) => {
-  const state = useActivityMapData(props)
-  return <ActivityMapView {...state} className="relative h-full min-h-0 overflow-hidden" />
 }

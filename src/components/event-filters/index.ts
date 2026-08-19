@@ -1,5 +1,4 @@
 export { EventFilterBar } from './event-filter-bar'
-export { EventQueryRow } from './event-query-row'
 export { FilterBuilder } from './filter-builder'
 export { FilterChip } from './filter-chip'
-export { BreakdownBuilder, BreakdownChip, EventChip, PropertyPickerList } from './pickers'
+export { BreakdownBuilder, BreakdownChip, PropertyPickerList } from './pickers'

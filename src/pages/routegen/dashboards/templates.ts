@@ -275,5 +275,3 @@ const TEMPLATE_GROUP_ORDER: readonly TileTemplateGroup[] = ['suggested', 'blank'
 export const TEMPLATE_GROUPS: readonly { label: string; group: TileTemplateGroup }[] = TEMPLATE_GROUP_ORDER.map(
   group => ({ label: TEMPLATE_GROUP_LABELS[group], group }),
 )
-
-export const findTileTemplate = (id: TileTemplateId): TileTemplate => TILE_TEMPLATES_BY_ID[id]

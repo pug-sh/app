@@ -33,13 +33,6 @@ export const buildPieSlices = (
     }
   })
 
-export const preparePieSlices = (
-  data: ChartPoint[],
-  seriesNames: string[],
-  seriesColors: SeriesColor[],
-  aggregations: AggregationType[],
-) => buildPieSlices(data, seriesNames, seriesColors, aggregations).filter(slice => slice.value > 0)
-
 const percent = (value: number, total: number) => `${((value / total) * 100).toFixed(1)}%`
 const labelName = (name: string, maxLength = 16) =>
   name.length > maxLength ? `${name.slice(0, maxLength - 1)}…` : name

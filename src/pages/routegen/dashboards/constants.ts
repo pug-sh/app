@@ -3,7 +3,6 @@
 // keeps edit mode (config rail open, narrower canvas) and view mode rendering
 // the same layout instead of diverging across breakpoints.
 export const BREAKPOINTS = { lg: 0 } as const
-export const BREAKPOINT_KEYS = Object.keys(BREAKPOINTS) as (keyof typeof BREAKPOINTS)[]
 export const TILE_MIN_H = 9
 export const BREAKDOWN_RESPONSE_LIMIT = 25
 export const UNTITLED_DASHBOARD_NAME = 'Untitled dashboard'

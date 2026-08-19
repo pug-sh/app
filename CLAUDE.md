@@ -17,7 +17,18 @@ bun run lint       # Biome check — format + lint + import organization (safe f
 bun run lint:ci    # Biome check, reporting only — never writes (what CI runs)
 bun run test       # Vitest, single run
 bun run test:watch # Vitest, watch mode
+bun run knip       # Knip — unused files, exports and dependencies (CI gate)
 ```
+
+## Knip
+
+`knip.jsonc`, run in CI after the build. It gates on unused files, unused/unlisted dependencies, and exports nothing imports.
+
+- **Three zones are ignored: `src/api/genproto/`, `src/components/charts/`, `src/components/ui/`.** All are regenerated or re-added from a registry, so a finding in one is never something we would act on. The cost is that knip no longer reports dead *files* there either — `components/ui/{card,table,tabs,toggle-group}.tsx` were all found and deleted that way before the zone was ignored, and a future one won't be. Dead files are the lesser reason for the ignore in any case: un-ignoring `components/ui/` also reports ~44 unused exports that are legitimate registry API.
+- **An ignored file still contributes dependency usage — unless nothing *reachable from an entry point* imports it.** Then knip never parses it, and a dependency only it pulls in reads as dead. Being imported is not enough, which is the trap: `@visx/pattern` needs a line in `ignoreDependencies` even though its importer `charts/visx-pattern.tsx` *is* imported, because the chain above it dead-ends — `@visx/pattern` ← `visx-pattern.tsx` ← `pattern-preset.tsx` ← `bar-squares.tsx` ← nothing. `cmdk`, `react-day-picker` and `class-variance-authority` are equally exclusive to `components/ui/`, and need nothing, because app code imports the files that use them.
+- **Don't add `src/components/shimmering-text.tsx` to `ignore`.** It is vendored, but it is reachable through the chart zone, so listing it earns a "Remove from ignore" config hint instead.
+- **`ignoreExportsUsedInFile: true`.** Flipping it surfaces a second tier of ~35 `export` keywords on symbols only used in their own file — worth a periodic sweep, but not a gate: some are deliberate module API (`lib/granularity.ts`, `analytics/sanitize-url.ts`).
+- `@bufbuild/protoc-gen-es` is also in `ignoreDependencies` — `buf.gen.yaml` runs it as a `local:` plugin binary, so there is no import site to find.
 
 ## Tests
 
