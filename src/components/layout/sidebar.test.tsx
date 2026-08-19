@@ -4,16 +4,20 @@ import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
-import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, orgsList } = vi.hoisted(() => ({ batchGet: vi.fn(), orgsList: vi.fn() }))
+const { batchGet, projectCreate, orgsList } = vi.hoisted(() => ({
+  batchGet: vi.fn(),
+  projectCreate: vi.fn(),
+  orgsList: vi.fn(),
+}))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    projectsRPCAtom: atom({ batchGet }),
+    projectsRPCAtom: atom({ batchGet, create: projectCreate }),
     orgsRPCAtom: atom({ list: orgsList }),
   }
 })
@@ -32,7 +36,8 @@ const AppSidebar = (await import('@/components/layout/sidebar')).default
 const { activeOrgAtom, activeProjectAtom, projectsAtom } = await import('@/data/workspace.atoms')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 
-const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
+// Admin so the Can gate renders the create-project affordance at all.
+const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A', role: OrgRole.ADMIN })
 const projects = [
   create(ProjectSchema, { id: 'p1', displayName: 'First' }),
   create(ProjectSchema, { id: 'p2', displayName: 'Second' }),
@@ -102,6 +107,23 @@ describe('the sidebar on mobile', () => {
 
     await waitFor(() => expect(document.body.contains(nav)).toBe(false))
     expect(history).toContain('/p/p2/overview')
+  })
+
+  // The one guarded dismissal: it sits inside `if (project)`, so a create that returns nothing
+  // leaves the sheet open rather than dismissing onto a page it never navigated to.
+  it('dismisses itself and navigates when a project is created', async () => {
+    const created = create(ProjectSchema, { id: 'p3', displayName: 'Third' })
+    projectCreate.mockResolvedValue({ project: created })
+    batchGet.mockResolvedValue({ projects: [...projects, created] })
+    const { history, nav } = await mount('/p/p1/overview')
+
+    fireEvent.click(screen.getByRole('button', { name: /Org A/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'New project' }))
+    fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'Third' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() => expect(document.body.contains(nav)).toBe(false))
+    expect(history).toContain('/p/p3/overview')
   })
 
   it('stays open when the theme is cycled', async () => {
