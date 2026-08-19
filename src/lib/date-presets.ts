@@ -134,10 +134,6 @@ export const isDashboardTimeRangePreset = (
 ): preset is (typeof DASHBOARD_TIME_RANGE_PRESETS)[number]['value'] =>
   preset !== undefined && DASHBOARD_TIME_RANGE_PRESETS.some(option => option.value === preset)
 
-export const getDashboardTimeRangePresetLabel = (preset: TimeRangePreset | undefined) =>
-  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === preset)?.label ??
-  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === DEFAULT_DASHBOARD_TIME_RANGE_PRESET)!.label
-
 export const resolveDashboardTimeRangePreset = (
   preset: TimeRangePreset | undefined,
   fallback?: TimeRange,

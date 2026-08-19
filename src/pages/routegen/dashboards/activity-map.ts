@@ -8,9 +8,6 @@ import {
   type QueryRequest,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import type { CountryActivity } from '@/components/activity-map-view'
-
-export type { CountryActivity }
 
 // The country auto-property key. MAP fixes the dimension server-side, so this is only used for
 // cross-filtering and labels — never to build the query.

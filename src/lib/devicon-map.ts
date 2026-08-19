@@ -114,9 +114,6 @@ export const formatOsLabel = (os?: string, osVersion?: string) => [os, osVersion
 
 export const formatPlatformPrimary = (browser?: string, os?: string) => [browser, os].filter(Boolean).join(' · ')
 
-export const formatPlatformDetail = (browser?: string, browserVersion?: string, os?: string, osVersion?: string) =>
-  [formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion)].filter(Boolean).join(' · ')
-
 export const formatDeviceLabel = (device?: string, os?: string) => {
   const isMobile = isMobileDevice(device, os)
   return device?.trim() || (os ? (isMobile ? 'Mobile' : 'Desktop') : '')
@@ -135,32 +132,3 @@ export const isMobileDevice = (device?: string, os?: string) => {
   }
   return isMobileOS(os)
 }
-
-const isGenericDeviceLabel = (label: string) => label === 'Mobile' || label === 'Desktop'
-
-type PlatformParts = {
-  browser?: string
-  browserVersion?: string
-  os?: string
-  osVersion?: string
-  device?: string
-}
-
-export const formatPlatformStackPrimary = ({ browser, os, device }: PlatformParts) => {
-  const deviceName = device?.trim()
-  if (deviceName && !isGenericDeviceLabel(deviceName)) return deviceName
-
-  const browserName = browser?.trim()
-  if (browserName) return browserName
-
-  const osName = os?.trim()
-  if (osName) return osName
-
-  const fallbackDevice = formatDeviceLabel(device, os)
-  return fallbackDevice || ''
-}
-
-export const formatPlatformStackDetail = ({ browser, browserVersion, os, osVersion, device }: PlatformParts) =>
-  [formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion), formatDeviceLabel(device, os)]
-    .filter(Boolean)
-    .join(' · ')
