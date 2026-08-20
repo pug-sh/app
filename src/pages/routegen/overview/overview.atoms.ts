@@ -1,9 +1,9 @@
-import { atom } from 'jotai'
+import { atom, type Getter } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { insightsRPCAtom } from '@/api/rpc'
-import { projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { type Bindings, pickBindings } from './tile-bindings'
 import type { OverviewMode } from './url-state'
@@ -36,48 +36,65 @@ export const overviewModeAtom = atom(
   },
 )
 
-export const overviewSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
-export const overviewSchemaLoadingAtom = atom(false)
-export const overviewSchemaErrorAtom = atom<string | null>(null)
+type OverviewSchemaState = {
+  projectId: string
+  schema: GetFilterSchemaResponse | null
+  error: string | null
+}
+
+const overviewSchemaStateAtom = atom<OverviewSchemaState | null>(null)
+
+// Owned by the project it was fetched for. The page remounts on a project switch but this
+// module-level state doesn't, so an ungated read hands the first commit under the new project the
+// previous one's schema — long enough for its tiles to fire queries against the wrong bindings.
+const ownedState = (get: Getter) => {
+  const state = get(overviewSchemaStateAtom)
+  return state?.projectId === get(activeProjectAtom)?.id ? state : null
+}
+
+export const overviewSchemaAtom = atom(get => ownedState(get)?.schema ?? null)
+export const overviewSchemaErrorAtom = atom(get => ownedState(get)?.error ?? null)
 
 export const fetchOverviewSchemaAtom = atom(null, async (get, set) => {
   const insightsRPC = get(insightsRPCAtom)
   const headers = get(projectHeaderAtom)
-  if (!headers) return
-  set(overviewSchemaLoadingAtom, true)
-  set(overviewSchemaErrorAtom, null)
-  // Drop the previous project's schema so tile queries don't fire with stale bindings
-  // during the project-switch roundtrip; the page shows its loading state until the
-  // new schema lands.
-  set(overviewSchemaAtom, null)
+  const projectId = get(activeProjectAtom)?.id
+  // Safe to leave the state alone: with no project the page renders NoProject, and any state left
+  // over from the last one is already gated out by ownership.
+  if (!headers || !projectId) return
+  // Asked but unanswered — a null schema is what the page reads as "still loading". Also clears a
+  // same-project retry, which ownership alone wouldn't.
+  set(overviewSchemaStateAtom, { projectId, schema: null, error: null })
+  // A response outlives the request that asked for it, and the loser lands last: without this a
+  // late reply for the old project overwrites the new one's and the page never leaves the spinner.
+  const stale = () => get(activeProjectAtom)?.id !== projectId
   try {
     const resp = await insightsRPC.getFilterSchema({}, { headers })
-    set(overviewSchemaAtom, resp)
+    if (stale()) return
+    set(overviewSchemaStateAtom, { projectId, schema: resp, error: null })
   } catch (err) {
+    if (stale()) return
+    // State before the toast: if the notifier throws, the page must still have an error to show.
+    set(overviewSchemaStateAtom, { projectId, schema: null, error: 'Failed to load project overview' })
     toastRPCError(err, 'Failed to load project overview')
-    set(overviewSchemaErrorAtom, 'Failed to load project overview')
-    set(overviewSchemaAtom, null)
-  } finally {
-    set(overviewSchemaLoadingAtom, false)
   }
 })
 
-// Background refresh for the setup screen's poll. Unlike fetchOverviewSchemaAtom it neither
-// clears the schema nor toggles the page-level loading flag, so the setup screen stays put (no
-// spinner flash between ticks) and the page swaps to the dashboard the instant the first events
-// land. Returns whether the fetch succeeded: the background poll ignores a miss (the initial load
-// already surfaced schema errors, so a transient tick shouldn't toast or tear down the screen),
-// while the explicit "Check now" action uses the result to tell the user when a refresh fails.
+// Background refresh for the setup screen's poll. Unlike fetchOverviewSchemaAtom it doesn't clear
+// the schema first, so the setup screen stays put (no spinner flash between ticks). Returns whether
+// the fetch succeeded: the poll ignores a miss, "Check now" reports it.
 export const pollOverviewSchemaAtom = atom(null, async (get, set) => {
   const insightsRPC = get(insightsRPCAtom)
   const headers = get(projectHeaderAtom)
-  if (!headers) return false
+  const projectId = get(activeProjectAtom)?.id
+  if (!headers || !projectId) return false
   try {
     const resp = await insightsRPC.getFilterSchema({}, { headers })
-    set(overviewSchemaAtom, resp)
+    if (get(activeProjectAtom)?.id !== projectId) return false
+    set(overviewSchemaStateAtom, { projectId, schema: resp, error: null })
     return true
   } catch (err) {
-    console.debug('overview schema poll failed', err)
+    console.error('overview schema poll failed', err)
     return false
   }
 })
