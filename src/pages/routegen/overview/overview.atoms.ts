@@ -1,4 +1,4 @@
-import { atom } from 'jotai'
+import { atom, type Getter } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
@@ -36,37 +36,46 @@ export const overviewModeAtom = atom(
   },
 )
 
-export const overviewSchemaAtom = atom<GetFilterSchemaResponse | null>(null)
-export const overviewSchemaErrorAtom = atom<string | null>(null)
+type OverviewSchemaState = {
+  projectId: string
+  schema: GetFilterSchemaResponse | null
+  error: string | null
+}
+
+const overviewSchemaStateAtom = atom<OverviewSchemaState | null>(null)
+
+// Owned by the project it was fetched for. The page remounts on a project switch but this
+// module-level state doesn't, so an ungated read hands the first commit under the new project the
+// previous one's schema — long enough for its tiles to fire queries against the wrong bindings.
+const ownedState = (get: Getter) => {
+  const state = get(overviewSchemaStateAtom)
+  return state?.projectId === get(activeProjectAtom)?.id ? state : null
+}
+
+export const overviewSchemaAtom = atom(get => ownedState(get)?.schema ?? null)
+export const overviewSchemaErrorAtom = atom(get => ownedState(get)?.error ?? null)
 
 export const fetchOverviewSchemaAtom = atom(null, async (get, set) => {
   const insightsRPC = get(insightsRPCAtom)
   const headers = get(projectHeaderAtom)
-  const requestedProjectId = get(activeProjectAtom)?.id
-  // Never a bare return: the page reads a null schema as "still loading", so an exit that writes
-  // neither a schema nor an error strands it on a spinner it can't leave.
-  if (!headers) {
-    set(overviewSchemaAtom, null)
-    set(overviewSchemaErrorAtom, 'No project selected')
-    return
-  }
-  set(overviewSchemaErrorAtom, null)
-  // Drop the previous project's schema so tile queries don't fire with stale bindings
-  // during the project-switch roundtrip; the page shows its loading state until the
-  // new schema lands.
-  set(overviewSchemaAtom, null)
-  // A response outlives the request that asked for it: switch project mid-flight and the loser
-  // lands its schema under the winner, binding tiles to another project's events.
-  const stale = () => get(activeProjectAtom)?.id !== requestedProjectId
+  const projectId = get(activeProjectAtom)?.id
+  // Safe to leave the state alone: with no project the page renders NoProject, and any state left
+  // over from the last one is already gated out by ownership.
+  if (!headers || !projectId) return
+  // Asked but unanswered — a null schema is what the page reads as "still loading". Also clears a
+  // same-project retry, which ownership alone wouldn't.
+  set(overviewSchemaStateAtom, { projectId, schema: null, error: null })
+  // A response outlives the request that asked for it, and the loser lands last: without this a
+  // late reply for the old project overwrites the new one's and the page never leaves the spinner.
+  const stale = () => get(activeProjectAtom)?.id !== projectId
   try {
     const resp = await insightsRPC.getFilterSchema({}, { headers })
     if (stale()) return
-    set(overviewSchemaAtom, resp)
+    set(overviewSchemaStateAtom, { projectId, schema: resp, error: null })
   } catch (err) {
     if (stale()) return
     // State before the toast: if the notifier throws, the page must still have an error to show.
-    set(overviewSchemaErrorAtom, 'Failed to load project overview')
-    set(overviewSchemaAtom, null)
+    set(overviewSchemaStateAtom, { projectId, schema: null, error: 'Failed to load project overview' })
     toastRPCError(err, 'Failed to load project overview')
   }
 })
@@ -77,12 +86,12 @@ export const fetchOverviewSchemaAtom = atom(null, async (get, set) => {
 export const pollOverviewSchemaAtom = atom(null, async (get, set) => {
   const insightsRPC = get(insightsRPCAtom)
   const headers = get(projectHeaderAtom)
-  const requestedProjectId = get(activeProjectAtom)?.id
-  if (!headers) return false
+  const projectId = get(activeProjectAtom)?.id
+  if (!headers || !projectId) return false
   try {
     const resp = await insightsRPC.getFilterSchema({}, { headers })
-    if (get(activeProjectAtom)?.id !== requestedProjectId) return false
-    set(overviewSchemaAtom, resp)
+    if (get(activeProjectAtom)?.id !== projectId) return false
+    set(overviewSchemaStateAtom, { projectId, schema: resp, error: null })
     return true
   } catch (err) {
     console.error('overview schema poll failed', err)
