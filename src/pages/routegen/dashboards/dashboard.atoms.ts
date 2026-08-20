@@ -9,8 +9,10 @@ import {
 import { dashboardsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 
-export const dashboardListAtom = atom<Dashboard[]>([])
-export const dashboardListLoadingAtom = atom(false)
+// Null means "not answered yet", the way the overview schema does — an in-flight flag reads false
+// on the first commit and flashes the empty state over a project that has dashboards. Only the
+// initial value is null: a refetch after create/delete leaves the list up rather than blanking it.
+export const dashboardListAtom = atom<Dashboard[] | null>(null)
 export const dashboardListErrorAtom = atom<string | null>(null)
 
 export const fetchDashboardsAtom = atom(null, async (get, set) => {
@@ -18,14 +20,12 @@ export const fetchDashboardsAtom = atom(null, async (get, set) => {
   const headers = get(projectHeaderAtom)
   if (!project || !headers) {
     set(dashboardListAtom, [])
-    set(dashboardListLoadingAtom, false)
     set(dashboardListErrorAtom, null)
     return []
   }
 
   const dashboardsRPC = get(dashboardsRPCAtom)
   const requestedProjectId = project.id
-  set(dashboardListLoadingAtom, true)
   set(dashboardListErrorAtom, null)
   try {
     const resp = await dashboardsRPC.list({}, { headers })
@@ -38,10 +38,6 @@ export const fetchDashboardsAtom = atom(null, async (get, set) => {
     set(dashboardListAtom, [])
     set(dashboardListErrorAtom, 'Failed to load dashboards')
     return []
-  } finally {
-    if (get(activeProjectAtom)?.id === requestedProjectId) {
-      set(dashboardListLoadingAtom, false)
-    }
   }
 })
 

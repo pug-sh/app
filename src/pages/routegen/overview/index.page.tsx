@@ -19,7 +19,6 @@ import {
   overviewModeAtom,
   overviewSchemaAtom,
   overviewSchemaErrorAtom,
-  overviewSchemaLoadingAtom,
 } from './overview.atoms'
 import SetupMode from './setup-mode'
 import TrafficAnalyticsMode from './traffic-analytics-mode'
@@ -35,7 +34,6 @@ const MODE_OPTIONS = [
 const Overview = () => {
   const project = useAtomValue(activeProjectAtom)
   const schema = useAtomValue(overviewSchemaAtom)
-  const loading = useAtomValue(overviewSchemaLoadingAtom)
   const error = useAtomValue(overviewSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchOverviewSchemaAtom)
 
@@ -138,11 +136,11 @@ const Overview = () => {
     </div>
   ) : null
 
+  // Null schema is the only "not answered yet" signal — don't reintroduce an in-flight flag, which
+  // reads false on the first commit and flashes the setup screen over a project that has events.
   return (
     <Page title="Overview" description="A starter view auto-built from your events" actions={pageActions}>
-      {loading && !schema ? (
-        <LoadingSpinner />
-      ) : error ? (
+      {error ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <LayoutDashboard className="mb-4 size-10 opacity-15" />
           <p className="mb-1 text-sm font-medium">{error}</p>
@@ -150,7 +148,9 @@ const Overview = () => {
             Retry
           </Button>
         </div>
-      ) : hasEvents && schema ? (
+      ) : !schema ? (
+        <LoadingSpinner />
+      ) : hasEvents ? (
         renderAnalyticsBody(schema)
       ) : (
         <SetupMode project={project} />

@@ -21,10 +21,13 @@ vi.mock('@/data/workspace.atoms', async importOriginal => {
 vi.mock('./overview.atoms', async importOriginal => {
   const actual = await importOriginal<typeof import('./overview.atoms')>()
   const { atom } = await import('jotai')
+  const { create } = await import('@bufbuild/protobuf')
+  const { GetFilterSchemaResponseSchema } = await import('@/api/genproto/common/v1/filter_schema_pb')
   return {
     ...actual,
-    overviewSchemaAtom: atom({ events: [{ kind: 'page_view' }] }),
-    overviewSchemaLoadingAtom: atom(false),
+    overviewSchemaAtom: atom(
+      create(GetFilterSchemaResponseSchema, { events: [{ name: 'page_view', count: BigInt(1) }] }),
+    ),
     fetchOverviewSchemaAtom: atom(null, () => {}),
   }
 })

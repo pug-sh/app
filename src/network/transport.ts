@@ -165,6 +165,10 @@ export const transportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: apiBaseUrl,
     interceptors: [authBearer, protovalidate],
+    // Without this a hung request hangs until the tab closes, and a page whose only "loading"
+    // signal is absent data spins forever. A deadline turns it into a ConnectError the callers
+    // already handle. Generous, so a slow insights query over a wide range still lands.
+    defaultTimeoutMs: 60_000,
   })
 })
 
@@ -176,5 +180,6 @@ export const publicTransportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: apiBaseUrl,
     interceptors: [protovalidate],
+    defaultTimeoutMs: 60_000,
   })
 })
