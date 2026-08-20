@@ -88,11 +88,12 @@ describe('formatTooltipDate stays inside the ticker grammar', () => {
     ['MONTH', Granularity.MONTH],
   ] as const
 
-  it.each(
-    GRANULARITIES.flatMap(([name, g]) => FIXTURES.map(([when, at]) => [`${name} in ${when}`, g, at] as const)),
-  )('%s renders at most two ticker columns', (_name, granularity, at) => {
-    expect(formatTooltipDate(at, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
-  })
+  it.each(GRANULARITIES.flatMap(([name, g]) => FIXTURES.map(([when, at]) => [`${name} in ${when}`, g, at] as const)))(
+    '%s renders at most two ticker columns',
+    (_name, granularity, at) => {
+      expect(formatTooltipDate(at, granularity, 'Asia/Kolkata').split(' ').length).toBeLessThanOrEqual(2)
+    },
+  )
 
   it('keeps the year on a day label inside the ticker grammar', () => {
     const label = formatTooltipDate(new Date(Date.UTC(THIS_YEAR - 1, 11, 15)), Granularity.DAY, 'UTC')
