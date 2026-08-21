@@ -21,6 +21,10 @@ SDK language and framework marks live separately, under `public/sdk/`.
   > The Android robot is reproduced or modified from work created and shared by Google and used
   > according to terms described in the Creative Commons 3.0 Attribution License.
 
+- **ios.svg** — [devicon] 2.17.0 (`icons/apple/apple-original.svg`), **MIT**, © 2015 konpa. MIT
+  requires the notice be kept, hence this row. Modified: tinted `#007AFF`, reformatted. The grant is
+  devicon's own; the mark itself is Apple's, on the nominative-use footing above.
+
 - **linux.svg** — Tux, by **Larry Ewing, Simon Budig and Garrett LeSage**, via
   [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Tux.svg). Larry Ewing's terms grant
   use and modification provided he and The GIMP are acknowledged:
@@ -51,9 +55,16 @@ SDK language and framework marks live separately, under `public/sdk/`.
 
 ## Unverified
 
-- **edge.svg**, **firefox.svg**, **ios.svg** — predate this audit; provenance not established.
+Both predate this audit, and both are byte-identical to the files first committed — neither is
+devicon's, which is what the obvious guess would be: devicon ships no Edge icon at all, and its
+Firefox is the *retired* logo.
+
+- **edge.svg** — a 24-viewBox path with an injected `fill`, which is the [Simple Icons] treatment
+  every other entry here got, but the upstream entry is unconfirmed. Not upgraded on a resemblance.
+- **firefox.svg** — 512×512 with radial gradients, i.e. Mozilla's current mark. Source unconfirmed.
 
 [Simple Icons]: https://github.com/simple-icons/simple-icons
 [browser-logos]: https://github.com/alrra/browser-logos
+[devicon]: https://github.com/devicons/devicon
 [ddg]: https://github.com/duckduckgo/duckduckgo-privacy-extension
 [Google's brand guidelines]: https://developer.android.com/distribute/marketing-tools/brand-guidelines#brand-android
