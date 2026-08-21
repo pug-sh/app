@@ -241,7 +241,7 @@ const Profiles = () => {
     <Page title="Profiles" description="Browse profiles collected for this project">
       <div
         ref={filterRef}
-        className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50"
+        className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50"
       >
         <div className="flex items-center gap-2 flex-wrap">
           {propFilters.map((filter, idx) => (
