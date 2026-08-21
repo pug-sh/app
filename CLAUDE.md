@@ -204,14 +204,36 @@ declares in `navigator.userAgentData.brands` (`sdk-web/src/parsers.ts`), or a ua
 normalized by the backend (`internal/useragent/normalize.go`) — normally a clean name like
 `"Google Chrome"` or `"Brave"`, though the resolver keeps raw-UA tokens as a backstop. An unlisted browser falls through to `null`, not to Chrome. Anything
 unmatched renders `UnknownBrowserIcon`, a neutral globe — that branch is reached routinely and is
-the point. Only rows that *name* a browser get it; an OS-only row stays iconless.
+the point.
+
+**A named browser owns the icon slot outright, so the globe is not a last resort.** The single-icon
+labels (`PlatformLabel`, `PlatformStackLabel`) read the OS mark *only* when no browser is named —
+they used to chain `resolveBrowserIcon(browser) ?? resolveOsIcon(os)`, which quietly handed an
+unrecognised browser the OS glyph and never reached the globe, so `Epiphany · Linux` drew Tux. An
+OS-only row still gets its OS mark; what it never gets is the globe, which would claim a browser the
+row doesn't name. Guarded by `platform-label.test.tsx`.
 
 **Ordering in `resolveBrowserIcon` is load-bearing — do not alphabetise it.** The `edg`, `crios`,
-`fxios`, `opr` and `ucweb` tokens exist for a raw UA reaching us unnormalized, and every Chromium UA
-also contains `Safari` — so the `chrome` branch has to stay above `safari`, or every Chrome row
-draws the Safari mark. Clean family names cannot catch that reorder, which is why `brand-icons.test.ts`
-pins it with a raw UA string. `uc` is the same shape: two letters that sit inside `DuckDuckGo`, kept
-right by both the multi-token guard *and* DuckDuckGo's earlier branch.
+`fxios`, `opr`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and
+a raw UA names the derivative *alongside* Chrome and Safari — `Chrome/120 … Safari/537.36 OPR/106`.
+So **every branch that names a specific brand has to sit above the generic `chrome`/`safari` pair**,
+or its raw-UA token is unreachable: Opera, UC and Samsung Internet each drew Chrome, and Firefox iOS
+drew Safari, for exactly that reason. `chrome` above `safari` is the same rule, since every Chromium
+UA ends in `Safari`. Clean family names cannot catch a reorder, which is why `brand-icons.test.ts`
+pins the whole order with raw UA strings.
+
+Two tokens are deliberately narrower than the brand name, and both would misfire if widened:
+`samsung` is matched as `samsung internet`/`samsungbrowser`, because a plain Chrome UA carries the
+handset in the same string (`SAMSUNG SM-S918B`) and from above the `chrome` branch a bare `samsung`
+turns Chrome-on-a-Galaxy into Samsung Internet — pinned by its own test. `uc` is two letters that sit
+inside `DuckDuckGo`, kept right by both the multi-token guard *and* DuckDuckGo's earlier branch.
+
+Known gap, same shape but not an ordering fix: Yandex and Coc Coc match only their clean family
+names, so their raw UAs (`YaBrowser/…`, `coc_coc_browser/…`) still fall through to Chrome. Closing
+it means adding those tokens, not moving the branches.
+
+`android` stays **last** for the opposite reason — a Chrome-on-Android UA names the platform in the
+same string, so from higher up it would claim every Android row.
 
 Two substring traps, both guarded by tests in `brand-icons.test.ts`:
 

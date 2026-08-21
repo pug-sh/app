@@ -155,13 +155,13 @@ export const PlatformLabel = ({
   fallback = '—',
   iconSize = 14,
 }: PlatformLabelProps) => {
+  const browserName = browser?.trim()
   const primary = formatPlatformPrimary(browser, os)
-  // Single icon in the trigger — prefer the browser, fall back to the OS so an
-  // OS-only row still shows a glyph. The full browser + OS breakdown is in the tooltip.
-  const icon = resolveBrowserIcon(browser) ?? resolveOsIcon(os)
-  // Only a row that names a browser earns the neutral glyph; an OS-only row would be
-  // mislabelled by it.
-  const unknownGlyph = browser?.trim() ? <UnknownBrowserIcon size={iconSize} /> : null
+  // Single icon in the trigger, and a named browser owns that slot outright: unrecognised, it takes
+  // the neutral globe rather than borrowing the OS mark. The OS only leads when no browser is named
+  // — and then there is no globe, which would mislabel the row. Full breakdown is in the tooltip.
+  const icon = browserName ? resolveBrowserIcon(browser) : resolveOsIcon(os)
+  const unknownGlyph = browserName ? <UnknownBrowserIcon size={iconSize} /> : null
 
   if (!primary) {
     return typeof fallback === 'string' ? <span className={className}>{fallback}</span> : fallback
@@ -204,7 +204,7 @@ export const PlatformStackLabel = ({
   // text. When there's no browser, the OS leads line 1 and line 2 is dropped.
   const browserName = browser?.trim()
   const osName = os?.trim()
-  const icon = resolveBrowserIcon(browser) ?? resolveOsIcon(os)
+  const icon = browserName ? resolveBrowserIcon(browser) : resolveOsIcon(os)
   const unknownGlyph = browserName ? <UnknownBrowserIcon size={iconSize} /> : null
   const primary = browserName || osName || formatDeviceLabel(device, os)
   const secondary = browserName ? osName : undefined

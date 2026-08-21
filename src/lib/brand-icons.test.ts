@@ -100,6 +100,34 @@ describe('resolveBrowserIcon', () => {
     expect(resolveBrowserIcon(chromeUA)).toBe('chrome')
   })
 
+  // The other half of that rule, and the half that was wrong: a derivative's raw UA carries its own
+  // token *plus* Chrome's and Safari's, so 'opr'/'ucweb'/'samsungbrowser'/'fxios' only ever fire
+  // from above the generic pair. Below it they are dead, and each of these drew Chrome or Safari.
+  it('keeps every named brand above Chrome and Safari for a raw user-agent string', () => {
+    const uas = {
+      opera:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0',
+      uc: 'Mozilla/5.0 (Linux; U; Android 10; en-US) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/78.0.3904.108 UCBrowser/13.4.0.1306 Mobile Safari/537.36',
+      'samsung-internet':
+        'Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/23.0 Chrome/115.0.0.0 Mobile Safari/537.36',
+      firefox:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/117.0 Mobile/15E148 Safari/605.1.15',
+      edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+      vivaldi:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Vivaldi/6.5',
+    }
+
+    for (const [expected, ua] of Object.entries(uas)) expect(resolveBrowserIcon(ua)).toBe(expected)
+  })
+
+  // The reason the Samsung branch cannot match a bare 'samsung' from up there: a Chrome UA names the
+  // handset in the same string, so this is Chrome on a Galaxy, not Samsung Internet.
+  it('does not read a Samsung handset in a Chrome user-agent as Samsung Internet', () => {
+    const chromeOnGalaxy =
+      'Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36'
+    expect(resolveBrowserIcon(chromeOnGalaxy)).toBe('chrome')
+  })
+
   // $browser is whatever the browser declares in userAgentData.brands, so this branch is
   // reached routinely — it is what UnknownBrowserIcon renders for.
   it('returns null for a brand it does not know, and for blanks', () => {

@@ -24,24 +24,29 @@ export const resolveBrowserIcon = (browser?: string) => {
   if (!browser?.trim()) return null
 
   // $browser is normally a family name ("Google Chrome", "Brave"), so each Chromium derivative needs
-  // its own line — unlisted, it falls through to null, not to Chrome. Order is still load-bearing:
-  // the 'crios'/'edg'/'opr' tokens exist for a raw UA reaching us unnormalized, and every Chromium
-  // UA also contains "Safari", so chrome must stay above safari or Chrome rows draw the Safari mark.
+  // its own line — unlisted, it falls through to null, not to Chrome. Order is load-bearing, in one
+  // direction: a raw UA reaching us unnormalized carries the derivative's own token *alongside*
+  // Chrome's and Safari's, so every named brand has to sit above that generic pair or its
+  // 'edg'/'opr'/'ucweb'/'fxios'/'samsungbrowser' token is unreachable. chrome above safari is the
+  // same rule — every Chromium UA ends in "Safari".
   if (matchToken(browser, ['edge', 'edg'])) return 'edge'
   if (matchToken(browser, ['brave'])) return 'brave'
   if (matchToken(browser, ['vivaldi'])) return 'vivaldi'
   if (matchToken(browser, ['duckduckgo'])) return 'duckduckgo'
+  if (matchToken(browser, ['opera', 'opr'])) return 'opera'
+  // Never a bare 'uc' — two letters would match far too much, DuckDuckGo included.
+  if (matchToken(browser, ['uc browser', 'ucbrowser', 'ucweb'])) return 'uc'
+  // Never a bare 'samsung' either: a Chrome UA names the handset in the same string
+  // ("SAMSUNG SM-S918B"), so above the chrome branch that would draw Samsung Internet for Chrome.
+  if (matchToken(browser, ['samsung internet', 'samsung browser', 'samsungbrowser'])) return 'samsung-internet'
+  if (matchToken(browser, ['yandex'])) return 'yandex'
+  if (matchToken(browser, ['coc coc', 'coccoc'])) return 'coccoc'
+  if (matchToken(browser, ['firefox', 'fxios'])) return 'firefox'
   if (matchToken(browser, ['chromium'])) return 'chromium'
   if (matchToken(browser, ['chrome', 'crios'])) return 'chrome'
   if (matchToken(browser, ['safari'])) return 'safari'
-  if (matchToken(browser, ['firefox', 'fxios'])) return 'firefox'
-  if (matchToken(browser, ['opera', 'opr'])) return 'opera'
-  if (matchToken(browser, ['samsung'])) return 'samsung-internet'
-  // Never a bare 'uc' — two letters would match far too much, DuckDuckGo included.
-  if (matchToken(browser, ['uc browser', 'ucbrowser', 'ucweb'])) return 'uc'
-  if (matchToken(browser, ['yandex'])) return 'yandex'
-  if (matchToken(browser, ['coc coc', 'coccoc'])) return 'coccoc'
-  // The legacy stock browser, which ua-parser reports as plain "Android".
+  // The legacy stock browser, which ua-parser reports as plain "Android". Last of all: a
+  // Chrome-on-Android UA names the platform in the same string.
   if (matchToken(browser, ['android'])) return 'android'
 
   return null
