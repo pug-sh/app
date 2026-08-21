@@ -510,7 +510,7 @@ const Insights = () => {
     >
       <div
         className={cn(
-          '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
+          '-mx-page-gutter px-page-gutter space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
           stickyClassName,
         )}
       >

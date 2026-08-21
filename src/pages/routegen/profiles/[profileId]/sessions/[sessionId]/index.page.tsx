@@ -249,7 +249,7 @@ const SessionView = () => {
           <SessionSummary sessionId={sessionId ?? ''} distinctId={profileId ?? ''} events={events} />
 
           {/* Kind legend — sticky */}
-          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5">
+          <div className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter py-3 border-b border-border/50 flex flex-wrap gap-1.5">
             {uniqueKinds.map(kind => (
               <span key={kind} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getSeriesColor(kind).dot }} />

@@ -12,7 +12,7 @@ export const DemoBanner = () => {
   if (!isDemo) return null
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b border-border bg-muted/40 px-4 py-1.5 text-center text-xs">
+    <div className="flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b border-border bg-muted/40 px-page-gutter py-1.5 text-center text-xs">
       <span className="text-muted-foreground">You're exploring a live, read-only demo of Pug.</span>
       {/* Dropping the /p/:projectId URL is App's job, not this button's — see SessionUrlGuard. */}
       <button

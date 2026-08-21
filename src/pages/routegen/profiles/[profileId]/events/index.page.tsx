@@ -190,7 +190,7 @@ const UserActivity = () => {
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
+      <div className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
           {/* ml-4 keeps the icon off the picker chip, so it reads as an action on the feed. */}

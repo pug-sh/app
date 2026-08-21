@@ -14,7 +14,7 @@ const Page = ({
   children: ReactNode
 }) => {
   return (
-    <div className="flex-1 p-8">
+    <div className="flex-1 py-8 px-page-gutter">
       {header ? (
         <div className="mb-8">{header}</div>
       ) : (

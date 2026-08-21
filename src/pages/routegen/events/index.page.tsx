@@ -296,7 +296,7 @@ const EventExplorer = () => {
       {/* Filter bar */}
       <div
         ref={filterRef}
-        className="sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50"
+        className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter pt-4 pb-3 space-y-2 border-b border-border/50"
       >
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
