@@ -28,7 +28,7 @@ import type { BreakdownPanelConfig } from './traffic-breakdown-panel'
 const { TrafficBreakdownPanel } = await import('./traffic-breakdown-panel')
 
 // Two `property` tabs, which is the case that breaks: they share `source: 'property'`, so the rows
-// memo's deps can't tell them apart. No `valueKind`, to keep flag/devicon assets out of the render.
+// memo's deps can't tell them apart. No `valueKind`, to keep flag/brand icon assets out of the render.
 const CONFIG: BreakdownPanelConfig = {
   title: 'Sources',
   footer: 'by referrer / UTM',
