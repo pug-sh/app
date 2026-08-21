@@ -35,6 +35,8 @@ const LIVE_MAP_VIEWPORT_PADDING = {
   bottom: 16,
 }
 
+const MINIMIZED_ROWS = 3
+
 const LiveDot = () => (
   <span className="relative flex size-2">
     <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
@@ -158,9 +160,14 @@ const LiveVisitorsPage = () => {
   }, [selectedVisitor])
   const selectedLeft = selectedDistinctId !== null && !selectedVisitor
 
-  // Minimized, the panel is a one-row readout — whoever is pinned, else the most recent activity.
-  // Not the hovered marker: that already opens the popover, and following it would strobe.
-  const minimizedVisitor = selectedVisitor ?? filtered[0] ?? null
+  // Minimized, the panel peeks at the top of the feed — whoever is pinned, then the most recent
+  // activity. Not the hovered marker: that already opens the popover, and following it would strobe.
+  // The pin leads even when the filters exclude it, the same way the focus bar outlives the window.
+  const minimizedVisitors = useMemo(() => {
+    const rest = filtered.filter(v => v.distinctId !== selectedVisitor?.distinctId)
+    if (selectedVisitor) return [selectedVisitor, ...rest].slice(0, MINIMIZED_ROWS)
+    return rest.slice(0, MINIMIZED_ROWS)
+  }, [filtered, selectedVisitor])
 
   const select = (id: string) => setSelectedDistinctId(prev => (prev === id ? null : id))
 
@@ -276,19 +283,22 @@ const LiveVisitorsPage = () => {
               </div>
             </div>
 
-            {/* Journey withheld on purpose: a minimized panel that unfolds when its one visitor
+            {/* Journey withheld on purpose: a minimized panel that unfolds when one of its rows
                   happens to be the pinned one isn't minimized. */}
-            {collapsed && minimizedVisitor && (
-              <ul className="px-2 pb-2">
-                <VisitorRow
-                  visitor={minimizedVisitor}
-                  journey={EMPTY_JOURNEY}
-                  stat={stats.get(minimizedVisitor.distinctId)}
-                  selected={minimizedVisitor.distinctId === selectedDistinctId}
-                  highlighted={minimizedVisitor.distinctId === mapHovered}
-                  onClick={() => select(minimizedVisitor.distinctId)}
-                  onHover={setRowHovered}
-                />
+            {collapsed && minimizedVisitors.length > 0 && (
+              <ul className="space-y-0.5 px-2 pb-2">
+                {minimizedVisitors.map(visitor => (
+                  <VisitorRow
+                    key={visitor.distinctId}
+                    visitor={visitor}
+                    journey={EMPTY_JOURNEY}
+                    stat={stats.get(visitor.distinctId)}
+                    selected={visitor.distinctId === selectedDistinctId}
+                    highlighted={visitor.distinctId === mapHovered}
+                    onClick={() => select(visitor.distinctId)}
+                    onHover={setRowHovered}
+                  />
+                ))}
               </ul>
             )}
 
