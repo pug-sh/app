@@ -1,14 +1,14 @@
 import { ArrowLeftRight, Loader2 } from 'lucide-react'
 import { type ReactNode, useMemo, useState } from 'react'
 import { AggregationType, type Granularity, type SessionMetric } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
 import { CountryFlag } from '@/components/country-flag'
 import type { TimeRange } from '@/components/date-range-picker'
-import { Devicon } from '@/components/devicon'
 import { DomainFavicon } from '@/components/domain-favicon'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { type DeviconName, resolveBrowserDevicon, resolveDeviceModelDevicon, resolveOsDevicon } from '@/lib/devicon-map'
+import { BRAND_ICON_RESOLVERS, type BrandValueKind } from '@/lib/brand-icons'
 import { formatCountryName } from '@/lib/location'
 import { cn } from '@/lib/utils'
 import { OverviewTileShell } from './overview-tile-shell'
@@ -27,14 +27,6 @@ import { utmSourceDomain } from './utm-source-domains'
 
 const SESSION_BREAKDOWN_LIMIT = 50
 
-// $device ranks raw UA models ("Pixel 8") with no OS column to lean on, so it classifies the model
-// string directly rather than going through resolveDeviceDevicon.
-const DEVICON_RESOLVERS: Record<'browser' | 'os' | 'device', (value?: string) => DeviconName | null> = {
-  browser: resolveBrowserDevicon,
-  os: resolveOsDevicon,
-  device: resolveDeviceModelDevicon,
-}
-
 const OS_LABELS: Record<string, string> = {
   ios: 'iOS',
   android: 'Android',
@@ -50,7 +42,7 @@ export type BreakdownTab = { id: string; label: string } & (
       source: 'property'
       property: string
       metric: AggregationType
-      valueKind?: 'domain' | 'source' | 'country' | 'browser' | 'os' | 'device'
+      valueKind?: 'domain' | 'source' | 'country' | BrandValueKind
     }
   | { source: 'eventKind' }
   | { source: 'session'; metric: SessionMetric.ENTRY | SessionMetric.EXIT; property: string }
@@ -239,11 +231,13 @@ export const TrafficBreakdownPanel = ({
     )
     formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
   } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
-    const resolve = DEVICON_RESOLVERS[valueKind]
-    renderLeading = row => {
-      const icon = row.muted ? null : resolve(row.label)
-      return <GlyphSlot>{icon ? <Devicon name={icon} size={16} /> : null}</GlyphSlot>
-    }
+    const resolve = BRAND_ICON_RESOLVERS[valueKind]
+    const unknownGlyph = valueKind === 'browser' ? <UnknownBrowserIcon size={16} /> : null
+    renderLeading = row => (
+      <GlyphSlot>
+        {row.muted ? null : <BrandIcon name={resolve(row.label)} size={16} unknownGlyph={unknownGlyph} />}
+      </GlyphSlot>
+    )
     // Ingest only fills an auto-property that's absent, so the mobile SDKs' own lowercase $os
     // ("ios", "android") reaches us unnormalized while the UA parser's is title-cased.
     if (valueKind === 'os') formatLabel = row => (row.muted ? row.label : (OS_LABELS[row.label] ?? row.label))

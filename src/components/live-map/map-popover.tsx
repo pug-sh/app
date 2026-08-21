@@ -15,7 +15,7 @@ import {
 import type { ClusterMapMarker, VisitorMapMarker } from '@/components/live-map/markers'
 import { BrowserLabel, DeviceLabel, OsLabel } from '@/components/platform-label'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { formatDeviceLabel, formatOsLabel } from '@/lib/devicon-map'
+import { formatDeviceLabel, formatOsLabel } from '@/lib/brand-icons'
 import { getSeriesColor } from '@/lib/event-colors'
 import { formatLocality } from '@/lib/location'
 import { formatClock, tsToDate } from '@/lib/timestamp'

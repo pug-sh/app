@@ -3,9 +3,9 @@ import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
 import { LocationLabel } from '@/components/country-flag'
 import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
-import { Devicon } from '@/components/devicon'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { PlatformTooltip } from '@/components/platform-label'
@@ -14,7 +14,7 @@ import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { resolveBrowserDevicon, resolveDeviceDevicon, resolveOsDevicon } from '@/lib/devicon-map'
+import { resolveBrowserIcon, resolveDeviceIcon, resolveOsIcon } from '@/lib/brand-icons'
 import { getSeriesColor } from '@/lib/event-colors'
 import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
@@ -62,9 +62,9 @@ const SessionSummary = ({
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
   const exitEvent = events.length > 0 ? events[0].kind : null
-  const browserIcon = resolveBrowserDevicon(browser)
-  const osIcon = resolveOsDevicon(os)
-  const deviceIcon = !browser && !os ? resolveDeviceDevicon(device, os) : null
+  const browserIcon = resolveBrowserIcon(browser)
+  const osIcon = resolveOsIcon(os)
+  const deviceIcon = !browser && !os ? resolveDeviceIcon(device, os) : null
 
   return (
     <div className="mb-5 pb-4 border-b border-border space-y-4">
@@ -134,9 +134,9 @@ const SessionSummary = ({
             contentClassName={tooltipPanelContent}
             className="min-w-0 items-center gap-1.5"
           >
-            {browserIcon && <Devicon name={browserIcon} size={14} />}
-            {osIcon && <Devicon name={osIcon} size={14} />}
-            {deviceIcon && <Devicon name={deviceIcon} size={14} />}
+            <BrandIcon name={browserIcon} size={14} unknownGlyph={browser ? <UnknownBrowserIcon size={14} /> : null} />
+            <BrandIcon name={osIcon} size={14} />
+            <BrandIcon name={deviceIcon} size={14} />
             {[
               browser && browserVersion ? `${browser} ${browserVersion}` : browser,
               os && osVersion ? `${os} ${osVersion}` : os,
