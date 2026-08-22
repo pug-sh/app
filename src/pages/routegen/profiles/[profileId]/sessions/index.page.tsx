@@ -11,7 +11,7 @@ import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { platformOf } from '@/lib/auto-properties'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { structGet } from '@/lib/struct'
@@ -25,6 +25,7 @@ type SessionRow = {
   events: number
   browser?: string
   os?: string
+  device?: string
   platform?: string
 }
 
@@ -42,9 +43,11 @@ const groupSessions = (events: ActivityEvent[]) => {
     const startedAt = tsToDate(evs[evs.length - 1].occurTime)
     const endedAt = tsToDate(evs[0].occurTime)
     if (!startedAt || !endedAt) continue
-    const browser = structGet(evs[evs.length - 1].autoProperties, '$browser')
-    const os = structGet(evs[evs.length - 1].autoProperties, '$os')
-    const platform = platformOf(evs[evs.length - 1].autoProperties)
+    const auto = evs[evs.length - 1].autoProperties
+    const browser = structGet(auto, '$browser')
+    const os = structGet(auto, '$os')
+    const device = deviceModelOf(auto)
+    const platform = platformOf(auto)
     rows.push({
       sessionId,
       startedAt,
@@ -52,6 +55,7 @@ const groupSessions = (events: ActivityEvent[]) => {
       events: evs.length,
       browser,
       os,
+      device,
       platform,
     })
   }
@@ -180,7 +184,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
             </td>
             <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">{r.events}</td>
             <td className="py-2.5 pr-4 text-xs text-muted-foreground">
-              <PlatformLabel browser={r.browser} os={r.os} platform={r.platform} iconSize={14} />
+              <PlatformLabel browser={r.browser} os={r.os} device={r.device} platform={r.platform} iconSize={14} />
             </td>
           </tr>
         ))}
