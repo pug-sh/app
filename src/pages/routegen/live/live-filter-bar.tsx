@@ -1,6 +1,6 @@
-import { Check, Globe, ListFilter, Monitor, Search, Smartphone, X } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
-import type { CountryCount, DeviceBreakdown, KindCount } from '@/components/live-map/live-visitors'
+import { Check, Globe, ListFilter, type LucideIcon, Monitor, Search, Smartphone, Tv, X } from 'lucide-react'
+import { Fragment, type ReactNode, useState } from 'react'
+import type { CountryCount, DeviceBreakdown, KindCount, VisitorDeviceType } from '@/components/live-map/live-visitors'
 import { formatCountryName, LIVE_WINDOW_OPTIONS } from '@/components/live-map/live-visitors'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -8,7 +8,9 @@ import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-export type DeviceFilter = 'all' | 'desktop' | 'mobile'
+// Derived, never re-spelled: the two unions are compared directly in the live page's filter, so a
+// hand-written copy that drifted from VisitorDeviceType would silently match nothing.
+export type DeviceFilter = 'all' | VisitorDeviceType
 
 type Props = {
   windowMs: number
@@ -168,6 +170,18 @@ const CountryFilter = ({
   )
 }
 
+// Declaration order is display order. The Record is the third place a new VisitorDeviceType has to
+// be named — with deviceBreakdown and deviceTypeLabel — and the segment then renders on its own.
+const DEVICE_SEGMENTS = {
+  desktop: { icon: Monitor, always: true },
+  mobile: { icon: Smartphone, always: true },
+  // Only the native SDKs can identify a TV, so the segment stays out of a web-only project's bar.
+  // Kept while it's the active filter, or clearing it needs the empty state's Clear link.
+  tv: { icon: Tv, always: false },
+} as const satisfies Record<VisitorDeviceType, { icon: LucideIcon; always: boolean }>
+
+const DEVICE_ORDER = Object.keys(DEVICE_SEGMENTS) as VisitorDeviceType[]
+
 const DeviceToggle = ({
   device,
   onChange,
@@ -193,22 +207,21 @@ const DeviceToggle = ({
   return (
     <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
       {segment('all', 'All')}
-      <span className="h-full w-px bg-border" />
-      {segment(
-        'desktop',
-        <>
-          <Monitor className="size-3" />
-          {devices.desktop}
-        </>,
-      )}
-      <span className="h-full w-px bg-border" />
-      {segment(
-        'mobile',
-        <>
-          <Smartphone className="size-3" />
-          {devices.mobile}
-        </>,
-      )}
+      {DEVICE_ORDER.filter(type => DEVICE_SEGMENTS[type].always || devices[type] > 0 || device === type).map(type => {
+        const Icon = DEVICE_SEGMENTS[type].icon
+        return (
+          <Fragment key={type}>
+            <span className="h-full w-px bg-border" />
+            {segment(
+              type,
+              <>
+                <Icon className="size-3" />
+                {devices[type]}
+              </>,
+            )}
+          </Fragment>
+        )
+      })}
     </span>
   )
 }

@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { resolveBrowserIcon, resolveDeviceIcon, resolveDeviceModelIcon, resolveOsIcon } from './brand-icons'
+import {
+  formatBrowserLabel,
+  formatOsLabel,
+  formatOsName,
+  resolveBrowserIcon,
+  resolveDeviceIcon,
+  resolveDeviceModelIcon,
+  resolveOsIcon,
+} from './brand-icons'
 
 describe('resolveDeviceModelIcon', () => {
   it('maps Apple device families to the Apple glyphs', () => {
@@ -191,5 +199,40 @@ describe('resolveDeviceIcon', () => {
     expect(resolveDeviceIcon('Nokia 8110', 'KaiOS')).toBeNull()
     expect(resolveDeviceIcon(undefined, 'KaiOS')).toBeNull()
     expect(resolveDeviceIcon('Mobile', 'Tizen')).toBeNull()
+  })
+})
+
+describe('formatBrowserLabel', () => {
+  // browserForPlatform drops a native row's $browser, but the backend still parsed a version off the
+  // HTTP client's UA — joined on its own that rendered a bare "3" beside the unknown-browser globe.
+  it('is empty without a name, rather than a bare version', () => {
+    expect(formatBrowserLabel(undefined, '3')).toBe('')
+    expect(formatBrowserLabel('   ', '3')).toBe('')
+  })
+
+  it('still joins a named browser with its version', () => {
+    expect(formatBrowserLabel('Google Chrome', '124')).toBe('Google Chrome 124')
+    expect(formatBrowserLabel('Brave')).toBe('Brave')
+  })
+})
+
+describe('formatOsName', () => {
+  it('canonicalises the lowercase names the native SDKs report', () => {
+    expect(formatOsName('android')).toBe('Android')
+    expect(formatOsName('macos')).toBe('macOS')
+    expect(formatOsName('ios')).toBe('iOS')
+  })
+
+  it('passes an already-canonical or unmapped name through', () => {
+    expect(formatOsName('macOS')).toBe('macOS')
+    expect(formatOsName('KaiOS')).toBe('KaiOS')
+  })
+
+  // $os is whatever the SDK sent, so a bare index reached Object.prototype and rendered the
+  // function source — "function toString() { [native code] } 14" in the OS slot.
+  it('does not index into Object.prototype', () => {
+    expect(formatOsName('toString')).toBe('toString')
+    expect(formatOsName('constructor')).toBe('constructor')
+    expect(formatOsLabel('valueOf', '14')).toBe('valueOf 14')
   })
 })

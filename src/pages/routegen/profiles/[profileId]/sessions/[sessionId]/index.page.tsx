@@ -14,7 +14,15 @@ import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { resolveBrowserIcon, resolveDeviceIcon, resolveOsIcon } from '@/lib/brand-icons'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import {
+  browserForPlatform,
+  formatBrowserLabel,
+  formatOsLabel,
+  resolveBrowserIcon,
+  resolveDeviceIcon,
+  resolveOsIcon,
+} from '@/lib/brand-icons'
 import { getSeriesColor } from '@/lib/event-colors'
 import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
@@ -50,11 +58,14 @@ const SessionSummary = ({
   const uniqueKinds = new Set(events.map(e => e.kind)).size
 
   const firstAuto = events.length > 0 ? events[events.length - 1].autoProperties : undefined
-  const browser = structGet(firstAuto, '$browser')
+  const platform = platformOf(firstAuto)
+  // Suppressed at the read, so every use below — the render gate, the icon, the label — is already
+  // right. On a native app $browser is the HTTP client ("Dart/3.x"), not a browser the session had.
+  const browser = browserForPlatform(structGet(firstAuto, '$browser'), platform)
   const browserVersion = structGet(firstAuto, '$browserVersion')
   const os = structGet(firstAuto, '$os')
   const osVersion = structGet(firstAuto, '$osVersion')
-  const device = structGet(firstAuto, '$device')
+  const device = deviceModelOf(firstAuto)
   const country = structGet(firstAuto, '$country')
   const city = structGet(firstAuto, '$city')
   const region = structGet(firstAuto, '$region')
@@ -129,6 +140,7 @@ const SessionSummary = ({
                 os={os}
                 osVersion={osVersion}
                 device={device}
+                platform={platform}
               />
             }
             contentClassName={tooltipPanelContent}
@@ -137,11 +149,7 @@ const SessionSummary = ({
             <BrandIcon name={browserIcon} size={14} unknownGlyph={browser ? <UnknownBrowserIcon size={14} /> : null} />
             <BrandIcon name={osIcon} size={14} />
             <BrandIcon name={deviceIcon} size={14} />
-            {[
-              browser && browserVersion ? `${browser} ${browserVersion}` : browser,
-              os && osVersion ? `${os} ${osVersion}` : os,
-              device,
-            ]
+            {[formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion), device]
               .filter(Boolean)
               .join(' / ')}
           </DetailTooltip>

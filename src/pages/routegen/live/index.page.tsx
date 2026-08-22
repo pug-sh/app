@@ -11,8 +11,8 @@ import {
   deviceBreakdown,
   EMPTY_JOURNEY,
   eventIdentity,
-  isMobileVisitor,
   LIVE_WINDOW_OPTIONS,
+  resolveDeviceType,
   sessionStats,
 } from '@/components/live-map/live-visitors'
 import LiveVisitorMap from '@/components/live-map/visitor-map'
@@ -20,6 +20,7 @@ import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
+import { deviceModelOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet } from '@/lib/struct'
@@ -60,6 +61,7 @@ const searchHaystack = (visitor: ActivityEvent) => {
     structGet(auto, '$city'),
     structGet(auto, '$region'),
     structGet(auto, '$country'),
+    deviceModelOf(auto),
   ]
     .filter(Boolean)
     .join(' ')
@@ -106,9 +108,7 @@ const LiveVisitorsPage = () => {
     return allVisitors.filter(v => {
       if (selectedKinds.size > 0 && !selectedKinds.has(v.kind || 'event')) return false
       const auto = v.autoProperties
-      const mobile = isMobileVisitor(auto)
-      if (device === 'mobile' && !mobile) return false
-      if (device === 'desktop' && mobile) return false
+      if (device !== 'all' && resolveDeviceType(auto) !== device) return false
       if (country && structGet(auto, '$country')?.toUpperCase() !== country.toUpperCase()) return false
       if (query && !haystacks.get(v.distinctId)?.includes(query)) return false
       return true

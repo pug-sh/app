@@ -82,6 +82,7 @@ export const InsightTileView = ({
   kpiMetadata,
   lightMetrics = false,
   hideSummary = false,
+  seriesLabel,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -102,6 +103,11 @@ export const InsightTileView = ({
   lightMetrics?: boolean
   // Suppress the chart's value·avg·peak summary row — folded into the hideLegend gate that renders it.
   hideSummary?: boolean
+  // Name a single-series trend after what it measures. The traffic chart scopes every stat to the
+  // navigation event, so the backend labels all six series `page_view` — meaningless in a tooltip
+  // under a "Visitors" / "Bounce rate" title. Colors still key off the event kind, so the hue holds
+  // across a stat switch.
+  seriesLabel?: string
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -173,8 +179,10 @@ export const InsightTileView = ({
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
     }
 
-    return trendSeriesNames(trendSeries)
-  }, [result.case, retentionCohorts, trendSeries])
+    const names = trendSeriesNames(trendSeries)
+    if (seriesLabel && names.length === 1) return [seriesLabel]
+    return names
+  }, [result.case, retentionCohorts, trendSeries, seriesLabel])
   const seriesColors = useMemo(() => {
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
     // so color them by index for distinctness; coloring by the "event · value"

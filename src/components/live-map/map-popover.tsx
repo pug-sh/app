@@ -150,7 +150,13 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/40 px-3 py-2.5 text-foreground">
-        <BrowserLabel browser={marker.browser} browserVersion={marker.browserVersion} iconSize={14} fallback="" />
+        <BrowserLabel
+          browser={marker.browser}
+          browserVersion={marker.browserVersion}
+          platform={marker.platform}
+          iconSize={14}
+          fallback=""
+        />
         <OsLabel os={marker.os} osVersion={marker.osVersion} iconSize={14} fallback="" />
         <DeviceCell device={marker.device} os={marker.os} osVersion={marker.osVersion} />
       </div>

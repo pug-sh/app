@@ -3,15 +3,17 @@ import { COUNTRY_CENTROIDS } from '@/components/country-centroids'
 import {
   countKinds,
   describeEvent,
+  deviceTypeLabel,
   type EventIdentity,
   eventAvatarUrl,
   eventIdentity,
   formatPagePath,
-  isMobileVisitor,
   type KindCount,
   referrerDomain,
+  resolveDeviceType,
 } from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { structGet } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 
@@ -31,6 +33,8 @@ export type VisitorMapMarker = {
   os?: string
   osVersion?: string
   device: string
+  // 'web' or the native OS, straight off the SDK — the popover drops $browser when it isn't web.
+  platform?: string
   referrer?: string
   utmSource?: string
   timezone?: string
@@ -176,7 +180,8 @@ const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): Visi
     browserVersion: structGet(auto, '$browserVersion'),
     os: structGet(auto, '$os'),
     osVersion: structGet(auto, '$osVersion'),
-    device: structGet(auto, '$device') || (isMobileVisitor(auto) ? 'Mobile' : 'Desktop'),
+    device: deviceModelOf(auto) || deviceTypeLabel[resolveDeviceType(auto)],
+    platform: platformOf(auto),
     referrer: referrerDomain(auto),
     utmSource: structGet(auto, '$utmSource'),
     timezone: structGet(auto, '$timezone'),
