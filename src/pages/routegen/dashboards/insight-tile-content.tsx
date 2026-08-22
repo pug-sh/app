@@ -61,6 +61,7 @@ export const DashboardInsightContent = ({
   kpiMetadata,
   lightMetrics = false,
   hideSummary = false,
+  seriesLabel,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -79,6 +80,7 @@ export const DashboardInsightContent = ({
   lightMetrics?: boolean
   // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
   hideSummary?: boolean
+  seriesLabel?: string
 }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -191,6 +193,7 @@ export const DashboardInsightContent = ({
       kpiMetadata={kpiMetadata}
       lightMetrics={lightMetrics}
       hideSummary={hideSummary}
+      seriesLabel={seriesLabel}
     />
   )
 }

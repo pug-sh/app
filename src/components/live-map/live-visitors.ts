@@ -1,5 +1,6 @@
 import type { JsonObject } from '@bufbuild/protobuf'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { platformOf } from '@/lib/auto-properties'
 import { resolveAvatarUrl } from '@/lib/avatar-traits'
 import { resolveTraitEmail, resolveTraitName } from '@/lib/identity-traits'
 import { structFirst, structGet } from '@/lib/struct'
@@ -60,10 +61,12 @@ export type CountryCount = {
   count: number
 }
 
-export type DeviceBreakdown = {
-  desktop: number
-  mobile: number
-}
+export type VisitorDeviceType = 'mobile' | 'desktop' | 'tv'
+
+// Record, not three named fields: a new device type is then a compile error everywhere the set is
+// enumerated — this map, deviceTypeLabel, and the filter bar's segments — rather than a bucket that
+// silently counts nothing.
+export type DeviceBreakdown = Record<VisitorDeviceType, number>
 
 export type KindCount = {
   name: string
@@ -95,13 +98,9 @@ export const countryBreakdown = (visitors: ActivityEvent[]): CountryCount[] => {
 }
 
 export const deviceBreakdown = (visitors: ActivityEvent[]): DeviceBreakdown => {
-  let mobile = 0
-  let desktop = 0
-  for (const visitor of visitors) {
-    if (structGet(visitor.autoProperties, '$mobile') === 'true') mobile++
-    else desktop++
-  }
-  return { desktop, mobile }
+  const counts: DeviceBreakdown = { desktop: 0, mobile: 0, tv: 0 }
+  for (const visitor of visitors) counts[resolveDeviceType(visitor.autoProperties)]++
+  return counts
 }
 
 export const formatPagePath = (url: string | undefined): string => {
@@ -117,7 +116,27 @@ export const formatPagePath = (url: string | undefined): string => {
   return url
 }
 
-export const isMobileVisitor = (auto: JsonObject | undefined): boolean => structGet(auto, '$mobile') === 'true'
+// Mobile only: the native desktop platforms already land in desktop by fallback, and adding them
+// here would claim the bucket for 'server' and 'fuchsia' too, which name no device class.
+const MOBILE_PLATFORMS = new Set(['android', 'ios'])
+
+// Three rungs, because no single key covers the family. $deviceType is the Flutter SDK's own answer
+// and the only TV signal anywhere in the stack (Android leanback). $platform catches the React Native
+// SDK, which sends no $deviceType at all. $mobile is last and web-only — navigator.userAgentData, or
+// the backend's UA parse, which on a native app reads the HTTP client and always says false, so
+// reaching it from a native event is what put every Flutter and RN phone in desktop.
+export const resolveDeviceType = (auto: JsonObject | undefined): VisitorDeviceType => {
+  const declared = structGet(auto, '$deviceType')?.trim().toLowerCase()
+  if (declared === 'mobile' || declared === 'desktop' || declared === 'tv') return declared
+  if (MOBILE_PLATFORMS.has(platformOf(auto)?.trim().toLowerCase() ?? '')) return 'mobile'
+  return structGet(auto, '$mobile') === 'true' ? 'mobile' : 'desktop'
+}
+
+export const deviceTypeLabel: Record<VisitorDeviceType, string> = {
+  mobile: 'Mobile',
+  desktop: 'Desktop',
+  tv: 'TV',
+}
 
 // Server-derived, already www-stripped, and blanked on self-referral — don't fall back to parsing the
 // raw `$referrer`, which would re-expose the referrers the backend deliberately counts as Direct.

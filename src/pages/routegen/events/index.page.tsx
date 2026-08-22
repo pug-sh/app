@@ -26,6 +26,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
 import { defaultRange, refreshTimeRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
@@ -86,6 +87,8 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const osVersion = structGet(event.autoProperties, '$osVersion')
   const browser = structGet(event.autoProperties, '$browser')
   const browserVersion = structGet(event.autoProperties, '$browserVersion')
+  const device = deviceModelOf(event.autoProperties)
+  const platform = platformOf(event.autoProperties)
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
   const region = structGet(event.autoProperties, '$region')
@@ -126,6 +129,8 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
             browserVersion={browserVersion}
             os={os}
             osVersion={osVersion}
+            device={device}
+            platform={platform}
             iconSize={14}
           />
         </td>

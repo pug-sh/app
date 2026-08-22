@@ -130,12 +130,50 @@ export const BRAND_ICON_RESOLVERS = {
 
 export type BrandValueKind = keyof typeof BRAND_ICON_RESOLVERS
 
+// Empty without a name, never a bare version: a native row's $browser is suppressed but the HTTP
+// client's $browserVersion survives, and joining that alone rendered "3" under the unknown glyph.
 export const formatBrowserLabel = (browser?: string, browserVersion?: string) =>
-  [browser, browserVersion].filter(Boolean).join(' ')
+  browser?.trim() ? [browser, browserVersion].filter(Boolean).join(' ') : ''
 
-export const formatOsLabel = (os?: string, osVersion?: string) => [os, osVersion].filter(Boolean).join(' ')
+// The native SDKs report Dart's `Platform.operatingSystem`, which is lowercase, while the web SDK and
+// the backend's UA parse both send the canonical casing — so an app row read "android 14" next to a
+// browser row's "macOS 15". Exact-match only, so an already-canonical name passes through untouched.
+const OS_DISPLAY_NAMES: Record<string, string> = {
+  android: 'Android',
+  fuchsia: 'Fuchsia',
+  ios: 'iOS',
+  linux: 'Linux',
+  macos: 'macOS',
+  windows: 'Windows',
+}
 
-export const formatPlatformPrimary = (browser?: string, os?: string) => [browser, os].filter(Boolean).join(' · ')
+export const formatOsName = (os?: string) => {
+  const name = os?.trim()
+  if (!name) return name
+  // hasOwn, not a bare index: $os is whatever the SDK sent, so "toString" would otherwise reach
+  // Object.prototype and render the function source next to the version.
+  return Object.hasOwn(OS_DISPLAY_NAMES, name) ? OS_DISPLAY_NAMES[name] : name
+}
+
+// $platform is the SDK's own target, not a parsed UA: 'web' for the browser SDK, otherwise the native
+// OS. Absent means an older event or a surface that doesn't carry it — treated as web, so nothing
+// that reads correctly today changes.
+const isNativePlatform = (platform?: string) => {
+  const name = platform?.trim().toLowerCase()
+  return !!name && name !== 'web'
+}
+
+// On a native app the User-Agent belongs to the HTTP client ("Dart/3.x (dart:io)"), so $browser is
+// noise — the same reason the overview's app Devices panel drops it. Suppressed rather than shown
+// unrecognised, which drew the neutral globe and claimed a browser the row doesn't have.
+export const browserForPlatform = (browser?: string, platform?: string) =>
+  isNativePlatform(platform) ? undefined : browser
+
+export const formatOsLabel = (os?: string, osVersion?: string) =>
+  [formatOsName(os), osVersion].filter(Boolean).join(' ')
+
+export const formatPlatformPrimary = (browser?: string, os?: string) =>
+  [browser, formatOsName(os)].filter(Boolean).join(' · ')
 
 export const formatDeviceLabel = (device?: string, os?: string) => {
   const isMobile = isMobileDevice(device, os)

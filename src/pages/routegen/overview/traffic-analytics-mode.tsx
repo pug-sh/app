@@ -122,6 +122,8 @@ const TrafficAnalyticsView = ({
     [nav, selectedStat, filters],
   )
 
+  const statLabel = getTrafficStat(selectedStat).label[nav.kind]
+
   const panelProps = { nav, range, granularity, filters, onAddFilter: addFilter }
 
   return (
@@ -145,7 +147,7 @@ const TrafficAnalyticsView = ({
         </div>
 
         <OverviewTileShell
-          title={getTrafficStat(selectedStat).label[nav.kind]}
+          title={statLabel}
           footer={`via ${nav.name}`}
           contentClassName="flex flex-col"
           className="h-[320px]"
@@ -162,6 +164,7 @@ const TrafficAnalyticsView = ({
               compact
               lightMetrics
               hideSummary
+              seriesLabel={statLabel}
             />
           </div>
         </OverviewTileShell>

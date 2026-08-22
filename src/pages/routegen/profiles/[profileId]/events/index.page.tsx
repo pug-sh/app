@@ -21,6 +21,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { platformOf } from '@/lib/auto-properties'
 import { refreshTimeRange } from '@/lib/date-presets'
 import { useRouteParams } from '@/lib/route-params'
 import { rpcErrorMessage } from '@/lib/rpc-error'
@@ -50,6 +51,7 @@ type SessionLane = {
   column: number
   browser?: string
   os?: string
+  platform?: string
 }
 
 const LANE_W = 80
@@ -73,7 +75,8 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
     const auto = events[range.first].autoProperties
     const browser = structGet(auto, '$browser')
     const os = structGet(auto, '$os')
-    lanes.push({ sessionId: sid, firstIdx: range.first, lastIdx: range.last, column: col, browser, os })
+    const platform = platformOf(auto)
+    lanes.push({ sessionId: sid, firstIdx: range.first, lastIdx: range.last, column: col, browser, os, platform })
   }
   return lanes
 }
@@ -310,6 +313,7 @@ const UserActivity = () => {
                                       <PlatformLabel
                                         browser={lane.browser}
                                         os={lane.os}
+                                        platform={lane.platform}
                                         iconSize={12}
                                         className="text-xs text-faint"
                                       />
