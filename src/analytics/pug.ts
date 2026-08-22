@@ -50,11 +50,15 @@ export const initAnalytics = () => {
     // marketing page — the funnel is the reason both surfaces are instrumented at all.
     trackingConsent: 'granted',
     beforeSend: maskEventUrls,
+    // An allowlist, not a denylist: every key omitted here is off, so this is the SDK's default set
+    // minus `scroll`. `{ scroll: false }` would not do it — it is a compile error, and under an
+    // allowlist it would mean "capture nothing".
+    autoCapture: { pageView: true, click: true, form: true, rageClick: true, deadClick: true },
   })
 
-  // autoCapture is left at its default (everything on) deliberately, clicks included. What keeps
-  // that safe is the `data-pug-no-capture` marker on <main> in App.tsx: click and dead-click
-  // capture send the clicked element's innerText, and in this app that text is customer data.
+  // Clicks stay on deliberately. What keeps that safe is the `data-pug-no-capture` marker on <main>
+  // in App.tsx: click and dead-click capture send the clicked element's innerText, and in this app
+  // that text is customer data.
   // The marker blanks text under the content region while still counting the interaction, so app
   // chrome (sidebar, header) keeps meaningful labels and the data surfaces send structure only.
   // Buttons inside <main> are covered by explicit trackFeature() calls instead — see below.
