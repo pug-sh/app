@@ -58,7 +58,7 @@
     "react-dom": "^19.2.8",
     "react-grid-layout": "^2.2.3",
     "react-hook-form": "^7.72.1",
-    "shadcn": "^4.1.0",
+    "shadcn": "^4.18.0",
     "snarkdown": "^2.0.0",
     "sonner": "^2.0.7",
     "sugar-high": "^2.0.1",
