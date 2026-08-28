@@ -21,6 +21,7 @@ import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-quer
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { mapSpecIncompleteReason } from '../insights/map'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
@@ -28,11 +29,11 @@ import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
 import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
 
-// User-flow, top-k and session specs all carry no events: user-flow runs once its flow
-// config is valid, top-k as soon as the ranking config is complete, and session
-// (web-analytics) specs as soon as `spec.session` is present — the event-count gate would
-// never let them run. Everything else needs at least one event and (for trends) a
-// resolved numeric-aggregation property.
+// User-flow, top-k, map and session specs all carry no events: user-flow runs once its flow
+// config is valid, top-k as soon as the ranking config is complete, map as soon as its measure
+// resolves, and session (traffic-analytics) specs as soon as `spec.session` is present — the
+// event-count gate would never let them run. Everything else needs at least one event and (for
+// trends) a resolved numeric-aggregation property.
 const queryReady = (query: QueryRequest) => {
   const spec = query.spec
   if (spec?.insightType === InsightType.USER_FLOW) {
@@ -40,6 +41,9 @@ const queryReady = (query: QueryRequest) => {
   }
   if (spec?.insightType === InsightType.TOP_K) {
     return !topKSpecIncompleteReason(spec)
+  }
+  if (spec?.insightType === InsightType.MAP) {
+    return !mapSpecIncompleteReason(spec)
   }
   return (!!spec?.session || (spec?.events.length ?? 0) > 0) && !specHasIncompleteNumericAggregation(spec)
 }
@@ -57,6 +61,7 @@ export const DashboardInsightContent = ({
   kpiMetadata,
   lightMetrics = false,
   hideSummary = false,
+  seriesLabel,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -68,13 +73,14 @@ export const DashboardInsightContent = ({
   granularityOverride?: Granularity
   queryKeyPrefix: string
   // Run the prior-period query and draw it dashed. Overrides any tile.compare; used by tile-less
-  // callers (the overview web chart) that have no ComparePeriod setting of their own.
+  // callers (the overview traffic chart) that have no ComparePeriod setting of their own.
   comparePrior?: boolean
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
   // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
   hideSummary?: boolean
+  seriesLabel?: string
 }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -187,6 +193,7 @@ export const DashboardInsightContent = ({
       kpiMetadata={kpiMetadata}
       lightMetrics={lightMetrics}
       hideSummary={hideSummary}
+      seriesLabel={seriesLabel}
     />
   )
 }

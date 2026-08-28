@@ -86,7 +86,9 @@ const accessTokenExpired = (token: string): boolean => {
 // refresh call can't recurse into the refresh logic.
 const refreshClient = createClient(
   AuthService,
-  createConnectTransport({ baseUrl: apiBaseUrl, interceptors: [protovalidate] }),
+  // Deadline matters most here: the refresh is single-flight, so a stall holds every authenticated
+  // request queued behind it, not just this one.
+  createConnectTransport({ baseUrl: apiBaseUrl, interceptors: [protovalidate], defaultTimeoutMs: 60_000 }),
 )
 
 // Single-flight: concurrent requests that all see an expired token share ONE
@@ -171,6 +173,10 @@ export const transportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: apiBaseUrl,
     interceptors: [authBearer, protovalidate],
+    // Without this a hung request hangs until the tab closes, and a page whose only "loading"
+    // signal is absent data spins forever. A deadline turns it into a ConnectError the callers
+    // already handle. Generous, so a slow insights query over a wide range still lands.
+    defaultTimeoutMs: 60_000,
   })
 })
 
@@ -182,6 +188,7 @@ export const publicTransportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: apiBaseUrl,
     interceptors: [protovalidate],
+    defaultTimeoutMs: 60_000,
   })
 })
 

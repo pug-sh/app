@@ -38,16 +38,17 @@ export const INSIGHT_TYPES = [
   { label: 'Retention', value: InsightType.RETENTION },
   { label: 'User flow', value: InsightType.USER_FLOW },
   { label: 'Top K', value: InsightType.TOP_K },
+  { label: 'Map', value: InsightType.MAP },
 ] as const
 
 export const INSIGHT_TYPE_VALUES = INSIGHT_TYPES.map(x => x.value) as InsightType[]
 
 // Max event entries an insight type accepts. Retention takes 2 (cohort + return);
-// top-k takes 1 (the optional scope event); trends/funnel are uncapped. Single
-// source of truth for the maxEvents UI cap and the truncate-on-type-switch effect.
+// top-k and map take 1 (the optional scope event); trends/funnel are uncapped.
+// Single source of truth for the maxEvents UI cap and the truncate-on-type-switch effect.
 export const eventEntryCap = (insightType: InsightType): number | undefined => {
   if (insightType === InsightType.RETENTION) return 2
-  if (insightType === InsightType.TOP_K) return 1
+  if (insightType === InsightType.TOP_K || insightType === InsightType.MAP) return 1
   return undefined
 }
 
@@ -75,5 +76,6 @@ export const getPageDescription = (insightType: InsightType) => {
   if (insightType === InsightType.RETENTION) return 'Analyze cohort retention over time'
   if (insightType === InsightType.USER_FLOW) return 'Explore how sessions move between events'
   if (insightType === InsightType.TOP_K) return 'Rank top events, property values, or users'
+  if (insightType === InsightType.MAP) return 'See where in the world your traffic comes from'
   return 'Analyze step-by-step conversion'
 }

@@ -40,6 +40,8 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
+  --spacing-page-gutter: var(--page-gutter);
+
   --font-sans: "Figtree Variable", system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
@@ -286,6 +288,22 @@
   --chart-scale-04: oklch(0.68 0.02 106);
   --chart-scale-05: oklch(0.55 0.025 106);
   --chart-scale-pattern-color: oklch(0.96 0.005 106);
+}
+
+:root {
+  --page-gutter: 1rem;
+}
+
+@media (width >= 40rem) {
+  :root {
+    --page-gutter: 1.5rem;
+  }
+}
+
+@media (width >= 64rem) {
+  :root {
+    --page-gutter: 2rem;
+  }
 }
 
 .dark {

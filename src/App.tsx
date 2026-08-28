@@ -231,7 +231,7 @@ const AuthenticatedApp = () => {
       </Suspense>
       <SidebarInset className="min-h-0">
         <DemoBanner />
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter">
           <SidebarTrigger className="-ml-1" />
           <SocialNav className="ml-auto -mr-1" />
         </header>

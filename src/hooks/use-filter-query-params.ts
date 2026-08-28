@@ -5,6 +5,7 @@ import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry, serializeEntry } from '@/hooks/use-event-filters'
+import { type MapState, normalizeMapState } from '@/pages/routegen/insights/map'
 import { normalizeTopKState, type TopKState } from '@/pages/routegen/insights/top-k'
 import {
   DEFAULT_USER_FLOW_CONFIG,
@@ -19,6 +20,7 @@ const VALID_INSIGHT_TYPES = [
   InsightType.RETENTION,
   InsightType.USER_FLOW,
   InsightType.TOP_K,
+  InsightType.MAP,
 ]
 const VALID_GRANULARITIES = [Granularity.HOUR, Granularity.DAY, Granularity.WEEK, Granularity.MONTH]
 const VALID_AGGREGATIONS = [
@@ -56,6 +58,7 @@ const TIME_TO_PARAM = 'tt'
 const BREAKDOWNS_PARAM = 'bd'
 const USER_FLOW_PARAM = 'uf'
 const TOP_K_PARAM = 'tk'
+const MAP_PARAM = 'mp'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -223,6 +226,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
   const hasPf = params.has(PROP_FILTERS_PARAM)
   const hasBd = params.has(BREAKDOWNS_PARAM)
   const hasTk = params.has(TOP_K_PARAM)
+  const hasMp = params.has(MAP_PARAM)
 
   const rawBreakdowns = parseJSONParam(params.get(BREAKDOWNS_PARAM))
   const eventFilters = Array.isArray(rawEventFilters)
@@ -267,6 +271,13 @@ export const readFilterQueryParams = (search = window.location.search) => {
   // of silently falling back to the default ranking.
   if (hasTk && params.get(TOP_K_PARAM) && !topK) warnings.push('ranking')
 
+  const rawMap = parseJSONParam(params.get(MAP_PARAM))
+  const map =
+    rawMap && typeof rawMap === 'object' && !Array.isArray(rawMap)
+      ? normalizeMapState(rawMap as Record<string, unknown>)
+      : undefined
+  if (hasMp && params.get(MAP_PARAM) && !map) warnings.push('map')
+
   const insightType = VALID_INSIGHT_TYPES.includes(rawInsightType) ? (rawInsightType as InsightType) : undefined
   const rawUserFlow = parseJSONParam(params.get(USER_FLOW_PARAM))
   const restoredUserFlow = parseSerializedUserFlowConfig(rawUserFlow)
@@ -286,6 +297,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
     breakdowns,
     userFlowConfig,
     topK,
+    map,
     parseWarning,
   }
 }
@@ -300,6 +312,7 @@ export const writeFilterQueryParams = (
     breakdowns?: string[]
     userFlowConfig?: UserFlowConfig
     topK?: TopKState
+    map?: MapState
   },
 ) => {
   const url = new URL(window.location.href)
@@ -321,12 +334,13 @@ export const writeFilterQueryParams = (
       : undefined,
   )
   setOrDelete(url, TOP_K_PARAM, opts?.topK ? JSON.stringify(opts.topK) : undefined)
+  setOrDelete(url, MAP_PARAM, opts?.map ? JSON.stringify(opts.map) : undefined)
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)
 }
 
-// Narrow read/write for just the property-filters (`pf`) param. The Overview web-analytics view
+// Narrow read/write for just the property-filters (`pf`) param. The Overview traffic-analytics view
 // persists property filters but none of the other insights params, so it can't use the full
 // read/writeFilterQueryParams (which own ef/it/bd/tk/tf/tt/gr too). Same param, JSON shape, and
 // per-entry validation — so a `pf` written here means exactly what the Insights page reads.

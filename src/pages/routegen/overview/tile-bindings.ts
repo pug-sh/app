@@ -3,11 +3,10 @@ import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
 // Convention-driven candidate lists. Scanned in order; the first one present
 // in the project's event schema wins. Add more entries here as we discover
 // common customer conventions.
-//
-// page_view is the only primary candidate today: one event per navigation is the closest thing a web
-// project has to a unit of "someone used this", where a click is one per interaction. Add a mobile
-// equivalent here when the other SDKs grow one.
-const PRIMARY_CANDIDATES = ['page_view'] as const
+
+// Barely a preference order, unlike the lists below — two spellings of the same event, so the busier
+// one wins rather than a stray page_view speaking for a mobile project. Order only settles a tie.
+const PRIMARY_CANDIDATES = ['page_view', 'screen_view'] as const
 const SIGNIN_CANDIDATES = ['signin', 'signup', 'identified', 'account_created'] as const
 const CONVERSION_CANDIDATES = [
   'purchased',
@@ -60,6 +59,17 @@ const findFirst = <T extends string>(candidates: readonly T[], available: Set<st
   return null
 }
 
+// Walks candidates in order and only takes a strictly busier one, so an exact tie keeps the earlier
+// candidate — the same way resolveNavEvent breaks it, rather than by the schema's own event order.
+const pickBusiest = <T extends string>(candidates: readonly T[], events: EventNameMeta[]): T | null => {
+  let best: { kind: T; count: bigint } | null = null
+  for (const candidate of candidates) {
+    const count = events.find(event => event.name === candidate)?.count
+    if (count !== undefined && (!best || count > best.count)) best = { kind: candidate, count }
+  }
+  return best?.kind ?? null
+}
+
 export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
   if (events.length === 0) return null
   const sorted = [...events].sort((a, b) => Number(b.count - a.count))
@@ -70,7 +80,7 @@ export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
     // click" than by hiding the whole Overview behind a null. That last tier announces itself —
     // every tile renders `via <kind>` — so a degraded pick is visible rather than silent.
     primary:
-      findFirst(PRIMARY_CANDIDATES, available) ??
+      pickBusiest(PRIMARY_CANDIDATES, events) ??
       sorted.find(event => !NOT_PRIMARY.has(event.name))?.name ??
       sorted[0].name,
     signinLike: findFirst(SIGNIN_CANDIDATES, available),

@@ -53,6 +53,37 @@ describe('dashboard sankey view mode', () => {
   })
 })
 
+// Same contract as Sankey above, for the same reason: Map is the only view a map insight takes,
+// and no other insight type can draw it.
+describe('dashboard map view mode', () => {
+  it('is preserved on read but never selects a chart of its own', () => {
+    const options: readonly { value: DashboardTileViewMode }[] = DASHBOARD_TILE_VIEW_MODES
+    expect(options.some(option => option.value === DashboardTileViewMode.MAP)).toBe(false)
+    expect(getInitialDashboardTileViewMode(DashboardTileViewMode.MAP)).toBe(DashboardTileViewMode.MAP)
+    expect(dashboardTileViewModeToViewMode(DashboardTileViewMode.MAP)).toBe('line')
+  })
+
+  it('offers a view-mode picker but no chart display options', () => {
+    const tile = create(DashboardTileSchema, {
+      viewMode: DashboardTileViewMode.MAP,
+      content: {
+        case: 'insight',
+        value: create(InsightTileContentSchema, {
+          spec: create(InsightQuerySpecSchema, { insightType: InsightType.MAP }),
+        }),
+      },
+    })
+
+    expect(tileOptionApplicability(tile)).toEqual({
+      showViewMode: true,
+      showKpiOptions: false,
+      showAxisOptions: false,
+      showLegendOption: false,
+      showPieLabelOption: false,
+    })
+  })
+})
+
 describe('dashboard pie view mode', () => {
   it('is selectable, preserved, and mapped to the pie renderer', () => {
     expect(DASHBOARD_TILE_VIEW_MODES).toContainEqual({ label: 'Pie', value: DashboardTileViewMode.PIE })

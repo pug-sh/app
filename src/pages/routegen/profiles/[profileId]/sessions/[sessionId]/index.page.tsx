@@ -3,9 +3,9 @@ import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
+import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
 import { LocationLabel } from '@/components/country-flag'
 import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
-import { Devicon } from '@/components/devicon'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
 import { PlatformTooltip } from '@/components/platform-label'
@@ -14,7 +14,15 @@ import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { resolveBrowserDevicon, resolveDeviceDevicon, resolveOsDevicon } from '@/lib/devicon-map'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import {
+  browserForPlatform,
+  formatBrowserLabel,
+  formatOsLabel,
+  resolveBrowserIcon,
+  resolveDeviceIcon,
+  resolveOsIcon,
+} from '@/lib/brand-icons'
 import { getSeriesColor } from '@/lib/event-colors'
 import { useRouteParams } from '@/lib/route-params'
 import { structGet } from '@/lib/struct'
@@ -50,11 +58,14 @@ const SessionSummary = ({
   const uniqueKinds = new Set(events.map(e => e.kind)).size
 
   const firstAuto = events.length > 0 ? events[events.length - 1].autoProperties : undefined
-  const browser = structGet(firstAuto, '$browser')
+  const platform = platformOf(firstAuto)
+  // Suppressed at the read, so every use below — the render gate, the icon, the label — is already
+  // right. On a native app $browser is the HTTP client ("Dart/3.x"), not a browser the session had.
+  const browser = browserForPlatform(structGet(firstAuto, '$browser'), platform)
   const browserVersion = structGet(firstAuto, '$browserVersion')
   const os = structGet(firstAuto, '$os')
   const osVersion = structGet(firstAuto, '$osVersion')
-  const device = structGet(firstAuto, '$device')
+  const device = deviceModelOf(firstAuto)
   const country = structGet(firstAuto, '$country')
   const city = structGet(firstAuto, '$city')
   const region = structGet(firstAuto, '$region')
@@ -62,9 +73,9 @@ const SessionSummary = ({
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
   const exitEvent = events.length > 0 ? events[0].kind : null
-  const browserIcon = resolveBrowserDevicon(browser)
-  const osIcon = resolveOsDevicon(os)
-  const deviceIcon = !browser && !os ? resolveDeviceDevicon(device, os) : null
+  const browserIcon = resolveBrowserIcon(browser)
+  const osIcon = resolveOsIcon(os)
+  const deviceIcon = !browser && !os ? resolveDeviceIcon(device, os) : null
 
   return (
     <div className="mb-5 pb-4 border-b border-border space-y-4">
@@ -129,19 +140,16 @@ const SessionSummary = ({
                 os={os}
                 osVersion={osVersion}
                 device={device}
+                platform={platform}
               />
             }
             contentClassName={tooltipPanelContent}
             className="min-w-0 items-center gap-1.5"
           >
-            {browserIcon && <Devicon name={browserIcon} size={14} />}
-            {osIcon && <Devicon name={osIcon} size={14} />}
-            {deviceIcon && <Devicon name={deviceIcon} size={14} />}
-            {[
-              browser && browserVersion ? `${browser} ${browserVersion}` : browser,
-              os && osVersion ? `${os} ${osVersion}` : os,
-              device,
-            ]
+            <BrandIcon name={browserIcon} size={14} unknownGlyph={browser ? <UnknownBrowserIcon size={14} /> : null} />
+            <BrandIcon name={osIcon} size={14} />
+            <BrandIcon name={deviceIcon} size={14} />
+            {[formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion), device]
               .filter(Boolean)
               .join(' / ')}
           </DetailTooltip>
@@ -249,7 +257,7 @@ const SessionView = () => {
           <SessionSummary sessionId={sessionId ?? ''} distinctId={profileId ?? ''} events={events} />
 
           {/* Kind legend — sticky */}
-          <div className="sticky top-0 z-10 bg-background -mx-8 px-8 py-3 border-b border-border/50 flex flex-wrap gap-1.5">
+          <div className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter py-3 border-b border-border/50 flex flex-wrap gap-1.5">
             {uniqueKinds.map(kind => (
               <span key={kind} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getSeriesColor(kind).dot }} />

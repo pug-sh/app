@@ -21,16 +21,19 @@ vi.mock('@/data/workspace.atoms', async importOriginal => {
 vi.mock('./overview.atoms', async importOriginal => {
   const actual = await importOriginal<typeof import('./overview.atoms')>()
   const { atom } = await import('jotai')
+  const { create } = await import('@bufbuild/protobuf')
+  const { GetFilterSchemaResponseSchema } = await import('@/api/genproto/common/v1/filter_schema_pb')
   return {
     ...actual,
-    overviewSchemaAtom: atom({ events: [{ kind: 'page_view' }] }),
-    overviewSchemaLoadingAtom: atom(false),
+    overviewSchemaAtom: atom(
+      create(GetFilterSchemaResponseSchema, { events: [{ name: 'page_view', count: BigInt(1) }] }),
+    ),
     fetchOverviewSchemaAtom: atom(null, () => {}),
   }
 })
 
 // Both modes stand in for their tile grids: the window they receive is the whole assertion.
-vi.mock('./web-analytics-mode', () => ({ default: () => <div data-testid="web-body" /> }))
+vi.mock('./traffic-analytics-mode', () => ({ default: () => <div data-testid="traffic-body" /> }))
 vi.mock('./analytics-mode', () => ({
   default: ({ globalTimeRange }: { globalTimeRange?: { from: Date; to: Date } }) => (
     <div data-testid="product-body">{globalTimeRange ? String(globalTimeRange.from.getTime()) : 'no-window'}</div>
@@ -53,7 +56,7 @@ describe('overview mode switch', () => {
   // product rather than dropping it to the tiles' own longer ranges.
   it('carries the 24h default into product', () => {
     render(<Overview />)
-    expect(screen.getByTestId('web-body')).toBeTruthy()
+    expect(screen.getByTestId('traffic-body')).toBeTruthy()
 
     switchTo('Product analytics')
     const shown = Number(screen.getByTestId('product-body').textContent)
@@ -70,9 +73,9 @@ describe('overview mode switch', () => {
     expect(screen.getByTestId('product-body').textContent).toBe(String(from.getTime()))
   })
 
-  // The in-app version of the above: change the range from the picker while in web mode, then toggle.
+  // The in-app version of the above: change the range from the picker while in traffic mode, then toggle.
   // The picked window has to ride across rather than snap back to either default.
-  it('retains a range picked in web mode when switching to product', () => {
+  it('retains a range picked in traffic mode when switching to product', () => {
     render(<Overview />)
 
     fireEvent.click(screen.getByText('time'))
@@ -86,13 +89,13 @@ describe('overview mode switch', () => {
     expect(screen.getByTestId('product-body').textContent).toBe(String(expected))
   })
 
-  // The 24h default rides through both toggles, so web still reads "Last 24 hours" — never
+  // The 24h default rides through both toggles, so traffic still reads "Last 24 hours" — never
   // "Default range" over live data — after a round trip.
-  it('keeps the 24h default across a web → product → web round trip', () => {
+  it('keeps the 24h default across a traffic → product → traffic round trip', () => {
     render(<Overview />)
     switchTo('Product analytics')
-    switchTo('Web analytics')
-    expect(screen.getByTestId('web-body')).toBeTruthy()
+    switchTo('Traffic analytics')
+    expect(screen.getByTestId('traffic-body')).toBeTruthy()
     expect(screen.getByText('Last 24 hours')).toBeTruthy()
   })
 })

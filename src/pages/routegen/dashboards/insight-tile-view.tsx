@@ -28,6 +28,7 @@ import {
   specAggregationResolver,
   trendSeriesNames,
 } from '../insights/helpers'
+import { mapSpecIncompleteReason } from '../insights/map'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
@@ -81,6 +82,7 @@ export const InsightTileView = ({
   kpiMetadata,
   lightMetrics = false,
   hideSummary = false,
+  seriesLabel,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -101,6 +103,11 @@ export const InsightTileView = ({
   lightMetrics?: boolean
   // Suppress the chart's value·avg·peak summary row — folded into the hideLegend gate that renders it.
   hideSummary?: boolean
+  // Name a single-series trend after what it measures. The traffic chart scopes every stat to the
+  // navigation event, so the backend labels all six series `page_view` — meaningless in a tooltip
+  // under a "Visitors" / "Bounce rate" title. Colors still key off the event kind, so the hue holds
+  // across a stat switch.
+  seriesLabel?: string
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -163,15 +170,19 @@ export const InsightTileView = ({
   const isRetention = spec?.insightType === InsightType.RETENTION
   const isUserFlow = spec?.insightType === InsightType.USER_FLOW
   const isTopK = spec?.insightType === InsightType.TOP_K
+  const isMap = spec?.insightType === InsightType.MAP
   const topKIncompleteReason = isTopK ? topKSpecIncompleteReason(spec) : null
+  const mapIncompleteReason = isMap ? mapSpecIncompleteReason(spec) : null
   const userFlowIncompleteReason = isUserFlow ? userFlowSpecIncompleteReason(spec) : null
   const seriesNames = useMemo(() => {
     if (result.case === 'retention') {
       return retentionCohorts.map((cohort, index) => cohort.cohort || `Cohort ${index + 1}`)
     }
 
-    return trendSeriesNames(trendSeries)
-  }, [result.case, retentionCohorts, trendSeries])
+    const names = trendSeriesNames(trendSeries)
+    if (seriesLabel && names.length === 1) return [seriesLabel]
+    return names
+  }, [result.case, retentionCohorts, trendSeries, seriesLabel])
   const seriesColors = useMemo(() => {
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
     // so color them by index for distinctness; coloring by the "event · value"
@@ -210,8 +221,9 @@ export const InsightTileView = ({
   // KPI tiles short-circuit the chart pipeline. The compare delta (when present) is
   // assembled by the caller — the public render has no comparison, so `compare` is
   // undefined and KpiTile degrades to a no-delta sparkline. Top-k results are not
-  // series-shaped, so they always render through the ranked list regardless of view mode.
-  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK) {
+  // series-shaped, so they always render through the ranked list regardless of view mode — and a
+  // map is not series-shaped either.
+  if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK && !isMap) {
     return (
       <div className="h-full min-h-0 overflow-hidden">
         <KpiTile
@@ -258,6 +270,8 @@ export const InsightTileView = ({
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
+        isMap={isMap}
+        mapIncompleteReason={mapIncompleteReason}
         isTopK={isTopK}
         topKRows={topKRows}
         topKDimension={spec?.topK?.dimension}
@@ -265,7 +279,7 @@ export const InsightTileView = ({
         topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}
         userFlowIncompleteReason={userFlowIncompleteReason}
-        // hideLegend is the SummaryStats gate; the web chart opts in via hideSummary (it passes no tile).
+        // hideLegend is the SummaryStats gate; the traffic chart opts in via hideSummary (it passes no tile).
         hideLegend={tile?.visualization?.hideLegend || hideSummary}
         legendPosition={legendPosition}
         showPieLabels={tile?.visualization?.hidePieLabels !== true}

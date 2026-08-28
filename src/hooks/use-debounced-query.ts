@@ -13,6 +13,10 @@ export const useDebouncedQuery = <T>(
 ) => {
   const { enabled = true, debounceMs = 300 } = opts
   const [data, setData] = useState<T | undefined>(undefined)
+  // The key `data` was fetched for. `data` deliberately survives a queryKey change so the previous
+  // result stays on screen, and `loading` only flips in the effect below — so the render that
+  // changes the query still reads stale data with loading false. Compare against the current key.
+  const [dataKey, setDataKey] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
@@ -23,6 +27,7 @@ export const useDebouncedQuery = <T>(
   useEffect(() => {
     if (!enabled) {
       setData(undefined)
+      setDataKey(undefined)
       setLoading(false)
       setError(null)
       return
@@ -35,11 +40,15 @@ export const useDebouncedQuery = <T>(
     debounceRef.current = setTimeout(async () => {
       try {
         const resp = await queryFnRef.current()
-        if (!cancelled) setData(resp)
+        if (!cancelled) {
+          setData(resp)
+          setDataKey(queryKey)
+        }
       } catch (err) {
         console.error(`Query failed [${queryKey.slice(0, 80)}]:`, err)
         if (!cancelled) {
           setData(undefined)
+          setDataKey(undefined)
           const message =
             err instanceof ConnectError
               ? err.message
@@ -58,5 +67,5 @@ export const useDebouncedQuery = <T>(
     }
   }, [queryKey, enabled, retryCount, debounceMs])
 
-  return { data, loading, error, retry: () => setRetryCount(c => c + 1) }
+  return { data, dataKey, loading, error, retry: () => setRetryCount(c => c + 1) }
 }

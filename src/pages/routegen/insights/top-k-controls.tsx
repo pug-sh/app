@@ -1,55 +1,13 @@
 import { Check, ListOrdered, Ruler, Trophy } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { TopKQuery_Dimension } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { PropertyPickerList } from '@/components/event-filters'
 import { OptionChip } from '@/components/option-chip'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
 import { filterNumericSchema } from './controls'
+import { InsightPropertyChip } from './property-chip'
 import { TOP_K_DIMENSIONS, TOP_K_LIMITS, TOP_K_USER_FORBIDDEN_METRICS, type TopKState } from './top-k'
-
-const TopKPropertyChip = ({
-  label,
-  value,
-  placeholder,
-  schema,
-  schemaError,
-  onSelect,
-}: {
-  label: string
-  value: string
-  placeholder: string
-  schema: GetFilterSchemaResponse | null
-  schemaError: string | null
-  onSelect: (name: string) => void
-}) => {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7 hover:bg-muted/40 transition-colors">
-        <span className="px-2 text-muted-foreground bg-muted/50 h-full flex items-center text-xs">{label}</span>
-        <span className={cn('px-2 h-full flex items-center', value ? 'font-mono' : 'text-muted-foreground')}>
-          {value || placeholder}
-        </span>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-0">
-        <PropertyPickerList
-          schema={schema}
-          schemaError={schemaError}
-          placeholder={`${placeholder}...`}
-          mode={{ kind: 'pick' }}
-          onSelect={name => {
-            onSelect(name)
-            setOpen(false)
-          }}
-        />
-      </PopoverContent>
-    </Popover>
-  )
-}
 
 // A checkbox-style toggle chip, sized to match the OptionChip siblings. Used for
 // boolean options as a direct toggle (button state) rather than a popover, per the
@@ -123,7 +81,7 @@ export const TopKControls = ({
         onChange={setDimension}
       />
       {topK.dimension === TopKQuery_Dimension.PROPERTY && (
-        <TopKPropertyChip
+        <InsightPropertyChip
           label="property"
           value={topK.property}
           placeholder="Select property"
@@ -140,7 +98,7 @@ export const TopKControls = ({
         onChange={metric => onChange({ ...topK, metric })}
       />
       {NUMERIC_AGGREGATIONS.has(topK.metric) && (
-        <TopKPropertyChip
+        <InsightPropertyChip
           label="property"
           value={topK.metricProperty}
           placeholder="Select numeric property"

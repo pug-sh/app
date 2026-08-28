@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Activity, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { trackFeature } from '@/analytics/pug'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
@@ -21,7 +21,10 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import { refreshTimeRange } from '@/lib/date-presets'
 import { useRouteParams } from '@/lib/route-params'
+import { rpcErrorMessage } from '@/lib/rpc-error'
 import { structGet } from '@/lib/struct'
 import { formatClock, formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -48,6 +51,8 @@ type SessionLane = {
   column: number
   browser?: string
   os?: string
+  device?: string
+  platform?: string
 }
 
 const LANE_W = 80
@@ -71,7 +76,18 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
     const auto = events[range.first].autoProperties
     const browser = structGet(auto, '$browser')
     const os = structGet(auto, '$os')
-    lanes.push({ sessionId: sid, firstIdx: range.first, lastIdx: range.last, column: col, browser, os })
+    const device = deviceModelOf(auto)
+    const platform = platformOf(auto)
+    lanes.push({
+      sessionId: sid,
+      firstIdx: range.first,
+      lastIdx: range.last,
+      column: col,
+      browser,
+      os,
+      device,
+      platform,
+    })
   }
   return lanes
 }
@@ -110,6 +126,10 @@ const UserActivity = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const lastUpdatedLabel = useRelativeTime(lastUpdated)
 
+  // The window the last request was issued with. A fresh load re-resolves it; "Load more" reuses it,
+  // so every page of a result set is fetched against the window its cursor was issued from.
+  const queryRangeRef = useRef(timeRange)
+
   useEffect(() => {
     if (project) fetchSchema()
   }, [project, fetchSchema])
@@ -125,10 +145,12 @@ const UserActivity = () => {
       setError(null)
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
+        const range = pageToken ? queryRangeRef.current : refreshTimeRange(timeRange)
+        queryRangeRef.current = range
         const resp = await activityRPC.getActivityFeed(
           {
             distinctId: profileId,
-            timeRange: toProtoTimeRange(timeRange),
+            timeRange: toProtoTimeRange(range),
             propertyFilters: toProtoFilters(propFilters),
             events: protoEvents,
             pageSize: 200,
@@ -146,7 +168,7 @@ const UserActivity = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Activity feed failed:', err)
-        setError({ message: err instanceof Error ? err.message : 'Failed to load activity feed', pageToken })
+        setError({ message: rpcErrorMessage(err, 'Failed to load activity feed'), pageToken })
       } finally {
         setLoading(false)
       }
@@ -182,7 +204,7 @@ const UserActivity = () => {
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-background -mx-8 px-8 -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
+      <div className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter -mt-4 pt-1 pb-2 mb-4 space-y-2 border-b border-border/50">
         <div className="flex flex-wrap items-center gap-2">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
           {/* ml-4 keeps the icon off the picker chip, so it reads as an action on the feed. */}
@@ -222,7 +244,7 @@ const UserActivity = () => {
         <div className="flex flex-col items-center justify-center py-16">
           <Activity className="w-10 h-10 mb-4 opacity-15" />
           <p className="text-sm font-medium mb-1">{error.message}</p>
-          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents(error.pageToken)}>
+          <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents()}>
             Retry
           </Button>
         </div>
@@ -302,6 +324,8 @@ const UserActivity = () => {
                                       <PlatformLabel
                                         browser={lane.browser}
                                         os={lane.os}
+                                        device={lane.device}
+                                        platform={lane.platform}
                                         iconSize={12}
                                         className="text-xs text-faint"
                                       />

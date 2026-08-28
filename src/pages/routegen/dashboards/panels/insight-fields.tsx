@@ -49,6 +49,7 @@ export const InsightFields = ({
   const isRetention = insightType === InsightType.RETENTION
   const isUserFlow = insightType === InsightType.USER_FLOW
   const isTopK = insightType === InsightType.TOP_K
+  const isMap = insightType === InsightType.MAP
   const { propFilters, addFilter, updateFilter, removeFilter } = filterState
 
   const maxEvents = eventEntryCap(insightType)
@@ -74,7 +75,7 @@ export const InsightFields = ({
               events={schema?.events}
               schema={schema}
               schemaError={schemaError}
-              showLetters={!isTopK}
+              showLetters={!isTopK && !isMap}
               seriesColors={eventFilters.entries.map((entry, index) =>
                 getSeriesColor(entry.kind || `step ${index + 1}`, index),
               )}
@@ -95,15 +96,15 @@ export const InsightFields = ({
                 <span>Retention supports up to 2 events.</span>
               </div>
             ) : null}
-            {isTopK ? (
+            {isTopK || isMap ? (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Tooltip>
                   <TooltipTrigger className="inline-flex cursor-help items-center">
                     <CircleHelp className="h-3.5 w-3.5" />
                   </TooltipTrigger>
                   <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                    Optionally scope the ranking to a single event (with per-event filters). Without a scope, all events
-                    participate.
+                    Optionally scope {isMap ? 'the map' : 'the ranking'} to a single event (with per-event filters).
+                    Without a scope, all events participate.
                   </TooltipContent>
                 </Tooltip>
                 <span>Event scope is optional.</span>
@@ -123,8 +124,8 @@ export const InsightFields = ({
           />
         ))}
         <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-        {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
-        {!isTopK && !isUserFlow && (
+        {/* Breakdowns don't apply to top-k or map (the dimension is the breakdown) or user flow. */}
+        {!isTopK && !isMap && !isUserFlow && (
           <>
             {propFilters.length > 0 || breakdowns.length > 0 ? <span className="mx-0.5 h-4 w-px bg-border" /> : null}
             {breakdowns.map(property => (

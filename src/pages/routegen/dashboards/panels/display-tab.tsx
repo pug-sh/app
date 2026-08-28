@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import {
   type DashboardTile,
+  type DashboardTileViewMode,
   type TileHeader,
   TileHeaderSchema,
   type VisualizationOptions,
@@ -16,6 +17,7 @@ import { TILE_ICON_PALETTE } from '../tile-icons'
 import {
   DASHBOARD_TILE_VIEW_MODES,
   DEFAULT_DASHBOARD_TILE_VIEW_MODE,
+  MAP_TILE_VIEW_MODES,
   resolveDashboardLegendPosition,
   USER_FLOW_TILE_VIEW_MODES,
 } from '../tile-settings'
@@ -43,8 +45,10 @@ export const DisplayTab = ({ tile, onPatch }: DisplayTabProps) => {
   const setViz = (next: Partial<VisualizationOptions>) =>
     onPatch({ visualization: { ...create(VisualizationOptionsSchema, tile.visualization), ...next } })
 
-  const isUserFlow = tile.content.case === 'insight' && tile.content.value.spec?.insightType === InsightType.USER_FLOW
-  const viewModeOptions = isUserFlow ? USER_FLOW_TILE_VIEW_MODES : DASHBOARD_TILE_VIEW_MODES
+  const insightType = tile.content.case === 'insight' ? tile.content.value.spec?.insightType : undefined
+  let viewModeOptions: readonly { label: string; value: DashboardTileViewMode }[] = DASHBOARD_TILE_VIEW_MODES
+  if (insightType === InsightType.USER_FLOW) viewModeOptions = USER_FLOW_TILE_VIEW_MODES
+  if (insightType === InsightType.MAP) viewModeOptions = MAP_TILE_VIEW_MODES
   // viewMode and insightType are independent fields on one persisted message, so a tile saved by
   // an older build (or written straight to the API) can hold a combination this list has no entry
   // for. OptionChip falls back to String(value) on a miss, which puts a bare enum number — "view

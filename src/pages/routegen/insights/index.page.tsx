@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
@@ -18,6 +18,7 @@ import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { OptionChip } from '@/components/option-chip'
+import { ShareChartButton } from '@/components/share-chart-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -32,7 +33,7 @@ import {
 } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { DEFAULT_INSIGHTS_RANGE } from '@/lib/date-presets'
+import { DEFAULT_INSIGHTS_RANGE, fmtDateRange } from '@/lib/date-presets'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
@@ -58,12 +59,16 @@ import { InsightsRowAggregationControls } from './controls'
 import {
   breakdownLabel,
   buildChartData,
+  canShareInsight,
   disambiguateLabels,
   hasBreakdown,
   resolveSeriesAggregations,
+  shareCardTitle,
   sortFunnelSteps,
   trendSeriesNames,
 } from './helpers'
+import { buildMapQuery, DEFAULT_MAP, mapIncompleteReason } from './map'
+import { MapControls } from './map-controls'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
 import { buildUserFlowQuery, isUserFlowConfigValid, userFlowIncompleteReason } from './user-flow'
@@ -130,6 +135,7 @@ const Insights = () => {
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
+  const [map, setMap] = useState(() => initialFilterState.map ?? DEFAULT_MAP)
 
   const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
@@ -189,6 +195,7 @@ const Insights = () => {
   const isTrends = insightType === InsightType.TRENDS
   const isRetention = insightType === InsightType.RETENTION
   const isTopK = insightType === InsightType.TOP_K
+  const isMap = insightType === InsightType.MAP
   const isTimeSeriesInsight = isTrends || isRetention
   const userFlowReady = isUserFlowConfigValid(userFlowConfig)
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
@@ -202,6 +209,7 @@ const Insights = () => {
       breakdowns,
       userFlowConfig: isUserFlow ? userFlowConfig : undefined,
       topK: isTopK ? topK : undefined,
+      map: isMap ? map : undefined,
     })
   }, [
     eventFilters.entries,
@@ -214,6 +222,8 @@ const Insights = () => {
     userFlowConfig,
     isTopK,
     topK,
+    isMap,
+    map,
   ])
 
   const hasIncompleteNumericAggregation = useMemo(
@@ -224,13 +234,15 @@ const Insights = () => {
   )
 
   const topKIncomplete = isTopK ? topKIncompleteReason(topK) : null
+  const mapIncomplete = isMap ? mapIncompleteReason(map) : null
   const userFlowIncomplete = isUserFlow ? userFlowIncompleteReason(userFlowConfig) : null
 
-  // Each insight type is "configured enough to run" for a different reason: user flow and top-k
-  // carry no event rows at all, so the row count can't gate them.
+  // Each insight type is "configured enough to run" for a different reason: user flow, top-k and
+  // map carry no event rows at all, so the row count can't gate them.
   const queryConfigured = () => {
     if (isUserFlow) return userFlowReady
     if (isTopK) return !topKIncomplete
+    if (isMap) return !mapIncomplete
     return validEntries.length > 0 && !hasIncompleteNumericAggregation
   }
 
@@ -243,6 +255,7 @@ const Insights = () => {
     breakdowns,
     userFlowConfig: isUserFlow ? userFlowConfig : undefined,
     topK: isTopK ? topK : undefined,
+    map: isMap ? map : undefined,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
   })
@@ -250,6 +263,7 @@ const Insights = () => {
   // Remote query execution.
   const {
     data: queryResult,
+    dataKey: resultKey,
     loading,
     error,
     retry,
@@ -258,40 +272,50 @@ const Insights = () => {
     async () => {
       const globalFilters = toProtoFilters(propFilters)
       const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
-      // Top-k specs carry no events/breakdowns (the backend rejects them); the
-      // scope event rides inside topK instead.
-      const spec = isTopK
-        ? {
-            insightType,
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-            topK: buildTopKQuery(topK, validEntries[0]),
-          }
-        : {
-            insightType,
-            events: isUserFlow
-              ? []
-              : validEntries.map(entry => ({
-                  event: {
-                    kind: entry.kind,
-                    filters: toProtoFilters(entry.filters),
-                  },
-                  aggregation:
-                    insightType === InsightType.TRENDS
-                      ? (entry.aggregation ?? AggregationType.TOTAL)
-                      : AggregationType.TOTAL,
-                  aggregationProperty: getAggregationProperty({
-                    insightType,
-                    aggregation: entry.aggregation,
-                    aggregationProperty: entry.aggregationProperty,
-                  }),
-                })),
-            userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
-            filterGroups,
-            filterGroupsOperator: LogicalOperator.AND,
-            breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
-            breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
-          }
+      // Top-k and map specs carry no events/breakdowns (the backend rejects them); the scope
+      // event rides inside topK / map instead.
+      let spec
+      if (isTopK) {
+        spec = {
+          insightType,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          topK: buildTopKQuery(topK, validEntries[0]),
+        }
+      } else if (isMap) {
+        spec = {
+          insightType,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          map: buildMapQuery(map, validEntries[0]),
+        }
+      } else {
+        spec = {
+          insightType,
+          events: isUserFlow
+            ? []
+            : validEntries.map(entry => ({
+                event: {
+                  kind: entry.kind,
+                  filters: toProtoFilters(entry.filters),
+                },
+                aggregation:
+                  insightType === InsightType.TRENDS
+                    ? (entry.aggregation ?? AggregationType.TOTAL)
+                    : AggregationType.TOTAL,
+                aggregationProperty: getAggregationProperty({
+                  insightType,
+                  aggregation: entry.aggregation,
+                  aggregationProperty: entry.aggregationProperty,
+                }),
+              })),
+          userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
+          filterGroups,
+          filterGroupsOperator: LogicalOperator.AND,
+          breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
+          breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
+        }
+      }
       const resp = await insightsRPC.query(
         {
           granularity,
@@ -309,14 +333,15 @@ const Insights = () => {
       // filter values: insightType/counts answer "what kinds of insights get run, how complex"
       // without carrying a customer's property values (which is why $url drops the query string).
       // Counts describe what was *sent*, not what the editor happens to be holding. User flow sends
-      // no events and no breakdowns (the backend rejects both), so reporting the rows left over
-      // from a previous insight type biased the shape by whatever preceded it. nodeKind is the
+      // neither events nor breakdowns, and top-k/map send no breakdowns (the backend rejects them),
+      // so reporting the rows left over from a previous insight type biased the shape by whatever
+      // preceded it. nodeKind is the
       // dimension that actually distinguishes one user-flow query from another, and it is a
       // category rather than a value.
       trackEvent('insight_queried', {
         insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
-        eventCount: isUserFlow ? 0 : isTopK ? 1 : validEntries.length,
-        breakdownCount: isUserFlow ? 0 : breakdowns.length,
+        eventCount: isUserFlow ? 0 : isTopK || isMap ? 1 : validEntries.length,
+        breakdownCount: isUserFlow || isMap || isTopK ? 0 : breakdowns.length,
         hasGlobalFilters: globalFilters.length > 0,
         ...(isUserFlow
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
@@ -436,6 +461,20 @@ const Insights = () => {
   // Render helpers.
   const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
 
+  const chartRef = useRef<HTMLDivElement>(null)
+  let drawnCount = resultSeriesCount
+  if (result.case === 'topK') drawnCount = topKRows.length
+  if (result.case === 'userFlow') drawnCount = result.value.nodes.length
+  const canShare = canShareInsight({
+    insightType,
+    resultCase: result.case,
+    drawnCount,
+    loading,
+    error,
+    queryKey,
+    resultKey,
+  })
+
   const renderRowExtra = useMemo(() => {
     if (!isTrends) return undefined
 
@@ -455,10 +494,23 @@ const Insights = () => {
   if (!project) return <NoProject title="Insights" icon={TrendingUp} />
 
   return (
-    <Page title="Insights" description={getPageDescription(insightType)}>
+    <Page
+      title="Insights"
+      description={getPageDescription(insightType)}
+      actions={
+        canShare ? (
+          <ShareChartButton
+            targetRef={chartRef}
+            defaultTitle={shareCardTitle({ insightType, eventKinds: schemaEventKinds(), topK })}
+            meta={timeRange ? fmtDateRange(timeRange) : ''}
+            fallbackName="insight"
+          />
+        ) : null
+      }
+    >
       <div
         className={cn(
-          '-mx-8 px-8 space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
+          '-mx-page-gutter px-page-gutter space-y-2 border-b border-border/50 bg-background -mt-4 pt-1 pb-2 mb-4',
           stickyClassName,
         )}
       >
@@ -468,6 +520,7 @@ const Insights = () => {
           {isTopK && (
             <TopKControls topK={topK} onChange={setTopK} schema={globalSchema} schemaError={globalSchemaError} />
           )}
+          {isMap && <MapControls map={map} onChange={setMap} schema={globalSchema} schemaError={globalSchemaError} />}
           {isTimeSeriesInsight && (
             <>
               <OptionChip
@@ -507,7 +560,7 @@ const Insights = () => {
                 events={schema?.events}
                 schema={schema}
                 schemaError={schemaError}
-                showLetters={!isTopK}
+                showLetters={!isTopK && !isMap}
                 seriesColors={eventFilterColors}
                 getEventColor={getEventColorDot}
                 renderRowExtra={renderRowExtra}
@@ -527,18 +580,18 @@ const Insights = () => {
                   <span>Retention supports up to 2 events (A = cohort, B = return).</span>
                 </div>
               )}
-              {isTopK && (
+              {(isTopK || isMap) && (
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <Tooltip>
                     <TooltipTrigger className="inline-flex items-center cursor-help">
                       <CircleHelp className="w-3.5 h-3.5" />
                     </TooltipTrigger>
                     <TooltipContent side="bottom" align="start" className="max-w-xs text-xs">
-                      Optionally scope the ranking to a single event (with per-event filters). Without a scope, all
-                      events participate.
+                      Optionally scope {isMap ? 'the map' : 'the ranking'} to a single event (with per-event filters).
+                      Without a scope, all events participate.
                     </TooltipContent>
                   </Tooltip>
-                  <span>Event scope is optional — leave empty to rank across all events.</span>
+                  <span>Event scope is optional — leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
                 </div>
               )}
             </>
@@ -555,8 +608,8 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
-          {/* Breakdowns don't apply to top-k (the dimension is the breakdown) or user flow. */}
-          {!isTopK && !isUserFlow && (
+          {/* Breakdowns don't apply to top-k or map (the dimension is the breakdown) or user flow. */}
+          {!isTopK && !isMap && !isUserFlow && (
             <>
               {(propFilters.length > 0 || breakdowns.length > 0) && <span className="h-4 w-px bg-border mx-0.5" />}
               {breakdowns.map(prop => (
@@ -581,37 +634,41 @@ const Insights = () => {
       {/* Same tile shell as the overview and dashboard tiles — the chart is the page's one
           object, so it sits on the elevated surface rather than flush on the canvas. */}
       <div className="rounded-lg border border-border/60 bg-card p-4">
-        <InsightsContent
-          error={error}
-          retry={retry}
-          unknownResultCase={unknownResultCase}
-          resultCase={result.case}
-          resultSeriesCount={resultSeriesCount}
-          isRetention={isRetention}
-          isTrends={isTrends}
-          isUserFlow={isUserFlow}
-          hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
-          chartData={chartData}
-          seriesNames={seriesNames}
-          seriesColors={seriesColors}
-          seriesAggregations={seriesAggregations}
-          viewMode={viewMode}
-          granularity={granularity}
-          breakdowns={breakdowns}
-          breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
-          retentionSeriesList={retentionSeriesList}
-          retentionLabels={retentionLabels}
-          retentionCohorts={retentionCohorts}
-          funnelSeriesData={funnelSeriesData}
-          userFlowResult={userFlowResult}
-          isTopK={isTopK}
-          topKRows={topKRows}
-          topKDimension={topK.dimension}
-          topKMetric={topK.metric}
-          topKOmitOthers={topK.omitOthers}
-          topKIncompleteReason={topKIncomplete}
-          userFlowIncompleteReason={userFlowIncomplete}
-        />
+        <div ref={chartRef}>
+          <InsightsContent
+            error={error}
+            retry={retry}
+            unknownResultCase={unknownResultCase}
+            resultCase={result.case}
+            resultSeriesCount={resultSeriesCount}
+            isRetention={isRetention}
+            isTrends={isTrends}
+            isUserFlow={isUserFlow}
+            hasIncompleteNumericAggregation={hasIncompleteNumericAggregation}
+            chartData={chartData}
+            seriesNames={seriesNames}
+            seriesColors={seriesColors}
+            seriesAggregations={seriesAggregations}
+            viewMode={viewMode}
+            granularity={granularity}
+            breakdowns={breakdowns}
+            breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
+            retentionSeriesList={retentionSeriesList}
+            retentionLabels={retentionLabels}
+            retentionCohorts={retentionCohorts}
+            funnelSeriesData={funnelSeriesData}
+            userFlowResult={userFlowResult}
+            isMap={isMap}
+            mapIncompleteReason={mapIncomplete}
+            isTopK={isTopK}
+            topKRows={topKRows}
+            topKDimension={topK.dimension}
+            topKMetric={topK.metric}
+            topKOmitOthers={topK.omitOthers}
+            topKIncompleteReason={topKIncomplete}
+            userFlowIncompleteReason={userFlowIncomplete}
+          />
+        </div>
       </div>
     </Page>
   )

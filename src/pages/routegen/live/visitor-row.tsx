@@ -1,4 +1,4 @@
-import { Laptop, Monitor, Smartphone } from 'lucide-react'
+import { Laptop, Monitor, Smartphone, Tv } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { CountryFlag } from '@/components/country-flag'
@@ -6,13 +6,16 @@ import IdentityAvatar from '@/components/identity-avatar'
 import {
   activeSpan,
   describeEvent,
+  deviceTypeLabel,
   eventAvatarUrl,
   eventIdentity,
   formatCountryName,
-  isMobileVisitor,
   localClock,
+  resolveDeviceType,
   type SessionStat,
+  type VisitorDeviceType,
 } from '@/components/live-map/live-visitors'
+import { deviceModelOf } from '@/lib/auto-properties'
 import { getSeriesColor } from '@/lib/event-colors'
 import { formatLocality } from '@/lib/location'
 import { structGet } from '@/lib/struct'
@@ -27,6 +30,13 @@ const EventLine = ({ kind, detail }: { kind: string; detail: string }) => {
       {detail && <span className="truncate text-muted-foreground">{detail}</span>}
     </span>
   )
+}
+
+// A known model on a desktop reads as a laptop; without one there's nothing to say it isn't a tower.
+const deviceIcon = (type: VisitorDeviceType, model: string | undefined) => {
+  if (type === 'tv') return Tv
+  if (type === 'mobile') return Smartphone
+  return model ? Laptop : Monitor
 }
 
 // A pin outranks the map's pointer, which outranks this list's own hover.
@@ -67,9 +77,9 @@ const VisitorRow = ({ visitor, journey, stat, selected, highlighted, onClick, on
   const auto = visitor.autoProperties
   const { kind, detail } = describeEvent(visitor)
   const country = structGet(auto, '$country')
-  const device = structGet(auto, '$device')
-  const mobile = isMobileVisitor(auto)
-  const DeviceIcon = mobile ? Smartphone : device ? Laptop : Monitor
+  const deviceType = resolveDeviceType(auto)
+  const deviceModel = deviceModelOf(auto)
+  const DeviceIcon = deviceIcon(deviceType, deviceModel)
   const locality = formatLocality(structGet(auto, '$city'), structGet(auto, '$region'))
   const countryName = country ? formatCountryName(country) : null
   const localTime = localClock(structGet(auto, '$timezone'), lastSeen)
@@ -115,7 +125,7 @@ const VisitorRow = ({ visitor, journey, stat, selected, highlighted, onClick, on
                 <span className="text-muted-foreground">{locality || countryName || '—'}</span>
                 {locality && countryName && ` · ${countryName}`}
               </span>
-              <span className="flex shrink-0 items-center gap-1" title={device || (mobile ? 'Mobile' : 'Desktop')}>
+              <span className="flex shrink-0 items-center gap-1" title={deviceModel || deviceTypeLabel[deviceType]}>
                 <span className="text-muted-foreground/30">·</span>
                 <DeviceIcon className="size-3 shrink-0" />
               </span>

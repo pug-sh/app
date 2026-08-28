@@ -17,7 +17,18 @@ bun run lint       # Biome check — format + lint + import organization (safe f
 bun run lint:ci    # Biome check, reporting only — never writes (what CI runs)
 bun run test       # Vitest, single run
 bun run test:watch # Vitest, watch mode
+bun run knip       # Knip — unused files, exports and dependencies (CI gate)
 ```
+
+## Knip
+
+`knip.jsonc`, run in CI after the build. It gates on unused files, unused/unlisted dependencies, and exports nothing imports.
+
+- **Three zones are ignored: `src/api/genproto/`, `src/components/charts/`, `src/components/ui/`.** All are regenerated or re-added from a registry, so a finding in one is never something we would act on. The cost is that knip no longer reports dead *files* there either — `components/ui/{card,table,tabs,toggle-group}.tsx` were all found and deleted that way before the zone was ignored, and a future one won't be. Dead files are the lesser reason for the ignore in any case: un-ignoring `components/ui/` also reports ~44 unused exports that are legitimate registry API.
+- **An ignored file still contributes dependency usage — unless nothing *reachable from an entry point* imports it.** Then knip never parses it, and a dependency only it pulls in reads as dead. Being imported is not enough, which is the trap: `@visx/pattern` needs a line in `ignoreDependencies` even though its importer `charts/visx-pattern.tsx` *is* imported, because the chain above it dead-ends — `@visx/pattern` ← `visx-pattern.tsx` ← `pattern-preset.tsx` ← `bar-squares.tsx` ← nothing. `cmdk`, `react-day-picker` and `class-variance-authority` are equally exclusive to `components/ui/`, and need nothing, because app code imports the files that use them.
+- **Don't add `src/components/shimmering-text.tsx` to `ignore`.** It is vendored, but it is reachable through the chart zone, so listing it earns a "Remove from ignore" config hint instead.
+- **`ignoreExportsUsedInFile: true`.** Flipping it surfaces a second tier of ~35 `export` keywords on symbols only used in their own file — worth a periodic sweep, but not a gate: some are deliberate module API (`lib/granularity.ts`, `analytics/sanitize-url.ts`).
+- `@bufbuild/protoc-gen-es` is also in `ignoreDependencies` — `buf.gen.yaml` runs it as a `local:` plugin binary, so there is no import site to find.
 
 ## Tests
 
@@ -36,13 +47,15 @@ Proto definitions live in `proto/` — a gitignored symlink to the pug backend c
 
 ## Architecture
 
-### State Management — Jotai atoms everywhere
+### State Management — Jotai atoms for shared state
 
-All state is Jotai atoms. No React Context, no Redux. Pattern:
+All *shared* state is Jotai atoms. No React Context, no Redux. Pattern:
 
 - **RPC clients** are atoms: `atom(get => createClient(Service, get(transportAtom)))` in `src/api/rpc.ts`
 - **Async operations** use write atoms: `atom(null, async (get, set) => { ... })`
 - **Persistent state** uses `atomWithStorage` (JWT token, theme preference)
+
+State only one page reads is not shared state and stays in `useState` — see Page Decomposition below.
 
 ### ConnectRPC Transport
 
@@ -151,7 +164,7 @@ UI sans is **Figtree** (`@fontsource-variable/figtree`, `wght` **300–900**), m
 - **Large type is tracked in, but only just.** `h1/h2/h3` set `-0.014em`; `.text-3xl/4xl/5xl` set `-0.018em` in `@layer base` so any large text is right by default. Text spacing is drawn for 14px and a 36px figure needs the gaps closed — but overdo it and an airy face stops being one, which is why these are half what a tight grotesque wanted. Utilities beat the base layer, so a `tracking-tight` at the call site still wins.
 - **`tabular-nums` is load-bearing.** Figtree ships real tabular figures (its digits otherwise span a 1.55× width range); keep it on numeric columns and live-updating values or they reflow as they tick.
 - **Axis-tick fitting is calibrated to the face.** `AXIS_LABEL_PX_PER_CHAR` (`insights/charts/helpers.ts`) is the face's *widest* realistic label (Figtree: an all-digit clock at 7.0px/char, vs ~4.9 for a spaced label), not its average — fitting to the average overprints exactly the labels that are hardest to read. **Re-measure it on every face change**; it has read 6.5 / 7.2 / 6.7 / 7.0 across four faces, and the old 6.5 for Figtree was measured against the *average* label rather than the worst one.
-- **The share-card renderer embeds the font separately and will not error if you forget it.** `capture-tile.ts` loads the SVG through an `<img>`, which cannot see the page's `@font-face`, so it fetches the woff2 via a Vite `?url` import and inlines it as a base64 `@font-face` built in a template string. Changing `--font-sans` means also updating `FONT_FAMILY`, the import path, **and the `font-weight` range** in that string — **Figtree's axis starts at 300, not the `100 900` most variable faces ship**, so a copied-over range renders the export off-weight. Get it wrong and exported tiles fall back to system sans or render off-weight — silently, and only in the export.
+- **The share-card renderer embeds the font separately and will not error if you forget it.** `lib/capture-chart.ts` loads the SVG through an `<img>`, which cannot see the page's `@font-face`, so it fetches the woff2 via a Vite `?url` import and inlines it as a base64 `@font-face` built in a template string. Changing `--font-sans` means also updating `FONT_FAMILY`, the import path, **and the `font-weight` range** in that string — **Figtree's axis starts at 300, not the `100 900` most variable faces ship**, so a copied-over range renders the export off-weight. Get it wrong and exported tiles fall back to system sans or render off-weight — silently, and only in the export.
 
 ### Emoji — Twemoji only
 
@@ -163,14 +176,111 @@ All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji)
 
 Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji — leave those as plain text unless explicitly moving them to the emoji system.
 
-### Platform icons — Devicon
+### Brand icons — self-hosted, no icon dependency
 
-Browser, OS, and device labels on profiles and events use colored `-original` SVGs from [Devicon](https://github.com/devicons/devicon) (npm `devicon`).
+Browser, OS and device marks on profiles and events. **The `devicon` package is gone** — it covered
+four browsers, shipped the *retired* Firefox logo (which we were already overriding), and its
+`linux-original` was a 194KB gradient-mesh Tux being painted into a 16px box, five times the weight
+of every other icon combined. Everything is self-hosted now.
 
-- **Assets:** `src/lib/devicon-assets.ts` — Vite `?url` imports from `devicon/icons/` for most platforms. Edge, iOS, and macOS use self-hosted SVGs in `public/devicon/` (not in devicon)
-- **Mapping:** `src/lib/devicon-map.ts` — string heuristics for `$browser`, `$os`, `$device` auto-properties
-- **Components:** `Devicon` (`src/components/devicon.tsx`), `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`)
-- **No CDN** — SVGs are bundled from `node_modules/devicon/icons/`
+- **Assets:** `public/brands/` (browser/OS), mapped in `src/lib/brand-icon-assets.ts`. That object
+  is the source of truth for both the names and the paths — `BrandIconName = keyof typeof
+  BRAND_ICON_ASSETS` — so the two cannot drift and adding a brand is one entry. It does **not**
+  prove a path resolves: `public/` is copied verbatim and never enters the module graph, so a typo
+  or a renamed file is an `<img>` that 404s silently behind `aria-hidden` and still clears `tsc`,
+  `vite build`, `knip` and `biome`. **`brand-icon-assets.test.ts` is that check** — it walks both
+  directions (every mapped path exists, case-exact; no orphan files) and covers `public/sdk/` too,
+  whose four language/framework marks are plain literals on `Platform.icon` in `setup-platforms.ts`
+  with no type guarantee of their own.
+- **Mapping:** `src/lib/brand-icons.ts` — string heuristics over the `$browser`, `$os`, `$device`
+  auto-properties.
+- **Components:** `BrandIcon` / `UnknownBrowserIcon` (`src/components/brand-icon.tsx`),
+  `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`).
+- Named **brand**, not platform: `Platform` already means two different things here — the SDK target
+  in `setup-platforms.ts` (web/script/node/flutter) and browser+OS+device in `platform-label.tsx`.
+
+**`$browser` is an open set, so the table can never be finished.** It is whatever the browser
+declares in `navigator.userAgentData.brands` (`sdk-web/src/parsers.ts`), or a ua-parser family
+normalized by the backend (`internal/useragent/normalize.go`) — normally a clean name like
+`"Google Chrome"` or `"Brave"`, though the resolver keeps raw-UA tokens as a backstop. An unlisted browser falls through to `null`, not to Chrome. Anything
+unmatched renders `UnknownBrowserIcon`, a neutral globe — that branch is reached routinely and is
+the point.
+
+**A named browser owns the icon slot outright, so the globe is not a last resort.** The single-icon
+labels (`PlatformLabel`, `PlatformStackLabel`) read the OS mark *only* when no browser is named —
+they used to chain `resolveBrowserIcon(browser) ?? resolveOsIcon(os)`, which quietly handed an
+unrecognised browser the OS glyph and never reached the globe, so `Epiphany · Linux` drew Tux. An
+OS-only row still gets its OS mark; what it never gets is the globe, which would claim a browser the
+row doesn't name. Guarded by `platform-label.test.tsx`.
+
+**Ordering in `resolveBrowserIcon` is load-bearing — do not alphabetise it.** The `edg`, `crios`,
+`fxios`, `opr`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and
+a raw UA names the derivative *alongside* Chrome and Safari — `Chrome/120 … Safari/537.36 OPR/106`.
+So **every branch that names a specific brand has to sit above the generic `chrome`/`safari` pair**,
+or its raw-UA token is unreachable: Opera, UC and Samsung Internet each drew Chrome, and Firefox iOS
+drew Safari, for exactly that reason. `chrome` above `safari` is the same rule, since every Chromium
+UA ends in `Safari`. Clean family names cannot catch a reorder, which is why `brand-icons.test.ts`
+pins the whole order with raw UA strings.
+
+Two tokens are deliberately narrower than the brand name, and both would misfire if widened:
+`samsung` is matched as `samsung internet`/`samsungbrowser`, because a plain Chrome UA carries the
+handset in the same string (`SAMSUNG SM-S918B`) and from above the `chrome` branch a bare `samsung`
+turns Chrome-on-a-Galaxy into Samsung Internet — pinned by its own test. `uc` is two letters that sit
+inside `DuckDuckGo`, kept right by both the multi-token guard *and* DuckDuckGo's earlier branch.
+
+Known gap, same shape but not an ordering fix: Yandex and Coc Coc match only their clean family
+names, so their raw UAs (`YaBrowser/…`, `coc_coc_browser/…`) still fall through to Chrome. Closing
+it means adding those tokens, not moving the branches.
+
+`android` stays **last** for the opposite reason — a Chrome-on-Android UA names the platform in the
+same string, so from higher up it would claim every Android row.
+
+Two substring traps, both guarded by tests in `brand-icons.test.ts`:
+
+- **`'ios'` must stay word-anchored.** `"kaios".includes("ios")` is true, so KaiOS — a Firefox OS
+  descendant with no Apple lineage — drew the Apple glyph. The other tokens *in that function* stay
+  unanchored because they also run against `$device` model strings, where a trailing `\b` would
+  reject `"iPhone15,3"`; `APPLE_DESKTOP_MODEL` and `ANDROID_BRAND_MODEL` further down are anchored,
+  for the opposite reason. **`isMobileOS` (`lib/format.ts`) still matches `ios` unanchored, and
+  should** — KaiOS *is* mobile, and anchoring it would label a feature phone "Desktop". The fix
+  belongs in `resolveDeviceIcon`, which must not read "mobile and not Apple" as Android; a named OS
+  it has no glyph for stays iconless.
+- **ChromeOS matches on the full `"chrome os"`, never a bare `chrome`** — that would also swallow the
+  four `Chromecast *` OS families. It reuses the Chrome mark deliberately: ChromeOS has no square
+  logo of its own. Every Linux distro resolves to Tux; the backend collapses those families anyway.
+
+**Licensing is the real constraint when adding an icon, and it is not the source's headline
+licence.** Simple Icons is CC0 *as a project* but says outright that its icons are not — the per-icon
+`license` field in its `data/simple-icons.json` is the thing to read, and it turned up CC-BY-SA-3.0
+on Debian and CC-BY-3.0 on Android. Wikimedia Commons is worse: its Ubuntu logo is GPLv3, its Debian
+CC-BY-SA, and the obvious Tux hit is GPLv2. **Copyleft on a bundled asset is the thing to avoid**;
+prefer public domain, then attribution-only, and record every source in `public/brands/NOTICE.md`
+(served, because CC-BY attribution should be discoverable). The Debian/Ubuntu/Fedora glyphs were
+dropped for exactly this reason — they were unreachable code carrying real obligations.
+
+Practical sourcing notes:
+
+- [browser-logos](https://github.com/alrra/browser-logos) is the best browser set, but only some entries ship SVG (Samsung Internet and UC
+  do; Yandex, Tor, Silk and Opera Mini are PNG-only). Its Safari is the macOS *app icon*, with a
+  gradient background plate that reads as a light tile on the dark canvas — use the flat mark.
+- **A Simple Icons path has no `fill`.** It inherits `currentColor`, which an `<img>` cannot provide,
+  so it renders solid black unless you inject the brand hex.
+- **Tint for both canvases, and don't trade away the identity to get there.** Linux's published
+  `#FCC624` is illegible on light — but a flat gold Tux is also just wrong, since Tux is
+  black/white/yellow. The authentic full-colour Larry Ewing Tux reads *better* than any flat tint on
+  both, including the deepest dark surface, because the white belly carries the silhouette. Its 31
+  `<filter>` elements were stripped: blur and shading passes invisible at 16px but recomputed on
+  every paint, in tables that render hundreds of rows.
+- **Verify against the dark surface ladder, not one flat canvas** — a dark glyph fails on `--sidebar`
+  (`0.158`), not on the average surface.
+
+**GNOME Web reports as `Safari 60.5` on Linux, and that is not our bug.** Epiphany returns
+WebKitGTK's default UA verbatim (`ephy_user_agent_get()`, no application name), and WebKitGTK builds
+a Safari UA on purpose for site compatibility, hardcoding an inflated `Version/60.5` to dodge sites
+that discriminate against older Safari. ua-parser *has* Epiphany rules; they never fire because no
+`Epiphany/` token is sent. Real Safari is at ~18–26, so **a "Safari 60.5" row on Linux is
+WebKitGTK** — distinguishable in the data, just not by name. Fixing it belongs in the backend's UA
+parser, if anywhere.
 
 Section divider header pattern:
 

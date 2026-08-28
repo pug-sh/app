@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { atom } from 'jotai'
+import { atom, type Getter } from 'jotai'
 import { trackFeature } from '@/analytics/pug'
 import type { Dashboard, DashboardsServiceUpsertRequest } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -9,39 +9,51 @@ import {
 import { dashboardsRPCAtom } from '@/api/rpc'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 
-export const dashboardListAtom = atom<Dashboard[]>([])
-export const dashboardListLoadingAtom = atom(false)
-export const dashboardListErrorAtom = atom<string | null>(null)
+type DashboardListState = {
+  projectId: string
+  dashboards: Dashboard[] | null
+  error: string | null
+}
+
+const dashboardListStateAtom = atom<DashboardListState | null>(null)
+
+// Two rules, both mirroring the overview schema. Null dashboards means "not answered yet": an
+// in-flight flag reads false on the first commit and flashes the empty state over a project that
+// has dashboards. And the state is owned by the project it was fetched for, because the page
+// remounts on a switch while this module-level atom doesn't — an ungated read would show the
+// previous project's rows under the new one.
+const ownedState = (get: Getter) => {
+  const state = get(dashboardListStateAtom)
+  return state?.projectId === get(activeProjectAtom)?.id ? state : null
+}
+
+export const dashboardListAtom = atom(get => ownedState(get)?.dashboards ?? null)
+export const dashboardListErrorAtom = atom(get => ownedState(get)?.error ?? null)
 
 export const fetchDashboardsAtom = atom(null, async (get, set) => {
-  const project = get(activeProjectAtom)
   const headers = get(projectHeaderAtom)
-  if (!project || !headers) {
-    set(dashboardListAtom, [])
-    set(dashboardListLoadingAtom, false)
-    set(dashboardListErrorAtom, null)
-    return []
-  }
+  const projectId = get(activeProjectAtom)?.id
+  // Safe to leave the state alone: with no project the page renders NoProject, and anything left
+  // over from the last one is already gated out by ownership.
+  if (!headers || !projectId) return []
 
   const dashboardsRPC = get(dashboardsRPCAtom)
-  const requestedProjectId = project.id
-  set(dashboardListLoadingAtom, true)
-  set(dashboardListErrorAtom, null)
+  // Carries the current list forward so a refetch after create/delete doesn't blank the page; on a
+  // switch the owned read is already null, which is what puts the spinner up.
+  set(dashboardListStateAtom, { projectId, dashboards: get(dashboardListAtom), error: null })
+  // A response outlives the request that asked for it, and the loser lands last: without this a
+  // late reply for the old project overwrites the new one's and the page never leaves the spinner.
+  const stale = () => get(activeProjectAtom)?.id !== projectId
   try {
     const resp = await dashboardsRPC.list({}, { headers })
-    if (get(activeProjectAtom)?.id !== requestedProjectId) return []
-    set(dashboardListAtom, resp.dashboards)
+    if (stale()) return []
+    set(dashboardListStateAtom, { projectId, dashboards: resp.dashboards, error: null })
     return resp.dashboards
   } catch (err) {
-    if (get(activeProjectAtom)?.id !== requestedProjectId) return []
+    if (stale()) return []
     console.error('fetchDashboards failed:', err)
-    set(dashboardListAtom, [])
-    set(dashboardListErrorAtom, 'Failed to load dashboards')
+    set(dashboardListStateAtom, { projectId, dashboards: [], error: 'Failed to load dashboards' })
     return []
-  } finally {
-    if (get(activeProjectAtom)?.id === requestedProjectId) {
-      set(dashboardListLoadingAtom, false)
-    }
   }
 })
 

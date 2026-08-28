@@ -1,21 +1,11 @@
-import { create } from '@bufbuild/protobuf'
 import { useAtomValue } from 'jotai'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import {
-  AggregationType,
-  EventQuerySchema,
-  Granularity,
-  InsightQuerySpecSchema,
-  InsightType,
-  QueryRequestSchema,
-  TopKQuery_Dimension,
-  TopKQuerySchema,
-} from '@/api/genproto/shared/insights/v1/insights_pb'
+import { AggregationType, Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import ProjectLink from '@/components/project-link'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { ActivityMapTile } from './activity-map-tile'
+import { buildTopEventsQuery, buildTrendsQuery } from './analytics-queries'
 import BreakdownTile from './breakdown-tile'
 import FunnelTile from './funnel-tile'
 import type { GlobalOverrides } from './global-overrides'
@@ -56,31 +46,6 @@ const GRANULARITY_ADVERB = {
 const perBucketAdverb = (granularity: Granularity | undefined) => GRANULARITY_ADVERB[granularity ?? Granularity.DAY]
 
 type Props = GlobalOverrides
-
-const buildTrendsQuery = (kind: string, aggregation: AggregationType) =>
-  create(QueryRequestSchema, {
-    spec: create(InsightQuerySpecSchema, {
-      insightType: InsightType.TRENDS,
-      events: [
-        create(EventQuerySchema, {
-          event: create(EventFilterSchema, { kind }),
-          aggregation,
-        }),
-      ],
-    }),
-  })
-
-const buildTopEventsQuery = () =>
-  create(QueryRequestSchema, {
-    spec: create(InsightQuerySpecSchema, {
-      insightType: InsightType.TOP_K,
-      topK: create(TopKQuerySchema, {
-        dimension: TopKQuery_Dimension.EVENT_KIND,
-        metric: AggregationType.TOTAL,
-        limit: 10,
-      }),
-    }),
-  })
 
 const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
   const schema = useAtomValue(overviewSchemaAtom)
@@ -152,7 +117,6 @@ const AnalyticsMode = ({ globalTimeRange, globalGranularity }: Props) => {
           <div className="grid min-h-0 grid-cols-1 gap-3.5 lg:h-[440px] lg:grid-cols-5">
             <div className="h-[440px] min-h-0 overflow-hidden lg:col-span-2 lg:h-full">
               <ActivityMapTile
-                schema={schema}
                 primary={bindings.primary}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={globalGranularity}

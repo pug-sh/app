@@ -14,7 +14,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -36,6 +36,12 @@ jobs:
         # No proto symlink needed: generated clients are committed, and only `bun run generate`
         # reads proto/.
         run: bun run build
+
+      - name: Knip
+        # Dead files, exports and dependencies. Ordered after tsc so an unresolved import — the one
+        # failure both tools flag — is reported by the compiler rather than as knip noise. Generated
+        # and vendored zones are in `ignore` in knip.jsonc, so it never proposes deleting code we don't own.
+        run: bun run knip
 
       # Pinned rather than inherited: the usage tests assert UTC bucketing by contrasting it with a
       # western zone, and their comments claim CI runs in UTC. That was only ever true because

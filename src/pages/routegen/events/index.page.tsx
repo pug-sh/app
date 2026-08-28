@@ -26,9 +26,11 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
+import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
-import { defaultRange } from '@/lib/date-presets'
+import { defaultRange, refreshTimeRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
+import { rpcErrorMessage } from '@/lib/rpc-error'
 import { structGet, structToEntries } from '@/lib/struct'
 import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -85,6 +87,8 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const osVersion = structGet(event.autoProperties, '$osVersion')
   const browser = structGet(event.autoProperties, '$browser')
   const browserVersion = structGet(event.autoProperties, '$browserVersion')
+  const device = deviceModelOf(event.autoProperties)
+  const platform = platformOf(event.autoProperties)
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
   const region = structGet(event.autoProperties, '$region')
@@ -125,6 +129,8 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
             browserVersion={browserVersion}
             os={os}
             osVersion={osVersion}
+            device={device}
+            platform={platform}
             iconSize={14}
           />
         </td>
@@ -207,9 +213,15 @@ const EventExplorer = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // The failed request's page token rides along: a refresh and a "Load more" both land in the bottom
+  // banner, whose Retry must repeat the one that failed, not whichever nextToken survived it.
+  const [error, setError] = useState<{ message: string; pageToken: string } | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const lastUpdatedLabel = useRelativeTime(lastUpdated)
+
+  // The window the last request was issued with. A fresh load re-resolves it; "Load more" reuses it,
+  // so every page of a result set is fetched against the window its cursor was issued from.
+  const queryRangeRef = useRef(timeRange)
 
   const filterRef = useRef<HTMLDivElement>(null)
   const [filterH, setFilterH] = useState(0)
@@ -236,10 +248,12 @@ const EventExplorer = () => {
       setError(null)
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
+        const range = pageToken ? queryRangeRef.current : refreshTimeRange(timeRange)
+        queryRangeRef.current = range
         const resp = await activityRPC.getEventExplorer(
           {
             distinctId: userFilter || undefined,
-            timeRange: toProtoTimeRange(timeRange),
+            timeRange: toProtoTimeRange(range),
             propertyFilters: toProtoFilters(propFilters),
             events: protoEvents,
             pageSize: 100,
@@ -258,9 +272,8 @@ const EventExplorer = () => {
         setNextToken(resp.nextPageToken)
       } catch (err) {
         console.error('Event explorer failed:', err)
-        setError(
-          err instanceof Error ? err.message : pageToken ? 'Failed to load more events' : 'Failed to load events',
-        )
+        const fallback = pageToken ? 'Failed to load more events' : 'Failed to load events'
+        setError({ message: rpcErrorMessage(err, fallback), pageToken })
       } finally {
         setLoading(false)
       }
@@ -288,7 +301,7 @@ const EventExplorer = () => {
       {/* Filter bar */}
       <div
         ref={filterRef}
-        className="sticky top-0 z-10 bg-background -mx-8 px-8 pt-4 pb-3 space-y-2 border-b border-border/50"
+        className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter pt-4 pb-3 space-y-2 border-b border-border/50"
       >
         <div className="flex items-center gap-2 flex-wrap">
           <DateRangePicker value={timeRange} onChange={setTimeRange} allowUnset />
@@ -372,7 +385,7 @@ const EventExplorer = () => {
       ) : error && events.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <AlertCircle className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
+          <p className="text-sm font-medium mb-1">{error.message}</p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchEvents()}>
             Retry
           </Button>
@@ -404,8 +417,8 @@ const EventExplorer = () => {
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <AlertCircle className="w-3.5 h-3.5" />
-              <span>{error}</span>
-              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchEvents(nextToken)}>
+              <span>{error.message}</span>
+              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchEvents(error.pageToken)}>
                 Retry
               </Button>
             </div>

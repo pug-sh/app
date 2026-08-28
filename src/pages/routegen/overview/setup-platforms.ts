@@ -1,8 +1,3 @@
-import flutterIcon from 'devicon/icons/flutter/flutter-original.svg?url'
-import html5Icon from 'devicon/icons/html5/html5-original.svg?url'
-import javascriptIcon from 'devicon/icons/javascript/javascript-original.svg?url'
-import nodejsIcon from 'devicon/icons/nodejs/nodejs-original.svg?url'
-
 // Per-platform onboarding shown on the Overview setup screen while a project has no events yet.
 //
 // Snippets are verified against the published SDKs: @pug-sh/browser (init(projectId, { apiKey })),
@@ -75,7 +70,7 @@ export type Platform = {
 export const PLATFORMS: Record<PlatformId, Platform> = {
   web: {
     label: 'Web',
-    icon: javascriptIcon,
+    icon: '/sdk/javascript.svg',
     docsUrl: `${DOCS_BASE}?platform=web`,
     sections: [
       { label: 'Install', credential: 'none', code: () => 'npm install @pug-sh/browser' },
@@ -97,7 +92,7 @@ track('signed_up', { plan: 'pro' })`,
   },
   script: {
     label: 'Script',
-    icon: html5Icon,
+    icon: '/sdk/html5.svg',
     docsUrl: `${DOCS_BASE}?platform=web`,
     sections: [
       {
@@ -137,7 +132,7 @@ track('signed_up', { plan: 'pro' })`,
   },
   node: {
     label: 'Node',
-    icon: nodejsIcon,
+    icon: '/sdk/nodejs.svg',
     docsUrl: `${DOCS_BASE}?platform=node`,
     needsPrivateKey: true,
     sections: [
@@ -158,7 +153,7 @@ pug.track('user_123', 'order_completed', { revenue: 49 })`,
   },
   flutter: {
     label: 'Flutter',
-    icon: flutterIcon,
+    icon: '/sdk/flutter.svg',
     docsUrl: `${DOCS_BASE}?platform=flutter`,
     sections: [
       { label: 'Install', credential: 'none', code: () => 'flutter pub add pug_flutter' },

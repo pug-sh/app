@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Area } from '@/components/charts/area'
 import { useChartStable, useYScale } from '@/components/charts/chart-context'
 import { Line } from '@/components/charts/line'
@@ -24,6 +25,24 @@ const useSettledYDomain = () => {
   return min === target[0] && max === target[1]
 }
 
+const HEIGHT_SETTLE_MS = 120
+
+// That same overlay lists innerWidth but not innerHeight in either call site's deps, so a
+// height-only change paints the dashes against the old plot — misaligned, and cropped at the new
+// floor if it shrank. Only a remount re-measures. Settled, because the remount frame draws no
+// dashes at all and a resizing tile samples its height every 10ms.
+const useSettledHeight = () => {
+  const { innerHeight } = useChartStable()
+  const [settled, setSettled] = useState(innerHeight)
+
+  useEffect(() => {
+    const id = setTimeout(() => setSettled(innerHeight), HEIGHT_SETTLE_MS)
+    return () => clearTimeout(id)
+  }, [innerHeight])
+
+  return settled
+}
+
 type Props = {
   dataKey: string
   // Read off the element by the shell's config scan, not only by the inner series.
@@ -35,10 +54,12 @@ type Props = {
 // reference line over the live fill.
 export function CompareArea({ dataKey, stroke, strokeWidth = 1.5 }: Props) {
   const settled = useSettledYDomain()
+  const height = useSettledHeight()
   if (!settled) return null
 
   return (
     <Area
+      key={height}
       curve={SERIES_CURVE}
       dashFromIndex={0}
       dataKey={dataKey}
@@ -58,10 +79,12 @@ CompareArea.displayName = 'Area'
 
 export function CompareLine({ dataKey, stroke, strokeWidth = 1.5 }: Props) {
   const settled = useSettledYDomain()
+  const height = useSettledHeight()
   if (!settled) return null
 
   return (
     <Line
+      key={height}
       animate={false}
       curve={SERIES_CURVE}
       dashFromIndex={0}

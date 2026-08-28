@@ -15,7 +15,6 @@ import {
   createDashboardAtom,
   dashboardListAtom,
   dashboardListErrorAtom,
-  dashboardListLoadingAtom,
   deleteDashboardAtom,
   fetchDashboardsAtom,
   pendingEditDashboardIdAtom,
@@ -33,7 +32,6 @@ const NewDashboardButton = ({ creating, onClick }: { creating: boolean; onClick:
 const Dashboards = () => {
   const project = useAtomValue(activeProjectAtom)
   const dashboards = useAtomValue(dashboardListAtom)
-  const loading = useAtomValue(dashboardListLoadingAtom)
   const error = useAtomValue(dashboardListErrorAtom)
   const fetchDashboards = useSetAtom(fetchDashboardsAtom)
   const createDashboard = useSetAtom(createDashboardAtom)
@@ -50,6 +48,7 @@ const Dashboards = () => {
   }, [fetchDashboards, project])
 
   const filteredDashboards = useMemo(() => {
+    if (!dashboards) return []
     const normalizedQuery = query.trim().toLowerCase()
     if (!normalizedQuery) return dashboards
     return dashboards.filter(dashboard =>
@@ -85,7 +84,7 @@ const Dashboards = () => {
 
   // Pick which state the body should render: spinner, an error/empty placeholder, or the list.
   const renderBody = () => {
-    if (loading && dashboards.length === 0) return <LoadingSpinner />
+    if (!dashboards) return <LoadingSpinner />
 
     if (error) {
       return (
@@ -148,7 +147,7 @@ const Dashboards = () => {
       }
     >
       <div className="space-y-4">
-        {dashboards.length > 0 ? (
+        {dashboards?.length ? (
           <div className="relative max-w-sm">
             <Search className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-2.5 size-4 text-muted-foreground" />
             <Input

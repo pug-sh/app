@@ -1,20 +1,9 @@
-import { create } from '@bufbuild/protobuf'
-import { EventFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import {
-  AggregationType,
-  BreakdownSchema,
-  EventQuerySchema,
-  InsightQuerySpecSchema,
-  InsightType,
-  QueryRequestSchema,
-} from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
+import { buildBreakdownQuery } from './analytics-queries'
 import type { GlobalOverrides } from './global-overrides'
 import { OverviewTileShell } from './overview-tile-shell'
-
-const BREAKDOWN_LIMIT = 50
 
 type Props = GlobalOverrides & {
   title: string
@@ -39,24 +28,7 @@ const BreakdownTile = ({
   globalTimeRange,
   globalGranularity,
 }: Props) => {
-  const query = create(QueryRequestSchema, {
-    spec: create(InsightQuerySpecSchema, {
-      insightType: InsightType.TRENDS,
-      events: [
-        create(EventQuerySchema, {
-          event: create(EventFilterSchema, { kind: eventKind }),
-          // These tiles ask what platform users are on and where they came from — questions about
-          // people, so count people rather than occurrences, which would weight by activity and let
-          // one busy user outweigh a hundred quiet ones. Per bucket, necessarily: a range-wide
-          // unique count isn't recoverable from a trends series (SERIES_COLLAPSE), so the summary
-          // reads as an average per bucket.
-          aggregation: AggregationType.UNIQUE_USERS,
-        }),
-      ],
-      breakdowns: [create(BreakdownSchema, { property: breakdownProperty })],
-      breakdownLimit: BREAKDOWN_LIMIT,
-    }),
-  })
+  const query = buildBreakdownQuery(eventKind, breakdownProperty)
 
   return (
     <OverviewTileShell

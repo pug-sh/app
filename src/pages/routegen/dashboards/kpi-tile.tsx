@@ -42,7 +42,7 @@ const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResol
   )
 }
 
-// Exported so the web-analytics stat tiles show the identical increasing/decreasing badge — one
+// Exported so the traffic stat tiles show the identical increasing/decreasing badge — one
 // source of truth for the delta visual across both overview modes.
 export const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
@@ -154,11 +154,11 @@ export const KpiTile = ({
 // Area sparkline: a soft gradient fill (trend color → transparent) under a
 // constant-width line. preserveAspectRatio="none" lets it stretch to the tile
 // width; vectorEffect keeps the stroke crisp despite the non-uniform scale.
-// Exported so the web-analytics stat cards render the identical sparkline.
+// Exported so the traffic stat cards render the identical sparkline.
 //
 // baseline='min' scales to the data's own range (default — emphasizes shape). baseline='zero'
 // anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
-// amplified to full height; the web stat cards use this to match the 0-based main chart.
+// amplified to full height; the traffic stat cards use this to match the 0-based main chart.
 export const Sparkline = ({ points, baseline = 'min' }: { points: { value: number }[]; baseline?: 'min' | 'zero' }) => {
   const gradientId = `spark-${useId().replace(/:/g, '')}`
   const values = points.map(p => p.value)

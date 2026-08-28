@@ -16,6 +16,7 @@ import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
 import { tsToDate } from '@/lib/timestamp'
 import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
+import { buildMapQuery, DEFAULT_MAP, type MapState, parseMapFromSpec } from '../insights/map'
 import { buildTopKQuery, DEFAULT_TOP_K, parseTopKFromSpec, type TopKState } from '../insights/top-k'
 import { buildUserFlowQuery, parseUserFlowConfig, type UserFlowConfig } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
@@ -29,6 +30,7 @@ export type InsightEditorState = {
   breakdowns: string[]
   userFlowConfig: UserFlowConfig
   topK: TopKState
+  map: MapState
 }
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
@@ -76,7 +78,8 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
     spec?.insightType === InsightType.FUNNEL ||
     spec?.insightType === InsightType.RETENTION ||
     spec?.insightType === InsightType.USER_FLOW ||
-    spec?.insightType === InsightType.TOP_K
+    spec?.insightType === InsightType.TOP_K ||
+    spec?.insightType === InsightType.MAP
   ) {
     return spec.insightType
   }
@@ -91,10 +94,10 @@ export const specHasIncompleteNumericAggregation = (spec?: InsightQuerySpec) => 
   return (spec.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty))
 }
 
-// Top-k specs carry no events — the optional scope event maps onto the editor's
+// Top-k and map specs carry no events — the optional scope event maps onto the editor's
 // event entries (capped at 1) so the shared event-filter UI edits it.
 const parseSpecScopeEntries = (spec?: InsightQuerySpec) => {
-  const scope = spec?.topK?.scope
+  const scope = spec?.topK?.scope ?? spec?.map?.scope
   if (!scope?.kind) return []
   return [createEntry(scope.kind, { filters: (scope.filters ?? []).map(filter => fromProtoFilter(filter)) })]
 }
@@ -106,11 +109,15 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
     displayName: tile?.displayName ?? '',
     description: tile?.description ?? '',
     insightType,
-    eventEntries: insightType === InsightType.TOP_K ? parseSpecScopeEntries(spec) : parseSpecEntries(spec),
+    eventEntries:
+      insightType === InsightType.TOP_K || insightType === InsightType.MAP
+        ? parseSpecScopeEntries(spec)
+        : parseSpecEntries(spec),
     propFilters: parseSpecPropFilters(spec),
     breakdowns: parseSpecBreakdowns(spec),
     userFlowConfig: parseUserFlowConfig(spec?.userFlow),
     topK: parseTopKFromSpec(spec),
+    map: parseMapFromSpec(spec),
   }
 }
 
@@ -121,6 +128,7 @@ export const buildInsightSpec = ({
   breakdowns,
   userFlowConfig,
   topK,
+  map,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
@@ -132,6 +140,7 @@ export const buildInsightSpec = ({
   // InsightEditorState always carries one, so no caller has to invent it.
   userFlowConfig: UserFlowConfig
   topK?: TopKState
+  map?: MapState
 }) => {
   const filterGroups =
     propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : []
@@ -142,6 +151,17 @@ export const buildInsightSpec = ({
     return create(InsightQuerySpecSchema, {
       insightType,
       topK: buildTopKQuery(topK ?? DEFAULT_TOP_K, validEntries[0]),
+      filterGroups,
+      filterGroupsOperator: LogicalOperator.AND,
+    })
+  }
+
+  // A map carries no events/breakdowns either: the country dimension is implied by the insight
+  // type, and the optional scope event rides inside map.
+  if (insightType === InsightType.MAP) {
+    return create(InsightQuerySpecSchema, {
+      insightType,
+      map: buildMapQuery(map ?? DEFAULT_MAP, validEntries[0]),
       filterGroups,
       filterGroupsOperator: LogicalOperator.AND,
     })

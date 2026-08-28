@@ -4,6 +4,8 @@ import type { DatePreset, TimeRange } from '@/components/date-range-picker'
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999)
 
+const fromPreset = (preset: DatePreset): TimeRange => ({ ...preset.resolve(), label: preset.label })
+
 // Midnight-to-now, behind the 'Today' preset.
 export const todayRange = (): TimeRange => ({ from: startOfDay(new Date()), to: new Date() })
 
@@ -14,9 +16,11 @@ const lastNHours = (n: number): TimeRange => {
   return { from: new Date(now.getTime() - n * 60 * 60 * 1000), to: now }
 }
 
+const LAST_24_HOURS_PRESET: DatePreset = { label: 'Last 24 hours', resolve: () => lastNHours(24) }
+
 // Shared by the 'Last 24 hours' preset and the Overview default landing window, so the two never
 // drift and neither hard-codes a preset-label lookup.
-export const last24HoursRange = (): TimeRange => ({ ...lastNHours(24), label: 'Last 24 hours' })
+export const last24HoursRange = () => fromPreset(LAST_24_HOURS_PRESET)
 
 const lastNDays = (n: number): TimeRange => {
   const now = new Date()
@@ -79,10 +83,12 @@ const thisYear = (): TimeRange => {
   return { from: new Date(now.getFullYear(), 0, 1), to: now }
 }
 
+const THIS_MONTH_PRESET: DatePreset = { label: 'This month', resolve: thisMonth }
+
 // One list behind every page-level picker, so a range offered on one page is offered on all.
 // Rolling first, then calendar-anchored next to its previous-period counterpart.
 export const TIME_RANGE_PRESETS: DatePreset[] = [
-  { label: 'Last 24 hours', resolve: last24HoursRange },
+  LAST_24_HOURS_PRESET,
   { label: 'Today', resolve: todayRange },
   { label: 'Yesterday', resolve: yesterday },
   { label: 'Last 7 days', resolve: () => lastNDays(7) },
@@ -93,10 +99,18 @@ export const TIME_RANGE_PRESETS: DatePreset[] = [
   { label: 'Last 12 months', resolve: () => lastNMonths(12) },
   { label: 'This week', resolve: thisWeek },
   { label: 'Last week', resolve: lastWeek },
-  { label: 'This month', resolve: thisMonth },
+  THIS_MONTH_PRESET,
   { label: 'Last month', resolve: lastMonth },
   { label: 'This year', resolve: thisYear },
 ]
+
+// A preset names a window relative to now, so a stored one is already stale by the next query.
+// Re-resolve it by label; unlabelled, undefined, and labels no preset claims pass through.
+export const refreshTimeRange = (range: TimeRange | undefined) => {
+  if (!range?.label) return range
+  const preset = TIME_RANGE_PRESETS.find(item => item.label === range.label)
+  return preset ? fromPreset(preset) : range
+}
 
 // Named, not TIME_RANGE_PRESETS[0], so reordering the list can't move Insights' landing window.
 export const DEFAULT_INSIGHTS_RANGE = () => lastNDays(7)
@@ -120,10 +134,6 @@ export const isDashboardTimeRangePreset = (
 ): preset is (typeof DASHBOARD_TIME_RANGE_PRESETS)[number]['value'] =>
   preset !== undefined && DASHBOARD_TIME_RANGE_PRESETS.some(option => option.value === preset)
 
-export const getDashboardTimeRangePresetLabel = (preset: TimeRangePreset | undefined) =>
-  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === preset)?.label ??
-  DASHBOARD_TIME_RANGE_PRESETS.find(item => item.value === DEFAULT_DASHBOARD_TIME_RANGE_PRESET)!.label
-
 export const resolveDashboardTimeRangePreset = (
   preset: TimeRangePreset | undefined,
   fallback?: TimeRange,
@@ -139,4 +149,7 @@ export const fmtDate = (d: Date) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(!sameYear && { year: 'numeric' }) })
 }
 
-export const defaultRange = thisMonth
+export const fmtDateRange = (range: TimeRange) => `${fmtDate(range.from)} – ${fmtDate(range.to)}`
+
+// Labelled, so refreshTimeRange can re-resolve it the same way a picked preset is re-resolved.
+export const defaultRange = () => fromPreset(THIS_MONTH_PRESET)
