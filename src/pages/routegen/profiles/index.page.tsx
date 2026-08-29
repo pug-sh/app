@@ -332,7 +332,7 @@ const Profiles = () => {
                           className="items-center gap-3"
                         >
                           <div className="relative shrink-0">
-                            <ProfileAvatar identity={identity} className="size-7 rounded-md" />
+                            <ProfileAvatar identity={identity} bot={activity?.bot} className="size-7 rounded-md" />
                             <span className="absolute -right-0.5 -bottom-0.5">
                               <StatusDot lastSeen={tsToDate(activity?.lastSeen)} className="size-2" />
                             </span>

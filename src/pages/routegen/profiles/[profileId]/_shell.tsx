@@ -88,7 +88,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
           <div className="relative shrink-0">
-            <ProfileAvatar identity={identity} className="size-10 rounded-md" />
+            <ProfileAvatar identity={identity} bot={profile.activity?.bot} className="size-10 rounded-md" />
             <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>
