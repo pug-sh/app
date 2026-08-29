@@ -11,6 +11,7 @@ import { EventDetails } from '@/components/event-details'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import { InlineEventProps } from '@/components/inline-event-props'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -25,6 +26,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
@@ -203,6 +205,7 @@ const EventExplorer = () => {
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [userFilter, setUserFilter] = useState('')
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
+  const [includeBots, setIncludeBots] = useIncludeBots()
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
@@ -222,6 +225,7 @@ const EventExplorer = () => {
   // The window the last request was issued with. A fresh load re-resolves it; "Load more" reuses it,
   // so every page of a result set is fetched against the window its cursor was issued from.
   const queryRangeRef = useRef(timeRange)
+  const requestRef = useRef(0)
 
   const filterRef = useRef<HTMLDivElement>(null)
   const [filterH, setFilterH] = useState(0)
@@ -246,6 +250,7 @@ const EventExplorer = () => {
     async (pageToken = '') => {
       setLoading(true)
       setError(null)
+      const seq = ++requestRef.current
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
         const range = pageToken ? queryRangeRef.current : refreshTimeRange(timeRange)
@@ -258,9 +263,13 @@ const EventExplorer = () => {
             events: protoEvents,
             pageSize: 100,
             pageToken,
+            includeBots,
           },
           { headers },
         )
+        // A filter or toggle change re-issues while the previous request is in flight, and there is
+        // no next poll here to correct a stale answer that lands last.
+        if (seq !== requestRef.current) return
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
@@ -271,14 +280,15 @@ const EventExplorer = () => {
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
+        if (seq !== requestRef.current) return
         console.error('Event explorer failed:', err)
         const fallback = pageToken ? 'Failed to load more events' : 'Failed to load events'
         setError({ message: rpcErrorMessage(err, fallback), pageToken })
       } finally {
-        setLoading(false)
+        if (seq === requestRef.current) setLoading(false)
       }
     },
-    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters],
+    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters, includeBots],
   )
 
   useEffect(() => {
@@ -373,6 +383,7 @@ const EventExplorer = () => {
             onAdd={addFilter}
             onUserIdSet={userFilter ? undefined : setUserFilter}
           />
+          <IncludeBotsToggle includeBots={includeBots} onChange={setIncludeBots} />
           {events.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground tabular-nums">{events.length} events</span>
           )}

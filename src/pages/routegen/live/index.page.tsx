@@ -70,7 +70,8 @@ const searchHaystack = (visitor: ActivityEvent) => {
 
 const LiveVisitorsPage = () => {
   const project = useAtomValue(activeProjectAtom)
-  const { events, loading, error, lastUpdated, windowMs, setWindowMs, arrivals, reload } = useLiveEvents()
+  const { events, loading, error, lastUpdated, windowMs, setWindowMs, arrivals, reload, includeBots, setIncludeBots } =
+    useLiveEvents()
 
   const [selectedDistinctId, setSelectedDistinctId] = useState<string | null>(null)
   // Minimized by default: the map is the page, the panel is the readout on top of it.
@@ -203,8 +204,14 @@ const LiveVisitorsPage = () => {
   const renderEmptyList = () => {
     if (allVisitors.length === 0) {
       return (
-        <div className="flex flex-1 items-center justify-center px-4 py-8 text-center text-sm text-muted-foreground">
-          No activity in the last {windowLabel(windowMs)}.
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-8 text-center text-sm text-muted-foreground">
+          No activity in the last {windowLabel(windowMs)}
+          {!includeBots && ' from real visitors'}.
+          {!includeBots && (
+            <button type="button" onClick={() => setIncludeBots(true)} className="text-xs text-primary hover:underline">
+              Include bots
+            </button>
+          )}
         </div>
       )
     }
@@ -319,6 +326,8 @@ const LiveVisitorsPage = () => {
                   countries={countries}
                   selectedCountry={country}
                   onCountryChange={setCountry}
+                  includeBots={includeBots}
+                  onIncludeBotsChange={setIncludeBots}
                   hasActiveFilters={hasActiveFilters}
                   onClearAll={clearAll}
                 />

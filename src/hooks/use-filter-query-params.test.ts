@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { UserFlowQuery_GroupBy, UserFlowQuery_NodeKind } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { insightsEventFiltersSearch, readFilterQueryParams } from './use-filter-query-params'
+import { insightsEventFiltersSearch, readFilterQueryParams, readIncludeBotsParam } from './use-filter-query-params'
 
 // The Overview events drill-through builds an Insights `?ef=…` with insightsEventFiltersSearch and
 // relies on the Insights page reading it straight back via readFilterQueryParams. Guard that contract.
@@ -82,5 +82,18 @@ describe('user-flow config restore', () => {
 
     expect(userFlowConfig.scope.kind).toBe('')
     expect(parseWarning).toContain('user flow')
+  })
+})
+
+// Only `1` opts in. A "generalisation" to `!== '0'` would flip every link that omits the param —
+// which is every default-view link, since the writer only emits the opt-in.
+describe('readIncludeBotsParam', () => {
+  it.each([
+    ['?bots=1', true],
+    ['', false],
+    ['?bots=0', false],
+    ['?bots=true', false],
+  ])('reads %s as %s', (search, expected) => {
+    expect(readIncludeBotsParam(search)).toBe(expected)
   })
 })

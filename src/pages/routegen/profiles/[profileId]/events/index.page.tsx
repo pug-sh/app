@@ -20,6 +20,7 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { refreshTimeRange } from '@/lib/date-presets'
@@ -112,6 +113,7 @@ const UserActivity = () => {
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const [includeBots] = useIncludeBots()
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -129,6 +131,7 @@ const UserActivity = () => {
   // The window the last request was issued with. A fresh load re-resolves it; "Load more" reuses it,
   // so every page of a result set is fetched against the window its cursor was issued from.
   const queryRangeRef = useRef(timeRange)
+  const requestRef = useRef(0)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -143,6 +146,7 @@ const UserActivity = () => {
       if (!profileId) return
       setLoading(true)
       setError(null)
+      const seq = ++requestRef.current
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
         const range = pageToken ? queryRangeRef.current : refreshTimeRange(timeRange)
@@ -155,9 +159,13 @@ const UserActivity = () => {
             events: protoEvents,
             pageSize: 200,
             pageToken,
+            includeBots,
           },
           { headers },
         )
+        // A filter or toggle change re-issues while the previous request is in flight, and there
+        // is no next poll here to correct a stale answer that lands last.
+        if (seq !== requestRef.current) return
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
@@ -167,13 +175,14 @@ const UserActivity = () => {
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
+        if (seq !== requestRef.current) return
         console.error('Activity feed failed:', err)
         setError({ message: rpcErrorMessage(err, 'Failed to load activity feed'), pageToken })
       } finally {
-        setLoading(false)
+        if (seq === requestRef.current) setLoading(false)
       }
     },
-    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC],
+    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC, includeBots],
   )
 
   useEffect(() => {

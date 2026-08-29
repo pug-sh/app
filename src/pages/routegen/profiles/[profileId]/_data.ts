@@ -3,6 +3,7 @@ import { atom } from 'jotai'
 import { atomWithRefresh } from 'jotai/utils'
 import { atomFamily } from 'jotai-family'
 import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
+import { includeBotsAtom } from '@/data/bots.atoms'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 
 // A profile URL can carry either an external/distinct id (events + activity links resolve
@@ -45,9 +46,12 @@ export const profileStatsFamilyAtom = atomFamily((profileId: string) =>
   atomWithRefresh(async get => {
     const rpc = get(activityRPCAtom)
     const headers = get(projectHeaderAtom)
+    // Tracked as a dependency rather than keyed into the family, which would strand a cache entry
+    // per profile per flag value. Must stay above the first await, or jotai stops tracking it.
+    const includeBots = get(includeBotsAtom)
     if (!headers) return { resp: null, failed: true as const, error: null }
     try {
-      const resp = await rpc.getProfileStats({ distinctId: profileId }, { headers })
+      const resp = await rpc.getProfileStats({ distinctId: profileId, includeBots }, { headers })
       return { resp, failed: false as const, error: null }
     } catch (err) {
       // Auth failures are session-wide, not a heatmap problem — let the boundary handle them.

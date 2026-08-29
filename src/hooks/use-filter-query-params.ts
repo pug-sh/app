@@ -59,6 +59,7 @@ const BREAKDOWNS_PARAM = 'bd'
 const USER_FLOW_PARAM = 'uf'
 const TOP_K_PARAM = 'tk'
 const MAP_PARAM = 'mp'
+const INCLUDE_BOTS_PARAM = 'bots'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -359,6 +360,17 @@ export const readPropFiltersParam = (search = window.location.search) => {
 export const writePropFiltersParam = (filters: readonly ActiveFilter[]) => {
   const url = new URL(window.location.href)
   setOrDelete(url, PROP_FILTERS_PARAM, filters.length > 0 ? JSON.stringify(filters) : undefined)
+  replaceUrlIfChanged(url)
+}
+
+// Only the opt-in is written, so an absent param and `bots=0` both mean hidden and a default-view
+// link never accumulates the param. Making the writer emit `bots=0` would break that.
+export const readIncludeBotsParam = (search = window.location.search) =>
+  new URLSearchParams(search).get(INCLUDE_BOTS_PARAM) === '1'
+
+export const writeIncludeBotsParam = (includeBots: boolean) => {
+  const url = new URL(window.location.href)
+  setOrDelete(url, INCLUDE_BOTS_PARAM, includeBots ? '1' : undefined)
   replaceUrlIfChanged(url)
 }
 

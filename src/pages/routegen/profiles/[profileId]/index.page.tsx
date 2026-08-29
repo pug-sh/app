@@ -11,6 +11,7 @@ import ProjectLink from '@/components/project-link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { getSeriesColor } from '@/lib/event-colors'
 import { useRouteParams } from '@/lib/route-params'
@@ -114,6 +115,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
   const [loadingRecent, setLoadingRecent] = useState(true)
   const [recentError, setRecentError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [includeBots] = useIncludeBots()
 
   useEffect(() => {
     if (!headers) return
@@ -121,7 +123,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
     setLoadingRecent(true)
     setRecentError(null)
     activityRPC
-      .getActivityFeed({ distinctId: profileId, pageSize: 10, pageToken: '' }, { headers })
+      .getActivityFeed({ distinctId: profileId, pageSize: 10, pageToken: '', includeBots }, { headers })
       .then(resp => {
         if (!cancelled) setRecent(resp.events.slice(0, 10))
       })
@@ -136,7 +138,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
     return () => {
       cancelled = true
     }
-  }, [profileId, headers, activityRPC, reloadKey])
+  }, [profileId, headers, activityRPC, reloadKey, includeBots])
 
   // structToEntries strips object/array/null values; total trait count comes from raw keys
   // so the "See all N" link matches what the Properties tab actually renders.
