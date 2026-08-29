@@ -94,7 +94,10 @@ const Profiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Carries the failed request's own page token: a filter or toggle change re-runs page one while
+  // nextToken still holds the previous query's cursor, so retrying off nextToken would append page
+  // two of the old query to stale rows.
+  const [error, setError] = useState<{ message: string; pageToken: string } | null>(null)
   const [schema, setSchema] = useState<GetFilterSchemaResponse | null>(null)
   const [schemaError, setSchemaError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -215,7 +218,7 @@ const Profiles = () => {
       } catch (err) {
         if (requestId !== latestProfilesRequestRef.current) return
         const fallback = pageToken ? 'Failed to load more profiles' : 'Failed to load profiles'
-        setError(fallback)
+        setError({ message: fallback, pageToken })
         toastRPCError(err, fallback)
       } finally {
         if (requestId === latestProfilesRequestRef.current) {
@@ -286,7 +289,7 @@ const Profiles = () => {
       ) : error && profiles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <ContactRound className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
+          <p className="text-sm font-medium mb-1">{error.message}</p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchProfilesPage()}>
             Retry
           </Button>
@@ -399,8 +402,13 @@ const Profiles = () => {
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <ContactRound className="w-3.5 h-3.5" />
-              <span>{error}</span>
-              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchProfilesPage(nextToken)}>
+              <span>{error.message}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => fetchProfilesPage(error.pageToken)}
+              >
                 Retry
               </Button>
             </div>
