@@ -62,7 +62,7 @@ export const DashboardCanvas = ({
     flaggedTileIds,
     assistantOpen,
     toggleAssistant,
-    applyTileOp,
+    assistant,
   } = editor
 
   const tileCount = effectiveDashboard?.tiles.length ?? 0
@@ -140,13 +140,8 @@ export const DashboardCanvas = ({
               )
             ) : null}
           </div>
-          {mode === 'edit' && assistantOpen && effectiveDashboard ? (
-            <DashboardAssistantPanel
-              draft={effectiveDashboard}
-              onApplyOp={applyTileOp}
-              onOpenTile={selectTile}
-              onClose={toggleAssistant}
-            />
+          {mode === 'edit' && assistantOpen ? (
+            <DashboardAssistantPanel assistant={assistant} onOpenTile={selectTile} onClose={toggleAssistant} />
           ) : mode === 'edit' && tileCount > 0 ? (
             <TileConfigPanel
               key={selectedTile?.id ?? '__none__'}

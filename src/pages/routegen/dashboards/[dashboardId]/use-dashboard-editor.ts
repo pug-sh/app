@@ -24,12 +24,13 @@ import {
   patchTile,
   removeDraftTile,
 } from '../draft-state'
-import { clearDraftKey, draftAtomFamily } from '../draft-storage'
+import { clearDraftKey, draftAtomFamily, type StoredDraft } from '../draft-storage'
 import { buildDuplicateTileInput } from '../duplicate-tile'
 import type { DashboardLayouts } from '../grid'
 import { buildTemplateContext, type TileTemplate } from '../templates'
 import { buildUpsertRequest } from '../upsert-dashboard'
 import { useEditorShortcuts } from '../use-editor-shortcuts'
+import { useDashboardAssistant } from './use-dashboard-assistant'
 
 // Undo/redo history caps: bound the snapshot stack so a long edit session can't grow
 // it without limit, and coalesce a burst of edits to the same target (e.g. typing a
@@ -62,10 +63,21 @@ export const useDashboardEditor = ({
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null)
   const [railCollapsed, setRailCollapsed] = useState(false)
   const [highlightTileId, setHighlightTileId] = useState<string | null>(null)
-  const [flaggedTileIds, setFlaggedTileIds] = useState<Set<string>>(new Set())
+  const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set())
   const [assistantOpen, setAssistantOpen] = useState(false)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
+  // The latest draft, for a streamed assistant turn that commits several ops between renders;
+  // the render-time sync covers writes that bypass writeDraft (another tab's storage event).
+  const draftRef = useRef(storedDraft)
+  draftRef.current = storedDraft
+  const writeDraft = useCallback(
+    (next: StoredDraft | null) => {
+      draftRef.current = next
+      setStoredDraft(next)
+    },
+    [setStoredDraft],
+  )
   const [pendingEditId, setPendingEditId] = useAtom(pendingEditDashboardIdAtom)
 
   // Undo/redo over the working draft. The whole draft is a small, cloneable proto
@@ -99,21 +111,22 @@ export const useDashboardEditor = ({
   // double-invoked updaters can't double-record.
   const commitDraft = useCallback(
     (updater: (draft: Dashboard) => Dashboard, coalesceKey?: string) => {
-      if (!storedDraft) return
+      const current = draftRef.current
+      if (!current) return
       const now = Date.now()
       const last = coalesceRef.current
       const coalesce =
         coalesceKey !== undefined && last !== null && last.key === coalesceKey && now - last.at < HISTORY_COALESCE_MS
       if (!coalesce) {
-        pastRef.current.push(cloneForDraft(storedDraft.draft))
+        pastRef.current.push(cloneForDraft(current.draft))
         if (pastRef.current.length > HISTORY_LIMIT) pastRef.current.shift()
         futureRef.current = []
       }
       coalesceRef.current = coalesceKey === undefined ? null : { key: coalesceKey, at: now }
-      setStoredDraft({ ...storedDraft, draft: updater(storedDraft.draft) })
+      writeDraft({ ...current, draft: updater(current.draft) })
       syncHistory()
     },
-    [storedDraft, setStoredDraft, syncHistory],
+    [writeDraft, syncHistory],
   )
 
   const undo = useCallback(() => {
@@ -122,9 +135,9 @@ export const useDashboardEditor = ({
     if (!previous) return
     futureRef.current.push(cloneForDraft(storedDraft.draft))
     coalesceRef.current = null
-    setStoredDraft({ ...storedDraft, draft: previous })
+    writeDraft({ ...storedDraft, draft: previous })
     syncHistory()
-  }, [mode, storedDraft, setStoredDraft, syncHistory])
+  }, [mode, storedDraft, writeDraft, syncHistory])
 
   const redo = useCallback(() => {
     if (mode !== 'edit' || !storedDraft || futureRef.current.length === 0) return
@@ -132,9 +145,45 @@ export const useDashboardEditor = ({
     if (!next) return
     pastRef.current.push(cloneForDraft(storedDraft.draft))
     coalesceRef.current = null
-    setStoredDraft({ ...storedDraft, draft: next })
+    writeDraft({ ...storedDraft, draft: next })
     syncHistory()
-  }, [mode, storedDraft, setStoredDraft, syncHistory])
+  }, [mode, storedDraft, writeDraft, syncHistory])
+
+  const highlightTimerRef = useRef<number | null>(null)
+  const pulseHighlight = useCallback((tileId: string) => {
+    setHighlightTileId(tileId)
+    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = window.setTimeout(
+      () => setHighlightTileId(current => (current === tileId ? null : current)),
+      1200,
+    )
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
+    },
+    [],
+  )
+
+  // Applies one streamed TileOp to the latest draft (several arrive per turn, between
+  // renders). Pulses rather than selects: selecting would swap the assistant panel out for
+  // the config rail mid-conversation; the panel's "open tile" link does that on request.
+  const applyTileOp = useCallback(
+    (op: TileOp) => {
+      const current = draftRef.current
+      if (!current) return null
+      const result = applyOpToDashboard(current.draft, op)
+      if (!result) return null
+      commitDraft(() => result.dashboard)
+      setFlaggedIds(ids => nextFlaggedIds(ids, result.tileId, op.violations.length > 0))
+      if (op.op.case !== 'remove') pulseHighlight(result.tileId)
+      return result.tileId
+    },
+    [commitDraft, pulseHighlight],
+  )
+
+  const assistant = useDashboardAssistant({ draft: storedDraft?.draft ?? null, onApplyOp: applyTileOp })
 
   // Resolve the project's events so suggested templates can seed real,
   // project-specific events (and gate tiles like Revenue). activeProjectAtom
@@ -161,30 +210,32 @@ export const useDashboardEditor = ({
   const enterEditMode = useCallback(
     (opts?: { focusName?: boolean }) => {
       if (!dashboard || !canEdit) return
-      setStoredDraft({
+      writeDraft({
         draft: cloneForDraft(dashboard),
         viewSnapshot: cloneForDraft(dashboard),
         startedAt: Date.now(),
       })
       resetHistory()
+      assistant.reset()
       setMode('edit')
       setSelectedTileId(dashboard.tiles[0]?.id ?? null)
       setAutoFocusName(opts?.focusName ?? false)
-      setFlaggedTileIds(new Set())
+      setFlaggedIds(new Set())
       setAssistantOpen(false)
     },
-    [dashboard, canEdit, setStoredDraft, resetHistory],
+    [dashboard, canEdit, writeDraft, resetHistory, assistant.reset],
   )
 
   const exitEditMode = useCallback(() => {
     if (!dashboardId) return
-    setStoredDraft(null)
+    writeDraft(null)
     clearDraftKey(dashboardId)
+    assistant.reset()
     setMode('view')
     setSelectedTileId(null)
-    setFlaggedTileIds(new Set())
+    setFlaggedIds(new Set())
     setAssistantOpen(false)
-  }, [dashboardId, setStoredDraft])
+  }, [dashboardId, writeDraft, assistant.reset])
 
   // A freshly created dashboard records its id in pendingEditDashboardIdAtom; once
   // it has loaded here, open straight into edit mode with the name field focused.
@@ -201,6 +252,13 @@ export const useDashboardEditor = ({
     return countDashboardChanges(storedDraft.viewSnapshot, storedDraft.draft)
   }, [storedDraft])
 
+  // Stored per tile id but read through the draft, so a flagged tile that is removed or
+  // undone can't keep blocking Save.
+  const flaggedTileIds = useMemo(() => {
+    const tiles = storedDraft?.draft.tiles ?? []
+    return new Set([...flaggedIds].filter(id => tiles.some(tile => tile.id === id)))
+  }, [flaggedIds, storedDraft])
+
   const handleSave = useCallback(async () => {
     if (!storedDraft || !dashboardId) return
     if (flaggedTileIds.size > 0) {
@@ -215,16 +273,13 @@ export const useDashboardEditor = ({
     try {
       const response = await upsertDashboard(buildUpsertRequest(storedDraft.draft))
       setDashboard(response)
-      setStoredDraft(null)
-      clearDraftKey(dashboardId)
-      setMode('view')
-      setSelectedTileId(null)
+      exitEditMode()
     } catch (err) {
       toastRPCError(err, 'Failed to save dashboard')
     } finally {
       setSaving(false)
     }
-  }, [dashboardId, flaggedTileIds, setDashboard, setStoredDraft, storedDraft, upsertDashboard])
+  }, [dashboardId, flaggedTileIds, setDashboard, exitEditMode, storedDraft, upsertDashboard])
 
   const handleDiscard = useCallback(() => {
     exitEditMode()
@@ -242,7 +297,7 @@ export const useDashboardEditor = ({
     resetHistory()
     setMode('edit')
     setSelectedTileId(storedDraft.draft.tiles[0]?.id ?? null)
-    setFlaggedTileIds(new Set())
+    setFlaggedIds(new Set())
     setAssistantOpen(false)
   }, [storedDraft, canEdit, resetHistory])
 
@@ -278,7 +333,7 @@ export const useDashboardEditor = ({
       if (!selectedTileId) return
       const key = `tile:${selectedTileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, selectedTileId, patch), key)
-      setFlaggedTileIds(current => nextFlaggedIds(current, selectedTileId, false))
+      setFlaggedIds(current => nextFlaggedIds(current, selectedTileId, false))
     },
     [selectedTileId, commitDraft],
   )
@@ -296,10 +351,10 @@ export const useDashboardEditor = ({
       if (equals(DashboardSchema, storedDraft.draft, nextDraft)) return
       coalesceRef.current = null
       futureRef.current = []
-      setStoredDraft({ ...storedDraft, draft: nextDraft })
+      writeDraft({ ...storedDraft, draft: nextDraft })
       syncHistory()
     },
-    [selectedTileId, storedDraft, setStoredDraft, syncHistory],
+    [selectedTileId, storedDraft, writeDraft, syncHistory],
   )
 
   const removeSelectedTile = useCallback(() => {
@@ -312,7 +367,7 @@ export const useDashboardEditor = ({
     (tileId: string, patch: Partial<DashboardTile>) => {
       const key = `tile:${tileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, tileId, patch), key)
-      setFlaggedTileIds(current => nextFlaggedIds(current, tileId, false))
+      setFlaggedIds(current => nextFlaggedIds(current, tileId, false))
     },
     [commitDraft],
   )
@@ -333,47 +388,12 @@ export const useDashboardEditor = ({
 
   const deselectTile = useCallback(() => setSelectedTileId(null), [])
 
-  const highlightTimerRef = useRef<number | null>(null)
-  const pulseHighlight = useCallback((tileId: string) => {
-    setHighlightTileId(tileId)
-    if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-    highlightTimerRef.current = window.setTimeout(
-      () => setHighlightTileId(current => (current === tileId ? null : current)),
-      1200,
-    )
-  }, [])
-
   const focusNewTile = useCallback(
     (tileId: string) => {
       selectTile(tileId)
       pulseHighlight(tileId)
     },
     [selectTile, pulseHighlight],
-  )
-
-  useEffect(
-    () => () => {
-      if (highlightTimerRef.current) window.clearTimeout(highlightTimerRef.current)
-    },
-    [],
-  )
-
-  // Applies one streamed TileOp to the draft. Deliberately does NOT select/focus
-  // the tile the way template-add or duplication do — the assistant panel must
-  // stay open across the whole conversation, and selecting a tile would close it
-  // (see selectTile above). A brief highlight pulse is enough feedback; jumping
-  // to the tile is an explicit action from the panel's "open tile" link instead.
-  const applyTileOp = useCallback(
-    (op: TileOp): string | undefined => {
-      if (!storedDraft) return undefined
-      const { dashboard: nextDashboard, tileId } = applyOpToDashboard(storedDraft.draft, op)
-      if (tileId === undefined) return undefined
-      commitDraft(() => nextDashboard)
-      setFlaggedTileIds(current => nextFlaggedIds(current, tileId, op.violations.length > 0))
-      if (op.op.case !== 'remove') pulseHighlight(tileId)
-      return tileId
-    },
-    [storedDraft, commitDraft, pulseHighlight],
   )
 
   const duplicateTile = useCallback(
@@ -465,5 +485,6 @@ export const useDashboardEditor = ({
     assistantOpen,
     toggleAssistant,
     applyTileOp,
+    assistant,
   }
 }

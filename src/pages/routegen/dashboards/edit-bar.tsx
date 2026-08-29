@@ -59,6 +59,7 @@ export const EditBar = ({
       <span className="text-caution text-xs">
         {dirtyCount} {dirtyCount === 1 ? 'change' : 'changes'}
       </span>
+      {flaggedCount > 0 ? <span className="text-caution text-xs">{flaggedCount} to fix</span> : null}
       <div className="ml-auto flex items-center gap-2">
         {confirming ? <span className="text-caution text-xs">Discard {dirtyCount} changes?</span> : null}
         {aiAssistantEnabled ? (

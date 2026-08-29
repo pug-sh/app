@@ -47,9 +47,8 @@ if (!apiBaseUrl) {
   throw new Error('VITE_API_BASE_URL is not configured. Check your .env file.')
 }
 
-// The dashboard assistant is a separate service (es/pug-sh/ai), not the main pug
-// backend — optional and feature-gating rather than hard-required, following the
-// VITE_GOOGLE_CLIENT_ID pattern: unset means the feature simply doesn't render.
+// The dashboard assistant is served from its own host. Optional, like VITE_DEMO_ENABLED:
+// unset hides the feature entirely.
 const aiServiceBaseUrl = (import.meta.env.VITE_AI_SERVICE_URL ?? '').trim()
 export const aiAssistantEnabled = aiServiceBaseUrl.length > 0
 
@@ -192,12 +191,10 @@ export const publicTransportAtom = atom(() => {
   })
 })
 
-// Transport for the dashboard assistant service. authBearer is reused as-is — it
-// only reads the JWT from the store/localStorage and never references
-// apiBaseUrl, so it works unchanged against a different host. protovalidate is
-// deliberately not attached: its only outgoing message here is TurnRequest over
-// a streaming call, and the interceptor already no-ops for streams (see its
-// `if (!req.stream)` guard above).
+// Transport for the dashboard assistant. Same session as the main API: authBearer refreshes
+// through refreshClient on apiBaseUrl, and a 401 on a stream is not retried. No protovalidate
+// (it skips streams, and Turn is the only call) and no deadline — a turn can run for minutes,
+// so the caller cancels through its own abort signal instead.
 export const assistantTransportAtom = atom(() => {
   return createConnectTransport({
     baseUrl: aiServiceBaseUrl,

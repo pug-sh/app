@@ -1,11 +1,15 @@
 import type { TileOp } from '@/api/genproto/ai/dashboards/v1/assistant_pb'
-import type { Dashboard, DashboardTile, DashboardTileInput } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import type { Dashboard, DashboardTileInput } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { appendDraftTile, patchTile, removeDraftTile } from './draft-state'
 
-// The inverse of upsert-dashboard.ts's tileToInput. Position is deliberately
-// excluded: an update op should never relocate a tile on the grid, regardless of
-// what position (if any) the assistant's tile payload carries.
-export const tileInputToPatch = (input: DashboardTileInput): Partial<DashboardTile> => ({
+export type AssistantOpSummary =
+  | { kind: 'applied'; text: string; tileId: string }
+  | { kind: 'flagged'; text: string; tileId: string }
+  | { kind: 'failed'; text: string }
+
+// UpdateTile replaces the whole tile, not a field mask: every field but id (the draft's
+// stays authoritative) and position (an update never moves a tile) is overwritten.
+const tileFieldsFromInput = (input: DashboardTileInput) => ({
   displayName: input.displayName,
   description: input.description,
   content: input.content,
@@ -16,40 +20,37 @@ export const tileInputToPatch = (input: DashboardTileInput): Partial<DashboardTi
   visualization: input.visualization,
 })
 
-// Apply one TileOp to a draft, reusing the exact same primitives templates and
-// duplication already use. Returns the affected tile id so the caller can flag
-// it or offer to jump to it — for `add` this is only known after appendDraftTile
-// assigns a local id, so it cannot come from the op itself.
-export const applyOpToDashboard = (
-  dashboard: Dashboard,
-  op: TileOp,
-): { dashboard: Dashboard; tileId: string | undefined } => {
+const hasTile = (dashboard: Dashboard, tileId: string) => dashboard.tiles.some(tile => tile.id === tileId)
+
+// Null when the op changed nothing (no tile payload, unknown id, empty oneof), so the caller
+// never reports an edit that didn't happen. An add's id only exists once appendDraftTile
+// assigns one, which is why it comes back from here rather than from the op.
+export const applyOpToDashboard = (dashboard: Dashboard, op: TileOp) => {
   switch (op.op.case) {
     case 'add': {
       const tile = op.op.value.tile
-      if (!tile) return { dashboard, tileId: undefined }
+      if (!tile) return null
       const next = appendDraftTile(dashboard, tile)
-      return { dashboard: next, tileId: next.tiles[next.tiles.length - 1]?.id }
+      const added = next.tiles[next.tiles.length - 1]
+      return added ? { dashboard: next, tileId: added.id } : null
     }
     case 'update': {
       const { tileId, tile } = op.op.value
-      if (!tile) return { dashboard, tileId: undefined }
-      return { dashboard: patchTile(dashboard, tileId, tileInputToPatch(tile)), tileId }
+      if (!tile || !hasTile(dashboard, tileId)) return null
+      return { dashboard: patchTile(dashboard, tileId, tileFieldsFromInput(tile)), tileId }
     }
     case 'remove': {
       const { tileId } = op.op.value
+      if (!hasTile(dashboard, tileId)) return null
       return { dashboard: removeDraftTile(dashboard, tileId), tileId }
     }
     default:
-      return { dashboard, tileId: undefined }
+      return null
   }
 }
 
-// Set update helper that returns the SAME reference when nothing changes, so a
-// caller can use it directly in a setState updater without an extra equality
-// check triggering a spurious re-render.
-export const nextFlaggedIds = (current: Set<string>, tileId: string | undefined, flagged: boolean): Set<string> => {
-  if (!tileId) return current
+// Returns the same Set when nothing changes so a setState updater bails out.
+export const nextFlaggedIds = (current: Set<string>, tileId: string, flagged: boolean) => {
   if (current.has(tileId) === flagged) return current
   const next = new Set(current)
   if (flagged) next.add(tileId)
@@ -57,25 +58,22 @@ export const nextFlaggedIds = (current: Set<string>, tileId: string | undefined,
   return next
 }
 
-const tileNameFromOp = (op: TileOp): string | undefined => {
+const tileNameFromOp = (op: TileOp) => {
   if (op.op.case === 'add' || op.op.case === 'update') return op.op.value.tile?.displayName
   return undefined
 }
 
-// One line describing what an op did, for the chat transcript. Deliberately
-// takes only the TileOp — the newly-assigned id for an `add` isn't known here,
-// see applyOpToDashboard.
-export const summarizeOp = (op: TileOp): { text: string; flagged: boolean } => {
-  const flagged = op.violations.length > 0
-  const name = tileNameFromOp(op)?.trim() || 'Untitled tile'
-  switch (op.op.case) {
-    case 'add':
-      return { text: flagged ? `"${name}" needs a fix` : `Added "${name}"`, flagged }
-    case 'update':
-      return { text: flagged ? `"${name}" needs a fix` : `Updated "${name}"`, flagged }
-    case 'remove':
-      return { text: 'Removed a tile', flagged: false }
-    default:
-      return { text: 'No change', flagged: false }
+// One transcript row per op, decided from what actually happened: tileId is null when
+// applyOpToDashboard changed nothing.
+export const summarizeOp = (op: TileOp, tileId: string | null): AssistantOpSummary => {
+  if (op.op.case === 'remove') {
+    if (!tileId) return { kind: 'failed', text: "Couldn't remove the tile" }
+    return { kind: 'applied', text: 'Removed a tile', tileId }
   }
+  const name = tileNameFromOp(op)?.trim() || 'Untitled tile'
+  if (!tileId) return { kind: 'failed', text: `Couldn't apply "${name}"` }
+  if (op.violations.length > 0) {
+    return { kind: 'flagged', text: `"${name}" needs a fix: ${op.violations.join('; ')}`, tileId }
+  }
+  return { kind: 'applied', text: `${op.op.case === 'add' ? 'Added' : 'Updated'} "${name}"`, tileId }
 }

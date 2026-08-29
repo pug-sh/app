@@ -1,27 +1,35 @@
 import { create } from '@bufbuild/protobuf'
 import { expect, test } from 'vitest'
 import { TileOpSchema } from '@/api/genproto/ai/dashboards/v1/assistant_pb'
-import { DashboardSchema, DashboardTileInputSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import { applyOpToDashboard, nextFlaggedIds, summarizeOp, tileInputToPatch } from './assistant-ops'
+import { DashboardSchema, DashboardTileSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { applyOpToDashboard, nextFlaggedIds, summarizeOp } from './assistant-ops'
 
 const dashboard = (
-  tiles: { id: string; displayName: string; position?: { x: number; y: number; w: number; h: number } }[] = [],
+  tiles: {
+    id: string
+    displayName: string
+    description?: string
+    position?: { x: number; y: number; w: number; h: number }
+  }[] = [],
 ) =>
   create(DashboardSchema, {
     displayName: 'Test dashboard',
-    tiles: tiles.map(t => ({
-      id: t.id,
-      displayName: t.displayName,
-      content: { case: 'markdown', value: { body: 'x' } },
-      position: t.position ?? { x: 0, y: 0, w: 36, h: 18 },
-    })),
-  } as never)
+    tiles: tiles.map(t =>
+      create(DashboardTileSchema, {
+        id: t.id,
+        displayName: t.displayName,
+        description: t.description,
+        content: { case: 'markdown', value: { body: 'x' } },
+        position: t.position ?? { x: 0, y: 0, w: 36, h: 18 },
+      }),
+    ),
+  })
 
 const addOp = (displayName: string, violations: string[] = []) =>
   create(TileOpSchema, {
     op: { case: 'add', value: { tile: { displayName, content: { case: 'markdown', value: { body: 'y' } } } } },
     violations,
-  } as never)
+  })
 
 const updateOp = (tileId: string, displayName: string, violations: string[] = []) =>
   create(TileOpSchema, {
@@ -30,32 +38,34 @@ const updateOp = (tileId: string, displayName: string, violations: string[] = []
       value: { tileId, tile: { displayName, content: { case: 'markdown', value: { body: 'y' } } } },
     },
     violations,
-  } as never)
+  })
 
-const removeOp = (tileId: string) => create(TileOpSchema, { op: { case: 'remove', value: { tileId } } } as never)
+const removeOp = (tileId: string) => create(TileOpSchema, { op: { case: 'remove', value: { tileId } } })
 
 test('applyOpToDashboard adds a tile and returns its new id', () => {
-  const { dashboard: next, tileId } = applyOpToDashboard(dashboard(), addOp('Weekly actives'))
-  expect(next.tiles).toHaveLength(1)
-  expect(next.tiles[0]?.displayName).toBe('Weekly actives')
-  expect(tileId).toBe(next.tiles[0]?.id)
+  const result = applyOpToDashboard(dashboard(), addOp('Weekly actives'))
+  expect(result?.dashboard.tiles).toHaveLength(1)
+  expect(result?.dashboard.tiles[0]?.displayName).toBe('Weekly actives')
+  expect(result?.tileId).toBe(result?.dashboard.tiles[0]?.id)
 })
 
-test('applyOpToDashboard updates a tile by id without moving it', () => {
-  const before = dashboard([{ id: 't1', displayName: 'Old name', position: { x: 5, y: 5, w: 20, h: 10 } }])
-  const { dashboard: next, tileId } = applyOpToDashboard(before, updateOp('t1', 'New name'))
-  expect(tileId).toBe('t1')
-  expect(next.tiles[0]?.displayName).toBe('New name')
-  // The point of tileInputToPatch: position is untouched by an update, regardless
-  // of whatever position (if any) came back on the assistant's tile payload.
-  expect(next.tiles[0]?.position).toMatchObject({ x: 5, y: 5, w: 20, h: 10 })
+test('applyOpToDashboard replaces a tile in place, keeping only its position', () => {
+  const before = dashboard([
+    { id: 't1', displayName: 'Old name', description: 'Old description', position: { x: 5, y: 5, w: 20, h: 10 } },
+  ])
+  const result = applyOpToDashboard(before, updateOp('t1', 'New name'))
+  expect(result?.tileId).toBe('t1')
+  const tile = result?.dashboard.tiles[0]
+  expect(tile?.displayName).toBe('New name')
+  expect(tile?.description).toBe('')
+  expect(tile?.position).toMatchObject({ x: 5, y: 5, w: 20, h: 10 })
 })
 
 test('applyOpToDashboard removes a tile by id', () => {
   const before = dashboard([{ id: 't1', displayName: 'Gone soon' }])
-  const { dashboard: next, tileId } = applyOpToDashboard(before, removeOp('t1'))
-  expect(tileId).toBe('t1')
-  expect(next.tiles).toHaveLength(0)
+  const result = applyOpToDashboard(before, removeOp('t1'))
+  expect(result?.tileId).toBe('t1')
+  expect(result?.dashboard.tiles).toHaveLength(0)
 })
 
 test('applyOpToDashboard leaves other tiles untouched', () => {
@@ -63,19 +73,19 @@ test('applyOpToDashboard leaves other tiles untouched', () => {
     { id: 't1', displayName: 'Stays' },
     { id: 't2', displayName: 'Also stays' },
   ])
-  const { dashboard: next } = applyOpToDashboard(before, updateOp('t1', 'Stays (renamed)'))
-  expect(next.tiles.find(t => t.id === 't2')?.displayName).toBe('Also stays')
+  const result = applyOpToDashboard(before, updateOp('t1', 'Stays (renamed)'))
+  expect(result?.dashboard.tiles.find(t => t.id === 't2')?.displayName).toBe('Also stays')
 })
 
-test('tileInputToPatch carries display/content fields but not position', () => {
-  const input = create(DashboardTileInputSchema, {
-    displayName: 'X',
-    content: { case: 'markdown', value: { body: 'hi' } },
-    position: { x: 1, y: 2, w: 3, h: 4 },
-  } as never)
-  const patch = tileInputToPatch(input)
-  expect(patch.displayName).toBe('X')
-  expect(patch.position).toBeUndefined()
+test('applyOpToDashboard applies nothing for an unknown tile id', () => {
+  const before = dashboard([{ id: 't1', displayName: 'Stays' }])
+  expect(applyOpToDashboard(before, updateOp('ghost', 'Ghost'))).toBeNull()
+  expect(applyOpToDashboard(before, removeOp('ghost'))).toBeNull()
+})
+
+test('applyOpToDashboard applies nothing for an add without a tile or an empty op', () => {
+  expect(applyOpToDashboard(dashboard(), create(TileOpSchema, { op: { case: 'add', value: {} } }))).toBeNull()
+  expect(applyOpToDashboard(dashboard(), create(TileOpSchema))).toBeNull()
 })
 
 test('nextFlaggedIds adds an id when flagged', () => {
@@ -91,27 +101,32 @@ test('nextFlaggedIds returns the same set reference when nothing changes', () =>
   expect(nextFlaggedIds(current, 't1', true)).toBe(current)
 })
 
-test('nextFlaggedIds is a no-op for an undefined tile id', () => {
-  const current = new Set(['t1'])
-  expect(nextFlaggedIds(current, undefined, true)).toBe(current)
+test('summarizeOp describes an applied add and update', () => {
+  expect(summarizeOp(addOp('Weekly actives'), 'tile-1')).toEqual({
+    kind: 'applied',
+    text: 'Added "Weekly actives"',
+    tileId: 'tile-1',
+  })
+  expect(summarizeOp(updateOp('t1', 'Weekly actives'), 't1')).toEqual({
+    kind: 'applied',
+    text: 'Updated "Weekly actives"',
+    tileId: 't1',
+  })
 })
 
-test('summarizeOp describes an added tile', () => {
-  const { text, flagged } = summarizeOp(addOp('Weekly actives'))
-  expect(text).toContain('Weekly actives')
-  expect(flagged).toBe(false)
+test('summarizeOp flags a tile with violations and carries the reason', () => {
+  expect(summarizeOp(addOp('Broken funnel', ['needs at least one event']), 'tile-1')).toEqual({
+    kind: 'flagged',
+    text: '"Broken funnel" needs a fix: needs at least one event',
+    tileId: 'tile-1',
+  })
 })
 
-test('summarizeOp flags a tile with violations', () => {
-  const { text, flagged } = summarizeOp(
-    addOp('Broken funnel', ['funnel and retention insight types require at least one event']),
-  )
-  expect(flagged).toBe(true)
-  expect(text).toContain('Broken funnel')
+test('summarizeOp reports an op that applied nothing as failed', () => {
+  expect(summarizeOp(addOp('Ghost'), null)).toEqual({ kind: 'failed', text: 'Couldn\'t apply "Ghost"' })
+  expect(summarizeOp(removeOp('ghost'), null)).toEqual({ kind: 'failed', text: "Couldn't remove the tile" })
 })
 
 test('summarizeOp describes a removal', () => {
-  const { text, flagged } = summarizeOp(removeOp('t1'))
-  expect(text.length).toBeGreaterThan(0)
-  expect(flagged).toBe(false)
+  expect(summarizeOp(removeOp('t1'), 't1')).toEqual({ kind: 'applied', text: 'Removed a tile', tileId: 't1' })
 })

@@ -34,7 +34,7 @@ export const insightsRPCAtom = atom(get => createClient(InsightsService, get(tra
 export const activityRPCAtom = atom(get => createClient(ActivityService, get(transportAtom)))
 export const profilesRPCAtom = atom(get => createClient(ProfilesService, get(transportAtom)))
 
-// AI — separate service, project-scoped (JWT auth + x-project-id, no protovalidate)
+// AI — project-scoped (JWT auth + x-project-id header from projectHeaderAtom), on its own transport
 export const dashboardAssistantRPCAtom = atom(get =>
   createClient(DashboardAssistantService, get(assistantTransportAtom)),
 )
