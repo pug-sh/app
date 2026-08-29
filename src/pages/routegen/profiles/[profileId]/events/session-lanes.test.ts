@@ -32,4 +32,10 @@ describe('session lane labels', () => {
     const [a, b] = lanes.map(l => l.labelIdx)
     expect(Math.abs(a - b)).toBeGreaterThan(1)
   })
+
+  // Three events leave nowhere to put two labels a clear row apart.
+  it('drops the referrer when a label lands next to another', () => {
+    const lanes = computeSessionLanes([event('s1'), event('s2', 'bing.com'), event('s1', 'google.com')])
+    expect(lanes.map(l => l.referrer)).toEqual([undefined, undefined])
+  })
 })

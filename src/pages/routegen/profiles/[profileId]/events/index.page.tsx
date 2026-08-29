@@ -113,6 +113,14 @@ export function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
     }
     claimed.add(lane.labelIdx)
   }
+
+  // Interleaved sessions can leave no row with clearance. Three lines are taller than a row, two
+  // are not, so a label with a neighbour next to it gives up the referrer instead of overprinting.
+  for (const lane of lanes) {
+    if (lanes.some(other => other !== lane && Math.abs(other.labelIdx - lane.labelIdx) <= 1)) {
+      lane.referrer = undefined
+    }
+  }
   return lanes
 }
 
