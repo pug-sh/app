@@ -9,11 +9,10 @@ import {
   eventIdentity,
   formatPagePath,
   type KindCount,
-  referrerDomain,
   resolveDeviceType,
 } from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
-import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import { deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
 import { structGet } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 
