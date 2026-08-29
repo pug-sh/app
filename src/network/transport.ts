@@ -5,6 +5,7 @@ import { createConnectTransport } from '@connectrpc/connect-web'
 import { atom, getDefaultStore } from 'jotai'
 import { toast } from 'sonner'
 import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
+import { file_dashboard_dashboards_v1_dashboards } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { AuthService } from '@/api/genproto/public/auth/v1/auth_pb'
 import { file_public_dashboards_v1_dashboards } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -21,17 +22,18 @@ import {
 // Register the app's file descriptors so the validator can compile rules defined
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references
 // common.v1.FilterOperator).
-const validator = createValidator({
+export const protoValidator = createValidator({
   registry: createRegistry(
     file_common_v1_filters,
     file_shared_insights_v1_insights,
     file_public_dashboards_v1_dashboards,
+    file_dashboard_dashboards_v1_dashboards,
   ),
 })
 
 const protovalidate: Interceptor = next => async req => {
   if (!req.stream) {
-    const result = validator.validate(req.method.input, req.message)
+    const result = protoValidator.validate(req.method.input, req.message)
     if (result.kind === 'invalid') {
       throw new ConnectError(result.violations.map(v => `${v.field}: ${v.message}`).join('; '))
     }

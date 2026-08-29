@@ -13,7 +13,7 @@ import { canAtom } from '@/auth/permissions'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { fetchFilterSchemaAtom, filterSchemaAtom } from '../../events/filter-schema.atoms'
-import { applyOpToDashboard, nextFlaggedIds } from '../assistant-ops'
+import { applyOpToDashboard, nextFlaggedIds, tileBlocksSave } from '../assistant-ops'
 import { pendingEditDashboardIdAtom, upsertDashboardAtom } from '../dashboard.atoms'
 import {
   appendDraftTile,
@@ -67,10 +67,13 @@ export const useDashboardEditor = ({
   const [assistantOpen, setAssistantOpen] = useState(false)
   const draftAtom = useMemo(() => draftAtomFamily(dashboardId ?? '__no-dashboard__'), [dashboardId])
   const [storedDraft, setStoredDraft] = useAtom(draftAtom)
-  // The latest draft, for a streamed assistant turn that commits several ops between renders;
-  // the render-time sync covers writes that bypass writeDraft (another tab's storage event).
+  // The latest draft, for a streamed assistant turn that commits several ops between renders.
+  // writeDraft keeps it current synchronously; the effect covers writes that bypass it (another
+  // tab's storage event, a dashboard switch) without mutating a ref React may discard mid-render.
   const draftRef = useRef(storedDraft)
-  draftRef.current = storedDraft
+  useEffect(() => {
+    draftRef.current = storedDraft
+  }, [storedDraft])
   const writeDraft = useCallback(
     (next: StoredDraft | null) => {
       draftRef.current = next
@@ -166,6 +169,14 @@ export const useDashboardEditor = ({
     [],
   )
 
+  // Re-derives one tile's flag from the committed draft, so every mutation path agrees: an
+  // unrelated edit can't clear a still-invalid tile, and repairing one always unblocks Save.
+  // Read after the mutation — writeDraft has already advanced draftRef by then.
+  const syncTileFlag = useCallback((tileId: string) => {
+    const tile = draftRef.current?.draft.tiles.find(candidate => candidate.id === tileId)
+    setFlaggedIds(ids => nextFlaggedIds(ids, tileId, tile ? tileBlocksSave(tile) : false))
+  }, [])
+
   // Applies one streamed TileOp to the latest draft (several arrive per turn, between
   // renders). Pulses rather than selects: selecting would swap the assistant panel out for
   // the config rail mid-conversation; the panel's "open tile" link does that on request.
@@ -176,14 +187,24 @@ export const useDashboardEditor = ({
       const result = applyOpToDashboard(current.draft, op)
       if (!result) return null
       commitDraft(() => result.dashboard)
-      setFlaggedIds(ids => nextFlaggedIds(ids, result.tileId, op.violations.length > 0))
+      syncTileFlag(result.tileId)
       if (op.op.case !== 'remove') pulseHighlight(result.tileId)
       return result.tileId
     },
-    [commitDraft, pulseHighlight],
+    [commitDraft, pulseHighlight, syncTileFlag],
   )
 
   const assistant = useDashboardAssistant({ draft: storedDraft?.draft ?? null, onApplyOp: applyTileOp })
+
+  // The route reuses this component across dashboards (the page dedups on the id, it doesn't
+  // remount), so without this an in-flight turn would keep streaming ops into the next
+  // dashboard's draft, and its next turn would resume the previous dashboard's conversation.
+  const assistantDashboardRef = useRef(dashboardId)
+  useEffect(() => {
+    if (assistantDashboardRef.current === dashboardId) return
+    assistantDashboardRef.current = dashboardId
+    assistant.reset()
+  }, [dashboardId, assistant.reset])
 
   // Resolve the project's events so suggested templates can seed real,
   // project-specific events (and gate tiles like Revenue). activeProjectAtom
@@ -333,9 +354,9 @@ export const useDashboardEditor = ({
       if (!selectedTileId) return
       const key = `tile:${selectedTileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, selectedTileId, patch), key)
-      setFlaggedIds(current => nextFlaggedIds(current, selectedTileId, false))
+      syncTileFlag(selectedTileId)
     },
-    [selectedTileId, commitDraft],
+    [selectedTileId, commitDraft, syncTileFlag],
   )
 
   // The Data tab keeps its own local editor state that only re-seeds on a tile switch
@@ -353,8 +374,9 @@ export const useDashboardEditor = ({
       futureRef.current = []
       writeDraft({ ...storedDraft, draft: nextDraft })
       syncHistory()
+      syncTileFlag(selectedTileId)
     },
-    [selectedTileId, storedDraft, writeDraft, syncHistory],
+    [selectedTileId, storedDraft, writeDraft, syncHistory, syncTileFlag],
   )
 
   const removeSelectedTile = useCallback(() => {
@@ -367,9 +389,9 @@ export const useDashboardEditor = ({
     (tileId: string, patch: Partial<DashboardTile>) => {
       const key = `tile:${tileId}:${Object.keys(patch).join(',')}`
       commitDraft(draft => patchTile(draft, tileId, patch), key)
-      setFlaggedIds(current => nextFlaggedIds(current, tileId, false))
+      syncTileFlag(tileId)
     },
-    [commitDraft],
+    [commitDraft, syncTileFlag],
   )
 
   // Selecting a tile reveals the config rail so its settings are visible even if

@@ -31,11 +31,20 @@ const addOp = (displayName: string, violations: string[] = []) =>
     violations,
   })
 
+// The payload carries a position the stored tile must keep out: an update replaces the tile but
+// never moves it, and without a distinct one here the assertion can't tell that from an unset field.
 const updateOp = (tileId: string, displayName: string, violations: string[] = []) =>
   create(TileOpSchema, {
     op: {
       case: 'update',
-      value: { tileId, tile: { displayName, content: { case: 'markdown', value: { body: 'y' } } } },
+      value: {
+        tileId,
+        tile: {
+          displayName,
+          content: { case: 'markdown', value: { body: 'y' } },
+          position: { x: 30, y: 30, w: 12, h: 6 },
+        },
+      },
     },
     violations,
   })

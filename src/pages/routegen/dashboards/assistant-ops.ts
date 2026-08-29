@@ -1,6 +1,13 @@
 import type { TileOp } from '@/api/genproto/ai/dashboards/v1/assistant_pb'
-import type { Dashboard, DashboardTileInput } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import {
+  type Dashboard,
+  type DashboardTile,
+  type DashboardTileInput,
+  DashboardTileInputSchema,
+} from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { protoValidator } from '@/network/transport'
 import { appendDraftTile, patchTile, removeDraftTile } from './draft-state'
+import { tileToInput } from './upsert-dashboard'
 
 export type AssistantOpSummary =
   | { kind: 'applied'; text: string; tileId: string }
@@ -48,6 +55,12 @@ export const applyOpToDashboard = (dashboard: Dashboard, op: TileOp) => {
       return null
   }
 }
+
+// The assistant's violations are protovalidate messages on DashboardTileInput, which is what save
+// sends — so revalidating locally reproduces the server's verdict. Only a definite 'invalid' flags;
+// a validator that errors falls through to the transport interceptor rather than blocking save.
+export const tileBlocksSave = (tile: DashboardTile) =>
+  protoValidator.validate(DashboardTileInputSchema, tileToInput(tile)).kind === 'invalid'
 
 // Returns the same Set when nothing changes so a setState updater bails out.
 export const nextFlaggedIds = (current: Set<string>, tileId: string, flagged: boolean) => {

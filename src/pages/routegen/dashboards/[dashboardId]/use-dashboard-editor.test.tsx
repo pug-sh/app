@@ -4,7 +4,7 @@ import { createStore, Provider } from 'jotai'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TileOpSchema } from '@/api/genproto/ai/dashboards/v1/assistant_pb'
-import { DashboardSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { DashboardSchema, MarkdownTileContentSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 
 const { turn, upsert, toastError } = vi.hoisted(() => ({ turn: vi.fn(), upsert: vi.fn(), toastError: vi.fn() }))
@@ -53,21 +53,31 @@ const updateOp = (tileId: string, displayName: string, violations: string[] = []
     violations,
   })
 
+// An empty markdown body fails DashboardTileInput's min_len, so this is a tile the assistant
+// flags and Upsert would reject — not just an op carrying a violation string.
+const brokenAddOp = (displayName: string) =>
+  create(TileOpSchema, {
+    op: { case: 'add', value: { tile: { displayName, content: { case: 'markdown', value: { body: '' } } } } },
+    violations: ['body: value length must be at least 1 characters'],
+  })
+
 const doneChunk = { chunk: { case: 'done', value: { failed: [] } } }
 
-// The editor in edit mode as an admin (enterEditMode is gated on dashboard:update).
+// The editor in edit mode as an admin (enterEditMode is gated on dashboard:update). The route
+// param is a prop so a test can switch dashboards the way the page does — without remounting.
 const mountEditor = () => {
   const store = createStore()
   store.set(activeOrgAtom, create(OrgSchema, { id: 'org-1', displayName: 'Org', role: OrgRole.ADMIN }))
   const wrapper = ({ children }: { children: ReactNode }) => <Provider store={store}>{children}</Provider>
-  const hook = renderHook(() => useDashboardEditor({ dashboardId: 'd1', dashboard, setDashboard: vi.fn() }), {
+  const hook = renderHook(({ id }) => useDashboardEditor({ dashboardId: id, dashboard, setDashboard: vi.fn() }), {
     wrapper,
+    initialProps: { id: 'd1' },
   })
   act(() => hook.result.current.enterEditMode())
-  return hook.result
+  return hook
 }
 
-const tileNames = (result: ReturnType<typeof mountEditor>) =>
+const tileNames = (result: ReturnType<typeof mountEditor>['result']) =>
   result.current.effectiveDashboard?.tiles.map(tile => tile.displayName)
 
 describe('useDashboardEditor', () => {
@@ -79,7 +89,7 @@ describe('useDashboardEditor', () => {
   })
 
   it('applies every op of a turn through one callback reference', () => {
-    const result = mountEditor()
+    const { result } = mountEditor()
     // The stream loop holds the applyTileOp it started with for the whole turn.
     const apply = result.current.applyTileOp
     act(() => {
@@ -97,16 +107,16 @@ describe('useDashboardEditor', () => {
       yield { chunk: { case: 'op', value: addOp('Second') } }
       yield doneChunk
     })
-    const result = mountEditor()
+    const { result } = mountEditor()
     await act(() => result.current.assistant.sendMessage('two tiles'))
     expect(tileNames(result)).toEqual(['First', 'Second'])
     expect(result.current.assistant.messages[1]?.ops.map(op => op.kind)).toEqual(['applied', 'applied'])
   })
 
   it('stops blocking Save once a flagged tile is undone or removed', () => {
-    const result = mountEditor()
+    const { result } = mountEditor()
     act(() => {
-      result.current.applyTileOp(addOp('Broken', ['needs an event']))
+      result.current.applyTileOp(brokenAddOp('Broken'))
     })
     expect(result.current.flaggedTileIds.size).toBe(1)
 
@@ -122,17 +132,39 @@ describe('useDashboardEditor', () => {
   })
 
   it('refuses to save while a tile is flagged', async () => {
-    const result = mountEditor()
+    const { result } = mountEditor()
     act(() => {
-      result.current.applyTileOp(addOp('Broken', ['needs an event']))
+      result.current.applyTileOp(brokenAddOp('Broken'))
     })
     await act(() => result.current.handleSave())
     expect(toastError).toHaveBeenCalledWith('Fix 1 flagged tile before saving')
     expect(upsert).not.toHaveBeenCalled()
   })
 
+  it('clears a flag only once the tile itself validates', () => {
+    const { result } = mountEditor()
+    act(() => {
+      result.current.applyTileOp(brokenAddOp('Broken'))
+    })
+    const tileId = result.current.effectiveDashboard?.tiles[0]?.id ?? ''
+    expect(result.current.flaggedTileIds.size).toBe(1)
+
+    // An edit that leaves the violation in place must not unblock Save.
+    act(() => result.current.selectTile(tileId))
+    act(() => result.current.patchSelectedTile({ displayName: 'Renamed' }))
+    expect(result.current.flaggedTileIds.size).toBe(1)
+
+    // Repairing it from the Data tab (the silent path) must.
+    act(() =>
+      result.current.patchSelectedTileSilent({
+        content: { case: 'markdown', value: create(MarkdownTileContentSchema, { body: 'fixed' }) },
+      }),
+    )
+    expect(result.current.flaggedTileIds.size).toBe(0)
+  })
+
   it('applies nothing for an update naming an unknown tile', () => {
-    const result = mountEditor()
+    const { result } = mountEditor()
     let applied: string | null = 'unset'
     act(() => {
       applied = result.current.applyTileOp(updateOp('ghost', 'Ghost', ['bad']))
@@ -143,12 +175,25 @@ describe('useDashboardEditor', () => {
     expect(result.current.canUndo).toBe(false)
   })
 
+  it('drops the assistant session when the route switches dashboards', async () => {
+    turn.mockImplementation(async function* () {
+      yield { chunk: { case: 'text', value: 'Hello' } }
+      yield doneChunk
+    })
+    const { result, rerender } = mountEditor()
+    await act(() => result.current.assistant.sendMessage('hi'))
+    expect(result.current.assistant.messages).toHaveLength(2)
+
+    act(() => rerender({ id: 'd2' }))
+    expect(result.current.assistant.messages).toHaveLength(0)
+  })
+
   it('keeps the transcript across the panel closing and resets it with the edit session', async () => {
     turn.mockImplementation(async function* () {
       yield { chunk: { case: 'text', value: 'Hello' } }
       yield doneChunk
     })
-    const result = mountEditor()
+    const { result } = mountEditor()
     act(() => result.current.toggleAssistant())
     await act(() => result.current.assistant.sendMessage('hi'))
     expect(result.current.assistant.messages.map(message => message.content)).toEqual(['hi', 'Hello'])

@@ -169,6 +169,10 @@ export const DashboardGrid = ({
       onMouseDown={handleTileSelect(tile)}
       className={['min-h-0 flex-1', tileOutline(tile.id)].join(' ')}
     >
+      {/* The caution outline is the only visual marker; this is what a screen reader gets instead. */}
+      {flaggedTileIds?.has(tile.id) ? (
+        <span className="sr-only">Needs a fix before this dashboard can be saved</span>
+      ) : null}
       {renderTile ? (
         renderTile(tile)
       ) : (
