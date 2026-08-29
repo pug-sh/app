@@ -594,7 +594,9 @@ export const ActivityService: GenService<{
    * GetProfileStats returns aggregate statistics, device/browser/location context from the
    * latest event, per-day heatmap data (last 60 days), and profile properties for a profile.
    * Resolves aliases so merged anonymous events are included.
-   * Traffic tagged as a bot at ingest is excluded unless include_bots is true.
+   * Traffic tagged as a bot at ingest is excluded unless include_bots is true, so a
+   * profile whose events are all bot-tagged omits stats entirely and returns no heatmap
+   * days — not a NotFound, and profile properties are still returned.
    *
    * @generated from rpc shared.activity.v1.ActivityService.GetProfileStats
    */

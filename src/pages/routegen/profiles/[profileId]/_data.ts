@@ -18,17 +18,20 @@ export const profileFamilyAtom = atomFamily((profileId: string) =>
   atom(async get => {
     const rpc = get(profilesRPCAtom)
     const headers = get(projectHeaderAtom)
+    // Same tracking rule as profileStatsFamilyAtom below: read before the first await. The header's
+    // counters come from here, so without it they'd contradict the bot-filtered tabs underneath.
+    const includeBots = get(includeBotsAtom)
     if (!headers) return null
 
     try {
-      const resp = await rpc.getByExternalId({ externalId: profileId }, { headers })
+      const resp = await rpc.getByExternalId({ externalId: profileId, includeBots }, { headers })
       if (resp.profile) return resp.profile
     } catch (err) {
       if (!isNotFound(err)) throw err
     }
 
     try {
-      const resp = await rpc.get({ id: profileId }, { headers })
+      const resp = await rpc.get({ id: profileId, includeBots }, { headers })
       return resp.profile ?? null
     } catch (err) {
       if (isNotFound(err)) return null

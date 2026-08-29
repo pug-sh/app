@@ -12,6 +12,7 @@ import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { compactNumber } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
@@ -98,6 +100,7 @@ const Profiles = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const lastUpdatedLabel = useRelativeTime(lastUpdated)
   const latestProfilesRequestRef = useRef(0)
+  const [includeBots, setIncludeBots] = useIncludeBots()
 
   // Measure the sticky filter bar so the sticky table header can sit just below it.
   const filterRef = useRef<HTMLDivElement>(null)
@@ -179,6 +182,7 @@ const Profiles = () => {
             pageToken,
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
+            includeBots,
           },
           { headers },
         )) {
@@ -219,7 +223,7 @@ const Profiles = () => {
         }
       }
     },
-    [headers, profilesRPC, propFilters],
+    [headers, profilesRPC, propFilters, includeBots],
   )
 
   useEffect(() => {
@@ -253,6 +257,7 @@ const Profiles = () => {
             />
           ))}
           <FilterBuilder schema={profileSchema} schemaError={schemaError} onAdd={addFilter} />
+          <IncludeBotsToggle includeBots={includeBots} onChange={setIncludeBots} />
           {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
               ml-4 keeps the icon off the filter controls: butted straight against them, it reads as
               one of their controls rather than an action on the table. The timestamp is the only
