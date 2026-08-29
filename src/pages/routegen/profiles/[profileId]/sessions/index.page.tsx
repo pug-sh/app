@@ -10,6 +10,7 @@ import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { useRouteParams } from '@/lib/route-params'
@@ -89,6 +90,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [sortKey, setSortKey] = useState<SortKey>('started')
+  const [includeBots] = useIncludeBots()
 
   useEffect(() => {
     if (!headers) return
@@ -96,7 +98,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
     setLoading(true)
     setError(null)
     activityRPC
-      .getActivityFeed({ distinctId: profileId, pageSize: 200, pageToken: '' }, { headers })
+      .getActivityFeed({ distinctId: profileId, pageSize: 200, pageToken: '', includeBots }, { headers })
       .then(resp => {
         if (!cancelled) setEvents(resp.events)
       })
@@ -111,7 +113,7 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
     return () => {
       cancelled = true
     }
-  }, [profileId, headers, activityRPC, reloadKey])
+  }, [profileId, headers, activityRPC, reloadKey, includeBots])
 
   const rows = useMemo(() => {
     const grouped = groupSessions(events)

@@ -12,6 +12,7 @@ import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import { FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { compactNumber } from '@/lib/format'
 import { toastRPCError } from '@/lib/rpc-error'
@@ -92,12 +94,16 @@ const Profiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Carries the failed request's own page token: a filter or toggle change re-runs page one while
+  // nextToken still holds the previous query's cursor, so retrying off nextToken would append page
+  // two of the old query to stale rows.
+  const [error, setError] = useState<{ message: string; pageToken: string } | null>(null)
   const [schema, setSchema] = useState<GetFilterSchemaResponse | null>(null)
   const [schemaError, setSchemaError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const lastUpdatedLabel = useRelativeTime(lastUpdated)
   const latestProfilesRequestRef = useRef(0)
+  const [includeBots, setIncludeBots] = useIncludeBots()
 
   // Measure the sticky filter bar so the sticky table header can sit just below it.
   const filterRef = useRef<HTMLDivElement>(null)
@@ -179,6 +185,7 @@ const Profiles = () => {
             pageToken,
             filterGroups,
             filterGroupsOperator: LogicalOperator.AND,
+            includeBots,
           },
           { headers },
         )) {
@@ -211,7 +218,7 @@ const Profiles = () => {
       } catch (err) {
         if (requestId !== latestProfilesRequestRef.current) return
         const fallback = pageToken ? 'Failed to load more profiles' : 'Failed to load profiles'
-        setError(fallback)
+        setError({ message: fallback, pageToken })
         toastRPCError(err, fallback)
       } finally {
         if (requestId === latestProfilesRequestRef.current) {
@@ -219,7 +226,7 @@ const Profiles = () => {
         }
       }
     },
-    [headers, profilesRPC, propFilters],
+    [headers, profilesRPC, propFilters, includeBots],
   )
 
   useEffect(() => {
@@ -253,6 +260,7 @@ const Profiles = () => {
             />
           ))}
           <FilterBuilder schema={profileSchema} schemaError={schemaError} onAdd={addFilter} />
+          <IncludeBotsToggle includeBots={includeBots} onChange={setIncludeBots} />
           {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
               ml-4 keeps the icon off the filter controls: butted straight against them, it reads as
               one of their controls rather than an action on the table. The timestamp is the only
@@ -281,7 +289,7 @@ const Profiles = () => {
       ) : error && profiles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
           <ContactRound className="w-10 h-10 mb-4 opacity-15" />
-          <p className="text-sm font-medium mb-1">{error}</p>
+          <p className="text-sm font-medium mb-1">{error.message}</p>
           <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchProfilesPage()}>
             Retry
           </Button>
@@ -327,7 +335,7 @@ const Profiles = () => {
                           className="items-center gap-3"
                         >
                           <div className="relative shrink-0">
-                            <ProfileAvatar identity={identity} className="size-7 rounded-md" />
+                            <ProfileAvatar identity={identity} bot={activity?.bot} className="size-7 rounded-md" />
                             <span className="absolute -right-0.5 -bottom-0.5">
                               <StatusDot lastSeen={tsToDate(activity?.lastSeen)} className="size-2" />
                             </span>
@@ -394,8 +402,13 @@ const Profiles = () => {
           {error && (
             <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <ContactRound className="w-3.5 h-3.5" />
-              <span>{error}</span>
-              <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchProfilesPage(nextToken)}>
+              <span>{error.message}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => fetchProfilesPage(error.pageToken)}
+              >
                 Retry
               </Button>
             </div>

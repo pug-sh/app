@@ -3,6 +3,7 @@ import { atom } from 'jotai'
 import { atomWithRefresh } from 'jotai/utils'
 import { atomFamily } from 'jotai-family'
 import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
+import { includeBotsAtom } from '@/data/bots.atoms'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 
 // A profile URL can carry either an external/distinct id (events + activity links resolve
@@ -17,17 +18,20 @@ export const profileFamilyAtom = atomFamily((profileId: string) =>
   atom(async get => {
     const rpc = get(profilesRPCAtom)
     const headers = get(projectHeaderAtom)
+    // Same tracking rule as profileStatsFamilyAtom below: read before the first await. The header's
+    // counters come from here, so without it they'd contradict the bot-filtered tabs underneath.
+    const includeBots = get(includeBotsAtom)
     if (!headers) return null
 
     try {
-      const resp = await rpc.getByExternalId({ externalId: profileId }, { headers })
+      const resp = await rpc.getByExternalId({ externalId: profileId, includeBots }, { headers })
       if (resp.profile) return resp.profile
     } catch (err) {
       if (!isNotFound(err)) throw err
     }
 
     try {
-      const resp = await rpc.get({ id: profileId }, { headers })
+      const resp = await rpc.get({ id: profileId, includeBots }, { headers })
       return resp.profile ?? null
     } catch (err) {
       if (isNotFound(err)) return null
@@ -45,9 +49,12 @@ export const profileStatsFamilyAtom = atomFamily((profileId: string) =>
   atomWithRefresh(async get => {
     const rpc = get(activityRPCAtom)
     const headers = get(projectHeaderAtom)
+    // Tracked as a dependency rather than keyed into the family, which would strand a cache entry
+    // per profile per flag value. Must stay above the first await, or jotai stops tracking it.
+    const includeBots = get(includeBotsAtom)
     if (!headers) return { resp: null, failed: true as const, error: null }
     try {
-      const resp = await rpc.getProfileStats({ distinctId: profileId }, { headers })
+      const resp = await rpc.getProfileStats({ distinctId: profileId, includeBots }, { headers })
       return { resp, failed: false as const, error: null }
     } catch (err) {
       // Auth failures are session-wide, not a heatmap problem — let the boundary handle them.

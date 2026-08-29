@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { Calendar, Clock, Timer } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
@@ -14,6 +14,7 @@ import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { deviceModelOf, platformOf } from '@/lib/auto-properties'
 import {
   browserForPlatform,
@@ -182,28 +183,35 @@ const SessionView = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [includeBots] = useIncludeBots()
+  const requestRef = useRef(0)
 
   const fetchEvents = useCallback(async () => {
     if (!profileId || !sessionId) return
     setLoading(true)
     setError(null)
+    const seq = ++requestRef.current
     try {
       const resp = await activityRPC.getActivityFeed(
         {
           distinctId: profileId,
           sessionId,
           pageSize: 1000,
+          includeBots,
         },
         { headers },
       )
+      // The toggle can re-issue mid-flight, and nothing re-polls here to correct a stale answer.
+      if (seq !== requestRef.current) return
       setEvents(resp.events)
     } catch (err) {
+      if (seq !== requestRef.current) return
       console.error('Session feed failed:', err)
       setError('Failed to load session')
     } finally {
-      setLoading(false)
+      if (seq === requestRef.current) setLoading(false)
     }
-  }, [profileId, sessionId, headers, activityRPC])
+  }, [profileId, sessionId, headers, activityRPC, includeBots])
 
   useEffect(() => {
     if (project && profileId && sessionId) fetchEvents()
