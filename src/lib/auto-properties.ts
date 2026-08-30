@@ -18,6 +18,6 @@ export const platformOf = (auto: JsonObject | undefined) => structGet(auto, '$pl
 // raw `$referrer`, which would re-expose the referrers the backend deliberately counts as Direct.
 export const referrerDomain = (auto: JsonObject | undefined) => structGet(auto, '$referrerDomain')?.trim() || undefined
 
-// Ingest only writes $bot on tagged rows, so absence means human rather than unknown. Promoted to a
-// column and merged back on read, like $platform.
+// Ingest only writes $bot on tagged rows, so absence means human rather than unknown. Derived from
+// UA + ASN, both fixed for a session, so one representative event answers for that whole session.
 export const botOf = (auto: JsonObject | undefined) => structGet(auto, '$bot') === 'true'

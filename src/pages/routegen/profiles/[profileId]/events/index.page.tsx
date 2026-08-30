@@ -63,17 +63,12 @@ const LANE_W = 80
 
 /** Assigns each session to a lane (column) so overlapping sessions don't share a column. Greedy first-fit. */
 export function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
-  const ranges = new Map<string, { first: number; last: number; bot: boolean }>()
+  const ranges = new Map<string, { first: number; last: number }>()
   events.forEach((e, i) => {
     if (!e.sessionId) return
     const r = ranges.get(e.sessionId)
-    if (r) {
-      r.last = i
-      // Every event, not the first: one untagged event means the session isn't a crawler's.
-      r.bot &&= botOf(e.autoProperties)
-    } else {
-      ranges.set(e.sessionId, { first: i, last: i, bot: botOf(e.autoProperties) })
-    }
+    if (r) r.last = i
+    else ranges.set(e.sessionId, { first: i, last: i })
   })
 
   const lanes: SessionLane[] = []
@@ -99,7 +94,7 @@ export function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
       device,
       platform,
       referrer,
-      bot: range.bot,
+      bot: botOf(auto),
       labelIdx: Math.floor((range.first + range.last) / 2),
     })
   }

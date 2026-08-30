@@ -58,7 +58,7 @@ const groupSessions = (events: ActivityEvent[]) => {
       os,
       device,
       platform,
-      bot: evs.every(e => botOf(e.autoProperties)),
+      bot: botOf(auto),
     })
   }
   return rows

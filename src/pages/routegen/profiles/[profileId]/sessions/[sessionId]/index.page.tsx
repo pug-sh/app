@@ -70,7 +70,7 @@ const SessionSummary = ({
   const city = structGet(firstAuto, '$city')
   const region = structGet(firstAuto, '$region')
   const ip = structGet(firstAuto, '$ip')
-  const bot = events.length > 0 && events.every(e => botOf(e.autoProperties))
+  const bot = botOf(firstAuto)
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
   const exitEvent = events.length > 0 ? events[0].kind : null
