@@ -159,7 +159,15 @@ export const KpiTile = ({
 // baseline='min' scales to the data's own range (default — emphasizes shape). baseline='zero'
 // anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
 // amplified to full height; the traffic stat cards use this to match the 0-based main chart.
-export const Sparkline = ({ points, baseline = 'min' }: { points: { value: number }[]; baseline?: 'min' | 'zero' }) => {
+export const Sparkline = ({
+  points,
+  baseline = 'min',
+  strokeWidth = 1.75,
+}: {
+  points: { value: number }[]
+  baseline?: 'min' | 'zero'
+  strokeWidth?: number
+}) => {
   const gradientId = `spark-${useId().replace(/:/g, '')}`
   const values = points.map(p => p.value)
   const max = Math.max(...values)
@@ -189,7 +197,7 @@ export const Sparkline = ({ points, baseline = 'min' }: { points: { value: numbe
         d={linePath}
         fill="none"
         stroke="currentColor"
-        strokeWidth={1.75}
+        strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
