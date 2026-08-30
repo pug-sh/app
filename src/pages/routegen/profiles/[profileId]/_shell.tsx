@@ -1,14 +1,12 @@
 import { useAtomValue } from 'jotai'
-import { Copy, UserX } from 'lucide-react'
+import { Bot, Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'wouter'
 import { LocationLabel } from '@/components/country-flag'
 import HoverSwap from '@/components/hover-swap'
-import IncludeBotsToggle from '@/components/include-bots-toggle'
 import Page from '@/components/layout/page'
 import { PlatformLabel } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
-import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { useRouteParams } from '@/lib/route-params'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
@@ -54,7 +52,6 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
   const { profileId = '' } = useRouteParams<{ profileId: string }>()
   const profile = useAtomValue(profileFamilyAtom(profileId))
   const [location] = useLocation()
-  const [includeBots, setIncludeBots] = useIncludeBots()
 
   const lastSeen = tsToDate(profile?.activity?.lastSeen)
   const lastSeenLive = useRelativeTime(lastSeen)
@@ -124,6 +121,12 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
         </div>
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+        {profile.activity?.bot && (
+          <Meta>
+            <Bot className="size-3.5" aria-hidden />
+            Automated traffic
+          </Meta>
+        )}
         {createTime && (
           <Meta label="Created">
             <HoverSwap primary={formatDateTime(createTime)} secondary={formatRelative(createTime)} />
@@ -146,6 +149,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
               browserVersion={profile.activity?.browserVersion}
               os={profile.activity?.os}
               osVersion={profile.activity?.osVersion}
+              bot={profile.activity?.bot}
             />
           </Meta>
         )}
@@ -164,7 +168,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
 
   return (
     <Page header={header} title={identity.name}>
-      <div className="-mt-2 mb-6 flex items-end justify-between gap-4 border-b border-border">
+      <div className="-mt-2 mb-6 border-b border-border">
         <nav className="-mb-px flex gap-6">
           {TABS.map(tab => {
             const isActive = tab.suffix === activeTab.suffix
@@ -184,9 +188,6 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
             )
           })}
         </nav>
-        {activeTab.suffix !== '/properties' && (
-          <IncludeBotsToggle includeBots={includeBots} onChange={setIncludeBots} className="mb-1.5" />
-        )}
       </div>
       {children}
     </Page>

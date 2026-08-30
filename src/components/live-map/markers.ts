@@ -12,7 +12,7 @@ import {
   resolveDeviceType,
 } from '@/components/live-map/live-visitors'
 import { resolveRegionCentroid } from '@/components/region-centroids'
-import { deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
+import { botOf, deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
 import { structGet } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 
@@ -34,6 +34,7 @@ export type VisitorMapMarker = {
   device: string
   // 'web' or the native OS, straight off the SDK — the popover drops $browser when it isn't web.
   platform?: string
+  bot?: boolean
   referrer?: string
   utmSource?: string
   timezone?: string
@@ -181,6 +182,7 @@ const visitorMarker = (placed: Placed, group: VisitorGroup, index: number): Visi
     osVersion: structGet(auto, '$osVersion'),
     device: deviceModelOf(auto) || deviceTypeLabel[resolveDeviceType(auto)],
     platform: platformOf(auto),
+    bot: botOf(auto),
     referrer: referrerDomain(auto),
     utmSource: structGet(auto, '$utmSource'),
     timezone: structGet(auto, '$timezone'),

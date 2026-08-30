@@ -21,9 +21,8 @@ import { useEventFilters } from '@/hooks/use-event-filters'
 import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
-import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
-import { deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
+import { botOf, deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
 import { refreshTimeRange } from '@/lib/date-presets'
 import { useRouteParams } from '@/lib/route-params'
 import { rpcErrorMessage } from '@/lib/rpc-error'
@@ -56,6 +55,7 @@ type SessionLane = {
   device?: string
   platform?: string
   referrer?: string
+  bot?: boolean
   labelIdx: number
 }
 
@@ -94,6 +94,7 @@ export function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
       device,
       platform,
       referrer,
+      bot: botOf(auto),
       labelIdx: Math.floor((range.first + range.last) / 2),
     })
   }
@@ -144,7 +145,6 @@ const UserActivity = () => {
   const eventFilters = useEventFilters(initialFilterState.eventFilters)
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(undefined)
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
-  const [includeBots] = useIncludeBots()
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -190,12 +190,12 @@ const UserActivity = () => {
             events: protoEvents,
             pageSize: 200,
             pageToken,
-            includeBots,
+            includeBots: true,
           },
           { headers },
         )
-        // A filter or toggle change re-issues while the previous request is in flight, and there
-        // is no next poll here to correct a stale answer that lands last.
+        // A filter change re-issues while the previous request is in flight, and there is no next
+        // poll here to correct a stale answer that lands last.
         if (seq !== requestRef.current) return
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
@@ -213,7 +213,7 @@ const UserActivity = () => {
         if (seq === requestRef.current) setLoading(false)
       }
     },
-    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC, includeBots],
+    [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC],
   )
 
   useEffect(() => {
@@ -365,6 +365,7 @@ const UserActivity = () => {
                                         os={lane.os}
                                         device={lane.device}
                                         platform={lane.platform}
+                                        bot={lane.bot}
                                         iconSize={12}
                                         className="text-xs text-faint"
                                       />
