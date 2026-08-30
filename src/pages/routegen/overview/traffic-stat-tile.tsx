@@ -86,7 +86,7 @@ export const TrafficStatTile = ({
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
     return (
-      <div className="flex h-[9.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-card px-4 py-3 text-left">
+      <div className="flex h-[8.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-card px-4 py-3 text-left">
         <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
           <span className="text-xs text-muted-foreground" title={error}>
@@ -119,7 +119,7 @@ export const TrafficStatTile = ({
       onClick={() => onSelect(statId)}
       aria-pressed={selected}
       className={cn(
-        'flex h-[9.5rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
+        'flex h-[8.5rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
         selected
           ? 'border-primary/50 bg-primary/[0.07]'
           : 'border-border/60 bg-card hover:border-border hover:bg-accent/40',
@@ -140,10 +140,10 @@ export const TrafficStatTile = ({
         {value !== undefined ? formatTrafficStatValue(statId, value) : '—'}
       </span>
 
-      {/* Sparkline fills the remaining height, bleeding to the card's bottom/side edges; accent-colored
-          when this stat drives the chart, faint otherwise. */}
-      <div className={cn('-mx-4 -mb-3 mt-2 min-h-0 flex-1', selected ? 'text-link' : 'text-muted-foreground/35')}>
-        {sparkPoints.length >= 2 ? <Sparkline points={sparkPoints} baseline="zero" /> : null}
+      {/* Fixed shallow band pinned to the bottom edge — given the full leftover height the vertical stretch
+          exaggerated every wiggle and the trend out-shouted the number. Accent when this stat drives the chart. */}
+      <div className={cn('-mx-4 -mb-3 mt-auto h-10', selected ? 'text-link' : 'text-muted-foreground/35')}>
+        {sparkPoints.length >= 2 ? <Sparkline points={sparkPoints} baseline="zero" strokeWidth={1.5} /> : null}
       </div>
     </button>
   )
