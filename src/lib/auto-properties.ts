@@ -17,3 +17,7 @@ export const platformOf = (auto: JsonObject | undefined) => structGet(auto, '$pl
 // Server-derived, already www-stripped, and blanked on self-referral — don't fall back to parsing the
 // raw `$referrer`, which would re-expose the referrers the backend deliberately counts as Direct.
 export const referrerDomain = (auto: JsonObject | undefined) => structGet(auto, '$referrerDomain')?.trim() || undefined
+
+// Ingest only writes $bot on tagged rows, so absence means human rather than unknown. Promoted to a
+// column and merged back on read, like $platform.
+export const botOf = (auto: JsonObject | undefined) => structGet(auto, '$bot') === 'true'

@@ -3,19 +3,18 @@ import { Calendar, Clock, Timer } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
-import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
+import { BrandIcon } from '@/components/brand-icon'
 import { LocationLabel } from '@/components/country-flag'
 import { DetailTooltip, tooltipPanelContent } from '@/components/detail-tooltip'
 import LoadingSpinner from '@/components/loading-spinner'
 import NoProject from '@/components/no-project'
-import { PlatformTooltip } from '@/components/platform-label'
+import { PlatformTooltip, unknownBrowserGlyph } from '@/components/platform-label'
 import ProjectLink from '@/components/project-link'
 import TimelineEventItem from '@/components/timeline-event-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
-import { useIncludeBots } from '@/hooks/use-include-bots'
-import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import { botOf, deviceModelOf, platformOf } from '@/lib/auto-properties'
 import {
   browserForPlatform,
   formatBrowserLabel,
@@ -71,6 +70,7 @@ const SessionSummary = ({
   const city = structGet(firstAuto, '$city')
   const region = structGet(firstAuto, '$region')
   const ip = structGet(firstAuto, '$ip')
+  const bot = events.length > 0 && events.every(e => botOf(e.autoProperties))
 
   const entryEvent = events.length > 0 ? events[events.length - 1].kind : null
   const exitEvent = events.length > 0 ? events[0].kind : null
@@ -142,12 +142,13 @@ const SessionSummary = ({
                 osVersion={osVersion}
                 device={device}
                 platform={platform}
+                bot={bot}
               />
             }
             contentClassName={tooltipPanelContent}
             className="min-w-0 items-center gap-1.5"
           >
-            <BrandIcon name={browserIcon} size={14} unknownGlyph={browser ? <UnknownBrowserIcon size={14} /> : null} />
+            <BrandIcon name={browserIcon} size={14} unknownGlyph={browser ? unknownBrowserGlyph(bot, 14) : null} />
             <BrandIcon name={osIcon} size={14} />
             <BrandIcon name={deviceIcon} size={14} />
             {[formatBrowserLabel(browser, browserVersion), formatOsLabel(os, osVersion), device]
@@ -183,7 +184,6 @@ const SessionView = () => {
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [includeBots] = useIncludeBots()
   const requestRef = useRef(0)
 
   const fetchEvents = useCallback(async () => {
@@ -197,11 +197,10 @@ const SessionView = () => {
           distinctId: profileId,
           sessionId,
           pageSize: 1000,
-          includeBots,
+          includeBots: true,
         },
         { headers },
       )
-      // The toggle can re-issue mid-flight, and nothing re-polls here to correct a stale answer.
       if (seq !== requestRef.current) return
       setEvents(resp.events)
     } catch (err) {
@@ -211,7 +210,7 @@ const SessionView = () => {
     } finally {
       if (seq === requestRef.current) setLoading(false)
     }
-  }, [profileId, sessionId, headers, activityRPC, includeBots])
+  }, [profileId, sessionId, headers, activityRPC])
 
   useEffect(() => {
     if (project && profileId && sessionId) fetchEvents()

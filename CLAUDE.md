@@ -194,7 +194,7 @@ of every other icon combined. Everything is self-hosted now.
   with no type guarantee of their own.
 - **Mapping:** `src/lib/brand-icons.ts` — string heuristics over the `$browser`, `$os`, `$device`
   auto-properties.
-- **Components:** `BrandIcon` / `UnknownBrowserIcon` (`src/components/brand-icon.tsx`),
+- **Components:** `BrandIcon` / `UnknownBrowserIcon` / `BotBrowserIcon` (`src/components/brand-icon.tsx`),
   `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`).
 - Named **brand**, not platform: `Platform` already means two different things here — the SDK target
   in `setup-platforms.ts` (web/script/node/flutter) and browser+OS+device in `platform-label.tsx`.
@@ -204,14 +204,27 @@ declares in `navigator.userAgentData.brands` (`sdk-web/src/parsers.ts`), or a ua
 normalized by the backend (`internal/useragent/normalize.go`) — normally a clean name like
 `"Google Chrome"` or `"Brave"`, though the resolver keeps raw-UA tokens as a backstop. An unlisted browser falls through to `null`, not to Chrome. Anything
 unmatched renders `UnknownBrowserIcon`, a neutral globe — that branch is reached routinely and is
-the point.
+the point. On a row flagged `bot` the same slot takes `BotBrowserIcon` instead.
 
-**A named browser owns the icon slot outright, so the globe is not a last resort.** The single-icon
+**A bot is marked in two places, and only one of them is the icon.** `PlatformLabel` /
+`PlatformStackLabel` / `PlatformTooltip` take a `bot` prop that swaps the *unknown* glyph for a
+robot — so a **recognised** browser keeps its real mark, which matters because half of bot detection
+is ASN-based and tags an ordinary `Google Chrome` from a datacenter range (`HeadlessChrome` resolves
+to the Chrome mark too). Those rows say nothing in the icon slot, so `PlatformTooltip` also prints a
+plain **Automated** item: that is the only signal a datacenter Chrome carries, and the only one a
+screen reader reaches. Per-event the flag is `botOf()` (`lib/auto-properties.ts`, reading `$bot`,
+present only on tagged rows); per-profile it is `activity.bot`, which is true only when *every*
+counted event was tagged.
+
+**A named browser owns the icon slot outright, so the neutral glyph is not a last resort.** The single-icon
 labels (`PlatformLabel`, `PlatformStackLabel`) read the OS mark *only* when no browser is named —
 they used to chain `resolveBrowserIcon(browser) ?? resolveOsIcon(os)`, which quietly handed an
 unrecognised browser the OS glyph and never reached the globe, so `Epiphany · Linux` drew Tux. An
 OS-only row still gets its OS mark; what it never gets is the globe, which would claim a browser the
-row doesn't name. Guarded by `platform-label.test.tsx`.
+row doesn't name — that also means an OS-only row shows no bot glyph, bot or not. Guarded by
+`platform-label.test.tsx`, which pins the glyph by lucide's `lucide-*` class rather than by "an svg
+rendered": the slot now has two possible glyphs, and asserting mere presence let an inverted ternary
+pass green.
 
 **Ordering in `resolveBrowserIcon` is load-bearing — do not alphabetise it.** The `edg`, `crios`,
 `fxios`, `opr`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and

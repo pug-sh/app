@@ -380,6 +380,7 @@ const Profiles = () => {
                           os={activity?.os}
                           osVersion={activity?.osVersion}
                           device={activity?.device}
+                          bot={activity?.bot}
                           iconSize={16}
                         />
                       </td>
