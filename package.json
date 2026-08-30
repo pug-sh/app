@@ -25,7 +25,7 @@
     "@bufbuild/protovalidate": "^1.1.1",
     "@connectrpc/connect": "^2.1.2",
     "@connectrpc/connect-web": "^2.1.2",
-    "@dicebear/core": "^9.4.3",
+    "@dicebear/core": "^10.6.1",
     "@dicebear/notionists": "^9.4.2",
     "@fontsource-variable/figtree": "^5.3.0",
     "@fontsource-variable/geist-mono": "^5.3.0",
