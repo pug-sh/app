@@ -1,7 +1,7 @@
 // Bundled rather than served from api.dicebear.com: that endpoint is free for non-commercial use
 // only, rate-limited, and offers no uptime guarantee. The artwork is CC0 either way.
-import { createAvatar } from '@dicebear/core'
-import * as notionists from '@dicebear/notionists'
+import { Avatar, Style } from '@dicebear/core'
+import notionists from '@dicebear/styles/notionists.json'
 import { memo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
@@ -23,6 +23,8 @@ const AVATAR_COLORS = [
 // DiceBear wants bare hex — a leading '#' emits fill="##da8282", silently invalid.
 const palette = AVATAR_COLORS.map(color => color.slice(1))
 
+const style = new Style(notionists)
+
 // Sized past the live feed's page size: below the working set a flush makes every later pass miss
 // everything, and each miss is ~0.2ms of generation.
 const MAX_CACHE = 1000
@@ -34,7 +36,7 @@ const generatedSrc = (id: string) => {
   const hit = cache.get(id)
   if (hit) return hit
   if (cache.size >= MAX_CACHE) cache.clear()
-  const uri = createAvatar(notionists, { seed: id, backgroundColor: palette }).toDataUri()
+  const uri = new Avatar(style, { seed: id, backgroundColor: palette }).toDataUri()
   cache.set(id, uri)
   return uri
 }
