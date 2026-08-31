@@ -50,3 +50,9 @@ jobs:
         run: bun run test
         env:
           TZ: UTC
+
+      # `tsc -b` never reaches cla/gate and vitest never runs its tests: it is its own program, with
+      # no dependencies so the CLA workflow can run it without an install. That workflow only ever
+      # runs the base branch's copy, so without this a broken gate merges green and blocks its own fix.
+      - name: CLA gate
+        run: bun run test:cla

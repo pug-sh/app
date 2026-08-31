@@ -17,6 +17,7 @@ bun run lint       # Biome check — format + lint + import organization (safe f
 bun run lint:ci    # Biome check, reporting only — never writes (what CI runs)
 bun run test       # Vitest, single run
 bun run test:watch # Vitest, watch mode
+bun run test:cla   # CLA gate — typecheck + bun test (its own program; nothing else checks it)
 bun run knip       # Knip — unused files, exports and dependencies (CI gate)
 ```
 
@@ -40,6 +41,38 @@ This is a young suite covering load-order and state bugs, not a coverage regime.
 - **Test through the structure that produces the bug.** The default-project race only reproduces when `ProjectRedirect` renders inside a `Switch` — rendered bare it never unmounts and self-corrects, passing either way.
 - **The environment has to install its own storage.** Node 25 defines inert `localStorage`/`sessionStorage` globals, and vitest won't overwrite a global that already exists, so happy-dom's real Storage never lands. `src/test/setup.ts` puts it back — don't assume the environment did.
 - **Fake the RPC atoms, not the transport** (`vi.mock('@/api/rpc', …)`); a hand-held `batchGet` lets a test decide when a call resolves, which is the only way to land a response into a workspace that has moved on.
+
+## CLA Gate
+
+`cla/gate/` is a standalone bun program that holds a pull request until everyone with work in it —
+commit author, committer, `Co-authored-by:` trailer, and the person who opened it — appears in
+`cla/signatures.json`. Signing is a commit to that file under the contributor's own identity; the
+agreement is `CLA.md`.
+
+- **It has no dependencies, and must not gain any.** `.github/workflows/cla.yml` runs it with no
+  `bun install`: that workflow needs `pull-requests: write` on a `pull_request_target` event, so the
+  app's dependency tree is kept out of it entirely. A test fails on any import that is not a relative
+  path or a builtin.
+- **Nothing else in the repo checks it.** It sits outside both tsconfig projects and vitest's
+  `include`, so `bun run test:cla` is the whole of it and CI runs that as its own step. The CLA
+  workflow only ever runs the **base branch's** copy of the gate, so without that step a broken
+  change to it would merge green and then block its own fix.
+- **Everything it judges comes from the API or the webhook, never the runner's filesystem**, and the
+  only signature it accepts is the opener's own — author, committer and trailer are all self-asserted,
+  so any other would let a pull request sign for whoever it named. The test names in `cla/gate/` are
+  the record of which attack each rule closes.
+- **The gate blocks nothing on its own — branch protection has to require the `signed` job.** That
+  setting lives in the repository config, not in this repo, and it is the one failure mode with no
+  code-level defence: a red check merges fine if nothing requires it.
+- **A `cla_version` bump lands by pushing to the base branch, never through a pull request.** The
+  version in force is read from the base branch precisely so a contribution cannot name its own, so a
+  pull request that raises it is rejected by its own rule. `check.ts` says so in the message.
+- **The API layer has to fail closed the way the parser does.** `parseSignatureFile` throws on a
+  field of the wrong type; `github.ts` decodes the API's own JSON and once did the opposite — an
+  author object with no usable id became a principal with id `0`, which `unsigned()` then skipped, so
+  the gate printed "verified" with an unchecked author. A missing commit message did the same to every
+  `Co-authored-by:` trailer. Both now return `null` / throw. A coercion to a zero value in that file is
+  the shape to distrust: it reads as "nothing to check" rather than "could not be read".
 
 ## Proto Code Generation
 
