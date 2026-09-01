@@ -62,6 +62,7 @@ export const DashboardInsightContent = ({
   lightMetrics = false,
   hideSummary = false,
   seriesLabel,
+  onComparisonCaption,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -81,6 +82,7 @@ export const DashboardInsightContent = ({
   // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
   hideSummary?: boolean
   seriesLabel?: string
+  onComparisonCaption?: (draws: boolean) => void
 }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -194,6 +196,7 @@ export const DashboardInsightContent = ({
       lightMetrics={lightMetrics}
       hideSummary={hideSummary}
       seriesLabel={seriesLabel}
+      onComparisonCaption={onComparisonCaption}
     />
   )
 }
