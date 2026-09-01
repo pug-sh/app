@@ -43,6 +43,11 @@ jobs:
         # and vendored zones are in `ignore` in knip.jsonc, so it never proposes deleting code we don't own.
         run: bun run knip
 
+      # The CLA gate is its own program on bun's runner, so vitest never sees it. This is the only
+      # place it is tested against the PR's own copy — cla.yaml runs the base branch's.
+      - name: Test the CLA gate
+        run: bun test tools/cla/gate
+
       # Pinned rather than inherited: the usage tests assert UTC bucketing by contrasting it with a
       # western zone, and their comments claim CI runs in UTC. That was only ever true because
       # GitHub's runners default to it.
