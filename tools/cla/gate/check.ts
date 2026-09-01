@@ -30,19 +30,20 @@ export type Commit = {
 
 export const isBot = (p: Principal) => p.type === 'Bot'
 
-const asObject = (v: unknown, what: string) => {
+export const asObject = (v: unknown, what: string) => {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) throw new Error(`${what} is not a JSON object`)
   return v as Record<string, unknown>
 }
 
-// null is absent rather than wrong, matching what a Go decoder does with it.
-const asString = (v: unknown, field: string) => {
+// null is absent rather than wrong: GitHub sends an explicit null for a field it has no value for,
+// and the callers that care — principals, invalidReason — reject the resulting zero value themselves.
+export const asString = (v: unknown, field: string) => {
   if (v === undefined || v === null) return ''
   if (typeof v !== 'string') throw new Error(`${field} is not a string`)
   return v
 }
 
-const asInt = (v: unknown, field: string) => {
+export const asInt = (v: unknown, field: string) => {
   if (v === undefined || v === null) return 0
   if (typeof v !== 'number' || !Number.isSafeInteger(v)) throw new Error(`${field} is not a whole number`)
   return v
@@ -92,8 +93,8 @@ export const parseSignatureFile = (text: string): SignatureFile => {
   return { claVersion: asString(root.cla_version, 'cla_version'), signatures }
 }
 
-// A version is echoed into the job log, where GitHub reads ::workflow:: commands line by line, so
-// it must not carry a newline.
+// A version is echoed into the job log, where GitHub reads workflow commands (`::error::` and
+// friends) line by line, so it must not carry a newline.
 const versionRe = /^[A-Za-z0-9._-]+$/
 
 // A real calendar day, not the shape of one: 2026-2-3 and 2026-02-30 are both rejected.
@@ -155,7 +156,10 @@ export const principals = (commits: Commit[], opener: Principal) => {
   const found: Principal[] = []
   const unlinked: string[] = []
   for (const c of commits) {
-    if (c.author === null || c.committer === null) {
+    // An id of zero counts as unlinked, not as a principal: decodePrincipal reads an absent id as
+    // zero, and unsigned() skips such a principal, so without this a commit whose author decoded to
+    // nobody would pass the gate having been checked against nobody.
+    if (c.author === null || c.committer === null || c.author.id === 0 || c.committer.id === 0) {
       unlinked.push(c.sha)
       continue
     }

@@ -20,9 +20,9 @@ import { Conflict, type GitHubAPI, NoRuns, newClient, type PullRequest, signatur
 import { logError, logInfo } from './log.ts'
 import { escapeAnnotation } from './report.ts'
 
-// The checker's workflow, re-run once a signature lands so the pull request's own required check
-// turns green rather than a second check merely agreeing with it.
-const signWorkflowFile = 'cla.yaml'
+// The checker's workflow — not this one — re-run once a signature lands so the pull request's own
+// required check turns green rather than a second check merely agreeing with it.
+const checkerWorkflowFile = 'cla.yaml'
 
 // The whole comment, not a prefix of it. The workflow gates on a prefix because Actions expressions
 // cannot trim, so this is the authoritative match.
@@ -53,8 +53,8 @@ export const loadSignConfig = (): SignConfig => {
   if (cfg.token === '') throw new Error('GH_TOKEN is empty')
   if (cfg.commenter.id === 0) throw new Error('COMMENTER_ID is zero')
   if (cfg.commenter.login === '') throw new Error('COMMENTER_LOGIN is empty')
-  // No "User" fallback: that is the value isBot() reads as human, so a renamed payload field would
-  // sign for a bot rather than refuse one.
+  // No "User" fallback: isBot() reads everything except "Bot" as human, so a renamed payload field
+  // would sign for a bot rather than refuse one.
   if (cfg.commenter.type === '') throw new Error('COMMENTER_TYPE is empty')
   if (cfg.pr <= 0) throw new Error(`PR_NUMBER is ${cfg.pr}`)
   return cfg
@@ -95,29 +95,35 @@ export const refusalOf = (err: unknown): RefusalReason | undefined => {
 // Decides whether this comment records a signature, and when it does not, which reason the
 // contributor is told.
 //
-// commenter is GitHub-attested, so its identity is not in question. people is every principal on the
-// pull request: the opener, every commit author and committer, and every resolved Co-authored-by
-// trailer. head is the pull request's own signature file and onBase the base branch's; a signature
-// in either one already covers this version. version is the one in force.
+// commenter is GitHub-attested, so its identity is not in question. opener is the pull request's
+// author, equally attested. people is every principal on the pull request: the opener, every commit
+// author and committer, and every resolved Co-authored-by trailer. head is the pull request's own
+// signature file and onBase the base branch's. version is the one in force.
 //
 // More than one reason can be true at once — a bot that is not a principal and has somehow signed
 // hits three — so the order of the checks is the order of the contributor's experience: whichever
 // fires first is the only message they read. Returns undefined to accept.
 export const maySign = (
   commenter: Principal,
+  opener: Principal,
   people: Principal[],
   head: SignatureFile,
   onBase: SignatureFile,
   version: string,
 ) => {
-  // A bot first. It is the one refusal that holds whatever the pull request says, and telling a
-  // machine which humans have signed is noise nobody reads.
+  // A bot first. It is the one refusal that holds whatever the pull request says.
   if (isBot(commenter)) return new Refusal('bot', 'a bot holds no copyright, so it has nothing to license')
   // Before principal-hood, deliberately. Someone who signed on an earlier pull request and comments
   // /sign on a colleague's would otherwise be told they have no work here — true, and it sends them
   // hunting for a problem they do not have. Both files are searched at the version in force, never
   // at their own: onBase can declare a different one mid-bump.
-  if (signedAt(head, commenter.id, version) || signedAt(onBase, commenter.id, version)) {
+  //
+  // head is the pull request's own file, so it is credited only to the opener. appendOnly takes a
+  // hand-written signature from nobody else, which makes an entry there naming anyone else forged —
+  // and crediting it would let a pull request refuse a co-author's /sign as already signed, on a
+  // green job, having recorded nothing.
+  const inHead = commenter.id === opener.id && signedAt(head, commenter.id, version)
+  if (inHead || signedAt(onBase, commenter.id, version)) {
     return new Refusal('already-signed', 'you have already signed the version in force')
   }
   // The only security-relevant check, and the one never to soften: without it the file fills with
@@ -186,6 +192,9 @@ const record = async (s: Signer) => {
   // issue_comment fires on a closed pull request too, and a merged one's head is gone once the fork
   // is deleted.
   if (pr.state !== 'open') return decline(s, new Error(`this pull request is ${pr.state}; sign on an open one`))
+  // The same check loadConfig applies to PR_HEAD_SHA, for the same reason: an empty ref reads as the
+  // default branch, so the head file would be read from somewhere else entirely.
+  if (pr.headSha === '') throw new Error('the pull request response carries no head sha')
 
   let commits
   try {
@@ -201,11 +210,13 @@ const record = async (s: Signer) => {
     )
   }
 
-  // An unlinked commit drops its author from people entirely, so a contributor who has commits here
-  // would otherwise be refused for having none.
+  // An unlinked commit, or a trailer the checker could not resolve, drops that person from people
+  // entirely, so a contributor who does have work here would otherwise be refused for having none.
+  // Both are collected so the refusal can name them instead of flatly denying they exist.
   const { found, unlinked } = principals(commits, pr.user)
-  const { found: coauthors } = await resolveCoauthors(s.gh, commits)
+  const { found: coauthors, unknown } = await resolveCoauthors(s.gh, commits)
   const people = [...found, ...coauthors]
+  const unidentified = [...unlinked, ...unknown]
 
   let head: SignatureFile
   try {
@@ -223,14 +234,14 @@ const record = async (s: Signer) => {
       throw new Error(`reading ${signaturesPath} on ${pr.baseRef}: ${message(err)}`)
     }
 
-    const refusal = maySign(s.cfg.commenter, people, head, onBase, onBase.claVersion)
+    const refusal = maySign(s.cfg.commenter, pr.user, people, head, onBase, onBase.claVersion)
     if (refusal !== undefined) {
-      if (refusal.reason === 'not-a-principal' && unlinked.length > 0) {
+      if (refusal.reason === 'not-a-principal' && unidentified.length > 0) {
         return decline(
           s,
           new Refusal(
             refusal.reason,
-            `${refusal.message}; these commits carry an email that is not linked to a GitHub account, so their author cannot be identified: ${unlinked.join(', ')}`,
+            `${refusal.message}; the check could not identify who these belong to, so if one of them is yours, fix that first: ${unidentified.join(', ')}`,
           ),
         )
       }
@@ -286,7 +297,7 @@ const confirm = async (s: Signer, pr: PullRequest, version: string) => {
   let body = `Signed CLA **${version}** for @${s.cfg.commenter.login} — recorded in \`${signaturesPath}\` on \`${pr.baseRef}\`. Thanks!`
 
   try {
-    const run = await s.gh.latestWorkflowRun(signWorkflowFile, pr.headSha)
+    const run = await s.gh.latestWorkflowRun(checkerWorkflowFile, pr.headSha)
     try {
       await s.gh.rerunWorkflow(run.id)
     } catch (err) {
@@ -322,10 +333,26 @@ const decline = async (s: Signer, reason: Error) => {
   throw new Declined(reason, `refused to sign for ${s.cfg.commenter.login}: declined: ${reason.message}`)
 }
 
+// What a comment body asks for. "unrelated" stays silent — the contributor meant something else, and
+// a refusal under every "I'll /sign later" would be worse than saying nothing. "near-miss" is a body
+// that opens with the command and carries anything else ("/sign please"); the workflow prefilters on
+// that same prefix, so those do reach the job, and exiting quietly on one is the worst shape
+// available — a green run, no comment, no annotation, and a check still red.
+export const commandOf = (body: string) => {
+  const trimmed = body.trim()
+  if (!trimmed.startsWith(signCommand)) return 'unrelated'
+  return trimmed === signCommand ? 'sign' : 'near-miss'
+}
+
+export const nearMiss = (s: Signer) =>
+  reply(
+    s,
+    `@${s.cfg.commenter.login} — to sign, comment \`${signCommand}\` on its own, with nothing else in the comment.`,
+  )
+
 export const runSign = async () => {
-  // A near-miss exits quietly rather than replying: the contributor meant something else, and a
-  // refusal posted under every "I'll /sign later" would be worse than saying nothing.
-  if ((process.env.COMMENT_BODY ?? '').trim() !== signCommand) {
+  const asked = commandOf(process.env.COMMENT_BODY ?? '')
+  if (asked === 'unrelated') {
     logInfo('comment is not the sign command; nothing to do')
     return
   }
@@ -337,5 +364,13 @@ export const runSign = async () => {
     throw new Error(`configuration: ${message(err)}`)
   }
   const gh = newClient({ token: cfg.token, repo: cfg.repo, signal: AbortSignal.timeout(runTimeout) })
-  await sign({ cfg, gh, now: () => new Date() })
+  const s: Signer = { cfg, gh, now: () => new Date() }
+
+  if (asked === 'near-miss') {
+    logInfo('comment is not exactly the sign command')
+    await nearMiss(s)
+    return
+  }
+
+  await sign(s)
 }

@@ -187,11 +187,12 @@ maximum extent possible under law.
 
 ## How to sign
 
-The simplest way is to comment `/sign` on a pull request you have work in. That
-records the entry below for you, on the base branch, as a commit authored under
-your own identity — you need not edit any file. GitHub attests the author of a
-comment, which is what lets a comment execute this Agreement where a commit's own
-author field, which the commit merely asserts, cannot.
+The simplest way is to comment `/sign` on an open pull request that targets `main`
+and that you have work in. Put the command on its own, with nothing else in the
+comment. That records the entry below for you, on the base branch, as a commit
+authored under your own identity — you need not edit any file. GitHub attests the
+author of a comment, which is what lets a comment execute this Agreement where a
+commit's own author field, which the commit merely asserts, cannot.
 
 You can also sign by hand. Add yourself to
 [`tools/cla/signatures.json`](tools/cla/signatures.json) as part of your pull request:
@@ -201,7 +202,7 @@ You can also sign by hand. Add yourself to
   "login": "your-github-username",
   "id": 12345678,
   "date": "YYYY-MM-DD",
-  "cla": "v1"
+  "cla": "the cla_version in tools/cla/signatures.json"
 }
 ```
 
@@ -219,6 +220,9 @@ that identifies you here, because usernames can be changed and re-registered.
 
 A status check verifies that the pull request author, every commit author and
 committer, and everyone named in a `Co-authored-by:` trailer appears in that file.
+Accounts that hold no copyright are left out of that list: bot accounts, and the
+`web-flow` account GitHub commits as on your behalf when you merge or apply a
+suggestion in the web interface.
 A trailer has to carry a GitHub noreply address — `<login>@users.noreply.github.com`,
 or the `<id>+<login>` form GitHub writes itself — since that is the only shape the
 check can resolve to an account.

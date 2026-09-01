@@ -5,9 +5,9 @@ import { message, run, Unsigned } from './gate.ts'
 import { escapeAnnotation } from './report.ts'
 import { runSign } from './sign.ts'
 
-// A bare invocation stays the checker, so cla.yaml is untouched by the signer's arrival. Anything
-// else unrecognised is a typo, not a mode: falling through to the checker would report a signature
-// that was never recorded, which is worse than any error.
+// A bare invocation stays the checker, so cla.yaml is untouched by the signer's arrival. A typo is
+// not a mode: dispatching it to the signer would find COMMENT_BODY empty, return, and take the
+// required check green having checked nothing.
 export const subcommand = (args: string[]) => {
   if (args.length === 0) return run
   if (args[0] === 'sign') return runSign
@@ -26,8 +26,9 @@ const main = async () => {
   try {
     await dispatch()
   } catch (err) {
-    // An unsigned CLA has already been reported with its own annotation; anything else is a checker
-    // fault that nothing has annotated yet.
+    // An unsigned CLA has already printed its own annotation, so a second would duplicate it.
+    // Everything else is annotated here, including a Declined /sign: the contributor already has
+    // their reply as a comment, but the annotation is the only place an operator sees the refusal.
     if (!(err instanceof Unsigned)) process.stdout.write(`::error::${escapeAnnotation(message(err))}\n`)
     process.exit(1)
   }

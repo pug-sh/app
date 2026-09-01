@@ -101,6 +101,9 @@ export type FakeState = {
   pr: PullRequest
   putFile: SignatureFile | null
   putBranch: string
+  putSha: string
+  putMessage: string
+  putAuthor: Principal | null
   putAttempts: number
   putConflicts: number
   putErr: Error | null
@@ -132,6 +135,9 @@ export const newFake = (init: Partial<FakeState> = {}): FakeGitHub => {
     pr: { state: 'open', commits: 0, user: alice, headSha: '', baseRef: '' },
     putFile: null,
     putBranch: '',
+    putSha: '',
+    putMessage: '',
+    putAuthor: null,
     putAttempts: 0,
     putConflicts: 0,
     putErr: null,
@@ -162,20 +168,27 @@ export const newFake = (init: Partial<FakeState> = {}): FakeGitHub => {
       return { file: { ...found, signatures: [...(found.signatures ?? [])] }, sha: f.fileSha }
     },
 
-    async putSignatureFile(branch, sf) {
+    async putSignatureFile(branch, sf, sha, message, author) {
       f.putAttempts++
+      // The conditional write, for real: a stale sha is what GitHub rejects, so the fake rejects it
+      // too rather than letting the retry tests pass against a write that was never conditional.
+      if (sha !== f.fileSha) throw new Conflict(`sha ${sha} does not match ${f.fileSha}`)
       if (f.putConflicts > 0) {
         f.putConflicts--
         if (f.landed !== null) {
           const current = f.files[branch]
           if (current !== undefined) current.signatures = [...(current.signatures ?? []), f.landed]
           f.landed = null
+          f.fileSha = `${f.fileSha}-2`
         }
         throw new Conflict('sha does not match')
       }
       if (f.putErr !== null) throw f.putErr
       f.putBranch = branch
       f.putFile = sf
+      f.putSha = sha
+      f.putMessage = message
+      f.putAuthor = author
       f.files[branch] = sf
     },
 
@@ -215,7 +228,7 @@ export const newFake = (init: Partial<FakeState> = {}): FakeGitHub => {
 
     async createComment(_pr, body) {
       if (f.writeErr !== null) throw f.writeErr
-      f.posted.push({ id: f.posted.length + 1, body })
+      f.posted.push({ id: f.posted.length + 1, body, authorType: 'Bot' })
     },
 
     async updateComment(id, body) {
@@ -283,4 +296,21 @@ export const signable = () =>
     },
     pr: { state: 'open', commits: 1, user: alice, headSha: 'deadbeef', baseRef: 'main' },
     commits: [{ sha: 'c1', author: alice, committer: alice, message: '' }],
+  })
+
+// alice opened it, bob wrote the second commit. Distinct identities, so a signature recorded for the
+// wrong one is visible: signable() alone cannot tell the commenter from the opener.
+export const bob = user('bob', 2)
+
+export const coauthored = () =>
+  newFake({
+    files: {
+      main: { claVersion: 'v1', signatures: [] },
+      deadbeef: { claVersion: 'v1', signatures: [] },
+    },
+    pr: { state: 'open', commits: 2, user: alice, headSha: 'deadbeef', baseRef: 'main' },
+    commits: [
+      { sha: 'c1', author: alice, committer: alice, message: '' },
+      { sha: 'c2', author: bob, committer: bob, message: '' },
+    ],
   })

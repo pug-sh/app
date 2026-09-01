@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { parseSignatureFile } from './check.ts'
+import { coauthorEmails, parseSignatureFile } from './check.ts'
 import { Conflict, marshalSignatureFile, NoRuns, NotFound, newClient } from './github.ts'
 import { caught, user, withServer } from './test-support.ts'
 
@@ -209,8 +209,9 @@ test('a 409 is reported as Conflict and nothing else is', async () => {
   )
 })
 
-// GitHub wraps base64 content at 60 characters. A decoder that does not strip the newlines fails on
-// every real response, so the fixture carries one.
+// GitHub wraps base64 content at 60 characters, so the fixture is wrapped the same way and the
+// decoder is exercised against the shape it actually meets. Buffer tolerates the newlines; the strip
+// in signatureFileMeta is there so a stricter decoder could be swapped in without a silent breakage.
 test('signatureFileMeta decodes the content and the sha', async () => {
   let ref = ''
   await withServer(
@@ -348,4 +349,89 @@ test('an empty run list is NoRuns, not NotFound', async () => {
 test('marshalSignatureFile round-trips the real file', async () => {
   const onDisk = await Bun.file(`${import.meta.dir}/../signatures.json`).text()
   expect(marshalSignatureFile(parseSignatureFile(onDisk))).toBe(onDisk)
+})
+
+// CLA.md states the version in prose and signatures.json carries it as data; the checker reads only
+// the latter, so a bump that updates one and not the other leaves the document advertising a version
+// nothing enforces, with every gate still green.
+test('CLA.md states the version the gate enforces', async () => {
+  const onDisk = await Bun.file(`${import.meta.dir}/../signatures.json`).text()
+  const doc = await Bun.file(`${import.meta.dir}/../../../CLA.md`).text()
+  const stated = /^\*\*Version: (.+)\*\*$/m.exec(doc)
+  expect(stated, 'CLA.md has no **Version: ...** line').not.toBeNull()
+  expect(stated![1]).toBe(parseSignatureFile(onDisk).claVersion)
+})
+
+// decodeCommit only ever ran against a fixture with no author and no message, so reading the trailer
+// from the wrong field — o.message rather than o.commit.message — made every Co-authored-by invisible
+// with the suite still green, and an unchecked co-author takes the gate green with it.
+test('pullCommits decodes a real-shaped commit, trailer included', async () => {
+  await withServer(
+    () =>
+      json(
+        JSON.stringify([
+          {
+            sha: 'a1',
+            commit: { message: 'feat: thing\n\nCo-authored-by: Bob <99+bob@users.noreply.github.com>\n' },
+            author: { id: 1, login: 'alice', type: 'User' },
+            committer: { id: 1, login: 'alice', type: 'User' },
+          },
+        ]),
+      ),
+    async baseURL => {
+      const commits = await client(baseURL).pullCommits(7)
+      expect(commits[0]!.author).toEqual(user('alice', 1))
+      expect(commits[0]!.committer).toEqual(user('alice', 1))
+      expect(coauthorEmails(commits)).toEqual(['99+bob@users.noreply.github.com'])
+    },
+  )
+})
+
+// GitHub sends author: null for a commit whose email is linked to no account, and principals() has to
+// see that rather than a principal naming nobody.
+test('pullCommits keeps an unlinked author as null', async () => {
+  await withServer(
+    () => json('[{"sha":"a1","commit":{"message":"feat"},"author":null,"committer":null}]'),
+    async baseURL => {
+      const commits = await client(baseURL).pullCommits(7)
+      expect(commits[0]!.author).toBeNull()
+      expect(commits[0]!.committer).toBeNull()
+    },
+  )
+})
+
+// The sha is the whole of what makes the signer's write conditional, so a response without one is an
+// error rather than an empty string GitHub would reject later for a reason nothing can read.
+test('a contents response with no sha is an error', async () => {
+  await withServer(
+    () => json(JSON.stringify({ encoding: 'base64', content: btoa('{"cla_version":"v1","signatures":[]}') })),
+    async baseURL => {
+      const err = await caught(client(baseURL).signatureFileMeta('main'))
+      expect((err as Error).message).toContain('carries no sha')
+    },
+  )
+})
+
+// An empty run list is "no run yet" and the claim that the first will pass holds. A payload that is
+// not a list at all is a shape we do not recognise, and that claim would be one we cannot make.
+test('a malformed workflow runs payload is not reported as "no run yet"', async () => {
+  await withServer(
+    () => json('{"workflow_runs":{"id":1}}'),
+    async baseURL => {
+      const err = await caught(client(baseURL).latestWorkflowRun('cla.yaml', 'head'))
+      expect(err).toBeInstanceOf(Error)
+      expect(err).not.toBeInstanceOf(NoRuns)
+    },
+  )
+})
+
+// The comment author is what tells the gate's own comment from one merely wearing its marker.
+test('comments carry their author type', async () => {
+  await withServer(
+    () => json('[{"id":9,"body":"hi","user":{"type":"Bot"}},{"id":10,"body":"yo","user":{"type":"User"}}]'),
+    async baseURL => {
+      const got = await client(baseURL).comments(7)
+      expect(got.map(c => c.authorType)).toEqual(['Bot', 'User'])
+    },
+  )
 })

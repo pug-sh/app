@@ -28,6 +28,6 @@ bun run lint      # Biome check — format + lint + import organization (safe fi
 
 ## License
 
-Pug UI is licensed under the [GNU AGPL v3.0](LICENSE). Contributors sign the
-[Contributor License Agreement](CLA.md) before their first pull request is merged —
-comment `/sign` on the pull request and that is done.
+Pug UI is licensed under the [GNU AGPL v3.0](LICENSE). Everyone with work in a pull
+request signs the [Contributor License Agreement](CLA.md) before it can merge —
+comment `/sign`, on its own, on the pull request and that is done.

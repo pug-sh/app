@@ -116,7 +116,7 @@ test('an absent signatures key decodes to null', () => {
 })
 
 // A signatures value that is not an array must fail to decode rather than being iterated as an
-// object, which is how a jq-based check silently accepted it.
+// object, which a shape-blind check accepts silently.
 test('signatures must be an array', () => {
   expect(() => parseSignatureFile('{"cla_version":"v1","signatures":{"a":{"id":1}}}')).toThrow(
     'signatures is not an array',
@@ -181,7 +181,7 @@ test("github's web-flow committer is ignored, but only by id", () => {
   expect(unsigned(file(sig('alice', 1)), file(), impostor.found).missing).toHaveLength(1)
 })
 
-// A commit whose email is not linked to an account must be reported, not dropped. jq's `//` applied
+// A commit whose email is not linked to an account must be reported, not dropped. A default applied
 // to the whole stream, so a null author among linked ones vanished.
 test('unlinked commits are reported, not dropped', () => {
   const { unlinked } = principals(
@@ -232,7 +232,7 @@ test('signed requires the current version', () => {
   expect(signed(f, 2)).toBe(true)
 })
 
-// A trailer spanning a newline would inject its own ::workflow:: commands into the annotation stream
+// A trailer spanning a newline would inject its own workflow commands into the annotation stream
 // when the address is echoed back.
 test('a co-author trailer stops at the line end', () => {
   const message = 'feat\n\nCo-authored-by: X <bob@example.com\n::error::injected>\n'

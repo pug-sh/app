@@ -302,7 +302,7 @@ test('an all-bot pull request passes and resolves any standing demand', async ()
   const gh = newFake({
     files: { head: file(), base: file() },
     commits: [commit('a1', bot, bot, 'chore(deps): bump x')],
-    posted: [{ id: 9, body: `${commentMarker}\n## Signature required` }],
+    posted: [{ id: 9, body: `${commentMarker}\n## Signature required`, authorType: 'Bot' }],
   })
   const c = newChecker(gh, out)
   c.cfg.opener = bot
@@ -312,6 +312,9 @@ test('an all-bot pull request passes and resolves any standing demand', async ()
   // Rebasing a human commit away leaves nobody to demand a signature from.
   expect(gh.edits).toBe(1)
   expect(gh.posted[0]!.body).not.toContain('Signature required')
+  // ...and nothing to claim was signed, either: no human authored this, so no agreement was given.
+  expect(gh.posted[0]!.body).toContain('nothing to sign')
+  expect(gh.posted[0]!.body).not.toContain('signed — thanks')
 })
 
 // The base file is read at the merge base, not at the base branch tip. The tip moves as others sign,
@@ -392,8 +395,8 @@ test('the gate edits its own comment instead of posting another', async () => {
     files: { head: file(), base: file() },
     commits: [commit('a1', user('bob', 2), user('bob', 2), 'x')],
     posted: [
-      { id: 5, body: "someone else's review" },
-      { id: 9, body: `${commentMarker}\nstale` },
+      { id: 5, body: "someone else's review", authorType: 'User' },
+      { id: 9, body: `${commentMarker}\nstale`, authorType: 'Bot' },
     ],
   })
 
@@ -425,7 +428,7 @@ test('the comment is resolved once signed, and never posted unasked', async () =
   const gh = newFake({
     files: { head: file(sig('alice', 1)), base: file(sig('alice', 1)) },
     commits: [commit('a1', alice, alice, 'x')],
-    posted: [{ id: 9, body: `${commentMarker}\n## Signature required` }],
+    posted: [{ id: 9, body: `${commentMarker}\n## Signature required`, authorType: 'Bot' }],
   })
   await check(newChecker(gh, sink()))
   expect(gh.posted).toHaveLength(1)
@@ -454,7 +457,7 @@ test('the verdict survives a comment that cannot be written', async () => {
   const signedPR = newFake({
     files: { head: file(sig('alice', 1)), base: file(sig('alice', 1)) },
     commits: [commit('a1', alice, alice, 'x')],
-    posted: [{ id: 9, body: `${commentMarker}\n## Signature required` }],
+    posted: [{ id: 9, body: `${commentMarker}\n## Signature required`, authorType: 'Bot' }],
     listErr: refusedWrite,
   })
   await check(newChecker(signedPR, sink()))
@@ -465,7 +468,7 @@ test('the verdict survives a comment that cannot be written', async () => {
   const refused = newFake({
     files: { head: file(sig('alice', 1)), base: file(sig('alice', 1)) },
     commits: [commit('a1', alice, alice, 'x')],
-    posted: [{ id: 9, body: `${commentMarker}\n## Signature required` }],
+    posted: [{ id: 9, body: `${commentMarker}\n## Signature required`, authorType: 'Bot' }],
     writeErr: refusedWrite,
   })
   await check(newChecker(refused, out))
@@ -478,7 +481,7 @@ test('a quoted marker is not the gate’s own comment', async () => {
   const gh = newFake({
     files: { head: file(), base: file() },
     commits: [commit('a1', alice, alice, 'x')],
-    posted: [{ id: 5, body: `> ${commentMarker}\n> ## Signature required\n\nwhy?` }],
+    posted: [{ id: 5, body: `> ${commentMarker}\n> ## Signature required\n\nwhy?`, authorType: 'User' }],
   })
 
   expect(await caught(check(newChecker(gh, sink())))).toBeInstanceOf(Unsigned)
@@ -493,7 +496,7 @@ test('a gate that cannot finish replaces its own comment', async () => {
   const broken = () => newFake({ files: { base: file() }, commits: [commit('a1', alice, alice, 'x')] })
 
   const gh = broken()
-  gh.posted = [{ id: 9, body: signedComment('v1') }]
+  gh.posted = [{ id: 9, body: signedComment('v1'), authorType: 'Bot' }]
   const err = await caught(check(newChecker(gh, sink())))
   expect(err).toBeInstanceOf(Error)
   expect(err).not.toBeInstanceOf(Unsigned)
@@ -601,4 +604,135 @@ test('an assistant trailer alone does not block the gate', async () => {
     )
     await check(c)
   }
+})
+
+// invalidReason is exhaustively unit-tested, but nothing wired it into the run: both call sites
+// could be deleted with the suite still green, and report.ts interpolates cla_version unescaped.
+test('an invalid signature file at the head fails the gate', async () => {
+  const out = sink()
+  const c = newChecker(
+    newFake({
+      files: { head: { claVersion: 'v1 \n::error::forged', signatures: [] }, base: file() },
+      commits: [commit('a1', alice, alice, 'feat: thing')],
+    }),
+    out,
+  )
+
+  const err = await caught(check(c))
+  expect(err).toBeInstanceOf(Error)
+  expect(err).not.toBeInstanceOf(Unsigned)
+  expect((err as Error).message).toContain('cla_version')
+})
+
+test('an invalid signature file on the base branch fails the gate', async () => {
+  const out = sink()
+  const c = newChecker(
+    newFake({
+      files: {
+        head: file(sig('alice', 1)),
+        base: file(sig('alice', 1)),
+        main: { claVersion: 'v1', signatures: [{ login: '', id: 0, date: 'nope', cla: 'v1' }] },
+      },
+      commits: [commit('a1', alice, alice, 'feat: thing')],
+    }),
+    out,
+  )
+
+  const err = await caught(check(c))
+  expect(err).toBeInstanceOf(Error)
+  expect((err as Error).message).toContain('on main is invalid')
+})
+
+// Dropping a commit whose author cannot be identified would pass the gate having checked nobody for
+// it, so it is raised rather than reported.
+test('a commit whose author is not linked to an account stops the gate', async () => {
+  const out = sink()
+  const c = newChecker(
+    newFake({
+      files: { head: file(sig('alice', 1)), base: file(sig('alice', 1)) },
+      commits: [commit('a1', alice, alice, 'feat'), commit('a2', null, null, 'feat')],
+    }),
+    out,
+  )
+  c.cfg.prCommits = 2
+
+  const err = await caught(check(c))
+  expect(err).toBeInstanceOf(Error)
+  expect(err).not.toBeInstanceOf(Unsigned)
+  expect((err as Error).message).toContain('not linked to a GitHub account')
+  expect((err as Error).message).toContain('a2')
+})
+
+// An id of zero decodes from an author object with no id, and unsigned() skips such a principal, so
+// without principals() calling it unlinked the gate passes having checked nobody for that commit.
+test('a commit whose author decoded to no id stops the gate', async () => {
+  const out = sink()
+  const c = newChecker(
+    newFake({
+      files: { head: file(sig('alice', 1)), base: file(sig('alice', 1)) },
+      commits: [commit('a1', alice, alice, 'feat'), commit('a2', { id: 0, login: '', type: '' }, alice, 'feat')],
+    }),
+    out,
+  )
+  c.cfg.prCommits = 2
+
+  const err = await caught(check(c))
+  expect((err as Error).message).toContain('not linked to a GitHub account')
+  expect((err as Error).message).toContain('a2')
+})
+
+// invalidReason constrains a login only by "not empty", so one carrying a newline reaches the
+// rejection message and, unescaped, would close the annotation and open a second command.
+test('a login carrying a newline cannot forge a workflow command', async () => {
+  const out = sink()
+  const c = newChecker(
+    newFake({
+      files: {
+        head: file(sig('alice', 1), { login: 'x\n::error::forged', id: 999, date: '2026-08-30', cla: 'v1' }),
+        base: file(sig('alice', 1)),
+      },
+      commits: [commit('a1', alice, alice, 'feat')],
+    }),
+    out,
+  )
+
+  expect(await caught(check(c))).toBeInstanceOf(Unsigned)
+  const text = out.text()
+  expect(text).toContain('%0A::error::forged')
+  expect(text.split('\n').filter(l => l.startsWith('::error::'))).toHaveLength(1)
+})
+
+// The marker is not identity. Taking the earliest comment carrying it let anyone capture every later
+// report: the gate would edit their comment forever and never post its own.
+test("a human comment wearing the marker is not mistaken for the gate's own", async () => {
+  const out = sink()
+  const gh = newFake({
+    files: { head: file(), base: file() },
+    commits: [commit('a1', alice, alice, 'feat')],
+    posted: [{ id: 5, body: `${commentMarker}\nnot mine`, authorType: 'User' }],
+  })
+  const c = newChecker(gh, out)
+
+  expect(await caught(check(c))).toBeInstanceOf(Unsigned)
+  expect(gh.edits).toBe(0)
+  expect(gh.posted).toHaveLength(2)
+  expect(gh.posted[0]!.body).toBe(`${commentMarker}\nnot mine`)
+  expect(gh.posted[1]!.body).toContain('CLA signature required')
+})
+
+// Returning early on a failed label read left a stale "cla: signed" standing on a run that had just
+// failed, which is the one label state that must never outlive its verdict.
+test('a label read that fails still clears the stale label', async () => {
+  const out = sink()
+  const gh = newFake({
+    files: { head: file(), base: file() },
+    commits: [commit('a1', alice, alice, 'feat')],
+    labelled: [labelSigned],
+  })
+  gh.listErr = new Error('502')
+  const c = newChecker(gh, out)
+
+  expect(await caught(check(c))).toBeInstanceOf(Unsigned)
+  expect(gh.labelled).not.toContain(labelSigned)
+  expect(gh.labelled).toContain(labelUnsigned)
 })

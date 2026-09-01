@@ -5,9 +5,10 @@
   "ignore": ["src/api/genproto/**", "src/components/charts/**", "src/components/ui/**"],
   // Replaces knip's default entry patterns rather than extending them. Safe only because plugin
   // entries are separate and additive: Vite roots the app graph at index.html -> src/main.tsx. The
-  // CLA gate is its own program with its own runner, so it roots its own graph: main.ts is what the
-  // workflows run, and the bun tests are what reach test-support.ts.
-  "entry": ["scripts/gen-favicons.mjs", "tools/cla/gate/main.ts", "tools/cla/gate/*.test.ts"],
+  // CLA gate is its own program with its own runner, so it roots its own graph. The tests are the
+  // only entry it needs — they reach main.ts and test-support.ts, and naming main.ts as well earns
+  // a "redundant entry pattern" hint.
+  "entry": ["scripts/gen-favicons.mjs", "tools/cla/gate/*.test.ts"],
   // Flip to false for a second tier of `export` keywords on symbols only used in their own file.
   // Some are deliberate module API (lib/granularity.ts, analytics/sanitize-url.ts), so this is not
   // a gate we can be red on. The Knip section in CLAUDE.md carries the current count.

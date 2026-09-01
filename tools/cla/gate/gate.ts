@@ -24,12 +24,13 @@ import {
   unsigned,
 } from './check.ts'
 import { type Comment, type GitHubAPI, type Label, NotFound, newClient, signaturesPath } from './github.ts'
-import { logError, logInfo } from './log.ts'
+import { logDebug, logError, logInfo } from './log.ts'
 import {
   commentMarker,
   escapeAnnotation,
   labelSigned,
   labelUnsigned,
+  nothingToSignComment,
   problemComment,
   rejectedComment,
   signedComment,
@@ -90,6 +91,7 @@ export const loadConfig = (): Config => {
   if (cfg.token === '') throw new Error('GH_TOKEN is empty')
   if (cfg.opener.id === 0) throw new Error('PR_USER_ID is zero')
   if (cfg.opener.login === '') throw new Error('PR_USER_LOGIN is empty')
+  if (cfg.pr <= 0) throw new Error(`PR_NUMBER is ${cfg.pr}`)
   return cfg
 }
 
@@ -124,9 +126,15 @@ export const check = async (c: Checker) => {
   try {
     await verdict(c)
   } catch (err) {
+    // Wrapped, so a failure while reporting the fault cannot replace the fault itself: the original
+    // is the only thing that says what went wrong.
     if (!(err instanceof Unsigned)) {
-      await upsertComment(c, problemComment(), false)
-      await syncLabels(c, '', labelSigned)
+      try {
+        await upsertComment(c, problemComment(), false)
+        await syncLabels(c, '', labelSigned)
+      } catch (nested) {
+        logError('could not report the checker fault', { error: nested })
+      }
     }
     throw err
   }
@@ -203,7 +211,7 @@ const verdict = async (c: Checker) => {
   // license, so there is nothing to sign for.
   if (checked.length === 0) {
     c.out(`CLA ${head.claVersion}: no human authors across ${commits.length} commit(s); nothing to sign\n`)
-    await upsertComment(c, signedComment(head.claVersion), false)
+    await upsertComment(c, nothingToSignComment(head.claVersion), false)
     await syncLabels(c, labelSigned, labelUnsigned)
     return
   }
@@ -235,7 +243,18 @@ const baseFile = async (c: Checker) => {
   } catch (err) {
     throw new Error(`finding where this pull request left ${c.cfg.baseRef}: ${message(err)}`)
   }
-  return read(c.gh, mergeBase, `reading ${signaturesPath} at ${mergeBase}`)
+  try {
+    return await c.gh.signatureFile(mergeBase)
+  } catch (err) {
+    // Not read as an empty history: that would let a pull request present arbitrary entries as
+    // pre-existing. A branch older than the gate itself hits this, so it names the way out.
+    if (err instanceof NotFound) {
+      throw new Error(
+        `${signaturesPath} does not exist at ${mergeBase}, where this pull request left ${c.cfg.baseRef}; merge ${c.cfg.baseRef} into this branch so it includes the file`,
+      )
+    }
+    throw new Error(`reading ${signaturesPath} at ${mergeBase}: ${message(err)}`)
+  }
 }
 
 // Turns Co-authored-by trailers into principals. It takes the API rather than hanging off the
@@ -257,7 +276,10 @@ export const resolveCoauthors = async (gh: GitHubAPI, commits: Commit[]) => {
   const found: Principal[] = []
   const unknown: string[] = []
   for (const email of coauthorEmails(commits)) {
-    if (isAssistant(email)) continue
+    if (isAssistant(email)) {
+      logDebug('skipping a trailer that names an assistant', { email })
+      continue
+    }
     const login = noreplyLogin(email)
     if (login === '') {
       unknown.push(email)
@@ -284,22 +306,23 @@ export const resolveCoauthors = async (gh: GitHubAPI, commits: Commit[]) => {
 // Reads first so a run that changes nothing writes nothing: a label event fires every subscriber on
 // the pull request. Best-effort, like the comment.
 const syncLabels = async (c: Checker, add: string, remove: string) => {
-  let current: Label[]
+  // A failed read leaves the state unknown rather than empty, and both writes are attempted anyway:
+  // returning early here left a stale "cla: signed" standing on a run that had just failed.
+  let current: Label[] | null = null
   try {
     current = await c.gh.labels(c.cfg.pr)
   } catch (err) {
     writeFailed(c, 'could not list the pull request labels', err)
-    return
   }
-  const has = (name: string) => current.some(l => l.name === name)
-  if (remove !== '' && has(remove)) {
+  const has = (name: string) => current?.some(l => l.name === name)
+  if (remove !== '' && has(remove) !== false) {
     try {
       await c.gh.removeLabel(c.cfg.pr, remove)
     } catch (err) {
       writeFailed(c, 'could not remove the stale cla label', err)
     }
   }
-  if (add !== '' && !has(add)) {
+  if (add !== '' && has(add) !== true) {
     try {
       await c.gh.addLabel(c.cfg.pr, add)
     } catch (err) {
@@ -319,9 +342,11 @@ const upsertComment = async (c: Checker, body: string, create: boolean) => {
     writeFailed(c, 'could not list the pull request comments', err)
     return
   }
-  // Prefix, not contains: quote-reply copies the marker into the quoting user's comment, and the
-  // token cannot edit that one anyway.
-  const mine = existing.find(cm => cm.body.startsWith(commentMarker))
+  // The marker is not identity: anyone can open a comment with it, and taking the earliest match
+  // would let them capture every later report — the gate would edit their comment forever and never
+  // post its own. The author has to be a bot as well, which the token's own comments always are.
+  // Prefix, not contains: quote-reply copies the marker into the quoting user's comment.
+  const mine = existing.find(cm => cm.authorType === 'Bot' && cm.body.startsWith(commentMarker))
   if (mine !== undefined) {
     if (mine.body === body) return
     try {

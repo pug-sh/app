@@ -1,8 +1,18 @@
 import { expect, test } from 'bun:test'
 import type { Principal, SignatureFile } from './check.ts'
 import { NoRuns, NotFound } from './github.ts'
-import { Declined, loadSignConfig, maySign, refusalOf, runSign, sign, signCommand } from './sign.ts'
-import { alice, caught, commit, newSigner, signable, user, withEnv } from './test-support.ts'
+import {
+  commandOf,
+  Declined,
+  loadSignConfig,
+  maySign,
+  nearMiss,
+  refusalOf,
+  runSign,
+  sign,
+  signCommand,
+} from './sign.ts'
+import { alice, bob, caught, coauthored, commit, newSigner, signable, user, withEnv } from './test-support.ts'
 
 const signEnv = {
   GITHUB_REPOSITORY: 'pug-sh/app',
@@ -48,25 +58,34 @@ const caughtSync = (fn: () => unknown) => {
 }
 
 test('maySign refuses a stranger', () => {
-  const refusal = maySign(user('carol', 999), [user('poluruprvn', 876188)], empty, empty, 'v1')
+  const refusal = maySign(
+    user('carol', 999),
+    user('poluruprvn', 876188),
+    [user('poluruprvn', 876188)],
+    empty,
+    empty,
+    'v1',
+  )
   expect(refusalOf(refusal)).toBe('not-a-principal')
 })
 
 // The whole point of signing by comment: a co-author can sign in the pull request they co-wrote
 // instead of opening a throwaway one of their own.
 test('maySign accepts a co-author', () => {
-  expect(maySign(alice, [user('poluruprvn', 876188), alice], empty, empty, 'v1')).toBeUndefined()
+  expect(
+    maySign(alice, user('poluruprvn', 876188), [user('poluruprvn', 876188), alice], empty, empty, 'v1'),
+  ).toBeUndefined()
 })
 
 test('maySign refuses someone already signed on the base branch', () => {
-  expect(refusalOf(maySign(alice, [alice], empty, signedBy(alice), 'v1'))).toBe('already-signed')
+  expect(refusalOf(maySign(alice, alice, [alice], empty, signedBy(alice), 'v1'))).toBe('already-signed')
 })
 
 // A signature already in the pull request's own head counts too. Writing a second one would put the
 // id in the file twice once the branch merges the base, and the file is rejected for a repeated id
 // and version outright — failing the gate for the crime of signing enthusiastically.
 test('maySign refuses someone already signed in head', () => {
-  expect(refusalOf(maySign(alice, [alice], signedBy(alice), empty, 'v1'))).toBe('already-signed')
+  expect(refusalOf(maySign(alice, alice, [alice], signedBy(alice), empty, 'v1'))).toBe('already-signed')
 })
 
 // A signature at a retired version is not a signature at the one in force.
@@ -75,12 +94,12 @@ test('maySign accepts someone signed only at an older version', () => {
     claVersion: 'v2',
     signatures: [{ login: 'alice', id: 1, date: '2026-08-31', cla: 'v1' }],
   }
-  expect(maySign(alice, [alice], { claVersion: 'v2', signatures: [] }, onBase, 'v2')).toBeUndefined()
+  expect(maySign(alice, alice, [alice], { claVersion: 'v2', signatures: [] }, onBase, 'v2')).toBeUndefined()
 })
 
 test('maySign refuses a bot', () => {
   const dependabot = { id: 49699333, login: 'dependabot[bot]', type: 'Bot' }
-  expect(refusalOf(maySign(dependabot, [dependabot], empty, empty, 'v1'))).toBe('bot')
+  expect(refusalOf(maySign(dependabot, dependabot, [dependabot], empty, empty, 'v1'))).toBe('bot')
 })
 
 test('the commenter is appended and committed to the base branch', async () => {
@@ -178,7 +197,12 @@ test('a pull request targeting another branch is refused', async () => {
   const gh = signable()
   gh.pr.baseRef = 'release/1.2'
 
+  // Seeded, so a missing file cannot stand in for the guard: without it the signer reads this branch
+  // happily and commits to it.
+  gh.files['release/1.2'] = { claVersion: 'v1', signatures: [] }
+
   const err = await caught(sign(newSigner(gh, alice)))
+  expect(err).toBeInstanceOf(Declined)
   expect((err as Error).message).toContain('release/1.2')
   expect(gh.putAttempts).toBe(0)
   expect(gh.posted[0]!.body).toContain('release/1.2')
@@ -294,8 +318,90 @@ test('maySign reports the first reason in order', () => {
   const signedFile = signedBy(alice, { ...botty, type: 'User' })
 
   // A bot that is also signed and also a stranger: all three are true.
-  expect(refusalOf(maySign(botty, [], signedFile, empty, 'v1'))).toBe('bot')
+  expect(refusalOf(maySign(botty, botty, [], signedFile, empty, 'v1'))).toBe('bot')
   // Signed on an earlier pull request, commenting on a colleague's: telling them they have no work
   // here is true and sends them hunting for nothing.
-  expect(refusalOf(maySign(alice, [], empty, signedFile, 'v1'))).toBe('already-signed')
+  expect(refusalOf(maySign(alice, alice, [], empty, signedFile, 'v1'))).toBe('already-signed')
+})
+
+// The premise of the whole design: the comment's author is who the signature is recorded for. Every
+// writing test used a fixture whose opener and commenter were the same person, so recording the
+// opener's identity instead passed.
+test('the signature is recorded for the commenter, not the opener', async () => {
+  const gh = coauthored()
+
+  await sign(newSigner(gh, bob))
+
+  expect(gh.putFile?.signatures).toEqual([{ login: 'bob', id: 2, date: '2026-08-30', cla: 'v1' }])
+  expect(gh.putAuthor).toEqual(bob)
+  expect(gh.putMessage).toContain('@bob')
+  expect(gh.putBranch).toBe('main')
+})
+
+// The write is conditional on the blob sha it read, which is the only thing stopping a signature
+// that landed in between from being silently overwritten.
+test('the write carries the sha the file was read at', async () => {
+  const gh = coauthored()
+
+  await sign(newSigner(gh, bob))
+
+  expect(gh.putSha).toBe('abc123')
+})
+
+// head is the pull request's own file, and appendOnly takes a hand-written signature from nobody but
+// the opener — so an entry there naming a co-author is forged. Crediting it refused their /sign as
+// already signed, on a green job, having recorded nothing.
+test('a forged entry in the head file cannot block a co-author from signing', async () => {
+  const gh = coauthored()
+  gh.files.deadbeef = { claVersion: 'v1', signatures: [{ login: 'bob', id: 2, date: '2026-08-30', cla: 'v1' }] }
+
+  await sign(newSigner(gh, bob))
+
+  expect(gh.putFile?.signatures).toEqual([{ login: 'bob', id: 2, date: '2026-08-30', cla: 'v1' }])
+})
+
+// The opener's own hand-written signature is still credited: appendOnly is what makes that entry
+// trustworthy, and asking them to sign twice would reject the file for a repeated id.
+test('the opener is still credited for their own hand-written signature', async () => {
+  const gh = coauthored()
+  gh.files.deadbeef = { claVersion: 'v1', signatures: [{ login: 'alice', id: 1, date: '2026-08-30', cla: 'v1' }] }
+
+  await sign(newSigner(gh, alice))
+
+  expect(gh.putAttempts).toBe(0)
+  expect(gh.posted[0]!.body).toContain('already signed')
+})
+
+// The workflow prefilters on the prefix, so a body opening with the command reaches the job whatever
+// follows it. Exiting quietly on those left a green run, no comment and a red check.
+test('commandOf separates the command from a near-miss and from an unrelated comment', () => {
+  expect(commandOf('/sign')).toBe('sign')
+  expect(commandOf('  /sign\r\n')).toBe('sign')
+  expect(commandOf('/sign please')).toBe('near-miss')
+  expect(commandOf('/signature of intent')).toBe('near-miss')
+  expect(commandOf("I'll /sign this later, promise")).toBe('unrelated')
+  expect(commandOf('')).toBe('unrelated')
+})
+
+test('a near-miss is answered with how to sign', async () => {
+  const gh = signable()
+
+  await nearMiss(newSigner(gh, alice))
+
+  expect(gh.posted).toHaveLength(1)
+  expect(gh.posted[0]!.body).toContain('on its own')
+  expect(gh.putAttempts).toBe(0)
+})
+
+// An empty ref reads as the default branch, so the head file would be read from somewhere else
+// entirely. The file is seeded at the empty ref so that read succeeds: without the guard the run
+// carries on and signs, which is what this has to catch.
+test('a pull request response with no head sha is refused', async () => {
+  const gh = signable()
+  gh.pr.headSha = ''
+  gh.files[''] = { claVersion: 'v1', signatures: [] }
+
+  const err = await caught(sign(newSigner(gh, alice)))
+  expect((err as Error).message).toContain('no head sha')
+  expect(gh.putAttempts).toBe(0)
 })

@@ -1,6 +1,9 @@
 // The GitHub API surface the gate depends on, and the one client that implements it.
 
 import {
+  asInt,
+  asObject,
+  asString,
   type Commit,
   decodeCommit,
   decodePrincipal,
@@ -9,6 +12,8 @@ import {
   type SignatureFile,
 } from './check.ts'
 import { logDebug, logError } from './log.ts'
+
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
 export class NotFound extends Error {}
 
@@ -23,7 +28,7 @@ export class Conflict extends Error {}
 export class NoRuns extends Error {}
 
 export type WorkflowRun = { id: number }
-export type Comment = { id: number; body: string }
+export type Comment = { id: number; body: string; authorType: string }
 export type Label = { name: string }
 
 // The part of the pull request the signer needs and the issue_comment payload does not carry: where
@@ -151,8 +156,9 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
     }
     const body = await res.text()
     if (res.status === 409) {
-      // The body is what separates a lost race from a refusal that will never succeed, such as a
-      // protected branch.
+      // Every 409 is retried once. A lost race is the common one; a refusal that will never succeed,
+      // such as a protected branch the token cannot push to, costs one wasted attempt and then
+      // surfaces with GitHub's own wording, which is what distinguishes them for whoever reads it.
       throw new Conflict(`conflict: ${body.trim()}`)
     }
     if (res.status < 200 || res.status > 299) {
@@ -169,7 +175,8 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
     }
   }
 
-  // Follows the Link header, so a short read is detectable rather than read as a complete list.
+  // Follows the Link header so the walk is complete. That completeness is what makes GitHub's 250
+  // cap detectable at all — the caller compares the count against the pull request's own total.
   const listPaged = async <T>(endpoint: string, what: string, decode: (v: unknown, at: string) => T) => {
     const all: T[] = []
     let next = endpoint
@@ -197,13 +204,17 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
       return parseSignatureFile(body)
     } catch (err) {
       logError(`${signaturesPath} did not decode`, { ref, error: err })
-      throw new Error(`${signaturesPath} is not valid JSON: ${String(err)}`)
+      throw new Error(`${signaturesPath} could not be read: ${message(err)}`)
     }
   }
 
   const decodeComment = (v: unknown): Comment => {
-    const o = v as { id?: number; body?: string }
-    return { id: Number(o.id ?? 0), body: String(o.body ?? '') }
+    const o = v as { id?: unknown; body?: unknown; user?: { type?: unknown } }
+    return {
+      id: asInt(o.id, 'the comment id'),
+      body: asString(o.body, 'the comment body'),
+      authorType: asString(o.user?.type, 'the comment author type'),
+    }
   }
 
   return {
@@ -229,9 +240,14 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
       if (meta.encoding !== 'base64') {
         throw new Error(`the contents response for ${signaturesPath} is "${String(meta.encoding)}"-encoded, not base64`)
       }
-      // GitHub wraps the encoding at 60 characters; atob rejects the newlines, so they go first.
+      // GitHub wraps the encoding at 60 characters. Buffer and atob both ignore the newlines; the
+      // strip is here so a stricter decoder could be swapped in without a silent breakage.
       const raw = Buffer.from(String(meta.content).replaceAll(/\s/g, ''), 'base64').toString('utf8')
-      return { file: decodeFile(raw, ref), sha: String(meta.sha ?? '') }
+      const sha = asString(meta.sha, 'the contents response sha')
+      // The sha is the whole of what makes the signer's write conditional, so an absent one is an
+      // error rather than an empty string GitHub would reject later for a reason nothing can read.
+      if (sha === '') throw new Error(`the contents response for ${signaturesPath} carries no sha`)
+      return { file: decodeFile(raw, ref), sha }
     },
 
     // Commits the file to branch. The contributor is the commit author and the workflow's token is
@@ -320,8 +336,11 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
         throw new Error(`the workflow runs response did not decode: ${String(err)}`)
       }
       const runs = page.workflow_runs
-      if (!Array.isArray(runs) || runs.length === 0) throw new NoRuns('no run yet')
-      return { id: Number((runs[0] as { id?: unknown }).id ?? 0) }
+      // Only an empty list is "no run yet". A payload that is not a list at all is a shape we do not
+      // recognise, and reporting that as "the first one will pass" would be a claim we cannot make.
+      if (!Array.isArray(runs)) throw new Error('the workflow runs response carries no run list')
+      if (runs.length === 0) throw new NoRuns('no run yet')
+      return { id: asInt((runs[0] as { id?: unknown }).id, 'the workflow run id') }
     },
 
     async rerunWorkflow(runId) {
@@ -341,8 +360,8 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
     },
 
     labels(pr) {
-      return listPaged(`${baseURL}/repos/${repo}/issues/${pr}/labels?per_page=100`, 'label', v => ({
-        name: String((v as { name?: unknown }).name ?? ''),
+      return listPaged(`${baseURL}/repos/${repo}/issues/${pr}/labels?per_page=100`, 'label', (v, at) => ({
+        name: asString(asObject(v, at).name, `${at}.name`),
       }))
     },
 
@@ -350,7 +369,7 @@ export const newClient = ({ token, repo, baseURL = 'https://api.github.com', sig
       await send('POST', `${baseURL}/repos/${repo}/issues/${pr}/labels`, { labels: [name] })
     },
 
-    // The name is escaped, not interpolated: it carries a space and a colon.
+    // Percent-encoded before it goes into the path: the name carries a space and a colon.
     async removeLabel(pr, name) {
       await send('DELETE', `${baseURL}/repos/${repo}/issues/${pr}/labels/${encodeURIComponent(name)}`)
     },

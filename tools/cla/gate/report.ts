@@ -73,7 +73,7 @@ const trailerBlocks = (others: Principal[], unknown: string[], quote: (s: string
       others.length > 1
         ? 'have work in this pull request and have not signed'
         : 'has work in this pull request and has not signed'
-    out.push(`${joinNames(loginsOf(others))} ${verb}. They can sign by commenting \`/sign\` here.`)
+    out.push(`${joinNames(loginsOf(others))} ${verb}. They can sign by commenting \`/sign\`, on its own, here.`)
   }
   if (unknown.length > 0) {
     const lead = unknown.length > 1 ? 'Co-authored-by trailers name ' : 'A Co-authored-by trailer names '
@@ -106,7 +106,7 @@ const signMarkdown = (
   md += `Thanks for contributing! Everyone with work in this pull request has to sign the [Contributor License Agreement](${claURL}) before it can merge.${tail}\n`
   if (mine !== undefined) {
     const name = mention ? `@${mine.login}` : mine.login
-    md += `\n**${name}** — comment \`/sign\` on this pull request and that is done. To sign by hand instead, add this to the \`signatures\` array in \`${signaturesPath}\`, then commit and push:\n\n`
+    md += `\n**${name}** — comment \`/sign\`, on its own, on this pull request and that is done. To sign by hand instead, add this to the \`signatures\` array in \`${signaturesPath}\`, then commit and push:\n\n`
     md += `\`\`\`json\n${entryJson(mine, head.claVersion, '', now)}\n\`\`\`\n`
   }
   for (const b of blocks) md += `\n${b}\n`
@@ -134,7 +134,7 @@ export const unsignedReport = (
   let text = `::error::CLA ${head.claVersion} not signed by: ${escapeAnnotation(named.join(', '))}\n`
   text += `\nThe agreement: ${claURL}\n`
   if (mine !== undefined) {
-    text += '\nComment /sign on the pull request, or add this entry to\n'
+    text += '\nComment /sign on its own on the pull request, or add this entry to\n'
     text += `${signaturesPath} and push it:\n\n`
     text += `${entryJson(mine, head.claVersion, '  ', now)}\n`
   }
@@ -152,8 +152,13 @@ export const unsignedReport = (
 // a demand that has already been met.
 export const signedComment = (version: string) => `${commentMarker}\nCLA ${version} signed — thanks!\n`
 
-// Like problemComment, the reason stays in the log: it quotes a login out of the pull request's own
-// file. The comment only has to get the contributor there.
+// A pull request with no human author has nothing to sign, so saying it is signed would name an
+// agreement nobody gave.
+export const nothingToSignComment = (version: string) =>
+  `${commentMarker}\nCLA ${version}: no human authors here, so there is nothing to sign.\n`
+
+// The reason stays in the log: it quotes a login out of the pull request's own file. The comment
+// only has to get the contributor there.
 export const rejectedComment = () =>
   `${commentMarker}\nThe change to \`${signaturesPath}\` was rejected. See the job log on the checks tab for what to fix.\n`
 
