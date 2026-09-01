@@ -103,6 +103,78 @@ describe('InsightsContent compare-vs-prior', () => {
     expect(shows(empty.container, CAPTION)).toBe(false)
   })
 
+  // With the caption suppressed, the reported boolean is the only thing naming the line.
+  it('hands the caption to a hoisting caller instead of drawing it', () => {
+    const onComparisonCaption = vi.fn()
+    const { container, unmount } = render(
+      <InsightsContent
+        {...base}
+        chartData={LIVE}
+        comparison={comparison([40, 50, 60])}
+        onComparisonCaption={onComparisonCaption}
+      />,
+    )
+
+    expect(shows(container, CAPTION)).toBe(false)
+    expect(onComparisonCaption).toHaveBeenLastCalledWith(true)
+
+    unmount()
+    expect(onComparisonCaption).toHaveBeenLastCalledWith(false)
+  })
+
+  // Silence, not a `false` — a view that never draws a line has nothing to report and the caller's
+  // own initial state stands. What must never happen is claiming one.
+  it('says nothing to a hoisting caller when no line is drawn', () => {
+    const onComparisonCaption = vi.fn()
+    render(<InsightsContent {...base} chartData={LIVE} onComparisonCaption={onComparisonCaption} />)
+
+    expect(onComparisonCaption).not.toHaveBeenCalledWith(true)
+  })
+
+  // Every gate that hides the inline caption has to reach the hoisted one too, and by rerender:
+  // a stat or filter change swaps the data under a chart that stays mounted.
+  it('reports the same gates to a hoisting caller that hide the inline caption', () => {
+    const spy = vi.fn()
+    const { rerender } = render(
+      <InsightsContent {...base} chartData={LIVE} comparison={comparison([40, 50, 60])} onComparisonCaption={spy} />,
+    )
+    expect(spy).toHaveBeenLastCalledWith(true)
+
+    rerender(
+      <InsightsContent {...base} chartData={ZERO} comparison={comparison([0, 0, 0])} onComparisonCaption={spy} />,
+    )
+    expect(spy).toHaveBeenLastCalledWith(false)
+
+    rerender(
+      <InsightsContent
+        {...base}
+        chartData={LIVE}
+        viewMode="bar-grouped"
+        comparison={comparison([40, 50, 60])}
+        onComparisonCaption={spy}
+      />,
+    )
+    expect(spy).toHaveBeenLastCalledWith(false)
+
+    // No rows means no chart, so the footer must not name a line over the empty state.
+    rerender(
+      <InsightsContent {...base} chartData={[]} comparison={comparison([40, 50, 60])} onComparisonCaption={spy} />,
+    )
+    expect(spy).toHaveBeenLastCalledWith(false)
+
+    // An early return that has nothing to do with the data: the caption goes with the chart it names.
+    rerender(
+      <InsightsContent
+        {...base}
+        chartData={LIVE}
+        comparison={comparison([40, 50, 60])}
+        error="Query failed"
+        onComparisonCaption={spy}
+      />,
+    )
+    expect(spy).toHaveBeenLastCalledWith(false)
+  })
+
   // Bars and the table never receive the comparison, so they must neither advertise one nor let it
   // stand in for live data: a zero window on those views is still an empty window.
   it('ignores the comparison entirely on a view that cannot draw it', () => {
