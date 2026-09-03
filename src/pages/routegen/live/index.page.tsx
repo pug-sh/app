@@ -132,7 +132,16 @@ const LiveVisitorsPage = () => {
     })
   }, [syncScrollCue])
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), [])
-  useEffect(syncScrollCue, [syncScrollCue, filtered.length, collapsed, selectedDistinctId])
+  // The deps catch content changes; the observer catches the box itself — the cap swapping at md,
+  // and on a short viewport the browser's chrome moving 100dvh.
+  useEffect(() => {
+    syncScrollCue()
+    const list = listRef.current
+    if (!list) return
+    const observer = new ResizeObserver(syncScrollCue)
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [syncScrollCue, filtered.length, collapsed, selectedDistinctId])
 
   const clearAll = () => {
     setSelectedKinds(new Set())
@@ -248,7 +257,7 @@ const LiveVisitorsPage = () => {
         {lastUpdated && (
           <aside
             ref={panelRef}
-            className="absolute bottom-4 left-4 z-10 flex max-h-[min(34rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md"
+            className="absolute bottom-4 left-4 z-10 flex max-h-[min(22rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md md:max-h-[min(34rem,calc(100dvh-9rem))]"
           >
             {/* Live count + freshness — the single source of "is this still ticking" */}
             <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
@@ -273,12 +282,14 @@ const LiveVisitorsPage = () => {
               </div>
               <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                 {loading && <Loader2 className="size-3 animate-spin" />}
-                {lastUpdated && (
+                {/* First thing to go: collapsed below md the window toggle needs the room, and the
+                    pinging dot plus the spinner still say the feed is ticking. */}
+                <span className={collapsed ? 'hidden md:inline' : undefined}>
                   <HoverSwap
                     primary={`Updated ${formatRelative(lastUpdated)}`}
                     secondary={formatDateTime(lastUpdated)}
                   />
-                )}
+                </span>
                 <button
                   type="button"
                   onClick={() => setCollapsed(c => !c)}
@@ -291,9 +302,10 @@ const LiveVisitorsPage = () => {
             </div>
 
             {/* Journey withheld on purpose: a minimized panel that unfolds when one of its rows
-                  happens to be the pinned one isn't minimized. */}
+                  happens to be the pinned one isn't minimized. Dropped entirely below md, where the
+                  peek covers the map it annotates — collapsed there is the header alone. */}
             {collapsed && minimizedVisitors.length > 0 && (
-              <ul className="space-y-0.5 px-2 pb-2">
+              <ul className="hidden space-y-0.5 px-2 pb-2 md:block">
                 {minimizedVisitors.map(visitor => (
                   <VisitorRow
                     key={visitor.distinctId}
