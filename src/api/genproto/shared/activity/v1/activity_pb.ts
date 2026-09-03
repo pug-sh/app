@@ -2,8 +2,8 @@
 // @generated from file shared/activity/v1/activity.proto (package shared.activity.v1, edition 2023)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_buf_validate_validate } from "../../../buf/validate/validate_pb";
 import type { GetFilterSchemaRequestSchema, GetFilterSchemaResponseSchema, PropertySource } from "../../../common/v1/filter_schema_pb";
 import { file_common_v1_filter_schema } from "../../../common/v1/filter_schema_pb";
@@ -19,7 +19,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file shared/activity/v1/activity.proto.
  */
 export const file_shared_activity_v1_activity: GenFile = /*@__PURE__*/
-  fileDesc("CiFzaGFyZWQvYWN0aXZpdHkvdjEvYWN0aXZpdHkucHJvdG8SEnNoYXJlZC5hY3Rpdml0eS52MSL7AwoWR2V0QWN0aXZpdHlGZWVkUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMhIUCgxpbmNsdWRlX2JvdHMYCCABKAg6ywG6SMcBGsQBCidhY3Rpdml0eV9mZWVkLmV2ZW50c19ub25fZW1wdHlfaW5fbXVsdGkSRWVhY2ggZXZlbnQgZmlsdGVyIG11c3Qgc3BlY2lmeSBhIGtpbmQgb3IgYXQgbGVhc3Qgb25lIHByb3BlcnR5IGZpbHRlchpSdGhpcy5ldmVudHMuc2l6ZSgpIDw9IDF8fCB0aGlzLmV2ZW50cy5hbGwoZSwgZS5raW5kICE9ICcnIHx8IGUuZmlsdGVycy5zaXplKCkgPiAwKSLuAQoNQWN0aXZpdHlFdmVudBIQCghldmVudF9pZBgBIAEoCRIMCgRraW5kGAIgASgJEhMKC2Rpc3RpbmN0X2lkGAMgASgJEi4KCm9jY3VyX3RpbWUYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCnNlc3Npb25faWQYBSABKAkSMAoPYXV0b19wcm9wZXJ0aWVzGAYgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIyChFjdXN0b21fcHJvcGVydGllcxgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QiZQoXR2V0QWN0aXZpdHlGZWVkUmVzcG9uc2USMQoGZXZlbnRzGAEgAygLMiEuc2hhcmVkLmFjdGl2aXR5LnYxLkFjdGl2aXR5RXZlbnQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIvUDChdHZXRFdmVudEV4cGxvcmVyUmVxdWVzdBITCgtkaXN0aW5jdF9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEigKCnRpbWVfcmFuZ2UYAyABKAsyFC5jb21tb24udjEuVGltZVJhbmdlEj0KEHByb3BlcnR5X2ZpbHRlcnMYBCADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAhAUEh0KCXBhZ2Vfc2l6ZRgFIAEoBUIKukgHGgUY6AcoABISCgpwYWdlX3Rva2VuGAYgASgJEjAKBmV2ZW50cxgHIAMoCzIWLmNvbW1vbi52MS5FdmVudEZpbHRlckIIukgFkgECEDISFAoMaW5jbHVkZV9ib3RzGAggASgIOswBukjIARrFAQooZXZlbnRfZXhwbG9yZXIuZXZlbnRzX25vbl9lbXB0eV9pbl9tdWx0aRJFZWFjaCBldmVudCBmaWx0ZXIgbXVzdCBzcGVjaWZ5IGEga2luZCBvciBhdCBsZWFzdCBvbmUgcHJvcGVydHkgZmlsdGVyGlJ0aGlzLmV2ZW50cy5zaXplKCkgPD0gMXx8IHRoaXMuZXZlbnRzLmFsbChlLCBlLmtpbmQgIT0gJycgfHwgZS5maWx0ZXJzLnNpemUoKSA+IDApImYKGEdldEV2ZW50RXhwbG9yZXJSZXNwb25zZRIxCgZldmVudHMYASADKAsyIS5zaGFyZWQuYWN0aXZpdHkudjEuQWN0aXZpdHlFdmVudBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiyAEKGEdldFByb3BlcnR5VmFsdWVzUmVxdWVzdBJGCgxwcm9wZXJ0eV9rZXkYASABKAlCMLpILcgBAXIoMiZeXCQ/W2EtekEtWjAtOV8tXSsoXC5bYS16QS1aMC05Xy1dKykqJBI2CgZzb3VyY2UYAiABKA4yGS5jb21tb24udjEuUHJvcGVydHlTb3VyY2VCC7pICMgBAYIBAhABEiwKCmV2ZW50X2tpbmQYAyABKAlCGLpIFXITMhFeW2EtekEtWjAtOV8uLV0qJCIrChlHZXRQcm9wZXJ0eVZhbHVlc1Jlc3BvbnNlEg4KBnZhbHVlcxgBIAMoCSJ4ChlHZXRBY3Rpdml0eUhlYXRtYXBSZXF1ZXN0EhsKC2Rpc3RpbmN0X2lkGAEgASgJQga6SAPIAQESKAoKdGltZV9yYW5nZRgCIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USFAoMaW5jbHVkZV9ib3RzGAMgASgIIikKCkhlYXRtYXBEYXkSDAoEZGF0ZRgBIAEoCRINCgVjb3VudBgCIAEoAyJKChpHZXRBY3Rpdml0eUhlYXRtYXBSZXNwb25zZRIsCgRkYXlzGAEgAygLMh4uc2hhcmVkLmFjdGl2aXR5LnYxLkhlYXRtYXBEYXkiSwoWR2V0UHJvZmlsZVN0YXRzUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEhQKDGluY2x1ZGVfYm90cxgCIAEoCCL8AQoMUHJvZmlsZVN0YXRzEi4KCmZpcnN0X3NlZW4YASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi0KCWxhc3Rfc2VlbhgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASFAoMdG90YWxfZXZlbnRzGAMgASgDEg8KB2Jyb3dzZXIYBCABKAkSFwoPYnJvd3Nlcl92ZXJzaW9uGAUgASgJEgoKAm9zGAYgASgJEhIKCm9zX3ZlcnNpb24YByABKAkSDgoGZGV2aWNlGAggASgJEg8KB2NvdW50cnkYCSABKAkSDAoEY2l0eRgKIAEoCSKoAQoXR2V0UHJvZmlsZVN0YXRzUmVzcG9uc2USLwoFc3RhdHMYASABKAsyIC5zaGFyZWQuYWN0aXZpdHkudjEuUHJvZmlsZVN0YXRzEi8KB2hlYXRtYXAYAiADKAsyHi5zaGFyZWQuYWN0aXZpdHkudjEuSGVhdG1hcERheRIrCgpwcm9wZXJ0aWVzGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdDKZBQoPQWN0aXZpdHlTZXJ2aWNlEmoKD0dldEFjdGl2aXR5RmVlZBIqLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRBY3Rpdml0eUZlZWRSZXF1ZXN0Gisuc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5RmVlZFJlc3BvbnNlEm0KEEdldEV2ZW50RXhwbG9yZXISKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0RXZlbnRFeHBsb3JlclJlcXVlc3QaLC5zaGFyZWQuYWN0aXZpdHkudjEuR2V0RXZlbnRFeHBsb3JlclJlc3BvbnNlElgKD0dldEZpbHRlclNjaGVtYRIhLmNvbW1vbi52MS5HZXRGaWx0ZXJTY2hlbWFSZXF1ZXN0GiIuY29tbW9uLnYxLkdldEZpbHRlclNjaGVtYVJlc3BvbnNlEnAKEUdldFByb3BlcnR5VmFsdWVzEiwuc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb3BlcnR5VmFsdWVzUmVxdWVzdBotLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRQcm9wZXJ0eVZhbHVlc1Jlc3BvbnNlEnMKEkdldEFjdGl2aXR5SGVhdG1hcBItLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRBY3Rpdml0eUhlYXRtYXBSZXF1ZXN0Gi4uc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5SGVhdG1hcFJlc3BvbnNlEmoKD0dldFByb2ZpbGVTdGF0cxIqLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRQcm9maWxlU3RhdHNSZXF1ZXN0Gisuc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb2ZpbGVTdGF0c1Jlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2hhcmVkL2FjdGl2aXR5L3YxO2FjdGl2aXR5djFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_v1_filter_schema, file_common_v1_filters, file_common_v1_time, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("CiFzaGFyZWQvYWN0aXZpdHkvdjEvYWN0aXZpdHkucHJvdG8SEnNoYXJlZC5hY3Rpdml0eS52MSL7AwoWR2V0QWN0aXZpdHlGZWVkUmVxdWVzdBIbCgtkaXN0aW5jdF9pZBgBIAEoCUIGukgDyAEBEhIKCnNlc3Npb25faWQYAiABKAkSKAoKdGltZV9yYW5nZRgDIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USPQoQcHJvcGVydHlfZmlsdGVycxgEIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECEBQSHQoJcGFnZV9zaXplGAUgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YBiABKAkSMAoGZXZlbnRzGAcgAygLMhYuY29tbW9uLnYxLkV2ZW50RmlsdGVyQgi6SAWSAQIQMhIUCgxpbmNsdWRlX2JvdHMYCCABKAg6ywG6SMcBGsQBCidhY3Rpdml0eV9mZWVkLmV2ZW50c19ub25fZW1wdHlfaW5fbXVsdGkSRWVhY2ggZXZlbnQgZmlsdGVyIG11c3Qgc3BlY2lmeSBhIGtpbmQgb3IgYXQgbGVhc3Qgb25lIHByb3BlcnR5IGZpbHRlchpSdGhpcy5ldmVudHMuc2l6ZSgpIDw9IDF8fCB0aGlzLmV2ZW50cy5hbGwoZSwgZS5raW5kICE9ICcnIHx8IGUuZmlsdGVycy5zaXplKCkgPiAwKSLuAQoNQWN0aXZpdHlFdmVudBIQCghldmVudF9pZBgBIAEoCRIMCgRraW5kGAIgASgJEhMKC2Rpc3RpbmN0X2lkGAMgASgJEi4KCm9jY3VyX3RpbWUYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCnNlc3Npb25faWQYBSABKAkSMAoPYXV0b19wcm9wZXJ0aWVzGAYgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIyChFjdXN0b21fcHJvcGVydGllcxgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QiZQoXR2V0QWN0aXZpdHlGZWVkUmVzcG9uc2USMQoGZXZlbnRzGAEgAygLMiEuc2hhcmVkLmFjdGl2aXR5LnYxLkFjdGl2aXR5RXZlbnQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIvUDChdHZXRFdmVudEV4cGxvcmVyUmVxdWVzdBITCgtkaXN0aW5jdF9pZBgBIAEoCRISCgpzZXNzaW9uX2lkGAIgASgJEigKCnRpbWVfcmFuZ2UYAyABKAsyFC5jb21tb24udjEuVGltZVJhbmdlEj0KEHByb3BlcnR5X2ZpbHRlcnMYBCADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAhAUEh0KCXBhZ2Vfc2l6ZRgFIAEoBUIKukgHGgUY6AcoABISCgpwYWdlX3Rva2VuGAYgASgJEjAKBmV2ZW50cxgHIAMoCzIWLmNvbW1vbi52MS5FdmVudEZpbHRlckIIukgFkgECEDISFAoMaW5jbHVkZV9ib3RzGAggASgIOswBukjIARrFAQooZXZlbnRfZXhwbG9yZXIuZXZlbnRzX25vbl9lbXB0eV9pbl9tdWx0aRJFZWFjaCBldmVudCBmaWx0ZXIgbXVzdCBzcGVjaWZ5IGEga2luZCBvciBhdCBsZWFzdCBvbmUgcHJvcGVydHkgZmlsdGVyGlJ0aGlzLmV2ZW50cy5zaXplKCkgPD0gMXx8IHRoaXMuZXZlbnRzLmFsbChlLCBlLmtpbmQgIT0gJycgfHwgZS5maWx0ZXJzLnNpemUoKSA+IDApImYKGEdldEV2ZW50RXhwbG9yZXJSZXNwb25zZRIxCgZldmVudHMYASADKAsyIS5zaGFyZWQuYWN0aXZpdHkudjEuQWN0aXZpdHlFdmVudBIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiyAEKGEdldFByb3BlcnR5VmFsdWVzUmVxdWVzdBJGCgxwcm9wZXJ0eV9rZXkYASABKAlCMLpILcgBAXIoMiZeXCQ/W2EtekEtWjAtOV8tXSsoXC5bYS16QS1aMC05Xy1dKykqJBI2CgZzb3VyY2UYAiABKA4yGS5jb21tb24udjEuUHJvcGVydHlTb3VyY2VCC7pICMgBAYIBAhABEiwKCmV2ZW50X2tpbmQYAyABKAlCGLpIFXITMhFeW2EtekEtWjAtOV8uLV0qJCIrChlHZXRQcm9wZXJ0eVZhbHVlc1Jlc3BvbnNlEg4KBnZhbHVlcxgBIAMoCSJ4ChlHZXRBY3Rpdml0eUhlYXRtYXBSZXF1ZXN0EhsKC2Rpc3RpbmN0X2lkGAEgASgJQga6SAPIAQESKAoKdGltZV9yYW5nZRgCIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2USFAoMaW5jbHVkZV9ib3RzGAMgASgIIikKCkhlYXRtYXBEYXkSDAoEZGF0ZRgBIAEoCRINCgVjb3VudBgCIAEoAyJKChpHZXRBY3Rpdml0eUhlYXRtYXBSZXNwb25zZRIsCgRkYXlzGAEgAygLMh4uc2hhcmVkLmFjdGl2aXR5LnYxLkhlYXRtYXBEYXki7wEKGUdldFByb2ZpbGVTZXNzaW9uc1JlcXVlc3QSHwoLZGlzdGluY3RfaWQYASABKAlCCrpIB8gBAXICEAESHQoJcGFnZV9zaXplGAIgASgFQgq6SAcaBRjoBygAEhIKCnBhZ2VfdG9rZW4YAyABKAkSPgoEc29ydBgEIAEoDjImLnNoYXJlZC5hY3Rpdml0eS52MS5Qcm9maWxlU2Vzc2lvblNvcnRCCLpIBYIBAhABEhQKDGluY2x1ZGVfYm90cxgFIAEoCBIoCgp0aW1lX3JhbmdlGAYgASgLMhQuY29tbW9uLnYxLlRpbWVSYW5nZSLjAQoOUHJvZmlsZVNlc3Npb24SEgoKc2Vzc2lvbl9pZBgBIAEoCRIuCgpzdGFydGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIsCghlbmRlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXZlbnRfY291bnQYBCABKAMSDwoHYnJvd3NlchgFIAEoCRIKCgJvcxgGIAEoCRIOCgZkZXZpY2UYByABKAkSEAoIcGxhdGZvcm0YCCABKAkSCwoDYm90GAkgASgIImsKGkdldFByb2ZpbGVTZXNzaW9uc1Jlc3BvbnNlEjQKCHNlc3Npb25zGAEgAygLMiIuc2hhcmVkLmFjdGl2aXR5LnYxLlByb2ZpbGVTZXNzaW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSJLChZHZXRQcm9maWxlU3RhdHNSZXF1ZXN0EhsKC2Rpc3RpbmN0X2lkGAEgASgJQga6SAPIAQESFAoMaW5jbHVkZV9ib3RzGAIgASgIIvwBCgxQcm9maWxlU3RhdHMSLgoKZmlyc3Rfc2VlbhgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoJbGFzdF9zZWVuGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIUCgx0b3RhbF9ldmVudHMYAyABKAMSDwoHYnJvd3NlchgEIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YBSABKAkSCgoCb3MYBiABKAkSEgoKb3NfdmVyc2lvbhgHIAEoCRIOCgZkZXZpY2UYCCABKAkSDwoHY291bnRyeRgJIAEoCRIMCgRjaXR5GAogASgJIqgBChdHZXRQcm9maWxlU3RhdHNSZXNwb25zZRIvCgVzdGF0cxgBIAEoCzIgLnNoYXJlZC5hY3Rpdml0eS52MS5Qcm9maWxlU3RhdHMSLwoHaGVhdG1hcBgCIAMoCzIeLnNoYXJlZC5hY3Rpdml0eS52MS5IZWF0bWFwRGF5EisKCnByb3BlcnRpZXMYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0KqgBChJQcm9maWxlU2Vzc2lvblNvcnQSJAogUFJPRklMRV9TRVNTSU9OX1NPUlRfVU5TUEVDSUZJRUQQABIjCh9QUk9GSUxFX1NFU1NJT05fU09SVF9TVEFSVEVEX0FUEAESIQodUFJPRklMRV9TRVNTSU9OX1NPUlRfRFVSQVRJT04QAhIkCiBQUk9GSUxFX1NFU1NJT05fU09SVF9FVkVOVF9DT1VOVBADMo4GCg9BY3Rpdml0eVNlcnZpY2USagoPR2V0QWN0aXZpdHlGZWVkEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5RmVlZFJlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlGZWVkUmVzcG9uc2USbQoQR2V0RXZlbnRFeHBsb3JlchIrLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVxdWVzdBosLnNoYXJlZC5hY3Rpdml0eS52MS5HZXRFdmVudEV4cGxvcmVyUmVzcG9uc2USWAoPR2V0RmlsdGVyU2NoZW1hEiEuY29tbW9uLnYxLkdldEZpbHRlclNjaGVtYVJlcXVlc3QaIi5jb21tb24udjEuR2V0RmlsdGVyU2NoZW1hUmVzcG9uc2UScAoRR2V0UHJvcGVydHlWYWx1ZXMSLC5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvcGVydHlWYWx1ZXNSZXF1ZXN0Gi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb3BlcnR5VmFsdWVzUmVzcG9uc2UScwoSR2V0QWN0aXZpdHlIZWF0bWFwEi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldEFjdGl2aXR5SGVhdG1hcFJlcXVlc3QaLi5zaGFyZWQuYWN0aXZpdHkudjEuR2V0QWN0aXZpdHlIZWF0bWFwUmVzcG9uc2UScwoSR2V0UHJvZmlsZVNlc3Npb25zEi0uc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb2ZpbGVTZXNzaW9uc1JlcXVlc3QaLi5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvZmlsZVNlc3Npb25zUmVzcG9uc2USagoPR2V0UHJvZmlsZVN0YXRzEiouc2hhcmVkLmFjdGl2aXR5LnYxLkdldFByb2ZpbGVTdGF0c1JlcXVlc3QaKy5zaGFyZWQuYWN0aXZpdHkudjEuR2V0UHJvZmlsZVN0YXRzUmVzcG9uc2VCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zaGFyZWQvYWN0aXZpdHkvdjE7YWN0aXZpdHl2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_filter_schema, file_common_v1_filters, file_common_v1_time, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message shared.activity.v1.GetActivityFeedRequest
@@ -380,6 +380,168 @@ export const GetActivityHeatmapResponseSchema: GenMessage<GetActivityHeatmapResp
   messageDesc(file_shared_activity_v1_activity, 9);
 
 /**
+ * @generated from message shared.activity.v1.GetProfileSessionsRequest
+ */
+export type GetProfileSessionsRequest = Message<"shared.activity.v1.GetProfileSessionsRequest"> & {
+  /**
+   * Required. The profile ID to list sessions for.
+   *
+   * @generated from field: string distinct_id = 1;
+   */
+  distinctId: string;
+
+  /**
+   * 0 means server default (100). Values above 1000 are rejected.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * Opaque cursor from a previous response's next_page_token. Empty for the first page.
+   * A token is bound to the sort it was issued under, since the seek predicate is
+   * built from the ordering column; send the same sort back, or restart from an
+   * empty token to change it. It is not bound to the other fields — changing
+   * time_range or include_bots mid-pagination gives undefined paging.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+
+  /**
+   * Optional. Defaults to PROFILE_SESSION_SORT_STARTED_AT.
+   *
+   * @generated from field: shared.activity.v1.ProfileSessionSort sort = 4;
+   */
+  sort: ProfileSessionSort;
+
+  /**
+   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
+   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   *
+   * @generated from field: bool include_bots = 5;
+   */
+  includeBots: boolean;
+
+  /**
+   * Optional. Restricts to sessions with an event in the window; omitted means the
+   * profile's whole history. Every page aggregates the window, so narrowing it is
+   * the only way to bound the read.
+   *
+   * @generated from field: common.v1.TimeRange time_range = 6;
+   */
+  timeRange?: TimeRange | undefined;
+};
+
+/**
+ * Describes the message shared.activity.v1.GetProfileSessionsRequest.
+ * Use `create(GetProfileSessionsRequestSchema)` to create a new message.
+ */
+export const GetProfileSessionsRequestSchema: GenMessage<GetProfileSessionsRequest> = /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 10);
+
+/**
+ * ProfileSession is one session of a profile, aggregated over every event in it.
+ *
+ * @generated from message shared.activity.v1.ProfileSession
+ */
+export type ProfileSession = Message<"shared.activity.v1.ProfileSession"> & {
+  /**
+   * @generated from field: string session_id = 1;
+   */
+  sessionId: string;
+
+  /**
+   * Time of the session's first event.
+   *
+   * @generated from field: google.protobuf.Timestamp started_at = 2;
+   */
+  startedAt?: Timestamp | undefined;
+
+  /**
+   * Time of the session's last event; equals started_at for a single-event session.
+   *
+   * @generated from field: google.protobuf.Timestamp ended_at = 3;
+   */
+  endedAt?: Timestamp | undefined;
+
+  /**
+   * Events recorded in the session.
+   *
+   * @generated from field: int64 event_count = 4;
+   */
+  eventCount: bigint;
+
+  /**
+   * Browser name from the session's latest event (e.g. "Chrome"). Empty if unavailable.
+   *
+   * @generated from field: string browser = 5;
+   */
+  browser: string;
+
+  /**
+   * OS name from the session's latest event (e.g. "Mac OS X"). Empty if unavailable.
+   *
+   * @generated from field: string os = 6;
+   */
+  os: string;
+
+  /**
+   * Device model from the session's latest event (e.g. "iPhone"). Empty for desktop browsers.
+   *
+   * @generated from field: string device = 7;
+   */
+  device: string;
+
+  /**
+   * Platform from the session's latest event (e.g. "web", "ios"). Empty if unavailable.
+   *
+   * @generated from field: string platform = 8;
+   */
+  platform: string;
+
+  /**
+   * True when EVERY event in the session was tagged as automated at ingest ($bot).
+   * Only ever true on a read that set include_bots, since a session with any tagged
+   * event is otherwise excluded.
+   *
+   * @generated from field: bool bot = 9;
+   */
+  bot: boolean;
+};
+
+/**
+ * Describes the message shared.activity.v1.ProfileSession.
+ * Use `create(ProfileSessionSchema)` to create a new message.
+ */
+export const ProfileSessionSchema: GenMessage<ProfileSession> = /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 11);
+
+/**
+ * @generated from message shared.activity.v1.GetProfileSessionsResponse
+ */
+export type GetProfileSessionsResponse = Message<"shared.activity.v1.GetProfileSessionsResponse"> & {
+  /**
+   * @generated from field: repeated shared.activity.v1.ProfileSession sessions = 1;
+   */
+  sessions: ProfileSession[];
+
+  /**
+   * Empty when there are no more pages. Set only when a further session exists.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+};
+
+/**
+ * Describes the message shared.activity.v1.GetProfileSessionsResponse.
+ * Use `create(GetProfileSessionsResponseSchema)` to create a new message.
+ */
+export const GetProfileSessionsResponseSchema: GenMessage<GetProfileSessionsResponse> = /*@__PURE__*/
+  messageDesc(file_shared_activity_v1_activity, 12);
+
+/**
  * @generated from message shared.activity.v1.GetProfileStatsRequest
  */
 export type GetProfileStatsRequest = Message<"shared.activity.v1.GetProfileStatsRequest"> & {
@@ -402,7 +564,7 @@ export type GetProfileStatsRequest = Message<"shared.activity.v1.GetProfileStats
  * Use `create(GetProfileStatsRequestSchema)` to create a new message.
  */
 export const GetProfileStatsRequestSchema: GenMessage<GetProfileStatsRequest> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 10);
+  messageDesc(file_shared_activity_v1_activity, 13);
 
 /**
  * ProfileStats holds aggregate event statistics and device/location context
@@ -487,7 +649,7 @@ export type ProfileStats = Message<"shared.activity.v1.ProfileStats"> & {
  * Use `create(ProfileStatsSchema)` to create a new message.
  */
 export const ProfileStatsSchema: GenMessage<ProfileStats> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 11);
+  messageDesc(file_shared_activity_v1_activity, 14);
 
 /**
  * @generated from message shared.activity.v1.GetProfileStatsResponse
@@ -521,7 +683,49 @@ export type GetProfileStatsResponse = Message<"shared.activity.v1.GetProfileStat
  * Use `create(GetProfileStatsResponseSchema)` to create a new message.
  */
 export const GetProfileStatsResponseSchema: GenMessage<GetProfileStatsResponse> = /*@__PURE__*/
-  messageDesc(file_shared_activity_v1_activity, 12);
+  messageDesc(file_shared_activity_v1_activity, 15);
+
+/**
+ * ProfileSessionSort names the ordering of GetProfileSessions. Ordering is always
+ * descending — newest, longest, or busiest first — with the session id breaking ties.
+ *
+ * @generated from enum shared.activity.v1.ProfileSessionSort
+ */
+export enum ProfileSessionSort {
+  /**
+   * Defaults to PROFILE_SESSION_SORT_STARTED_AT.
+   *
+   * @generated from enum value: PROFILE_SESSION_SORT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Session start, newest first.
+   *
+   * @generated from enum value: PROFILE_SESSION_SORT_STARTED_AT = 1;
+   */
+  STARTED_AT = 1,
+
+  /**
+   * Session duration (ended_at - started_at), longest first.
+   *
+   * @generated from enum value: PROFILE_SESSION_SORT_DURATION = 2;
+   */
+  DURATION = 2,
+
+  /**
+   * Events in the session, most first.
+   *
+   * @generated from enum value: PROFILE_SESSION_SORT_EVENT_COUNT = 3;
+   */
+  EVENT_COUNT = 3,
+}
+
+/**
+ * Describes the enum shared.activity.v1.ProfileSessionSort.
+ */
+export const ProfileSessionSortSchema: GenEnum<ProfileSessionSort> = /*@__PURE__*/
+  enumDesc(file_shared_activity_v1_activity, 0);
 
 /**
  * ActivityService provides paginated access to raw event data and aggregated activity insights for user profiles.
@@ -589,6 +793,29 @@ export const ActivityService: GenService<{
     methodKind: "unary";
     input: typeof GetActivityHeatmapRequestSchema;
     output: typeof GetActivityHeatmapResponseSchema;
+  },
+  /**
+   * GetProfileSessions returns a paginated list of one user profile's sessions,
+   * newest first. Requires that user's distinct_id (the pug profile id a profile
+   * lookup gives you). Sessions are aggregated server-side — one row per session
+   * with its start, end, event count and device context — so a profile with more
+   * events than any one page can hold still lists every session, with exact
+   * durations and counts. Resolves profile aliases so merged anonymous events are
+   * included.
+   * To page, send the previous response's next_page_token back as page_token; an
+   * empty next_page_token means there are no more pages. A token is only valid for
+   * the sort it was issued under — to change sort, start again with no page_token.
+   * Every sort is descending.
+   * Traffic tagged as a bot at ingest is excluded unless include_bots is true, and
+   * the judgement is per session: a session with any tagged event is omitted whole
+   * rather than returned with only its untagged events.
+   *
+   * @generated from rpc shared.activity.v1.ActivityService.GetProfileSessions
+   */
+  getProfileSessions: {
+    methodKind: "unary";
+    input: typeof GetProfileSessionsRequestSchema;
+    output: typeof GetProfileSessionsResponseSchema;
   },
   /**
    * GetProfileStats returns aggregate statistics, device/browser/location context from the
