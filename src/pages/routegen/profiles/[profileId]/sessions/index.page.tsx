@@ -1,7 +1,8 @@
 import { useAtomValue } from 'jotai'
-import { AlertCircle, User } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { AlertCircle, Loader2, User } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ProfileSession } from '@/api/genproto/shared/activity/v1/activity_pb'
+import { ProfileSessionSort } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -11,58 +12,10 @@ import ProjectLink from '@/components/project-link'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { botOf, deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { useRouteParams } from '@/lib/route-params'
-import { toastRPCError } from '@/lib/rpc-error'
-import { structGet } from '@/lib/struct'
+import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
-
-type SessionRow = {
-  sessionId: string
-  startedAt: Date
-  endedAt: Date
-  events: number
-  browser?: string
-  os?: string
-  device?: string
-  platform?: string
-  bot?: boolean
-}
-
-const groupSessions = (events: ActivityEvent[]) => {
-  const buckets = new Map<string, ActivityEvent[]>()
-  for (const e of events) {
-    if (!e.sessionId) continue
-    const existing = buckets.get(e.sessionId)
-    if (existing) existing.push(e)
-    else buckets.set(e.sessionId, [e])
-  }
-  const rows: SessionRow[] = []
-  for (const [sessionId, evs] of buckets) {
-    // events arrive newest-first from getActivityFeed
-    const startedAt = tsToDate(evs[evs.length - 1].occurTime)
-    const endedAt = tsToDate(evs[0].occurTime)
-    if (!startedAt || !endedAt) continue
-    const auto = evs[evs.length - 1].autoProperties
-    const browser = structGet(auto, '$browser')
-    const os = structGet(auto, '$os')
-    const device = deviceModelOf(auto)
-    const platform = platformOf(auto)
-    rows.push({
-      sessionId,
-      startedAt,
-      endedAt,
-      events: evs.length,
-      browser,
-      os,
-      device,
-      platform,
-      bot: botOf(auto),
-    })
-  }
-  return rows
-}
 
 const formatDuration = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000))
@@ -75,6 +28,12 @@ const formatDuration = (ms: number) => {
 
 type SortKey = 'started' | 'duration' | 'events'
 
+const SORTS: Record<SortKey, ProfileSessionSort> = {
+  started: ProfileSessionSort.STARTED_AT,
+  duration: ProfileSessionSort.DURATION,
+  events: ProfileSessionSort.EVENT_COUNT,
+}
+
 const ProfileSessions = () => {
   const { profileId } = useRouteParams<{ profileId: string }>()
   const project = useAtomValue(activeProjectAtom)
@@ -86,62 +45,56 @@ const ProfileSessions = () => {
 const SessionsBody = ({ profileId }: { profileId: string }) => {
   const activityRPC = useAtomValue(activityRPCAtom)
   const headers = useAtomValue(projectHeaderAtom)
-  const [events, setEvents] = useState<ActivityEvent[]>([])
+  const [sessions, setSessions] = useState<ProfileSession[]>([])
+  const [nextToken, setNextToken] = useState('')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [reloadKey, setReloadKey] = useState(0)
+  const [error, setError] = useState<{ message: string; pageToken: string } | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('started')
+  const requestRef = useRef(0)
+
+  const fetchSessions = useCallback(
+    async (pageToken = '') => {
+      setLoading(true)
+      setError(null)
+      const seq = ++requestRef.current
+      try {
+        const resp = await activityRPC.getProfileSessions(
+          { distinctId: profileId, pageSize: 100, pageToken, sort: SORTS[sortKey], includeBots: true },
+          { headers },
+        )
+        // A sort change re-issues while the previous request is in flight, and a stale answer
+        // landing last would store its cursor under the new sort's header.
+        if (seq !== requestRef.current) return
+        setSessions(prev => (pageToken ? [...prev, ...resp.sessions] : resp.sessions))
+        setNextToken(resp.nextPageToken)
+      } catch (err) {
+        if (seq !== requestRef.current) return
+        toastRPCError(err, 'Failed to load sessions')
+        setError({ message: rpcErrorMessage(err, 'Failed to load sessions'), pageToken })
+      } finally {
+        if (seq === requestRef.current) setLoading(false)
+      }
+    },
+    [profileId, headers, activityRPC, sortKey],
+  )
 
   useEffect(() => {
-    if (!headers) return
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    activityRPC
-      .getActivityFeed({ distinctId: profileId, pageSize: 200, pageToken: '', includeBots: true }, { headers })
-      .then(resp => {
-        if (!cancelled) setEvents(resp.events)
-      })
-      .catch(err => {
-        if (cancelled) return
-        toastRPCError(err, 'Failed to load sessions')
-        setError(err instanceof Error ? err.message : 'Failed to load sessions')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [profileId, headers, activityRPC, reloadKey])
+    fetchSessions()
+  }, [fetchSessions])
 
-  const rows = useMemo(() => {
-    const grouped = groupSessions(events)
-    if (sortKey === 'duration') {
-      grouped.sort(
-        (a, b) => b.endedAt.getTime() - b.startedAt.getTime() - (a.endedAt.getTime() - a.startedAt.getTime()),
-      )
-    } else if (sortKey === 'events') {
-      grouped.sort((a, b) => b.events - a.events)
-    } else {
-      grouped.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
-    }
-    return grouped
-  }, [events, sortKey])
-
-  if (loading) return <LoadingSpinner />
-  if (error && rows.length === 0) {
+  if (loading && sessions.length === 0) return <LoadingSpinner />
+  if (error && sessions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <AlertCircle className="w-10 h-10 mb-4 opacity-15" />
-        <p className="text-sm font-medium mb-1">{error}</p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => setReloadKey(k => k + 1)}>
+        <p className="text-sm font-medium mb-1">{error.message}</p>
+        <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchSessions()}>
           Retry
         </Button>
       </div>
     )
   }
-  if (rows.length === 0) return <p className="text-xs text-muted-foreground">No sessions yet for this profile.</p>
+  if (sessions.length === 0) return <p className="text-xs text-muted-foreground">No sessions yet for this profile.</p>
 
   const SortHeader = ({ k, label }: { k: SortKey; label: string }) => (
     <th
@@ -157,48 +110,84 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
   )
 
   return (
-    <table className="w-full">
-      <thead>
-        <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          <th className="py-2 pr-4 text-left font-medium">Session</th>
-          <SortHeader k="started" label="Started" />
-          <SortHeader k="duration" label="Duration" />
-          <SortHeader k="events" label="Events" />
-          <th className="py-2 pr-4 text-left font-medium">Device</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(r => (
-          <tr key={r.sessionId} className="border-b border-border/50 transition-colors hover:bg-muted/40">
-            <td className="py-2.5 pr-4">
-              <ProjectLink
-                href={`/profiles/${encodeURIComponent(profileId)}/sessions/${encodeURIComponent(r.sessionId)}`}
-                className="text-xs font-mono text-link hover:underline underline-offset-4"
-              >
-                {r.sessionId.slice(0, 8)}
-              </ProjectLink>
-            </td>
-            <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
-              <HoverSwap primary={formatDateTime(r.startedAt)} secondary={formatRelative(r.startedAt)} />
-            </td>
-            <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
-              {formatDuration(r.endedAt.getTime() - r.startedAt.getTime())}
-            </td>
-            <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">{r.events}</td>
-            <td className="py-2.5 pr-4 text-xs text-muted-foreground">
-              <PlatformLabel
-                browser={r.browser}
-                os={r.os}
-                device={r.device}
-                platform={r.platform}
-                bot={r.bot}
-                iconSize={14}
-              />
-            </td>
+    <>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <th className="py-2 pr-4 text-left font-medium">Session</th>
+            <SortHeader k="started" label="Started" />
+            <SortHeader k="duration" label="Duration" />
+            <SortHeader k="events" label="Events" />
+            <th className="py-2 pr-4 text-left font-medium">Device</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {sessions.map(s => {
+            const startedAt = tsToDate(s.startedAt)
+            const endedAt = tsToDate(s.endedAt)
+            return (
+              <tr key={s.sessionId} className="border-b border-border/50 transition-colors hover:bg-muted/40">
+                <td className="py-2.5 pr-4">
+                  <ProjectLink
+                    href={`/profiles/${encodeURIComponent(profileId)}/sessions/${encodeURIComponent(s.sessionId)}`}
+                    className="text-xs font-mono text-link hover:underline underline-offset-4"
+                  >
+                    {s.sessionId.slice(0, 8)}
+                  </ProjectLink>
+                </td>
+                <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
+                  {startedAt ? (
+                    <HoverSwap primary={formatDateTime(startedAt)} secondary={formatRelative(startedAt)} />
+                  ) : (
+                    '—'
+                  )}
+                </td>
+                <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
+                  {startedAt && endedAt ? formatDuration(endedAt.getTime() - startedAt.getTime()) : '—'}
+                </td>
+                <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
+                  {s.eventCount.toLocaleString()}
+                </td>
+                <td className="py-2.5 pr-4 text-xs text-muted-foreground">
+                  <PlatformLabel
+                    browser={s.browser}
+                    os={s.os}
+                    device={s.device}
+                    platform={s.platform}
+                    bot={s.bot}
+                    iconSize={14}
+                  />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+
+      {error && (
+        <div className="mt-4 mb-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <AlertCircle className="w-3.5 h-3.5" />
+          <span>{error.message}</span>
+          <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => fetchSessions(error.pageToken)}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {!error && nextToken && (
+        <div className="my-4">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => fetchSessions(nextToken)}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : 'Load more sessions'}
+          </Button>
+        </div>
+      )}
+    </>
   )
 }
 
