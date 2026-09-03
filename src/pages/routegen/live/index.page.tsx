@@ -19,7 +19,6 @@ import LiveVisitorMap from '@/components/live-map/visitor-map'
 import NoProject from '@/components/no-project'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { deviceModelOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
@@ -119,8 +118,6 @@ const LiveVisitorsPage = () => {
 
   const hasActiveFilters = selectedKinds.size > 0 || device !== 'all' || country !== null || query !== ''
 
-  // Only for the cue below: the panel's height cap changes at md, and so does what overflows.
-  const isMobile = useIsMobile()
   const syncScrollCue = useCallback(() => {
     const list = listRef.current
     setMoreBelow(!!list && list.scrollHeight - list.scrollTop - list.clientHeight > 8)
@@ -135,7 +132,16 @@ const LiveVisitorsPage = () => {
     })
   }, [syncScrollCue])
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), [])
-  useEffect(syncScrollCue, [syncScrollCue, filtered.length, collapsed, selectedDistinctId, isMobile])
+  // The deps catch content changes; the observer catches the box itself — the cap swapping at md,
+  // and on a short viewport the browser's chrome moving 100dvh.
+  useEffect(() => {
+    syncScrollCue()
+    const list = listRef.current
+    if (!list) return
+    const observer = new ResizeObserver(syncScrollCue)
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [syncScrollCue, filtered.length, collapsed, selectedDistinctId])
 
   const clearAll = () => {
     setSelectedKinds(new Set())
