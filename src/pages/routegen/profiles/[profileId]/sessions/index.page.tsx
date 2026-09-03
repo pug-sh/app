@@ -39,7 +39,9 @@ const ProfileSessions = () => {
   const project = useAtomValue(activeProjectAtom)
   if (!project) return <NoProject title="Profile" icon={User} />
   if (!profileId) return null
-  return <SessionsBody profileId={profileId} />
+  // ProjectSync keys the route subtree by project, not by profile, so without a key of its own this
+  // list would render one profile's rows under the next profile's links.
+  return <SessionsBody key={profileId} profileId={profileId} />
 }
 
 const SessionsBody = ({ profileId }: { profileId: string }) => {

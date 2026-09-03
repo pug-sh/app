@@ -4,7 +4,10 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GetProfileSessionsResponseSchema, ProfileSessionSort } from '@/api/genproto/shared/activity/v1/activity_pb'
 
-const { getProfileSessions } = vi.hoisted(() => ({ getProfileSessions: vi.fn() }))
+const { getProfileSessions, params } = vi.hoisted(() => ({
+  getProfileSessions: vi.fn(),
+  params: { profileId: 'user-1' },
+}))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
@@ -21,7 +24,7 @@ vi.mock('@/data/workspace.atoms', async importOriginal => {
   }
 })
 
-vi.mock('@/lib/route-params', () => ({ useRouteParams: () => ({ profileId: 'user-1' }) }))
+vi.mock('@/lib/route-params', () => ({ useRouteParams: () => ({ profileId: params.profileId }) }))
 vi.mock('@/lib/rpc-error', () => ({ toastRPCError: vi.fn(), rpcErrorMessage: (_: unknown, m: string) => m }))
 
 const ProfileSessions = (await import('./index.page')).default
@@ -42,6 +45,7 @@ const argOf = (call: number) => getProfileSessions.mock.calls[call][0]
 
 beforeEach(() => {
   getProfileSessions.mockReset()
+  params.profileId = 'user-1'
 })
 
 describe('profile sessions', () => {
@@ -139,5 +143,20 @@ describe('profile sessions', () => {
 
     expect(screen.queryByText('22')).toBeNull()
     expect(screen.getByText('33')).toBeTruthy()
+  })
+  // The route subtree is keyed by project, not by profile, so a profile change reuses this
+  // component — and an unreset row would hand its session id to the next profile's link.
+  it('starts clean when the profile changes', async () => {
+    respond([session('aaaaaaaa-1', 777)], 'T1')
+    const { rerender } = render(<ProfileSessions />)
+    await waitFor(() => expect(screen.getByText('777')).toBeTruthy())
+
+    params.profileId = 'user-2'
+    getProfileSessions.mockReturnValueOnce(new Promise(() => {}))
+    rerender(<ProfileSessions />)
+    await waitFor(() => expect(getProfileSessions).toHaveBeenCalledTimes(2))
+
+    expect(screen.queryByText('777')).toBeNull()
+    expect(argOf(1).distinctId).toBe('user-2')
   })
 })
