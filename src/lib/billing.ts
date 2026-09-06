@@ -3,6 +3,7 @@ import {
   type GetBillingStatusResponse,
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import { tsToDate } from '@/lib/timestamp'
 
 // What the org is entitled to. Derived from the clock on the server, so a trial
 // that ended an hour ago already reads free here.
@@ -48,6 +49,12 @@ export const TONE_FILL: Record<UsageTone, string> = {
   over: 'bg-chart-5',
 }
 
+export const TONE_TEXT: Record<UsageTone, string> = {
+  normal: 'text-muted-foreground',
+  caution: 'text-caution',
+  over: 'text-negative',
+}
+
 export const USAGE_WARN_RATIO = 0.9
 
 export type Usage = {
@@ -76,6 +83,15 @@ export const usageFor = (includedEvents: bigint | undefined, usedEvents: number 
   const tone: UsageTone = ratio >= 1 ? 'over' : ratio >= USAGE_WARN_RATIO ? 'caution' : 'normal'
   // Floored, not rounded: 99.6% must not render as "100%" while the tone still says caution.
   return { used, included, percent: Math.min(100, Math.floor(ratio * 100)), tone }
+}
+
+export type BannerTone = Exclude<UsageTone, 'normal'> | 'past_due'
+
+// Dismissal lasts the period, but crossing from "nearly out" to "over" earns a fresh banner. With
+// no period there is nothing to expire against, so it lasts the day rather than forever.
+export const usageBannerKey = (status: GetBillingStatusResponse, tone: BannerTone) => {
+  const periodEnd = tsToDate(status.periodEnd)
+  return `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
 }
 
 // Plan + subscription state — what a completed checkout changes, and null while nothing is loaded.

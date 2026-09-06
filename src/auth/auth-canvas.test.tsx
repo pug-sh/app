@@ -15,6 +15,8 @@ vi.mock('@/api/rpc', async () => {
     authRPCAtom: atom({ getAuthConfig: vi.fn().mockResolvedValue({ providers: [] }) }),
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: vi.fn() }),
+    billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
+    usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
   }
 })
 

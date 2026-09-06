@@ -20,6 +20,10 @@ vi.mock('@/api/rpc', async () => {
   return {
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
+    // The over-quota banner reads both. Never resolving keeps it unrendered, which is the state
+    // every assertion about the bootstrap below is written against.
+    billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
+    usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
   }
 })
 
