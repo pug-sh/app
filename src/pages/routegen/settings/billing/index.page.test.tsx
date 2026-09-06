@@ -132,6 +132,15 @@ describe('the usage section', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
+  // The entitlement is known even when the count is not, and the bar needs both. Dropping the known
+  // half with the missing one leaves a trialing org no number anywhere on the page.
+  it('still names the included quota when the meter has no count', async () => {
+    getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
+    renderPage()
+    expect(await screen.findByText('Not measured yet')).toBeTruthy()
+    expect(screen.getByText('500,000 events included this period.')).toBeTruthy()
+  })
+
   // Absent means no limit at all, which is a plan without a bar rather than a bar at zero.
   it('draws no bar for a plan with no quota', async () => {
     getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))

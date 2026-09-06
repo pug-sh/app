@@ -61,6 +61,17 @@ const PortalButton = ({ label, busy, onClick }: { label: string; busy: boolean; 
   </Can>
 )
 
+// Stands in for the bar, which needs both halves. Absent included_events is a plan with no limit at
+// all; otherwise the meter simply has no count for this period yet, and dropping the entitlement
+// along with the missing half leaves a trialing org no number anywhere on the page.
+const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => (
+  <p className="mt-2 text-xs text-muted-foreground">
+    {includedEvents === undefined
+      ? 'This plan has no event limit.'
+      : `${formatEvents(Number(includedEvents))} events included this period.`}
+  </p>
+)
+
 // Three different dates, and conflating them is the mistake this exists to prevent. `renewsAt` is
 // when the provider bills next; `periodEnd` is when the quota window turns over. They are only the
 // same by coincidence.
@@ -285,9 +296,7 @@ const Billing = () => {
             <div className={cn('h-full rounded-full', TONE_FILL[usage.tone])} style={{ width: `${usage.percent}%` }} />
           </div>
         ) : (
-          status.includedEvents === undefined && (
-            <p className="mt-2 text-xs text-muted-foreground">This plan has no event limit.</p>
-          )
+          <QuotaNote includedEvents={status.includedEvents} />
         )}
         <p className="mt-2 text-xs text-muted-foreground">
           Counted in UTC and refreshed periodically, so this can lag the events page by up to an hour.
