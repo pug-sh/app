@@ -349,15 +349,19 @@ describe('Usage page — refusing to assert a zero', () => {
     unmount()
 
     getUsage.mockResolvedValueOnce(
-      usage([], { usedEvents: 0n, usageComputedAt: timestampFromDate(new Date('2026-08-12T02:15:00Z')) }),
+      usage([], {
+        counted: true,
+        usedEvents: 0n,
+        usageComputedAt: timestampFromDate(new Date('2026-08-12T02:15:00Z')),
+      }),
     )
     mount()
     await screen.findByText(/Last metered Aug 12, 02:15 UTC/)
     expect(screen.queryByText('Unknown')).toBeNull()
   })
 
-  // usage.proto is explicit about this third state: a stamp EARLIER than period_start means the
-  // meter has not reached this period, so used_events is a placeholder zero carrying the previous
+  // usage.proto is explicit about this third state: `counted` false means the meter has not reached
+  // this period, so used_events is a placeholder zero carrying the previous
   // period's stamp — "render it as computing rather than as a total". It happens every 1st of the
   // month, and unboundedly if the meter stops.
   it('renders a period the meter has not reached as computing, not as zero', async () => {
@@ -380,6 +384,7 @@ describe('Usage page — refusing to assert a zero', () => {
   it('renders the total once the meter has reached the period', async () => {
     getUsage.mockResolvedValueOnce(
       usage([], {
+        counted: true,
         usedEvents: 4200n,
         periodStart: timestampFromDate(new Date('2026-08-01T00:00:00Z')),
         periodEnd: timestampFromDate(new Date('2026-09-01T00:00:00Z')),
@@ -410,6 +415,7 @@ describe('Usage page — refusing to assert a zero', () => {
   it('says the tail of the chart is unmetered rather than letting zero bars imply no usage', async () => {
     getUsage.mockResolvedValueOnce(
       usage([day(daysAgo(8).toISOString(), 'p1', 10)], {
+        counted: true,
         usedEvents: 10n,
         usageComputedAt: timestampFromDate(daysAgo(7)),
       }),
