@@ -135,6 +135,32 @@ export const resetBillingAtom = atom(null, (_, set) => {
   set(inFlightAtom, null)
 })
 
+// Terminal refusals: the payment landed and pug will not be able to place it however long anyone
+// waits. Everything else — a network blip, an org the read could not resolve — is worth falling back
+// to the poll for, since the webhook is still coming.
+const TERMINAL_CONFIRM_CODES = new Set([Code.PermissionDenied, Code.FailedPrecondition])
+
+// Asks the provider what the checkout did, rather than waiting for it to tell us. This is what
+// confirms a returning buyer in one round trip, and the only thing that works at all on a deployment
+// whose webhook URL is not reachable — where the poll below can never terminate.
+//
+// False is "not settled yet", not a failure: keep polling. A terminal refusal is rethrown, because
+// "this page will update shortly" is a lie for a payment that needs a person.
+export const confirmCheckoutAtom = atom(null, async (get, set, sessionId: string) => {
+  const org = get(activeOrgAtom)
+  if (!org || !sessionId || get(isDemoSessionAtom)) return false
+  try {
+    const { confirmed } = await get(billingRPCAtom).confirmCheckout({ orgId: org.id, sessionId })
+    if (!confirmed) return false
+  } catch (err) {
+    console.error('confirmCheckout failed:', err)
+    if (err instanceof ConnectError && TERMINAL_CONFIRM_CODES.has(err.code)) throw err
+    return false
+  }
+  await set(loadBillingAtom, { force: true })
+  return true
+})
+
 const CHECKOUT_POLL_DELAYS_MS = [1500, 3000, 5000, 8000]
 
 // The customer is back before the webhook lands, so the page still reads "Free" — which looks

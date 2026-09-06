@@ -10,7 +10,7 @@ import { Can, useCan } from '@/auth/can'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
 import { Badge } from '@/components/ui/badge'
-import { loadBillingAtom, pollBillingAfterCheckoutAtom } from '@/data/billing.atoms'
+import { confirmCheckoutAtom, loadBillingAtom, pollBillingAfterCheckoutAtom } from '@/data/billing.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
@@ -91,6 +91,7 @@ const Billing = () => {
   const { status, usedEvents, error, unsupported, loaded } = useBilling()
   const reloadBilling = useSetAtom(loadBillingAtom)
   const pollAfterCheckout = useSetAtom(pollBillingAfterCheckoutAtom)
+  const confirmWithProvider = useSetAtom(confirmCheckoutAtom)
   const can = useCan()
   const { projectId } = useRouteParams<{ projectId: string }>()
   const [, navigate] = useLocation()
@@ -148,12 +149,22 @@ const Billing = () => {
 
   // The webhook can outlast the poll, and then the plan on screen is still the old one — which
   // reads as a payment that failed.
+  // The provider is asked first and the poll is the fallback, not the other way round: the poll only
+  // watches pug's own state, which nothing but a webhook changes, so on its own it makes the
+  // checkout moment depend on inbound connectivity the deployment may not have.
   const confirmCheckout = useCallback(
-    async (before: string) => {
+    async (before: string, sessionId: string) => {
+      try {
+        if (await confirmWithProvider(sessionId)) return
+      } catch (err) {
+        // Paid, and not placeable without a person. Saying it will update shortly would be false.
+        toastRPCError(err, "We couldn't confirm your payment. Please contact support.")
+        return
+      }
       if (!(await pollAfterCheckout(before)))
         toast.info('Still confirming your payment. This page will update shortly.')
     },
-    [pollAfterCheckout],
+    [confirmWithProvider, pollAfterCheckout],
   )
 
   // A completed checkout reloads the page at the provider's return_url, which is why the baseline is
@@ -161,14 +172,14 @@ const Billing = () => {
   // query it returns with — without reading it, a declined card polls for 17s and is then told its
   // payment is still confirming.
   useEffect(() => {
-    const before = takeCheckoutPending()
-    if (before === null) return
+    const pending = takeCheckoutPending()
+    if (pending === null) return
     const outcome = new URLSearchParams(search).get('status')?.toLowerCase()
     if (outcome && FAILED_CHECKOUT_STATUSES.has(outcome)) {
       toast.error('Your payment did not go through. Your plan is unchanged.')
       return
     }
-    confirmCheckout(before)
+    confirmCheckout(pending.signature, pending.sessionId)
   }, [confirmCheckout, search])
 
   const handleSelectPlan = async (plan: PlanOption) => {
@@ -177,7 +188,7 @@ const Billing = () => {
     try {
       const resp = await billingRPC.createCheckoutSession({ orgId, planSlug: plan.slug })
       trackFeature({ featureId: 'billing.checkout_started', featureName: 'Start checkout' })
-      markCheckoutPending(planKey)
+      markCheckoutPending({ signature: planKey, sessionId: resp.sessionId })
       const outcome = await openCheckoutOverlay(resp.checkoutUrl)
       if (outcome.status === 'failed') {
         clearCheckoutPending()
@@ -186,7 +197,7 @@ const Billing = () => {
         // Nothing can have changed if the customer backed out, so don't spend the poll on it.
         clearCheckoutPending()
       } else {
-        await confirmCheckout(planKey)
+        await confirmCheckout(planKey, resp.sessionId)
       }
     } catch (err) {
       clearCheckoutPending()

@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/billing/v1/billing.proto.
  */
 export const file_dashboard_billing_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIrsEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSEgoKbWFuYWdlYWJsZRgMIAEoCCJTChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAEiNQodQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2USFAoMY2hlY2tvdXRfdXJsGAEgASgJIjUKGkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQASIxChtDcmVhdGVQb3J0YWxTZXNzaW9uUmVzcG9uc2USEgoKcG9ydGFsX3VybBgBIAEoCSIrChBMaXN0UGxhbnNSZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQASK/AQoKUGxhbk9wdGlvbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJEjQKD2luY2x1ZGVkX2V2ZW50cxgFIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhMKC3B1cmNoYXNhYmxlGAYgASgIIkQKEUxpc3RQbGFuc1Jlc3BvbnNlEi8KBXBsYW5zGAEgAygLMiAuZGFzaGJvYXJkLmJpbGxpbmcudjEuUGxhbk9wdGlvbiqAAQoNQmlsbGluZ1N0YXR1cxIeChpCSUxMSU5HX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF0JJTExJTkdfU1RBVFVTX1RSSUFMSU5HEAESGQoVQklMTElOR19TVEFUVVNfQUNUSVZFEAISFwoTQklMTElOR19TVEFUVVNfRlJFRRADKv8BChJTdWJzY3JpcHRpb25TdGF0dXMSIwofU1VCU0NSSVBUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfQUNUSVZFEAESIAocU1VCU0NSSVBUSU9OX1NUQVRVU19QQVNUX0RVRRACEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfUEFVU0VEEAMSIQodU1VCU0NSSVBUSU9OX1NUQVRVU19DQU5DRUxMRUQQBBIfChtTVUJTQ1JJUFRJT05fU1RBVFVTX0VYUElSRUQQBRIeChpTVUJTQ1JJUFRJT05fU1RBVFVTX0ZBSUxFRBAGMugDCg5CaWxsaW5nU2VydmljZRJzChBHZXRCaWxsaW5nU3RhdHVzEi0uZGFzaGJvYXJkLmJpbGxpbmcudjEuR2V0QmlsbGluZ1N0YXR1c1JlcXVlc3QaLi5kYXNoYm9hcmQuYmlsbGluZy52MS5HZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2UiABKCAQoVQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uEjIuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVxdWVzdBozLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0U2Vzc2lvblJlc3BvbnNlIgASfAoTQ3JlYXRlUG9ydGFsU2Vzc2lvbhIwLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0GjEuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlUG9ydGFsU2Vzc2lvblJlc3BvbnNlIgASXgoJTGlzdFBsYW5zEiYuZGFzaGJvYXJkLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVxdWVzdBonLmRhc2hib2FyZC5iaWxsaW5nLnYxLkxpc3RQbGFuc1Jlc3BvbnNlIgBCSVpHZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvYmlsbGluZy92MTtiaWxsaW5ndjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
+  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIrsEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSEgoKbWFuYWdlYWJsZRgMIAEoCCJTChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAEiSQodQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2USFAoMY2hlY2tvdXRfdXJsGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiTgoWQ29uZmlybUNoZWNrb3V0UmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAESGwoKc2Vzc2lvbl9pZBgCIAEoCUIHukgEcgIQASIsChdDb25maXJtQ2hlY2tvdXRSZXNwb25zZRIRCgljb25maXJtZWQYASABKAgiNQoaQ3JlYXRlUG9ydGFsU2Vzc2lvblJlcXVlc3QSFwoGb3JnX2lkGAEgASgJQge6SARyAhABIjEKG0NyZWF0ZVBvcnRhbFNlc3Npb25SZXNwb25zZRISCgpwb3J0YWxfdXJsGAEgASgJIisKEExpc3RQbGFuc1JlcXVlc3QSFwoGb3JnX2lkGAEgASgJQge6SARyAhABIr8BCgpQbGFuT3B0aW9uEgwKBHNsdWcYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEjAKC3ByaWNlX2NlbnRzGAMgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSEAoIY3VycmVuY3kYBCABKAkSNAoPaW5jbHVkZWRfZXZlbnRzGAUgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSEwoLcHVyY2hhc2FibGUYBiABKAgiRAoRTGlzdFBsYW5zUmVzcG9uc2USLwoFcGxhbnMYASADKAsyIC5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuT3B0aW9uKoABCg1CaWxsaW5nU3RhdHVzEh4KGkJJTExJTkdfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGwoXQklMTElOR19TVEFUVVNfVFJJQUxJTkcQARIZChVCSUxMSU5HX1NUQVRVU19BQ1RJVkUQAhIXChNCSUxMSU5HX1NUQVRVU19GUkVFEAMq/wEKElN1YnNjcmlwdGlvblN0YXR1cxIjCh9TVUJTQ1JJUFRJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASHgoaU1VCU0NSSVBUSU9OX1NUQVRVU19BQ1RJVkUQARIgChxTVUJTQ1JJUFRJT05fU1RBVFVTX1BBU1RfRFVFEAISHgoaU1VCU0NSSVBUSU9OX1NUQVRVU19QQVVTRUQQAxIhCh1TVUJTQ1JJUFRJT05fU1RBVFVTX0NBTkNFTExFRBAEEh8KG1NVQlNDUklQVElPTl9TVEFUVVNfRVhQSVJFRBAFEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfRkFJTEVEEAYy2gQKDkJpbGxpbmdTZXJ2aWNlEnMKEEdldEJpbGxpbmdTdGF0dXMSLS5kYXNoYm9hcmQuYmlsbGluZy52MS5HZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBouLmRhc2hib2FyZC5iaWxsaW5nLnYxLkdldEJpbGxpbmdTdGF0dXNSZXNwb25zZSIAEoIBChVDcmVhdGVDaGVja291dFNlc3Npb24SMi5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0GjMuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2UiABJwCg9Db25maXJtQ2hlY2tvdXQSLC5kYXNoYm9hcmQuYmlsbGluZy52MS5Db25maXJtQ2hlY2tvdXRSZXF1ZXN0Gi0uZGFzaGJvYXJkLmJpbGxpbmcudjEuQ29uZmlybUNoZWNrb3V0UmVzcG9uc2UiABJ8ChNDcmVhdGVQb3J0YWxTZXNzaW9uEjAuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlUG9ydGFsU2Vzc2lvblJlcXVlc3QaMS5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVQb3J0YWxTZXNzaW9uUmVzcG9uc2UiABJeCglMaXN0UGxhbnMSJi5kYXNoYm9hcmQuYmlsbGluZy52MS5MaXN0UGxhbnNSZXF1ZXN0GicuZGFzaGJvYXJkLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVzcG9uc2UiAEJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9iaWxsaW5nL3YxO2JpbGxpbmd2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
 
 /**
  * @generated from message dashboard.billing.v1.GetBillingStatusRequest
@@ -239,6 +239,16 @@ export type CreateCheckoutSessionResponse = Message<"dashboard.billing.v1.Create
    * @generated from field: string checkout_url = 1;
    */
   checkoutUrl: string;
+
+  /**
+   * Hand back to ConfirmCheckout when the buyer returns. Not a secret and not
+   * proof of anything: it names a checkout the server then re-reads from the
+   * provider and checks belongs to the caller's org. Empty when the provider
+   * gives no id to confirm against, which leaves the webhook as the only path.
+   *
+   * @generated from field: string session_id = 2;
+   */
+  sessionId: string;
 };
 
 /**
@@ -247,6 +257,50 @@ export type CreateCheckoutSessionResponse = Message<"dashboard.billing.v1.Create
  */
 export const CreateCheckoutSessionResponseSchema: GenMessage<CreateCheckoutSessionResponse> = /*@__PURE__*/
   messageDesc(file_dashboard_billing_v1_billing, 4);
+
+/**
+ * @generated from message dashboard.billing.v1.ConfirmCheckoutRequest
+ */
+export type ConfirmCheckoutRequest = Message<"dashboard.billing.v1.ConfirmCheckoutRequest"> & {
+  /**
+   * @generated from field: string org_id = 1;
+   */
+  orgId: string;
+
+  /**
+   * The session_id CreateCheckoutSessionResponse returned for this org.
+   *
+   * @generated from field: string session_id = 2;
+   */
+  sessionId: string;
+};
+
+/**
+ * Describes the message dashboard.billing.v1.ConfirmCheckoutRequest.
+ * Use `create(ConfirmCheckoutRequestSchema)` to create a new message.
+ */
+export const ConfirmCheckoutRequestSchema: GenMessage<ConfirmCheckoutRequest> = /*@__PURE__*/
+  messageDesc(file_dashboard_billing_v1_billing, 5);
+
+/**
+ * @generated from message dashboard.billing.v1.ConfirmCheckoutResponse
+ */
+export type ConfirmCheckoutResponse = Message<"dashboard.billing.v1.ConfirmCheckoutResponse"> & {
+  /**
+   * True once the subscription behind this checkout has been written. False is
+   * "not settled yet", never a failure: keep waiting for the webhook.
+   *
+   * @generated from field: bool confirmed = 1;
+   */
+  confirmed: boolean;
+};
+
+/**
+ * Describes the message dashboard.billing.v1.ConfirmCheckoutResponse.
+ * Use `create(ConfirmCheckoutResponseSchema)` to create a new message.
+ */
+export const ConfirmCheckoutResponseSchema: GenMessage<ConfirmCheckoutResponse> = /*@__PURE__*/
+  messageDesc(file_dashboard_billing_v1_billing, 6);
 
 /**
  * @generated from message dashboard.billing.v1.CreatePortalSessionRequest
@@ -263,7 +317,7 @@ export type CreatePortalSessionRequest = Message<"dashboard.billing.v1.CreatePor
  * Use `create(CreatePortalSessionRequestSchema)` to create a new message.
  */
 export const CreatePortalSessionRequestSchema: GenMessage<CreatePortalSessionRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_billing_v1_billing, 5);
+  messageDesc(file_dashboard_billing_v1_billing, 7);
 
 /**
  * @generated from message dashboard.billing.v1.CreatePortalSessionResponse
@@ -280,7 +334,7 @@ export type CreatePortalSessionResponse = Message<"dashboard.billing.v1.CreatePo
  * Use `create(CreatePortalSessionResponseSchema)` to create a new message.
  */
 export const CreatePortalSessionResponseSchema: GenMessage<CreatePortalSessionResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_billing_v1_billing, 6);
+  messageDesc(file_dashboard_billing_v1_billing, 8);
 
 /**
  * @generated from message dashboard.billing.v1.ListPlansRequest
@@ -300,7 +354,7 @@ export type ListPlansRequest = Message<"dashboard.billing.v1.ListPlansRequest"> 
  * Use `create(ListPlansRequestSchema)` to create a new message.
  */
 export const ListPlansRequestSchema: GenMessage<ListPlansRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_billing_v1_billing, 7);
+  messageDesc(file_dashboard_billing_v1_billing, 9);
 
 /**
  * PlanOption is a tier as this deployment sells it. Distinct from Plan, which is
@@ -360,7 +414,7 @@ export type PlanOption = Message<"dashboard.billing.v1.PlanOption"> & {
  * Use `create(PlanOptionSchema)` to create a new message.
  */
 export const PlanOptionSchema: GenMessage<PlanOption> = /*@__PURE__*/
-  messageDesc(file_dashboard_billing_v1_billing, 8);
+  messageDesc(file_dashboard_billing_v1_billing, 10);
 
 /**
  * @generated from message dashboard.billing.v1.ListPlansResponse
@@ -377,7 +431,7 @@ export type ListPlansResponse = Message<"dashboard.billing.v1.ListPlansResponse"
  * Use `create(ListPlansResponseSchema)` to create a new message.
  */
 export const ListPlansResponseSchema: GenMessage<ListPlansResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_billing_v1_billing, 9);
+  messageDesc(file_dashboard_billing_v1_billing, 11);
 
 /**
  * BillingStatus is derived from the clock on every read, never stored. The
@@ -524,6 +578,34 @@ export const BillingService: GenService<{
     methodKind: "unary";
     input: typeof CreateCheckoutSessionRequestSchema;
     output: typeof CreateCheckoutSessionResponseSchema;
+  },
+  /**
+   * Verifies one checkout the dashboard started, straight against the provider,
+   * and applies its subscription through the same write the webhook uses.
+   *
+   * This is the path a returning buyer is confirmed on. The webhook remains the
+   * authority for everything else -- renewal, dunning, cancellation, expiry --
+   * none of which has a redirect to be confirmed on, so it is a backstop here
+   * rather than a second-class citizen. What this removes is the dependence of
+   * the CHECKOUT MOMENT on inbound connectivity: without it a deployment with no
+   * reachable webhook URL can never complete a purchase, and every buyer waits
+   * out a poll of pug's own state that only a delivery can change.
+   *
+   * session_id is a CLAIM, not evidence. The provider is asked what it means, and
+   * the subscription it resolves to must carry this org in the metadata pug wrote
+   * at checkout -- PermissionDenied otherwise. There is no fallback to
+   * attribution by customer id here, unlike the webhook: the caller chose the id.
+   *
+   * confirmed=false is the ordinary "not yet" -- the buyer is back before the
+   * payment settled -- and the client should keep waiting rather than report a
+   * failure. Admin-only, like the checkout it confirms.
+   *
+   * @generated from rpc dashboard.billing.v1.BillingService.ConfirmCheckout
+   */
+  confirmCheckout: {
+    methodKind: "unary";
+    input: typeof ConfirmCheckoutRequestSchema;
+    output: typeof ConfirmCheckoutResponseSchema;
   },
   /**
    * Opens the provider's customer portal, which is where plan changes, card

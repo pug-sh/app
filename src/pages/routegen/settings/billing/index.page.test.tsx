@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,18 +13,24 @@ import {
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 
-const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession } = vi.hoisted(() => ({
-  getBillingStatus: vi.fn(),
-  getUsage: vi.fn(),
-  listPlans: vi.fn(),
-  createCheckoutSession: vi.fn(),
-  createPortalSession: vi.fn(),
-}))
+const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession, confirmCheckout } =
+  vi.hoisted(() => ({
+    getBillingStatus: vi.fn(),
+    getUsage: vi.fn(),
+    listPlans: vi.fn(),
+    createCheckoutSession: vi.fn(),
+    createPortalSession: vi.fn(),
+    confirmCheckout: vi.fn(),
+  }))
+
+const { toastError, toastInfo } = vi.hoisted(() => ({ toastError: vi.fn(), toastInfo: vi.fn() }))
+
+vi.mock('sonner', () => ({ toast: { error: toastError, info: toastInfo, success: vi.fn() } }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    billingRPCAtom: atom({ getBillingStatus, listPlans, createCheckoutSession, createPortalSession }),
+    billingRPCAtom: atom({ getBillingStatus, listPlans, createCheckoutSession, createPortalSession, confirmCheckout }),
     usageRPCAtom: atom({ getUsage }),
   }
 })
@@ -208,6 +215,59 @@ describe('the portal', () => {
     renderPage()
     await screen.findByText('Growth')
     expect(screen.queryByText('Manage payment method and invoices')).toBeNull()
+  })
+})
+
+describe('the checkout return', () => {
+  const PENDING_KEY = 'pug:billingCheckoutPending'
+
+  const pending = (sessionId: string) =>
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ signature: 'stale-signature', sessionId }))
+
+  beforeEach(() => sessionStorage.clear())
+
+  // The session id has to survive the provider's full-page redirect, or the returning buyer has
+  // nothing to confirm against and is back to waiting on a webhook.
+  it('confirms the checkout the buyer just completed, by its session id', async () => {
+    confirmCheckout.mockResolvedValue({ confirmed: true })
+    pending('cs_1')
+    renderPage()
+
+    await waitFor(() => expect(confirmCheckout).toHaveBeenCalledWith({ orgId: 'org-a', sessionId: 'cs_1' }))
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  // "Not settled yet" is not a failure. The webhook is still coming, so the poll has to take over.
+  it('falls back to waiting when the provider has nothing yet', async () => {
+    confirmCheckout.mockResolvedValue({ confirmed: false })
+    pending('cs_1')
+    renderPage()
+
+    await waitFor(() => expect(confirmCheckout).toHaveBeenCalled())
+    // The poll's own re-read, which only runs because the confirm declined to answer.
+    await waitFor(() => expect(getBillingStatus.mock.calls.length).toBeGreaterThan(1))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  // The money is in and pug cannot place it. "This page will update shortly" is a lie for a payment
+  // that needs a person, so a terminal refusal must not reach the buyer as one.
+  it('says a confirmed payment needs help rather than promising an update', async () => {
+    confirmCheckout.mockRejectedValue(new ConnectError('unsupported currency', Code.FailedPrecondition))
+    pending('cs_1')
+    renderPage()
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  // A provider that returns no session handle, or a checkout started before this shipped. The
+  // webhook is the only path left, so the poll must still run rather than the return doing nothing.
+  it('waits it out when there is no session id to confirm', async () => {
+    pending('')
+    renderPage()
+
+    await waitFor(() => expect(getBillingStatus.mock.calls.length).toBeGreaterThan(1))
+    expect(confirmCheckout).not.toHaveBeenCalled()
   })
 })
 

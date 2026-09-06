@@ -1,14 +1,27 @@
 const PENDING_KEY = 'pug:billingCheckoutPending'
 
-// A completed checkout navigates the whole page to the provider's return_url, so the plan the
-// customer had *before* it has to outlive the reload — polling against the plan they came back to
-// can never see the change a fast webhook already made.
-export const markCheckoutPending = (signature: string) => sessionStorage.setItem(PENDING_KEY, signature)
+// What a completed checkout has to carry across the provider's return_url, which navigates the whole
+// page. `signature` is the plan the customer had *before* it — polling against the plan they came
+// back to can never see the change a fast webhook already made. `sessionId` is what asks the
+// provider directly instead of waiting for that webhook at all.
+export type PendingCheckout = { signature: string; sessionId: string }
 
-export const takeCheckoutPending = () => {
-  const signature = sessionStorage.getItem(PENDING_KEY)
+export const markCheckoutPending = (pending: PendingCheckout) =>
+  sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending))
+
+export const takeCheckoutPending = (): PendingCheckout | null => {
+  const raw = sessionStorage.getItem(PENDING_KEY)
   sessionStorage.removeItem(PENDING_KEY)
-  return signature
+  if (raw === null) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed?.signature !== 'string') return null
+    return { signature: parsed.signature, sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : '' }
+  } catch {
+    // A checkout that was in flight across a deploy stored the bare signature this used to write.
+    // Dropping it costs that one buyer the confirmation toast, never the payment.
+    return null
+  }
 }
 
 export const clearCheckoutPending = () => sessionStorage.removeItem(PENDING_KEY)
