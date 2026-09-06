@@ -58,9 +58,15 @@ describe('formatMoney', () => {
     expect(formatMoney(2_000n, 'JPY')).toBe('¥2,000')
   })
 
-  // Intl throws on a malformed code rather than merely an unknown one.
+  // Intl throws on a malformed code rather than merely an unknown one. Minor units are unknowable
+  // there, so the fallback shows the raw amount rather than reintroducing the /100 it warns about.
   it('falls back rather than throwing on a malformed code', () => {
-    expect(formatMoney(2_000n, 'not a currency')).toContain('20.00')
+    expect(formatMoney(2_000n, 'not a currency')).toBe('2000 not a currency')
+  })
+
+  // An absent currency cannot be denominated; "$20" would state a price the server never sent.
+  it('never guesses dollars for a plan with no currency', () => {
+    expect(formatMoney(2_000n, '')).toBe('—')
   })
 })
 

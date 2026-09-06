@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { createStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GetBillingStatusResponseSchema } from '@/api/genproto/dashboard/billing/v1/billing_pb'
@@ -119,22 +120,114 @@ describe('loadBillingAtom', () => {
     expect(result.status).toBeNull()
   })
 
-  // The in-flight request is keyed by REQUEST, not by org: switching away and back leaves an older
-  // request in the air whose answer would otherwise overwrite the newer one.
+  // The in-flight request is keyed by REQUEST, not by org. Switching away and BACK is the case the
+  // org check alone cannot catch: org A is active again when A's first answer finally lands, so only
+  // the request id stops it painting over the newer one.
   it('does not let a superseded request paint over a newer one', async () => {
     const store = newStore()
     let settleA!: (v: unknown) => void
     getBillingStatus.mockImplementationOnce(() => new Promise(res => (settleA = res)))
 
     const first = store.set(loadBillingAtom)
+
     store.set(activeOrgAtom, orgB)
     getBillingStatus.mockResolvedValue(status('scale'))
+    await store.set(loadBillingAtom)
+
+    store.set(activeOrgAtom, orgA)
+    getBillingStatus.mockResolvedValue(status('enterprise'))
     await store.set(loadBillingAtom)
 
     settleA(status('growth'))
     await first
 
-    expect(store.get(billingAtom).status?.plan?.slug).toBe('scale')
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('enterprise')
+  })
+
+  it('sequences a forced reload behind the request already in the air', async () => {
+    const store = newStore()
+    let settle!: (v: unknown) => void
+    getBillingStatus.mockImplementationOnce(() => new Promise(res => (settle = res)))
+
+    const first = store.set(loadBillingAtom)
+    const forced = store.set(loadBillingAtom, { force: true })
+    settle(status('growth'))
+    await first
+    await forced
+
+    expect(getBillingStatus).toHaveBeenCalledTimes(2)
+  })
+
+  // A negative total is not a number any surface will put on screen — the usage page already refuses
+  // it, and gating here is what gives the meter, the banner and the page the same answer.
+  it('refuses a negative total the way the usage page does', async () => {
+    getUsage.mockResolvedValue(usage(-5_000, true))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).usedEvents).toBeNull()
+  })
+
+  // "Not measured yet" is a claim about the meter. A meter we never reached has made no claim, and
+  // saying it did is the same class of lie as rendering an absent quota as 0.
+  it('separates a meter that failed from one that has not counted', async () => {
+    getUsage.mockRejectedValue(new Error('boom'))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    const result = store.get(billingAtom)
+    expect(result.usedEvents).toBeNull()
+    expect(result.meterError).toBe(true)
+    // The plan is the other half of the call and must survive the meter failing.
+    expect(result.status?.plan?.slug).toBe('growth')
+    expect(result.error).toBeNull()
+  })
+
+  it('does not call a not-yet-counted period a meter failure', async () => {
+    getUsage.mockResolvedValue(usage(0, false))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).meterError).toBe(false)
+  })
+
+  // The past-due banner is the only in-app notice that a card was declined, so a transient failure
+  // must not blank the status that carries it.
+  it('keeps the last known plan when a refresh fails', async () => {
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    getBillingStatus.mockRejectedValue(new Error('boom'))
+    await store.set(loadBillingAtom, { force: true })
+
+    const result = store.get(billingAtom)
+    expect(result.error).toBeTruthy()
+    expect(result.status?.plan?.slug).toBe('growth')
+  })
+
+  // Unimplemented is a different answer from a call that failed: there is no billing service here,
+  // and a retry can only ever fail the same way.
+  it('marks a deployment with no billing service unsupported, and stops asking', async () => {
+    getBillingStatus.mockRejectedValue(new ConnectError('nope', Code.Unimplemented))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).unsupported).toBe(true)
+    expect(getBillingStatus).toHaveBeenCalledTimes(1)
+
+    await store.set(loadBillingAtom)
+    expect(getBillingStatus).toHaveBeenCalledTimes(1)
+  })
+
+  // The contrast: an ordinary failure is not an answer, so the next caller must be free to retry.
+  it('retries after an ordinary failure', async () => {
+    getBillingStatus.mockRejectedValue(new ConnectError('down', Code.Unavailable))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).unsupported).toBe(false)
+    await store.set(loadBillingAtom)
+    expect(getBillingStatus).toHaveBeenCalledTimes(2)
   })
 
   it('asks for nothing without an org', async () => {

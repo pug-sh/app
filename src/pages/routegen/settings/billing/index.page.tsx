@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useLocation, useSearch } from 'wouter'
 import { trackFeature } from '@/analytics/pug'
-import { BillingStatus, type PlanOption } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import { BillingStatus, type PlanOption, SubscriptionStatus } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { billingRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
 import LoadingSpinner from '@/components/loading-spinner'
@@ -25,7 +25,7 @@ import {
 } from '@/lib/billing'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
-import { formatUTCDate, tsToDate } from '@/lib/timestamp'
+import { formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import {
   clearCheckoutPending,
@@ -72,9 +72,8 @@ const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) =
   </p>
 )
 
-// Three different dates, and conflating them is the mistake this exists to prevent. `renewsAt` is
-// when the provider bills next; `periodEnd` is when the quota window turns over. They are only the
-// same by coincidence.
+// `renewsAt` is when the provider bills next; `periodEnd` is when the quota window turns over. They
+// coincide only by accident, and conflating them is the mistake this exists to prevent.
 const periodLine = (status: BillingStatus, trialEndsAt: Date | null, renewsAt: Date | null, periodEnd: Date | null) => {
   if (status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatUTCDate(trialEndsAt)}`
   if (renewsAt) return `Renews ${formatUTCDate(renewsAt)}`
@@ -88,7 +87,7 @@ const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'ex
 const Billing = () => {
   const org = useAtomValue(activeOrgAtom)
   const billingRPC = useAtomValue(billingRPCAtom)
-  const { status, usedEvents, error, unsupported, loaded } = useBilling()
+  const { status, usedEvents, meterError, error, unsupported, loaded } = useBilling()
   const reloadBilling = useSetAtom(loadBillingAtom)
   const pollAfterCheckout = useSetAtom(pollBillingAfterCheckoutAtom)
   const confirmWithProvider = useSetAtom(confirmCheckoutAtom)
@@ -112,18 +111,16 @@ const Billing = () => {
   // nothing purchasable, or no permission to start a checkout, and there is nothing to draw.
   const canBrowsePlans = !!status?.purchasable && can('create', 'billing')
 
-  // A confirmed "off", a deployment with no billing service at all, and a role that cannot read
-  // billing all leave nothing to render — and a blank body under a tab bar is worse than the general
-  // tab. Any other failure keeps its own retry state below. The tab is already dropped from the nav,
-  // so this catches a typed or saved URL.
+  // Nothing to render: billing off, no billing service, or a role that cannot read it. Any other
+  // failure keeps its own retry state below.
   useEffect(() => {
     if (!loaded || !projectId || (error && !unsupported)) return
     if (!enabled || unsupported || !canReadBilling) navigate(`/p/${projectId}/settings/general`, { replace: true })
   }, [loaded, error, unsupported, enabled, canReadBilling, projectId, navigate])
 
-  // An overlay still open at unmount means the customer navigated away mid-checkout (browser Back);
-  // left set, the flag polls on their next visit and toasts "still confirming" at someone who never
-  // paid. A completed checkout reloads the page instead, so no cleanup runs and the flag survives.
+  // An overlay still open at unmount means the customer navigated away mid-checkout; left set, the
+  // flag would toast "still confirming" at someone who never paid. A completed checkout reloads the
+  // page instead, so no cleanup runs and the flag survives.
   useEffect(() => {
     return () => {
       if (closeCheckoutOverlay()) clearCheckoutPending()
@@ -147,11 +144,6 @@ const Billing = () => {
     }
   }, [orgId, enabled, canBrowsePlans, billingRPC, planAttempt, planKey])
 
-  // The webhook can outlast the poll, and then the plan on screen is still the old one — which
-  // reads as a payment that failed.
-  // The provider is asked first and the poll is the fallback, not the other way round: the poll only
-  // watches pug's own state, which nothing but a webhook changes, so on its own it makes the
-  // checkout moment depend on inbound connectivity the deployment may not have.
   const confirmCheckout = useCallback(
     async (before: string, sessionId: string) => {
       try {
@@ -167,10 +159,9 @@ const Billing = () => {
     [confirmWithProvider, pollAfterCheckout],
   )
 
-  // A completed checkout reloads the page at the provider's return_url, which is why the baseline is
-  // read on mount as well as awaited in handleSelectPlan. The provider states the outcome in the
-  // query it returns with — without reading it, a declined card polls for 17s and is then told its
-  // payment is still confirming.
+  // A completed checkout reloads the page at the provider's return_url. The provider states the
+  // outcome in the query it returns with — without reading it, a declined card polls for 17.5s and
+  // is then told its payment is still confirming.
   useEffect(() => {
     const pending = takeCheckoutPending()
     if (pending === null) return
@@ -194,7 +185,6 @@ const Billing = () => {
         clearCheckoutPending()
         toast.error(outcome.message)
       } else if (outcome.status === 'closed') {
-        // Nothing can have changed if the customer backed out, so don't spend the poll on it.
         clearCheckoutPending()
       } else {
         await confirmCheckout(planKey, resp.sessionId)
@@ -213,8 +203,11 @@ const Billing = () => {
     try {
       const resp = await billingRPC.createPortalSession({ orgId })
       trackFeature({ featureId: 'billing.portal_opened', featureName: 'Open billing portal' })
-      // The tab is opened after an await, so it can be blocked — fall back to this tab.
-      if (!window.open(resp.portalUrl, '_blank', 'noopener,noreferrer')) window.location.href = resp.portalUrl
+      // noopener/noreferrer both make window.open return null even on success, so a blocked popup
+      // would be indistinguishable from an opened one — sever the opener by hand instead.
+      const tab = window.open(resp.portalUrl, '_blank')
+      if (tab) tab.opener = null
+      else window.location.href = resp.portalUrl
     } catch (err) {
       toastRPCError(err, 'Failed to open the billing portal')
     } finally {
@@ -244,16 +237,16 @@ const Billing = () => {
   const usage = usageFor(status.includedEvents, usedEvents)
   const period = periodLine(
     status.status,
-    tsToDate(status.trialEndsAt),
-    tsToDate(status.currentPeriodEnd),
-    tsToDate(status.periodEnd),
+    validDate(tsToDate(status.trialEndsAt)),
+    validDate(tsToDate(status.currentPeriodEnd)),
+    validDate(tsToDate(status.periodEnd)),
   )
   // The free plan is named after its own state, so the badge would just repeat the plan name.
   const badge = statusLabel(status.status) === status.plan?.displayName ? '' : statusLabel(status.status)
   const pastDue = isPastDue(status)
   // The server refuses a second checkout while one subscription is live, and a tier switch belongs
   // in the portal where the card and billing date carry over.
-  const liveSubscription = status.manageable && status.subscriptionStatus !== 0
+  const liveSubscription = status.manageable && status.subscriptionStatus !== SubscriptionStatus.UNSPECIFIED
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -285,10 +278,8 @@ const Billing = () => {
       <section>
         <SectionHeader title="Events this period" description="Across every project in this organization." />
         <div className="text-2xl tabular-nums">
-          {/* Null is "the meter has no answer for this period", which must never render as 0 —
-              that would tell an org it has sent nothing when nobody has counted yet. */}
           {usedEvents === null ? (
-            <span className="text-muted-foreground">Not measured yet</span>
+            <span className="text-muted-foreground">{meterError ? 'Count unavailable' : 'Not measured yet'}</span>
           ) : (
             formatEvents(usedEvents)
           )}

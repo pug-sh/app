@@ -7,11 +7,17 @@ import ProjectLink from '@/components/project-link'
 import { dismissedUsageBannerAtom } from '@/data/billing.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
-import { type BannerTone, formatEvents, isPastDue, usageBannerKey, usageFor } from '@/lib/billing'
+import {
+  BANNER_BOX,
+  BANNER_TEXT,
+  type BannerTone,
+  formatEvents,
+  isPastDue,
+  usageBannerKey,
+  usageFor,
+} from '@/lib/billing'
 import { cn } from '@/lib/utils'
 
-// Nothing is enforced anywhere in this system — a quota drives a banner and never a rejected event —
-// so this has to say so, or "over your limit" reads as an outage the customer is already having.
 const UsageBanner = () => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const org = useAtomValue(activeOrgAtom)
@@ -31,6 +37,8 @@ const UsageBanner = () => {
   const key = usageBannerKey(status, tone)
   if (dismissed[org.id] === key) return null
 
+  // Nothing is enforced here — a quota drives a banner, never a rejected event — so the copy has to
+  // say so, or "over your limit" reads as an outage the customer is already having.
   const message = () => {
     if (pastDue) return 'Your last payment failed. Update your payment method to keep this plan.'
     if (!usage) return ''
@@ -44,12 +52,12 @@ const UsageBanner = () => {
     <div
       className={cn(
         'flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b px-4 py-1.5 text-center text-xs',
-        tone === 'caution' ? 'border-caution/25 bg-caution/8' : 'border-negative/25 bg-negative/8',
+        BANNER_BOX[tone],
       )}
       // Autocapture would otherwise file every click under this org's own usage numbers.
       data-pug-no-capture
     >
-      <span className={tone === 'caution' ? 'text-caution' : 'text-negative'}>{message()}</span>
+      <span className={BANNER_TEXT[tone]}>{message()}</span>
       <ProjectLink
         href="/settings/billing"
         onClick={() => trackFeature({ featureId: 'billing.banner', featureName: 'Usage banner' })}

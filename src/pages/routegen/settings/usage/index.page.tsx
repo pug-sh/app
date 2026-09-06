@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
-import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { toProtoTimeRange, tsToDate, validDate } from '@/lib/timestamp'
 import { BarChart } from '../../insights/charts'
 import ProjectBreakdown from './project-breakdown'
 import {
@@ -25,7 +25,6 @@ import {
   type RangeDays,
   unmeteredTailDays,
   usageSeriesColors,
-  validDate,
 } from './usage-helpers'
 
 // The window a response was fetched with, carried alongside it: deriving the series from the

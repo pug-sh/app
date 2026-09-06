@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -216,6 +216,25 @@ describe('the portal', () => {
     await screen.findByText('Growth')
     expect(screen.queryByText('Manage payment method and invoices')).toBeNull()
   })
+
+  // window.open returns null whenever noopener/noreferrer is asked for, so treating null as "the
+  // popup was blocked" dragged this tab to the portal on every single open.
+  it('opens the portal in a new tab without taking the current one with it', async () => {
+    const tab = { opener: {} } as Window
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab)
+    const before = window.location.href
+    createPortalSession.mockResolvedValue({ portalUrl: 'https://portal.example/session' })
+    getBillingStatus.mockResolvedValue(status({ manageable: true }))
+    renderPage()
+
+    fireEvent.click(await screen.findByText('Manage payment method and invoices'))
+    await waitFor(() => expect(open).toHaveBeenCalled())
+
+    expect(open.mock.calls[0][2]).toBeUndefined()
+    expect(tab.opener).toBeNull()
+    expect(window.location.href).toBe(before)
+    open.mockRestore()
+  })
 })
 
 describe('the checkout return', () => {
@@ -258,6 +277,29 @@ describe('the checkout return', () => {
 
     await waitFor(() => expect(toastError).toHaveBeenCalled())
     expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  // Only a refusal that cannot pass is terminal. A blip on the way to ConfirmCheckout still has a
+  // webhook behind it, so it must reach the poll rather than the "contact support" toast.
+  it('falls back to waiting on a confirm that failed for a reason that may pass', async () => {
+    confirmCheckout.mockRejectedValue(new ConnectError('unavailable', Code.Unavailable))
+    pending('cs_1')
+    renderPage()
+
+    await waitFor(() => expect(getBillingStatus.mock.calls.length).toBeGreaterThan(1))
+    expect(toastError).not.toHaveBeenCalled()
+  })
+
+  // The provider states the outcome in the query it returns with. Without reading it a declined
+  // card polls for 17.5s and is then told its payment is still confirming.
+  it('reports a declined card instead of polling for it', async () => {
+    window.history.replaceState({}, '', '/?status=failed')
+    pending('cs_1')
+    renderPage()
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(confirmCheckout).not.toHaveBeenCalled()
+    window.history.replaceState({}, '', '/')
   })
 
   // A provider that returns no session handle, or a checkout started before this shipped. The

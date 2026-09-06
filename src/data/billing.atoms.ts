@@ -7,23 +7,21 @@ import { isDemoSessionAtom } from '@/auth/demo'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { billingSignature } from '@/lib/billing'
+import { rpcErrorMessage } from '@/lib/rpc-error'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
-// The status and the org it answers for, together — an org switch must not leave the previous
-// org's quota on screen. `at` is what stops a dashboard left open all day from showing the quota it
-// had at breakfast.
+// The status and the org it answers for, together — an org switch must not leave the previous org's
+// quota on screen.
 type BillingResult = {
   orgId: string
   status: GetBillingStatusResponse | null
-  // Events recorded this period. Null means the meter has no answer for it — never metered, or not
-  // yet reached this period — which the proto's `counted` flag is what distinguishes. Kept null
-  // rather than 0 so no surface can render "0 of 500,000" for an org that has simply not been
-  // summed yet.
+  // Null means there is no number to draw: never metered, not yet counted this period, or the meter
+  // call failed. `meterError` separates that last one, which must not read as "not measured yet".
   usedEvents: number | null
+  meterError: boolean
   error: string | null
   // Unimplemented: the deployment has no billing service at all, which is a different answer from a
-  // call that failed. A retry can only ever fail the same way, so the surfaces drop instead of
-  // offering one.
+  // call that failed. A retry can only ever fail the same way, so the surfaces drop instead.
   unsupported: boolean
   at: number
 }
@@ -34,7 +32,7 @@ const billingResultAtom = atom<BillingResult | null>(null)
 const inFlightAtom = atom<{ id: number; orgId: string; promise: Promise<void> } | null>(null)
 let requestId = 0
 
-const EMPTY = { status: null, usedEvents: null, error: null, unsupported: false, loaded: false }
+const EMPTY = { status: null, usedEvents: null, meterError: false, error: null, unsupported: false, loaded: false }
 
 export const billingAtom = atom(get => {
   const org = get(activeOrgAtom)
@@ -43,14 +41,15 @@ export const billingAtom = atom(get => {
   return {
     status: result.status,
     usedEvents: result.usedEvents,
+    meterError: result.meterError,
     error: result.error,
     unsupported: result.unsupported,
     loaded: true,
   }
 })
 
-// The quota is billing's and the count is the meter's, so "X of Y" is two calls. They are made
-// together here because every surface that renders one renders the other.
+// The quota is billing's and the count is the meter's, so "X of Y" is two calls, made together
+// because every surface that renders one renders the other.
 //
 // The usage call carries a one-day range on purpose: `range` bounds the DAILY SERIES only and
 // `used_events` always covers the whole period, so this asks for the period total without dragging
@@ -82,16 +81,20 @@ export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?
               orgId: org.id,
               range: toProtoTimeRange({ from: new Date(now.getTime() - 24 * 60 * 60 * 1000), to: now }),
             })
-            .catch(() => null),
+            .catch(err => {
+              console.error('getUsage failed; the meter has no count to draw:', err)
+              return null
+            }),
         ])
         // `counted` is the proto's own answer to "is used_events a measurement of THIS period".
-        // Without it a just-rolled-over period reads as a real zero.
-        const usedEvents = usage?.counted ? Number(usage.usedEvents) : null
+        // Negative is refused for the same reason the usage page refuses it — not a number to show.
+        const usedEvents = usage?.counted && usage.usedEvents >= 0n ? Number(usage.usedEvents) : null
         if (fresh()) {
           set(billingResultAtom, {
             orgId: org.id,
             status,
             usedEvents,
+            meterError: usage === null,
             error: null,
             unsupported: false,
             at: Date.now(),
@@ -100,14 +103,21 @@ export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?
       } catch (err) {
         console.error('getBillingStatus failed:', err)
         const unsupported = err instanceof ConnectError && err.code === Code.Unimplemented
+        // A transient failure must not blank a status we already have: the past-due banner is the
+        // only in-app notice that a card was declined.
+        const prev = get(billingResultAtom)
+        const kept = prev?.orgId === org.id ? prev : null
         if (fresh()) {
           set(billingResultAtom, {
             orgId: org.id,
-            status: null,
-            usedEvents: null,
-            error: 'Failed to load billing',
+            status: kept?.status ?? null,
+            usedEvents: kept?.usedEvents ?? null,
+            meterError: kept?.meterError ?? false,
+            error: rpcErrorMessage(err, 'Failed to load billing'),
             unsupported,
-            at: 0,
+            // Cached only when the answer cannot change: a deployment with no billing service would
+            // otherwise re-ask on every window focus, forever.
+            at: unsupported ? Date.now() : 0,
           })
         }
       } finally {
@@ -122,9 +132,11 @@ export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?
   // A forced caller wants an answer newer than the one already in the air.
   if (inFlight?.orgId === org.id) return force ? inFlight.promise.then(start) : inFlight.promise
 
-  // A cached failure is not an answer, so it must not stop the next caller from retrying.
+  // A cached failure is not an answer, so it must not stop the next caller from retrying — unless
+  // the answer cannot change, which is what `unsupported` means.
   const cached = get(billingResultAtom)
-  if (!force && cached?.orgId === org.id && !cached.error && Date.now() - cached.at < MAX_AGE_MS) {
+  const usable = cached && (!cached.error || cached.unsupported)
+  if (!force && cached?.orgId === org.id && usable && Date.now() - cached.at < MAX_AGE_MS) {
     return Promise.resolve()
   }
   return start()
@@ -135,17 +147,15 @@ export const resetBillingAtom = atom(null, (_, set) => {
   set(inFlightAtom, null)
 })
 
-// Terminal refusals: the payment landed and pug will not be able to place it however long anyone
-// waits. Everything else — a network blip, an org the read could not resolve — is worth falling back
-// to the poll for, since the webhook is still coming.
+// Terminal refusals: pug will not be able to place this however long anyone waits. Everything else —
+// a network blip, a server without ConfirmCheckout — falls back to the poll, since the webhook is
+// still coming.
 const TERMINAL_CONFIRM_CODES = new Set([Code.PermissionDenied, Code.FailedPrecondition])
 
-// Asks the provider what the checkout did, rather than waiting for it to tell us. This is what
-// confirms a returning buyer in one round trip, and the only thing that works at all on a deployment
-// whose webhook URL is not reachable — where the poll below can never terminate.
-//
-// False is "not settled yet", not a failure: keep polling. A terminal refusal is rethrown, because
-// "this page will update shortly" is a lie for a payment that needs a person.
+// Asks the provider what the checkout did rather than waiting for it to tell us — the only thing
+// that works on a deployment whose webhook URL is not reachable, where the poll can never terminate.
+// False is "not settled yet", not a failure. A terminal refusal is rethrown, because "this page will
+// update shortly" is a lie for a payment that needs a person.
 export const confirmCheckoutAtom = atom(null, async (get, set, sessionId: string) => {
   const org = get(activeOrgAtom)
   if (!org || !sessionId || get(isDemoSessionAtom)) return false
@@ -165,8 +175,7 @@ const CHECKOUT_POLL_DELAYS_MS = [1500, 3000, 5000, 8000]
 
 // The customer is back before the webhook lands, so the page still reads "Free" — which looks
 // exactly like a payment that failed. `before` is the signature taken *before* checkout opened, so a
-// webhook that beat the customer home still reads as a change; a null signature is a failed load,
-// never one.
+// webhook that beat the customer home still reads as a change; a null signature is a failed load.
 export const pollBillingAfterCheckoutAtom = atom(null, async (get, set, before: string) => {
   const changed = () => {
     const now = billingSignature(get(billingAtom).status)
@@ -195,7 +204,9 @@ export const dismissedUsageBannerAtom = atom(
   get => {
     const customerId = get(customerIdAtom)
     const stored = get(dismissedStoreAtom)
-    return customerId && stored.customerId === customerId ? stored.byOrg : {}
+    // Storage is untrusted input: a stored value missing byOrg would throw on the lookup below.
+    if (!customerId || stored?.customerId !== customerId) return {}
+    return stored.byOrg ?? {}
   },
   (get, set, { orgId, key }: { orgId: string; key: string }) => {
     const customerId = get(customerIdAtom)

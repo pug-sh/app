@@ -25,8 +25,6 @@ const PlanList = ({
   plans: PlanOption[]
   currentSlug: string | undefined
   busySlug: string | null
-  // A live subscriber switches tiers in the provider's portal, where the card and billing date
-  // carry over. The catalog is informational then.
   readOnly: boolean
   onSelect: (plan: PlanOption) => void
 }) => (
@@ -37,10 +35,7 @@ const PlanList = ({
       // work is worse than no button, so nothing here re-derives it.
       const selectable = !readOnly && !current && plan.purchasable
       return (
-        <div
-          key={plan.slug}
-          className="flex items-center gap-4 border-b border-border/50 py-3 transition-colors last:border-b-0"
-        >
+        <div key={plan.slug} className="flex items-center gap-4 border-b border-border/50 py-3 last:border-b-0">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">{plan.displayName}</span>

@@ -1,6 +1,6 @@
 import type { UsageDay } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 import { getIndexedColor } from '@/lib/event-colors'
-import { tsToDate } from '@/lib/timestamp'
+import { tsToDate, validDate } from '@/lib/timestamp'
 import type { ChartPoint } from '../../insights/charts/types'
 
 export const DAY_MS = 24 * 60 * 60 * 1000
@@ -8,15 +8,6 @@ export const DAY_MS = 24 * 60 * 60 * 1000
 // Usage is UTC end to end. date-presets.ts anchors on local midnight, so none of it is reusable
 // here — west of UTC it would date every cell a day early, east of UTC a day late.
 const floorUtcDay = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
-
-// protobuf-es hands back an Invalid Date for an out-of-range int64 rather than throwing, so
-// tsToDate's own try/catch never fires and a bare null check passes it straight through. It then
-// throws RangeError inside Intl.DateTimeFormat.format() — during render, where it takes out the
-// whole routed page rather than one label. Every Timestamp this feature reads goes through here.
-export const validDate = (d: Date | null) => {
-  if (!d || Number.isNaN(d.getTime())) return null
-  return d
-}
 
 // Half-open [from, to), matching the server. `to` is the midnight after today, so today is in.
 export const lastNUtcDays = (days: RangeDays) => {
