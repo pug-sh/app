@@ -1,6 +1,7 @@
 import { createClient } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { publicTransportAtom, transportAtom } from '@/network/transport'
+import { BillingService } from './genproto/dashboard/billing/v1/billing_pb'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
@@ -26,6 +27,9 @@ export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(tra
 // Org-scoped despite returning per-project cells: usage spans every project the org owns, so
 // GetUsage takes an orgId in the message and no x-project-id header.
 export const usageRPCAtom = atom(get => createClient(UsageService, get(transportAtom)))
+// Org-scoped like usage: an entitlement belongs to the org, and the checkout it can start spends
+// the org's money — so orgId is in the message and there is no x-project-id header.
+export const billingRPCAtom = atom(get => createClient(BillingService, get(transportAtom)))
 
 // Dashboard — project-scoped (JWT auth + x-project-id header from projectHeaderAtom)
 export const dashboardsRPCAtom = atom(get => createClient(DashboardsService, get(transportAtom)))

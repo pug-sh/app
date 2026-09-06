@@ -1,0 +1,158 @@
+import { create } from '@bufbuild/protobuf'
+import { createStore } from 'jotai'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { GetBillingStatusResponseSchema } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
+
+// The RPC atoms are faked, not the transport: a hand-held call is the only way to decide when a
+// response resolves, which is what these tests are about.
+const { getBillingStatus, getUsage } = vi.hoisted(() => ({
+  getBillingStatus: vi.fn(),
+  getUsage: vi.fn(),
+}))
+
+vi.mock('@/api/rpc', async () => {
+  const { atom } = await import('jotai')
+  return { billingRPCAtom: atom({ getBillingStatus }), usageRPCAtom: atom({ getUsage }) }
+})
+
+const { activeOrgAtom } = await import('@/data/workspace.atoms')
+const { billingAtom, loadBillingAtom, resetBillingAtom } = await import('./billing.atoms')
+
+const orgA = create(OrgSchema, { id: 'org-a', displayName: 'A' })
+const orgB = create(OrgSchema, { id: 'org-b', displayName: 'B' })
+
+const status = (slug: string) =>
+  create(GetBillingStatusResponseSchema, { billingEnabled: true, plan: { slug, displayName: slug } })
+
+const usage = (usedEvents: number, counted: boolean) =>
+  create(GetUsageResponseSchema, { usedEvents: BigInt(usedEvents), counted })
+
+const newStore = (org = orgA) => {
+  const store = createStore()
+  store.set(activeOrgAtom, org)
+  return store
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  getBillingStatus.mockResolvedValue(status('growth'))
+  getUsage.mockResolvedValue(usage(1_000, true))
+})
+
+describe('loadBillingAtom', () => {
+  it('reports the plan and the counted total together', async () => {
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    const result = store.get(billingAtom)
+    expect(result.loaded).toBe(true)
+    expect(result.status?.plan?.slug).toBe('growth')
+    expect(result.usedEvents).toBe(1_000)
+  })
+
+  // `counted` is the proto's own answer to "is used_events a measurement of THIS period". Without
+  // reading it a just-rolled-over period reads as a real zero, and the page renders "0 of 500,000"
+  // for an org nobody has summed yet.
+  it('has no total when the meter has not counted this period', async () => {
+    getUsage.mockResolvedValue(usage(0, false))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).usedEvents).toBeNull()
+  })
+
+  // The meter is the optional half: a usage failure must still leave the plan and the quota on
+  // screen, because those are what the page is for.
+  it('keeps the plan when the meter call fails', async () => {
+    getUsage.mockRejectedValue(new Error('boom'))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+
+    const result = store.get(billingAtom)
+    expect(result.status?.plan?.slug).toBe('growth')
+    expect(result.usedEvents).toBeNull()
+    expect(result.error).toBeNull()
+  })
+
+  // Meter, banner and settings tab can all mount in one commit.
+  it('dedupes concurrent callers into one request', async () => {
+    const store = newStore()
+    await Promise.all([store.set(loadBillingAtom), store.set(loadBillingAtom), store.set(loadBillingAtom)])
+
+    expect(getBillingStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it('serves a fresh answer from cache and refetches when forced', async () => {
+    const store = newStore()
+    await store.set(loadBillingAtom)
+    await store.set(loadBillingAtom)
+    expect(getBillingStatus).toHaveBeenCalledTimes(1)
+
+    await store.set(loadBillingAtom, { force: true })
+    expect(getBillingStatus).toHaveBeenCalledTimes(2)
+  })
+
+  // A cached failure is not an answer, so it must not stop the next caller retrying.
+  it('retries after a failure without being forced', async () => {
+    getBillingStatus.mockRejectedValueOnce(new Error('boom'))
+    const store = newStore()
+    await store.set(loadBillingAtom)
+    expect(store.get(billingAtom).error).toBe('Failed to load billing')
+
+    getBillingStatus.mockResolvedValue(status('scale'))
+    await store.set(loadBillingAtom)
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('scale')
+  })
+
+  // An org switch must not leave the previous org's quota on screen — not even for the render
+  // between the switch and the new answer.
+  it('reports nothing for an org it has not answered for', async () => {
+    const store = newStore()
+    await store.set(loadBillingAtom)
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('growth')
+
+    store.set(activeOrgAtom, orgB)
+    const result = store.get(billingAtom)
+    expect(result.loaded).toBe(false)
+    expect(result.status).toBeNull()
+  })
+
+  // The in-flight request is keyed by REQUEST, not by org: switching away and back leaves an older
+  // request in the air whose answer would otherwise overwrite the newer one.
+  it('does not let a superseded request paint over a newer one', async () => {
+    const store = newStore()
+    let settleA!: (v: unknown) => void
+    getBillingStatus.mockImplementationOnce(() => new Promise(res => (settleA = res)))
+
+    const first = store.set(loadBillingAtom)
+    store.set(activeOrgAtom, orgB)
+    getBillingStatus.mockResolvedValue(status('scale'))
+    await store.set(loadBillingAtom)
+
+    settleA(status('growth'))
+    await first
+
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('scale')
+  })
+
+  it('asks for nothing without an org', async () => {
+    const store = createStore()
+    await store.set(loadBillingAtom)
+    expect(getBillingStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe('resetBillingAtom', () => {
+  // Sign-out: the next account landing on the same shared org is exactly when leaving the previous
+  // person's numbers on screen would be worst.
+  it('drops the stored answer', async () => {
+    const store = newStore()
+    await store.set(loadBillingAtom)
+    expect(store.get(billingAtom).loaded).toBe(true)
+
+    store.set(resetBillingAtom)
+    expect(store.get(billingAtom).loaded).toBe(false)
+  })
+})

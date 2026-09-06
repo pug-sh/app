@@ -5,6 +5,7 @@ import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
 import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
+import { resetBillingAtom } from '@/data/billing.atoms'
 import { resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
@@ -274,4 +275,8 @@ export const signOutAtom = atom(null, async (get, set) => {
   clearMe(set)
   set(isDemoSessionAtom, false)
   set(resetWorkspaceAtom)
+  // The quota is org-scoped and the atom keys on the active org, so this only matters when the next
+  // account lands on the SAME org — a shared workspace, which is exactly when leaving the previous
+  // person's numbers on screen would be worst.
+  set(resetBillingAtom)
 })

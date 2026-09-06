@@ -30,6 +30,7 @@ export type Resource =
   | 'activity'
   | 'profile'
   | 'usage'
+  | 'billing'
 
 // Mirror of authz.Action (resources.go).
 const ACTIONS = ['create', 'read', 'update', 'delete'] as const
@@ -67,6 +68,10 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     // exposes GetUsage alone. Mirrors the backend registry, which puts it on the viewer floor.
     // Nothing in the UI reads this grant yet; the Usage tab renders for every role.
     usage: ['read'],
+    // The read sits beside usage on the viewer floor for the same reason: the person who notices
+    // the quota banner is rarely the admin. `create` is admin-only below — it is what starts a
+    // checkout and what opens the payments portal.
+    billing: ['read'],
   },
   // Inherits VIEWER's reads (org/member/project + analytics) via INHERITS; adds full CRUD on
   // the analytics objects.
@@ -86,6 +91,10 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     // here rather than with MEMBER (read comes from VIEWER via INHERITS). Not `'all'`: the
     // backend defines no update action for a key — it is created and revoked, never edited.
     api_key: ['create', 'delete'],
+    // Starting a checkout is spending money and the portal reaches invoices. Not `'all'`: the
+    // backend defines no update or delete on billing — an entitlement is written by `pug billing`,
+    // never over the wire.
+    billing: ['create'],
   },
 }
 

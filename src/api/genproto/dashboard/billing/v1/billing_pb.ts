@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/billing/v1/billing.proto.
  */
 export const file_dashboard_billing_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIrsEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSEgoKbWFuYWdlYWJsZRgMIAEoCCJTChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAEiNQodQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2USFAoMY2hlY2tvdXRfdXJsGAEgASgJIjUKGkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQASIxChtDcmVhdGVQb3J0YWxTZXNzaW9uUmVzcG9uc2USEgoKcG9ydGFsX3VybBgBIAEoCSqAAQoNQmlsbGluZ1N0YXR1cxIeChpCSUxMSU5HX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF0JJTExJTkdfU1RBVFVTX1RSSUFMSU5HEAESGQoVQklMTElOR19TVEFUVVNfQUNUSVZFEAISFwoTQklMTElOR19TVEFUVVNfRlJFRRADKv8BChJTdWJzY3JpcHRpb25TdGF0dXMSIwofU1VCU0NSSVBUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfQUNUSVZFEAESIAocU1VCU0NSSVBUSU9OX1NUQVRVU19QQVNUX0RVRRACEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfUEFVU0VEEAMSIQodU1VCU0NSSVBUSU9OX1NUQVRVU19DQU5DRUxMRUQQBBIfChtTVUJTQ1JJUFRJT05fU1RBVFVTX0VYUElSRUQQBRIeChpTVUJTQ1JJUFRJT05fU1RBVFVTX0ZBSUxFRBAGMogDCg5CaWxsaW5nU2VydmljZRJzChBHZXRCaWxsaW5nU3RhdHVzEi0uZGFzaGJvYXJkLmJpbGxpbmcudjEuR2V0QmlsbGluZ1N0YXR1c1JlcXVlc3QaLi5kYXNoYm9hcmQuYmlsbGluZy52MS5HZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2UiABKCAQoVQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uEjIuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVxdWVzdBozLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0U2Vzc2lvblJlc3BvbnNlIgASfAoTQ3JlYXRlUG9ydGFsU2Vzc2lvbhIwLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0GjEuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlUG9ydGFsU2Vzc2lvblJlc3BvbnNlIgBCSVpHZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvYmlsbGluZy92MTtiaWxsaW5ndjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
+  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIrsEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSEgoKbWFuYWdlYWJsZRgMIAEoCCJTChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAEiNQodQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2USFAoMY2hlY2tvdXRfdXJsGAEgASgJIjUKGkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQASIxChtDcmVhdGVQb3J0YWxTZXNzaW9uUmVzcG9uc2USEgoKcG9ydGFsX3VybBgBIAEoCSIrChBMaXN0UGxhbnNSZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQASK/AQoKUGxhbk9wdGlvbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJEjQKD2luY2x1ZGVkX2V2ZW50cxgFIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhMKC3B1cmNoYXNhYmxlGAYgASgIIkQKEUxpc3RQbGFuc1Jlc3BvbnNlEi8KBXBsYW5zGAEgAygLMiAuZGFzaGJvYXJkLmJpbGxpbmcudjEuUGxhbk9wdGlvbiqAAQoNQmlsbGluZ1N0YXR1cxIeChpCSUxMSU5HX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF0JJTExJTkdfU1RBVFVTX1RSSUFMSU5HEAESGQoVQklMTElOR19TVEFUVVNfQUNUSVZFEAISFwoTQklMTElOR19TVEFUVVNfRlJFRRADKv8BChJTdWJzY3JpcHRpb25TdGF0dXMSIwofU1VCU0NSSVBUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfQUNUSVZFEAESIAocU1VCU0NSSVBUSU9OX1NUQVRVU19QQVNUX0RVRRACEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfUEFVU0VEEAMSIQodU1VCU0NSSVBUSU9OX1NUQVRVU19DQU5DRUxMRUQQBBIfChtTVUJTQ1JJUFRJT05fU1RBVFVTX0VYUElSRUQQBRIeChpTVUJTQ1JJUFRJT05fU1RBVFVTX0ZBSUxFRBAGMugDCg5CaWxsaW5nU2VydmljZRJzChBHZXRCaWxsaW5nU3RhdHVzEi0uZGFzaGJvYXJkLmJpbGxpbmcudjEuR2V0QmlsbGluZ1N0YXR1c1JlcXVlc3QaLi5kYXNoYm9hcmQuYmlsbGluZy52MS5HZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2UiABKCAQoVQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uEjIuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVxdWVzdBozLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0U2Vzc2lvblJlc3BvbnNlIgASfAoTQ3JlYXRlUG9ydGFsU2Vzc2lvbhIwLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZVBvcnRhbFNlc3Npb25SZXF1ZXN0GjEuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlUG9ydGFsU2Vzc2lvblJlc3BvbnNlIgASXgoJTGlzdFBsYW5zEiYuZGFzaGJvYXJkLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVxdWVzdBonLmRhc2hib2FyZC5iaWxsaW5nLnYxLkxpc3RQbGFuc1Jlc3BvbnNlIgBCSVpHZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9kYXNoYm9hcmQvYmlsbGluZy92MTtiaWxsaW5ndjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
 
 /**
  * @generated from message dashboard.billing.v1.GetBillingStatusRequest
@@ -283,6 +283,103 @@ export const CreatePortalSessionResponseSchema: GenMessage<CreatePortalSessionRe
   messageDesc(file_dashboard_billing_v1_billing, 6);
 
 /**
+ * @generated from message dashboard.billing.v1.ListPlansRequest
+ */
+export type ListPlansRequest = Message<"dashboard.billing.v1.ListPlansRequest"> & {
+  /**
+   * Scoped to an org because purchasability is: the custom tier is only
+   * purchasable by the org whose row records its product.
+   *
+   * @generated from field: string org_id = 1;
+   */
+  orgId: string;
+};
+
+/**
+ * Describes the message dashboard.billing.v1.ListPlansRequest.
+ * Use `create(ListPlansRequestSchema)` to create a new message.
+ */
+export const ListPlansRequestSchema: GenMessage<ListPlansRequest> = /*@__PURE__*/
+  messageDesc(file_dashboard_billing_v1_billing, 7);
+
+/**
+ * PlanOption is a tier as this deployment sells it. Distinct from Plan, which is
+ * a tier as ONE ORG HOLDS it, overrides applied -- a negotiated quota and display
+ * name never appear here.
+ *
+ * @generated from message dashboard.billing.v1.PlanOption
+ */
+export type PlanOption = Message<"dashboard.billing.v1.PlanOption"> & {
+  /**
+   * @generated from field: string slug = 1;
+   */
+  slug: string;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+
+  /**
+   * The tier's list price, in minor units of `currency`. ABSENT is the custom
+   * tier, whose price lives in the payments provider; that is not a price of
+   * zero.
+   *
+   * @generated from field: google.protobuf.Int64Value price_cents = 3;
+   */
+  priceCents?: bigint | undefined;
+
+  /**
+   * ISO 4217.
+   *
+   * @generated from field: string currency = 4;
+   */
+  currency: string;
+
+  /**
+   * Events the tier includes. ABSENT is the custom tier, whose quota comes from
+   * the org's own row. Never render its absence as 0.
+   *
+   * @generated from field: google.protobuf.Int64Value included_events = 5;
+   */
+  includedEvents?: bigint | undefined;
+
+  /**
+   * Whether a checkout for THIS tier would open. Same helper
+   * CreateCheckoutSession refuses on, so a button that cannot work is
+   * impossible rather than unlikely -- and it is per tier, because a deployment
+   * can configure a product for some tiers and not others.
+   *
+   * @generated from field: bool purchasable = 6;
+   */
+  purchasable: boolean;
+};
+
+/**
+ * Describes the message dashboard.billing.v1.PlanOption.
+ * Use `create(PlanOptionSchema)` to create a new message.
+ */
+export const PlanOptionSchema: GenMessage<PlanOption> = /*@__PURE__*/
+  messageDesc(file_dashboard_billing_v1_billing, 8);
+
+/**
+ * @generated from message dashboard.billing.v1.ListPlansResponse
+ */
+export type ListPlansResponse = Message<"dashboard.billing.v1.ListPlansResponse"> & {
+  /**
+   * @generated from field: repeated dashboard.billing.v1.PlanOption plans = 1;
+   */
+  plans: PlanOption[];
+};
+
+/**
+ * Describes the message dashboard.billing.v1.ListPlansResponse.
+ * Use `create(ListPlansResponseSchema)` to create a new message.
+ */
+export const ListPlansResponseSchema: GenMessage<ListPlansResponse> = /*@__PURE__*/
+  messageDesc(file_dashboard_billing_v1_billing, 9);
+
+/**
  * BillingStatus is derived from the clock on every read, never stored. The
  * states a payments provider reports — past due, cancelled — cannot be derived
  * and do not exist yet.
@@ -442,6 +539,26 @@ export const BillingService: GenService<{
     methodKind: "unary";
     input: typeof CreatePortalSessionRequestSchema;
     output: typeof CreatePortalSessionResponseSchema;
+  },
+  /**
+   * The tiers this deployment sells, in display order. On the viewer floor
+   * beside GetBillingStatus: a price is a marketing number, and the person
+   * reading the quota banner is the one who wants to know what the next tier
+   * costs — they simply cannot buy it.
+   *
+   * It exists because the catalog is Go, not rows, so the dashboard has no other
+   * honest way to name a tier. Mirroring the catalog in the frontend would put a
+   * second authority on what a plan costs, which is the mistake section 4
+   * exists to prevent, one layer up.
+   *
+   * Never returns a product id, and never the floors -- nobody buys Free.
+   *
+   * @generated from rpc dashboard.billing.v1.BillingService.ListPlans
+   */
+  listPlans: {
+    methodKind: "unary";
+    input: typeof ListPlansRequestSchema;
+    output: typeof ListPlansResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dashboard_billing_v1_billing, 0);
