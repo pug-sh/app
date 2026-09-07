@@ -60,6 +60,7 @@ const USER_FLOW_PARAM = 'uf'
 const TOP_K_PARAM = 'tk'
 const MAP_PARAM = 'mp'
 const INCLUDE_BOTS_PARAM = 'bots'
+const INCLUDE_COOKIELESS_PARAM = 'cookieless'
 
 export const BREAKDOWN_MAX = 5
 export const BREAKDOWN_RESPONSE_LIMIT = 25
@@ -299,6 +300,7 @@ export const readFilterQueryParams = (search = window.location.search) => {
     userFlowConfig,
     topK,
     map,
+    includeCookieless: params.get(INCLUDE_COOKIELESS_PARAM) === '1',
     parseWarning,
   }
 }
@@ -314,6 +316,7 @@ export const writeFilterQueryParams = (
     userFlowConfig?: UserFlowConfig
     topK?: TopKState
     map?: MapState
+    includeCookieless?: boolean
   },
 ) => {
   const url = new URL(window.location.href)
@@ -336,6 +339,8 @@ export const writeFilterQueryParams = (
   )
   setOrDelete(url, TOP_K_PARAM, opts?.topK ? JSON.stringify(opts.topK) : undefined)
   setOrDelete(url, MAP_PARAM, opts?.map ? JSON.stringify(opts.map) : undefined)
+  // Opt-in only, same rule as `bots` below: absent and `cookieless=0` both mean excluded.
+  setOrDelete(url, INCLUDE_COOKIELESS_PARAM, opts?.includeCookieless ? '1' : undefined)
   setTimeGranularityParams(url, opts)
 
   replaceUrlIfChanged(url)
