@@ -31,6 +31,7 @@ export type InsightEditorState = {
   userFlowConfig: UserFlowConfig
   topK: TopKState
   map: MapState
+  includeCookieless: boolean
 }
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
@@ -118,6 +119,7 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
     userFlowConfig: parseUserFlowConfig(spec?.userFlow),
     topK: parseTopKFromSpec(spec),
     map: parseMapFromSpec(spec),
+    includeCookieless: spec?.includeCookieless ?? false,
   }
 }
 
@@ -129,6 +131,7 @@ export const buildInsightSpec = ({
   userFlowConfig,
   topK,
   map,
+  includeCookieless,
 }: {
   insightType: InsightType
   validEntries: EventFilterEntry[]
@@ -141,6 +144,9 @@ export const buildInsightSpec = ({
   userFlowConfig: UserFlowConfig
   topK?: TopKState
   map?: MapState
+  // Required for the same reason as userFlowConfig: an omitted flag reads as "exclude", which would
+  // silently drop a saved tile's opt-in the next time the editor rebuilt its spec.
+  includeCookieless: boolean
 }) => {
   const filterGroups =
     propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : []
@@ -153,6 +159,7 @@ export const buildInsightSpec = ({
       topK: buildTopKQuery(topK ?? DEFAULT_TOP_K, validEntries[0]),
       filterGroups,
       filterGroupsOperator: LogicalOperator.AND,
+      includeCookieless,
     })
   }
 
@@ -164,6 +171,7 @@ export const buildInsightSpec = ({
       map: buildMapQuery(map ?? DEFAULT_MAP, validEntries[0]),
       filterGroups,
       filterGroupsOperator: LogicalOperator.AND,
+      includeCookieless,
     })
   }
 
@@ -175,6 +183,7 @@ export const buildInsightSpec = ({
       userFlow: buildUserFlowQuery(userFlowConfig),
       filterGroups,
       filterGroupsOperator: LogicalOperator.AND,
+      includeCookieless,
     })
   }
 
@@ -196,6 +205,7 @@ export const buildInsightSpec = ({
     breakdownLimit: breakdowns.length > 0 ? BREAKDOWN_RESPONSE_LIMIT : 0,
     filterGroups,
     filterGroupsOperator: LogicalOperator.AND,
+    includeCookieless,
     includeStepTiming: false,
   })
 }
