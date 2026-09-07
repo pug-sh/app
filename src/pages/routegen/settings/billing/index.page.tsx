@@ -147,7 +147,7 @@ const Billing = () => {
   }, [orgId, enabled, canBrowsePlans, billingRPC, planAttempt, planKey])
 
   const confirmCheckout = useCallback(
-    async (before: string, sessionId: string) => {
+    async (org: string, before: string, sessionId: string) => {
       try {
         if (await confirmWithProvider(sessionId)) return
       } catch (err) {
@@ -155,7 +155,7 @@ const Billing = () => {
         toastRPCError(err, "We couldn't confirm your payment. Please contact support.")
         return
       }
-      if (!(await pollAfterCheckout(before)))
+      if (!(await pollAfterCheckout({ orgId: org, before })))
         toast.info('Still confirming your payment. This page will update shortly.')
     },
     [confirmWithProvider, pollAfterCheckout],
@@ -183,7 +183,7 @@ const Billing = () => {
       toast.error('Your payment did not go through. Your plan is unchanged.')
       return
     }
-    confirmCheckout(pending.signature, pending.sessionId)
+    confirmCheckout(orgId, pending.signature, pending.sessionId)
   }, [confirmCheckout, search, orgId])
 
   const handleSelectPlan = async (plan: PlanOption) => {
@@ -200,7 +200,7 @@ const Billing = () => {
       } else if (outcome.status === 'closed') {
         clearCheckoutPending()
       } else if (outcome.status === 'redirect') {
-        await confirmCheckout(planKey, resp.sessionId)
+        await confirmCheckout(orgId, planKey, resp.sessionId)
       }
     } catch (err) {
       clearCheckoutPending()

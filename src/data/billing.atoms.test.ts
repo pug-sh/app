@@ -19,7 +19,7 @@ vi.mock('@/api/rpc', async () => {
 })
 
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
-const { billingAtom, loadBillingAtom, resetBillingAtom } = await import('./billing.atoms')
+const { billingAtom, loadBillingAtom, pollBillingAfterCheckoutAtom, resetBillingAtom } = await import('./billing.atoms')
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'A' })
 const orgB = create(OrgSchema, { id: 'org-b', displayName: 'B' })
@@ -254,6 +254,21 @@ describe('loadBillingAtom', () => {
     const store = createStore()
     await store.set(loadBillingAtom)
     expect(getBillingStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe('pollBillingAfterCheckoutAtom', () => {
+  // The baseline is the plan the buyer had in the org they paid in. Another org's plan is simply a
+  // different plan, so reading it as the purchase landing tells someone their payment settled when
+  // nothing about it has.
+  it('does not read another org as the checkout landing', async () => {
+    const store = newStore()
+    store.set(activeOrgAtom, orgB)
+    getBillingStatus.mockResolvedValue(status('enterprise'))
+
+    const landed = await store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before: 'growth' })
+
+    expect(landed).toBe(false)
   })
 })
 

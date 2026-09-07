@@ -183,11 +183,19 @@ export const confirmCheckoutAtom = atom(null, async (get, set, sessionId: string
 
 const CHECKOUT_POLL_DELAYS_MS = [1500, 3000, 5000, 8000]
 
+// The signature taken *before* checkout opened, and the org it was taken in — the same pairing the
+// pending record carries, for the same reason.
+type PollAfterCheckout = { orgId: string; before: string }
+
 // The customer is back before the webhook lands, so the page still reads "Free" — which looks
 // exactly like a payment that failed. `before` is the signature taken *before* checkout opened, so a
 // webhook that beat the customer home still reads as a change; a null signature is a failed load.
-export const pollBillingAfterCheckoutAtom = atom(null, async (get, set, before: string) => {
+export const pollBillingAfterCheckoutAtom = atom(null, async (get, set, { orgId, before }: PollAfterCheckout) => {
+  // The baseline belongs to the org the buyer paid in, so the comparison does too: another org's
+  // plan is simply a different plan, never this checkout landing.
+  const sameOrg = () => get(activeOrgAtom)?.id === orgId
   const changed = () => {
+    if (!sameOrg()) return false
     const now = billingSignature(get(billingAtom).status)
     return now !== null && now !== before
   }
@@ -196,6 +204,9 @@ export const pollBillingAfterCheckoutAtom = atom(null, async (get, set, before: 
   if (changed()) return true
 
   for (const delay of CHECKOUT_POLL_DELAYS_MS) {
+    // Nothing this poll can read answers for the org they paid in any more, so waiting out the
+    // ladder only delays the "still confirming" it has to end on.
+    if (!sameOrg()) return false
     await new Promise(resolve => setTimeout(resolve, delay))
     await set(loadBillingAtom, { force: true })
     if (changed()) return true
