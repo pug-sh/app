@@ -27,9 +27,8 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const can = useCan()
   const billing = useBilling()
-  // Kept on a failed load too, or the one route that could explain the failure becomes unreachable —
-  // except when the deployment has no billing service at all, where the retry behind that route can
-  // only ever fail the same way.
+  // Kept on a failed load, or the route that explains the failure is unreachable — unless there is
+  // no billing service, where the retry behind it can only fail the same way.
   const showBilling = (!!billing.error && !billing.unsupported) || !!billing.status?.billingEnabled
 
   // Settings is hidden in the read-only demo — it exposes the shared demo account's email/password
@@ -45,9 +44,8 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const currentTab = location.match(/\/settings\/([^/]+)/)?.[1]
   const activeTab = SETTINGS_TABS.find(tab => tab.path === currentTab) ?? SETTINGS_TABS[0]
 
-  // Self-hosted deployments have no billing at all, so the tab is dropped rather than shown empty —
-  // but never while it is the tab being viewed, or a fresh load of /settings/billing draws its bar
-  // with nothing highlighted until the status lands.
+  // Dropped rather than shown empty where billing is off — but never while it is the tab being
+  // viewed, or a fresh load draws the bar with nothing highlighted.
   const tabs = SETTINGS_TABS.filter(
     tab => tab.path !== 'billing' || activeTab.path === 'billing' || (showBilling && can('read', 'billing')),
   )

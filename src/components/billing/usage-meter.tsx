@@ -25,8 +25,7 @@ const UsageMeter = ({ href }: { href: string }) => {
         <SidebarMenuButton
           size="lg"
           render={<Link href={href} />}
-          // The tooltip portals to document.body, so it carries its own marker — the one on the
-          // button below cannot reach it.
+          // Portals to document.body, out of reach of the marker on the button below.
           tooltip={{
             children: `${formatEvents(usage.used)} of ${formatEvents(usage.included)} events`,
             render: <div data-pug-no-capture />,
@@ -35,8 +34,7 @@ const UsageMeter = ({ href }: { href: string }) => {
           // Autocapture would otherwise file every click under this org's own usage numbers.
           data-pug-no-capture
           onClick={() => {
-            // On mobile the sidebar is a sheet over the page, so a click that commits a page
-            // dismisses it — same as every nav link above.
+            // On mobile the sidebar is a sheet, so committing a page dismisses it.
             setOpenMobile(false)
             trackFeature({ featureId: 'billing.meter', featureName: 'Sidebar usage meter' })
           }}

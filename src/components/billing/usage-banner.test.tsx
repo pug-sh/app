@@ -43,8 +43,7 @@ const status = (extra: StatusFields = {}) =>
 const renderBanner = (role = OrgRole.ADMIN) => {
   const store = createStore()
   store.set(activeOrgAtom, create(OrgSchema, { id: 'org-a', displayName: 'Org A', role }))
-  // Dismissal is stamped with the customer, so one browser outliving one account does not carry a
-  // dismissal across sign-ins.
+  // Dismissals are stamped with the customer, so they never carry across sign-ins.
   store.set(jwtAtom, jwtFor('cust-1'))
   const view = render(
     <Provider store={store}>
@@ -54,10 +53,8 @@ const renderBanner = (role = OrgRole.ADMIN) => {
   return { ...view, store }
 }
 
-// Every "stays quiet" assertion below needs the answer to have LANDED, not merely to have been
-// asked for. Waiting on the call alone passes while the response is still in flight and the banner
-// has had no chance to render, which makes the assertion vacuous — the version of this file that
-// waited on the mock could not tell a working guard from a missing one.
+// Every "stays quiet" assertion needs the answer to have LANDED. Waiting on the call alone passes
+// while the response is in flight, which cannot tell a working guard from a missing one.
 const settled = async (store: ReturnType<typeof createStore>) => {
   await vi.waitFor(() => expect(store.get(billingAtom).loaded).toBe(true))
 }
@@ -83,18 +80,15 @@ describe('the over-quota banner', () => {
     expect(await screen.findByText(/You've used 92% of the 500,000 events/)).toBeTruthy()
   })
 
-  // Nothing is enforced anywhere in this system, so a banner that only said "over your limit" would
-  // read as an outage the customer is already having.
+  // Nothing is enforced, so "over your limit" alone reads as an outage they are already having.
   it('says nothing is being dropped when over', async () => {
     getUsage.mockResolvedValue(used(600_000))
     renderBanner()
     expect(await screen.findByText(/Nothing is being dropped/)).toBeTruthy()
   })
 
-  // The card failed and the plan did not. This one outranks the quota, message AND tone: a banner
-  // reading "your payment failed" in the amber of a soft warning understates the only thing here
-  // that needs acting on. The usage is deliberately in the caution band, which is the one
-  // combination where the two tones differ.
+  // Outranks the quota in message AND tone: "your payment failed" in a soft amber understates the
+  // only thing needing action. Usage sits in the caution band, where the two tones differ.
   it('reports a failed payment ahead of the quota, in its own tone', async () => {
     getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
     getUsage.mockResolvedValue(used(460_000))
@@ -106,9 +100,8 @@ describe('the over-quota banner', () => {
     expect(message.className).not.toContain('caution')
   })
 
-  // Billing off is the self-hosted shape, and the server omits the quota with it — so the guard is
-  // asserted against a response that carries one anyway, which is the only way to see the flag
-  // being read rather than the absent quota doing the work.
+  // The quota is present anyway, which is the only way to see the flag read rather than the
+  // absent quota doing the work.
   it('stays quiet on a deployment with billing off', async () => {
     getBillingStatus.mockResolvedValue(
       create(GetBillingStatusResponseSchema, { billingEnabled: false, includedEvents: 500_000n }),
@@ -119,8 +112,7 @@ describe('the over-quota banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // The demo signs everyone in as a shared viewer of someone else's org. Their quota is not the
-  // visitor's business, and there is nothing they could do about it.
+  // The demo is a shared viewer of someone else's org, whose quota is not the visitor's business.
   it('stays quiet in the demo', async () => {
     getUsage.mockResolvedValue(used(600_000))
     const store = createStore()
@@ -148,8 +140,7 @@ describe('the over-quota banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // Crossing from "nearly out" to "over" is new information, so it earns a fresh banner even after
-  // the caution one was dismissed.
+  // Crossing to "over" is new information, so it earns a banner past the dismissed caution.
   it('comes back when the tone worsens', async () => {
     getUsage.mockResolvedValue(used(460_000))
     const { unmount } = renderBanner()

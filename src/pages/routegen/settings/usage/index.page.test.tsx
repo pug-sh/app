@@ -360,12 +360,10 @@ describe('Usage page — refusing to assert a zero', () => {
     expect(screen.queryByText('Unknown')).toBeNull()
   })
 
-  // usage.proto is explicit about this third state: `counted` false means the meter has not reached
-  // this period, so used_events is a placeholder zero carrying the previous
-  // period's stamp — "render it as computing rather than as a total". It happens every 1st of the
-  // month, and unboundedly if the meter stops.
-  // The stamp sits INSIDE the period on purpose: comparing usage_computed_at against period_start —
-  // the guess this replaced — reads that as a real total and renders the placeholder zero.
+  // `counted` false is a placeholder zero carrying the previous period's stamp, which usage.proto
+  // says to render as computing. Happens every 1st of the month, and unboundedly if the meter stops.
+  // The stamp sits INSIDE the period, where the usage_computed_at comparison this replaced reads a
+  // placeholder zero as a real total.
   it('renders a period the meter has not reached as computing, not as zero', async () => {
     getUsage.mockResolvedValueOnce(
       usage([], {
@@ -384,8 +382,8 @@ describe('Usage page — refusing to assert a zero', () => {
     expect(screen.queryByText('0')).toBeNull()
   })
 
-  // The inverse, and the other half of why the flag is read rather than derived: the meter can run
-  // mid-period against a stamp that predates it, which the old comparison called "computing".
+  // The inverse: the meter can run mid-period against an older stamp, which that comparison called
+  // "computing".
   it('renders a counted total even when the stamp predates the period', async () => {
     getUsage.mockResolvedValueOnce(
       usage([], {

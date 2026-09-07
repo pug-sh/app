@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle, FolderPlus } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
-import { Route, Switch, useLocation } from 'wouter'
+import { Route, Switch, useLocation, useSearch } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
@@ -106,6 +106,7 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
 // navigation off '/', and the bug only appears when they run together.
 export const ProjectRedirect = () => {
   const [location, navigate] = useLocation()
+  const search = useSearch()
   // Waits for activeProjectAtom rather than falling back to projects[0] itself. This route is the
   // one place the URL names no project, so App's bootstrap always has a pick coming — and a second
   // pick here doesn't just duplicate that one, it beats it: both run off the render where the list
@@ -117,16 +118,13 @@ export const ProjectRedirect = () => {
 
   useEffect(() => {
     if (project) {
-      // Keep the path the user asked for and only supply the project. The server
-      // builds the post-checkout return URL with no project to put in it, so
-      // '/settings/billing' arrives here and would otherwise land on overview —
-      // and the billing page is the only thing that calls ConfirmCheckout.
-      // Anything already under /p/ has been through here and has no route, so it
-      // falls back to overview rather than nesting a second prefix forever.
-      const rest = location === '/' || location.startsWith('/p/') ? '/overview' : location
+      // The post-checkout return URL carries no project, so '/settings/billing?status=failed' has to
+      // survive whole — useLocation drops the query, and without it a declined card reads as pending.
+      const query = search ? `?${search}` : ''
+      const rest = location === '/' || location.startsWith('/p/') ? '/overview' : `${location}${query}`
       navigate(`/p/${project.id}${rest}`, { replace: true })
     }
-  }, [location, project, navigate])
+  }, [location, search, project, navigate])
 
   if (project) return null
   // A brand-new org, or one whose last project was deleted, has no pick coming — waiting on one

@@ -16,7 +16,7 @@ const { clearCheckoutPending, closeCheckoutOverlay, markCheckoutPending, openChe
 const TEST_URL = 'https://test.checkout.dodopayments.com/session'
 const LIVE_URL = 'https://checkout.dodopayments.com/session'
 
-// Mirrors the two guards in checkout.ts: the handshake, and what takes over once the iframe speaks.
+// The two guards in checkout.ts: the handshake, and what takes over once the iframe speaks.
 const HANDSHAKE_MS = 15_000
 const STALLED_MS = 30 * 60_000
 
@@ -46,21 +46,19 @@ describe('the pending checkout', () => {
     expect(takeCheckoutPending()).toBeNull()
   })
 
-  // A provider that returns no session handle leaves the webhook as the only path; the signature
-  // still has to survive so the poll has a baseline to compare against.
+  // With no session handle the webhook is the only path, and the poll still needs a baseline.
   it('keeps the signature when there is no session id', () => {
     markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: '' })
     expect(takeCheckoutPending()).toEqual({ orgId: 'org-a', signature: 'growth:2000', sessionId: '' })
   })
 
-  // Written by the build before the org was stamped on it, and still in this tab across a deploy.
-  // Dropping it would strand a checkout that is already paid for.
+  // Written before the org was stamped on it; dropping it strands a paid checkout.
   it('reads a record written without an org', () => {
     sessionStorage.setItem(KEY, JSON.stringify({ signature: 'growth:2000', sessionId: 'cs_1' }))
     expect(takeCheckoutPending()).toEqual({ orgId: '', signature: 'growth:2000', sessionId: 'cs_1' })
   })
 
-  // sessionStorage is untrusted input; anything that is not our shape must drop, not throw.
+  // sessionStorage is untrusted: anything off-shape drops rather than throws.
   it('drops a value it did not write instead of throwing', () => {
     sessionStorage.setItem(KEY, 'growth:2000')
     expect(takeCheckoutPending()).toBeNull()
@@ -76,8 +74,7 @@ describe('the pending checkout', () => {
 describe('the checkout overlay', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  // The SDK validates the iframe's postMessage origin against this mode, so a mode that disagrees
-  // with the minted URL swallows every event and the customer waits out the handshake timeout.
+  // The SDK validates the iframe's origin against this, so a disagreeing mode swallows every event.
   it('takes its mode from the host the server minted, not a build flag', async () => {
     const test = openCheckoutOverlay(TEST_URL)
     ;(await started()).onEvent({ event_type: 'checkout.closed' })
@@ -91,15 +88,15 @@ describe('the checkout overlay', () => {
     expect(Initialize.mock.calls[0][0].mode).toBe('live')
   })
 
-  // An ad blocker eating the wallet script, or a declined Apple Pay, both arrive as checkout.error
-  // while the card form behind them still works. Tearing the overlay down loses a live sale.
+  // Both arrive as checkout.error while the card form still works, so tearing the overlay down
+  // loses a live sale.
   it('leaves the card form standing when a wallet fails', async () => {
     const outcome = openCheckoutOverlay(TEST_URL)
     const { onEvent } = await started()
 
     onEvent({ event_type: 'checkout.error', data: { message: 'Wallet initialization failed' } })
     onEvent({ event_type: 'checkout.error', data: { message: 'Wallet payment failed' } })
-    // Still open: the customer goes on to pay by card.
+    // Still open, so the customer can go on to pay by card.
     onEvent({ event_type: 'checkout.redirect' })
 
     await expect(outcome).resolves.toEqual({ status: 'redirect' })
@@ -113,8 +110,7 @@ describe('the checkout overlay', () => {
     await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Failed to create checkout' })
   })
 
-  // The handshake guard is the only thing that settles a checkout the iframe never answers — a mode
-  // that disagrees with the minted host swallows every event.
+  // The only thing that settles a checkout the iframe never answers.
   it('fails a checkout the iframe never answers', async () => {
     vi.useFakeTimers()
     try {
@@ -127,8 +123,8 @@ describe('the checkout overlay', () => {
     }
   })
 
-  // A wallet error is an answer, so the handshake window is spent. Settling on it anyway tears the
-  // overlay down under a customer who is still typing a card — and toasts them a failure.
+  // A wallet error spends the handshake window; settling on it anyway tears the overlay down under
+  // a customer still typing a card.
   it('leaves the card form standing past the handshake window', async () => {
     vi.useFakeTimers()
     try {
@@ -146,8 +142,8 @@ describe('the checkout overlay', () => {
     }
   })
 
-  // An overlay that answers once and then goes quiet still has to settle, or the promise hangs — and
-  // with it `setCheckingOut(null)`, which leaves every plan button disabled.
+  // An overlay that answers once and goes quiet still has to settle, or every plan button stays
+  // disabled behind the hanging promise.
   it('settles an overlay that answers once and then goes quiet', async () => {
     vi.useFakeTimers()
     try {
@@ -164,8 +160,8 @@ describe('the checkout overlay', () => {
     }
   })
 
-  // The SDK's close() rethrows on a teardown failure, and it runs in openCheckoutOverlay's finally —
-  // where a throw overrides the outcome. The customer paid; the page must not call that a failure.
+  // close() rethrows from openCheckoutOverlay's finally, where a throw overrides the outcome — and
+  // the customer paid.
   it('keeps a completed payment when tearing the overlay down throws', async () => {
     closeOverlay.mockImplementation(() => {
       throw new Error('iframe already detached')
@@ -175,12 +171,11 @@ describe('the checkout overlay', () => {
     ;(await started()).onEvent({ event_type: 'checkout.redirect' })
 
     await expect(outcome).resolves.toEqual({ status: 'redirect' })
-    // Cleared even though the close threw, so the next unmount cannot clear someone else's pending.
+    // Cleared despite the throw, so the next unmount cannot clear someone else's pending.
     expect(closeCheckoutOverlay()).toBe(false)
   })
 
-  // Navigating away while the SDK chunk is still loading: without the guard the overlay opens over
-  // whatever rendered next, with nothing registered to close it.
+  // Navigating away mid-import, where the overlay would open over whatever rendered next.
   it('does not open an overlay the page has already left', async () => {
     const outcome = openCheckoutOverlay(TEST_URL)
     expect(closeCheckoutOverlay()).toBe(true)

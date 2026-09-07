@@ -45,8 +45,8 @@ const renderMeter = () => {
   return { ...view, store }
 }
 
-// Waiting on the mock alone passes while the response is still in flight, which makes every
-// "renders nothing" assertion below vacuous.
+// Waiting on the mock alone passes while the response is in flight, making every "renders nothing"
+// assertion vacuous.
 const settled = async (store: ReturnType<typeof createStore>) => {
   await vi.waitFor(() => expect(store.get(billingAtom).loaded).toBe(true))
 }
@@ -64,8 +64,7 @@ describe('the sidebar usage meter', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('24')
   })
 
-  // Absent means no limit, so there is no fraction to show — and a bar at 0% would read as an org
-  // that has sent nothing.
+  // No limit is no fraction, and a bar at 0% would read as an org that has sent nothing.
   it('renders nothing for a plan with no quota', async () => {
     getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
     const { store } = renderMeter()
@@ -73,8 +72,7 @@ describe('the sidebar usage meter', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  // The period has not been summed, so there is no numerator. A meter reading "0 / 500K" would
-  // state a figure the server never claimed, in the one place it is always on screen.
+  // Unsummed, so "0 / 500K" would state a figure the server never claimed.
   it('renders nothing before the meter has counted', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
     const { store } = renderMeter()

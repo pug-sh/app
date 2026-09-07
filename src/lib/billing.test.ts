@@ -8,9 +8,8 @@ import {
 import { formatMoney, statusLabel, subStatusLabel, USAGE_WARN_RATIO, usageBannerKey, usageFor } from './billing'
 
 describe('usageFor', () => {
-  // The two halves come from different RPCs and each has its own way of having no answer. Either
-  // missing means there is no meter to draw — substituting a zero for the half we do have is the
-  // one thing this must never do.
+  // Either half missing means no meter to draw; substituting a zero for the other is the one thing
+  // this must never do.
   it('has nothing to draw when the quota is absent', () => {
     expect(usageFor(undefined, 1_000)).toBeNull()
   })
@@ -40,8 +39,7 @@ describe('usageFor', () => {
     expect(usageFor(1_000n, 5_000)?.percent).toBe(100)
   })
 
-  // A quota of 0 is not something the server emits — absent is how it says "no quota" — but the
-  // ratio would divide by it, and NaN renders as a bar of width "NaN%".
+  // The server says "no quota" by absence, but a 0 would divide into a bar of width "NaN%".
   it('does not divide by a zero quota', () => {
     expect(usageFor(0n, 10)).toEqual({ used: 10, included: 0, percent: 100, tone: 'over' })
     expect(usageFor(0n, 0)).toEqual({ used: 0, included: 0, percent: 0, tone: 'normal' })
@@ -57,19 +55,17 @@ describe('formatMoney', () => {
     expect(formatMoney(1_999n, 'USD')).toBe('$19.99')
   })
 
-  // The field is named cents but carries the currency's smallest unit, and JPY has none — a fixed
-  // /100 renders it a hundred times low.
+  // Named cents but carries the smallest unit, and JPY has none.
   it('respects a currency with no minor unit', () => {
     expect(formatMoney(2_000n, 'JPY')).toBe('¥2,000')
   })
 
-  // Intl throws on a malformed code rather than merely an unknown one. Minor units are unknowable
-  // there, so the fallback shows the raw amount rather than reintroducing the /100 it warns about.
+  // Intl throws on a malformed code, where minor units are unknowable — so no /100 guess.
   it('falls back rather than throwing on a malformed code', () => {
     expect(formatMoney(2_000n, 'not a currency')).toBe('2000 not a currency')
   })
 
-  // An absent currency cannot be denominated; "$20" would state a price the server never sent.
+  // "$20" would state a price the server never sent.
   it('never guesses dollars for a plan with no currency', () => {
     expect(formatMoney(2_000n, '')).toBe('—')
   })
@@ -82,15 +78,13 @@ describe('labels', () => {
     expect(statusLabel(BillingStatus.FREE)).toBe('Free')
   })
 
-  // Proto enums are open: a newer server can send a value this build has no key for, and the
-  // lookup must not return undefined into the markup.
+  // Proto enums are open, and the lookup must not return undefined into the markup.
   it('says nothing for a value this build does not know', () => {
     expect(statusLabel(99 as BillingStatus)).toBe('')
     expect(subStatusLabel(99 as SubscriptionStatus)).toBe('')
   })
 
-  // Only past_due carries a label: it is the one subscription state a customer has to act on, and
-  // the others are either invisible (active) or unreachable (the server nils out a dead one).
+  // The one subscription state a customer acts on; the rest are invisible or unreachable.
   it('labels only the state that needs acting on', () => {
     expect(subStatusLabel(SubscriptionStatus.PAST_DUE)).toBe('Payment failed')
     expect(subStatusLabel(SubscriptionStatus.ACTIVE)).toBe('')
@@ -98,9 +92,8 @@ describe('labels', () => {
 })
 
 describe('usageBannerKey', () => {
-  // An out-of-range stamp makes tsToDate an Invalid Date, which is truthy — so getTime() is NaN and
-  // the key freezes at "NaN:over". A dismissal keyed on it never expires, which is the one outcome
-  // the comment above it promises cannot happen.
+  // An Invalid Date is truthy, so getTime() is NaN and the key freezes at "NaN:over" — a dismissal
+  // that never expires.
   it('does not freeze the key when the period end is unreadable', () => {
     const status = create(GetBillingStatusResponseSchema, {
       periodEnd: { seconds: 900_000_000_000_000n, nanos: 0 },
@@ -108,7 +101,7 @@ describe('usageBannerKey', () => {
     expect(usageBannerKey(status, 'over')).not.toContain('NaN')
   })
 
-  // A real period is what the dismissal expires against, so it has to stay in the key.
+  // What the dismissal expires against, so it has to stay in the key.
   it('keys on the period end when there is one', () => {
     const periodEnd = new Date('2026-10-01T00:00:00Z')
     const status = create(GetBillingStatusResponseSchema, {

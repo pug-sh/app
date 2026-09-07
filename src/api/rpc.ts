@@ -27,8 +27,7 @@ export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(tra
 // Org-scoped despite returning per-project cells: usage spans every project the org owns, so
 // GetUsage takes an orgId in the message and no x-project-id header.
 export const usageRPCAtom = atom(get => createClient(UsageService, get(transportAtom)))
-// Org-scoped like usage: an entitlement belongs to the org, and the checkout it can start spends
-// the org's money — so orgId is in the message and there is no x-project-id header.
+// Org-scoped like usage: orgId in the message, no x-project-id header.
 export const billingRPCAtom = atom(get => createClient(BillingService, get(transportAtom)))
 
 // Dashboard — project-scoped (JWT auth + x-project-id header from projectHeaderAtom)

@@ -44,17 +44,10 @@ const LOAD_TIMEOUT_MS = 20_000
 const EMPTY_STATE_CLASS = 'flex flex-col items-center justify-center py-16 text-muted-foreground'
 
 // Three answers the proto distinguishes and this page must not flatten into one (usage.proto, on
-// used_events and counted): no stamp at all means the meter has never run for this org; a stamp
-// with `counted` false means it has not reached this period yet, so used_events is a placeholder
-// zero rather than a measurement, and the proto says to render it as "computing"; only `counted`
-// makes the number a total. Rendering either of the first two as "0" states a billing figure the
-// server never claimed. The fourth case is ours rather than the proto's — a negative total is not a
-// number this page will put on screen.
-//
-// `counted` is read rather than derived. Comparing usage_computed_at against period_start is the
-// same guess by hand, and the proto says outright not to make it: the meter can run mid-period
-// against a stamp that predates it, and a period boundary crossed between the two reads flips the
-// comparison on data that never changed.
+// used_events and counted): no stamp means the meter never ran, `counted` false means it has not
+// reached this period so used_events is a placeholder, and only `counted` makes it a total. A zero
+// on either of the first two states a billing figure the server never claimed. Read `counted`
+// rather than comparing usage_computed_at against period_start — the proto says not to guess it.
 type PeriodState =
   | { kind: 'never' }
   | { kind: 'unreadable'; meteredAt: Date }

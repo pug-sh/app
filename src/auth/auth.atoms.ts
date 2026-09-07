@@ -275,8 +275,7 @@ export const signOutAtom = atom(null, async (get, set) => {
   clearMe(set)
   set(isDemoSessionAtom, false)
   set(resetWorkspaceAtom)
-  // The quota is org-scoped and the atom keys on the active org, so this only matters when the next
-  // account lands on the SAME org — a shared workspace, which is exactly when leaving the previous
-  // person's numbers on screen would be worst.
+  // Only matters when the next account lands on the SAME org — a shared workspace, which is exactly
+  // when leaving the previous person's numbers on screen would be worst.
   set(resetBillingAtom)
 })

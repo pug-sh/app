@@ -7,7 +7,7 @@ import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 
 // The RPC atoms are faked, not the transport: a hand-held call is the only way to decide when a
-// response resolves, which is what these tests are about.
+// response resolves.
 const { getBillingStatus, getUsage } = vi.hoisted(() => ({
   getBillingStatus: vi.fn(),
   getUsage: vi.fn(),
@@ -53,9 +53,8 @@ describe('loadBillingAtom', () => {
     expect(result.usedEvents).toBe(1_000)
   })
 
-  // `counted` is the proto's own answer to "is used_events a measurement of THIS period". Without
-  // reading it a just-rolled-over period reads as a real zero, and the page renders "0 of 500,000"
-  // for an org nobody has summed yet.
+  // Unread, a just-rolled-over period reads as a real zero and renders "0 of 500,000" for an org
+  // nobody has summed yet.
   it('has no total when the meter has not counted this period', async () => {
     getUsage.mockResolvedValue(usage(0, false))
     const store = newStore()
@@ -64,8 +63,7 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).usedEvents).toBeNull()
   })
 
-  // The meter is the optional half: a usage failure must still leave the plan and the quota on
-  // screen, because those are what the page is for.
+  // The meter is the optional half — a usage failure must leave the plan and quota on screen.
   it('keeps the plan when the meter call fails', async () => {
     getUsage.mockRejectedValue(new Error('boom'))
     const store = newStore()
@@ -95,7 +93,7 @@ describe('loadBillingAtom', () => {
     expect(getBillingStatus).toHaveBeenCalledTimes(2)
   })
 
-  // A cached failure is not an answer, so it must not stop the next caller retrying.
+  // A cached failure is not an answer, so the next caller still retries.
   it('retries after a failure without being forced', async () => {
     getBillingStatus.mockRejectedValueOnce(new Error('boom'))
     const store = newStore()
@@ -107,8 +105,7 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).status?.plan?.slug).toBe('scale')
   })
 
-  // An org switch must not leave the previous org's quota on screen — not even for the render
-  // between the switch and the new answer.
+  // Not even for the render between the switch and the new answer.
   it('reports nothing for an org it has not answered for', async () => {
     const store = newStore()
     await store.set(loadBillingAtom)
@@ -120,9 +117,8 @@ describe('loadBillingAtom', () => {
     expect(result.status).toBeNull()
   })
 
-  // The in-flight request is keyed by REQUEST, not by org. Switching away and BACK is the case the
-  // org check alone cannot catch: org A is active again when A's first answer finally lands, so only
-  // the request id stops it painting over the newer one.
+  // Switching away and BACK is what the org check alone cannot catch: A is active again when A's
+  // first answer lands, so only the request id stops it painting over the newer one.
   it('does not let a superseded request paint over a newer one', async () => {
     const store = newStore()
     let settleA!: (v: unknown) => void
@@ -144,9 +140,8 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).status?.plan?.slug).toBe('enterprise')
   })
 
-  // A forced reload waits out the request already in the air, and the org can move while it waits.
-  // Starting the org it was asked for takes over the new org's in-flight slot and has its own answer
-  // discarded for being stale — leaving every billing surface with nothing for the org on screen.
+  // A forced reload waits out the request in the air, and the org can move while it waits — the
+  // second request would then take over the new org's slot and have its answer discarded.
   it('follows the org that is current by the time a queued reload runs', async () => {
     const store = newStore()
     let settle!: (v: unknown) => void
@@ -178,8 +173,7 @@ describe('loadBillingAtom', () => {
     expect(getBillingStatus).toHaveBeenCalledTimes(2)
   })
 
-  // A negative total is not a number any surface will put on screen — the usage page already refuses
-  // it, and gating here is what gives the meter, the banner and the page the same answer.
+  // The usage page already refuses it; gating here gives every surface the same answer.
   it('refuses a negative total the way the usage page does', async () => {
     getUsage.mockResolvedValue(usage(-5_000, true))
     const store = newStore()
@@ -188,8 +182,7 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).usedEvents).toBeNull()
   })
 
-  // "Not measured yet" is a claim about the meter. A meter we never reached has made no claim, and
-  // saying it did is the same class of lie as rendering an absent quota as 0.
+  // A meter we never reached has made no claim, so saying "not measured yet" for it is a lie.
   it('separates a meter that failed from one that has not counted', async () => {
     getUsage.mockRejectedValue(new Error('boom'))
     const store = newStore()
@@ -198,7 +191,7 @@ describe('loadBillingAtom', () => {
     const result = store.get(billingAtom)
     expect(result.usedEvents).toBeNull()
     expect(result.meterError).toBe(true)
-    // The plan is the other half of the call and must survive the meter failing.
+    // The other half of the call, which must survive the meter failing.
     expect(result.status?.plan?.slug).toBe('growth')
     expect(result.error).toBeNull()
   })
@@ -211,8 +204,7 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).meterError).toBe(false)
   })
 
-  // The past-due banner is the only in-app notice that a card was declined, so a transient failure
-  // must not blank the status that carries it.
+  // The past-due banner is the only notice that a card was declined.
   it('keeps the last known plan when a refresh fails', async () => {
     const store = newStore()
     await store.set(loadBillingAtom)
@@ -225,8 +217,7 @@ describe('loadBillingAtom', () => {
     expect(result.status?.plan?.slug).toBe('growth')
   })
 
-  // Unimplemented is a different answer from a call that failed: there is no billing service here,
-  // and a retry can only ever fail the same way.
+  // No billing service here, so a retry can only fail the same way.
   it('marks a deployment with no billing service unsupported, and stops asking', async () => {
     getBillingStatus.mockRejectedValue(new ConnectError('nope', Code.Unimplemented))
     const store = newStore()
@@ -239,7 +230,7 @@ describe('loadBillingAtom', () => {
     expect(getBillingStatus).toHaveBeenCalledTimes(1)
   })
 
-  // The contrast: an ordinary failure is not an answer, so the next caller must be free to retry.
+  // The contrast: an ordinary failure is not an answer, so the next caller retries.
   it('retries after an ordinary failure', async () => {
     getBillingStatus.mockRejectedValue(new ConnectError('down', Code.Unavailable))
     const store = newStore()
@@ -258,9 +249,8 @@ describe('loadBillingAtom', () => {
 })
 
 describe('pollBillingAfterCheckoutAtom', () => {
-  // The baseline is the plan the buyer had in the org they paid in. Another org's plan is simply a
-  // different plan, so reading it as the purchase landing tells someone their payment settled when
-  // nothing about it has.
+  // The baseline is the paying org's plan; reading another org's as the purchase landing tells
+  // someone their payment settled when nothing has.
   it('does not read another org as the checkout landing', async () => {
     const store = newStore()
     store.set(activeOrgAtom, orgB)
@@ -273,8 +263,7 @@ describe('pollBillingAfterCheckoutAtom', () => {
 })
 
 describe('resetBillingAtom', () => {
-  // Sign-out: the next account landing on the same shared org is exactly when leaving the previous
-  // person's numbers on screen would be worst.
+  // The next account landing on the same shared org is when stale numbers would be worst.
   it('drops the stored answer', async () => {
     const store = newStore()
     await store.set(loadBillingAtom)

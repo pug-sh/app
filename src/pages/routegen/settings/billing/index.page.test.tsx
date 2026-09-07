@@ -95,8 +95,8 @@ describe('the plan section', () => {
     expect(screen.getByText('$20 / month')).toBeTruthy()
   })
 
-  // The quota window turns over on the org's anniversary; the subscription's period is when the
-  // provider bills. Conflating them is the mistake the two fields exist to prevent.
+  // The quota turns over on the org's anniversary; the subscription's period is when the provider
+  // bills. Conflating them is the mistake the two fields exist to prevent.
   it('shows the billing date when there is one, and the quota reset otherwise', async () => {
     getBillingStatus.mockResolvedValue(
       status({ currentPeriodEnd: timestampFromDate(new Date('2026-06-28T00:00:00Z')) }),
@@ -112,8 +112,7 @@ describe('the plan section', () => {
     expect(await screen.findByText('Quota resets Jul 10, 2026')).toBeTruthy()
   })
 
-  // The card failed and the entitlement did not: the server keeps the quota through PAST_DUE, so
-  // the page must say what happened without implying anything has been cut off.
+  // The server keeps the quota through PAST_DUE, so the page must not imply anything was cut off.
   it('says a payment failed without claiming the plan changed', async () => {
     getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE, manageable: true }))
     renderPage()
@@ -130,8 +129,7 @@ describe('the usage section', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('24')
   })
 
-  // A period nobody has summed yet must never render as 0 — that states a billing figure the
-  // server never claimed.
+  // A period nobody has summed must never render as 0 — a figure the server never claimed.
   it('says not measured rather than zero', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
     renderPage()
@@ -139,8 +137,7 @@ describe('the usage section', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  // The entitlement is known even when the count is not, and the bar needs both. Dropping the known
-  // half with the missing one leaves a trialing org no number anywhere on the page.
+  // The bar needs both halves, and dropping the known one leaves a trialing org no number at all.
   it('still names the included quota when the meter has no count', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
     renderPage()
@@ -156,8 +153,7 @@ describe('the usage section', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  // Nothing is enforced: going over is a banner, and the page has to say so or it reads as an
-  // outage.
+  // Nothing is enforced, and unsaid that reads as an outage.
   it('says nothing is dropped when over the limit', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 900_000n, counted: true }))
     renderPage()
@@ -178,8 +174,8 @@ describe('the plan catalog', () => {
     expect(screen.getAllByRole('button', { name: 'Choose' })).toHaveLength(1)
   })
 
-  // The spinner replaces the button's only text and lucide marks it aria-hidden, so a button that
-  // carries no label of its own loses its name exactly while it is busy.
+  // The spinner replaces the button's only text and is aria-hidden, so an unlabelled button loses
+  // its name exactly while it is busy.
   it('keeps the choose button named while its checkout opens', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
     listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
@@ -192,8 +188,8 @@ describe('the plan catalog', () => {
     await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
   })
 
-  // purchasable is the server's own answer to "would a checkout open". A button that cannot work
-  // is worse than no button, so an unconfigured tier is listed without one.
+  // purchasable is the server's own "would a checkout open" — an unconfigured tier lists without
+  // a button rather than with one that cannot work.
   it('does not offer a tier the server cannot check out', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: { slug: 'free', displayName: 'Free' } }))
     listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, false)] })
@@ -203,8 +199,7 @@ describe('the plan catalog', () => {
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
   })
 
-  // Spending money is admin-only on the server too, so a member sees the plan and the quota and no
-  // way to buy.
+  // Spending money is admin-only on the server too.
   it('is hidden from a role that cannot start a checkout', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
     listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
@@ -217,8 +212,7 @@ describe('the plan catalog', () => {
 })
 
 describe('the portal', () => {
-  // manageable is not implied by having a live subscription: a cancelled org still has invoices to
-  // fetch and a card to re-add.
+  // Not implied by a live subscription: a cancelled org has invoices to fetch and a card to re-add.
   it('offers the portal to an org with a payments customer', async () => {
     getBillingStatus.mockResolvedValue(status({ manageable: true, subscriptionStatus: SubscriptionStatus.UNSPECIFIED }))
     renderPage()
@@ -231,8 +225,8 @@ describe('the portal', () => {
     expect(screen.queryByText('Manage payment method and invoices')).toBeNull()
   })
 
-  // window.open returns null whenever noopener/noreferrer is asked for, so treating null as "the
-  // popup was blocked" dragged this tab to the portal on every single open.
+  // window.open returns null whenever noopener is asked for, so reading null as "blocked" dragged
+  // this tab to the portal on every open.
   it('opens the portal in a new tab without taking the current one with it', async () => {
     const tab = { opener: {} } as Window
     const open = vi.spyOn(window, 'open').mockReturnValue(tab)
@@ -259,8 +253,7 @@ describe('the checkout return', () => {
 
   beforeEach(() => sessionStorage.clear())
 
-  // The session id has to survive the provider's full-page redirect, or the returning buyer has
-  // nothing to confirm against and is back to waiting on a webhook.
+  // The session id has to survive the full-page redirect, or the buyer is back on the webhook.
   it('confirms the checkout the buyer just completed, by its session id', async () => {
     confirmCheckout.mockResolvedValue({ confirmed: true })
     pending('cs_1')
@@ -270,20 +263,19 @@ describe('the checkout return', () => {
     expect(toastInfo).not.toHaveBeenCalled()
   })
 
-  // "Not settled yet" is not a failure. The webhook is still coming, so the poll has to take over.
+  // "Not settled yet" is not a failure — the webhook is still coming.
   it('falls back to waiting when the provider has nothing yet', async () => {
     confirmCheckout.mockResolvedValue({ confirmed: false })
     pending('cs_1')
     renderPage()
 
     await waitFor(() => expect(confirmCheckout).toHaveBeenCalled())
-    // The poll's own re-read, which only runs because the confirm declined to answer.
+    // The poll's own re-read, reached only because the confirm declined to answer.
     await waitFor(() => expect(getBillingStatus.mock.calls.length).toBeGreaterThan(1))
     expect(toastError).not.toHaveBeenCalled()
   })
 
-  // The money is in and pug cannot place it. "This page will update shortly" is a lie for a payment
-  // that needs a person, so a terminal refusal must not reach the buyer as one.
+  // The money is in and unplaceable — "updating shortly" is a lie for a payment needing a person.
   it('says a confirmed payment needs help rather than promising an update', async () => {
     confirmCheckout.mockRejectedValue(new ConnectError('unsupported currency', Code.FailedPrecondition))
     pending('cs_1')
@@ -293,8 +285,7 @@ describe('the checkout return', () => {
     expect(toastInfo).not.toHaveBeenCalled()
   })
 
-  // Only a refusal that cannot pass is terminal. A blip on the way to ConfirmCheckout still has a
-  // webhook behind it, so it must reach the poll rather than the "contact support" toast.
+  // A blip still has a webhook behind it, so it must reach the poll and not "contact support".
   it('falls back to waiting on a confirm that failed for a reason that may pass', async () => {
     confirmCheckout.mockRejectedValue(new ConnectError('unavailable', Code.Unavailable))
     pending('cs_1')
@@ -304,8 +295,7 @@ describe('the checkout return', () => {
     expect(toastError).not.toHaveBeenCalled()
   })
 
-  // The provider states the outcome in the query it returns with. Without reading it a declined
-  // card polls for 17.5s and is then told its payment is still confirming.
+  // Unread, a declined card polls for 17.5s and is then told its payment is still confirming.
   it('reports a declined card instead of polling for it', async () => {
     window.history.replaceState({}, '', '/?status=failed')
     pending('cs_1')
@@ -316,8 +306,7 @@ describe('the checkout return', () => {
     window.history.replaceState({}, '', '/')
   })
 
-  // A provider that returns no session handle, or a checkout started before this shipped. The
-  // webhook is the only path left, so the poll must still run rather than the return doing nothing.
+  // With no session handle the webhook is the only path left, so the poll still has to run.
   it('waits it out when there is no session id to confirm', async () => {
     pending('')
     renderPage()
@@ -326,9 +315,8 @@ describe('the checkout return', () => {
     expect(confirmCheckout).not.toHaveBeenCalled()
   })
 
-  // A second tab moved the session to another org while this one was at the provider. Confirming
-  // would send this org's id with that org's session — refused, and reported to a buyer who paid as
-  // a payment that needs support. The record waits for the org that started it instead.
+  // A second tab moved the session's org while this one was at the provider: confirming would send
+  // the wrong org's id, so the record waits for the org that started it.
   it('leaves a checkout started in another org for that org', async () => {
     pending('cs_1', 'org-b')
     renderPage()
@@ -341,8 +329,7 @@ describe('the checkout return', () => {
   })
 })
 
-// A self-hosted deployment has no billing at all. A blank body under a tab bar is worse than the
-// general tab, so the page leaves rather than rendering an empty shell.
+// With no billing at all, a blank body under a tab bar is worse than leaving for the general tab.
 it('renders nothing when billing is switched off', async () => {
   getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
   renderPage()

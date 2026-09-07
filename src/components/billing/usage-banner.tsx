@@ -37,8 +37,8 @@ const UsageBanner = () => {
   const key = usageBannerKey(status, tone)
   if (dismissed[org.id] === key) return null
 
-  // Nothing is enforced here — a quota drives a banner, never a rejected event — so the copy has to
-  // say so, or "over your limit" reads as an outage the customer is already having.
+  // A quota drives a banner, never a rejected event, so the copy has to say so — or "over your
+  // limit" reads as an outage the customer is already having.
   const message = () => {
     if (pastDue) return 'Your last payment failed. Update your payment method to keep this plan.'
     if (!usage) return ''

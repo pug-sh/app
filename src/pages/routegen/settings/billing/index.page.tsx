@@ -36,8 +36,7 @@ import {
 } from './checkout'
 import PlanList from './plan-list'
 
-// Deliberately not muted: on a billing page, "we couldn't load this" must not read as "you have
-// none".
+// Not muted: "we couldn't load this" must not read as "you have none".
 const ListError = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
   <p className="text-sm text-negative">
     {message}{' '}
@@ -61,9 +60,8 @@ const PortalButton = ({ label, busy, onClick }: { label: string; busy: boolean; 
   </Can>
 )
 
-// Stands in for the bar, which needs both halves. Absent included_events is a plan with no limit at
-// all; otherwise the meter simply has no count for this period yet, and dropping the entitlement
-// along with the missing half leaves a trialing org no number anywhere on the page.
+// Stands in for the bar, which needs both halves — without it a trialing org has no number
+// anywhere on the page.
 const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => (
   <p className="mt-2 text-xs text-muted-foreground">
     {includedEvents === undefined
@@ -72,10 +70,8 @@ const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) =
   </p>
 )
 
-// `renewsAt` is when the provider bills next; `periodEnd` is when the quota window turns over. They
-// coincide only by accident, and conflating them is the mistake this exists to prevent. That splits
-// the formatters too: only the quota window is a UTC boundary — a renewal is the provider's own
-// instant and a trial end is the signup instant plus 14 days, so UTC dates either a day off.
+// `renewsAt` is the provider's next bill, `periodEnd` the quota turnover; they coincide only by
+// accident. Only the quota window is a UTC boundary, which is why the formatters differ.
 const periodLine = (status: BillingStatus, trialEndsAt: Date | null, renewsAt: Date | null, periodEnd: Date | null) => {
   if (status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
   if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
@@ -83,7 +79,7 @@ const periodLine = (status: BillingStatus, trialEndsAt: Date | null, renewsAt: D
   return ''
 }
 
-// Denylist, not an allowlist: guessing wrong here toasts a failure at someone who just paid.
+// A denylist: guessing wrong here toasts a failure at someone who just paid.
 const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'expired'])
 
 const Billing = () => {
@@ -106,23 +102,19 @@ const Billing = () => {
   const orgId = org?.id
   const enabled = !!status?.billingEnabled
   const canReadBilling = can('read', 'billing')
-  // The catalog is stale the moment the checkout poll lands a new plan — without this it keeps
-  // offering "Choose" on the tier just bought.
+  // The catalog goes stale the moment the poll lands a new plan.
   const planKey = billingSignature(status)
-  // The catalog exists to be bought from, so the read follows the buy button rather than the page:
-  // nothing purchasable, or no permission to start a checkout, and there is nothing to draw.
+  // The read follows the buy button, not the page: an unbuyable catalog has nothing to draw.
   const canBrowsePlans = !!status?.purchasable && can('create', 'billing')
 
-  // Nothing to render: billing off, no billing service, or a role that cannot read it. Any other
-  // failure keeps its own retry state below.
+  // Billing off, no billing service, or a role that cannot read it. Any other failure retries below.
   useEffect(() => {
     if (!loaded || !projectId || (error && !unsupported)) return
     if (!enabled || unsupported || !canReadBilling) navigate(`/p/${projectId}/settings/general`, { replace: true })
   }, [loaded, error, unsupported, enabled, canReadBilling, projectId, navigate])
 
-  // An overlay still open at unmount means the customer navigated away mid-checkout; left set, the
-  // flag would toast "still confirming" at someone who never paid. A completed checkout reloads the
-  // page instead, so no cleanup runs and the flag survives.
+  // An overlay open at unmount means they navigated away mid-checkout, and a left-set flag would
+  // toast "still confirming" at someone who never paid. A completed checkout reloads instead.
   useEffect(() => {
     return () => {
       if (closeCheckoutOverlay()) clearCheckoutPending()
@@ -151,7 +143,7 @@ const Billing = () => {
       try {
         if (await confirmWithProvider(sessionId)) return
       } catch (err) {
-        // Paid, and not placeable without a person. Saying it will update shortly would be false.
+        // Paid and unplaceable without a person — "updating shortly" would be false.
         toastRPCError(err, "We couldn't confirm your payment. Please contact support.")
         return
       }
@@ -161,19 +153,15 @@ const Billing = () => {
     [confirmWithProvider, pollAfterCheckout],
   )
 
-  // A completed checkout reloads the page at the provider's return_url. The provider states the
-  // outcome in the query it returns with — without reading it, a declined card polls for 17.5s and
-  // is then told its payment is still confirming.
+  // The provider states the outcome in the query it returns with; unread, a declined card polls for
+  // 17.5s and is then told its payment is still confirming.
   useEffect(() => {
-    // Held until the org resolves: both halves below are answered against it, and on this page's
-    // first render the workspace has not bootstrapped yet.
+    // Both halves below are answered against the org, which has not bootstrapped on first render.
     if (!orgId) return
     const pending = takeCheckoutPending()
     if (pending === null) return
-    // Another tab moved the session to a different org while this one was at the provider.
-    // Confirming would hand this org's id to that org's session and be refused as someone else's,
-    // and the poll would read that org's plan against this one's baseline as a purchase landing.
-    // Put it back instead: switching to the org that started it confirms there.
+    // Another tab moved the session's org while this one was at the provider: confirming would send
+    // the wrong org's id. Put it back, so switching to the org that started it still confirms.
     if (pending.orgId && pending.orgId !== orgId) {
       markCheckoutPending(pending)
       return
@@ -216,8 +204,8 @@ const Billing = () => {
     try {
       const resp = await billingRPC.createPortalSession({ orgId })
       trackFeature({ featureId: 'billing.portal_opened', featureName: 'Open billing portal' })
-      // noopener/noreferrer both make window.open return null even on success, so a blocked popup
-      // would be indistinguishable from an opened one — sever the opener by hand instead.
+      // noopener/noreferrer return null even on success, which a blocked popup is indistinguishable
+      // from — sever the opener by hand instead.
       const tab = window.open(resp.portalUrl, '_blank')
       if (tab) tab.opener = null
       else window.location.href = resp.portalUrl
@@ -243,8 +231,7 @@ const Billing = () => {
       </div>
     )
   }
-  // Not a spinner: that would read as billing still loading rather than not existing here. The
-  // effect above is already redirecting off both of these.
+  // Not a spinner, which would read as still loading; the effect above is already redirecting.
   if (!status?.billingEnabled || !canReadBilling) return null
 
   const usage = usageFor(status.includedEvents, usedEvents)
@@ -254,12 +241,11 @@ const Billing = () => {
     validDate(tsToDate(status.currentPeriodEnd)),
     validDate(tsToDate(status.periodEnd)),
   )
-  // The free plan is named after its own state, so the badge would just repeat the plan name.
+  // The free plan is named after its own state, so the badge would repeat the plan name.
   const badge = statusLabel(status.status) === status.plan?.displayName ? '' : statusLabel(status.status)
   const pastDue = isPastDue(status)
-  // Nothing server-side stops a second checkout — the duplicate is only refused at ConfirmCheckout,
-  // after the card is charged. So this is what prevents paying twice, not a mirror of a refusal. A
-  // tier switch belongs in the portal anyway, where the card and billing date carry over.
+  // The duplicate is only refused at ConfirmCheckout, after the card is charged, so this is what
+  // prevents paying twice rather than a mirror of a refusal.
   const liveSubscription = status.manageable && status.subscriptionStatus !== SubscriptionStatus.UNSPECIFIED
 
   return (
