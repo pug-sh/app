@@ -105,7 +105,7 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
 // Exported for the test that pins it against WorkspaceBootstrap: the two race for the first
 // navigation off '/', and the bug only appears when they run together.
 export const ProjectRedirect = () => {
-  const [, navigate] = useLocation()
+  const [location, navigate] = useLocation()
   // Waits for activeProjectAtom rather than falling back to projects[0] itself. This route is the
   // one place the URL names no project, so App's bootstrap always has a pick coming — and a second
   // pick here doesn't just duplicate that one, it beats it: both run off the render where the list
@@ -117,9 +117,16 @@ export const ProjectRedirect = () => {
 
   useEffect(() => {
     if (project) {
-      navigate(`/p/${project.id}/overview`, { replace: true })
+      // Keep the path the user asked for and only supply the project. The server
+      // builds the post-checkout return URL with no project to put in it, so
+      // '/settings/billing' arrives here and would otherwise land on overview —
+      // and the billing page is the only thing that calls ConfirmCheckout.
+      // Anything already under /p/ has been through here and has no route, so it
+      // falls back to overview rather than nesting a second prefix forever.
+      const rest = location === '/' || location.startsWith('/p/') ? '/overview' : location
+      navigate(`/p/${project.id}${rest}`, { replace: true })
     }
-  }, [project, navigate])
+  }, [location, project, navigate])
 
   if (project) return null
   // A brand-new org, or one whose last project was deleted, has no pick coming — waiting on one

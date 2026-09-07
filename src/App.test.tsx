@@ -280,6 +280,41 @@ describe('landing on the bare app URL', () => {
     await waitFor(() => expect(history.at(-1)).toBe('/p/p2/overview'))
     expect(store.get(activeProjectAtom)?.id).toBe('p2')
   })
+
+  // The server builds the post-checkout return URL from PUG_DASHBOARD_BASE_URL and has no project
+  // id to put in it, so a returning buyer arrives at a project-less '/settings/billing'. Dropping
+  // the path here sends them to overview, and the billing page is the only caller of
+  // ConfirmCheckout — which on a deployment with no reachable webhook is the whole confirmation.
+  it('keeps the path a project-less URL asked for', async () => {
+    const { hook, history } = memoryLocation({ path: '/settings/billing', record: true })
+    const store = seedStore({ 'org-a': 'p2' })
+
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/settings/billing">
+              <ProjectSync>
+                <div>billing</div>
+              </ProjectSync>
+            </Route>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/p2/settings/billing'))
+  })
+
 })
 
 // Restoring a session used to spend two sequential round trips: the project list waited on the org
