@@ -55,7 +55,16 @@ const PlanList = ({
           {anySelectable && (
             <div className="w-20 shrink-0 text-right">
               {isSelectable(plan) && (
-                <Button size="sm" variant="outline" disabled={!!busySlug} onClick={() => onSelect(plan)}>
+                // The spinner replaces the only text in the button, and lucide marks it aria-hidden,
+                // so without a label of its own the button loses its name exactly while it is busy.
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Choose"
+                  aria-busy={busySlug === plan.slug}
+                  disabled={!!busySlug}
+                  onClick={() => onSelect(plan)}
+                >
                   {busySlug === plan.slug ? <Loader2 className="size-3.5 animate-spin" /> : 'Choose'}
                 </Button>
               )}

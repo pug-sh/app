@@ -178,6 +178,20 @@ describe('the plan catalog', () => {
     expect(screen.getAllByRole('button', { name: 'Choose' })).toHaveLength(1)
   })
 
+  // The spinner replaces the button's only text and lucide marks it aria-hidden, so a button that
+  // carries no label of its own loses its name exactly while it is busy.
+  it('keeps the choose button named while its checkout opens', async () => {
+    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    createCheckoutSession.mockImplementation(() => new Promise(() => {}))
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+
+    const button = await screen.findByRole('button', { name: 'Choose' })
+    await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
+  })
+
   // purchasable is the server's own answer to "would a checkout open". A button that cannot work
   // is worse than no button, so an unconfigured tier is listed without one.
   it('does not offer a tier the server cannot check out', async () => {
