@@ -175,9 +175,9 @@ export type GetBillingStatusResponse = Message<"dashboard.billing.v1.GetBillingS
    * Whether a checkout would actually open. True only when billing is enabled, a
    * payments provider is configured, and there is a product to check out
    * against -- a configured catalog tier, or the custom tier once this org has a
-   * product id recorded. It is the same condition CreateCheckoutSession refuses
-   * on, read from one helper so the two cannot drift: a button that cannot work
-   * is worse than no button.
+   * product id recorded. It gates the buy button as a whole; whether a
+   * PARTICULAR tier can be bought is PlanOption.purchasable, which does share a
+   * helper with the refusal.
    *
    * It says nothing about which tier, and carries no product id -- the dashboard
    * never sees one.
@@ -242,9 +242,8 @@ export type CreateCheckoutSessionResponse = Message<"dashboard.billing.v1.Create
 
   /**
    * Hand back to ConfirmCheckout when the buyer returns. Not a secret and not
-   * proof of anything: it names a checkout the server then re-reads from the
-   * provider and checks belongs to the caller's org. Empty when the provider
-   * gives no id to confirm against, which leaves the webhook as the only path.
+   * proof: the server re-reads the checkout and checks it belongs to the caller's
+   * org. Empty if the provider gives no id, leaving the webhook to confirm.
    *
    * @generated from field: string session_id = 2;
    */
@@ -287,8 +286,8 @@ export const ConfirmCheckoutRequestSchema: GenMessage<ConfirmCheckoutRequest> = 
  */
 export type ConfirmCheckoutResponse = Message<"dashboard.billing.v1.ConfirmCheckoutResponse"> & {
   /**
-   * True once the subscription behind this checkout has been written. False is
-   * "not settled yet", never a failure: keep waiting for the webhook.
+   * False is "not settled yet" -- the buyer beat their own payment home -- never
+   * a failure. A checkout that will not settle is an error instead.
    *
    * @generated from field: bool confirmed = 1;
    */
@@ -435,8 +434,8 @@ export const ListPlansResponseSchema: GenMessage<ListPlansResponse> = /*@__PURE_
 
 /**
  * BillingStatus is derived from the clock on every read, never stored. The
- * states a payments provider reports — past due, cancelled — cannot be derived
- * and do not exist yet.
+ * states a payments provider reports — past due, cancelled — cannot be derived,
+ * so they live on SubscriptionStatus below rather than here.
  *
  * @generated from enum dashboard.billing.v1.BillingStatus
  */
@@ -580,25 +579,14 @@ export const BillingService: GenService<{
     output: typeof CreateCheckoutSessionResponseSchema;
   },
   /**
-   * Verifies one checkout the dashboard started, straight against the provider,
-   * and applies its subscription through the same write the webhook uses.
+   * Verifies one checkout against the provider and applies its subscription,
+   * which is what confirms a returning buyer without a webhook -- the only thing
+   * that works at all on a deployment with no reachable webhook URL. The webhook
+   * stays the authority for the lifecycle, which has no redirect to ride on.
    *
-   * This is the path a returning buyer is confirmed on. The webhook remains the
-   * authority for everything else -- renewal, dunning, cancellation, expiry --
-   * none of which has a redirect to be confirmed on, so it is a backstop here
-   * rather than a second-class citizen. What this removes is the dependence of
-   * the CHECKOUT MOMENT on inbound connectivity: without it a deployment with no
-   * reachable webhook URL can never complete a purchase, and every buyer waits
-   * out a poll of pug's own state that only a delivery can change.
-   *
-   * session_id is a CLAIM, not evidence. The provider is asked what it means, and
-   * the subscription it resolves to must carry this org in the metadata pug wrote
-   * at checkout -- PermissionDenied otherwise. There is no fallback to
-   * attribution by customer id here, unlike the webhook: the caller chose the id.
-   *
-   * confirmed=false is the ordinary "not yet" -- the buyer is back before the
-   * payment settled -- and the client should keep waiting rather than report a
-   * failure. Admin-only, like the checkout it confirms.
+   * session_id is a claim: the subscription it resolves to must carry this org in
+   * the metadata pug wrote at checkout, PermissionDenied otherwise. Admin-only,
+   * like the checkout it confirms.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.ConfirmCheckout
    */
