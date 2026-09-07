@@ -3,13 +3,14 @@ import { Link } from 'wouter'
 import { trackFeature } from '@/analytics/pug'
 import { useCan } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar'
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
 import { useBilling } from '@/hooks/use-billing'
 import { formatEvents, TONE_FILL, TONE_TEXT, usageFor } from '@/lib/billing'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const UsageMeter = ({ href }: { href: string }) => {
+  const { setOpenMobile } = useSidebar()
   const isDemo = useAtomValue(isDemoSessionAtom)
   const { status, usedEvents } = useBilling()
   const can = useCan()
@@ -33,7 +34,12 @@ const UsageMeter = ({ href }: { href: string }) => {
           className="group-data-[collapsible=icon]:justify-center"
           // Autocapture would otherwise file every click under this org's own usage numbers.
           data-pug-no-capture
-          onClick={() => trackFeature({ featureId: 'billing.meter', featureName: 'Sidebar usage meter' })}
+          onClick={() => {
+            // On mobile the sidebar is a sheet over the page, so a click that commits a page
+            // dismisses it — same as every nav link above.
+            setOpenMobile(false)
+            trackFeature({ featureId: 'billing.meter', featureName: 'Sidebar usage meter' })
+          }}
         >
           <span className="flex size-4 shrink-0 items-center justify-center">
             <span className={cn('size-2 rounded-full', TONE_FILL[usage.tone])} />

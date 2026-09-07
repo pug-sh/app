@@ -16,6 +16,10 @@ const { clearCheckoutPending, closeCheckoutOverlay, markCheckoutPending, openChe
 const TEST_URL = 'https://test.checkout.dodopayments.com/session'
 const LIVE_URL = 'https://checkout.dodopayments.com/session'
 
+// Mirrors the two guards in checkout.ts: the handshake, and what takes over once the iframe speaks.
+const HANDSHAKE_MS = 15_000
+const STALLED_MS = 30 * 60_000
+
 // Initialize is reached only after the SDK's dynamic import resolves.
 const started = async () => {
   await vi.waitFor(() => expect(Initialize).toHaveBeenCalled())
@@ -27,13 +31,13 @@ const KEY = 'pug:billingCheckoutPending'
 beforeEach(() => sessionStorage.clear())
 
 describe('the pending checkout', () => {
-  it('carries the signature and the session id across the provider redirect', () => {
-    markCheckoutPending({ signature: 'growth:2000', sessionId: 'cs_1' })
-    expect(takeCheckoutPending()).toEqual({ signature: 'growth:2000', sessionId: 'cs_1' })
+  it('carries the org, the signature and the session id across the provider redirect', () => {
+    markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: 'cs_1' })
+    expect(takeCheckoutPending()).toEqual({ orgId: 'org-a', signature: 'growth:2000', sessionId: 'cs_1' })
   })
 
   it('is taken once, so a reload cannot re-confirm a checkout', () => {
-    markCheckoutPending({ signature: 'growth:2000', sessionId: 'cs_1' })
+    markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: 'cs_1' })
     takeCheckoutPending()
     expect(takeCheckoutPending()).toBeNull()
   })
@@ -45,8 +49,15 @@ describe('the pending checkout', () => {
   // A provider that returns no session handle leaves the webhook as the only path; the signature
   // still has to survive so the poll has a baseline to compare against.
   it('keeps the signature when there is no session id', () => {
-    markCheckoutPending({ signature: 'growth:2000', sessionId: '' })
-    expect(takeCheckoutPending()).toEqual({ signature: 'growth:2000', sessionId: '' })
+    markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: '' })
+    expect(takeCheckoutPending()).toEqual({ orgId: 'org-a', signature: 'growth:2000', sessionId: '' })
+  })
+
+  // Written by the build before the org was stamped on it, and still in this tab across a deploy.
+  // Dropping it would strand a checkout that is already paid for.
+  it('reads a record written without an org', () => {
+    sessionStorage.setItem(KEY, JSON.stringify({ signature: 'growth:2000', sessionId: 'cs_1' }))
+    expect(takeCheckoutPending()).toEqual({ orgId: '', signature: 'growth:2000', sessionId: 'cs_1' })
   })
 
   // sessionStorage is untrusted input; anything that is not our shape must drop, not throw.
@@ -56,7 +67,7 @@ describe('the pending checkout', () => {
   })
 
   it('clears without reading', () => {
-    markCheckoutPending({ signature: 'growth:2000', sessionId: 'cs_1' })
+    markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: 'cs_1' })
     clearCheckoutPending()
     expect(sessionStorage.getItem(KEY)).toBeNull()
   })
@@ -102,10 +113,23 @@ describe('the checkout overlay', () => {
     await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Failed to create checkout' })
   })
 
-  // The handshake guard is the only thing that settles a checkout the iframe never answers. A
-  // swallowed wallet error resolves nothing, so clearing the timer on it hangs the promise forever —
-  // and with it `setCheckingOut(null)`, which leaves every plan button disabled.
-  it('still settles when a swallowed wallet error is the last event', async () => {
+  // The handshake guard is the only thing that settles a checkout the iframe never answers — a mode
+  // that disagrees with the minted host swallows every event.
+  it('fails a checkout the iframe never answers', async () => {
+    vi.useFakeTimers()
+    try {
+      const outcome = openCheckoutOverlay(TEST_URL)
+      await vi.advanceTimersByTimeAsync(HANDSHAKE_MS)
+
+      await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Checkout could not be opened' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // A wallet error is an answer, so the handshake window is spent. Settling on it anyway tears the
+  // overlay down under a customer who is still typing a card — and toasts them a failure.
+  it('leaves the card form standing past the handshake window', async () => {
     vi.useFakeTimers()
     try {
       const outcome = openCheckoutOverlay(TEST_URL)
@@ -113,10 +137,28 @@ describe('the checkout overlay', () => {
       const { onEvent } = Initialize.mock.calls[0][0]
 
       onEvent({ event_type: 'checkout.error', data: { message: 'Wallet initialization failed' } })
-      // The iframe never loaded, so nothing follows it.
-      await vi.advanceTimersByTimeAsync(15_000)
+      await vi.advanceTimersByTimeAsync(4 * HANDSHAKE_MS)
+      onEvent({ event_type: 'checkout.redirect' })
 
-      await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Checkout could not be opened' })
+      await expect(outcome).resolves.toEqual({ status: 'redirect' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // An overlay that answers once and then goes quiet still has to settle, or the promise hangs — and
+  // with it `setCheckingOut(null)`, which leaves every plan button disabled.
+  it('settles an overlay that answers once and then goes quiet', async () => {
+    vi.useFakeTimers()
+    try {
+      const outcome = openCheckoutOverlay(TEST_URL)
+      await vi.advanceTimersByTimeAsync(0)
+      const { onEvent } = Initialize.mock.calls[0][0]
+
+      onEvent({ event_type: 'checkout.error', data: { message: 'Wallet initialization failed' } })
+      await vi.advanceTimersByTimeAsync(STALLED_MS)
+
+      await expect(outcome).resolves.toEqual({ status: 'closed' })
     } finally {
       vi.useRealTimers()
     }
@@ -157,7 +199,7 @@ describe('blocked site data', () => {
       throw new Error('site data blocked')
     })
 
-    expect(() => markCheckoutPending({ signature: 'growth:2000', sessionId: 'cs_1' })).not.toThrow()
+    expect(() => markCheckoutPending({ orgId: 'org-a', signature: 'growth:2000', sessionId: 'cs_1' })).not.toThrow()
     expect(() => clearCheckoutPending()).not.toThrow()
     expect(takeCheckoutPending()).toBeNull()
 

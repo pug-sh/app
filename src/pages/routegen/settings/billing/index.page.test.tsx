@@ -240,8 +240,8 @@ describe('the portal', () => {
 describe('the checkout return', () => {
   const PENDING_KEY = 'pug:billingCheckoutPending'
 
-  const pending = (sessionId: string) =>
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ signature: 'stale-signature', sessionId }))
+  const pending = (sessionId: string, orgId = 'org-a') =>
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ orgId, signature: 'stale-signature', sessionId }))
 
   beforeEach(() => sessionStorage.clear())
 
@@ -310,6 +310,20 @@ describe('the checkout return', () => {
 
     await waitFor(() => expect(getBillingStatus.mock.calls.length).toBeGreaterThan(1))
     expect(confirmCheckout).not.toHaveBeenCalled()
+  })
+
+  // A second tab moved the session to another org while this one was at the provider. Confirming
+  // would send this org's id with that org's session — refused, and reported to a buyer who paid as
+  // a payment that needs support. The record waits for the org that started it instead.
+  it('leaves a checkout started in another org for that org', async () => {
+    pending('cs_1', 'org-b')
+    renderPage()
+
+    expect(await screen.findByText('Growth')).toBeTruthy()
+    expect(confirmCheckout).not.toHaveBeenCalled()
+    expect(toastError).not.toHaveBeenCalled()
+    expect(toastInfo).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem(PENDING_KEY)).toContain('cs_1')
   })
 })
 

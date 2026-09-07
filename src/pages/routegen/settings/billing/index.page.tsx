@@ -165,15 +165,26 @@ const Billing = () => {
   // outcome in the query it returns with — without reading it, a declined card polls for 17.5s and
   // is then told its payment is still confirming.
   useEffect(() => {
+    // Held until the org resolves: both halves below are answered against it, and on this page's
+    // first render the workspace has not bootstrapped yet.
+    if (!orgId) return
     const pending = takeCheckoutPending()
     if (pending === null) return
+    // Another tab moved the session to a different org while this one was at the provider.
+    // Confirming would hand this org's id to that org's session and be refused as someone else's,
+    // and the poll would read that org's plan against this one's baseline as a purchase landing.
+    // Put it back instead: switching to the org that started it confirms there.
+    if (pending.orgId && pending.orgId !== orgId) {
+      markCheckoutPending(pending)
+      return
+    }
     const outcome = new URLSearchParams(search).get('status')?.toLowerCase()
     if (outcome && FAILED_CHECKOUT_STATUSES.has(outcome)) {
       toast.error('Your payment did not go through. Your plan is unchanged.')
       return
     }
     confirmCheckout(pending.signature, pending.sessionId)
-  }, [confirmCheckout, search])
+  }, [confirmCheckout, search, orgId])
 
   const handleSelectPlan = async (plan: PlanOption) => {
     if (!orgId || planKey === null) return
@@ -181,7 +192,7 @@ const Billing = () => {
     try {
       const resp = await billingRPC.createCheckoutSession({ orgId, planSlug: plan.slug })
       trackFeature({ featureId: 'billing.checkout_started', featureName: 'Start checkout' })
-      markCheckoutPending({ signature: planKey, sessionId: resp.sessionId })
+      markCheckoutPending({ orgId, signature: planKey, sessionId: resp.sessionId })
       const outcome = await openCheckoutOverlay(resp.checkoutUrl)
       if (outcome.status === 'failed') {
         clearCheckoutPending()

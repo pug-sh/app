@@ -1,5 +1,5 @@
 import { Code, ConnectError } from '@connectrpc/connect'
-import { atom } from 'jotai'
+import { atom, type Getter, type Setter } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import type { GetBillingStatusResponse } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { billingRPCAtom, usageRPCAtom } from '@/api/rpc'
@@ -54,7 +54,10 @@ export const billingAtom = atom(get => {
 // The usage call carries a one-day range on purpose: `range` bounds the DAILY SERIES only and
 // `used_events` always covers the whole period, so this asks for the period total without dragging
 // back a row per (project, day) that nothing here draws.
-export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?: boolean } = {}) => {
+//
+// A plain function rather than the atom's own write, because it has to re-enter itself: `set` on the
+// atom being written writes its VALUE in jotai, it does not call this again.
+const runLoad = (get: Getter, set: Setter, force: boolean): Promise<void> => {
   const org = get(activeOrgAtom)
   if (!org) return Promise.resolve()
   // The demo signs everyone in as a shared viewer of someone else's org, and hides every billing
@@ -129,8 +132,11 @@ export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?
   }
 
   const inFlight = get(inFlightAtom)
-  // A forced caller wants an answer newer than the one already in the air.
-  if (inFlight?.orgId === org.id) return force ? inFlight.promise.then(start) : inFlight.promise
+  // A forced caller wants an answer newer than the one already in the air. Re-entered rather than
+  // chained straight to `start`, which holds the org captured above: the org can move while the
+  // first request is out, and this org's second request would then take over the new org's in-flight
+  // slot and have its answer discarded — leaving the surfaces with nothing for either org.
+  if (inFlight?.orgId === org.id) return force ? inFlight.promise.then(() => runLoad(get, set, true)) : inFlight.promise
 
   // A cached failure is not an answer, so it must not stop the next caller from retrying — unless
   // the answer cannot change, which is what `unsupported` means.
@@ -140,7 +146,11 @@ export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?
     return Promise.resolve()
   }
   return start()
-})
+}
+
+export const loadBillingAtom = atom(null, (get, set, { force = false }: { force?: boolean } = {}) =>
+  runLoad(get, set, force),
+)
 
 export const resetBillingAtom = atom(null, (_, set) => {
   set(billingResultAtom, null)

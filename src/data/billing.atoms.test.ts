@@ -144,6 +144,26 @@ describe('loadBillingAtom', () => {
     expect(store.get(billingAtom).status?.plan?.slug).toBe('enterprise')
   })
 
+  // A forced reload waits out the request already in the air, and the org can move while it waits.
+  // Starting the org it was asked for takes over the new org's in-flight slot and has its own answer
+  // discarded for being stale — leaving every billing surface with nothing for the org on screen.
+  it('follows the org that is current by the time a queued reload runs', async () => {
+    const store = newStore()
+    let settle!: (v: unknown) => void
+    getBillingStatus.mockImplementationOnce(() => new Promise(res => (settle = res)))
+
+    const first = store.set(loadBillingAtom)
+    const forced = store.set(loadBillingAtom, { force: true })
+
+    store.set(activeOrgAtom, orgB)
+    getBillingStatus.mockResolvedValue(status('enterprise'))
+    settle(status('growth'))
+    await first
+    await forced
+
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('enterprise')
+  })
+
   it('sequences a forced reload behind the request already in the air', async () => {
     const store = newStore()
     let settle!: (v: unknown) => void

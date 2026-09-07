@@ -2,8 +2,10 @@ const PENDING_KEY = 'pug:billingCheckoutPending'
 
 // What a completed checkout has to carry across the provider's return_url, which navigates the whole
 // page. `signature` is the plan the customer had *before* it — polling against the plan they came
-// back to can never see the change a fast webhook already made.
-export type PendingCheckout = { signature: string; sessionId: string }
+// back to can never see the change a fast webhook already made. `orgId` is the org that started it:
+// a second tab can move the session's org while this one is at the provider, and confirming would
+// then send the wrong org's id with this session — refused, and reported as a payment that failed.
+export type PendingCheckout = { orgId: string; signature: string; sessionId: string }
 
 export const markCheckoutPending = (pending: PendingCheckout) => {
   try {
@@ -27,7 +29,11 @@ export const takeCheckoutPending = (): PendingCheckout | null => {
   try {
     const parsed = JSON.parse(raw)
     if (typeof parsed?.signature !== 'string') return null
-    return { signature: parsed.signature, sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : '' }
+    return {
+      orgId: typeof parsed.orgId === 'string' ? parsed.orgId : '',
+      signature: parsed.signature,
+      sessionId: typeof parsed.sessionId === 'string' ? parsed.sessionId : '',
+    }
   } catch {
     return null
   }
@@ -56,6 +62,12 @@ const modeFor = (checkoutUrl: string) => {
 // A white-label or renamed checkout host defeats the mode guess above, and then no event ever
 // arrives — without this the promise never settles and every plan button stays disabled.
 const HANDSHAKE_TIMEOUT_MS = 15_000
+
+// What replaces the handshake guard once the iframe has spoken. An overlay that answered once and
+// then went quiet — a wallet error and nothing after it — still has to settle, or the promise and
+// the plan buttons behind it hang forever; but settling tears the overlay down, so this has to
+// outlast any customer still typing a card.
+const STALLED_TIMEOUT_MS = 30 * 60_000
 
 type CheckoutOutcome =
   // The provider took the payment and is navigating to the return URL.
@@ -97,28 +109,32 @@ export const openCheckoutOverlay = async (checkoutUrl: string): Promise<Checkout
   const { DodoPayments } = await import('dodopayments-checkout')
   if (cancelled) return { status: 'closed' }
   closeActive = () => DodoPayments.Checkout.close()
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await new Promise<CheckoutOutcome>(resolve => {
-      const handshake = setTimeout(() => {
+      timer = setTimeout(() => {
         console.error('no checkout event arrived; check the mode against the host:', modeFor(checkoutUrl), checkoutUrl)
         resolve({ status: 'failed', message: 'Checkout could not be opened' })
       }, HANDSHAKE_TIMEOUT_MS)
+      let heard = false
       DodoPayments.Initialize({
         mode: modeFor(checkoutUrl),
         displayType: 'overlay',
-        // Cleared on the first event that proves the iframe is talking: this guards the handshake,
-        // not the checkout, which legitimately takes as long as the customer needs to type a card.
         onEvent: event => {
+          // Any event proves the iframe is talking, which is all the handshake guards — a wallet
+          // error included, even though it resolves nothing. Past that the overlay legitimately
+          // stays open as long as the customer needs to type a card, so the long guard takes over.
+          if (!heard) {
+            heard = true
+            clearTimeout(timer)
+            timer = setTimeout(() => resolve({ status: 'closed' }), STALLED_TIMEOUT_MS)
+          }
           const detail = typeof event.data?.message === 'string' ? event.data.message : ''
-          // A swallowed wallet error resolves nothing, so it must not spend the handshake guard
-          // either — left cleared, a wallet error that arrives last hangs the promise forever.
-          const swallowed = event.event_type === 'checkout.error' && isWalletError(detail)
-          if (!swallowed) clearTimeout(handshake)
           if (event.event_type === 'checkout.redirect') resolve({ status: 'redirect' })
           if (event.event_type === 'checkout.closed') resolve({ status: 'closed' })
           if (event.event_type === 'checkout.error') {
             console.error('dodo checkout error:', detail || '(no message)')
-            if (!swallowed) resolve({ status: 'failed', message: detail || 'Checkout failed' })
+            if (!isWalletError(detail)) resolve({ status: 'failed', message: detail || 'Checkout failed' })
           }
           if (event.event_type === 'checkout.link_expired') {
             resolve({ status: 'failed', message: 'This checkout link expired' })
@@ -128,6 +144,7 @@ export const openCheckoutOverlay = async (checkoutUrl: string): Promise<Checkout
       DodoPayments.Checkout.open({ checkoutUrl })
     })
   } finally {
+    clearTimeout(timer)
     closeCheckoutOverlay()
   }
 }
