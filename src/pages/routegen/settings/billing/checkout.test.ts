@@ -102,6 +102,41 @@ describe('the checkout overlay', () => {
     await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Failed to create checkout' })
   })
 
+  // The handshake guard is the only thing that settles a checkout the iframe never answers. A
+  // swallowed wallet error resolves nothing, so clearing the timer on it hangs the promise forever —
+  // and with it `setCheckingOut(null)`, which leaves every plan button disabled.
+  it('still settles when a swallowed wallet error is the last event', async () => {
+    vi.useFakeTimers()
+    try {
+      const outcome = openCheckoutOverlay(TEST_URL)
+      await vi.advanceTimersByTimeAsync(0)
+      const { onEvent } = Initialize.mock.calls[0][0]
+
+      onEvent({ event_type: 'checkout.error', data: { message: 'Wallet initialization failed' } })
+      // The iframe never loaded, so nothing follows it.
+      await vi.advanceTimersByTimeAsync(15_000)
+
+      await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Checkout could not be opened' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // The SDK's close() rethrows on a teardown failure, and it runs in openCheckoutOverlay's finally —
+  // where a throw overrides the outcome. The customer paid; the page must not call that a failure.
+  it('keeps a completed payment when tearing the overlay down throws', async () => {
+    closeOverlay.mockImplementation(() => {
+      throw new Error('iframe already detached')
+    })
+
+    const outcome = openCheckoutOverlay(TEST_URL)
+    ;(await started()).onEvent({ event_type: 'checkout.redirect' })
+
+    await expect(outcome).resolves.toEqual({ status: 'redirect' })
+    // Cleared even though the close threw, so the next unmount cannot clear someone else's pending.
+    expect(closeCheckoutOverlay()).toBe(false)
+  })
+
   // Navigating away while the SDK chunk is still loading: without the guard the overlay opens over
   // whatever rendered next, with nothing registered to close it.
   it('does not open an overlay the page has already left', async () => {

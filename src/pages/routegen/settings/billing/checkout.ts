@@ -71,10 +71,16 @@ let closeActive: (() => void) | null = null
 // whether one was still open, which is what separates navigating away mid-checkout from the page
 // reload a completed one performs.
 export const closeCheckoutOverlay = () => {
-  const wasOpen = closeActive !== null
-  closeActive?.()
+  const close = closeActive
+  // Cleared before the call, not after: the SDK's close() rethrows on a teardown failure, and from
+  // openCheckoutOverlay's finally that would turn a completed payment into "Failed to start checkout".
   closeActive = null
-  return wasOpen
+  try {
+    close?.()
+  } catch (err) {
+    console.error('could not close the checkout overlay:', err)
+  }
+  return close !== null
 }
 
 // A wallet script blocked by an ad blocker, or a declined Apple Pay, both arrive as checkout.error
@@ -100,16 +106,19 @@ export const openCheckoutOverlay = async (checkoutUrl: string): Promise<Checkout
       DodoPayments.Initialize({
         mode: modeFor(checkoutUrl),
         displayType: 'overlay',
-        // Cleared on the first event of any type: this guards the handshake, not the checkout, which
-        // legitimately takes as long as the customer needs to type a card.
+        // Cleared on the first event that proves the iframe is talking: this guards the handshake,
+        // not the checkout, which legitimately takes as long as the customer needs to type a card.
         onEvent: event => {
-          clearTimeout(handshake)
+          const detail = typeof event.data?.message === 'string' ? event.data.message : ''
+          // A swallowed wallet error resolves nothing, so it must not spend the handshake guard
+          // either — left cleared, a wallet error that arrives last hangs the promise forever.
+          const swallowed = event.event_type === 'checkout.error' && isWalletError(detail)
+          if (!swallowed) clearTimeout(handshake)
           if (event.event_type === 'checkout.redirect') resolve({ status: 'redirect' })
           if (event.event_type === 'checkout.closed') resolve({ status: 'closed' })
           if (event.event_type === 'checkout.error') {
-            const detail = typeof event.data?.message === 'string' ? event.data.message : ''
             console.error('dodo checkout error:', detail || '(no message)')
-            if (!isWalletError(detail)) resolve({ status: 'failed', message: detail || 'Checkout failed' })
+            if (!swallowed) resolve({ status: 'failed', message: detail || 'Checkout failed' })
           }
           if (event.event_type === 'checkout.link_expired') {
             resolve({ status: 'failed', message: 'This checkout link expired' })

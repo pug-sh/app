@@ -25,7 +25,7 @@ import {
 } from '@/lib/billing'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
-import { formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
+import { formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import {
   clearCheckoutPending,
@@ -73,10 +73,12 @@ const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) =
 )
 
 // `renewsAt` is when the provider bills next; `periodEnd` is when the quota window turns over. They
-// coincide only by accident, and conflating them is the mistake this exists to prevent.
+// coincide only by accident, and conflating them is the mistake this exists to prevent. That splits
+// the formatters too: only the quota window is a UTC boundary — a renewal is the provider's own
+// instant and a trial end is the signup instant plus 14 days, so UTC dates either a day off.
 const periodLine = (status: BillingStatus, trialEndsAt: Date | null, renewsAt: Date | null, periodEnd: Date | null) => {
-  if (status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatUTCDate(trialEndsAt)}`
-  if (renewsAt) return `Renews ${formatUTCDate(renewsAt)}`
+  if (status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
+  if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
   if (periodEnd) return `Quota resets ${formatUTCDate(periodEnd)}`
   return ''
 }
@@ -186,7 +188,7 @@ const Billing = () => {
         toast.error(outcome.message)
       } else if (outcome.status === 'closed') {
         clearCheckoutPending()
-      } else {
+      } else if (outcome.status === 'redirect') {
         await confirmCheckout(planKey, resp.sessionId)
       }
     } catch (err) {
@@ -244,8 +246,9 @@ const Billing = () => {
   // The free plan is named after its own state, so the badge would just repeat the plan name.
   const badge = statusLabel(status.status) === status.plan?.displayName ? '' : statusLabel(status.status)
   const pastDue = isPastDue(status)
-  // The server refuses a second checkout while one subscription is live, and a tier switch belongs
-  // in the portal where the card and billing date carry over.
+  // Nothing server-side stops a second checkout — the duplicate is only refused at ConfirmCheckout,
+  // after the card is charged. So this is what prevents paying twice, not a mirror of a refusal. A
+  // tier switch belongs in the portal anyway, where the card and billing date carry over.
   const liveSubscription = status.manageable && status.subscriptionStatus !== SubscriptionStatus.UNSPECIFIED
 
   return (

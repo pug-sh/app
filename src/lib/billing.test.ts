@@ -1,6 +1,11 @@
+import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
-import { BillingStatus, SubscriptionStatus } from '@/api/genproto/dashboard/billing/v1/billing_pb'
-import { formatMoney, statusLabel, subStatusLabel, USAGE_WARN_RATIO, usageFor } from './billing'
+import {
+  BillingStatus,
+  GetBillingStatusResponseSchema,
+  SubscriptionStatus,
+} from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import { formatMoney, statusLabel, subStatusLabel, USAGE_WARN_RATIO, usageBannerKey, usageFor } from './billing'
 
 describe('usageFor', () => {
   // The two halves come from different RPCs and each has its own way of having no answer. Either
@@ -89,5 +94,26 @@ describe('labels', () => {
   it('labels only the state that needs acting on', () => {
     expect(subStatusLabel(SubscriptionStatus.PAST_DUE)).toBe('Payment failed')
     expect(subStatusLabel(SubscriptionStatus.ACTIVE)).toBe('')
+  })
+})
+
+describe('usageBannerKey', () => {
+  // An out-of-range stamp makes tsToDate an Invalid Date, which is truthy — so getTime() is NaN and
+  // the key freezes at "NaN:over". A dismissal keyed on it never expires, which is the one outcome
+  // the comment above it promises cannot happen.
+  it('does not freeze the key when the period end is unreadable', () => {
+    const status = create(GetBillingStatusResponseSchema, {
+      periodEnd: { seconds: 900_000_000_000_000n, nanos: 0 },
+    })
+    expect(usageBannerKey(status, 'over')).not.toContain('NaN')
+  })
+
+  // A real period is what the dismissal expires against, so it has to stay in the key.
+  it('keys on the period end when there is one', () => {
+    const periodEnd = new Date('2026-10-01T00:00:00Z')
+    const status = create(GetBillingStatusResponseSchema, {
+      periodEnd: { seconds: BigInt(periodEnd.getTime() / 1000), nanos: 0 },
+    })
+    expect(usageBannerKey(status, 'over')).toBe(`${periodEnd.getTime()}:over`)
   })
 })

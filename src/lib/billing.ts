@@ -3,7 +3,7 @@ import {
   type GetBillingStatusResponse,
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
-import { tsToDate } from '@/lib/timestamp'
+import { tsToDate, validDate } from '@/lib/timestamp'
 
 const STATUS_LABEL: Record<BillingStatus, string> = {
   [BillingStatus.UNSPECIFIED]: '',
@@ -87,7 +87,7 @@ export const BANNER_TEXT: Record<BannerTone, string> = {
 // Dismissal lasts the period, but crossing from "nearly out" to "over" earns a fresh banner. With no
 // period there is nothing to expire against, so it lasts the day rather than forever.
 export const usageBannerKey = (status: GetBillingStatusResponse, tone: BannerTone) => {
-  const periodEnd = tsToDate(status.periodEnd)
+  const periodEnd = validDate(tsToDate(status.periodEnd))
   return `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
 }
 
