@@ -126,7 +126,12 @@ export const openCheckoutOverlay = async (checkoutUrl: string): Promise<Checkout
           }
         },
       })
-      DodoPayments.Checkout.open({ checkoutUrl })
+      // Both read as consumer-funnel pressure on a B2B upgrade. They ride the URL as
+      // query params, so a buyer can turn them back on -- cosmetic either way.
+      DodoPayments.Checkout.open({
+        checkoutUrl,
+        options: { showTimer: false, showSecurityBadge: false },
+      })
     })
   } finally {
     clearTimeout(timer)

@@ -4,13 +4,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { useLocation, useSearch } from 'wouter'
 import { trackFeature } from '@/analytics/pug'
-import { BillingStatus, type PlanOption, SubscriptionStatus } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import {
+  BillingStatus,
+  CheckoutTheme,
+  type PlanOption,
+  SubscriptionStatus,
+} from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { billingRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
 import { Badge } from '@/components/ui/badge'
 import { confirmCheckoutAtom, loadBillingAtom, pollBillingAfterCheckoutAtom } from '@/data/billing.atoms'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
@@ -85,6 +91,9 @@ const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'ex
 const Billing = () => {
   const org = useAtomValue(activeOrgAtom)
   const billingRPC = useAtomValue(billingRPCAtom)
+  // Resolved, not the stored preference: the overlay opens over this page, so it has
+  // to match what is actually on screen rather than the buyer's OS.
+  const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const { status, usedEvents, meterError, error, unsupported, loaded } = useBilling()
   const reloadBilling = useSetAtom(loadBillingAtom)
   const pollAfterCheckout = useSetAtom(pollBillingAfterCheckoutAtom)
@@ -178,7 +187,8 @@ const Billing = () => {
     if (!orgId || planKey === null) return
     setCheckingOut(plan.slug)
     try {
-      const resp = await billingRPC.createCheckoutSession({ orgId, planSlug: plan.slug })
+      const theme = resolvedTheme === 'dark' ? CheckoutTheme.DARK : CheckoutTheme.LIGHT
+      const resp = await billingRPC.createCheckoutSession({ orgId, planSlug: plan.slug, theme })
       trackFeature({ featureId: 'billing.checkout_started', featureName: 'Start checkout' })
       markCheckoutPending({ orgId, signature: planKey, sessionId: resp.sessionId })
       const outcome = await openCheckoutOverlay(resp.checkoutUrl)

@@ -6,6 +6,7 @@ import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   BillingStatus,
+  CheckoutTheme,
   GetBillingStatusResponseSchema,
   PlanOptionSchema,
   SubscriptionStatus,
@@ -186,6 +187,24 @@ describe('the plan catalog', () => {
 
     const button = await screen.findByRole('button', { name: 'Choose' })
     await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
+  })
+
+  // The overlay opens over this page, so it follows the theme in effect rather than the
+  // buyer's OS. 'system' is already resolved by the time it is sent.
+  it.each([
+    ['dark', CheckoutTheme.DARK],
+    ['light', CheckoutTheme.LIGHT],
+  ])('sends the %s the overlay opens over', async (theme, want) => {
+    localStorage.setItem('pug:theme', JSON.stringify(theme))
+    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    createCheckoutSession.mockImplementation(() => new Promise(() => {}))
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+
+    await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled())
+    expect(createCheckoutSession.mock.calls[0][0]).toMatchObject({ theme: want })
   })
 
   // purchasable is the server's own "would a checkout open" — an unconfigured tier lists without

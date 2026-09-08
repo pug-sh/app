@@ -88,6 +88,15 @@ describe('the checkout overlay', () => {
     expect(Initialize.mock.calls[0][0].mode).toBe('live')
   })
 
+  it('opens without the timer or the security badge', async () => {
+    openCheckoutOverlay(TEST_URL)
+    await started()
+
+    expect(openOverlay).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { showTimer: false, showSecurityBadge: false } }),
+    )
+  })
+
   // Both arrive as checkout.error while the card form still works, so tearing the overlay down
   // loses a live sale.
   it('leaves the card form standing when a wallet fails', async () => {
