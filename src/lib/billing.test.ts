@@ -5,7 +5,15 @@ import {
   GetBillingStatusResponseSchema,
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
-import { formatMoney, statusLabel, subStatusLabel, USAGE_WARN_RATIO, usageBannerKey, usageFor } from './billing'
+import {
+  formatMoney,
+  retentionLabel,
+  statusLabel,
+  subStatusLabel,
+  USAGE_WARN_RATIO,
+  usageBannerKey,
+  usageFor,
+} from './billing'
 
 describe('usageFor', () => {
   // Either half missing means no meter to draw; substituting a zero for the other is the one thing
@@ -68,6 +76,18 @@ describe('formatMoney', () => {
   // "$20" would state a price the server never sent.
   it('never guesses dollars for a plan with no currency', () => {
     expect(formatMoney(2_000n, '')).toBe('—')
+  })
+})
+
+describe('retentionLabel', () => {
+  it('agrees with its own number', () => {
+    expect(retentionLabel(90n)).toBe('90 days of event history')
+    expect(retentionLabel(1n)).toBe('1 day of event history')
+  })
+
+  // Grouped the way the quota beside it is, not the way the browser locale would.
+  it('groups in en-US', () => {
+    expect(retentionLabel(3_650n)).toBe('3,650 days of event history')
   })
 })
 

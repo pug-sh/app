@@ -62,7 +62,9 @@ const status = (extra: StatusFields = {}) =>
     ...extra,
   } as StatusFields)
 
-const plan = (slug: string, displayName: string, priceCents: bigint, purchasable = true) =>
+type PlanFields = NonNullable<Parameters<typeof create<typeof PlanOptionSchema>>[1]>
+
+const plan = (slug: string, displayName: string, priceCents: bigint, purchasable = true, extra: PlanFields = {}) =>
   create(PlanOptionSchema, {
     slug,
     displayName,
@@ -70,7 +72,8 @@ const plan = (slug: string, displayName: string, priceCents: bigint, purchasable
     currency: 'USD',
     includedEvents: 500_000n,
     purchasable,
-  })
+    ...extra,
+  } as PlanFields)
 
 const renderPage = (role = OrgRole.ADMIN) => {
   const store = createStore()
@@ -111,6 +114,18 @@ describe('the plan section', () => {
     listPlans.mockResolvedValue({ plans: [] })
     renderPage()
     expect(await screen.findByText('Quota resets Jul 10, 2026')).toBeTruthy()
+  })
+
+  it('names the history the plan keeps', async () => {
+    getBillingStatus.mockResolvedValue(status({ retentionDays: 90n }))
+    renderPage()
+    expect(await screen.findByText('90 days of event history')).toBeTruthy()
+  })
+
+  // Absent is no bound at all, and "0 days of event history" is what it must never say.
+  it('reads an absent bound as unlimited, not zero', async () => {
+    renderPage()
+    expect(await screen.findByText('Unlimited event history')).toBeTruthy()
   })
 
   // The server keeps the quota through PAST_DUE, so the page must not imply anything was cut off.
@@ -173,6 +188,25 @@ describe('the plan catalog', () => {
     // The current tier is marked, never offered.
     expect(screen.getByText('Current')).toBeTruthy()
     expect(screen.getAllByRole('button', { name: 'Choose' })).toHaveLength(1)
+  })
+
+  it('names the quota and the history each tier keeps', async () => {
+    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, true, { retentionDays: 90n })] })
+    renderPage()
+    expect(await screen.findByText('500,000 events / month · 90 days of event history')).toBeTruthy()
+  })
+
+  // Both numbers are absent on the custom tier, where the row must not trail a separator with
+  // nothing after it.
+  it('leaves the custom tier its one line', async () => {
+    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
+    listPlans.mockResolvedValue({
+      plans: [plan('custom', 'Custom', 0n, true, { priceCents: undefined, includedEvents: undefined })],
+    })
+    renderPage()
+    expect(await screen.findByText('Quota agreed with us')).toBeTruthy()
+    expect(screen.getByText('Agreed price')).toBeTruthy()
   })
 
   // The spinner replaces the button's only text and is aria-hidden, so an unlabelled button loses

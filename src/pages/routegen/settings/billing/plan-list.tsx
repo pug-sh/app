@@ -1,13 +1,17 @@
 import { Check, Loader2 } from 'lucide-react'
 import type { PlanOption } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { Button } from '@/components/ui/button'
-import { formatEvents, formatMoney } from '@/lib/billing'
+import { formatEvents, formatMoney, retentionLabel } from '@/lib/billing'
 
 // Absent is the custom tier, whose quota comes from the org's own row. Never 0.
 const quotaLabel = (plan: PlanOption) =>
   plan.includedEvents === undefined
     ? 'Quota agreed with us'
     : `${formatEvents(Number(plan.includedEvents))} events / month`
+
+// Retention is absent on the custom tier too, where the quota half already says to talk to us.
+const detailLabel = (plan: PlanOption) =>
+  plan.retentionDays === undefined ? quotaLabel(plan) : `${quotaLabel(plan)} · ${retentionLabel(plan.retentionDays)}`
 
 // Absent is the custom tier again — distinct from the free floor's price of zero.
 const priceLabel = (plan: PlanOption) =>
@@ -45,7 +49,7 @@ const PlanList = ({
                 </>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{quotaLabel(plan)}</p>
+            <p className="text-xs text-muted-foreground">{detailLabel(plan)}</p>
           </div>
           <div className="shrink-0 text-right text-sm tabular-nums">{priceLabel(plan)}</div>
           {anySelectable && (

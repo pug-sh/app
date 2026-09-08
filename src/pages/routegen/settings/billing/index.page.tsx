@@ -24,6 +24,7 @@ import {
   formatEvents,
   formatMoney,
   isPastDue,
+  retentionLabel,
   statusLabel,
   subStatusLabel,
   TONE_FILL,
@@ -73,6 +74,14 @@ const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) =
     {includedEvents === undefined
       ? 'This plan has no event limit.'
       : `${formatEvents(Number(includedEvents))} events included this period.`}
+  </p>
+)
+
+// Absent is NO BOUND, not zero. Nothing deletes on this number today, so it promises history
+// rather than warning about a cutoff.
+const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined }) => (
+  <p className="mt-1 text-xs text-muted-foreground">
+    {retentionDays === undefined ? 'Unlimited event history' : retentionLabel(retentionDays)}
   </p>
 )
 
@@ -273,6 +282,7 @@ const Billing = () => {
           )}
         </div>
         {period && <p className="mt-1 text-xs text-muted-foreground">{period}</p>}
+        <RetentionNote retentionDays={status.retentionDays} />
         {pastDue && (
           <p className="mt-2 text-xs text-caution">
             We couldn't charge your card. Nothing has changed about your plan or your limits — update your payment

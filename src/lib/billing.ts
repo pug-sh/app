@@ -98,6 +98,13 @@ export const billingSignature = (status: GetBillingStatusResponse | null) =>
 // "1,20,000 / 5,00,000" beside a "$20".
 export const formatEvents = (n: number) => n.toLocaleString('en-US')
 
+// Pinned to en-US too, since it shares a line with both. Absence is the caller's to name: no bound
+// on the status, the custom tier on a plan option.
+export const retentionLabel = (days: bigint) => {
+  const n = Number(days)
+  return `${n.toLocaleString('en-US')} ${n === 1 ? 'day' : 'days'} of event history`
+}
+
 export const formatMoney = (cents: bigint, currency: string) => {
   // "$20" would state a price the server never sent.
   if (!currency) return '—'
