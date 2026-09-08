@@ -102,6 +102,8 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   return <Fragment key={projectId}>{children}</Fragment>
 }
 
+const PROJECT_LESS_PATHS = new Set(Object.keys(routes).map(path => path.replace('/p/:projectId', '')))
+
 // Exported for the test that pins it against WorkspaceBootstrap: the two race for the first
 // navigation off '/', and the bug only appears when they run together.
 export const ProjectRedirect = () => {
@@ -118,10 +120,10 @@ export const ProjectRedirect = () => {
 
   useEffect(() => {
     if (project) {
-      // The post-checkout return URL carries no project, so '/settings/billing?status=failed' has to
-      // survive whole — useLocation drops the query, and without it a declined card reads as pending.
-      const query = search ? `?${search}` : ''
-      const rest = location === '/' || location.startsWith('/p/') ? '/overview' : `${location}${query}`
+      // The post-checkout return carries no project, so '/settings/billing?status=failed' survives
+      // whole. Only a real route does: anything else prefixed draws a layout shell with no body.
+      const keep = PROJECT_LESS_PATHS.has(location)
+      const rest = keep ? `${location}${search ? `?${search}` : ''}` : '/overview'
       navigate(`/p/${project.id}${rest}`, { replace: true })
     }
   }, [location, search, project, navigate])

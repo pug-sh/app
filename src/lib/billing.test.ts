@@ -1,12 +1,14 @@
 import { create } from '@bufbuild/protobuf'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   BillingStatus,
   GetBillingStatusResponseSchema,
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import {
+  formatEvents,
   formatMoney,
+  hasLiveSubscription,
   retentionLabel,
   statusLabel,
   subStatusLabel,
@@ -68,9 +70,10 @@ describe('formatMoney', () => {
     expect(formatMoney(2_000n, 'JPY')).toBe('¥2,000')
   })
 
-  // Intl throws on a malformed code, where minor units are unknowable — so no /100 guess.
-  it('falls back rather than throwing on a malformed code', () => {
-    expect(formatMoney(2_000n, 'not a currency')).toBe('2000 not a currency')
+  // Intl throws on a malformed code, where minor units are unknowable. Printing the raw integer
+  // where a price goes would state 2000 for what may be $20.00.
+  it('says nothing rather than a wrong number on a malformed code', () => {
+    expect(formatMoney(2_000n, 'not a currency')).toBe('—')
   })
 
   // "$20" would state a price the server never sent.
@@ -128,5 +131,51 @@ describe('usageBannerKey', () => {
       periodEnd: { seconds: BigInt(periodEnd.getTime() / 1000), nanos: 0 },
     })
     expect(usageBannerKey(status, 'over')).toBe(`${periodEnd.getTime()}:over`)
+  })
+})
+
+describe('hasLiveSubscription', () => {
+  const sub = (subscriptionStatus: SubscriptionStatus, manageable = true) =>
+    create(GetBillingStatusResponseSchema, { manageable, subscriptionStatus })
+
+  // A running subscription moves plan changes to the portal, where the card and billing date carry
+  // over.
+  it.each([SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE])('is live on %s', subscriptionStatus => {
+    expect(hasLiveSubscription(sub(subscriptionStatus))).toBe(true)
+  })
+
+  // A terminal state has no card to carry over, so sending them to the portal would leave them with
+  // no way to buy anything and a message about a subscription they no longer have.
+  it.each([
+    SubscriptionStatus.UNSPECIFIED,
+    SubscriptionStatus.PAUSED,
+    SubscriptionStatus.CANCELLED,
+    SubscriptionStatus.EXPIRED,
+    SubscriptionStatus.FAILED,
+  ])('is not live on %s', subscriptionStatus => {
+    expect(hasLiveSubscription(sub(subscriptionStatus))).toBe(false)
+  })
+
+  // manageable is the server's own answer to "would a portal session open".
+  it('is not live without a customer at the provider', () => {
+    expect(hasLiveSubscription(sub(SubscriptionStatus.ACTIVE, false))).toBe(false)
+  })
+})
+
+describe('the en-US pin', () => {
+  // CI runs under an en-US default, where dropping the pin changes nothing and an output assertion
+  // cannot go red. The argument is the contract, so that is what this reads.
+  it('names the locale rather than taking the machine default', () => {
+    const toLocaleString = vi.spyOn(Number.prototype, 'toLocaleString')
+    const toLocaleStringBig = vi.spyOn(BigInt.prototype, 'toLocaleString')
+    try {
+      formatEvents(500_000)
+      retentionLabel(90n)
+      expect(toLocaleString).toHaveBeenCalledWith('en-US')
+      expect(toLocaleStringBig).toHaveBeenCalledWith('en-US')
+    } finally {
+      toLocaleString.mockRestore()
+      toLocaleStringBig.mockRestore()
+    }
   })
 })

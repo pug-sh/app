@@ -19,17 +19,18 @@ const UsageMeter = ({ href }: { href: string }) => {
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !status?.billingEnabled || !usage || !can('read', 'billing')) return null
 
+  const label = `${formatEvents(usage.used)} of ${formatEvents(usage.included)} events`
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
           size="lg"
           render={<Link href={href} />}
+          // Collapsed, the only span carrying text is display:none, so the link needs its own name.
+          aria-label={label}
           // Portals to document.body, out of reach of the marker on the button below.
-          tooltip={{
-            children: `${formatEvents(usage.used)} of ${formatEvents(usage.included)} events`,
-            render: <div data-pug-no-capture />,
-          }}
+          tooltip={{ children: label, render: <div data-pug-no-capture /> }}
           className="group-data-[collapsible=icon]:justify-center"
           // Autocapture would otherwise file every click under this org's own usage numbers.
           data-pug-no-capture

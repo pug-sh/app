@@ -40,11 +40,11 @@ const status = (extra: StatusFields = {}) =>
     ...extra,
   } as StatusFields)
 
-const renderBanner = (role = OrgRole.ADMIN) => {
+const renderBanner = (role = OrgRole.ADMIN, customerId = 'cust-1') => {
   const store = createStore()
   store.set(activeOrgAtom, create(OrgSchema, { id: 'org-a', displayName: 'Org A', role }))
   // Dismissals are stamped with the customer, so they never carry across sign-ins.
-  store.set(jwtAtom, jwtFor('cust-1'))
+  store.set(jwtAtom, jwtFor(customerId))
   const view = render(
     <Provider store={store}>
       <UsageBanner />
@@ -138,6 +138,19 @@ describe('the over-quota banner', () => {
     const { store } = renderBanner()
     await settled(store)
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  })
+
+  // One browser outlives one account: under an org key alone the second person to sign in inherits
+  // the first's dismissal and never learns their card was declined.
+  it('does not carry a dismissal across sign-ins', async () => {
+    getUsage.mockResolvedValue(used(460_000))
+    const { unmount } = renderBanner()
+    fireEvent.click(await screen.findByRole('button', { name: 'Dismiss' }))
+    unmount()
+
+    const { store } = renderBanner(OrgRole.ADMIN, 'cust-2')
+    await settled(store)
+    expect(await screen.findByRole('button', { name: 'Dismiss' })).toBeTruthy()
   })
 
   // Crossing to "over" is new information, so it earns a banner past the dismissed caution.

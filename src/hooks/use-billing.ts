@@ -11,8 +11,9 @@ export const useBilling = () => {
   useEffect(() => {
     if (!orgId) return
     load()
-    // Returning from the portal, where the plan can be cancelled, is a tab switch and not a mount.
-    const refresh = () => load()
+    // Returning from the portal is a tab switch, not a mount. Forced, or the 60s cache swallows the
+    // one round trip this exists for.
+    const refresh = () => load({ force: true })
     window.addEventListener('focus', refresh)
     return () => window.removeEventListener('focus', refresh)
   }, [orgId, load])

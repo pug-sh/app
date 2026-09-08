@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GetBillingStatusResponseSchema } from '@/api/genproto/dashboard/billing/v1/billing_pb'
@@ -78,6 +78,27 @@ describe('the sidebar usage meter', () => {
     const { store } = renderMeter()
     await settled(store)
     expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
+  // Collapsed, the only span carrying text is display:none — unlike the nav items, whose labels stay
+  // in the DOM and are merely clipped — so without a name of its own the link is announced unnamed.
+  it('names the link independently of the span the collapsed sidebar hides', async () => {
+    renderMeter()
+    expect(await screen.findByRole('link', { name: '120,000 of 500,000 events' })).toBeTruthy()
+  })
+
+  // Returning from the portal, where the plan can be cancelled, is a tab switch and not a mount — so
+  // the refresh has to beat the 60s cache the four consumers share.
+  it('re-reads the plan on a window focus', async () => {
+    const { store } = renderMeter()
+    await settled(store)
+    expect(getBillingStatus).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    await vi.waitFor(() => expect(getBillingStatus).toHaveBeenCalledTimes(2))
   })
 
   it('renders nothing on a deployment with billing off', async () => {

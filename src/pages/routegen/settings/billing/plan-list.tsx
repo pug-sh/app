@@ -3,17 +3,15 @@ import type { PlanOption } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { Button } from '@/components/ui/button'
 import { formatEvents, formatMoney, retentionLabel } from '@/lib/billing'
 
-// Absent is the custom tier, whose quota comes from the org's own row. Never 0.
+// Absent is the custom tier, never 0.
 const quotaLabel = (plan: PlanOption) =>
-  plan.includedEvents === undefined
-    ? 'Quota agreed with us'
-    : `${formatEvents(Number(plan.includedEvents))} events / month`
+  plan.includedEvents === undefined ? 'Quota agreed with us' : `${formatEvents(plan.includedEvents)} events / month`
 
-// Retention is absent on the custom tier too, where the quota half already says to talk to us.
+// Absent shows the quota alone.
 const detailLabel = (plan: PlanOption) =>
   plan.retentionDays === undefined ? quotaLabel(plan) : `${quotaLabel(plan)} · ${retentionLabel(plan.retentionDays)}`
 
-// Absent is the custom tier again — distinct from the free floor's price of zero.
+// Absent is the custom tier, distinct from the free floor's price of zero.
 const priceLabel = (plan: PlanOption) =>
   plan.priceCents === undefined ? 'Agreed price' : `${formatMoney(plan.priceCents, plan.currency)} / month`
 
@@ -30,7 +28,7 @@ const PlanList = ({
   readOnly: boolean
   onSelect: (plan: PlanOption) => void
 }) => {
-  // The server's own answer to "would a checkout open" — never re-derived here.
+  // `purchasable` is the server's "would a checkout open"; the rest is this page's.
   const isSelectable = (plan: PlanOption) => !readOnly && plan.slug !== currentSlug && plan.purchasable
   // Reserved only when some row can fill it, or every price hangs short of the rule.
   const anySelectable = plans.some(isSelectable)
@@ -55,12 +53,11 @@ const PlanList = ({
           {anySelectable && (
             <div className="w-20 shrink-0 text-right">
               {isSelectable(plan) && (
-                // The spinner replaces the button's only text and is aria-hidden, so without this
-                // the button loses its name exactly while it is busy.
+                // The spinner replaces the only text and is aria-hidden, so the name goes with it.
                 <Button
                   size="sm"
                   variant="outline"
-                  aria-label="Choose"
+                  aria-label={`Choose ${plan.displayName}`}
                   aria-busy={busySlug === plan.slug}
                   disabled={!!busySlug}
                   onClick={() => onSelect(plan)}

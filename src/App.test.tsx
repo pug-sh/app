@@ -348,6 +348,44 @@ describe('landing on the bare app URL', () => {
     await waitFor(() => expect(history.at(-1)).toBe('/p/p2/settings/billing?status=failed'))
     expect(await screen.findByText('billing')).toBeTruthy()
   })
+
+  // Only reproduces through the layout group's `/*?`, which is what a prefixed unknown path lands
+  // in: it matches, so the shell renders with an empty body rather than falling back here again.
+  it('sends a path that names no route to overview', async () => {
+    const { hook, history } = memoryLocation({ path: '/settings/plans', record: true })
+    const store = seedStore({ 'org-a': 'p2' })
+
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/settings/*?">
+              <ProjectSync>
+                <div>settings shell</div>
+                <Switch>
+                  <Route path="/p/:projectId/settings/billing">
+                    <div>billing</div>
+                  </Route>
+                </Switch>
+              </ProjectSync>
+            </Route>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+
+    expect(await screen.findByText('overview')).toBeTruthy()
+    expect(history.at(-1)).toBe('/p/p2/overview')
+  })
 })
 
 // Restoring a session used to spend two sequential round trips: the project list waited on the org

@@ -36,6 +36,13 @@ vi.mock('@/api/rpc', async () => {
   }
 })
 
+const { openCheckoutOverlay } = vi.hoisted(() => ({ openCheckoutOverlay: vi.fn() }))
+
+vi.mock('./checkout', async importOriginal => ({
+  ...(await importOriginal<typeof import('./checkout')>()),
+  openCheckoutOverlay,
+}))
+
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
   trackFeature: vi.fn(),
@@ -90,6 +97,7 @@ beforeEach(() => {
   getBillingStatus.mockResolvedValue(status())
   getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 120_000n, counted: true }))
   listPlans.mockResolvedValue({ plans: [] })
+  openCheckoutOverlay.mockReturnValue(new Promise(() => {}))
 })
 
 describe('the plan section', () => {
@@ -153,6 +161,15 @@ describe('the usage section', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
+  // "Not measured yet" for a meter we never reached is a lie about a billing figure. The atom keeps
+  // the two apart; this is the copy that has to.
+  it('says the count is unavailable when the meter could not be read', async () => {
+    getUsage.mockRejectedValue(new ConnectError('down', Code.Unavailable))
+    renderPage()
+    expect(await screen.findByText('Count unavailable')).toBeTruthy()
+    expect(screen.queryByText('Not measured yet')).toBeNull()
+  })
+
   // The bar needs both halves, and dropping the known one leaves a trialing org no number at all.
   it('still names the included quota when the meter has no count', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
@@ -187,7 +204,7 @@ describe('the plan catalog', () => {
     await screen.findByText('Scale')
     // The current tier is marked, never offered.
     expect(screen.getByText('Current')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Choose' })).toHaveLength(1)
+    expect(screen.getAllByRole('button', { name: 'Choose Scale' })).toHaveLength(1)
   })
 
   it('names the quota and the history each tier keeps', async () => {
@@ -217,9 +234,9 @@ describe('the plan catalog', () => {
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
 
-    const button = await screen.findByRole('button', { name: 'Choose' })
+    const button = await screen.findByRole('button', { name: 'Choose Scale' })
     await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
   })
 
@@ -235,7 +252,7 @@ describe('the plan catalog', () => {
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
 
     await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled())
     expect(createCheckoutSession.mock.calls[0][0]).toMatchObject({ theme: want })
@@ -249,7 +266,7 @@ describe('the plan catalog', () => {
     renderPage()
 
     await screen.findByText('Scale')
-    expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Choose Scale' })).toBeNull()
   })
 
   // Spending money is admin-only on the server too.
@@ -295,6 +312,75 @@ describe('the portal', () => {
     expect(tab.opener).toBeNull()
     expect(window.location.href).toBe(before)
     open.mockRestore()
+  })
+})
+
+// A retry can only fail the same way, so the page redirects instead — an error with a Try again
+// button would be a button that cannot work.
+describe('a deployment with no billing service', () => {
+  it('shows no failure to retry', async () => {
+    getBillingStatus.mockRejectedValue(new ConnectError('nope', Code.Unimplemented))
+    renderPage()
+
+    await waitFor(() => expect(getBillingStatus).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByText('Try again')).toBeNull())
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
+})
+
+describe('the checkout outcome', () => {
+  const PENDING_KEY = 'pug:billingCheckoutPending'
+
+  // The record is written and cleared in one flush, so it is read at open time — otherwise a final
+  // `toBeNull()` passes just as well when nothing was ever written.
+  let pendingAtOpen: string | null = null
+
+  const startCheckout = async (outcome: { status: string; message?: string }) => {
+    openCheckoutOverlay.mockImplementation(async () => {
+      pendingAtOpen = sessionStorage.getItem(PENDING_KEY)
+      return outcome
+    })
+    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    createCheckoutSession.mockResolvedValue({ checkoutUrl: 'https://test.dodo/x', sessionId: 'cs_9' })
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    await waitFor(() => expect(openCheckoutOverlay).toHaveBeenCalled())
+    expect(pendingAtOpen).toContain('cs_9')
+  }
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    pendingAtOpen = null
+  })
+
+  // Left set, the next mount of this page confirms a checkout the customer walked away from.
+  it('drops the session a failed checkout left behind', async () => {
+    await startCheckout({ status: 'failed', message: 'Checkout could not be completed' })
+
+    await waitFor(() => expect(sessionStorage.getItem(PENDING_KEY)).toBeNull())
+    expect(toastError).toHaveBeenCalledWith('Checkout could not be completed')
+  })
+
+  // A charge can settle before the overlay reports itself closed. Not the poll, though: that would
+  // promise an update to someone who just dismissed the form.
+  it('asks whether a dismissed checkout settled before discarding it', async () => {
+    confirmCheckout.mockResolvedValue({ confirmed: false })
+    await startCheckout({ status: 'closed' })
+
+    await waitFor(() => expect(confirmCheckout).toHaveBeenCalledWith({ orgId: 'org-a', sessionId: 'cs_9' }))
+    await waitFor(() => expect(sessionStorage.getItem(PENDING_KEY)).toBeNull())
+    expect(toastInfo).not.toHaveBeenCalled()
+  })
+
+  // Confirmed in the page, the record must not also survive for the return path to confirm a second
+  // time — a duplicate is only refused after the card is charged.
+  it('drops the session once a redirect has been confirmed in the page', async () => {
+    confirmCheckout.mockResolvedValue({ confirmed: true })
+    await startCheckout({ status: 'redirect' })
+
+    await waitFor(() => expect(confirmCheckout).toHaveBeenCalledWith({ orgId: 'org-a', sessionId: 'cs_9' }))
+    await waitFor(() => expect(sessionStorage.getItem(PENDING_KEY)).toBeNull())
   })
 })
 

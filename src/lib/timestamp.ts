@@ -14,7 +14,11 @@ export const tsToDate = (ts: Timestamp | undefined) => {
 // protobuf-es returns an Invalid Date rather than throwing, so tsToDate's catch never fires and a
 // bare null check passes it into Intl, which throws mid-render.
 export const validDate = (d: Date | null) => {
-  if (!d || Number.isNaN(d.getTime())) return null
+  if (!d) return null
+  if (Number.isNaN(d.getTime())) {
+    console.error('dropping an out-of-range timestamp')
+    return null
+  }
   return d
 }
 
@@ -22,7 +26,7 @@ export const formatClock = (d: Date) => {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 }
 
-// A quota period is built as UTC midnight, so a western local zone renders it a day early.
+// For quota-period bounds, which the server anchors in UTC; a local zone dates them a day off.
 export const formatUTCDate = (d: Date) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 }

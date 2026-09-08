@@ -8,18 +8,20 @@ import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_
 
 // The RPC atoms are faked, not the transport: a hand-held call is the only way to decide when a
 // response resolves.
-const { getBillingStatus, getUsage } = vi.hoisted(() => ({
+const { getBillingStatus, getUsage, confirmCheckout } = vi.hoisted(() => ({
   getBillingStatus: vi.fn(),
   getUsage: vi.fn(),
+  confirmCheckout: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
-  return { billingRPCAtom: atom({ getBillingStatus }), usageRPCAtom: atom({ getUsage }) }
+  return { billingRPCAtom: atom({ getBillingStatus, confirmCheckout }), usageRPCAtom: atom({ getUsage }) }
 })
 
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
-const { billingAtom, loadBillingAtom, pollBillingAfterCheckoutAtom, resetBillingAtom } = await import('./billing.atoms')
+const { billingAtom, confirmCheckoutAtom, loadBillingAtom, pollBillingAfterCheckoutAtom, resetBillingAtom } =
+  await import('./billing.atoms')
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'A' })
 const orgB = create(OrgSchema, { id: 'org-b', displayName: 'B' })
@@ -196,6 +198,19 @@ describe('loadBillingAtom', () => {
     expect(result.error).toBeNull()
   })
 
+  // The usage page names this state 'unreadable'. Collapsed into the not-counted branch it reads as
+  // the benign "Not measured yet", and nobody ever finds out.
+  it('calls a negative total a meter failure, not an uncounted period', async () => {
+    const store = newStore()
+    getBillingStatus.mockResolvedValue(status('growth'))
+    getUsage.mockResolvedValue(usage(-1, true))
+
+    await store.set(loadBillingAtom)
+
+    expect(store.get(billingAtom).usedEvents).toBeNull()
+    expect(store.get(billingAtom).meterError).toBe(true)
+  })
+
   it('does not call a not-yet-counted period a meter failure', async () => {
     getUsage.mockResolvedValue(usage(0, false))
     const store = newStore()
@@ -248,17 +263,113 @@ describe('loadBillingAtom', () => {
   })
 })
 
+describe('confirmCheckoutAtom', () => {
+  // The whole point of asking the provider: without a true here every paying customer is told their
+  // payment is "still confirming".
+  it('reports a settled session, and re-reads the plan it changed', async () => {
+    const store = newStore()
+    getBillingStatus.mockResolvedValue(status('scale'))
+    confirmCheckout.mockResolvedValue({ confirmed: true })
+
+    await expect(store.set(confirmCheckoutAtom, 'cs_1')).resolves.toBe(true)
+    expect(store.get(billingAtom).status?.plan?.slug).toBe('scale')
+  })
+
+  it('reports a session the provider has not settled', async () => {
+    const store = newStore()
+    confirmCheckout.mockResolvedValue({ confirmed: false })
+
+    await expect(store.set(confirmCheckoutAtom, 'cs_1')).resolves.toBe(false)
+  })
+
+  // Both are unplaceable however long anyone waits, so they are rethrown for the page to say
+  // something true. Everything else falls through to the poll — the webhook is still coming.
+  it.each([
+    ['a session id for another org', Code.PermissionDenied],
+    ['a payment that cannot be placed', Code.FailedPrecondition],
+  ])('rethrows %s', async (_name, code) => {
+    const store = newStore()
+    confirmCheckout.mockRejectedValue(new ConnectError('nope', code))
+
+    await expect(store.set(confirmCheckoutAtom, 'cs_1')).rejects.toThrow()
+  })
+
+  it('falls through to the poll on a failure that may still settle', async () => {
+    const store = newStore()
+    confirmCheckout.mockRejectedValue(new ConnectError('down', Code.Unavailable))
+
+    await expect(store.set(confirmCheckoutAtom, 'cs_1')).resolves.toBe(false)
+  })
+})
+
 describe('pollBillingAfterCheckoutAtom', () => {
   // The baseline is the paying org's plan; reading another org's as the purchase landing tells
   // someone their payment settled when nothing has.
   it('does not read another org as the checkout landing', async () => {
-    const store = newStore()
-    store.set(activeOrgAtom, orgB)
-    getBillingStatus.mockResolvedValue(status('enterprise'))
+    vi.useFakeTimers()
+    try {
+      const store = newStore()
+      store.set(activeOrgAtom, orgB)
+      getBillingStatus.mockResolvedValue(status('enterprise'))
 
-    const landed = await store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before: 'growth' })
+      const landed = store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before: 'growth' })
+      await vi.runAllTimersAsync()
 
-    expect(landed).toBe(false)
+      await expect(landed).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // The signature has to actually move, or the poll returns on its first re-read and every delay
+  // below is dead code no test can reach.
+  it('waits out the delays for a webhook that has not landed yet', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = newStore()
+      getBillingStatus.mockResolvedValue(status('growth'))
+      const before = `growth:0:0`
+
+      const landed = store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before })
+      await vi.runAllTimersAsync()
+
+      await expect(landed).resolves.toBe(false)
+      // One read up front, then one per delay.
+      expect(getBillingStatus).toHaveBeenCalledTimes(5)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reports the plan the webhook moved', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = newStore()
+      getBillingStatus.mockResolvedValueOnce(status('growth')).mockResolvedValue(status('scale'))
+
+      const landed = store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before: 'growth:0:0' })
+      await vi.runAllTimersAsync()
+
+      await expect(landed).resolves.toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // A failed load reads as no signature at all, which must never pass for a change.
+  it('does not read a failed load as the checkout landing', async () => {
+    vi.useFakeTimers()
+    try {
+      const store = newStore()
+      getBillingStatus.mockRejectedValue(new ConnectError('down', Code.Unavailable))
+
+      const landed = store.set(pollBillingAfterCheckoutAtom, { orgId: 'org-a', before: 'growth:0:0' })
+      await vi.runAllTimersAsync()
+
+      await expect(landed).resolves.toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

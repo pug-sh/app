@@ -1,3 +1,4 @@
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { ExternalLink, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
@@ -7,8 +8,8 @@ import { trackFeature } from '@/analytics/pug'
 import {
   BillingStatus,
   CheckoutTheme,
+  type GetBillingStatusResponse,
   type PlanOption,
-  SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { billingRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
@@ -23,6 +24,7 @@ import {
   billingSignature,
   formatEvents,
   formatMoney,
+  hasLiveSubscription,
   isPastDue,
   retentionLabel,
   statusLabel,
@@ -67,29 +69,32 @@ const PortalButton = ({ label, busy, onClick }: { label: string; busy: boolean; 
   </Can>
 )
 
-// Stands in for the bar, which needs both halves — without it a trialing org has no number
-// anywhere on the page.
+// Stands in for the bar, which needs both halves; without it a trialing org has no number at all.
 const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => (
   <p className="mt-2 text-xs text-muted-foreground">
     {includedEvents === undefined
       ? 'This plan has no event limit.'
-      : `${formatEvents(Number(includedEvents))} events included this period.`}
+      : `${formatEvents(includedEvents)} events included this period.`}
   </p>
 )
 
-// Absent is NO BOUND, not zero. Nothing deletes on this number today, so it promises history
-// rather than warning about a cutoff.
+// Absent is NO BOUND, not zero. Nothing deletes on this number today, so it promises rather than
+// warns.
 const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined }) => (
   <p className="mt-1 text-xs text-muted-foreground">
     {retentionDays === undefined ? 'Unlimited event history' : retentionLabel(retentionDays)}
   </p>
 )
 
-// `renewsAt` is the provider's next bill, `periodEnd` the quota turnover; they coincide only by
-// accident. Only the quota window is a UTC boundary, which is why the formatters differ.
-const periodLine = (status: BillingStatus, trialEndsAt: Date | null, renewsAt: Date | null, periodEnd: Date | null) => {
-  if (status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
+// `currentPeriodEnd` is the provider's next bill, `periodEnd` the quota turnover; only the second is
+// a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
+const periodLine = (status: GetBillingStatusResponse) => {
+  const at = (ts: Timestamp | undefined) => validDate(tsToDate(ts))
+  const trialEndsAt = at(status.trialEndsAt)
+  if (status.status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
+  const renewsAt = at(status.currentPeriodEnd)
   if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
+  const periodEnd = at(status.periodEnd)
   if (periodEnd) return `Quota resets ${formatUTCDate(periodEnd)}`
   return ''
 }
@@ -100,8 +105,7 @@ const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'ex
 const Billing = () => {
   const org = useAtomValue(activeOrgAtom)
   const billingRPC = useAtomValue(billingRPCAtom)
-  // Resolved, not the stored preference: the overlay opens over this page, so it has
-  // to match what is actually on screen rather than the buyer's OS.
+  // Resolved, because the stored preference can be 'system', which is not a theme to open in.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const { status, usedEvents, meterError, error, unsupported, loaded } = useBilling()
   const reloadBilling = useSetAtom(loadBillingAtom)
@@ -131,8 +135,8 @@ const Billing = () => {
     if (!enabled || unsupported || !canReadBilling) navigate(`/p/${projectId}/settings/general`, { replace: true })
   }, [loaded, error, unsupported, enabled, canReadBilling, projectId, navigate])
 
-  // An overlay open at unmount means they navigated away mid-checkout, and a left-set flag would
-  // toast "still confirming" at someone who never paid. A completed checkout reloads instead.
+  // An overlay open at unmount means they left mid-checkout, and a left-set record would toast
+  // "still confirming" at someone who never paid.
   useEffect(() => {
     return () => {
       if (closeCheckoutOverlay()) clearCheckoutPending()
@@ -161,7 +165,7 @@ const Billing = () => {
       try {
         if (await confirmWithProvider(sessionId)) return
       } catch (err) {
-        // Paid and unplaceable without a person — "updating shortly" would be false.
+        // Paid and unplaceable without a person, so "updating shortly" would be false.
         toastRPCError(err, "We couldn't confirm your payment. Please contact support.")
         return
       }
@@ -172,14 +176,14 @@ const Billing = () => {
   )
 
   // The provider states the outcome in the query it returns with; unread, a declined card polls for
-  // 17.5s and is then told its payment is still confirming.
+  // 17.5s and is then told it is still confirming.
   useEffect(() => {
-    // Both halves below are answered against the org, which has not bootstrapped on first render.
+    // Both halves below are answered against the org, absent on the first render.
     if (!orgId) return
     const pending = takeCheckoutPending()
     if (pending === null) return
-    // Another tab moved the session's org while this one was at the provider: confirming would send
-    // the wrong org's id. Put it back, so switching to the org that started it still confirms.
+    // Another tab moved the org while this one was away, so confirming would send the wrong id. Put
+    // it back and switching to the org that started it still confirms.
     if (pending.orgId && pending.orgId !== orgId) {
       markCheckoutPending(pending)
       return
@@ -205,9 +209,19 @@ const Billing = () => {
         clearCheckoutPending()
         toast.error(outcome.message)
       } else if (outcome.status === 'closed') {
+        // A charge can settle before the overlay reports itself closed, so ask before discarding it.
+        // Not the full confirm: polling would promise an update to someone who just dismissed it.
+        try {
+          await confirmWithProvider(resp.sessionId)
+        } catch (err) {
+          toastRPCError(err, "We couldn't confirm your payment. Please contact support.")
+        }
         clearCheckoutPending()
       } else if (outcome.status === 'redirect') {
         await confirmCheckout(orgId, planKey, resp.sessionId)
+        // Cleared after, so if the provider's navigation wins the race the record survives and the
+        // return path confirms there instead.
+        clearCheckoutPending()
       }
     } catch (err) {
       clearCheckoutPending()
@@ -223,8 +237,8 @@ const Billing = () => {
     try {
       const resp = await billingRPC.createPortalSession({ orgId })
       trackFeature({ featureId: 'billing.portal_opened', featureName: 'Open billing portal' })
-      // noopener/noreferrer return null even on success, which a blocked popup is indistinguishable
-      // from — sever the opener by hand instead.
+      // noopener/noreferrer return null even on success, which a blocked popup also does; sever the
+      // opener by hand instead.
       const tab = window.open(resp.portalUrl, '_blank')
       if (tab) tab.opener = null
       else window.location.href = resp.portalUrl
@@ -236,7 +250,8 @@ const Billing = () => {
   }
 
   if (!loaded) return <LoadingSpinner />
-  if (error) {
+  // Not reported: the effect above is already redirecting, and the retry could only fail the same.
+  if (error && !unsupported) {
     return (
       <div className="max-w-2xl">
         <p className="text-sm text-negative">{error}</p>
@@ -254,18 +269,12 @@ const Billing = () => {
   if (!status?.billingEnabled || !canReadBilling) return null
 
   const usage = usageFor(status.includedEvents, usedEvents)
-  const period = periodLine(
-    status.status,
-    validDate(tsToDate(status.trialEndsAt)),
-    validDate(tsToDate(status.currentPeriodEnd)),
-    validDate(tsToDate(status.periodEnd)),
-  )
+  const period = periodLine(status)
   // The free plan is named after its own state, so the badge would repeat the plan name.
-  const badge = statusLabel(status.status) === status.plan?.displayName ? '' : statusLabel(status.status)
+  const planStatus = statusLabel(status.status)
+  const badge = planStatus === status.plan?.displayName ? '' : planStatus
   const pastDue = isPastDue(status)
-  // The duplicate is only refused at ConfirmCheckout, after the card is charged, so this is what
-  // prevents paying twice rather than a mirror of a refusal.
-  const liveSubscription = status.manageable && status.subscriptionStatus !== SubscriptionStatus.UNSPECIFIED
+  const liveSubscription = hasLiveSubscription(status)
 
   return (
     <div className="max-w-2xl space-y-8">

@@ -98,26 +98,28 @@ describe('the checkout overlay', () => {
     )
   })
 
-  // Both arrive as checkout.error while the card form still works, so tearing the overlay down
-  // loses a live sale.
-  it('leaves the card form standing when a wallet fails', async () => {
+  // All three arrive while the card form still works, so tearing the overlay down loses a live sale.
+  // The wallet pair is inline-only, which is why the teardown one has to be here too.
+  it('leaves the card form standing on a non-fatal error', async () => {
     const outcome = openCheckoutOverlay(TEST_URL)
     const { onEvent } = await started()
 
     onEvent({ event_type: 'checkout.error', data: { message: 'Wallet initialization failed' } })
     onEvent({ event_type: 'checkout.error', data: { message: 'Wallet payment failed' } })
+    onEvent({ event_type: 'checkout.error', data: { message: 'Failed to close checkout' } })
     // Still open, so the customer can go on to pay by card.
     onEvent({ event_type: 'checkout.redirect' })
 
     await expect(outcome).resolves.toEqual({ status: 'redirect' })
   })
 
-  it('fails on a checkout that could not be created, and says why', async () => {
+  // The detail is provider-internal English, so it is logged rather than shown to a buyer.
+  it('fails on a checkout that could not be created, without quoting the provider', async () => {
     const outcome = openCheckoutOverlay(TEST_URL)
     const { onEvent } = await started()
     onEvent({ event_type: 'checkout.error', data: { message: 'Failed to create checkout' } })
 
-    await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Failed to create checkout' })
+    await expect(outcome).resolves.toEqual({ status: 'failed', message: 'Checkout could not be completed' })
   })
 
   // The only thing that settles a checkout the iframe never answers.
@@ -173,7 +175,7 @@ describe('the checkout overlay', () => {
   // close() rethrows from openCheckoutOverlay's finally, where a throw overrides the outcome — and
   // the customer paid.
   it('keeps a completed payment when tearing the overlay down throws', async () => {
-    closeOverlay.mockImplementation(() => {
+    closeOverlay.mockImplementationOnce(() => {
       throw new Error('iframe already detached')
     })
 
@@ -183,6 +185,17 @@ describe('the checkout overlay', () => {
     await expect(outcome).resolves.toEqual({ status: 'redirect' })
     // Cleared despite the throw, so the next unmount cannot clear someone else's pending.
     expect(closeCheckoutOverlay()).toBe(false)
+  })
+
+  // Without this the promise only settles on an event the SDK may never send, leaving a 30-minute
+  // stall timer that later tears down whatever overlay is open by then.
+  it('settles when the page closes an overlay it has already opened', async () => {
+    const outcome = openCheckoutOverlay(TEST_URL)
+    await started()
+
+    expect(closeCheckoutOverlay()).toBe(true)
+
+    await expect(outcome).resolves.toEqual({ status: 'closed' })
   })
 
   // Navigating away mid-import, where the overlay would open over whatever rendered next.

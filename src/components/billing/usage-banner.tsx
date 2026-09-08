@@ -13,10 +13,28 @@ import {
   type BannerTone,
   formatEvents,
   isPastDue,
+  type Usage,
   usageBannerKey,
   usageFor,
 } from '@/lib/billing'
 import { cn } from '@/lib/utils'
+
+const bannerAlert = (pastDue: boolean, usage: Usage | null): { tone: BannerTone; message: string } | null => {
+  if (pastDue) {
+    return { tone: 'past_due', message: 'Your last payment failed. Update your payment method to keep this plan.' }
+  }
+  if (!usage || usage.tone === 'normal') return null
+  if (usage.tone === 'over') {
+    return {
+      tone: 'over',
+      message: `You're over the ${formatEvents(usage.included)} events included in this plan — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`,
+    }
+  }
+  return {
+    tone: 'caution',
+    message: `You've used ${usage.percent}% of the ${formatEvents(usage.included)} events included in this plan.`,
+  }
+}
 
 const UsageBanner = () => {
   const isDemo = useAtomValue(isDemoSessionAtom)
@@ -30,34 +48,26 @@ const UsageBanner = () => {
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !org || !status?.billingEnabled || !can('read', 'billing')) return null
 
+  // A quota drives a banner, never a rejected event, or "over your limit" reads as an outage.
   const pastDue = isPastDue(status)
-  const tone: BannerTone | null = pastDue ? 'past_due' : usage && usage.tone !== 'normal' ? usage.tone : null
-  if (!tone) return null
+  const alert = bannerAlert(pastDue, usage)
+  if (!alert) return null
 
-  const key = usageBannerKey(status, tone)
+  const key = usageBannerKey(status, alert.tone)
   if (dismissed[org.id] === key) return null
-
-  // A quota drives a banner, never a rejected event, so the copy has to say so — or "over your
-  // limit" reads as an outage the customer is already having.
-  const message = () => {
-    if (pastDue) return 'Your last payment failed. Update your payment method to keep this plan.'
-    if (!usage) return ''
-    if (usage.tone === 'over') {
-      return `You're over the ${formatEvents(usage.included)} events included in this plan — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`
-    }
-    return `You've used ${usage.percent}% of the ${formatEvents(usage.included)} events included in this plan.`
-  }
 
   return (
     <div
       className={cn(
         'flex shrink-0 flex-wrap items-center justify-center gap-x-2 border-b px-4 py-1.5 text-center text-xs',
-        BANNER_BOX[tone],
+        BANNER_BOX[alert.tone],
       )}
+      // Arrives after the RPC, so without this a screen reader never learns a card was declined.
+      role="status"
       // Autocapture would otherwise file every click under this org's own usage numbers.
       data-pug-no-capture
     >
-      <span className={BANNER_TEXT[tone]}>{message()}</span>
+      <span className={BANNER_TEXT[alert.tone]}>{alert.message}</span>
       <ProjectLink
         href="/settings/billing"
         onClick={() => trackFeature({ featureId: 'billing.banner', featureName: 'Usage banner' })}

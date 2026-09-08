@@ -27,9 +27,9 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const can = useCan()
   const billing = useBilling()
-  // Kept on a failed load, or the route that explains the failure is unreachable — unless there is
-  // no billing service, where the retry behind it can only fail the same way.
-  const showBilling = (!!billing.error && !billing.unsupported) || !!billing.status?.billingEnabled
+  // Kept while the answer is coming, so the bar doesn't reflow, and on a failed load, or the route
+  // explaining it is unreachable. Not where there is no billing service: a retry cannot get past it.
+  const showBilling = !billing.loaded || (!!billing.error && !billing.unsupported) || !!billing.status?.billingEnabled
 
   // Settings is hidden in the read-only demo — it exposes the shared demo account's email/password
   // and org config. The sidebar entry is dropped (DEMO_HIDDEN_PATHS in sidebar.tsx); this guards a
@@ -46,9 +46,8 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
 
   // Dropped rather than shown empty where billing is off — but never while it is the tab being
   // viewed, or a fresh load draws the bar with nothing highlighted.
-  const tabs = SETTINGS_TABS.filter(
-    tab => tab.path !== 'billing' || activeTab.path === 'billing' || (showBilling && can('read', 'billing')),
-  )
+  const showBillingTab = activeTab.path === 'billing' || (showBilling && can('read', 'billing'))
+  const tabs = SETTINGS_TABS.filter(tab => tab.path !== 'billing' || showBillingTab)
 
   return (
     <Page title="Settings" description={activeTab.description}>
