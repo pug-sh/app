@@ -89,8 +89,9 @@ describe('the checkout overlay', () => {
   })
 
   it('opens without the timer or the security badge', async () => {
-    openCheckoutOverlay(TEST_URL)
-    await started()
+    const outcome = openCheckoutOverlay(TEST_URL)
+    ;(await started()).onEvent({ event_type: 'checkout.closed' })
+    await expect(outcome).resolves.toEqual({ status: 'closed' })
 
     expect(openOverlay).toHaveBeenCalledWith(
       expect.objectContaining({ options: { showTimer: false, showSecurityBadge: false } }),
