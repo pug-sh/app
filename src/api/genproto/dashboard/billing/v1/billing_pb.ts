@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/billing/v1/billing.proto.
  */
 export const file_dashboard_billing_v1_billing: GenFile = /*@__PURE__*/
-  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIrsEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSEgoKbWFuYWdlYWJsZRgMIAEoCCJTChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAEiSQodQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2USFAoMY2hlY2tvdXRfdXJsGAEgASgJEhIKCnNlc3Npb25faWQYAiABKAkiTgoWQ29uZmlybUNoZWNrb3V0UmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAESGwoKc2Vzc2lvbl9pZBgCIAEoCUIHukgEcgIQASIsChdDb25maXJtQ2hlY2tvdXRSZXNwb25zZRIRCgljb25maXJtZWQYASABKAgiNQoaQ3JlYXRlUG9ydGFsU2Vzc2lvblJlcXVlc3QSFwoGb3JnX2lkGAEgASgJQge6SARyAhABIjEKG0NyZWF0ZVBvcnRhbFNlc3Npb25SZXNwb25zZRISCgpwb3J0YWxfdXJsGAEgASgJIisKEExpc3RQbGFuc1JlcXVlc3QSFwoGb3JnX2lkGAEgASgJQge6SARyAhABIr8BCgpQbGFuT3B0aW9uEgwKBHNsdWcYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEjAKC3ByaWNlX2NlbnRzGAMgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSEAoIY3VycmVuY3kYBCABKAkSNAoPaW5jbHVkZWRfZXZlbnRzGAUgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSEwoLcHVyY2hhc2FibGUYBiABKAgiRAoRTGlzdFBsYW5zUmVzcG9uc2USLwoFcGxhbnMYASADKAsyIC5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuT3B0aW9uKoABCg1CaWxsaW5nU3RhdHVzEh4KGkJJTExJTkdfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGwoXQklMTElOR19TVEFUVVNfVFJJQUxJTkcQARIZChVCSUxMSU5HX1NUQVRVU19BQ1RJVkUQAhIXChNCSUxMSU5HX1NUQVRVU19GUkVFEAMq/wEKElN1YnNjcmlwdGlvblN0YXR1cxIjCh9TVUJTQ1JJUFRJT05fU1RBVFVTX1VOU1BFQ0lGSUVEEAASHgoaU1VCU0NSSVBUSU9OX1NUQVRVU19BQ1RJVkUQARIgChxTVUJTQ1JJUFRJT05fU1RBVFVTX1BBU1RfRFVFEAISHgoaU1VCU0NSSVBUSU9OX1NUQVRVU19QQVVTRUQQAxIhCh1TVUJTQ1JJUFRJT05fU1RBVFVTX0NBTkNFTExFRBAEEh8KG1NVQlNDUklQVElPTl9TVEFUVVNfRVhQSVJFRBAFEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfRkFJTEVEEAYy2gQKDkJpbGxpbmdTZXJ2aWNlEnMKEEdldEJpbGxpbmdTdGF0dXMSLS5kYXNoYm9hcmQuYmlsbGluZy52MS5HZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBouLmRhc2hib2FyZC5iaWxsaW5nLnYxLkdldEJpbGxpbmdTdGF0dXNSZXNwb25zZSIAEoIBChVDcmVhdGVDaGVja291dFNlc3Npb24SMi5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0GjMuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlQ2hlY2tvdXRTZXNzaW9uUmVzcG9uc2UiABJwCg9Db25maXJtQ2hlY2tvdXQSLC5kYXNoYm9hcmQuYmlsbGluZy52MS5Db25maXJtQ2hlY2tvdXRSZXF1ZXN0Gi0uZGFzaGJvYXJkLmJpbGxpbmcudjEuQ29uZmlybUNoZWNrb3V0UmVzcG9uc2UiABJ8ChNDcmVhdGVQb3J0YWxTZXNzaW9uEjAuZGFzaGJvYXJkLmJpbGxpbmcudjEuQ3JlYXRlUG9ydGFsU2Vzc2lvblJlcXVlc3QaMS5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVQb3J0YWxTZXNzaW9uUmVzcG9uc2UiABJeCglMaXN0UGxhbnMSJi5kYXNoYm9hcmQuYmlsbGluZy52MS5MaXN0UGxhbnNSZXF1ZXN0GicuZGFzaGJvYXJkLmJpbGxpbmcudjEuTGlzdFBsYW5zUmVzcG9uc2UiAEJJWkdnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9iaWxsaW5nL3YxO2JpbGxpbmd2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
+  fileDesc("CiJkYXNoYm9hcmQvYmlsbGluZy92MS9iaWxsaW5nLnByb3RvEhRkYXNoYm9hcmQuYmlsbGluZy52MSIyChdHZXRCaWxsaW5nU3RhdHVzUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEibgoEUGxhbhIMCgRzbHVnGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIwCgtwcmljZV9jZW50cxgDIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhAKCGN1cnJlbmN5GAQgASgJIvAEChhHZXRCaWxsaW5nU3RhdHVzUmVzcG9uc2USFwoPYmlsbGluZ19lbmFibGVkGAEgASgIEigKBHBsYW4YAiABKAsyGi5kYXNoYm9hcmQuYmlsbGluZy52MS5QbGFuEjMKBnN0YXR1cxgDIAEoDjIjLmRhc2hib2FyZC5iaWxsaW5nLnYxLkJpbGxpbmdTdGF0dXMSNAoPaW5jbHVkZWRfZXZlbnRzGAQgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMQoNdHJpYWxfZW5kc19hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQY29udHJhY3RfZW5kc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMAoMcGVyaW9kX3N0YXJ0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgpwZXJpb2RfZW5kGAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBJFChNzdWJzY3JpcHRpb25fc3RhdHVzGAkgASgOMiguZGFzaGJvYXJkLmJpbGxpbmcudjEuU3Vic2NyaXB0aW9uU3RhdHVzEjYKEmN1cnJlbnRfcGVyaW9kX2VuZBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcHVyY2hhc2FibGUYCyABKAgSMwoOcmV0ZW50aW9uX2RheXMYDSABKAsyGy5nb29nbGUucHJvdG9idWYuSW50NjRWYWx1ZRISCgptYW5hZ2VhYmxlGAwgASgIIpEBChxDcmVhdGVDaGVja291dFNlc3Npb25SZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIaCglwbGFuX3NsdWcYAiABKAlCB7pIBHICEAESPAoFdGhlbWUYAyABKA4yIy5kYXNoYm9hcmQuYmlsbGluZy52MS5DaGVja291dFRoZW1lQgi6SAWCAQIQASJJCh1DcmVhdGVDaGVja291dFNlc3Npb25SZXNwb25zZRIUCgxjaGVja291dF91cmwYASABKAkSEgoKc2Vzc2lvbl9pZBgCIAEoCSJjChZDb25maXJtQ2hlY2tvdXRSZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIwCgpzZXNzaW9uX2lkGAIgASgJQhy6SBlyFxABGIABMhBeW0EtWmEtejAtOV8tXSskIiwKF0NvbmZpcm1DaGVja291dFJlc3BvbnNlEhEKCWNvbmZpcm1lZBgBIAEoCCI1ChpDcmVhdGVQb3J0YWxTZXNzaW9uUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEiMQobQ3JlYXRlUG9ydGFsU2Vzc2lvblJlc3BvbnNlEhIKCnBvcnRhbF91cmwYASABKAkiKwoQTGlzdFBsYW5zUmVxdWVzdBIXCgZvcmdfaWQYASABKAlCB7pIBHICEAEi9AEKClBsYW5PcHRpb24SDAoEc2x1ZxgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSMAoLcHJpY2VfY2VudHMYAyABKAsyGy5nb29nbGUucHJvdG9idWYuSW50NjRWYWx1ZRIQCghjdXJyZW5jeRgEIAEoCRI0Cg9pbmNsdWRlZF9ldmVudHMYBSABKAsyGy5nb29nbGUucHJvdG9idWYuSW50NjRWYWx1ZRIzCg5yZXRlbnRpb25fZGF5cxgHIAEoCzIbLmdvb2dsZS5wcm90b2J1Zi5JbnQ2NFZhbHVlEhMKC3B1cmNoYXNhYmxlGAYgASgIIkQKEUxpc3RQbGFuc1Jlc3BvbnNlEi8KBXBsYW5zGAEgAygLMiAuZGFzaGJvYXJkLmJpbGxpbmcudjEuUGxhbk9wdGlvbiqAAQoNQmlsbGluZ1N0YXR1cxIeChpCSUxMSU5HX1NUQVRVU19VTlNQRUNJRklFRBAAEhsKF0JJTExJTkdfU1RBVFVTX1RSSUFMSU5HEAESGQoVQklMTElOR19TVEFUVVNfQUNUSVZFEAISFwoTQklMTElOR19TVEFUVVNfRlJFRRADKv8BChJTdWJzY3JpcHRpb25TdGF0dXMSIwofU1VCU0NSSVBUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfQUNUSVZFEAESIAocU1VCU0NSSVBUSU9OX1NUQVRVU19QQVNUX0RVRRACEh4KGlNVQlNDUklQVElPTl9TVEFUVVNfUEFVU0VEEAMSIQodU1VCU0NSSVBUSU9OX1NUQVRVU19DQU5DRUxMRUQQBBIfChtTVUJTQ1JJUFRJT05fU1RBVFVTX0VYUElSRUQQBRIeChpTVUJTQ1JJUFRJT05fU1RBVFVTX0ZBSUxFRBAGKmIKDUNoZWNrb3V0VGhlbWUSHgoaQ0hFQ0tPVVRfVEhFTUVfVU5TUEVDSUZJRUQQABIYChRDSEVDS09VVF9USEVNRV9MSUdIVBABEhcKE0NIRUNLT1VUX1RIRU1FX0RBUksQAjLaBAoOQmlsbGluZ1NlcnZpY2UScwoQR2V0QmlsbGluZ1N0YXR1cxItLmRhc2hib2FyZC5iaWxsaW5nLnYxLkdldEJpbGxpbmdTdGF0dXNSZXF1ZXN0Gi4uZGFzaGJvYXJkLmJpbGxpbmcudjEuR2V0QmlsbGluZ1N0YXR1c1Jlc3BvbnNlIgASggEKFUNyZWF0ZUNoZWNrb3V0U2Vzc2lvbhIyLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZUNoZWNrb3V0U2Vzc2lvblJlcXVlc3QaMy5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVDaGVja291dFNlc3Npb25SZXNwb25zZSIAEnAKD0NvbmZpcm1DaGVja291dBIsLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNvbmZpcm1DaGVja291dFJlcXVlc3QaLS5kYXNoYm9hcmQuYmlsbGluZy52MS5Db25maXJtQ2hlY2tvdXRSZXNwb25zZSIAEnwKE0NyZWF0ZVBvcnRhbFNlc3Npb24SMC5kYXNoYm9hcmQuYmlsbGluZy52MS5DcmVhdGVQb3J0YWxTZXNzaW9uUmVxdWVzdBoxLmRhc2hib2FyZC5iaWxsaW5nLnYxLkNyZWF0ZVBvcnRhbFNlc3Npb25SZXNwb25zZSIAEl4KCUxpc3RQbGFucxImLmRhc2hib2FyZC5iaWxsaW5nLnYxLkxpc3RQbGFuc1JlcXVlc3QaJy5kYXNoYm9hcmQuYmlsbGluZy52MS5MaXN0UGxhbnNSZXNwb25zZSIAQklaR2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vZGFzaGJvYXJkL2JpbGxpbmcvdjE7YmlsbGluZ3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_timestamp, file_google_protobuf_wrappers]);
 
 /**
  * @generated from message dashboard.billing.v1.GetBillingStatusRequest
@@ -49,21 +49,9 @@ export type Plan = Message<"dashboard.billing.v1.Plan"> & {
   displayName: string;
 
   /**
-   * The tier's LIST price, in minor units of `currency` — never what a
-   * negotiated deal is charged, which belongs to the payments provider and is
-   * not stored in pug at all. ABSENT is the custom tier, which has no list
-   * price; that is not the same as a price of zero, which is the free and trial
-   * floors.
-   *
-   * Named `cents` because every tier in the catalog is priced in USD today.
-   * Format from the (amount, currency) pair regardless: the day a second
-   * currency is presented, minor units stop being hundredths (JPY has none) and
-   * this field is renamed with that change, not after it.
-   *
-   * A wrapper rather than a bare int64: protoc-gen-es renders an edition-2023
-   * singular scalar as a NON-optional bigint, so absence would reach the
-   * dashboard as 0 — indistinguishable from a comped deal. Verified against the
-   * generated TS, not assumed.
+   * The tier's LIST price, in minor units of `currency` -- never what a negotiated
+   * deal is charged. ABSENT is the custom tier, which is not a price of zero. A
+   * wrapper because a bare int64 would reach the dashboard as 0.
    *
    * @generated from field: google.protobuf.Int64Value price_cents = 3;
    */
@@ -89,9 +77,7 @@ export const PlanSchema: GenMessage<Plan> = /*@__PURE__*/
  */
 export type GetBillingStatusResponse = Message<"dashboard.billing.v1.GetBillingStatusResponse"> & {
   /**
-   * False on a deployment with billing switched off — a self-hosted install.
-   * Hide every billing surface, and note that included_events is absent in that
-   * mode too, so no quota banner can fire even if this flag is ignored.
+   * False on a deployment with billing switched off. Hide every billing surface.
    *
    * @generated from field: bool billing_enabled = 1;
    */
@@ -108,45 +94,32 @@ export type GetBillingStatusResponse = Message<"dashboard.billing.v1.GetBillingS
   status: BillingStatus;
 
   /**
-   * Events the org may send this period. ABSENT means NO QUOTA — billing is off,
-   * or the org is on a plan carrying none. Never render its absence as 0. An org
-   * whose stored plan this deployment no longer knows keeps any negotiated
-   * number on its own row, and is otherwise absent here.
-   *
-   * A wrapper for the same reason as Plan.price_cents: a bare int64 reaches the
-   * dashboard as 0 when it is absent, and "0 events allowed" is the one thing
-   * this field must never say. The absence has no companion field to infer it
-   * from either, unlike GetUsageResponse.used_events, which a client can pair
-   * with usage_computed_at.
+   * Events the org may send this period. ABSENT means NO QUOTA -- billing is off,
+   * or the plan carries none. Never render its absence as 0.
    *
    * @generated from field: google.protobuf.Int64Value included_events = 4;
    */
   includedEvents?: bigint | undefined;
 
   /**
-   * When the trial ends, or when it ended. Kept once it is past, where it says
-   * why an org is on the free floor rather than when it will be. Absent only
-   * with billing switched off.
+   * When the trial ends, or when it ended. Kept once past, where it says why an
+   * org is on the free floor. Absent only with billing switched off.
    *
    * @generated from field: google.protobuf.Timestamp trial_ends_at = 5;
    */
   trialEndsAt?: Timestamp | undefined;
 
   /**
-   * When a granted plan lapses back to the free floor. Absent means open-ended.
-   * Kept once it is in the past, where it says when the plan ended.
-   *
-   * This is the end of the agreement, NOT of the quota window — an annual
-   * contract does not make a quota period a year long.
+   * When a granted plan lapses back to the free floor; absent means open-ended.
+   * The end of the agreement, NOT of the quota window.
    *
    * @generated from field: google.protobuf.Timestamp contract_ends_at = 6;
    */
   contractEndsAt?: Timestamp | undefined;
 
   /**
-   * The quota window, which runs from the org's billing anniversary rather than
-   * the 1st of the month. Identical to UsageService.GetUsage's period bounds for
-   * the same org, which is what makes "X of Y" a comparison of like with like.
+   * The quota window, which runs from the org's billing anniversary. Identical to
+   * GetUsage's period bounds, which is what makes "X of Y" like for like.
    *
    * @generated from field: google.protobuf.Timestamp period_start = 7;
    */
@@ -163,34 +136,32 @@ export type GetBillingStatusResponse = Message<"dashboard.billing.v1.GetBillingS
   subscriptionStatus: SubscriptionStatus;
 
   /**
-   * When the provider bills next. This is the MONEY's period, not the quota's:
-   * period_start/period_end above are the window used_events is measured over,
-   * and the two do not coincide. Absent when there is no live subscription.
+   * When the provider bills next: the MONEY's period, not the quota's above.
+   * Absent when there is no live subscription.
    *
    * @generated from field: google.protobuf.Timestamp current_period_end = 10;
    */
   currentPeriodEnd?: Timestamp | undefined;
 
   /**
-   * Whether a checkout would actually open. True only when billing is enabled, a
-   * payments provider is configured, and there is a product to check out
-   * against -- a configured catalog tier, or the custom tier once this org has a
-   * product id recorded. It gates the buy button as a whole; whether a
-   * PARTICULAR tier can be bought is PlanOption.purchasable, which does share a
-   * helper with the refusal.
-   *
-   * It says nothing about which tier, and carries no product id -- the dashboard
-   * never sees one.
+   * Whether a checkout would open at all -- billing on, a provider configured, and
+   * a product to check out against. Per tier it is PlanOption.purchasable.
    *
    * @generated from field: bool purchasable = 11;
    */
   purchasable: boolean;
 
   /**
-   * Whether a portal session would open: this org has a customer at the
-   * provider, which only a checkout leaves behind. Not implied by
-   * subscription_status -- a CANCELLED org reports UNSPECIFIED above and still
-   * has invoices to fetch and a card to re-add.
+   * Days of event history the plan promises. ABSENT means NO BOUND and is never
+   * zero. Nothing in pug deletes on this number today.
+   *
+   * @generated from field: google.protobuf.Int64Value retention_days = 13;
+   */
+  retentionDays?: bigint | undefined;
+
+  /**
+   * Whether a portal session would open: this org has a customer at the provider,
+   * which only a checkout leaves behind. Not implied by subscription_status.
    *
    * @generated from field: bool manageable = 12;
    */
@@ -214,12 +185,21 @@ export type CreateCheckoutSessionRequest = Message<"dashboard.billing.v1.CreateC
   orgId: string;
 
   /**
-   * A catalog slug. Never a price and never a product id: the amount lives on
-   * the provider's product, and pug stores no money at all.
+   * A catalog slug. Never a price and never a product id.
    *
    * @generated from field: string plan_slug = 2;
    */
   planSlug: string;
+
+  /**
+   * The mode the overlay opens over, so it does not land light on a dark page.
+   * The dashboard's resolved theme, not the stored preference -- "system" is
+   * already resolved by the time this is sent. UNSPECIFIED leaves the provider's
+   * own configured default -- it does not follow the buyer's OS.
+   *
+   * @generated from field: dashboard.billing.v1.CheckoutTheme theme = 3;
+   */
+  theme: CheckoutTheme;
 };
 
 /**
@@ -241,9 +221,8 @@ export type CreateCheckoutSessionResponse = Message<"dashboard.billing.v1.Create
   checkoutUrl: string;
 
   /**
-   * Hand back to ConfirmCheckout when the buyer returns. Not a secret and not
-   * proof: the server re-reads the checkout and checks it belongs to the caller's
-   * org. Empty if the provider gives no id, leaving the webhook to confirm.
+   * Hand back to ConfirmCheckout when the buyer returns. Not proof: the server
+   * re-reads the checkout. Empty if the provider gives no id.
    *
    * @generated from field: string session_id = 2;
    */
@@ -267,7 +246,8 @@ export type ConfirmCheckoutRequest = Message<"dashboard.billing.v1.ConfirmChecko
   orgId: string;
 
   /**
-   * The session_id CreateCheckoutSessionResponse returned for this org.
+   * Bounded to the provider's own id alphabet: it is echoed into the provider's
+   * URL path, where a `../` would address another endpoint with pug's API key.
    *
    * @generated from field: string session_id = 2;
    */
@@ -286,8 +266,8 @@ export const ConfirmCheckoutRequestSchema: GenMessage<ConfirmCheckoutRequest> = 
  */
 export type ConfirmCheckoutResponse = Message<"dashboard.billing.v1.ConfirmCheckoutResponse"> & {
   /**
-   * False is "not settled yet" -- the buyer beat their own payment home -- never
-   * a failure. A checkout that will not settle is an error instead.
+   * False is "not settled yet", never a failure; a checkout that will not settle
+   * is an error instead.
    *
    * @generated from field: bool confirmed = 1;
    */
@@ -340,8 +320,8 @@ export const CreatePortalSessionResponseSchema: GenMessage<CreatePortalSessionRe
  */
 export type ListPlansRequest = Message<"dashboard.billing.v1.ListPlansRequest"> & {
   /**
-   * Scoped to an org because purchasability is: the custom tier is only
-   * purchasable by the org whose row records its product.
+   * Scoped to an org because purchasability is: only the org whose row records a
+   * product can buy the custom tier.
    *
    * @generated from field: string org_id = 1;
    */
@@ -356,9 +336,8 @@ export const ListPlansRequestSchema: GenMessage<ListPlansRequest> = /*@__PURE__*
   messageDesc(file_dashboard_billing_v1_billing, 9);
 
 /**
- * PlanOption is a tier as this deployment sells it. Distinct from Plan, which is
- * a tier as ONE ORG HOLDS it, overrides applied -- a negotiated quota and display
- * name never appear here.
+ * PlanOption is a tier as this deployment sells it. Plan is a tier as ONE ORG
+ * holds it, overrides applied.
  *
  * @generated from message dashboard.billing.v1.PlanOption
  */
@@ -374,9 +353,8 @@ export type PlanOption = Message<"dashboard.billing.v1.PlanOption"> & {
   displayName: string;
 
   /**
-   * The tier's list price, in minor units of `currency`. ABSENT is the custom
-   * tier, whose price lives in the payments provider; that is not a price of
-   * zero.
+   * List price, in minor units of `currency`. ABSENT is the custom tier, whose
+   * price lives in the provider -- absence is never zero, here or below.
    *
    * @generated from field: google.protobuf.Int64Value price_cents = 3;
    */
@@ -390,18 +368,22 @@ export type PlanOption = Message<"dashboard.billing.v1.PlanOption"> & {
   currency: string;
 
   /**
-   * Events the tier includes. ABSENT is the custom tier, whose quota comes from
-   * the org's own row. Never render its absence as 0.
+   * Events the tier includes. ABSENT is the custom tier.
    *
    * @generated from field: google.protobuf.Int64Value included_events = 5;
    */
   includedEvents?: bigint | undefined;
 
   /**
-   * Whether a checkout for THIS tier would open. Same helper
-   * CreateCheckoutSession refuses on, so a button that cannot work is
-   * impossible rather than unlikely -- and it is per tier, because a deployment
-   * can configure a product for some tiers and not others.
+   * Days of history the tier keeps. ABSENT is the custom tier.
+   *
+   * @generated from field: google.protobuf.Int64Value retention_days = 7;
+   */
+  retentionDays?: bigint | undefined;
+
+  /**
+   * Whether a checkout for THIS tier would open -- the same helper
+   * CreateCheckoutSession refuses on, so a dead button is impossible.
    *
    * @generated from field: bool purchasable = 6;
    */
@@ -434,8 +416,7 @@ export const ListPlansResponseSchema: GenMessage<ListPlansResponse> = /*@__PURE_
 
 /**
  * BillingStatus is derived from the clock on every read, never stored. The
- * states a payments provider reports — past due, cancelled — cannot be derived,
- * so they live on SubscriptionStatus below rather than here.
+ * states a provider reports live on SubscriptionStatus instead.
  *
  * @generated from enum dashboard.billing.v1.BillingStatus
  */
@@ -446,8 +427,7 @@ export enum BillingStatus {
   UNSPECIFIED = 0,
 
   /**
-   * Inside the trial window, which runs from the org's creation unless an
-   * operator extended it.
+   * Inside the trial window, which runs from org creation unless extended.
    *
    * @generated from enum value: BILLING_STATUS_TRIALING = 1;
    */
@@ -475,21 +455,15 @@ export const BillingStatusSchema: GenEnum<BillingStatus> = /*@__PURE__*/
   enumDesc(file_dashboard_billing_v1_billing, 0);
 
 /**
- * SubscriptionStatus is the provider subscription behind the entitlement, in
- * pug's own vocabulary rather than the provider's.
- *
- * Only UNSPECIFIED, ACTIVE and PAST_DUE are ever emitted: resolution consults
- * only a LIVE subscription, so a paused or cancelled one reports UNSPECIFIED
- * and the org resolves to whatever sits beneath it. The remaining values exist
- * because they are pug's vocabulary and a stored row holds them -- do not write
- * a client branch that waits for one.
+ * SubscriptionStatus is the provider subscription behind the entitlement, in pug's
+ * own vocabulary. Only UNSPECIFIED, ACTIVE and PAST_DUE are ever emitted -- the
+ * rest exist because a stored row holds them.
  *
  * @generated from enum dashboard.billing.v1.SubscriptionStatus
  */
 export enum SubscriptionStatus {
   /**
-   * No live subscription. A trialing, free or comped org, and every org on a
-   * deployment with no payments provider.
+   * No live subscription: trialing, free, comped, or no provider configured.
    *
    * @generated from enum value: SUBSCRIPTION_STATUS_UNSPECIFIED = 0;
    */
@@ -501,10 +475,8 @@ export enum SubscriptionStatus {
   ACTIVE = 1,
 
   /**
-   * The card failed and the provider is retrying. The entitlement is UNCHANGED
-   * and the quota still applies -- degrading a paying customer's product over an
-   * expired card is worse for both sides than a few unbilled days. Worth a
-   * banner, never a block.
+   * The card failed and the provider is retrying. The entitlement is UNCHANGED:
+   * worth a banner, never a block.
    *
    * @generated from enum value: SUBSCRIPTION_STATUS_PAST_DUE = 2;
    */
@@ -538,19 +510,39 @@ export const SubscriptionStatusSchema: GenEnum<SubscriptionStatus> = /*@__PURE__
   enumDesc(file_dashboard_billing_v1_billing, 1);
 
 /**
+ * @generated from enum dashboard.billing.v1.CheckoutTheme
+ */
+export enum CheckoutTheme {
+  /**
+   * @generated from enum value: CHECKOUT_THEME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CHECKOUT_THEME_LIGHT = 1;
+   */
+  LIGHT = 1,
+
+  /**
+   * @generated from enum value: CHECKOUT_THEME_DARK = 2;
+   */
+  DARK = 2,
+}
+
+/**
+ * Describes the enum dashboard.billing.v1.CheckoutTheme.
+ */
+export const CheckoutThemeSchema: GenEnum<CheckoutTheme> = /*@__PURE__*/
+  enumDesc(file_dashboard_billing_v1_billing, 2);
+
+/**
  * @generated from service dashboard.billing.v1.BillingService
  */
 export const BillingService: GenService<{
   /**
-   * Returns what the org is entitled to send this period: its plan, its event
-   * quota, and the window both are measured over. It does NOT return how much
-   * has been used — that is UsageService.GetUsage, and a client rendering
-   * "X of Y" makes both calls.
-   *
-   * The plan fields are already resolved: a negotiated deal's name and quota
-   * have replaced the catalog tier's, so nothing downstream recombines a base
-   * plan with overrides. Price is never overridden — what a deal is charged
-   * lives in the payments provider, not here.
+   * What the org may send this period: plan, quota, and the window both are
+   * measured over. Usage is UsageService.GetUsage; a client renders "X of Y"
+   * from both. Plan fields arrive already resolved, overrides applied.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.GetBillingStatus
    */
@@ -560,16 +552,9 @@ export const BillingService: GenService<{
     output: typeof GetBillingStatusResponseSchema;
   },
   /**
-   * Opens a checkout for one catalog tier and returns the URL to send the buyer
-   * to. Admin-only: the quota banner stays on the viewer floor, but starting a
-   * checkout is spending money.
-   *
-   * The price is never pug's -- it lives on the provider's product, and this
-   * request names a plan slug, never an amount. For the custom tier it checks
-   * out against the org's own recorded product and returns FailedPrecondition
-   * when none is recorded; for a catalog tier it uses the configured one.
-   * Unavailable when the deployment has no payments provider at all, which is
-   * the self-hosted shape.
+   * Opens a checkout for one catalog tier. Admin-only: the quota banner is on
+   * the viewer floor, but starting a checkout spends money. The price lives on
+   * the provider's product; this request names a plan slug, never an amount.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.CreateCheckoutSession
    */
@@ -579,14 +564,10 @@ export const BillingService: GenService<{
     output: typeof CreateCheckoutSessionResponseSchema;
   },
   /**
-   * Verifies one checkout against the provider and applies its subscription,
-   * which is what confirms a returning buyer without a webhook -- the only thing
-   * that works at all on a deployment with no reachable webhook URL. The webhook
-   * stays the authority for the lifecycle, which has no redirect to ride on.
-   *
-   * session_id is a claim: the subscription it resolves to must carry this org in
-   * the metadata pug wrote at checkout, PermissionDenied otherwise. Admin-only,
-   * like the checkout it confirms.
+   * Verifies one checkout against the provider and applies its subscription:
+   * what confirms a returning buyer on a deployment with no reachable webhook
+   * URL. Admin-only, like the checkout it settles. session_id is a claim -- the
+   * subscription must carry this org.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.ConfirmCheckout
    */
@@ -596,12 +577,9 @@ export const BillingService: GenService<{
     output: typeof ConfirmCheckoutResponseSchema;
   },
   /**
-   * Opens the provider's customer portal, which is where plan changes, card
-   * updates, invoices and cancellation live. Pug serves none of those itself,
-   * so there is no ChangePlan or CancelSubscription RPC.
-   *
-   * FailedPrecondition for an org that has never checked out: a trialing, free
-   * or comped org has no customer at the provider to open a portal for.
+   * Opens the provider's customer portal, where plan changes, card updates,
+   * invoices and cancellation live -- hence no ChangePlan or CancelSubscription.
+   * FailedPrecondition for an org that has never checked out.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.CreatePortalSession
    */
@@ -611,17 +589,9 @@ export const BillingService: GenService<{
     output: typeof CreatePortalSessionResponseSchema;
   },
   /**
-   * The tiers this deployment sells, in display order. On the viewer floor
-   * beside GetBillingStatus: a price is a marketing number, and the person
-   * reading the quota banner is the one who wants to know what the next tier
-   * costs — they simply cannot buy it.
-   *
-   * It exists because the catalog is Go, not rows, so the dashboard has no other
-   * honest way to name a tier. Mirroring the catalog in the frontend would put a
-   * second authority on what a plan costs, which is the mistake section 4
-   * exists to prevent, one layer up.
-   *
-   * Never returns a product id, and never the floors -- nobody buys Free.
+   * The tiers this deployment sells, in display order. On the viewer floor: the
+   * person reading the quota banner wants to know what the next tier costs, they
+   * just cannot buy it. Never returns a product id, and never the floors.
    *
    * @generated from rpc dashboard.billing.v1.BillingService.ListPlans
    */
