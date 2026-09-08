@@ -10,7 +10,6 @@ import {
   OTHERS_LABEL,
   RANGE_OPTIONS,
   unmeteredTailDays,
-  validDate,
 } from './usage-helpers'
 
 // Run the UTC assertions outside UTC, where a local-midnight implementation lands on a different
@@ -80,18 +79,6 @@ describe('lastNUtcDays', () => {
         expect(from.toISOString()).toBe('2026-07-15T00:00:00.000Z')
       })
     })
-  })
-})
-
-describe('validDate', () => {
-  it('rejects the Invalid Date protobuf-es returns for an out-of-range stamp', () => {
-    // Truthy, and every comparison against it is false, so a bare null check passes it through to
-    // Intl.DateTimeFormat.format() — which throws RangeError, during render.
-    expect(validDate(new Date(Number.NaN))).toBeNull()
-    expect(validDate(null)).toBeNull()
-
-    const real = new Date('2026-08-01T00:00:00Z')
-    expect(validDate(real)).toBe(real)
   })
 })
 

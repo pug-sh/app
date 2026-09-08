@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
-import { toProtoTimeRange, tsToDate } from '@/lib/timestamp'
+import { toProtoTimeRange, tsToDate, validDate } from '@/lib/timestamp'
 import { BarChart } from '../../insights/charts'
 import ProjectBreakdown from './project-breakdown'
 import {
@@ -25,7 +25,6 @@ import {
   type RangeDays,
   unmeteredTailDays,
   usageSeriesColors,
-  validDate,
 } from './usage-helpers'
 
 // The window a response was fetched with, carried alongside it: deriving the series from the
@@ -45,22 +44,20 @@ const LOAD_TIMEOUT_MS = 20_000
 const EMPTY_STATE_CLASS = 'flex flex-col items-center justify-center py-16 text-muted-foreground'
 
 // Three answers the proto distinguishes and this page must not flatten into one (usage.proto, on
-// usage_computed_at): no stamp at all means the meter has never run for this org; a stamp EARLIER
-// than period_start means it has not reached this period yet, so used_events is a placeholder zero
-// rather than a measurement, and the proto says to render it as "computing"; only a stamp inside
-// the period makes the number a total. Rendering either of the first two as "0" states a billing
-// figure the server never claimed. The fourth case is ours rather than the proto's — a negative
-// total is not a number this page will put on screen.
+// used_events and counted): no stamp means the meter never ran, `counted` false means it has not
+// reached this period so used_events is a placeholder, and only `counted` makes it a total. A zero
+// on either of the first two states a billing figure the server never claimed. Read `counted`
+// rather than comparing usage_computed_at against period_start — the proto says not to guess it.
 type PeriodState =
   | { kind: 'never' }
   | { kind: 'unreadable'; meteredAt: Date }
   | { kind: 'computing'; meteredAt: Date }
   | { kind: 'metered'; meteredAt: Date }
 
-const periodState = (usedEvents: bigint, meteredAt: Date | null, periodStart: Date | null): PeriodState => {
+const periodState = (usedEvents: bigint, counted: boolean, meteredAt: Date | null): PeriodState => {
   if (!meteredAt) return { kind: 'never' }
   if (usedEvents < 0n) return { kind: 'unreadable', meteredAt }
-  if (periodStart && meteredAt < periodStart) return { kind: 'computing', meteredAt }
+  if (!counted) return { kind: 'computing', meteredAt }
   return { kind: 'metered', meteredAt }
 }
 
@@ -254,7 +251,7 @@ const Usage = () => {
   const meteredAt = validDate(tsToDate(loaded.usage.usageComputedAt))
   const periodStart = validDate(tsToDate(loaded.usage.periodStart))
   const periodEnd = validDate(tsToDate(loaded.usage.periodEnd))
-  const period = periodState(loaded.usage.usedEvents, meteredAt, periodStart)
+  const period = periodState(loaded.usage.usedEvents, loaded.usage.counted, meteredAt)
   const unmeteredDays = unmeteredTailDays(loaded.range, meteredAt)
 
   return (

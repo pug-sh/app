@@ -23,6 +23,7 @@ import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
+import UsageMeter from '@/components/billing/usage-meter'
 import { NameChip } from '@/components/name-chip'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -331,6 +332,7 @@ const AppSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter>
+        <UsageMeter href={`${prefix}/settings/billing`} />
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>
