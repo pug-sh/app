@@ -15,6 +15,7 @@ import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import IncludeCookielessToggle from '@/components/include-cookieless-toggle'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
 import { OptionChip } from '@/components/option-chip'
@@ -56,6 +57,7 @@ import {
 } from './constants'
 import { InsightsContent } from './content'
 import { InsightsRowAggregationControls } from './controls'
+import { cookielessAffectsQuery, isPersonBasedInsight } from './cookieless'
 import {
   breakdownLabel,
   buildChartData,
@@ -136,6 +138,7 @@ const Insights = () => {
   const [breakdowns, setBreakdowns] = useState(() => initialFilterState.breakdowns)
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
   const [map, setMap] = useState(() => initialFilterState.map ?? DEFAULT_MAP)
+  const [includeCookieless, setIncludeCookieless] = useState(() => initialFilterState.includeCookieless)
 
   const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
@@ -200,6 +203,8 @@ const Insights = () => {
   const userFlowReady = isUserFlowConfigValid(userFlowConfig)
   const stickyClassName = isRetention ? 'relative z-auto' : 'sticky top-0 z-10'
   const maxEvents = eventEntryCap(insightType)
+  const cookielessMatters = cookielessAffectsQuery({ insightType, entries: validEntries, topK, map })
+  const cookielessPersonBased = isPersonBasedInsight(insightType, topK)
 
   useEffect(() => {
     writeFilterQueryParams(eventFilters.entries, propFilters, {
@@ -210,6 +215,7 @@ const Insights = () => {
       userFlowConfig: isUserFlow ? userFlowConfig : undefined,
       topK: isTopK ? topK : undefined,
       map: isMap ? map : undefined,
+      includeCookieless: cookielessMatters ? includeCookieless : undefined,
     })
   }, [
     eventFilters.entries,
@@ -224,6 +230,8 @@ const Insights = () => {
     topK,
     isMap,
     map,
+    includeCookieless,
+    cookielessMatters,
   ])
 
   const hasIncompleteNumericAggregation = useMemo(
@@ -256,6 +264,7 @@ const Insights = () => {
     userFlowConfig: isUserFlow ? userFlowConfig : undefined,
     topK: isTopK ? topK : undefined,
     map: isMap ? map : undefined,
+    includeCookieless,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
   })
@@ -281,6 +290,7 @@ const Insights = () => {
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
           topK: buildTopKQuery(topK, validEntries[0]),
+          includeCookieless,
         }
       } else if (isMap) {
         spec = {
@@ -288,6 +298,7 @@ const Insights = () => {
           filterGroups,
           filterGroupsOperator: LogicalOperator.AND,
           map: buildMapQuery(map, validEntries[0]),
+          includeCookieless,
         }
       } else {
         spec = {
@@ -314,6 +325,7 @@ const Insights = () => {
           filterGroupsOperator: LogicalOperator.AND,
           breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
           breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
+          includeCookieless,
         }
       }
       const resp = await insightsRPC.query(
@@ -343,6 +355,7 @@ const Insights = () => {
         eventCount: isUserFlow ? 0 : isTopK || isMap ? 1 : validEntries.length,
         breakdownCount: isUserFlow || isMap || isTopK ? 0 : breakdowns.length,
         hasGlobalFilters: globalFilters.length > 0,
+        includeCookieless,
         ...(isUserFlow
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
           : {}),
@@ -608,6 +621,13 @@ const Insights = () => {
             />
           ))}
           <FilterBuilder schema={globalSchema} schemaError={globalSchemaError} onAdd={addFilter} />
+          {cookielessMatters && (
+            <IncludeCookielessToggle
+              includeCookieless={includeCookieless}
+              personBased={cookielessPersonBased}
+              onChange={setIncludeCookieless}
+            />
+          )}
           {/* Breakdowns don't apply to top-k or map (the dimension is the breakdown) or user flow. */}
           {!isTopK && !isMap && !isUserFlow && (
             <>

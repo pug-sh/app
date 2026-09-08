@@ -10,6 +10,7 @@ import {
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import IncludeCookielessToggle from '@/components/include-cookieless-toggle'
 import { OptionChip } from '@/components/option-chip'
 import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
@@ -17,6 +18,7 @@ import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '../../insights/constants'
 import { InsightsRowAggregationControls } from '../../insights/controls'
+import { cookielessAffectsQuery, isPersonBasedInsight } from '../../insights/cookieless'
 import { MapControls } from '../../insights/map-controls'
 import { UserFlowControls } from '../../insights/user-flow-controls'
 import { buildInsightSpec, getInsightEditorDefaults } from '../query'
@@ -79,6 +81,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const [userFlowConfig, setUserFlowConfig] = useState(defaults.userFlowConfig)
   const [topK, setTopK] = useState(defaults.topK)
   const [map, setMap] = useState(defaults.map)
+  const [includeCookieless, setIncludeCookieless] = useState(defaults.includeCookieless)
 
   // Truncate leftover event rows when switching to an insight type with a smaller
   // event cap (retention = 2, top-k and map = 1). See eventEntryCap.
@@ -119,6 +122,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       userFlowConfig,
       topK,
       map,
+      includeCookieless,
     })
     const patch: Partial<DashboardTile> = {
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
@@ -147,7 +151,16 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     // outside this tab is not corrected until some editor state here changes. Harmless only
     // because the Display tab offers a user-flow tile no view but Sankey.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
-  }, [insightType, eventFilters.validEntries, filterState.propFilters, breakdowns, userFlowConfig, topK, map])
+  }, [
+    insightType,
+    eventFilters.validEntries,
+    filterState.propFilters,
+    breakdowns,
+    userFlowConfig,
+    topK,
+    map,
+    includeCookieless,
+  ])
 
   const addBreakdown = (property: string) => {
     setBreakdowns(current => (current.includes(property) || current.length >= 5 ? current : [...current, property]))
@@ -180,6 +193,13 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       ),
     [insightType, eventFilters.validEntries],
   )
+
+  const cookielessMatters = cookielessAffectsQuery({
+    insightType,
+    entries: eventFilters.validEntries,
+    topK,
+    map,
+  })
 
   return (
     <div className="space-y-4">
@@ -225,6 +245,16 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
           <p className="mt-2 text-xs text-muted-foreground">Select a numeric property to run this aggregation.</p>
         ) : null}
       </Section>
+
+      {cookielessMatters ? (
+        <Section label="Visitors">
+          <IncludeCookielessToggle
+            includeCookieless={includeCookieless}
+            personBased={isPersonBasedInsight(insightType, topK)}
+            onChange={setIncludeCookieless}
+          />
+        </Section>
+      ) : null}
 
       {tile.viewMode === DashboardTileViewMode.KPI ? (
         <Section label="Compare">
