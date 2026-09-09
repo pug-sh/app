@@ -6,6 +6,7 @@ import { trackFeature } from '@/analytics/pug'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { activityRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
+import { DomainFavicon } from '@/components/domain-favicon'
 import { EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoEventFilters, toProtoFilters } from '@/components/event-filters/filter-proto'
 import HoverSwap from '@/components/hover-swap'
@@ -21,7 +22,7 @@ import { readFilterQueryParams, writeFilterQueryParams } from '@/hooks/use-filte
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
-import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import { botOf, deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
 import { refreshTimeRange } from '@/lib/date-presets'
 import { useRouteParams } from '@/lib/route-params'
 import { rpcErrorMessage } from '@/lib/rpc-error'
@@ -53,12 +54,15 @@ type SessionLane = {
   os?: string
   device?: string
   platform?: string
+  referrer?: string
+  bot?: boolean
+  labelIdx: number
 }
 
 const LANE_W = 80
 
 /** Assigns each session to a lane (column) so overlapping sessions don't share a column. Greedy first-fit. */
-function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
+export function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
   const ranges = new Map<string, { first: number; last: number }>()
   events.forEach((e, i) => {
     if (!e.sessionId) return
@@ -78,6 +82,8 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
     const os = structGet(auto, '$os')
     const device = deviceModelOf(auto)
     const platform = platformOf(auto)
+    // Feed is newest-first, so a lane's entry is its highest index — the oldest event loaded for it.
+    const referrer = referrerDomain(events[range.last].autoProperties)
     lanes.push({
       sessionId: sid,
       firstIdx: range.first,
@@ -87,7 +93,34 @@ function computeSessionLanes(events: ActivityEvent[]): SessionLane[] {
       os,
       device,
       platform,
+      referrer,
+      bot: botOf(auto),
+      labelIdx: Math.floor((range.first + range.last) / 2),
     })
+  }
+
+  // A label is wider than its lane and taller than a row, so two within a row of each other overlap.
+  // Shortest lanes place first: they have the fewest rows to choose from.
+  const claimed = new Set<number>()
+  const clearance = (row: number) => Math.min(2, ...[...claimed].map(c => Math.abs(c - row)))
+  for (const lane of [...lanes].sort((a, b) => a.lastIdx - a.firstIdx - (b.lastIdx - b.firstIdx))) {
+    const mid = lane.labelIdx
+    const rows = [mid]
+    for (let d = 1; d <= lane.lastIdx - lane.firstIdx; d++) rows.push(mid + d, mid - d)
+    for (const row of rows) {
+      if (row >= lane.firstIdx && row <= lane.lastIdx && clearance(row) > clearance(lane.labelIdx)) {
+        lane.labelIdx = row
+      }
+    }
+    claimed.add(lane.labelIdx)
+  }
+
+  // Interleaved sessions can leave no row with clearance. Three lines are taller than a row, two
+  // are not, so a label with a neighbour next to it gives up the referrer instead of overprinting.
+  for (const lane of lanes) {
+    if (lanes.some(other => other !== lane && Math.abs(other.labelIdx - lane.labelIdx) <= 1)) {
+      lane.referrer = undefined
+    }
   }
   return lanes
 }
@@ -129,6 +162,7 @@ const UserActivity = () => {
   // The window the last request was issued with. A fresh load re-resolves it; "Load more" reuses it,
   // so every page of a result set is fetched against the window its cursor was issued from.
   const queryRangeRef = useRef(timeRange)
+  const requestRef = useRef(0)
 
   useEffect(() => {
     if (project) fetchSchema()
@@ -143,6 +177,7 @@ const UserActivity = () => {
       if (!profileId) return
       setLoading(true)
       setError(null)
+      const seq = ++requestRef.current
       try {
         const protoEvents = toProtoEventFilters(eventFilters.entries)
         const range = pageToken ? queryRangeRef.current : refreshTimeRange(timeRange)
@@ -155,9 +190,13 @@ const UserActivity = () => {
             events: protoEvents,
             pageSize: 200,
             pageToken,
+            includeBots: true,
           },
           { headers },
         )
+        // A filter change re-issues while the previous request is in flight, and there is no next
+        // poll here to correct a stale answer that lands last.
+        if (seq !== requestRef.current) return
         if (pageToken) {
           setEvents(prev => [...prev, ...resp.events])
         } else {
@@ -167,10 +206,11 @@ const UserActivity = () => {
         }
         setNextToken(resp.nextPageToken)
       } catch (err) {
+        if (seq !== requestRef.current) return
         console.error('Activity feed failed:', err)
         setError({ message: rpcErrorMessage(err, 'Failed to load activity feed'), pageToken })
       } finally {
-        setLoading(false)
+        if (seq === requestRef.current) setLoading(false)
       }
     },
     [profileId, eventFilters.entries, timeRange, propFilters, headers, activityRPC],
@@ -287,8 +327,7 @@ const UserActivity = () => {
                             const isFirst = i === lane.firstIdx
                             const isLast = i === lane.lastIdx
                             const belongs = event.sessionId === lane.sessionId
-                            const midIdx = Math.floor((lane.firstIdx + lane.lastIdx) / 2)
-                            const isMid = i === midIdx
+                            const isLabelRow = i === lane.labelIdx
                             const x = lane.column * LANE_W
                             return (
                               <div key={lane.sessionId}>
@@ -309,7 +348,7 @@ const UserActivity = () => {
                                     style={{ left: x + 1 }}
                                   />
                                 )}
-                                {isMid && (
+                                {isLabelRow && (
                                   <div
                                     className="absolute top-1/2 -translate-y-1/2 flex flex-col gap-0.5"
                                     style={{ left: x + 10 }}
@@ -326,9 +365,19 @@ const UserActivity = () => {
                                         os={lane.os}
                                         device={lane.device}
                                         platform={lane.platform}
+                                        bot={lane.bot}
                                         iconSize={12}
                                         className="text-xs text-faint"
                                       />
+                                    )}
+                                    {lane.referrer && (
+                                      <span
+                                        className="flex items-center gap-1.5 text-xs text-faint whitespace-nowrap"
+                                        title={`Entered from ${lane.referrer}`}
+                                      >
+                                        <DomainFavicon domain={lane.referrer} size={12} />
+                                        {lane.referrer}
+                                      </span>
                                     )}
                                   </div>
                                 )}

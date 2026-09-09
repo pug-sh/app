@@ -13,3 +13,11 @@ export const deviceModelOf = (auto: JsonObject | undefined) => structFirst(auto,
 // Every SDK sends $platform because it isn't derivable from the UA header; it survives to the client
 // because ingest promotes it to a column and the read path merges it back.
 export const platformOf = (auto: JsonObject | undefined) => structGet(auto, '$platform')
+
+// Server-derived, already www-stripped, and blanked on self-referral — don't fall back to parsing the
+// raw `$referrer`, which would re-expose the referrers the backend deliberately counts as Direct.
+export const referrerDomain = (auto: JsonObject | undefined) => structGet(auto, '$referrerDomain')?.trim() || undefined
+
+// Ingest only writes $bot on tagged rows, so absence means human rather than unknown. Derived from
+// UA + ASN, both fixed for a session, so one representative event answers for that whole session.
+export const botOf = (auto: JsonObject | undefined) => structGet(auto, '$bot') === 'true'

@@ -154,6 +154,7 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
           browser={marker.browser}
           browserVersion={marker.browserVersion}
           platform={marker.platform}
+          bot={marker.bot}
           iconSize={14}
           fallback=""
         />

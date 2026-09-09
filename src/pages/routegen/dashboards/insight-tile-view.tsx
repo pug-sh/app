@@ -83,6 +83,7 @@ export const InsightTileView = ({
   lightMetrics = false,
   hideSummary = false,
   seriesLabel,
+  onComparisonCaption,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -108,6 +109,7 @@ export const InsightTileView = ({
   // under a "Visitors" / "Bounce rate" title. Colors still key off the event kind, so the hue holds
   // across a stat switch.
   seriesLabel?: string
+  onComparisonCaption?: (draws: boolean) => void
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -285,6 +287,7 @@ export const InsightTileView = ({
         showPieLabels={tile?.visualization?.hidePieLabels !== true}
         yTickFormatter={yTickFormatter}
         comparison={chartComparison}
+        onComparisonCaption={onComparisonCaption}
         compact={compact}
         lightNumbers={lightMetrics}
       />

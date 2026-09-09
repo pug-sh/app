@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai'
-import { Copy, UserX } from 'lucide-react'
+import { Bot, Copy, UserX } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'wouter'
 import { LocationLabel } from '@/components/country-flag'
@@ -85,7 +85,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
           <div className="relative shrink-0">
-            <ProfileAvatar identity={identity} className="size-10 rounded-md" />
+            <ProfileAvatar identity={identity} bot={profile.activity?.bot} className="size-10 rounded-md" />
             <span className="absolute -bottom-0.5 -right-0.5">
               <StatusDot lastSeen={lastSeen} />
             </span>
@@ -121,6 +121,12 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
         </div>
       </div>
       <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+        {profile.activity?.bot && (
+          <Meta>
+            <Bot className="size-3.5" aria-hidden />
+            Automated traffic
+          </Meta>
+        )}
         {createTime && (
           <Meta label="Created">
             <HoverSwap primary={formatDateTime(createTime)} secondary={formatRelative(createTime)} />
@@ -143,6 +149,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
               browserVersion={profile.activity?.browserVersion}
               os={profile.activity?.os}
               osVersion={profile.activity?.osVersion}
+              bot={profile.activity?.bot}
             />
           </Meta>
         )}

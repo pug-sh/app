@@ -3,17 +3,15 @@ import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, us
 import { toast } from 'sonner'
 import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
-import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { insightsEventFiltersSearch, writePropFiltersParam } from '@/hooks/use-filter-query-params'
 import { autoGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
-import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import type { GlobalOverrides } from './global-overrides'
 import OverviewSectionHeader from './overview-section-header'
-import { OverviewTileShell } from './overview-tile-shell'
 import { TrafficBreakdownPanel } from './traffic-breakdown-panel'
+import { TrafficChartTile } from './traffic-chart-tile'
 import { TrafficFilterBar } from './traffic-filter-bar'
 import {
   readTrafficFilters,
@@ -146,28 +144,14 @@ const TrafficAnalyticsView = ({
           ))}
         </div>
 
-        <OverviewTileShell
-          title={statLabel}
-          footer={`via ${nav.name}`}
-          contentClassName="flex flex-col"
-          className="h-[320px]"
-        >
-          <div className="min-h-0 flex-1">
-            <DashboardInsightContent
-              query={chartQuery}
-              defaultTimeRange={undefined}
-              timeRangeOverride={range}
-              granularityOverride={granularity}
-              viewMode={DashboardTileViewMode.AREA}
-              queryKeyPrefix={`overview-traffic-chart-${selectedStat}`}
-              comparePrior
-              compact
-              lightMetrics
-              hideSummary
-              seriesLabel={statLabel}
-            />
-          </div>
-        </OverviewTileShell>
+        <TrafficChartTile
+          statLabel={statLabel}
+          navName={nav.name}
+          query={chartQuery}
+          range={range}
+          granularity={granularity}
+          queryKeyPrefix={`overview-traffic-chart-${selectedStat}`}
+        />
       </section>
 
       <section className="flex flex-col gap-4">

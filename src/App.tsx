@@ -8,6 +8,7 @@ import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import { AuthSplit } from '@/auth/auth-split'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { customerIdAtom } from '@/auth/jwt.atoms'
+import UsageBanner from '@/components/billing/usage-banner'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
 import { SocialNav } from '@/components/social-nav'
@@ -231,6 +232,7 @@ const AuthenticatedApp = () => {
       </Suspense>
       <SidebarInset className="min-h-0">
         <DemoBanner />
+        <UsageBanner />
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter">
           <SidebarTrigger className="-ml-1" />
           <SocialNav className="ml-auto -mr-1" />

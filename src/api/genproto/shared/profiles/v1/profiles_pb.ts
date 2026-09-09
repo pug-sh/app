@@ -15,7 +15,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file shared/profiles/v1/profiles.proto.
  */
 export const file_shared_profiles_v1_profiles: GenFile = /*@__PURE__*/
-  fileDesc("CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiNwoYRGVsZXRlRGF0YVN1YmplY3RSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQEiYQoORGVsZXRlUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRI7CgZzdGF0dXMYAiABKA4yKy5zaGFyZWQucHJvZmlsZXMudjEuQ29tcGxpYW5jZVJlcXVlc3RTdGF0dXMibAoZRGVsZXRlRGF0YVN1YmplY3RSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJEjsKBnN0YXR1cxgCIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cyI3ChlHZXREZWxldGlvblJlcXVlc3RSZXF1ZXN0EhoKCnJlcXVlc3RfaWQYASABKAlCBrpIA8gBASKkAgoaR2V0RGVsZXRpb25SZXF1ZXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRITCgtleHRlcm5hbF9pZBgCIAEoCRISCgpwcm9maWxlX2lkGAMgASgJEjsKBnN0YXR1cxgEIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cxIZChFldmVudHNfaWRlbnRpZmllZBgFIAEoAxIwCgxyZXF1ZXN0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFZXJyb3IYCCABKAkiNQoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBIkcKF0dldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlEiwKB3Byb2ZpbGUYASABKAsyGy5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZSIgCgpHZXRSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiOwoLR2V0UmVzcG9uc2USLAoHcHJvZmlsZRgBIAEoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlInEKC0ZpbHRlckdyb3VwEjQKB2ZpbHRlcnMYASADKAsyGS5jb21tb24udjEuUHJvcGVydHlGaWx0ZXJCCLpIBZIBAggBEiwKCG9wZXJhdG9yGAIgASgOMhouY29tbW9uLnYxLkxvZ2ljYWxPcGVyYXRvciKVAQoLTGlzdFJlcXVlc3QSEgoKcGFnZV90b2tlbhgBIAEoCRI2Cg1maWx0ZXJfZ3JvdXBzGAIgAygLMh8uc2hhcmVkLnByb2ZpbGVzLnYxLkZpbHRlckdyb3VwEjoKFmZpbHRlcl9ncm91cHNfb3BlcmF0b3IYAyABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSK7AgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCSKLAgoHUHJvZmlsZRIvCgtjcmVhdGVfdGltZRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLZXh0ZXJuYWxfaWQYAiABKAkSCgoCaWQYAyABKAkSKwoKcHJvcGVydGllcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKcHJvamVjdF9pZBgFIAEoCRIvCgt1cGRhdGVfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPAoIYWN0aXZpdHkYByABKAsyKi5zaGFyZWQucHJvZmlsZXMudjEuUHJvZmlsZUFjdGl2aXR5U3VtbWFyeSrkAQoXQ29tcGxpYW5jZVJlcXVlc3RTdGF0dXMSKQolQ09NUExJQU5DRV9SRVFVRVNUX1NUQVRVU19VTlNQRUNJRklFRBAAEiUKIUNPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfUEVORElORxABEigKJENPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfUFJPQ0VTU0lORxACEicKI0NPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfQ09NUExFVEVEEAMSJAogQ09NUExJQU5DRV9SRVFVRVNUX1NUQVRVU19GQUlMRUQQBDLWBAoPUHJvZmlsZXNTZXJ2aWNlEkgKA0dldBIeLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXF1ZXN0Gh8uc2hhcmVkLnByb2ZpbGVzLnYxLkdldFJlc3BvbnNlIgASbAoPR2V0QnlFeHRlcm5hbElkEiouc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlcXVlc3QaKy5zaGFyZWQucHJvZmlsZXMudjEuR2V0QnlFeHRlcm5hbElkUmVzcG9uc2UiABJNCgRMaXN0Eh8uc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXF1ZXN0GiAuc2hhcmVkLnByb2ZpbGVzLnYxLkxpc3RSZXNwb25zZSIAMAESUQoGRGVsZXRlEiEuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlcXVlc3QaIi5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlUmVzcG9uc2UiABJyChFEZWxldGVEYXRhU3ViamVjdBIsLnNoYXJlZC5wcm9maWxlcy52MS5EZWxldGVEYXRhU3ViamVjdFJlcXVlc3QaLS5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlRGF0YVN1YmplY3RSZXNwb25zZSIAEnUKEkdldERlbGV0aW9uUmVxdWVzdBItLnNoYXJlZC5wcm9maWxlcy52MS5HZXREZWxldGlvblJlcXVlc3RSZXF1ZXN0Gi4uc2hhcmVkLnByb2ZpbGVzLnYxLkdldERlbGV0aW9uUmVxdWVzdFJlc3BvbnNlIgBCSFpGZ2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9zaGFyZWQvcHJvZmlsZXMvdjE7cHJvZmlsZXN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("CiFzaGFyZWQvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SEnNoYXJlZC5wcm9maWxlcy52MSIjCg1EZWxldGVSZXF1ZXN0EhIKAmlkGAEgASgJQga6SAPIAQEiNwoYRGVsZXRlRGF0YVN1YmplY3RSZXF1ZXN0EhsKC2V4dGVybmFsX2lkGAEgASgJQga6SAPIAQEiYQoORGVsZXRlUmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRI7CgZzdGF0dXMYAiABKA4yKy5zaGFyZWQucHJvZmlsZXMudjEuQ29tcGxpYW5jZVJlcXVlc3RTdGF0dXMibAoZRGVsZXRlRGF0YVN1YmplY3RSZXNwb25zZRISCgpyZXF1ZXN0X2lkGAEgASgJEjsKBnN0YXR1cxgCIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cyI3ChlHZXREZWxldGlvblJlcXVlc3RSZXF1ZXN0EhoKCnJlcXVlc3RfaWQYASABKAlCBrpIA8gBASKkAgoaR2V0RGVsZXRpb25SZXF1ZXN0UmVzcG9uc2USEgoKcmVxdWVzdF9pZBgBIAEoCRITCgtleHRlcm5hbF9pZBgCIAEoCRISCgpwcm9maWxlX2lkGAMgASgJEjsKBnN0YXR1cxgEIAEoDjIrLnNoYXJlZC5wcm9maWxlcy52MS5Db21wbGlhbmNlUmVxdWVzdFN0YXR1cxIZChFldmVudHNfaWRlbnRpZmllZBgFIAEoAxIwCgxyZXF1ZXN0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjAKDGNvbXBsZXRlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASDQoFZXJyb3IYCCABKAkiSwoWR2V0QnlFeHRlcm5hbElkUmVxdWVzdBIbCgtleHRlcm5hbF9pZBgBIAEoCUIGukgDyAEBEhQKDGluY2x1ZGVfYm90cxgCIAEoCCJHChdHZXRCeUV4dGVybmFsSWRSZXNwb25zZRIsCgdwcm9maWxlGAEgASgLMhsuc2hhcmVkLnByb2ZpbGVzLnYxLlByb2ZpbGUiNgoKR2V0UmVxdWVzdBISCgJpZBgBIAEoCUIGukgDyAEBEhQKDGluY2x1ZGVfYm90cxgCIAEoCCI7CgtHZXRSZXNwb25zZRIsCgdwcm9maWxlGAEgASgLMhsuc2hhcmVkLnByb2ZpbGVzLnYxLlByb2ZpbGUicQoLRmlsdGVyR3JvdXASNAoHZmlsdGVycxgBIAMoCzIZLmNvbW1vbi52MS5Qcm9wZXJ0eUZpbHRlckIIukgFkgECCAESLAoIb3BlcmF0b3IYAiABKA4yGi5jb21tb24udjEuTG9naWNhbE9wZXJhdG9yIqsBCgtMaXN0UmVxdWVzdBISCgpwYWdlX3Rva2VuGAEgASgJEjYKDWZpbHRlcl9ncm91cHMYAiADKAsyHy5zaGFyZWQucHJvZmlsZXMudjEuRmlsdGVyR3JvdXASOgoWZmlsdGVyX2dyb3Vwc19vcGVyYXRvchgDIAEoDjIaLmNvbW1vbi52MS5Mb2dpY2FsT3BlcmF0b3ISFAoMaW5jbHVkZV9ib3RzGAQgASgIIlYKDExpc3RSZXNwb25zZRItCghwcm9maWxlcxgBIAMoCzIbLnNoYXJlZC5wcm9maWxlcy52MS5Qcm9maWxlEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCSLIAgoWUHJvZmlsZUFjdGl2aXR5U3VtbWFyeRIuCgpmaXJzdF9zZWVuGAEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCglsYXN0X3NlZW4YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDHRvdGFsX2V2ZW50cxgDIAEoAxIRCglwYWdldmlld3MYBCABKAMSEAoIc2Vzc2lvbnMYBSABKAMSDwoHYnJvd3NlchgGIAEoCRIXCg9icm93c2VyX3ZlcnNpb24YByABKAkSCgoCb3MYCCABKAkSEgoKb3NfdmVyc2lvbhgJIAEoCRIOCgZkZXZpY2UYCiABKAkSDwoHY291bnRyeRgLIAEoCRIOCgZyZWdpb24YDCABKAkSDAoEY2l0eRgNIAEoCRILCgNib3QYDiABKAgiiwIKB1Byb2ZpbGUSLwoLY3JlYXRlX3RpbWUYASABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhMKC2V4dGVybmFsX2lkGAIgASgJEgoKAmlkGAMgASgJEisKCnByb3BlcnRpZXMYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhIKCnByb2plY3RfaWQYBSABKAkSLwoLdXBkYXRlX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjwKCGFjdGl2aXR5GAcgASgLMiouc2hhcmVkLnByb2ZpbGVzLnYxLlByb2ZpbGVBY3Rpdml0eVN1bW1hcnkq5AEKF0NvbXBsaWFuY2VSZXF1ZXN0U3RhdHVzEikKJUNPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIlCiFDT01QTElBTkNFX1JFUVVFU1RfU1RBVFVTX1BFTkRJTkcQARIoCiRDT01QTElBTkNFX1JFUVVFU1RfU1RBVFVTX1BST0NFU1NJTkcQAhInCiNDT01QTElBTkNFX1JFUVVFU1RfU1RBVFVTX0NPTVBMRVRFRBADEiQKIENPTVBMSUFOQ0VfUkVRVUVTVF9TVEFUVVNfRkFJTEVEEAQy1gQKD1Byb2ZpbGVzU2VydmljZRJICgNHZXQSHi5zaGFyZWQucHJvZmlsZXMudjEuR2V0UmVxdWVzdBofLnNoYXJlZC5wcm9maWxlcy52MS5HZXRSZXNwb25zZSIAEmwKD0dldEJ5RXh0ZXJuYWxJZBIqLnNoYXJlZC5wcm9maWxlcy52MS5HZXRCeUV4dGVybmFsSWRSZXF1ZXN0Gisuc2hhcmVkLnByb2ZpbGVzLnYxLkdldEJ5RXh0ZXJuYWxJZFJlc3BvbnNlIgASTQoETGlzdBIfLnNoYXJlZC5wcm9maWxlcy52MS5MaXN0UmVxdWVzdBogLnNoYXJlZC5wcm9maWxlcy52MS5MaXN0UmVzcG9uc2UiADABElEKBkRlbGV0ZRIhLnNoYXJlZC5wcm9maWxlcy52MS5EZWxldGVSZXF1ZXN0GiIuc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZVJlc3BvbnNlIgAScgoRRGVsZXRlRGF0YVN1YmplY3QSLC5zaGFyZWQucHJvZmlsZXMudjEuRGVsZXRlRGF0YVN1YmplY3RSZXF1ZXN0Gi0uc2hhcmVkLnByb2ZpbGVzLnYxLkRlbGV0ZURhdGFTdWJqZWN0UmVzcG9uc2UiABJ1ChJHZXREZWxldGlvblJlcXVlc3QSLS5zaGFyZWQucHJvZmlsZXMudjEuR2V0RGVsZXRpb25SZXF1ZXN0UmVxdWVzdBouLnNoYXJlZC5wcm9maWxlcy52MS5HZXREZWxldGlvblJlcXVlc3RSZXNwb25zZSIAQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2hhcmVkL3Byb2ZpbGVzL3YxO3Byb2ZpbGVzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_v1_filters, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message shared.profiles.v1.DeleteRequest
@@ -186,6 +186,14 @@ export type GetByExternalIdRequest = Message<"shared.profiles.v1.GetByExternalId
    * @generated from field: string external_id = 1;
    */
   externalId: string;
+
+  /**
+   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
+   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   *
+   * @generated from field: bool include_bots = 2;
+   */
+  includeBots: boolean;
 };
 
 /**
@@ -220,6 +228,14 @@ export type GetRequest = Message<"shared.profiles.v1.GetRequest"> & {
    * @generated from field: string id = 1;
    */
   id: string;
+
+  /**
+   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
+   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   *
+   * @generated from field: bool include_bots = 2;
+   */
+  includeBots: boolean;
 };
 
 /**
@@ -288,6 +304,17 @@ export type ListRequest = Message<"shared.profiles.v1.ListRequest"> & {
    * @generated from field: common.v1.LogicalOperator filter_groups_operator = 3;
    */
   filterGroupsOperator: LogicalOperator;
+
+  /**
+   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
+   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   * A derived anonymous person's create_time — the sort and cursor key — is
+   * computed after this filter, so changing it mid-pagination skips rows. Keep it
+   * constant for a page_token run and restart from an empty token to flip it.
+   *
+   * @generated from field: bool include_bots = 4;
+   */
+  includeBots: boolean;
 };
 
 /**
@@ -389,6 +416,15 @@ export type ProfileActivitySummary = Message<"shared.profiles.v1.ProfileActivity
    * @generated from field: string city = 13;
    */
   city: string;
+
+  /**
+   * True when EVERY event counted in this summary was tagged as automated at
+   * ingest ($bot) — a crawler, not a user with one tagged event. Only ever true
+   * on a read that set include_bots, since bot traffic is otherwise excluded.
+   *
+   * @generated from field: bool bot = 14;
+   */
+  bot: boolean;
 };
 
 /**
@@ -493,6 +529,8 @@ export const ProfilesService: GenService<{
    * Get returns a single user profile by its pug profile id, including identity
    * properties and an activity summary. A claimed anonymous id is redirected to
    * its canonical profile.
+   * Traffic tagged as a bot at ingest is excluded from the activity summary
+   * unless include_bots is true.
    *
    * @generated from rpc shared.profiles.v1.ProfilesService.Get
    */
@@ -504,6 +542,8 @@ export const ProfilesService: GenService<{
   /**
    * GetByExternalId returns a single user profile looked up by the external_id your
    * application assigned to its end user, rather than by pug's internal profile id.
+   * Traffic tagged as a bot at ingest is excluded from the activity summary
+   * unless include_bots is true.
    *
    * @generated from rpc shared.profiles.v1.ProfilesService.GetByExternalId
    */
@@ -514,7 +554,9 @@ export const ProfilesService: GenService<{
   },
   /**
    * List returns a page of user profiles for the project. Server-streaming, so it
-   * is not exposed as an MCP tool.
+   * is not exposed as an MCP tool. Derived anonymous persons whose traffic is all
+   * bot-tagged are omitted unless include_bots is true; an identified profile is
+   * always listed, with bot-tagged events left out of its activity summary.
    *
    * @generated from rpc shared.profiles.v1.ProfilesService.List
    */

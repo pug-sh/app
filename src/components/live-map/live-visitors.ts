@@ -138,10 +138,6 @@ export const deviceTypeLabel: Record<VisitorDeviceType, string> = {
   tv: 'TV',
 }
 
-// Server-derived, already www-stripped, and blanked on self-referral — don't fall back to parsing the
-// raw `$referrer`, which would re-expose the referrers the backend deliberately counts as Direct.
-export const referrerDomain = (auto: JsonObject | undefined) => structGet(auto, '$referrerDomain')?.trim() || undefined
-
 export const liveTimeRange = (windowMs = LIVE_WINDOW_MS, now = new Date()) => ({
   from: new Date(now.getTime() - windowMs),
   to: now,

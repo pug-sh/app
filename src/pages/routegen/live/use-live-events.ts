@@ -12,6 +12,7 @@ import {
   liveTimeRange,
 } from '@/components/live-map/live-visitors'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { useIncludeBots } from '@/hooks/use-include-bots'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
 // Polls every event kind in the active window. No `events` filter is sent — the backend
@@ -22,6 +23,7 @@ export const useLiveEvents = () => {
   const project = useAtomValue(activeProjectAtom)
   const headers = useAtomValue(projectHeaderAtom)
   const activityRPC = useAtomValue(activityRPCAtom)
+  const [includeBots, setIncludeBots] = useIncludeBots()
 
   const [events, setEvents] = useState<ActivityEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,10 +35,12 @@ export const useLiveEvents = () => {
   const windowRef = useRef(windowMs)
   windowRef.current = windowMs
   const seenRef = useRef<Set<string> | null>(null)
+  const requestRef = useRef(0)
 
   const load = useCallback(async () => {
     if (!headers) return
     setError(null)
+    const seq = ++requestRef.current
     try {
       const range = liveTimeRange(windowRef.current)
       const resp = await activityRPC.getEventExplorer(
@@ -45,9 +49,13 @@ export const useLiveEvents = () => {
           pageSize: LIVE_PAGE_SIZE,
           pageToken: '',
           events: [],
+          includeBots,
         },
         { headers },
       )
+      // Flipping the bot toggle re-issues mid-poll; without this the older answer can land last
+      // and paint bot rows under a "Bots hidden" label.
+      if (seq !== requestRef.current) return
       setEvents(resp.events)
       setLastUpdated(new Date())
 
@@ -60,15 +68,17 @@ export const useLiveEvents = () => {
       }
       seenRef.current = ids
     } catch (err) {
+      if (seq !== requestRef.current) return
       console.error('activity.getEventExplorer failed:', err)
       setError('Failed to load live activity')
     } finally {
-      setLoading(false)
+      if (seq === requestRef.current) setLoading(false)
     }
-  }, [activityRPC, headers])
+  }, [activityRPC, headers, includeBots])
 
-  // Re-poll on mount and whenever the window changes. Changing the window refetches immediately
-  // (a wider window is a different question, not a slow refresh).
+  // Re-poll on mount and whenever the window or the bot toggle changes — both are different
+  // questions, not a slow refresh. The reset matters for the flag too: without it every newly
+  // visible bot would register as a "+N" arrival on the next poll.
   useEffect(() => {
     if (!project) return
     setLoading(true)
@@ -79,5 +89,16 @@ export const useLiveEvents = () => {
     return () => window.clearInterval(id)
   }, [load, project, windowMs])
 
-  return { events, loading, error, lastUpdated, windowMs, setWindowMs, arrivals, reload: load }
+  return {
+    events,
+    loading,
+    error,
+    lastUpdated,
+    windowMs,
+    setWindowMs,
+    arrivals,
+    reload: load,
+    includeBots,
+    setIncludeBots,
+  }
 }

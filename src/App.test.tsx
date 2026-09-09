@@ -20,6 +20,9 @@ vi.mock('@/api/rpc', async () => {
   return {
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
+    // The over-quota banner reads both; unresolved, it stays unrendered.
+    billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
+    usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
   }
 })
 
@@ -275,6 +278,113 @@ describe('landing on the bare app URL', () => {
 
     await waitFor(() => expect(history.at(-1)).toBe('/p/p2/overview'))
     expect(store.get(activeProjectAtom)?.id).toBe('p2')
+  })
+
+  // The post-checkout return URL carries no project id, so a returning buyer lands on a
+  // project-less '/settings/billing' — and that page is the only caller of ConfirmCheckout.
+  it('keeps the path a project-less URL asked for', async () => {
+    const { hook, history } = memoryLocation({ path: '/settings/billing', record: true })
+    const store = seedStore({ 'org-a': 'p2' })
+
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/settings/billing">
+              <ProjectSync>
+                <div>billing</div>
+              </ProjectSync>
+            </Route>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/p2/settings/billing'))
+  })
+
+  // The provider states a declined card in the query, and useLocation reads the pathname alone —
+  // dropped, the billing page polls for 17.5s and then calls the failure "still confirming".
+  it('keeps the query a project-less URL asked for', async () => {
+    const { hook, history } = memoryLocation({
+      path: '/settings/billing',
+      searchPath: 'status=failed',
+      record: true,
+    })
+    const store = seedStore({ 'org-a': 'p2' })
+
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/settings/billing">
+              <ProjectSync>
+                <div>billing</div>
+              </ProjectSync>
+            </Route>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+
+    await waitFor(() => expect(history.at(-1)).toBe('/p/p2/settings/billing?status=failed'))
+    expect(await screen.findByText('billing')).toBeTruthy()
+  })
+
+  // Only reproduces through the layout group's `/*?`, which is what a prefixed unknown path lands
+  // in: it matches, so the shell renders with an empty body rather than falling back here again.
+  it('sends a path that names no route to overview', async () => {
+    const { hook, history } = memoryLocation({ path: '/settings/plans', record: true })
+    const store = seedStore({ 'org-a': 'p2' })
+
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            <Route path="/p/:projectId/settings/*?">
+              <ProjectSync>
+                <div>settings shell</div>
+                <Switch>
+                  <Route path="/p/:projectId/settings/billing">
+                    <div>billing</div>
+                  </Route>
+                </Switch>
+              </ProjectSync>
+            </Route>
+            <Route path="/p/:projectId/overview">
+              <ProjectSync>
+                <div>overview</div>
+              </ProjectSync>
+            </Route>
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+
+    expect(await screen.findByText('overview')).toBeTruthy()
+    expect(history.at(-1)).toBe('/p/p2/overview')
   })
 })
 

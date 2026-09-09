@@ -3,8 +3,16 @@ import { describe, expect, it } from 'vitest'
 import { BrowserLabel, PlatformLabel, PlatformStackLabel, PlatformTooltip } from '@/components/platform-label'
 
 // The trigger renders one icon. Its <img> is aria-hidden, so reach for it directly rather than by
-// role; absence of one means the neutral globe rendered instead.
+// role; absence of one means a neutral glyph rendered instead — triggerGlyph says which.
 const triggerIconSrc = (container: HTMLElement) => container.querySelector('img')?.getAttribute('src') ?? null
+
+// Which glyph, not just that one rendered: lucide stamps the icon name into the class from a
+// build-time literal, so this survives minification where displayName would not.
+const triggerGlyph = (container: HTMLElement) =>
+  container
+    .querySelector('svg')
+    ?.getAttribute('class')
+    ?.match(/lucide-[a-z-]+/)?.[0] ?? null
 
 describe.each([
   ['PlatformLabel', PlatformLabel],
@@ -21,7 +29,7 @@ describe.each([
   it('draws the neutral globe when the browser is named but unrecognised', () => {
     const { container } = render(<Label browser="Epiphany" os="Linux" />)
     expect(triggerIconSrc(container)).toBeNull()
-    expect(container.querySelector('svg')).not.toBeNull()
+    expect(triggerGlyph(container)).toBe('lucide-globe')
     expect(container.textContent).toContain('Epiphany')
   })
 
@@ -29,6 +37,17 @@ describe.each([
   it('draws the OS mark when no browser is named', () => {
     const { container } = render(<Label os="Linux" />)
     expect(triggerIconSrc(container)).toBe('/brands/linux.svg')
+  })
+
+  it('draws the bot glyph instead of the globe on automated traffic', () => {
+    const { container } = render(<Label browser="Applebot" os="macOS" bot />)
+    expect(triggerIconSrc(container)).toBeNull()
+    expect(triggerGlyph(container)).toBe('lucide-bot')
+  })
+
+  it('keeps a recognised browser mark on automated traffic', () => {
+    const { container } = render(<Label browser="Google Chrome" os="Linux" bot />)
+    expect(triggerIconSrc(container)).toBe('/brands/chrome.svg')
   })
 })
 
@@ -103,6 +122,14 @@ describe('PlatformTooltip', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('/brands/android.svg')
     expect(container.textContent).toContain('Android')
     expect(container.textContent).toContain('Pixel 8')
+  })
+
+  // The icon slot keeps a recognised mark on a bot, so the panel is the only place a datacenter
+  // Chrome says it is automated at all.
+  it('names automated traffic even when the browser mark resolves', () => {
+    const { container } = render(<PlatformTooltip browser="Google Chrome" browserVersion="124" os="macOS" bot />)
+    expect(container.textContent).toContain('Automated')
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/brands/chrome.svg')
   })
 
   it('keeps browser, device and OS on a web row', () => {

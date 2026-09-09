@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
+import { BotBrowserIcon, BrandIcon, UnknownBrowserIcon } from '@/components/brand-icon'
 import { DetailTooltip, TooltipInline, TooltipInlineItem, tooltipPanelContent } from '@/components/detail-tooltip'
 import {
   browserForPlatform,
@@ -14,6 +14,11 @@ import {
 } from '@/lib/brand-icons'
 import { cn } from '@/lib/utils'
 
+// Reached only when the browser is already unmatched, where the globe would read as "unknown
+// browser" rather than "not a person".
+export const unknownBrowserGlyph = (bot: boolean | undefined, size: number) =>
+  bot ? <BotBrowserIcon size={size} /> : <UnknownBrowserIcon size={size} />
+
 type PlatformTooltipProps = {
   browser?: string
   browserVersion?: string
@@ -22,22 +27,36 @@ type PlatformTooltipProps = {
   device?: string
   // The SDK's own target ('web' or the native OS). Native rows drop $browser — see browserForPlatform.
   platform?: string
+  bot?: boolean
 }
 
 // Bespoke platform tooltip: a single inline spec line, ordered browser → device →
 // OS (each with icon + mono version), separated by hairline dividers. An unrecognised
 // browser falls back to a neutral glyph; an unrecognised OS stays iconless.
-export const PlatformTooltip = ({ browser, browserVersion, os, osVersion, device, platform }: PlatformTooltipProps) => {
+export const PlatformTooltip = ({
+  browser,
+  browserVersion,
+  os,
+  osVersion,
+  device,
+  platform,
+  bot,
+}: PlatformTooltipProps) => {
   const browserName = browserForPlatform(browser, platform)
   const browserIcon = resolveBrowserIcon(browserName)
   const osIcon = resolveOsIcon(os)
   const items: ReactNode[] = []
 
+  // The icon slot only swaps when the browser is unmatched, so a datacenter Chrome keeps its mark —
+  // this is the one place every bot row says so, and the only one a screen reader reaches.
+  if (bot) {
+    items.push(<TooltipInlineItem key="bot" label={<span className="text-muted-foreground">Automated</span>} />)
+  }
   if (browserName?.trim()) {
     items.push(
       <TooltipInlineItem
         key="browser"
-        icon={<BrandIcon name={browserIcon} size={16} unknownGlyph={<UnknownBrowserIcon size={16} />} />}
+        icon={<BrandIcon name={browserIcon} size={16} unknownGlyph={unknownBrowserGlyph(bot, 16)} />}
         label={browserName}
         version={browserVersion}
       />,
@@ -67,6 +86,7 @@ type BrowserLabelProps = {
   browser?: string
   browserVersion?: string
   platform?: string
+  bot?: boolean
   className?: string
   fallback?: ReactNode
   iconSize?: number
@@ -76,6 +96,7 @@ export const BrowserLabel = ({
   browser,
   browserVersion,
   platform,
+  bot,
   className,
   fallback = '—',
   iconSize = 16,
@@ -90,7 +111,7 @@ export const BrowserLabel = ({
 
   return (
     <span className={cn('inline-flex min-w-0 items-center gap-1.5', className)}>
-      <BrandIcon name={icon} size={iconSize} unknownGlyph={<UnknownBrowserIcon size={iconSize} />} />
+      <BrandIcon name={icon} size={iconSize} unknownGlyph={unknownBrowserGlyph(bot, iconSize)} />
       <span className="truncate">{label}</span>
     </span>
   )
@@ -151,6 +172,7 @@ type PlatformLabelProps = {
   osVersion?: string
   device?: string
   platform?: string
+  bot?: boolean
   className?: string
   fallback?: ReactNode
   iconSize?: number
@@ -163,6 +185,7 @@ export const PlatformLabel = ({
   osVersion,
   device,
   platform,
+  bot,
   className,
   fallback = '—',
   iconSize = 14,
@@ -172,10 +195,10 @@ export const PlatformLabel = ({
   const browserName = browserForPlatform(browser, platform)?.trim()
   const primary = formatPlatformPrimary(browserName, os)
   // Single icon in the trigger, and a named browser owns that slot outright: unrecognised, it takes
-  // the neutral globe rather than borrowing the OS mark. The OS only leads when no browser is named
+  // a neutral glyph rather than borrowing the OS mark. The OS only leads when no browser is named
   // — and then there is no globe, which would mislabel the row. Full breakdown is in the tooltip.
   const icon = browserName ? resolveBrowserIcon(browserName) : resolveOsIcon(os)
-  const unknownGlyph = browserName ? <UnknownBrowserIcon size={iconSize} /> : null
+  const unknownGlyph = browserName ? unknownBrowserGlyph(bot, iconSize) : null
 
   if (!primary) {
     return typeof fallback === 'string' ? <span className={className}>{fallback}</span> : fallback
@@ -191,6 +214,7 @@ export const PlatformLabel = ({
           osVersion={osVersion}
           device={device}
           platform={platform}
+          bot={bot}
         />
       }
       contentClassName={tooltipPanelContent}
@@ -209,6 +233,7 @@ type PlatformStackLabelProps = {
   osVersion?: string
   device?: string
   platform?: string
+  bot?: boolean
   className?: string
   fallback?: ReactNode
   iconSize?: number
@@ -221,6 +246,7 @@ export const PlatformStackLabel = ({
   osVersion,
   device,
   platform,
+  bot,
   className,
   fallback = '—',
   iconSize = 16,
@@ -230,7 +256,7 @@ export const PlatformStackLabel = ({
   const browserName = browserForPlatform(browser, platform)?.trim()
   const osName = formatOsName(os)
   const icon = browserName ? resolveBrowserIcon(browserName) : resolveOsIcon(os)
-  const unknownGlyph = browserName ? <UnknownBrowserIcon size={iconSize} /> : null
+  const unknownGlyph = browserName ? unknownBrowserGlyph(bot, iconSize) : null
   const primary = browserName || osName || formatDeviceLabel(device, os)
   const secondary = browserName ? osName : undefined
 
@@ -248,6 +274,7 @@ export const PlatformStackLabel = ({
           osVersion={osVersion}
           device={device}
           platform={platform}
+          bot={bot}
         />
       }
       contentClassName={tooltipPanelContent}

@@ -19,6 +19,10 @@ vi.mock('@/api/rpc', async () => {
   return {
     projectsRPCAtom: atom({ batchGet, create: projectCreate }),
     orgsRPCAtom: atom({ list: orgsList }),
+    // The footer's usage meter reads both; unresolved, it renders nothing, as every assertion here
+    // expects.
+    billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
+    usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
   }
 })
 

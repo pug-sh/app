@@ -121,7 +121,7 @@ const OverviewBody = ({ profileId }: { profileId: string }) => {
     setLoadingRecent(true)
     setRecentError(null)
     activityRPC
-      .getActivityFeed({ distinctId: profileId, pageSize: 10, pageToken: '' }, { headers })
+      .getActivityFeed({ distinctId: profileId, pageSize: 10, pageToken: '', includeBots: true }, { headers })
       .then(resp => {
         if (!cancelled) setRecent(resp.events.slice(0, 10))
       })

@@ -1,9 +1,11 @@
 import { Check, Globe, ListFilter, type LucideIcon, Monitor, Search, Smartphone, Tv, X } from 'lucide-react'
 import { Fragment, type ReactNode, useState } from 'react'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import type { CountryCount, DeviceBreakdown, KindCount, VisitorDeviceType } from '@/components/live-map/live-visitors'
 import { formatCountryName, LIVE_WINDOW_OPTIONS } from '@/components/live-map/live-visitors'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { chipActiveClass, chipIdleClass, chipTriggerClass } from '@/lib/chip-styles'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -27,11 +29,11 @@ type Props = {
   countries: CountryCount[]
   selectedCountry: string | null
   onCountryChange: (country: string | null) => void
+  includeBots: boolean
+  onIncludeBotsChange: (includeBots: boolean) => void
   hasActiveFilters: boolean
   onClearAll: () => void
 }
-
-const triggerClass = 'inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors'
 
 const KindFilter = ({
   kinds,
@@ -49,14 +51,7 @@ const KindFilter = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={cn(
-          triggerClass,
-          selected.size > 0
-            ? 'border-primary/40 bg-primary/5 text-foreground'
-            : 'border-dashed border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground',
-        )}
-      >
+      <PopoverTrigger className={cn(chipTriggerClass, selected.size > 0 ? chipActiveClass : chipIdleClass)}>
         <ListFilter className="size-3" />
         {label}
         {selected.size > 0 && (
@@ -117,14 +112,7 @@ const CountryFilter = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={cn(
-          triggerClass,
-          selected
-            ? 'border-primary/40 bg-primary/5 text-foreground'
-            : 'border-dashed border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground',
-        )}
-      >
+      <PopoverTrigger className={cn(chipTriggerClass, selected ? chipActiveClass : chipIdleClass)}>
         <Globe className="size-3" />
         {selected ? formatCountryName(selected) : 'All countries'}
         {selected && (
@@ -262,6 +250,8 @@ const LiveFilterBar = ({
   countries,
   selectedCountry,
   onCountryChange,
+  includeBots,
+  onIncludeBotsChange,
   hasActiveFilters,
   onClearAll,
 }: Props) => (
@@ -276,6 +266,7 @@ const LiveFilterBar = ({
           className="h-7 w-full rounded-md border border-border bg-background/60 pr-2 pl-7 text-xs placeholder:text-faint focus:border-foreground/20 focus:outline-none"
         />
       </div>
+      <IncludeBotsToggle includeBots={includeBots} onChange={onIncludeBotsChange} />
       <WindowToggle windowMs={windowMs} onChange={onWindowChange} />
     </div>
     <div className="flex flex-wrap items-center gap-1.5">

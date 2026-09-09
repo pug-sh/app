@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { TrendingUp } from 'lucide-react'
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo } from 'react'
 import {
   AggregationType,
   type Granularity,
@@ -35,6 +35,22 @@ import { EMPTY_ARRAY, type ViewMode } from './constants'
 import { countryCountsFromTopKRows } from './map'
 import { buildSankeyData, sankeyIncompleteReason } from './user-flow'
 
+// Rendered standalone here, or lowercased into a tile shell's footer by a hoisting caller —
+// one literal so the two can't drift apart.
+export const COMPARE_CAPTION = 'Dashed line is the previous period'
+
+// Reports from the caption's own slot rather than the top of InsightsContent, so the nine early
+// returns above it unmount this and tell the caller for free — a boolean computed up there has
+// to mirror all nine by hand, and silently captions error and empty states when it drifts.
+const ComparisonCaption = ({ report }: { report?: (draws: boolean) => void }) => {
+  useEffect(() => {
+    report?.(true)
+    return () => report?.(false)
+  }, [report])
+  if (report) return null
+  return <p className="shrink-0 text-xs text-faint">{COMPARE_CAPTION}</p>
+}
+
 export const InsightsContent = memo(function InsightsContent({
   error,
   retry,
@@ -63,6 +79,7 @@ export const InsightsContent = memo(function InsightsContent({
   showPieLabels = true,
   yTickFormatter,
   comparison,
+  onComparisonCaption,
   isMap = false,
   mapIncompleteReason = null,
   isTopK = false,
@@ -110,6 +127,11 @@ export const InsightsContent = memo(function InsightsContent({
   // The compare-vs-prior window, drawn as a dashed reference series. Only the two line-shaped views
   // take it; bars and the table read the live series alone.
   comparison?: ChartComparison
+  // Hands the caption up instead of drawing it, so a shell rendering around this can fold it into
+  // its own footer. Passing it suppresses the caption here, and the identity has to be stable.
+  // Silence means no line: a caller seeds its own state false, since nothing reports on a view
+  // that never draws one.
+  onComparisonCaption?: (draws: boolean) => void
   // A map reads the same top-k rows, keyed by country. Dispatched on the insight type, so a map
   // never falls through to the ranked list its result shape would otherwise select.
   isMap?: boolean
@@ -504,8 +526,7 @@ export const InsightsContent = memo(function InsightsContent({
             <div className={cn('min-h-0 min-w-0', compact && 'h-full overflow-y-auto')}>{renderLegend()}</div>
           </div>
         )}
-        {/* Named here, not by the tile shell, so the caption can't outlive the line it describes. */}
-        {drawsComparison ? <p className="shrink-0 text-xs text-faint">Dashed line is the previous period</p> : null}
+        {drawsComparison ? <ComparisonCaption report={onComparisonCaption} /> : null}
       </div>
     )
   }

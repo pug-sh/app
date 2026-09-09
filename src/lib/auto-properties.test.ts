@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deviceModelOf, platformOf } from '@/lib/auto-properties'
+import { deviceModelOf, platformOf, referrerDomain } from '@/lib/auto-properties'
 
 describe('deviceModelOf', () => {
   it('reads the web $device and the Flutter $deviceModel', () => {
@@ -21,5 +21,17 @@ describe('platformOf', () => {
   it('reads the SDK target the read path merges back off the promoted column', () => {
     expect(platformOf({ $platform: 'android' })).toBe('android')
     expect(platformOf({})).toBeUndefined()
+  })
+})
+
+describe('referrerDomain', () => {
+  it('uses the server-derived domain', () => {
+    expect(referrerDomain({ $referrerDomain: 'google.com' })).toBe('google.com')
+  })
+
+  // The backend blanks this on self-referral; parsing $referrer here would undo that.
+  it('stays empty when blanked, even with a raw referrer present', () => {
+    expect(referrerDomain({ $referrerDomain: '', $referrer: 'https://acme.com/pricing' })).toBeUndefined()
+    expect(referrerDomain(undefined)).toBeUndefined()
   })
 })

@@ -1,4 +1,4 @@
-import { Globe } from 'lucide-react'
+import { Bot, Globe } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { brandIconSrc } from '@/lib/brand-icon-assets'
 import type { BrandIconName } from '@/lib/brand-icons'
@@ -43,6 +43,16 @@ export const BrandIcon = ({ name, className, size = 16, unknownGlyph = null }: B
 export const UnknownBrowserIcon = ({ className, size = 16 }: { className?: string; size?: number }) => (
   <Globe
     aria-hidden
+    strokeWidth={1.75}
+    className={cn('inline-block shrink-0 text-muted-foreground/80', className)}
+    style={{ width: size, height: size }}
+  />
+)
+
+export const BotBrowserIcon = ({ className, size = 16 }: { className?: string; size?: number }) => (
+  <Bot
+    role="img"
+    aria-label="Automated traffic"
     strokeWidth={1.75}
     className={cn('inline-block shrink-0 text-muted-foreground/80', className)}
     style={{ width: size, height: size }}

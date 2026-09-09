@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/usage/v1/usage.proto.
  */
 export const file_dashboard_usage_v1_usage: GenFile = /*@__PURE__*/
-  fileDesc("Ch5kYXNoYm9hcmQvdXNhZ2UvdjEvdXNhZ2UucHJvdG8SEmRhc2hib2FyZC51c2FnZS52MSLgAQoPR2V0VXNhZ2VSZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIjCgVyYW5nZRgCIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2U6jgG6SIoBGocBChNnZXRfdXNhZ2UucmFuZ2VfbWF4EiZyYW5nZSBtdXN0IG5vdCBzcGFuIG1vcmUgdGhhbiA0MDAgZGF5cxpIIWhhcyh0aGlzLnJhbmdlKSB8fCB0aGlzLnJhbmdlLnRvIC0gdGhpcy5yYW5nZS5mcm9tIDw9IGR1cmF0aW9uKCc5NjAwaCcpIlwKCFVzYWdlRGF5EicKA2RheRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKcHJvamVjdF9pZBgCIAEoCRITCgtldmVudF9jb3VudBgDIAEoAyLtAQoQR2V0VXNhZ2VSZXNwb25zZRITCgt1c2VkX2V2ZW50cxgBIAEoAxIwCgxwZXJpb2Rfc3RhcnQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnBlcmlvZF9lbmQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKEXVzYWdlX2NvbXB1dGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIrCgVkYWlseRgFIAMoCzIcLmRhc2hib2FyZC51c2FnZS52MS5Vc2FnZURheTJnCgxVc2FnZVNlcnZpY2USVwoIR2V0VXNhZ2USIy5kYXNoYm9hcmQudXNhZ2UudjEuR2V0VXNhZ2VSZXF1ZXN0GiQuZGFzaGJvYXJkLnVzYWdlLnYxLkdldFVzYWdlUmVzcG9uc2UiAEJFWkNnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC91c2FnZS92MTt1c2FnZXYxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_common_v1_time, file_google_protobuf_timestamp]);
+  fileDesc("Ch5kYXNoYm9hcmQvdXNhZ2UvdjEvdXNhZ2UucHJvdG8SEmRhc2hib2FyZC51c2FnZS52MSLgAQoPR2V0VXNhZ2VSZXF1ZXN0EhcKBm9yZ19pZBgBIAEoCUIHukgEcgIQARIjCgVyYW5nZRgCIAEoCzIULmNvbW1vbi52MS5UaW1lUmFuZ2U6jgG6SIoBGocBChNnZXRfdXNhZ2UucmFuZ2VfbWF4EiZyYW5nZSBtdXN0IG5vdCBzcGFuIG1vcmUgdGhhbiA0MDAgZGF5cxpIIWhhcyh0aGlzLnJhbmdlKSB8fCB0aGlzLnJhbmdlLnRvIC0gdGhpcy5yYW5nZS5mcm9tIDw9IGR1cmF0aW9uKCc5NjAwaCcpIlwKCFVzYWdlRGF5EicKA2RheRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKcHJvamVjdF9pZBgCIAEoCRITCgtldmVudF9jb3VudBgDIAEoAyL+AQoQR2V0VXNhZ2VSZXNwb25zZRITCgt1c2VkX2V2ZW50cxgBIAEoAxIwCgxwZXJpb2Rfc3RhcnQYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnBlcmlvZF9lbmQYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKEXVzYWdlX2NvbXB1dGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIrCgVkYWlseRgFIAMoCzIcLmRhc2hib2FyZC51c2FnZS52MS5Vc2FnZURheRIPCgdjb3VudGVkGAYgASgIMmcKDFVzYWdlU2VydmljZRJXCghHZXRVc2FnZRIjLmRhc2hib2FyZC51c2FnZS52MS5HZXRVc2FnZVJlcXVlc3QaJC5kYXNoYm9hcmQudXNhZ2UudjEuR2V0VXNhZ2VSZXNwb25zZSIAQkVaQ2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vZGFzaGJvYXJkL3VzYWdlL3YxO3VzYWdldjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_common_v1_time, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message dashboard.usage.v1.GetUsageRequest
@@ -88,9 +88,11 @@ export const UsageDaySchema: GenMessage<UsageDay> = /*@__PURE__*/
 export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & {
   /**
    * Distinct events recorded across all of the org's projects this period.
-   * ABSENT until the meter has actually summed this period — never render its
-   * absence as 0. Present implies usage_computed_at is present; the reverse does
-   * not hold.
+   * MEANINGLESS unless `counted` is true — never render it as 0 on its own.
+   *
+   * It is absent on the wire until the meter has summed this period, but do not
+   * rely on that: protoc-gen-es renders an edition-2023 singular scalar as a
+   * non-optional bigint, so absence reaches a TypeScript client as 0.
    *
    * @generated from field: int64 used_events = 1;
    */
@@ -111,12 +113,6 @@ export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & 
    * has — there is no answer at all, which a deployment not running
    * `pug cron usage` must render as "unknown" rather than "0".
    *
-   * Present WITH used_events absent is the third state: the meter is alive but has
-   * not reached this period yet (the 1st of a month, before the first pass, when
-   * this stamp is still the previous period's). Render that as "computing". The
-   * two fields carry the distinction on their own — no comparison against
-   * period_start is required, and none should be relied on.
-   *
    * @generated from field: google.protobuf.Timestamp usage_computed_at = 4;
    */
   usageComputedAt?: Timestamp | undefined;
@@ -130,6 +126,25 @@ export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & 
    * @generated from field: repeated dashboard.usage.v1.UsageDay daily = 5;
    */
   daily: UsageDay[];
+
+  /**
+   * Whether used_events is a measurement of THIS period. With
+   * usage_computed_at it carries three states:
+   *
+   *   - no stamp: the meter has never run. Render "unknown".
+   *   - stamp, not counted: it has not reached this period yet (just after a
+   *     period boundary, when the stamp is the previous period's). "Computing".
+   *   - stamp, counted: used_events is a real total, and a 0 there is a real 0.
+   *
+   * Read this rather than comparing usage_computed_at against period_start.
+   *
+   * A plain bool rather than a wrapper: it is only ever emitted true, so a
+   * generator that drops the presence bit reads absence as false — which is the
+   * right answer, unlike the 0 the same erasure makes of used_events.
+   *
+   * @generated from field: bool counted = 6;
+   */
+  counted: boolean;
 };
 
 /**
@@ -144,12 +159,12 @@ export const GetUsageResponseSchema: GenMessage<GetUsageResponse> = /*@__PURE__*
  */
 export const UsageService: GenService<{
   /**
-   * Returns how many events the org's projects recorded in the current calendar
-   * month, plus the per-project daily series behind it. The numbers come from a
-   * scheduled meter whose cadence the deployment sets, so read usage_computed_at
-   * for how stale they are rather than assuming one. Both used_events and
-   * usage_computed_at are absent if the meter has never run; usage_computed_at
-   * alone is present while it is alive but has not summed this period yet.
+   * Returns how many events the org's projects recorded in the current billing
+   * period — which runs from the org's billing anchor, defaulting to its signup
+   * anniversary rather than the 1st of the month — plus the per-project daily
+   * series behind it. The numbers come from a scheduled meter whose cadence the
+   * deployment sets, so read usage_computed_at for how stale they are rather than
+   * assuming one, and read counted before rendering used_events at all.
    *
    * @generated from rpc dashboard.usage.v1.UsageService.GetUsage
    */
