@@ -102,6 +102,9 @@ export default defineConfig({
             return 'vendor-maplibre'
           }
           if (id.includes('/@bufbuild/') || id.includes('/@connectrpc/')) return 'vendor-proto'
+          // Dynamically imported by checkout.ts alone; in vendor-misc every visitor pays for it
+          // on first paint.
+          if (id.includes('/dodopayments-checkout/')) return 'vendor-checkout'
           // Own chunk so ~120KB of artwork caches separately. The eagerly-imported ProfileShell
           // still pulls it onto every authenticated route; sign-in and the share page escape it.
           if (id.includes('/@dicebear/')) return 'vendor-avatars'

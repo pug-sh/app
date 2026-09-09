@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle, FolderPlus } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
-import { Route, Switch, useLocation } from 'wouter'
+import { Route, Switch, useLocation, useSearch } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
@@ -102,10 +102,13 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   return <Fragment key={projectId}>{children}</Fragment>
 }
 
+const PROJECT_LESS_PATHS = new Set(Object.keys(routes).map(path => path.replace('/p/:projectId', '')))
+
 // Exported for the test that pins it against WorkspaceBootstrap: the two race for the first
 // navigation off '/', and the bug only appears when they run together.
 export const ProjectRedirect = () => {
-  const [, navigate] = useLocation()
+  const [location, navigate] = useLocation()
+  const search = useSearch()
   // Waits for activeProjectAtom rather than falling back to projects[0] itself. This route is the
   // one place the URL names no project, so App's bootstrap always has a pick coming — and a second
   // pick here doesn't just duplicate that one, it beats it: both run off the render where the list
@@ -117,9 +120,13 @@ export const ProjectRedirect = () => {
 
   useEffect(() => {
     if (project) {
-      navigate(`/p/${project.id}/overview`, { replace: true })
+      // The post-checkout return carries no project, so '/settings/billing?status=failed' survives
+      // whole. Only a real route does: anything else prefixed draws a layout shell with no body.
+      const keep = PROJECT_LESS_PATHS.has(location)
+      const rest = keep ? `${location}${search ? `?${search}` : ''}` : '/overview'
+      navigate(`/p/${project.id}${rest}`, { replace: true })
     }
-  }, [project, navigate])
+  }, [location, search, project, navigate])
 
   if (project) return null
   // A brand-new org, or one whose last project was deleted, has no pick coming — waiting on one
