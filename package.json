@@ -89,7 +89,7 @@
     "@vitest/coverage-v8": "^5.0.0",
     "happy-dom": "^20.14.0",
     "knip": "^6.34.0",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "vite": "^8.0.1",
     "vitest": "^5.0.0"
   },
