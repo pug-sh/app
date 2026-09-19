@@ -1,4 +1,4 @@
-import maplibregl, { type PaddingOptions } from 'maplibre-gl'
+import { type ErrorEvent, Marker, type PaddingOptions } from 'maplibre-gl'
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import type { ActivityEvent } from '@/api/genproto/shared/activity/v1/activity_pb'
@@ -35,7 +35,7 @@ const HOVER_OUT_MS = 180
 const ARROW_PX = 10
 
 type Entry = {
-  marker: maplibregl.Marker
+  marker: Marker
   root: Root
   data: MapEntry
   signature: string
@@ -445,7 +445,7 @@ const LiveVisitorMap = ({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    const onError = (e: maplibregl.ErrorEvent) => console.warn('[live-map] basemap error:', e.error?.message ?? e.error)
+    const onError = (e: ErrorEvent) => console.warn('[live-map] basemap error:', e.error?.message ?? e.error)
     map.on('error', onError)
     return () => {
       map.off('error', onError)
@@ -533,9 +533,7 @@ const LiveVisitorMap = ({
       el.style.transition = `opacity ${FADE_MS}ms ease`
       el.addEventListener('mouseenter', onMarkerEnter)
       el.addEventListener('mouseleave', onMarkerLeave)
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-        .setLngLat(displayPos(data, cell))
-        .addTo(map)
+      const marker = new Marker({ element: el, anchor: 'center' }).setLngLat(displayPos(data, cell)).addTo(map)
       // Empty signature so the first repaint always renders.
       const entry: Entry = { marker, root: createRoot(el), data, signature: '' }
       repaint(entry, selectedRef.current, highlightRef.current)

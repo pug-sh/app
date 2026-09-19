@@ -1,7 +1,11 @@
 import { useAtomValue } from 'jotai'
-import maplibregl, { type MapOptions } from 'maplibre-gl'
+import { Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
+
+// v6 otherwise resolves the worker next to its own chunk, where Vite never emits it.
+setWorkerUrl(workerUrl)
 
 // --- Resolved dark mode (shared by both maps + theme-aware styling) ---
 
@@ -41,7 +45,7 @@ type Options = Omit<MapOptions, 'container'>
 // (on mount); change the style/paint imperatively via mapRef afterwards.
 export const useMaplibreMap = (options: Options) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<maplibregl.Map | null>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
   const optionsRef = useRef(options)
   const [ready, setReady] = useState(false)
 
@@ -49,7 +53,7 @@ export const useMaplibreMap = (options: Options) => {
     const container = containerRef.current
     if (!container) return
 
-    const map = new maplibregl.Map({ container, ...optionsRef.current })
+    const map = new MapLibreMap({ container, ...optionsRef.current })
     mapRef.current = map
     const onLoad = () => setReady(true)
     map.on('load', onLoad)
