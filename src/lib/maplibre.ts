@@ -1,11 +1,11 @@
-import maplibregl, { type LngLatBoundsLike } from 'maplibre-gl'
+import { addProtocol, type LngLatBoundsLike } from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
 
 // Register the pmtiles:// protocol once so MapLibre can read self-hosted .pmtiles archives.
 let protocolRegistered = false
 export const ensurePmtilesProtocol = () => {
   if (protocolRegistered) return
-  maplibregl.addProtocol('pmtiles', new Protocol().tile)
+  addProtocol('pmtiles', new Protocol().tile)
   protocolRegistered = true
 }
 
