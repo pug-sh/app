@@ -28,11 +28,8 @@ const clipIds = (container: HTMLElement) =>
     .map(clip => clip.id)
     .filter(Boolean)
 
-// Guards the clip-id rewrite in vite.config.ts. The vendored charts pass a hardcoded clipPathId,
-// so two charts of one type on a page emit the same <clipPath id> — and since url(#id) resolves to
-// the first in document order, the later chart is clipped by the first one's rect and loses
-// whatever falls outside it. Silent whenever the two plots happen to be the same size, which is
-// why it needs a test rather than an eye.
+// Two charts of one type must not share a <clipPath id>: url(#id) resolves to the first, cropping later charts
+// to its rect — invisible at equal sizes, so an eye won't catch it. Scoped upstream since bklit#232.
 describe('vendored chart clip ids', () => {
   for (const [name, Chart] of [
     ['line', LineChart],
