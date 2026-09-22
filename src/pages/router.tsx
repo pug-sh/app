@@ -1,11 +1,13 @@
 import { useAtom, useAtomValue } from 'jotai'
 import { AlertCircle, FolderPlus } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
-import { Route, Switch, useLocation, useSearch } from 'wouter'
+import { Link, Route, Switch, useLocation, useSearch } from 'wouter'
+import { Can } from '@/auth/can'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
 import { activeProjectAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import { useRouteParams } from '@/lib/route-params'
+import ProjectDeletions from './project-deletions'
 import ProfileShell from './routegen/profiles/[profileId]/_shell'
 import SettingsLayout from './routegen/settings/settings-layout'
 import { routes } from './routes'
@@ -137,6 +139,11 @@ export const ProjectRedirect = () => {
         <FolderPlus className="w-10 h-10 mb-4 opacity-30" />
         <p className="text-sm font-medium mb-1">No projects yet</p>
         <p className="text-xs">Create one from the project switcher to get started.</p>
+        <Can action="delete" resource="project">
+          <Link href="/project-deletions" className="mt-4 text-sm text-link hover:underline">
+            View project deletion activity
+          </Link>
+        </Can>
       </div>
     )
   }
@@ -154,6 +161,7 @@ const flatRoutes = Object.entries(routes).filter(([path]) => !groupedPaths.has(p
 const Router = () => {
   return (
     <Switch>
+      <Route path="/project-deletions" component={ProjectDeletions} />
       {groupedRoutes.map(({ outer, Layout, members }) => (
         <Route key={outer} path={outer}>
           <ProjectSync>

@@ -8,10 +8,11 @@ import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, projectCreate, orgsList } = vi.hoisted(() => ({
+const { batchGet, projectCreate, orgsList, getMe } = vi.hoisted(() => ({
   batchGet: vi.fn(),
   projectCreate: vi.fn(),
   orgsList: vi.fn(),
+  getMe: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
@@ -19,6 +20,7 @@ vi.mock('@/api/rpc', async () => {
   return {
     projectsRPCAtom: atom({ batchGet, create: projectCreate }),
     orgsRPCAtom: atom({ list: orgsList }),
+    customersRPCAtom: atom({ getMe }),
     // The footer's usage meter reads both; unresolved, it renders nothing, as every assertion here
     // expects.
     billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
@@ -39,6 +41,7 @@ const { SidebarProvider, SidebarTrigger } = await import('@/components/ui/sideba
 const AppSidebar = (await import('@/components/layout/sidebar')).default
 const { activeOrgAtom, activeProjectAtom, projectsAtom } = await import('@/data/workspace.atoms')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
+const { fetchMeAtom } = await import('@/auth/auth.atoms')
 
 // Admin so the Can gate renders the create-project affordance at all.
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A', role: OrgRole.ADMIN })
@@ -51,13 +54,23 @@ const projects = [
 // column beside it. Read once in a lazy useState initializer, so setting it before render is enough.
 const MOBILE_WIDTH = 500
 
-const mount = async (path: string) => {
+const mount = async (path: string, instanceAdmin = false) => {
   const store = createStore()
   store.set(refreshTokenAtom, 'refresh-token')
   store.set(jwtAtom, jwtFor('cust-1'))
   store.set(activeOrgAtom, orgA)
   store.set(projectsAtom, projects)
   store.set(activeProjectAtom, projects[0])
+  if (instanceAdmin) {
+    getMe.mockResolvedValue({
+      customerId: 'cust-1',
+      email: 'admin@example.com',
+      emailVerified: true,
+      instanceAdmin: true,
+      canCreateOrganization: true,
+    })
+    await store.set(fetchMeAtom)
+  }
   const { hook, history } = memoryLocation({ path, record: true })
   render(
     <Provider store={store}>
@@ -70,7 +83,9 @@ const mount = async (path: string) => {
     </Provider>,
   )
   fireEvent.click(screen.getByRole('button', { name: /toggle sidebar/i }))
-  const nav = await screen.findByRole('link', { name: 'Insights' })
+  const nav = await screen.findByRole('link', {
+    name: path.startsWith('/instance/') && instanceAdmin ? 'Organizations' : 'Insights',
+  })
   // Only the mobile branch renders a sheet. Without this the dismissal assertions below would pass
   // against a desktop column that was never a sheet, which is what a stale innerWidth would leave.
   expect(document.querySelector('[data-mobile="true"]')).not.toBeNull()
@@ -136,5 +151,42 @@ describe('the sidebar on mobile', () => {
     fireEvent.click(screen.getByRole('button', { name: /light|dark|system/i }))
 
     expect(document.body.contains(nav)).toBe(true)
+  })
+
+  it('switches the sidebar between workspace and instance administration', async () => {
+    const { history, nav } = await mount('/p/p1/overview', true)
+
+    expect(screen.getByRole('link', { name: 'Instance administration' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Instance administration' }))
+
+    await waitFor(() => expect(document.body.contains(nav)).toBe(false))
+    expect(history.at(-1)).toBe('/instance/organizations')
+
+    fireEvent.click(screen.getByRole('button', { name: /toggle sidebar/i }))
+    expect(screen.queryByRole('link', { name: 'Insights' })).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Instance administration' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Instance administration' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Organizations' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Users' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Deletion history' })).toBeTruthy()
+    expect(screen.queryByRole('textbox', { name: 'Find organization' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to workspace' }))
+
+    expect(history.at(-1)).toBe('/p/p1/overview')
+  })
+
+  it('keeps organizations selected while viewing one organization', async () => {
+    const { nav } = await mount('/instance/organizations/org-z', true)
+
+    expect(nav.hasAttribute('data-active')).toBe(true)
+    expect(screen.queryByRole('link', { name: 'Org Z' })).toBeNull()
+  })
+
+  it('keeps workspace navigation when a non-admin enters an instance URL', async () => {
+    const { nav } = await mount('/instance/users')
+
+    expect(nav.textContent).toContain('Insights')
+    expect(screen.queryByRole('heading', { name: 'Instance administration' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Organizations' })).toBeNull()
   })
 })

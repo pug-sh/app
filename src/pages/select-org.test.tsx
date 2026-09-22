@@ -3,12 +3,21 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { jwtFor } from '@/test/jwt'
 
 const { orgsCreate } = vi.hoisted(() => ({ orgsCreate: vi.fn() }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
+    customersRPCAtom: atom({
+      getMe: vi.fn().mockResolvedValue({
+        customerId: 'cust-1',
+        email: 'admin@example.com',
+        emailVerified: true,
+        canCreateOrganization: true,
+      }),
+    }),
     projectsRPCAtom: atom({ batchGet: vi.fn() }),
     orgsRPCAtom: atom({ list: vi.fn(), get: vi.fn(), create: orgsCreate, leave: vi.fn() }),
   }
@@ -26,11 +35,15 @@ vi.mock('@/analytics/pug', () => ({
 }))
 
 const { orgsAtom } = await import('@/data/workspace.atoms')
+const { fetchMeAtom } = await import('@/auth/auth.atoms')
+const { jwtAtom } = await import('@/auth/jwt.atoms')
 const SelectOrg = (await import('./select-org')).default
 
 describe('org creation from the picker', () => {
   it('rejects a name of nothing but spaces, and says so', async () => {
     const store = createStore()
+    store.set(jwtAtom, jwtFor('cust-1'))
+    await store.set(fetchMeAtom)
     store.set(orgsAtom, [create(OrgSchema, { id: 'org-a', displayName: 'Acme', role: OrgRole.ADMIN })])
     render(
       <Provider store={store}>

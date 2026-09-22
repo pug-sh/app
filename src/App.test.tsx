@@ -8,11 +8,12 @@ import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
+const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName, getMe } = vi.hoisted(() => ({
   batchGet: vi.fn(),
   orgsList: vi.fn(),
   orgsGet: vi.fn(),
   orgsUpdateDisplayName: vi.fn(),
+  getMe: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
@@ -20,6 +21,7 @@ vi.mock('@/api/rpc', async () => {
   return {
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
+    customersRPCAtom: atom({ getMe }),
     // The over-quota banner reads both; unresolved, it stays unrendered.
     billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
     usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
@@ -38,7 +40,7 @@ vi.mock('@/analytics/pug', () => ({
   analyticsEnabled: false,
 }))
 
-const { SessionUrlGuard, WorkspaceBootstrap } = await import('./App')
+const { InstanceAdminEntry, SessionUrlGuard, WorkspaceBootstrap } = await import('./App')
 const { ProjectRedirect, ProjectSync } = await import('@/pages/router')
 const {
   activeOrgAtom,
@@ -55,6 +57,59 @@ const {
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 const { SidebarProvider } = await import('@/components/ui/sidebar')
 const AppSidebar = (await import('@/components/layout/sidebar')).default
+
+describe('workspace bootstrap with no memberships', () => {
+  it.each([
+    { instanceAdmin: false, canCreateOrganization: false, expected: 'no-org' },
+    { instanceAdmin: false, canCreateOrganization: true, expected: 'needs-selection' },
+    { instanceAdmin: true, canCreateOrganization: false, expected: 'instance-admin' },
+  ])(
+    'routes a customer with instanceAdmin=$instanceAdmin and canCreateOrganization=$canCreateOrganization to $expected',
+    async ({ instanceAdmin, canCreateOrganization, expected }) => {
+      orgsList.mockResolvedValue({ orgs: [] })
+      getMe.mockResolvedValue({
+        customerId: 'cust-1',
+        email: 'user@example.com',
+        emailVerified: true,
+        instanceAdmin,
+        canCreateOrganization,
+      })
+      const store = createStore()
+      store.set(refreshTokenAtom, 'refresh-token')
+      store.set(jwtAtom, jwtFor('cust-1'))
+      store.set(lastOrgIdAtom, '')
+      render(
+        <Provider store={store}>
+          <Router hook={memoryLocation({ path: '/' }).hook}>
+            <WorkspaceBootstrap />
+          </Router>
+        </Provider>,
+      )
+      await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe(expected))
+    },
+  )
+})
+
+describe('instance console route', () => {
+  it('denies a verified account without instance authority before loading the console', async () => {
+    getMe.mockResolvedValue({
+      customerId: 'cust-1',
+      email: 'user@example.com',
+      emailVerified: true,
+      instanceAdmin: false,
+      canCreateOrganization: false,
+    })
+    const store = createStore()
+    store.set(refreshTokenAtom, 'refresh-token')
+    store.set(jwtAtom, jwtFor('cust-1'))
+    render(
+      <Provider store={store}>
+        <InstanceAdminEntry />
+      </Provider>,
+    )
+    expect(await screen.findByText('Access denied')).toBeTruthy()
+  })
+})
 
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
 const projects = [

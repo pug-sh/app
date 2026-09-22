@@ -1,10 +1,10 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Building2 } from 'lucide-react'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
-import { isAuthenticatedAtom } from '@/auth/auth.atoms'
+import { fetchMeAtom, isAuthenticatedAtom, meAtom, meStatusAtom, signOutAtom } from '@/auth/auth.atoms'
 import { AuthSplit } from '@/auth/auth-split'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { customerIdAtom } from '@/auth/jwt.atoms'
@@ -42,6 +42,7 @@ const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 's
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
 const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
+const InstanceConsole = lazyWithRetry(() => import('@/pages/instance-console'), 'instance-console')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
 const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oauth-callback')
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
@@ -103,6 +104,7 @@ export const WorkspaceBootstrap = () => {
   const lastOrgId = useAtomValue(lastOrgIdAtom)
   const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
+  const fetchMe = useSetAtom(fetchMeAtom)
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const prefetchProjects = useSetAtom(prefetchProjectsAtom)
   const commitProjects = useSetAtom(commitProjectsAtom)
@@ -158,7 +160,13 @@ export const WorkspaceBootstrap = () => {
       const list = await fetchOrgs()
       if (cancelled) return
       if (list.length === 0) {
-        setStatus('error')
+        const me = await fetchMe()
+        if (cancelled) return
+        if (!me) {
+          setStatus('error')
+          return
+        }
+        setStatus(me.instanceAdmin ? 'instance-admin' : me.canCreateOrganization ? 'needs-selection' : 'no-org')
         return
       }
       if (list.length === 1) {
@@ -171,7 +179,7 @@ export const WorkspaceBootstrap = () => {
     return () => {
       cancelled = true
     }
-  }, [status, lastOrgId, loadOrg, prefetchProjects, commitProjects, fetchOrgs, selectOrg, setStatus])
+  }, [status, lastOrgId, loadOrg, prefetchProjects, commitProjects, fetchOrgs, fetchMe, selectOrg, setStatus])
 
   // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
   // and this effect blanks the active project and refetches the list — so a rename would clear the
@@ -224,15 +232,15 @@ export const WorkspaceBootstrap = () => {
   return null
 }
 
-const AuthenticatedApp = () => {
+const AuthenticatedApp = ({ instanceAdmin = false }: { instanceAdmin?: boolean }) => {
   return (
     <SidebarProvider>
       <Suspense fallback={null}>
         <AppSidebar />
       </Suspense>
       <SidebarInset className="min-h-0">
-        <DemoBanner />
-        <UsageBanner />
+        {!instanceAdmin && <DemoBanner />}
+        {!instanceAdmin && <UsageBanner />}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter">
           <SidebarTrigger className="-ml-1" />
           <SocialNav className="ml-auto -mr-1" />
@@ -251,9 +259,7 @@ const AuthenticatedApp = () => {
           button labels in here are blanked too — trackFeature() names those explicitly instead.
         */}
         <main className="relative flex min-h-0 flex-1 flex-col overflow-x-clip" data-pug-no-capture>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Router />
-          </Suspense>
+          <Suspense fallback={<LoadingSpinner />}>{instanceAdmin ? <InstanceAdminEntry /> : <Router />}</Suspense>
         </main>
       </SidebarInset>
     </SidebarProvider>
@@ -267,6 +273,52 @@ const WorkspaceError = ({ message }: { message: string }) => (
     </Button>
   </AuthStatus>
 )
+
+const NoOrganization = () => {
+  const me = useAtomValue(meAtom)
+  const setStatus = useSetAtom(bootstrapStatusAtom)
+  const signOut = useSetAtom(signOutAtom)
+  return (
+    <AuthStatus
+      icon={Building2}
+      title="No organization yet"
+      description={
+        <span data-pug-no-capture>
+          Ask an organization admin to invite {me?.email ? <strong>{me.email}</strong> : 'your sign-in email'}. An
+          invitation may already be on its way.
+        </span>
+      }
+    >
+      <div className="mt-6 flex justify-center gap-3">
+        <Button onClick={() => setStatus('loading-org')}>Refresh</Button>
+        <Button variant="outline" onClick={() => signOut()}>
+          Sign out
+        </Button>
+      </div>
+    </AuthStatus>
+  )
+}
+
+export const InstanceAdminEntry = () => {
+  const me = useAtomValue(meAtom)
+  const meStatus = useAtomValue(meStatusAtom)
+  const fetchMe = useSetAtom(fetchMeAtom)
+  useEffect(() => {
+    if (!me && meStatus === 'idle') void fetchMe()
+  }, [me, meStatus, fetchMe])
+  if (meStatus === 'error') return <WorkspaceError message="Could not verify your instance access." />
+  if (!me) return <AuthPending label="Checking instance access…" />
+  if (!me.instanceAdmin)
+    return (
+      <AuthStatus
+        icon={AlertCircle}
+        tone="negative"
+        title="Access denied"
+        description="Instance administrator access is required."
+      />
+    )
+  return <InstanceConsole />
+}
 
 const App = () => {
   const [location] = useLocation()
@@ -288,6 +340,7 @@ const App = () => {
   // authenticated workspace — skip bootstrap so a logged-in viewer's org/project
   // RPCs never fire on a public page.
   const isSharedRoute = location.startsWith('/shared/')
+  const isInstanceRoute = location === '/instance' || location.startsWith('/instance/')
   const isMagicLink = location === '/magic-link'
   const isOAuthCallback = location === '/oauth/callback'
   const isDemoRoute = location === '/demo'
@@ -298,7 +351,15 @@ const App = () => {
   // restored session into the dashboard.
   const onAuthScreen =
     !isSharedRoute &&
-    (isMagicLink || isOAuthCallback || isDemoRoute || !authenticated || failed || status === 'needs-selection')
+    (isMagicLink ||
+      isOAuthCallback ||
+      isDemoRoute ||
+      isInstanceRoute ||
+      !authenticated ||
+      failed ||
+      status === 'needs-selection' ||
+      status === 'no-org' ||
+      status === 'instance-admin')
 
   // Which of the two bootstraps this is, latched from whether an auth screen came first — a
   // restored session never shows one, so it boots on the plain spinner and never flashes the wall.
@@ -323,6 +384,7 @@ const App = () => {
     if (isDemoRoute) return <Demo />
     if (!authenticated) return <SignIn />
     if (failed) return <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
+    if (status === 'no-org') return <NoOrganization />
     if (status === 'needs-selection') return <SelectOrg />
     return <AuthPending label="Loading your workspace…" />
   }
@@ -335,6 +397,7 @@ const App = () => {
         </Suspense>
       )
     }
+    if (authenticated && (isInstanceRoute || status === 'instance-admin')) return <AuthenticatedApp instanceAdmin />
     // One AuthSplit for every signed-out screen, held at a fixed position so a change of screen
     // swaps only its children. The pages used to bring their own, which meant React tore the
     // canvas down between them: the ground changed twice and the wall's drift restarted.

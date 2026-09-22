@@ -5,7 +5,7 @@ import { isDemoSessionAtom } from '@/auth/demo'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { roleLabel } from '@/auth/permissions'
 import { activeOrgAtom, activeProjectAtom, workspaceSettledAtom } from '@/data/workspace.atoms'
-import { analyticsEnabled, type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
+import { type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 
 // Keeps the SDK's identity in step with the session. Mounted from App.tsx alongside ThemeSync,
 // which is the pattern for a null-rendering effect that syncs a module to atom state.
@@ -35,10 +35,9 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const sentCustomerId = useRef<string | null>(null)
   const sentTraits = useRef<string | null>(null)
 
-  // True exactly when the effect below issues a GetMe, so the identify gate knows whether there is
-  // an email on its way to wait for. One expression rather than two: state them separately and a
-  // guard added to the fetch leaves the gate waiting for a call that is no longer made.
-  const emailExpected = Boolean(customerId) && awaitWorkspace && !isDemo && analyticsEnabled
+  // GetMe also supplies instance capabilities for workspace controls, so fetch it even when
+  // analytics is disabled. The identify gate uses the same condition for the email trait.
+  const emailExpected = Boolean(customerId) && awaitWorkspace && !isDemo
 
   // Triggered off 'idle', not a ref of who we last fetched for: a teardown back to the same account
   // (demo round-trip, re-auth) resets the status, and a ref would skip it for the life of the page.

@@ -1,9 +1,10 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Loader2, Lock, Save } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { projectsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
@@ -11,7 +12,7 @@ import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
+import { activeProjectAtom, projectHeaderAtom, projectsAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { browserTimezone } from '@/lib/timezone'
 import { TimezonePicker } from './timezone-picker'
@@ -30,6 +31,11 @@ const General = () => {
   const [project, setProject] = useAtom(activeProjectAtom)
   const projectHeaders = useAtomValue(projectHeaderAtom)
   const projectsRPC = useAtomValue(projectsRPCAtom)
+  const setProjects = useSetAtom(projectsAtom)
+  const [, navigate] = useLocation()
+  const [deleteName, setDeleteName] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [savingProject, setSavingProject] = useState(false)
   const [savedProject, setSavedProject] = useState(false)
@@ -166,6 +172,63 @@ const General = () => {
             </form>
           </Can>
         </section>
+      )}
+      {project && projectHeaders && (
+        <Can action="delete" resource="project" fallback={null}>
+          <section className="space-y-3 border-t pt-6">
+            <SectionHeader
+              title="Delete project"
+              description="Permanently removes events, profiles, dashboards, credentials, and derived analytics. Access ends as soon as the request is accepted."
+            />
+            {!deleteOpen ? (
+              <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+                Delete project
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm">
+                  Type <strong>{project.displayName}</strong> to confirm permanent deletion.
+                </p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  Project {project.id} · organization {project.orgId}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  The live-data purge runs in the background. Older backups expire under the instance backup retention
+                  policy.
+                </p>
+                <Input
+                  aria-label="Project deletion confirmation"
+                  value={deleteName}
+                  onChange={event => setDeleteName(event.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="destructive"
+                    disabled={deleting || deleteName !== project.displayName}
+                    onClick={async () => {
+                      setDeleting(true)
+                      try {
+                        await projectsRPC.delete({ confirmationName: deleteName }, { headers: projectHeaders })
+                        setProjects(current => current.filter(item => item.id !== project.id))
+                        setProject(null)
+                        navigate('/project-deletions')
+                      } catch (err) {
+                        toastRPCError(err, 'Could not delete project')
+                      } finally {
+                        setDeleting(false)
+                      }
+                    }}
+                  >
+                    Request permanent deletion
+                  </Button>
+                  <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </section>
+        </Can>
       )}
     </div>
   )
