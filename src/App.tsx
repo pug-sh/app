@@ -166,7 +166,7 @@ export const WorkspaceBootstrap = () => {
           setStatus('error')
           return
         }
-        setStatus(me.instanceAdmin ? 'instance-admin' : 'no-org')
+        setStatus(me.instanceAdmin ? 'instance-admin' : me.canCreateOrganization ? 'needs-selection' : 'no-org')
         return
       }
       if (list.length === 1) {

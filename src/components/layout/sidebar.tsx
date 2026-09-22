@@ -104,7 +104,7 @@ const AppSidebar = () => {
   const { setOpenMobile } = useSidebar()
 
   const isInstanceRoute = location === '/instance' || location.startsWith('/instance/')
-  const showInstanceNavigation = isInstanceRoute || (!activeOrg && me?.instanceAdmin)
+  const showInstanceNavigation = Boolean(me?.instanceAdmin) && (isInstanceRoute || !activeOrg)
   const canReturnToWorkspace = Boolean(activeOrg || orgs.length > 0)
   const lastWorkspacePath = useRef<string | null>(null)
   useEffect(() => {

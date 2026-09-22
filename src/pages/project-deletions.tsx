@@ -9,31 +9,60 @@ import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 
+type DeletionResult = {
+  orgId: string
+  operations: DeletionOperation[]
+  nextPageToken: string
+  error: string
+}
+
+const emptyResult = (orgId: string): DeletionResult => ({
+  orgId,
+  operations: [],
+  nextPageToken: '',
+  error: '',
+})
+
 const ProjectDeletions = () => {
   const org = useAtomValue(activeOrgAtom)
   const rpc = useAtomValue(projectsRPCAtom)
   const can = useCan()
-  const [operations, setOperations] = useState<DeletionOperation[]>([])
-  const [nextPageToken, setNextPageToken] = useState('')
-  const [pageToken, setPageToken] = useState('')
-  const [error, setError] = useState('')
+  const [result, setResult] = useState<DeletionResult>(() => emptyResult(''))
+  const [page, setPage] = useState({ orgId: '', token: '' })
   const [busy, setBusy] = useState(false)
   const [revision, setRevision] = useState(0)
+  const orgId = org?.id ?? ''
+  const pageToken = page.orgId === orgId ? page.token : ''
+  const currentResult = result.orgId === orgId ? result : emptyResult(orgId)
+  const { operations, nextPageToken, error } = currentResult
+
+  useEffect(() => {
+    setResult(emptyResult(orgId))
+    setPage({ orgId, token: '' })
+  }, [orgId])
 
   useEffect(() => {
     if (!org || !can('delete', 'project')) return
     let cancelled = false
     rpc
       .listDeletions({ orgId: org.id, pageSize: 50, pageToken })
-      .then(result => {
+      .then(response => {
         if (!cancelled) {
-          setOperations(result.operations)
-          setNextPageToken(result.nextPageToken)
-          setError('')
+          setResult({
+            orgId: org.id,
+            operations: response.operations,
+            nextPageToken: response.nextPageToken,
+            error: '',
+          })
         }
       })
       .catch(cause => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : 'Could not load deletion activity')
+        if (!cancelled) {
+          setResult({
+            ...emptyResult(org.id),
+            error: cause instanceof Error ? cause.message : 'Could not load deletion activity',
+          })
+        }
       })
     return () => {
       cancelled = true
@@ -89,13 +118,21 @@ const ProjectDeletions = () => {
                   variant="outline"
                   disabled={busy}
                   onClick={async () => {
+                    const retryOrgId = org.id
                     setBusy(true)
-                    setError('')
+                    setResult(value => (value.orgId === retryOrgId ? { ...value, error: '' } : value))
                     try {
-                      await rpc.retryDeletion({ orgId: org.id, operationId: operation.id })
+                      await rpc.retryDeletion({ orgId: retryOrgId, operationId: operation.id })
                       setRevision(value => value + 1)
                     } catch (cause) {
-                      setError(cause instanceof Error ? cause.message : 'Could not retry deletion')
+                      setResult(value =>
+                        value.orgId === retryOrgId
+                          ? {
+                              ...value,
+                              error: cause instanceof Error ? cause.message : 'Could not retry deletion',
+                            }
+                          : value,
+                      )
                     } finally {
                       setBusy(false)
                     }
@@ -108,12 +145,12 @@ const ProjectDeletions = () => {
           ))}
           <div className="flex gap-2">
             {pageToken && (
-              <Button variant="outline" onClick={() => setPageToken('')}>
+              <Button variant="outline" onClick={() => setPage({ orgId, token: '' })}>
                 First page
               </Button>
             )}
             {nextPageToken && (
-              <Button variant="outline" onClick={() => setPageToken(nextPageToken)}>
+              <Button variant="outline" onClick={() => setPage({ orgId, token: nextPageToken })}>
                 Next page
               </Button>
             )}

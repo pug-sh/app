@@ -60,30 +60,34 @@ const AppSidebar = (await import('@/components/layout/sidebar')).default
 
 describe('workspace bootstrap with no memberships', () => {
   it.each([
-    { instanceAdmin: false, expected: 'no-org' },
-    { instanceAdmin: true, expected: 'instance-admin' },
-  ])('routes a customer with instanceAdmin=$instanceAdmin to $expected', async ({ instanceAdmin, expected }) => {
-    orgsList.mockResolvedValue({ orgs: [] })
-    getMe.mockResolvedValue({
-      customerId: 'cust-1',
-      email: 'user@example.com',
-      emailVerified: true,
-      instanceAdmin,
-      canCreateOrganization: false,
-    })
-    const store = createStore()
-    store.set(refreshTokenAtom, 'refresh-token')
-    store.set(jwtAtom, jwtFor('cust-1'))
-    store.set(lastOrgIdAtom, '')
-    render(
-      <Provider store={store}>
-        <Router hook={memoryLocation({ path: '/' }).hook}>
-          <WorkspaceBootstrap />
-        </Router>
-      </Provider>,
-    )
-    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe(expected))
-  })
+    { instanceAdmin: false, canCreateOrganization: false, expected: 'no-org' },
+    { instanceAdmin: false, canCreateOrganization: true, expected: 'needs-selection' },
+    { instanceAdmin: true, canCreateOrganization: false, expected: 'instance-admin' },
+  ])(
+    'routes a customer with instanceAdmin=$instanceAdmin and canCreateOrganization=$canCreateOrganization to $expected',
+    async ({ instanceAdmin, canCreateOrganization, expected }) => {
+      orgsList.mockResolvedValue({ orgs: [] })
+      getMe.mockResolvedValue({
+        customerId: 'cust-1',
+        email: 'user@example.com',
+        emailVerified: true,
+        instanceAdmin,
+        canCreateOrganization,
+      })
+      const store = createStore()
+      store.set(refreshTokenAtom, 'refresh-token')
+      store.set(jwtAtom, jwtFor('cust-1'))
+      store.set(lastOrgIdAtom, '')
+      render(
+        <Provider store={store}>
+          <Router hook={memoryLocation({ path: '/' }).hook}>
+            <WorkspaceBootstrap />
+          </Router>
+        </Provider>,
+      )
+      await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe(expected))
+    },
+  )
 })
 
 describe('instance console route', () => {

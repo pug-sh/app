@@ -84,7 +84,7 @@ const mount = async (path: string, instanceAdmin = false) => {
   )
   fireEvent.click(screen.getByRole('button', { name: /toggle sidebar/i }))
   const nav = await screen.findByRole('link', {
-    name: path.startsWith('/instance/') ? 'Organizations' : 'Insights',
+    name: path.startsWith('/instance/') && instanceAdmin ? 'Organizations' : 'Insights',
   })
   // Only the mobile branch renders a sheet. Without this the dismissal assertions below would pass
   // against a desktop column that was never a sheet, which is what a stale innerWidth would leave.
@@ -180,5 +180,13 @@ describe('the sidebar on mobile', () => {
 
     expect(nav.hasAttribute('data-active')).toBe(true)
     expect(screen.queryByRole('link', { name: 'Org Z' })).toBeNull()
+  })
+
+  it('keeps workspace navigation when a non-admin enters an instance URL', async () => {
+    const { nav } = await mount('/instance/users')
+
+    expect(nav.textContent).toContain('Insights')
+    expect(screen.queryByRole('heading', { name: 'Instance administration' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Organizations' })).toBeNull()
   })
 })
