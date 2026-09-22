@@ -1241,4 +1241,3 @@ export const InstanceAdminService: GenService<{
   },
 }> = /*@__PURE__*/
   serviceDesc(file_dashboard_instance_v1_instance, 0);
-
