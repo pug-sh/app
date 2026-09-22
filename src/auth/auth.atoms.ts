@@ -51,7 +51,10 @@ export const signInAtom = atom(
   },
 )
 
-export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
+export type Me = Pick<
+  GetMeResponse,
+  'customerId' | 'email' | 'emailVerified' | 'instanceAdmin' | 'canCreateOrganization'
+>
 type MeStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe. Keyed by customer
@@ -129,7 +132,13 @@ export const fetchMeAtom = atom(null, async (get, set) => {
   try {
     const resp = await customersRPC.getMe({}, { timeoutMs: GET_ME_DEADLINE_MS })
     if (stale()) return abandon()
-    const me = { customerId: resp.customerId, email: resp.email, emailVerified: resp.emailVerified }
+    const me = {
+      customerId: resp.customerId,
+      email: resp.email,
+      emailVerified: resp.emailVerified,
+      instanceAdmin: resp.instanceAdmin,
+      canCreateOrganization: resp.canCreateOrganization,
+    }
     set(meResultAtom, me)
     set(meStatusRawAtom, 'ready')
     return me

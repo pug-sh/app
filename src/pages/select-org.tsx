@@ -4,7 +4,7 @@ import { ChevronRight, Loader2, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { signOutAtom } from '@/auth/auth.atoms'
+import { meAtom, signOutAtom } from '@/auth/auth.atoms'
 import { roleLabel } from '@/auth/permissions'
 import { NameChip } from '@/components/name-chip'
 import SectionHeader from '@/components/section-header'
@@ -35,6 +35,7 @@ const SelectOrg = () => {
   const selectOrg = useSetAtom(selectOrgAtom)
   const createOrg = useSetAtom(createOrgAtom)
   const signOut = useSetAtom(signOutAtom)
+  const me = useAtomValue(meAtom)
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const createForm = useForm<CreateFormData>({
@@ -79,7 +80,7 @@ const SelectOrg = () => {
           )
         })}
 
-        {showCreate ? (
+        {me?.canCreateOrganization && showCreate ? (
           <form onSubmit={createForm.handleSubmit(onCreate)} className="mt-1 px-2">
             <Field data-invalid={!!createForm.formState.errors.displayName}>
               <Input
@@ -113,7 +114,7 @@ const SelectOrg = () => {
               </Button>
             </div>
           </form>
-        ) : (
+        ) : me?.canCreateOrganization ? (
           <button type="button" onClick={() => setShowCreate(true)} className={rowClass}>
             <span
               className="flex size-8 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors group-hover:text-foreground"
@@ -125,7 +126,7 @@ const SelectOrg = () => {
               Create new organization
             </span>
           </button>
-        )}
+        ) : null}
       </div>
 
       <p className="mt-10 text-center text-sm text-muted-foreground">

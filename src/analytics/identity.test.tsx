@@ -53,8 +53,20 @@ const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
 const orgB = create(OrgSchema, { id: 'org-b', displayName: 'Org B' })
 const projects = [create(ProjectSchema, { id: 'p1', displayName: 'First' })]
 
-const ada: Me = { customerId: 'cust-1', email: 'ada@pug.sh', emailVerified: true }
-const bob: Me = { customerId: 'cust-2', email: 'bob@pug.sh', emailVerified: true }
+const ada: Me = {
+  customerId: 'cust-1',
+  email: 'ada@pug.sh',
+  emailVerified: true,
+  instanceAdmin: false,
+  canCreateOrganization: true,
+}
+const bob: Me = {
+  customerId: 'cust-2',
+  email: 'bob@pug.sh',
+  emailVerified: true,
+  instanceAdmin: false,
+  canCreateOrganization: true,
+}
 const offline = () => new ConnectError('offline', Code.Unavailable)
 
 // A GetMe the test resolves by hand: the whole question here is what identity does in the window

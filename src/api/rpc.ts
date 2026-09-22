@@ -4,6 +4,7 @@ import { publicTransportAtom, transportAtom } from '@/network/transport'
 import { BillingService } from './genproto/dashboard/billing/v1/billing_pb'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
+import { InstanceAdminService } from './genproto/dashboard/instance/v1/instance_pb'
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectsService } from './genproto/dashboard/projects/v1/projects_pb'
 import { UsageService } from './genproto/dashboard/usage/v1/usage_pb'
@@ -22,6 +23,7 @@ export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboards
 
 // Dashboard — org-scoped (JWT auth)
 export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))
+export const instanceAdminRPCAtom = atom(get => createClient(InstanceAdminService, get(transportAtom)))
 export const orgsRPCAtom = atom(get => createClient(OrgsService, get(transportAtom)))
 export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(transportAtom)))
 // Org-scoped despite returning per-project cells: usage spans every project the org owns, so

@@ -1,6 +1,8 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import {
+  ArrowLeft,
   BookOpen,
+  Building2,
   Check,
   ChevronsUpDown,
   ContactRound,
@@ -14,13 +16,14 @@ import {
   Radio,
   Settings,
   Sun,
+  Trash2,
   TrendingUp,
   Users,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
-import { signOutAtom } from '@/auth/auth.atoms'
+import { meAtom, signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
 import UsageMeter from '@/components/billing/usage-meter'
@@ -38,12 +41,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from '@/components/ui/sidebar'
 import { type Theme, themeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
+  bootstrapStatusAtom,
   createProjectAtom,
   orgsAtom,
   projectsAtom,
@@ -91,15 +96,26 @@ const AppSidebar = () => {
   const createProject = useSetAtom(createProjectAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const refreshOrgs = useSetAtom(refreshOrgsAtom)
+  const setBootstrapStatus = useSetAtom(bootstrapStatusAtom)
   const signOut = useSetAtom(signOutAtom)
+  const me = useAtomValue(meAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
   const [theme, setTheme] = useAtom(themeAtom)
   const { setOpenMobile } = useSidebar()
 
+  const isInstanceRoute = location === '/instance' || location.startsWith('/instance/')
+  const showInstanceNavigation = isInstanceRoute || (!activeOrg && me?.instanceAdmin)
+  const canReturnToWorkspace = Boolean(activeOrg || orgs.length > 0)
+  const lastWorkspacePath = useRef<string | null>(null)
+  useEffect(() => {
+    if (location.startsWith('/p/')) lastWorkspacePath.current = location
+  }, [location])
+
   const routeProjectId = useRouteProjectId()
   const currentProjectId = routeProjectId ?? activeProject?.id ?? null
   const prefix = currentProjectId ? `/p/${currentProjectId}` : ''
-  const pagePath = location.match(/^\/p\/[^/]+\/(.*)$/)?.[1] ?? 'overview'
+  const projectPagePath = location.match(/^\/p\/[^/]+\/(.*)$/)?.[1]
+  const pagePath = projectPagePath ?? 'overview'
 
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -118,6 +134,16 @@ const AppSidebar = () => {
   // On mobile the sidebar is a sheet over the page, so any click that commits a page dismisses it.
   // Unguarded by isMobile: desktop renders no sheet, and clearing the flag survives a rotation back.
   const closeMobileSidebar = () => setOpenMobile(false)
+
+  const returnToWorkspace = () => {
+    if (!activeOrg) {
+      setBootstrapStatus('loading-org')
+      navigate('/')
+    } else {
+      navigate(lastWorkspacePath.current ?? (activeProject ? `/p/${activeProject.id}/overview` : '/'))
+    }
+    closeMobileSidebar()
+  }
 
   const closeSwitcher = () => {
     setSwitcherOpen(false)
@@ -181,158 +207,246 @@ const AppSidebar = () => {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <Popover
-              open={switcherOpen}
-              onOpenChange={open => {
-                if (open) setSwitcherOpen(true)
-                else closeSwitcher()
-              }}
-            >
-              <PopoverTrigger render={<SidebarMenuButton size="lg" />}>
-                <NameChip name={activeProject?.displayName} fallback="P" className="size-8 text-sm" />
-                <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    {activeOrg?.displayName ?? 'Workspace'}
-                  </span>
-                  <span className="truncate text-foreground">{activeProject?.displayName ?? 'Select project'}</span>
-                </div>
-                <ChevronsUpDown className="ml-auto size-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
-              </PopoverTrigger>
-              <PopoverContent align="start" sideOffset={6} className="w-(--anchor-width) min-w-56 gap-0 p-1.5">
-                {/* Signup auto-creates an org, so for most accounts this is one entry worth no space. */}
-                {orgs.length > 1 && (
-                  <>
-                    <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
-                      <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                        Organizations
-                      </span>
-                      <div className="h-px flex-1 bg-border" />
-                      <span className="text-xs text-muted-foreground tabular-nums">{orgs.length}</span>
-                    </div>
-                    <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
-                      {orgs.map(org => (
+          {showInstanceNavigation ? (
+            <SidebarMenuItem>
+              <h2
+                aria-label="Instance administration"
+                className="flex h-12 items-center gap-2 overflow-hidden p-2 text-sm text-sidebar-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted"
+                >
+                  <Building2 className="size-4" />
+                </span>
+                <span className="font-medium group-data-[collapsible=icon]:hidden">Instance administration</span>
+              </h2>
+            </SidebarMenuItem>
+          ) : (
+            <SidebarMenuItem>
+              <Popover
+                open={switcherOpen}
+                onOpenChange={open => {
+                  if (open) setSwitcherOpen(true)
+                  else closeSwitcher()
+                }}
+              >
+                <PopoverTrigger render={<SidebarMenuButton size="lg" />}>
+                  <NameChip name={activeProject?.displayName} fallback="P" className="size-8 text-sm" />
+                  <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                    <span className="truncate text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                      {activeOrg?.displayName ?? 'Workspace'}
+                    </span>
+                    <span className="truncate text-foreground">{activeProject?.displayName ?? 'Select project'}</span>
+                  </div>
+                  <ChevronsUpDown className="ml-auto size-3.5 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                </PopoverTrigger>
+                <PopoverContent align="start" sideOffset={6} className="w-(--anchor-width) min-w-56 gap-0 p-1.5">
+                  {/* Signup auto-creates an org, so for most accounts this is one entry worth no space. */}
+                  {orgs.length > 1 && (
+                    <>
+                      <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
+                        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Organizations
+                        </span>
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-xs text-muted-foreground tabular-nums">{orgs.length}</span>
+                      </div>
+                      <div className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
+                        {orgs.map(org => (
+                          <button
+                            key={org.id}
+                            type="button"
+                            onClick={() => handleSelectOrg(org.id)}
+                            className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
+                          >
+                            <span className="min-w-0 flex-1 truncate">{org.displayName}</span>
+                            {org.id === activeOrg?.id ? <Check className="size-3.5 shrink-0 text-link" /> : null}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mx-1 my-1.5 h-px bg-border/70" />
+                    </>
+                  )}
+                  <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
+                    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Projects</span>
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground tabular-nums">{projects.length}</span>
+                  </div>
+                  <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
+                    {projects.map(proj => {
+                      const selected = proj.id === currentProjectId
+                      return (
                         <button
-                          key={org.id}
+                          key={proj.id}
                           type="button"
-                          onClick={() => handleSelectOrg(org.id)}
+                          onClick={() => handleSelectProject(proj.id)}
                           className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
                         >
-                          <span className="min-w-0 flex-1 truncate">{org.displayName}</span>
-                          {org.id === activeOrg?.id ? <Check className="size-3.5 shrink-0 text-link" /> : null}
+                          <NameChip name={proj.displayName} fallback="P" className="size-5 rounded text-xs" />
+                          <span className="min-w-0 flex-1 truncate">{proj.displayName}</span>
+                          {selected ? <Check className="size-3.5 shrink-0 text-link" /> : null}
                         </button>
-                      ))}
-                    </div>
+                      )
+                    })}
+                  </div>
+                  <Can action="create" resource="project">
                     <div className="mx-1 my-1.5 h-px bg-border/70" />
-                  </>
-                )}
-                <div className="flex items-center gap-2 px-2 pt-1.5 pb-2">
-                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Projects</span>
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-xs text-muted-foreground tabular-nums">{projects.length}</span>
-                </div>
-                <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-                  {projects.map(proj => {
-                    const selected = proj.id === currentProjectId
-                    return (
-                      <button
-                        key={proj.id}
-                        type="button"
-                        onClick={() => handleSelectProject(proj.id)}
-                        className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors hover:bg-accent"
-                      >
-                        <NameChip name={proj.displayName} fallback="P" className="size-5 rounded text-xs" />
-                        <span className="min-w-0 flex-1 truncate">{proj.displayName}</span>
-                        {selected ? <Check className="size-3.5 shrink-0 text-link" /> : null}
-                      </button>
-                    )
-                  })}
-                </div>
-                <Can action="create" resource="project">
-                  <div className="mx-1 my-1.5 h-px bg-border/70" />
-                  {creating ? (
-                    <div className="flex items-center gap-1.5 p-0.5">
-                      <Input
-                        autoFocus
-                        value={newProjectName}
-                        onChange={e => setNewProjectName(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleCreateProject()
-                          if (e.key === 'Escape') {
-                            e.stopPropagation()
-                            setCreating(false)
-                            setNewProjectName('')
-                          }
-                        }}
-                        placeholder="Project name"
-                        disabled={saving}
-                        className="h-8 flex-1 text-sm"
-                      />
+                    {creating ? (
+                      <div className="flex items-center gap-1.5 p-0.5">
+                        <Input
+                          autoFocus
+                          value={newProjectName}
+                          onChange={e => setNewProjectName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleCreateProject()
+                            if (e.key === 'Escape') {
+                              e.stopPropagation()
+                              setCreating(false)
+                              setNewProjectName('')
+                            }
+                          }}
+                          placeholder="Project name"
+                          disabled={saving}
+                          className="h-8 flex-1 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCreateProject}
+                          disabled={saving || !newProjectName.trim()}
+                          className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                        >
+                          {saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create'}
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        onClick={handleCreateProject}
-                        disabled={saving || !newProjectName.trim()}
-                        className="flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => setCreating(true)}
+                        disabled={!activeOrg}
+                        className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
                       >
-                        {saving ? <Loader2 className="size-3.5 animate-spin" /> : 'Create'}
+                        <Plus className="size-4" />
+                        New project
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setCreating(true)}
-                      disabled={!activeOrg}
-                      className="flex min-h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-link transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                    >
-                      <Plus className="size-4" />
-                      New project
-                    </button>
-                  )}
-                </Can>
-              </PopoverContent>
-            </Popover>
-          </SidebarMenuItem>
+                    )}
+                  </Can>
+                </PopoverContent>
+              </Popover>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        {navGroups.map((group, groupIndex) => {
-          const items = isDemo ? group.items.filter(item => !DEMO_HIDDEN_PATHS.includes(item.path)) : group.items
-          if (items.length === 0) return null
-          return (
-            <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
-              {group.label ? (
-                <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-faint">
-                  {group.label}
-                </SidebarGroupLabel>
-              ) : null}
-              <SidebarMenu className="gap-1">
-                {items.map(item => {
-                  const href = `${prefix}/${item.path}`
-                  const isActive =
-                    pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path))
-                  return (
-                    <SidebarMenuItem key={item.path}>
-                      <SidebarMenuButton
-                        render={<Link href={href} />}
-                        isActive={isActive}
-                        tooltip={item.label}
-                        onClick={closeMobileSidebar}
-                      >
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroup>
-          )
-        })}
+        {!showInstanceNavigation &&
+          activeOrg &&
+          navGroups.map((group, groupIndex) => {
+            const items = isDemo ? group.items.filter(item => !DEMO_HIDDEN_PATHS.includes(item.path)) : group.items
+            if (items.length === 0) return null
+            return (
+              <SidebarGroup key={group.label ?? groupIndex} className="py-1 first:pt-2">
+                {group.label ? (
+                  <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-faint">
+                    {group.label}
+                  </SidebarGroupLabel>
+                ) : null}
+                <SidebarMenu className="gap-1">
+                  {items.map(item => {
+                    const href = `${prefix}/${item.path}`
+                    const isActive =
+                      !!projectPagePath &&
+                      (pagePath === item.path || (item.path !== 'overview' && pagePath.startsWith(item.path)))
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          render={<Link href={href} />}
+                          isActive={isActive}
+                          tooltip={item.label}
+                          onClick={closeMobileSidebar}
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            )
+          })}
+        {showInstanceNavigation && me?.instanceAdmin && (
+          <SidebarGroup className="py-1 first:pt-2">
+            <SidebarMenu className="gap-1">
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/instance/organizations" />}
+                  isActive={location === '/instance' || location.startsWith('/instance/organizations')}
+                  tooltip="Organizations"
+                  onClick={closeMobileSidebar}
+                >
+                  <Building2 />
+                  <span>Organizations</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/instance/users" />}
+                  isActive={location.startsWith('/instance/users')}
+                  tooltip="Users"
+                  onClick={closeMobileSidebar}
+                >
+                  <Users />
+                  <span>Users</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<Link href="/instance/deletions" />}
+                  isActive={location.startsWith('/instance/deletions')}
+                  tooltip="Deletion history"
+                  onClick={closeMobileSidebar}
+                >
+                  <Trash2 />
+                  <span>Deletion history</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter>
-        <UsageMeter href={`${prefix}/settings/billing`} />
+        {!showInstanceNavigation && activeOrg && <UsageMeter href={`${prefix}/settings/billing`} />}
+        {me?.instanceAdmin && (!showInstanceNavigation || canReturnToWorkspace) && (
+          <>
+            {!showInstanceNavigation && (
+              <SidebarGroupLabel className="h-7 text-xs font-medium uppercase tracking-wider text-faint">
+                Instance
+              </SidebarGroupLabel>
+            )}
+            <SidebarMenu>
+              <SidebarMenuItem>
+                {showInstanceNavigation ? (
+                  <SidebarMenuButton onClick={returnToWorkspace} tooltip="Back to workspace">
+                    <ArrowLeft />
+                    <span>Back to workspace</span>
+                  </SidebarMenuButton>
+                ) : (
+                  <SidebarMenuButton
+                    render={<Link href="/instance/organizations" />}
+                    tooltip="Instance administration"
+                    onClick={closeMobileSidebar}
+                  >
+                    <Building2 />
+                    <span>Instance administration</span>
+                  </SidebarMenuButton>
+                )}
+              </SidebarMenuItem>
+            </SidebarMenu>
+            <SidebarSeparator />
+          </>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>

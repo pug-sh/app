@@ -33,7 +33,7 @@ export const NameChip = ({
       aria-hidden
     >
       {/* By code point, not code unit: charAt splits an emoji-led name into a lone surrogate. */}
-      {Array.from(seed)[0]?.toUpperCase()}
+      <span className="translate-y-px leading-none">{Array.from(seed)[0]?.toUpperCase()}</span>
     </span>
   )
 }

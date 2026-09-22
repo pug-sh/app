@@ -12,6 +12,15 @@ const { orgsList, batchGet } = vi.hoisted(() => ({ orgsList: vi.fn(), batchGet: 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
+    customersRPCAtom: atom({
+      getMe: vi.fn().mockResolvedValue({
+        customerId: 'cust-1',
+        email: 'admin@example.com',
+        emailVerified: true,
+        instanceAdmin: false,
+        canCreateOrganization: true,
+      }),
+    }),
     authRPCAtom: atom({ getAuthConfig: vi.fn().mockResolvedValue({ providers: [] }) }),
     projectsRPCAtom: atom({ batchGet }),
     orgsRPCAtom: atom({ list: orgsList, get: vi.fn() }),

@@ -87,7 +87,14 @@ export const selectOrgAtom = atom(null, (_get, set, org: Org) => {
 })
 
 // Task 5: bootstrapStatusAtom — tracks the org-bootstrap lifecycle
-export type BootstrapStatus = 'idle' | 'loading-org' | 'needs-selection' | 'ready' | 'error'
+export type BootstrapStatus =
+  | 'idle'
+  | 'loading-org'
+  | 'needs-selection'
+  | 'no-org'
+  | 'instance-admin'
+  | 'ready'
+  | 'error'
 
 export const bootstrapStatusAtom = atom<BootstrapStatus>('idle')
 
@@ -205,7 +212,7 @@ export const workspaceSettledAtom = atom(get => {
   // org a render before the status reaches 'ready', and settling in that window spends a report on
   // traits that are a strict subset of the ones one render away.
   if (status === 'needs-selection') return !get(activeOrgAtom)
-  if (status !== 'ready') return status === 'error'
+  if (status !== 'ready') return status === 'error' || status === 'no-org' || status === 'instance-admin'
   const org = get(activeOrgAtom)
   if (!org || get(projectsOrgIdAtom) !== org.id) return false
   // The list has landed; the pick follows a render later. An org with no projects has no pick coming.

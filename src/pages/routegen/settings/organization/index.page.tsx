@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Check, Copy, Loader2, Pencil, Plus } from 'lucide-react'
+import { Check, Copy, History, Loader2, Pencil, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useLocation } from 'wouter'
+import { Link, useLocation } from 'wouter'
 import { z } from 'zod'
+import { meAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
 import SectionHeader from '@/components/section-header'
 import { Field, FieldError } from '@/components/ui/field'
@@ -47,6 +48,7 @@ const CopyId = ({ value, context }: { value: string; context?: string }) => {
 
 const Organization = () => {
   const org = useAtomValue(activeOrgAtom)
+  const me = useAtomValue(meAtom)
   const createOrg = useSetAtom(createOrgAtom)
   const renameOrg = useSetAtom(renameOrgAtom)
   const leaveOrg = useSetAtom(leaveOrgAtom)
@@ -191,7 +193,16 @@ const Organization = () => {
 
           {/* New organization + Leave */}
           <div className="mt-4 space-y-2">
-            {showCreateOrg ? (
+            <Can action="delete" resource="project">
+              <Link
+                href="/project-deletions"
+                className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline"
+              >
+                <History className="size-4" />
+                Project deletion activity
+              </Link>
+            </Can>
+            {me?.canCreateOrganization && showCreateOrg ? (
               <form onSubmit={createOrgForm.handleSubmit(handleCreateOrg)} className="max-w-sm">
                 <Field data-invalid={!!createOrgForm.formState.errors.displayName}>
                   <div className="flex items-center gap-2">
@@ -227,7 +238,7 @@ const Organization = () => {
                   )}
                 </Field>
               </form>
-            ) : (
+            ) : me?.canCreateOrganization ? (
               <button
                 type="button"
                 onClick={() => setShowCreateOrg(true)}
@@ -236,7 +247,7 @@ const Organization = () => {
                 <Plus className="size-4" />
                 New organization
               </button>
-            )}
+            ) : null}
 
             {confirmingLeave ? (
               <div className="flex items-center gap-2 text-sm">

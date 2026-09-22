@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { describe, expect, it, vi } from 'vitest'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { jwtFor } from '@/test/jwt'
 
 const { orgsCreate, orgsUpdateDisplayName } = vi.hoisted(() => ({
   orgsCreate: vi.fn(),
@@ -15,6 +16,14 @@ const { orgsCreate, orgsUpdateDisplayName } = vi.hoisted(() => ({
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
+    customersRPCAtom: atom({
+      getMe: vi.fn().mockResolvedValue({
+        customerId: 'cust-1',
+        email: 'admin@example.com',
+        emailVerified: true,
+        canCreateOrganization: true,
+      }),
+    }),
     projectsRPCAtom: atom({ batchGet: vi.fn() }),
     orgsRPCAtom: atom({
       list: vi.fn(),
@@ -27,14 +36,18 @@ vi.mock('@/api/rpc', async () => {
 })
 
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
+const { fetchMeAtom } = await import('@/auth/auth.atoms')
+const { jwtAtom } = await import('@/auth/jwt.atoms')
 const Organization = (await import('./index.page')).default
 
 // ADMIN, or <Can action='update' resource='org'> renders the read-only name and there is no rename
 // form to submit.
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Acme', role: OrgRole.ADMIN })
 
-const mount = () => {
+const mount = async () => {
   const store = createStore()
+  store.set(jwtAtom, jwtFor('cust-1'))
+  await store.set(fetchMeAtom)
   store.set(activeOrgAtom, orgA)
   render(
     <Provider store={store}>
@@ -49,7 +62,7 @@ const submit = (input: HTMLElement) => fireEvent.submit(input.closest('form') as
 
 describe('organization name validation', () => {
   it('rejects a rename to nothing but spaces, and says so', async () => {
-    mount()
+    await mount()
 
     fireEvent.click(screen.getByLabelText('Rename organization'))
     const input = screen.getByLabelText('Organization name')
@@ -64,7 +77,7 @@ describe('organization name validation', () => {
   })
 
   it('rejects creating an org named nothing but spaces, and says so', async () => {
-    mount()
+    await mount()
 
     fireEvent.click(screen.getByText('New organization'))
     const input = screen.getByPlaceholderText('New organization name')
@@ -78,7 +91,7 @@ describe('organization name validation', () => {
   })
 
   it('trims the padding off an otherwise valid name', async () => {
-    mount()
+    await mount()
 
     fireEvent.click(screen.getByLabelText('Rename organization'))
     const input = screen.getByLabelText('Organization name')
