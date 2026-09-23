@@ -59,12 +59,16 @@ State only one page reads is not shared state and stays in `useState` — see Pa
 
 ### ConnectRPC Transport
 
-`src/network/transport.ts` — single transport with two interceptors:
+`src/network/transport.ts` — three transports built from two interceptors:
 
-1. **authBearer** — reads JWT from localStorage, sets Authorization header on every request. No per-call `{ headers }` needed for auth.
-2. **protovalidate** — validates outgoing messages against proto buf.validate constraints before sending.
+1. **authBearer** — reads the JWT from the store/localStorage, sets the Authorization header on every request, and refreshes an expired token through the main API. No per-call `{ headers }` needed for auth.
+2. **protovalidate** — validates outgoing unary messages against proto buf.validate constraints before sending (a no-op for streams).
 
-For project-scoped endpoints (campaigns, insights), pass `{ headers }` from `projectHeaderAtom` which only contains `x-project-id`. Auth is automatic.
+- `transportAtom` — the main API: both interceptors, 60s deadline.
+- `publicTransportAtom` — shared dashboards: protovalidate only, never attaches a JWT.
+- `assistantTransportAtom` — the dashboard assistant on `VITE_AI_SERVICE_URL`: authBearer only, no deadline (a turn can run for minutes; callers cancel through their own abort signal). An unset URL hides the feature via `aiAssistantEnabled`.
+
+For project-scoped endpoints (dashboards, insights, the assistant), pass `{ headers }` from `projectHeaderAtom` which only contains `x-project-id`. Auth is automatic.
 
 ### File-Based Routing
 
