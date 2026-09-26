@@ -214,6 +214,26 @@ describe('the SSO & domains tab', () => {
     expect(await screen.findByText('No domains yet.')).toBeTruthy()
   })
 
+  it('keeps a domain removed during its verify from coming back', async () => {
+    let landVerify: (value: unknown) => void = () => {}
+    listDomains
+      .mockResolvedValueOnce(listing([pending]))
+      .mockResolvedValueOnce(listing([]))
+      .mockReturnValueOnce(new Promise(() => {}))
+    verifyDomain.mockReturnValue(new Promise(resolve => (landVerify = resolve)))
+    removeDomain.mockResolvedValue({})
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Verify now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove acme.io' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
+    await screen.findByText('No domains yet.')
+    await act(async () => landVerify({ domain: pending }))
+
+    expect(screen.getByText('No domains yet.')).toBeTruthy()
+  })
+
   it('keeps each verify spinner to its own row', async () => {
     const other = create(OrgDomainSchema, { ...pendingInit, id: 'd-other', domain: 'acme.dev' })
     const land: Record<string, (value: unknown) => void> = {}
@@ -255,6 +275,27 @@ describe('the SSO & domains tab', () => {
     await waitFor(() => expect(addDomain).toHaveBeenCalledWith({ orgId: 'org-a', domain: 'acme.io' }))
     expect(await screen.findByText('_pug-verification.acme.io')).toBeTruthy()
     expect(screen.queryByPlaceholderText('acme.com')).toBeNull()
+  })
+
+  it('lists a new domain once when a reload got to it first', async () => {
+    const added = create(OrgDomainSchema, { ...pendingInit, id: 'd-added', domain: 'acme.dev' })
+    let landAdd: (value: unknown) => void = () => {}
+    listDomains
+      .mockResolvedValueOnce(listing([pending]))
+      .mockResolvedValueOnce(listing([pending, added]))
+      .mockReturnValueOnce(new Promise(() => {}))
+    addDomain.mockReturnValue(new Promise(resolve => (landAdd = resolve)))
+    verifyDomain.mockResolvedValue({ domain: pending })
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    await typeDomain('acme.dev')
+    await waitFor(() => expect(addDomain).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'Verify now' }))
+    await screen.findByText('acme.dev')
+    await act(async () => landAdd({ domain: added }))
+
+    expect(screen.getAllByText('acme.dev')).toHaveLength(1)
   })
 
   // The transport's proto check refuses these too, but only as a bare "Failed to add domain".

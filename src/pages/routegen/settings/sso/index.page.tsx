@@ -1,3 +1,4 @@
+import { clone } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue } from 'jotai'
@@ -6,7 +7,13 @@ import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
-import { type DomainSettings, DomainStatus, type OrgDomain, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import {
+  type DomainSettings,
+  DomainStatus,
+  type OrgDomain,
+  OrgDomainSchema,
+  OrgRole,
+} from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
 import { roleLabel } from '@/auth/permissions'
@@ -116,12 +123,16 @@ const SsoDomains = () => {
   // The action's own result, so it shows even if the reload fails; the flags only ListDomains sets stay.
   const applyDomain = (updated: OrgDomain | undefined) => {
     if (!updated) return
-    const current = domains.find(d => d.id === updated.id)
-    if (current) {
-      updated.orgCreationRestrictedElsewhere = current.orgCreationRestrictedElsewhere
-      updated.ssoRequiredElsewhere = current.ssoRequiredElsewhere
-    }
-    setDomains(ds => (current ? ds.map(d => (d.id === updated.id ? updated : d)) : [...ds, updated]))
+    setDomains(ds =>
+      ds.map(d => {
+        if (d.id !== updated.id) return d
+        // Not a spread: that drops every unset field, which a message reads from its prototype.
+        const merged = clone(OrgDomainSchema, updated)
+        merged.orgCreationRestrictedElsewhere = d.orgCreationRestrictedElsewhere
+        merged.ssoRequiredElsewhere = d.ssoRequiredElsewhere
+        return merged
+      }),
+    )
   }
 
   const save = async (next: { autoJoinRole: OrgRole; membersCanCreateOrgs: boolean }) => {
@@ -145,7 +156,8 @@ const SsoDomains = () => {
   const handleAdd = async ({ domain }: AddDomainFormData) => {
     if (!orgId) return
     try {
-      applyDomain((await orgsRPC.addDomain({ orgId, domain })).domain)
+      const { domain: added } = await orgsRPC.addDomain({ orgId, domain })
+      if (added) setDomains(ds => (ds.some(d => d.id === added.id) ? ds : [...ds, added]))
     } catch (err) {
       toastRPCError(err, 'Failed to add domain')
       return
