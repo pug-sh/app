@@ -1,19 +1,24 @@
-import { render, screen } from '@testing-library/react'
+import { create } from '@bufbuild/protobuf'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { Provider } from 'jotai'
 import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
-import { type AuthProviderConfig, AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
+import { type AuthProviderConfig, AuthProviderType, SSORequiredSchema } from '@/api/genproto/public/auth/v1/auth_pb'
+import type { AuthResult } from '@/auth/auth.atoms'
 
 const state = vi.hoisted(() => ({ providers: null as AuthProviderConfig[] | null }))
 const completeOIDC = vi.hoisted(() =>
-  vi.fn(async (_get: unknown, _set: unknown, _input: unknown) => ({ ok: true }) as { ok: boolean; error?: string }),
+  vi.fn(async (_get: unknown, _set: unknown, _input: unknown) => ({ ok: true }) as AuthResult),
 )
 const oidc = vi.hoisted(() => ({
   clearPendingOIDCProvider: vi.fn(),
   completeOIDCRedirect: vi.fn(),
   pendingOIDCProviderID: vi.fn(() => 'company_sso'),
+  pendingOIDCInviteToken: vi.fn(() => ''),
+  startOIDCSignIn: vi.fn(),
+  isGoogleProvider: (provider: AuthProviderConfig) => provider.issuerUrl.startsWith('https://accounts.google.com'),
 }))
 
 vi.mock('@/auth/auth.atoms', async () => {
@@ -64,6 +69,8 @@ describe('OAuth callback provider lookup', () => {
     oidc.clearPendingOIDCProvider.mockReset()
     oidc.completeOIDCRedirect.mockReset()
     oidc.pendingOIDCProviderID.mockReset().mockReturnValue('company_sso')
+    oidc.pendingOIDCInviteToken.mockReset().mockReturnValue('')
+    oidc.startOIDCSignIn.mockReset()
     completeOIDC.mockClear().mockResolvedValue({ ok: true })
   })
 
@@ -101,7 +108,63 @@ describe('OAuth callback provider lookup', () => {
 
     renderCallback()
 
-    await vi.waitFor(() => expect(completeOIDC.mock.calls[0]?.[2]).toEqual({ provider: companySSO, ...authorization }))
+    await vi.waitFor(() =>
+      expect(completeOIDC.mock.calls[0]?.[2]).toEqual({ provider: companySSO, ...authorization, inviteToken: '' }),
+    )
+  })
+
+  it('sends the invite the sign-in was started for', async () => {
+    state.providers = [companySSO]
+    oidc.pendingOIDCInviteToken.mockReturnValue('invite-token')
+    // Like the real one, which clears the pending invite along with the provider.
+    oidc.completeOIDCRedirect.mockImplementation(async () => {
+      oidc.pendingOIDCInviteToken.mockReturnValue('')
+      return authorization
+    })
+
+    renderCallback()
+
+    await vi.waitFor(() =>
+      expect(completeOIDC.mock.calls[0]?.[2]).toMatchObject({ provider: companySSO, inviteToken: 'invite-token' }),
+    )
+  })
+
+  // E.g. a personal Google account using a work address. The retry keeps the invite it was started for.
+  it("offers the domain's providers again when the sign-in didn't prove the domain", async () => {
+    const google = { ...companySSO, id: 'google', displayName: 'Google', issuerUrl: 'https://accounts.google.com' }
+    state.providers = [google]
+    oidc.pendingOIDCProviderID.mockReturnValue('google')
+    oidc.pendingOIDCInviteToken.mockReturnValue('invite-token')
+    oidc.completeOIDCRedirect.mockResolvedValue(authorization)
+    completeOIDC.mockResolvedValue({
+      ok: false,
+      error: 'acme.com accounts sign in through SSO.',
+      ssoRequired: create(SSORequiredSchema, { domain: 'acme.com', providers: [google] }),
+    })
+
+    renderCallback()
+
+    expect(await screen.findByText('acme.com accounts sign in with Google')).toBeTruthy()
+    expect(screen.getByText('Use your acme.com Google Workspace account.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    expect(oidc.startOIDCSignIn).toHaveBeenCalledWith(expect.objectContaining({ id: 'google' }), {
+      loginHint: undefined,
+      domain: 'acme.com',
+      inviteToken: 'invite-token',
+    })
+  })
+
+  // E.g. cancelled at the provider. The invite link is still unused, so it can start the sign-in over.
+  it('goes back to the invite when the sign-in fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    state.providers = [companySSO]
+    oidc.pendingOIDCInviteToken.mockReturnValue('invite-token')
+    oidc.completeOIDCRedirect.mockRejectedValue(new Error('The identity provider rejected the sign-in request'))
+
+    const location = renderCallback()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Back to your invite' }))
+    expect(location.history.at(-1)).toBe('/magic-link?token=invite-token')
   })
 
   it('lands the signed-in user on the app once the exchange succeeds', async () => {

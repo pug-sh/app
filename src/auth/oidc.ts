@@ -3,6 +3,15 @@ import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 
 const callbackPath = '/oauth/callback'
 const pendingProviderKey = 'pug.oidc.pending-provider'
+const pendingInviteKey = 'pug.oidc.pending-invite'
+
+// Keyed on the issuer, not the id — the id is operator-chosen and can be anything.
+export const isGoogleProvider = (provider: AuthProviderConfig) =>
+  provider.issuerUrl.startsWith('https://accounts.google.com')
+
+// loginHint and domain only steer the provider's account picker; the server checks the token.
+// inviteToken rides this one attempt, so a later sign-in in the tab can't carry an old invite.
+export type OIDCSignInOptions = { loginHint?: string; domain?: string; inviteToken?: string }
 
 // Annotated: without a target type the object literal gets no excess-property check, so a typo in
 // any optional key silently falls back to the library default (scope → "openid", store → local).
@@ -20,21 +29,37 @@ const settingsFor = (provider: AuthProviderConfig): UserManagerSettings => ({
 const managerFor = (provider: AuthProviderConfig) => new UserManager(settingsFor(provider))
 const clientFor = (provider: AuthProviderConfig) => new OidcClient(settingsFor(provider))
 
-export const startOIDCSignIn = async (provider: AuthProviderConfig) => {
+export const startOIDCSignIn = async (
+  provider: AuthProviderConfig,
+  { loginHint, domain, inviteToken }: OIDCSignInOptions = {},
+) => {
   sessionStorage.setItem(pendingProviderKey, provider.id)
+  if (inviteToken) sessionStorage.setItem(pendingInviteKey, inviteToken)
+  else sessionStorage.removeItem(pendingInviteKey)
   try {
     const manager = managerFor(provider)
     await manager.clearStaleState()
-    await manager.signinRedirect({ nonce: crypto.randomUUID() })
+    await manager.signinRedirect({
+      nonce: crypto.randomUUID(),
+      login_hint: loginHint,
+      // Google's hosted-domain hint.
+      extraQueryParams: domain && isGoogleProvider(provider) ? { hd: domain } : undefined,
+    })
   } catch (error) {
-    sessionStorage.removeItem(pendingProviderKey)
+    clearPendingOIDCProvider()
     throw error
   }
 }
 
 export const pendingOIDCProviderID = () => sessionStorage.getItem(pendingProviderKey) ?? ''
 
-export const clearPendingOIDCProvider = () => sessionStorage.removeItem(pendingProviderKey)
+// Read it before completeOIDCRedirect, which clears it along with the provider.
+export const pendingOIDCInviteToken = () => sessionStorage.getItem(pendingInviteKey) ?? ''
+
+export const clearPendingOIDCProvider = () => {
+  sessionStorage.removeItem(pendingProviderKey)
+  sessionStorage.removeItem(pendingInviteKey)
+}
 
 export const completeOIDCRedirect = async (provider: AuthProviderConfig) => {
   const expectedRedirectURI = `${window.location.origin}${callbackPath}`

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -9,6 +9,8 @@ import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authProvidersAtom, demoEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
 import { AuthStatus } from '@/auth/auth-status'
 import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
+import { ssoBlockAtom } from '@/auth/sso-required'
+import { SSORequiredScreen } from '@/auth/sso-required-screen'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -54,6 +56,8 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false)
   // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+  // Also set by the transport when a session refresh is refused for the same reason.
+  const [ssoBlock, setSSOBlock] = useAtom(ssoBlockAtom)
 
   const oidcProviders = authProviders?.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
 
@@ -78,7 +82,9 @@ const SignIn = () => {
     setPending('password')
     try {
       const result = await signIn(data)
-      if (!result.ok) setError(result.error)
+      if (result.ok) return
+      if (result.ssoRequired) setSSOBlock({ detail: result.ssoRequired, email: data.email })
+      else setError(result.error)
     } catch (err) {
       console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
@@ -99,7 +105,8 @@ const SignIn = () => {
     try {
       const res = await requestMagicLink({ email })
       if (!res.ok) {
-        setError(res.error)
+        if (res.ssoRequired) setSSOBlock({ detail: res.ssoRequired, email })
+        else setError(res.error)
         return
       }
       setMagicLinkEmail(email)
@@ -119,6 +126,21 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
+
+  if (ssoBlock) {
+    const { domain } = ssoBlock.detail
+    let description = `Passwords and email links are turned off for ${domain}.`
+    if (ssoBlock.sessionEnded) description = `SSO is now required for ${domain}. Sign in again to continue.`
+    return (
+      <SSORequiredScreen
+        detail={ssoBlock.detail}
+        email={ssoBlock.email}
+        description={description}
+        onUseDifferentEmail={() => setSSOBlock(null)}
+      />
+    )
+  }
+
   return (
     <>
       {magicLinkEmail ? (
