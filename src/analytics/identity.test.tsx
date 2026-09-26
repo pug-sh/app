@@ -278,7 +278,7 @@ describe('analytics identity', () => {
     // Into the demo and back out on a magic link, no sign-out in between — it lands back on a
     // customer this component has already fetched for.
     demoSignIn.mockResolvedValue({ token: jwtFor('snoop'), refreshToken: 'refresh-token' })
-    completeMagicLink.mockResolvedValue({ token: jwtFor('cust-1'), refreshToken: 'refresh-token' })
+    completeMagicLink.mockResolvedValue({ token: jwtFor('cust-1'), refreshToken: 'refresh-token', joinedOrgIds: [] })
     await act(async () => {
       await store.set(demoSignInAtom)
     })

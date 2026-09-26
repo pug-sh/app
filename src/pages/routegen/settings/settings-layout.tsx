@@ -19,6 +19,7 @@ const SETTINGS_TABS = [
   { path: 'billing', label: 'Billing', description: 'Plan and limits for this organization' },
   { path: 'account', label: 'Account', description: 'Your personal account settings' },
   { path: 'organization', label: 'Organization', description: 'Organizations you belong to' },
+  { path: 'sso', label: 'SSO & domains', description: 'Verified domains and who joins this organization' },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
@@ -47,12 +48,15 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   // Dropped rather than shown empty where billing is off — but never while it is the tab being
   // viewed, or a fresh load draws the bar with nothing highlighted.
   const showBillingTab = activeTab.path === 'billing' || (showBilling && can('read', 'billing'))
-  const tabs = SETTINGS_TABS.filter(tab => tab.path !== 'billing' || showBillingTab)
+  const showSsoTab = activeTab.path === 'sso' || can('read', 'domain')
+  const tabs = SETTINGS_TABS.filter(
+    tab => (tab.path !== 'billing' || showBillingTab) && (tab.path !== 'sso' || showSsoTab),
+  )
 
   return (
     <Page title="Settings" description={activeTab.description}>
       <div className="border-b border-border mb-8">
-        <nav className="-mb-px flex gap-6">
+        <nav className="-mb-px flex gap-6 overflow-x-auto">
           {tabs.map(tab => {
             const isActive = tab.path === activeTab.path
             return (
@@ -60,7 +64,7 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
                 key={tab.path}
                 href={`/settings/${tab.path}`}
                 className={cn(
-                  'border-b-2 pb-2 text-sm font-medium transition-colors',
+                  'shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors',
                   isActive
                     ? 'border-foreground text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground',

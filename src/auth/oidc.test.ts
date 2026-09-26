@@ -18,7 +18,13 @@ vi.mock('oidc-client-ts', () => ({
   },
 }))
 
-import { completeOIDCRedirect, pendingOIDCProviderID, startOIDCSignIn } from './oidc'
+import {
+  clearPendingOIDCProvider,
+  completeOIDCRedirect,
+  pendingOIDCInviteToken,
+  pendingOIDCProviderID,
+  startOIDCSignIn,
+} from './oidc'
 
 const provider = {
   id: 'company_sso',
@@ -76,6 +82,7 @@ describe('OIDC redirect lifecycle', () => {
       state: storedState(),
     })
     sessionStorage.setItem('pug.oidc.pending-provider', provider.id)
+    sessionStorage.setItem('pug.oidc.pending-invite', 'invite-token')
 
     await expect(completeOIDCRedirect(provider)).resolves.toEqual({
       code: 'authorization-code',
@@ -84,6 +91,7 @@ describe('OIDC redirect lifecycle', () => {
       nonce,
     })
     expect(pendingOIDCProviderID()).toBe('')
+    expect(pendingOIDCInviteToken()).toBe('')
     expect(oidc.readSigninResponseState).toHaveBeenCalledWith(window.location.href, true)
   })
 
@@ -124,5 +132,34 @@ describe('OIDC redirect lifecycle', () => {
       'OIDC response did not match the original sign-in request',
     )
     expect(pendingOIDCProviderID()).toBe('')
+  })
+
+  it('narrows Google to the domain and hints the account', async () => {
+    oidc.signinRedirect.mockResolvedValue(undefined)
+    const google = { ...provider, issuerUrl: 'https://accounts.google.com' } as AuthProviderConfig
+
+    await startOIDCSignIn(google, { loginHint: 'bob@acme.com', domain: 'acme.com' })
+    await startOIDCSignIn(provider, { loginHint: 'bob@acme.com', domain: 'acme.com' })
+
+    const [googleArgs, otherArgs] = oidc.signinRedirect.mock.calls.map(call => call[0])
+    expect(googleArgs.login_hint).toBe('bob@acme.com')
+    expect(googleArgs.extraQueryParams).toEqual({ hd: 'acme.com' })
+    // hd is Google's own parameter; another provider only gets the standard hint.
+    expect(otherArgs.login_hint).toBe('bob@acme.com')
+    expect(otherArgs.extraQueryParams).toBeUndefined()
+  })
+
+  it('carries an invite token for that one attempt only', async () => {
+    oidc.signinRedirect.mockResolvedValue(undefined)
+
+    await startOIDCSignIn(provider, { inviteToken: 'invite-token' })
+    expect(pendingOIDCInviteToken()).toBe('invite-token')
+
+    await startOIDCSignIn(provider)
+    expect(pendingOIDCInviteToken()).toBe('')
+
+    await startOIDCSignIn(provider, { inviteToken: 'invite-token' })
+    clearPendingOIDCProvider()
+    expect(pendingOIDCInviteToken()).toBe('')
   })
 })

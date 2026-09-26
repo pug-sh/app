@@ -3,17 +3,24 @@ import { atom, type Getter, type Setter } from 'jotai'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
-import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
+import type { AuthProviderConfig, SSORequired } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetBillingAtom } from '@/data/billing.atoms'
-import { resetWorkspaceAtom } from '@/data/workspace.atoms'
+import { openJoinedOrgsAtom, resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
 import { customerIdAtom, jwtAtom, refreshTokenAtom } from './jwt.atoms'
 import { mapOAuthConnectError } from './oauth'
+import { ssoBlockAtom, ssoRequiredOf } from './sso-required'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
-export type AuthResult = { ok: true } | { ok: false; error: string }
+// ssoRequired: refused because the account must sign in through SSO; show its providers, not error.
+export type AuthResult = { ok: true } | { ok: false; error: string; ssoRequired?: SSORequired }
+
+const ssoRefusal = (error: unknown): AuthResult | undefined => {
+  const ssoRequired = ssoRequiredOf(error)
+  return ssoRequired && { ok: false, error: `${ssoRequired.domain} accounts sign in through SSO.`, ssoRequired }
+}
 
 // A ConnectError's own fields survive console serialization; the whole error doesn't.
 const connectDetail = (err: unknown) => (err instanceof ConnectError ? { code: err.code, message: err.message } : err)
@@ -44,6 +51,8 @@ export const signInAtom = atom(
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'password' })
       return { ok: true }
     } catch (error) {
+      const refused = ssoRefusal(error)
+      if (refused) return refused
       if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
       const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
       return { ok: false, error: msg }
@@ -150,6 +159,8 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
     await authRPC.requestMagicLink({ email })
     return { ok: true }
   } catch (error) {
+    const refused = ssoRefusal(error)
+    if (refused) return refused
     if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
     const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
     return { ok: false, error: msg }
@@ -166,8 +177,11 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
     // Malformed/empty values are coerced to UTC server-side; correct later in settings.
     const resp = await authRPC.completeMagicLink({ token, timezone: browserTimezone() })
     set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'magic_link' })
+    set(openJoinedOrgsAtom, resp.joinedOrgIds)
     return { ok: true }
   } catch (error) {
+    const refused = ssoRefusal(error)
+    if (refused) return refused
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
       return { ok: false, error: 'This link is invalid or has expired. Request a new one.' }
     }
@@ -187,12 +201,14 @@ export const completeOIDCAtom = atom(
       codeVerifier,
       redirectURI,
       nonce,
+      inviteToken = '',
     }: {
       provider: AuthProviderConfig
       code: string
       codeVerifier: string
       redirectURI: string
       nonce: string
+      inviteToken?: string
     },
   ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
@@ -205,10 +221,20 @@ export const completeOIDCAtom = atom(
         redirectUri: redirectURI,
         nonce,
         timezone: browserTimezone(),
+        inviteToken,
       })
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
+      set(openJoinedOrgsAtom, resp.joinedOrgIds)
       return { ok: true }
     } catch (error) {
+      const refused = ssoRefusal(error)
+      if (refused) return refused
+      if (inviteToken && error instanceof ConnectError && error.code === Code.PermissionDenied) {
+        return {
+          ok: false,
+          error: 'This invite was sent to another email address. Open it again and sign in with that account.',
+        }
+      }
       return { ok: false, error: mapOAuthConnectError(error, provider.displayName) }
     }
   },
@@ -274,6 +300,7 @@ export const signOutAtom = atom(null, async (get, set) => {
   set(refreshTokenAtom, '')
   clearMe(set)
   set(isDemoSessionAtom, false)
+  set(ssoBlockAtom, null)
   set(resetWorkspaceAtom)
   // Only matters when the next account lands on the SAME org — a shared workspace, which is exactly
   // when leaving the previous person's numbers on screen would be worst.

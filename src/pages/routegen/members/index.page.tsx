@@ -2,6 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Check, History, Loader2, Plus, Trash2, Users, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { InvitationStatus, type OrgInvitation, type OrgMember, OrgRole } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
@@ -16,6 +17,8 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
+
+const inviteEmail = z.string().trim().email()
 
 const omitKey = <T,>(obj: Record<string, T>, key: string): Record<string, T> => {
   const { [key]: _, ...rest } = obj
@@ -95,9 +98,14 @@ const Members = () => {
 
   const handleInvite = async () => {
     if (!org || !email.trim()) return
+    const parsed = inviteEmail.safeParse(email)
+    if (!parsed.success) {
+      toast.error('Enter a valid email address')
+      return
+    }
     setInviting(true)
     try {
-      await orgsRPC.inviteMember({ orgId: org.id, email, role: inviteRole })
+      await orgsRPC.inviteMember({ orgId: org.id, email: parsed.data, role: inviteRole })
       closeInvite()
       fetchData()
     } catch (err) {
@@ -211,6 +219,11 @@ const Members = () => {
                         <p className="text-sm font-medium truncate">{name}</p>
                         <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
+                      {m.joinedViaDomain && (
+                        <Badge variant="outline" className="text-xs shrink-0 text-muted-foreground">
+                          via {m.joinedViaDomain}
+                        </Badge>
+                      )}
                       {canEditRole && m.customerId !== myCustomerId ? (
                         <Select value={m.role} onValueChange={v => handleRoleChange(m.customerId, v ?? m.role)}>
                           <SelectTrigger size="sm" className="shrink-0">
@@ -241,12 +254,19 @@ const Members = () => {
                       )}
                       <Can action="delete" resource="member">
                         {confirmingRemove === m.customerId ? (
-                          <button
-                            onClick={() => handleRemove(m.customerId)}
-                            className="text-xs font-medium text-negative hover:underline underline-offset-2"
-                          >
-                            Remove?
-                          </button>
+                          <span className="flex min-w-0 items-center gap-2">
+                            {m.joinedViaDomain && (
+                              <span className="min-w-0 truncate text-xs text-muted-foreground">
+                                While auto-join is on, signing in through SSO adds them back.
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleRemove(m.customerId)}
+                              className="shrink-0 text-xs font-medium text-negative hover:underline underline-offset-2"
+                            >
+                              Remove?
+                            </button>
+                          </span>
                         ) : (
                           <button
                             onClick={() => setConfirmingRemove(m.customerId)}

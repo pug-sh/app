@@ -1,4 +1,4 @@
-import { ConnectError } from '@connectrpc/connect'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { toast } from 'sonner'
 
 const extractRPCErrorMessage = (err: ConnectError) => {
@@ -16,8 +16,12 @@ const extractRPCErrorMessage = (err: ConnectError) => {
   return raw.replace(/^\[[^\]]+\]\s*/, '').trim() || err.message
 }
 
-export const rpcErrorMessage = (err: unknown, fallback: string) =>
-  err instanceof ConnectError ? extractRPCErrorMessage(err) : fallback
+// Unknown is how a dropped connection or a client-side proto check arrives, and Internal is the
+// server's "internal error": neither says anything the caller's wording doesn't say better.
+export const rpcErrorMessage = (err: unknown, fallback: string) => {
+  if (!(err instanceof ConnectError) || err.code === Code.Unknown || err.code === Code.Internal) return fallback
+  return extractRPCErrorMessage(err)
+}
 
 export const toastRPCError = (err: unknown, fallback: string) => {
   console.error(fallback + ':', err)

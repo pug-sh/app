@@ -24,6 +24,7 @@ export type Resource =
   | 'invitation'
   | 'email_provider'
   | 'project'
+  | 'domain'
   | 'api_key'
   | 'dashboard'
   | 'insight'
@@ -85,6 +86,8 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     invitation: 'all',
     email_provider: 'all',
     project: 'all',
+    // Reads included: a pending domain's TXT value is a live claim token.
+    domain: 'all',
     // Minting a credential for a whole project is an administrative act, so create/delete sit
     // here rather than with MEMBER (read comes from VIEWER via INHERITS). Not `'all'`: the
     // backend defines no update action for a key — it is created and revoked, never edited.

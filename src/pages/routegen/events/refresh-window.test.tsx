@@ -123,9 +123,9 @@ describe('events refresh', () => {
     render(<EventExplorer />)
     await settle()
 
-    getEventExplorer.mockRejectedValueOnce(new ConnectError('refresh blew up', Code.Internal))
+    getEventExplorer.mockRejectedValueOnce(new ConnectError('refresh blew up', Code.Unavailable))
     fireEvent.click(refreshButton())
-    // Not '[internal] refresh blew up' — the raw ConnectError message is not user-facing.
+    // Not '[unavailable] refresh blew up' — the raw ConnectError message is not user-facing.
     await waitFor(() => expect(screen.getByText('refresh blew up')).toBeTruthy())
 
     fireEvent.click(screen.getByText('Retry'))

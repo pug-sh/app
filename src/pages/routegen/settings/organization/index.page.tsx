@@ -9,7 +9,7 @@ import { Can } from '@/auth/can'
 import SectionHeader from '@/components/section-header'
 import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { activeOrgAtom, createOrgAtom, leaveOrgAtom, renameOrgAtom } from '@/data/workspace.atoms'
+import { activeOrgAtom, canCreateOrgAtom, createOrgAtom, leaveOrgAtom, renameOrgAtom } from '@/data/workspace.atoms'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { toastRPCError } from '@/lib/rpc-error'
 
@@ -47,6 +47,7 @@ const CopyId = ({ value, context }: { value: string; context?: string }) => {
 
 const Organization = () => {
   const org = useAtomValue(activeOrgAtom)
+  const canCreateOrg = useAtomValue(canCreateOrgAtom)
   const createOrg = useSetAtom(createOrgAtom)
   const renameOrg = useSetAtom(renameOrgAtom)
   const leaveOrg = useSetAtom(leaveOrgAtom)
@@ -130,14 +131,16 @@ const Organization = () => {
     orgForm.reset({ displayName: org?.displayName ?? '' })
   }
 
+  let description = 'Rename this organization or leave it. Switch between them from the sidebar.'
+  if (canCreateOrg) {
+    description = 'Rename this organization, create another, or leave it. Switch between them from the sidebar.'
+  }
+
   return (
     <div className="space-y-8 max-w-2xl">
       {org && (
         <section>
-          <SectionHeader
-            title="Organization"
-            description="Rename this organization, create another, or leave it. Switch between them from the sidebar."
-          />
+          <SectionHeader title="Organization" description={description} />
 
           {/* Current org: inline-editable name + copyable id */}
           <div className="space-y-1">
@@ -191,52 +194,53 @@ const Organization = () => {
 
           {/* New organization + Leave */}
           <div className="mt-4 space-y-2">
-            {showCreateOrg ? (
-              <form onSubmit={createOrgForm.handleSubmit(handleCreateOrg)} className="max-w-sm">
-                <Field data-invalid={!!createOrgForm.formState.errors.displayName}>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      {...createOrgForm.register('displayName')}
-                      placeholder="New organization name"
-                      autoFocus
-                      maxLength={150}
-                      disabled={creatingOrg}
-                      aria-invalid={!!createOrgForm.formState.errors.displayName}
-                      className="h-8"
-                      onKeyDown={e => {
-                        if (e.key === 'Escape') {
+            {canCreateOrg &&
+              (showCreateOrg ? (
+                <form onSubmit={createOrgForm.handleSubmit(handleCreateOrg)} className="max-w-sm">
+                  <Field data-invalid={!!createOrgForm.formState.errors.displayName}>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        {...createOrgForm.register('displayName')}
+                        placeholder="New organization name"
+                        autoFocus
+                        maxLength={150}
+                        disabled={creatingOrg}
+                        aria-invalid={!!createOrgForm.formState.errors.displayName}
+                        className="h-8"
+                        onKeyDown={e => {
+                          if (e.key === 'Escape') {
+                            setShowCreateOrg(false)
+                            createOrgForm.reset()
+                          }
+                        }}
+                      />
+                      {creatingOrg && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
+                      <button
+                        type="button"
+                        onClick={() => {
                           setShowCreateOrg(false)
                           createOrgForm.reset()
-                        }
-                      }}
-                    />
-                    {creatingOrg && <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCreateOrg(false)
-                        createOrgForm.reset()
-                      }}
-                      className="shrink-0 text-xs text-muted-foreground hover:underline"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  {createOrgForm.formState.errors.displayName && (
-                    <FieldError errors={[createOrgForm.formState.errors.displayName]} />
-                  )}
-                </Field>
-              </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowCreateOrg(true)}
-                className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline"
-              >
-                <Plus className="size-4" />
-                New organization
-              </button>
-            )}
+                        }}
+                        className="shrink-0 text-xs text-muted-foreground hover:underline"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {createOrgForm.formState.errors.displayName && (
+                      <FieldError errors={[createOrgForm.formState.errors.displayName]} />
+                    )}
+                  </Field>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowCreateOrg(true)}
+                  className="flex items-center gap-1.5 text-sm text-link underline-offset-4 hover:underline"
+                >
+                  <Plus className="size-4" />
+                  New organization
+                </button>
+              ))}
 
             {confirmingLeave ? (
               <div className="flex items-center gap-2 text-sm">

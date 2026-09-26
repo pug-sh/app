@@ -1,6 +1,8 @@
 import { create } from '@bufbuild/protobuf'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
+import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Router, Switch } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
@@ -44,7 +46,9 @@ const {
   activeOrgAtom,
   activeProjectAtom,
   bootstrapStatusAtom,
+  joinedOrgIdsAtom,
   lastOrgIdAtom,
+  openJoinedOrgsAtom,
   lastProjectByOrgAtom,
   projectsAtom,
   rememberLastProjectAtom,
@@ -144,10 +148,10 @@ describe('WorkspaceBootstrap default project pick', () => {
 describe('another tab signing in as someone else', () => {
   beforeEach(() => {
     batchGet.mockResolvedValue({ projects })
-    orgsList.mockResolvedValue({ orgs: [] })
   })
 
   it('rebuilds the workspace rather than carrying the previous account into it', async () => {
+    orgsList.mockResolvedValueOnce({ orgs: [] })
     const store = mount({ path: '/' })
     await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
 
@@ -463,6 +467,30 @@ describe('restoring the last org', () => {
     expect(batchGet).toHaveBeenCalledTimes(2)
   })
 
+  it('says so when the last org is gone', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const message = vi.spyOn(toast, 'message').mockImplementation(() => '')
+    orgsGet.mockRejectedValueOnce(new ConnectError('not a member of this org', Code.PermissionDenied))
+    orgsList.mockResolvedValueOnce({ orgs: [orgA] })
+
+    const { store } = mountRestore()
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('ready'))
+    expect(message).toHaveBeenCalledWith('Your previous organization is no longer available')
+  })
+
+  it('does not call the last org gone when it could not be checked', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const message = vi.spyOn(toast, 'message').mockImplementation(() => '')
+    orgsGet.mockRejectedValueOnce(new Error('Failed to fetch'))
+    orgsList.mockResolvedValueOnce({ orgs: [orgA] })
+
+    const { store } = mountRestore()
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('ready'))
+    expect(message).not.toHaveBeenCalled()
+  })
+
   it('drops a prefetch that lands after the bootstrap was torn down', async () => {
     // The stale-org guard can't cover this: an unmount leaves activeOrgAtom set, so the commit
     // would pass its check. Only the cancelled check stops it.
@@ -484,6 +512,151 @@ describe('restoring the last org', () => {
 
     expect(store.get(projectsAtom)).toEqual([])
     expect(store.get(bootstrapStatusAtom)).not.toBe('ready')
+  })
+})
+
+describe('signing in to an org the sign-in joined', () => {
+  const mountSignedIn = (setup: (store: ReturnType<typeof createStore>) => void) => {
+    const store = createStore()
+    store.set(refreshTokenAtom, 'refresh-token')
+    store.set(jwtAtom, jwtFor('cust-1'))
+    setup(store)
+    render(
+      <Provider store={store}>
+        <Router hook={memoryLocation({ path: '/' }).hook}>
+          <WorkspaceBootstrap />
+        </Router>
+      </Provider>,
+    )
+    return store
+  }
+
+  beforeEach(() => {
+    orgsList.mockReset()
+    orgsGet.mockReset()
+    batchGet.mockResolvedValue({ projects })
+  })
+
+  it('opens the joined org over the last one visited, and says so', async () => {
+    const acme = create(OrgSchema, { id: 'org-acme', displayName: 'Acme' })
+    orgsGet.mockImplementationOnce(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ org: orgId === 'org-acme' ? acme : orgA }),
+    )
+    const success = vi.spyOn(toast, 'success').mockImplementation(() => '')
+    // Held open so the org lands first: a write to lastOrgId while the list is in flight restarts the load.
+    let landProjects = (_: unknown) => {}
+    batchGet.mockReturnValueOnce(new Promise(resolve => (landProjects = resolve)))
+
+    const store = mountSignedIn(s => {
+      s.set(lastOrgIdAtom, 'org-a')
+      s.set(joinedOrgIdsAtom, ['org-acme'])
+    })
+
+    await waitFor(() => expect(store.get(activeOrgAtom)?.id).toBe('org-acme'))
+    await act(async () => landProjects({ projects }))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('You joined Acme.'))
+    expect(store.get(lastOrgIdAtom)).toBe('org-acme')
+    expect(store.get(joinedOrgIdsAtom)).toEqual([])
+    expect(success).toHaveBeenCalledTimes(1)
+    expect(orgsGet).toHaveBeenCalledTimes(1)
+  })
+
+  // The workspace was already up: the same account clicking an invite link, or another account's
+  // link opened in this tab.
+  for (const [name, customer] of [
+    ['the same account', 'cust-1'],
+    ['another account in this tab', 'cust-2'],
+  ] as const) {
+    it(`opens the joined org over a loaded workspace for ${name}`, async () => {
+      const acme = create(OrgSchema, { id: 'org-acme', displayName: 'Acme' })
+      orgsGet.mockResolvedValue({ org: acme })
+      const success = vi.spyOn(toast, 'success').mockImplementation(() => '')
+      const store = mount({ path: '/' })
+      await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+      await act(async () => {
+        store.set(jwtAtom, jwtFor(customer, 9e9 + 1))
+        store.set(openJoinedOrgsAtom, ['org-acme'])
+      })
+
+      await waitFor(() => expect(store.get(activeOrgAtom)?.id).toBe('org-acme'))
+      await waitFor(() => expect(success).toHaveBeenCalledWith('You joined Acme.'))
+      expect(success).toHaveBeenCalledTimes(1)
+    })
+  }
+
+  it('keeps the joined org when the restore it interrupted lands later', async () => {
+    const acme = create(OrgSchema, { id: 'org-acme', displayName: 'Acme' })
+    let landRestore = (_: unknown) => {}
+    orgsGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      orgId === 'org-a' ? new Promise(resolve => (landRestore = resolve)) : Promise.resolve({ org: acme }),
+    )
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+
+    const store = mountSignedIn(s => s.set(lastOrgIdAtom, 'org-a'))
+    await waitFor(() => expect(orgsGet).toHaveBeenCalledWith({ orgId: 'org-a' }))
+    await act(async () => store.set(openJoinedOrgsAtom, ['org-acme']))
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('ready'))
+
+    await act(async () => landRestore({ org: orgA }))
+
+    expect(store.get(activeOrgAtom)?.id).toBe('org-acme')
+  })
+
+  it('shows the picker when the joined org cannot be opened, and still names it', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const success = vi.spyOn(toast, 'success').mockImplementation(() => '')
+    const acme = create(OrgSchema, { id: 'org-acme', displayName: 'Acme' })
+    orgsGet.mockRejectedValueOnce(new Error('down'))
+    orgsList.mockResolvedValueOnce({ orgs: [orgA, acme] })
+    const store = mount({ path: '/' })
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+
+    await act(async () => store.set(openJoinedOrgsAtom, ['org-acme']))
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('needs-selection'))
+    expect(store.get(activeOrgAtom)).toBeNull()
+    await act(async () => store.set(selectOrgAtom, orgA))
+    await waitFor(() => expect(success).toHaveBeenCalledWith('You joined Acme.'))
+  })
+
+  it("returns to the joined org's last project, not the one it left", async () => {
+    const acme = create(OrgSchema, { id: 'org-acme', displayName: 'Acme' })
+    const projectsOfAcme = [
+      create(ProjectSchema, { id: 'x1', displayName: 'X1' }),
+      create(ProjectSchema, { id: 'x2', displayName: 'X2' }),
+    ]
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    orgsGet.mockResolvedValueOnce({ org: acme })
+    const store = mount({ path: '/', lastProjectByOrg: { 'org-acme': 'x2' } })
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+    // Held open so the org lands while the project it left could still be filed under it.
+    let landProjects = (_: unknown) => {}
+    batchGet.mockReturnValueOnce(new Promise(resolve => (landProjects = resolve)))
+
+    await act(async () => store.set(openJoinedOrgsAtom, ['org-acme']))
+    await waitFor(() => expect(store.get(activeOrgAtom)?.id).toBe('org-acme'))
+    await act(async () => landProjects({ projects: projectsOfAcme }))
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('x2'))
+  })
+
+  it('shows the picker, not an error, to an account with no orgs', async () => {
+    orgsList.mockResolvedValueOnce({ orgs: [] })
+
+    const store = mountSignedIn(() => {})
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('needs-selection'))
+    expect(store.get(workspaceErrorAtom)).toBeNull()
+  })
+
+  it('still fails when the org list cannot be loaded', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    orgsList.mockRejectedValueOnce(new Error('down'))
+
+    const store = mountSignedIn(() => {})
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('error'))
   })
 })
 

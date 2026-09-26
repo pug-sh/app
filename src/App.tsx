@@ -23,9 +23,11 @@ import {
   commitProjectsAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
+  joinedOrgIdsAtom,
   lastOrgIdAtom,
   lastProjectByOrgAtom,
   loadOrgAtom,
+  orgsAtom,
   prefetchProjectsAtom,
   projectsAtom,
   projectsLoadedAtom,
@@ -97,10 +99,12 @@ export const WorkspaceBootstrap = () => {
   const customerId = useAtomValue(customerIdAtom)
   const [status, setStatus] = useAtom(bootstrapStatusAtom)
   const projects = useAtomValue(projectsAtom)
-  const activeOrg = useAtomValue(activeOrgAtom)
+  const orgs = useAtomValue(orgsAtom)
+  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const routeProjectId = useRouteProjectId()
-  const lastOrgId = useAtomValue(lastOrgIdAtom)
+  const [lastOrgId, setLastOrgId] = useAtom(lastOrgIdAtom)
+  const [joinedOrgIds, setJoinedOrgIds] = useAtom(joinedOrgIdsAtom)
   const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
   const fetchProjects = useSetAtom(fetchProjectsAtom)
@@ -115,10 +119,11 @@ export const WorkspaceBootstrap = () => {
   useEffect(() => {
     if (!authenticated) {
       resetWorkspace()
+      setJoinedOrgIds([])
     } else if (status === 'idle') {
       setStatus('loading-org')
     }
-  }, [authenticated, status, setStatus, resetWorkspace])
+  }, [authenticated, status, setStatus, resetWorkspace, setJoinedOrgIds])
 
   // The one place an account switch tears the workspace down, in-tab and cross-tab alike. The JWT
   // syncs across tabs (atomWithStorage listens for storage events); the workspace does not. Sign in
@@ -137,28 +142,37 @@ export const WorkspaceBootstrap = () => {
     if (status !== 'loading-org') return
     let cancelled = false
     ;(async () => {
-      if (lastOrgId) {
+      const joinedOrgId = joinedOrgIds[0]
+      const restoreOrgId = joinedOrgId || lastOrgId
+      if (restoreOrgId) {
         // Both calls need only the org id, so they go out together rather than the list waiting on
         // the org. prefetchProjects resolves null on a miss; the org-keyed effect below then fetches.
-        const prefetched = prefetchProjects(lastOrgId)
-        const org = await loadOrg(lastOrgId)
+        const prefetched = prefetchProjects(restoreOrgId)
+        const org = await loadOrg(restoreOrgId)
         if (cancelled) return
         if (org) {
-          // Before 'ready': the org-keyed effect runs off that change and skips on a landed list.
+          setActiveOrg(org)
+          // Committed before 'ready': the org-keyed effect runs off 'ready' and skips a landed list.
           const projects = await prefetched
           if (cancelled) return
           // Keyed to the org the list was fetched for, not the one that came back: if they differ
           // the commit is dropped and the effect below refetches, rather than mis-filing the list.
-          if (projects) commitProjects({ orgId: lastOrgId, projects })
+          if (projects) commitProjects({ orgId: restoreOrgId, projects })
           setStatus('ready')
+          // After 'ready': lastOrgId is a dependency, and changing it mid-flight restarts the load.
+          if (org.id !== lastOrgId) setLastOrgId(org.id)
           return
         }
-        toast.message('Your previous organization is no longer available')
+        if (org === null && !joinedOrgId) toast.message('Your previous organization is no longer available')
       }
       const list = await fetchOrgs()
       if (cancelled) return
-      if (list.length === 0) {
+      if (!list) {
         setStatus('error')
+        return
+      }
+      if (list.length === 0) {
+        setStatus('needs-selection')
         return
       }
       if (list.length === 1) {
@@ -171,7 +185,29 @@ export const WorkspaceBootstrap = () => {
     return () => {
       cancelled = true
     }
-  }, [status, lastOrgId, loadOrg, prefetchProjects, commitProjects, fetchOrgs, selectOrg, setStatus])
+  }, [
+    status,
+    joinedOrgIds,
+    lastOrgId,
+    setLastOrgId,
+    setActiveOrg,
+    loadOrg,
+    prefetchProjects,
+    commitProjects,
+    fetchOrgs,
+    selectOrg,
+    setStatus,
+  ])
+
+  useEffect(() => {
+    if (status !== 'ready' || joinedOrgIds.length === 0 || !activeOrg) return
+    const name = [activeOrg, ...orgs].find(org => org.id === joinedOrgIds[0])?.displayName ?? 'a new organization'
+    const others = joinedOrgIds.length - 1
+    let message = `You joined ${name}.`
+    if (others > 0) message = `You joined ${name} and ${others} more organization${others > 1 ? 's' : ''}.`
+    toast.success(message)
+    setJoinedOrgIds([])
+  }, [status, joinedOrgIds, activeOrg, orgs, setJoinedOrgIds])
 
   // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
   // and this effect blanks the active project and refetches the list — so a rename would clear the
@@ -322,7 +358,7 @@ const App = () => {
     // <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
     if (isDemoRoute) return <Demo />
     if (!authenticated) return <SignIn />
-    if (failed) return <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
+    if (failed) return <WorkspaceError message={workspaceError ?? 'Please try again.'} />
     if (status === 'needs-selection') return <SelectOrg />
     return <AuthPending label="Loading your workspace…" />
   }

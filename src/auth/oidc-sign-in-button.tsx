@@ -2,7 +2,7 @@ import { KeyRound, Loader2 } from 'lucide-react'
 import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { startOIDCSignIn } from './oidc'
+import { isGoogleProvider, type OIDCSignInOptions, startOIDCSignIn } from './oidc'
 
 // Google's sign-in branding fixes these values, so they're literals rather than theme tokens.
 // Only the radius follows the app — Google's 4px was already overridden for the old GIS button.
@@ -11,24 +11,25 @@ const googleBranding =
 
 export const OIDCSignInButton = ({
   provider,
+  options,
   disabled,
   loading,
   onBegin,
   onError,
 }: {
   provider: AuthProviderConfig
+  options?: OIDCSignInOptions
   disabled: boolean
   loading: boolean
   onBegin: () => void
   onError: (message: string) => void
 }) => {
-  // Keyed on the issuer, not the id — the id is operator-chosen and can be anything.
-  const isGoogle = provider.issuerUrl.startsWith('https://accounts.google.com')
+  const isGoogle = isGoogleProvider(provider)
 
   const begin = async () => {
     onBegin()
     try {
-      await startOIDCSignIn(provider)
+      await startOIDCSignIn(provider, options)
     } catch (error) {
       console.error('OIDC sign-in redirect failed', error)
       onError(`${provider.displayName} sign-in could not be started. Try again.`)

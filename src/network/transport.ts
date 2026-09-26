@@ -17,6 +17,7 @@ import {
   refreshTokenAtom,
   setSessionTokens,
 } from '@/auth/jwt.atoms'
+import { ssoBlockAtom, ssoRequiredOf } from '@/auth/sso-required'
 
 // Register the app's file descriptors so the validator can compile rules defined
 // in these protos (e.g. buf.validate constraints on PropertyFilter which references
@@ -118,7 +119,10 @@ const doRefresh = async (): Promise<string | null> => {
   } catch (err) {
     if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
       clearSession()
-      toast.error('Session expired — please sign in again')
+      // The domain now requires SSO: sign-in shows its providers instead of a generic expiry.
+      const detail = ssoRequiredOf(err)
+      if (detail) store.set(ssoBlockAtom, { detail, sessionEnded: true })
+      else toast.error('Session expired — please sign in again')
       return null
     }
     // Transient — keep the session intact.
