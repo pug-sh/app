@@ -215,7 +215,7 @@ const Members = () => {
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
                         <span className="text-xs font-medium text-muted-foreground">{initials(name)}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="grow basis-32 min-w-0">
                         <p className="text-sm font-medium truncate">{name}</p>
                         <p className="text-xs text-muted-foreground font-mono truncate">{m.email}</p>
                       </div>
@@ -257,7 +257,7 @@ const Members = () => {
                           <span className="flex min-w-0 items-center gap-2">
                             {m.joinedViaDomain && (
                               <span className="min-w-0 truncate text-xs text-muted-foreground">
-                                While auto-join is on, signing in through SSO adds them back.
+                                While auto-join is on, they rejoin at their next SSO sign-in or SSO session refresh.
                               </span>
                             )}
                             <button
