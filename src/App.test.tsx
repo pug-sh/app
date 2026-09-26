@@ -168,9 +168,9 @@ describe('another tab signing in as someone else', () => {
     const store = mount({ path: '/' })
     await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
 
-    // The transport re-mints this hourly: a different token string carrying the same `sub`. It must
+    // The transport re-mints this daily: a different token string carrying the same `sub`. It must
     // not read as an account switch — tearing the workspace down on every refresh would bounce every
-    // active user through a full reload once an hour.
+    // active user through a full reload once a day.
     //
     // Inside act, or the effect under test hasn't run when the assertions below read the workspace,
     // and they hold no matter what it does — an `await Promise.resolve()` here passes even against a

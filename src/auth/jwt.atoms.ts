@@ -4,7 +4,7 @@ import { isDemoSessionAtom } from './demo'
 
 // Shared with transport.ts — both read the same localStorage keys.
 export const JWT_KEY = 'pug:jwt'
-// The long-lived refresh token. The access JWT (JWT_KEY) is short-lived (~1h);
+// The long-lived refresh token. The access JWT (JWT_KEY) is short-lived (24h);
 // the refresh token is exchanged for a fresh pair via AuthService.RefreshSession.
 export const REFRESH_KEY = 'pug:refresh'
 
@@ -53,7 +53,7 @@ export const jwtDataAtom = atom(get => {
 })
 
 // The signed-in customer, as a primitive. jwtDataAtom rebuilds its object on every recompute, so a
-// subscriber that only cares about identity would re-render on each hourly token refresh, and an
+// subscriber that only cares about identity would re-render on each daily token refresh, and an
 // effect keyed on it would refire — a refresh re-mints the same `sub`, so this stays put across one.
 //
 // Deliberately expiry-*independent*: jwtDataAtom parses `sub` without consulting `exp`, so a cold
