@@ -29,7 +29,17 @@ vi.mock('@/auth/auth.atoms', async () => {
   }
 })
 
-vi.mock('@/auth/oidc', () => oidc)
+// Like the real one, which clears the pending invite along with the provider however it settles.
+vi.mock('@/auth/oidc', () => ({
+  ...oidc,
+  completeOIDCRedirect: async (provider: AuthProviderConfig) => {
+    try {
+      return await oidc.completeOIDCRedirect(provider)
+    } finally {
+      oidc.pendingOIDCInviteToken.mockReturnValue('')
+    }
+  },
+}))
 
 const OAuthCallback = (await import('./oauth-callback')).default
 
@@ -116,11 +126,7 @@ describe('OAuth callback provider lookup', () => {
   it('sends the invite the sign-in was started for', async () => {
     state.providers = [companySSO]
     oidc.pendingOIDCInviteToken.mockReturnValue('invite-token')
-    // Like the real one, which clears the pending invite along with the provider.
-    oidc.completeOIDCRedirect.mockImplementation(async () => {
-      oidc.pendingOIDCInviteToken.mockReturnValue('')
-      return authorization
-    })
+    oidc.completeOIDCRedirect.mockResolvedValue(authorization)
 
     renderCallback()
 
@@ -139,7 +145,7 @@ describe('OAuth callback provider lookup', () => {
     completeOIDC.mockResolvedValue({
       ok: false,
       error: 'acme.com accounts sign in through SSO.',
-      ssoRequired: create(SSORequiredSchema, { domain: 'acme.com', providers: [google] }),
+      ssoRequired: create(SSORequiredSchema, { domain: 'acme.com', providers: [google], invite: true }),
     })
 
     renderCallback()
