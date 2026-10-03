@@ -48,7 +48,7 @@
     "dodopayments-checkout": "^1.9.9",
     "jotai": "^3.0.0",
     "jotai-family": "^1.0.2",
-    "lucide-react": "^1.40.0",
+    "lucide-react": "^1.48.0",
     "maplibre-gl": "^6.10.0",
     "motion": "^13.1.1",
     "oidc-client-ts": "^3.5.0",
