@@ -3,7 +3,8 @@ import { atomWithStorage } from 'jotai/utils'
 
 export type Theme = 'light' | 'dark' | 'system'
 
-export const themeAtom = atomWithStorage<Theme>('pug:theme', 'system')
+// getOnInit: App renders before ThemeSync's mount loads storage, and jotai 3 won't re-render it for that.
+export const themeAtom = atomWithStorage<Theme>('pug:theme', 'system', undefined, { getOnInit: true })
 
 // OS-level preference, kept live via matchMedia so 'system' resolves reactively.
 const systemDarkAtom = atom(typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches)
