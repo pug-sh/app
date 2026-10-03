@@ -25,13 +25,14 @@ vi.mock('@/analytics/pug', () => ({
   analyticsEnabled: false,
 }))
 
-const { orgsAtom } = await import('@/data/workspace.atoms')
+const { canCreateOrgAtom, orgsAtom } = await import('@/data/workspace.atoms')
 const SelectOrg = (await import('./select-org')).default
 
 describe('org creation from the picker', () => {
   it('rejects a name of nothing but spaces, and says so', async () => {
     const store = createStore()
     store.set(orgsAtom, [create(OrgSchema, { id: 'org-a', displayName: 'Acme', role: OrgRole.ADMIN })])
+    store.set(canCreateOrgAtom, true)
     render(
       <Provider store={store}>
         <SelectOrg />
@@ -47,5 +48,32 @@ describe('org creation from the picker', () => {
     // door into createOrg, and it is the one a brand-new account walks through first.
     await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('Required'))
     expect(orgsCreate).not.toHaveBeenCalled()
+  })
+})
+
+describe('an account with no orgs', () => {
+  const mount = (canCreate: boolean) => {
+    const store = createStore()
+    store.set(canCreateOrgAtom, canCreate)
+    render(
+      <Provider store={store}>
+        <SelectOrg />
+      </Provider>,
+    )
+  }
+
+  it('is told to ask for an invite, not to pick', () => {
+    mount(false)
+
+    expect(screen.getByText("You're not in an org yet")).toBeTruthy()
+    expect(screen.getByText('Ask an admin to invite you.')).toBeTruthy()
+    expect(screen.queryByText('Create new organization')).toBeNull()
+  })
+
+  it('can still create one where its domain allows it', () => {
+    mount(true)
+
+    expect(screen.getByText('Create one, or ask an admin to invite you.')).toBeTruthy()
+    expect(screen.getByText('Create new organization')).toBeTruthy()
   })
 })

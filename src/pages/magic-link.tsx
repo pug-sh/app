@@ -2,14 +2,17 @@ import { useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'wouter'
+import type { SSORequired } from '@/api/genproto/public/auth/v1/auth_pb'
 import { completeMagicLinkAtom } from '@/auth/auth.atoms'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
+import { SSORequiredScreen } from '@/auth/sso-required-screen'
 
 const MagicLink = () => {
   const token = new URLSearchParams(window.location.search).get('token') ?? ''
   const completeMagicLink = useSetAtom(completeMagicLinkAtom)
   const [, navigate] = useLocation()
   const [error, setError] = useState('')
+  const [ssoRequired, setSSORequired] = useState<SSORequired | null>(null)
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -21,6 +24,7 @@ const MagicLink = () => {
     ;(async () => {
       const res = await completeMagicLink({ token })
       if (res.ok) navigate('/overview')
+      else if (res.ssoRequired) setSSORequired(res.ssoRequired)
       else setError(res.error)
     })()
   }, [token, completeMagicLink, navigate])
@@ -45,6 +49,20 @@ const MagicLink = () => {
       >
         {backToSignIn}
       </AuthStatus>
+    )
+  }
+
+  // The server left the link unused, so an invite is accepted by the SSO sign-in instead.
+  if (ssoRequired) {
+    let description = `Email links are turned off for ${ssoRequired.domain}.`
+    if (ssoRequired.invite) description = 'Sign in to accept your invite.'
+    return (
+      <SSORequiredScreen
+        detail={ssoRequired}
+        description={description}
+        inviteToken={ssoRequired.invite ? token : undefined}
+        onUseDifferentEmail={() => navigate('/')}
+      />
     )
   }
 

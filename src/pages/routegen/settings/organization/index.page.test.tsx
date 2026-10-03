@@ -26,7 +26,7 @@ vi.mock('@/api/rpc', async () => {
   }
 })
 
-const { activeOrgAtom } = await import('@/data/workspace.atoms')
+const { activeOrgAtom, canCreateOrgAtom } = await import('@/data/workspace.atoms')
 const Organization = (await import('./index.page')).default
 
 // ADMIN, or <Can action='update' resource='org'> renders the read-only name and there is no rename
@@ -36,6 +36,7 @@ const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Acme', role: OrgRole
 const mount = () => {
   const store = createStore()
   store.set(activeOrgAtom, orgA)
+  store.set(canCreateOrgAtom, true)
   render(
     <Provider store={store}>
       <Organization />

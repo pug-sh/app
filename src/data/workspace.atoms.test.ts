@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { createStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
@@ -26,7 +26,9 @@ const {
   activeOrgAtom,
   activeProjectAtom,
   bootstrapStatusAtom,
+  canCreateOrgAtom,
   commitProjectsAtom,
+  fetchOrgsAtom,
   fetchProjectsAtom,
   orgsAtom,
   projectsAtom,
@@ -206,6 +208,51 @@ describe('refreshOrgsAtom', () => {
     expect(store.get(projectsAtom)).toEqual(projectsOfA)
     expect(store.get(workspaceErrorAtom)).toBeNull()
     expect(store.get(orgsAtom)).toEqual([orgA, orgB])
+  })
+})
+
+describe('canCreateOrgAtom', () => {
+  // A restricted account deep-linked to the organization settings would otherwise see the button
+  // until the sidebar's list call lands.
+  it('hides creating until the list says, and again after a reset', () => {
+    const store = createStore()
+    expect(store.get(canCreateOrgAtom)).toBe(false)
+
+    store.set(canCreateOrgAtom, true)
+    store.set(resetWorkspaceAtom)
+
+    expect(store.get(canCreateOrgAtom)).toBe(false)
+  })
+
+  // The bootstrap's fetch is the only thing feeding the zero-org picker.
+  it('is set by the bootstrap fetch', async () => {
+    const store = createStore()
+    store.set(canCreateOrgAtom, true)
+    orgsList.mockResolvedValueOnce(create(ListResponseSchema, { orgs: [], canCreateOrg: false }))
+
+    await store.set(fetchOrgsAtom)
+
+    expect(store.get(canCreateOrgAtom)).toBe(false)
+  })
+
+  it('follows the server once it answers', async () => {
+    const store = createStore()
+    store.set(canCreateOrgAtom, true)
+    orgsList.mockResolvedValueOnce(create(ListResponseSchema, { orgs: [orgA], canCreateOrg: false }))
+
+    await store.set(refreshOrgsAtom)
+
+    expect(store.get(canCreateOrgAtom)).toBe(false)
+  })
+
+  it('allows creating when the server sends no answer', async () => {
+    const store = createStore()
+    store.set(canCreateOrgAtom, false)
+    orgsList.mockResolvedValueOnce(create(ListResponseSchema, { orgs: [orgA] }))
+
+    await store.set(refreshOrgsAtom)
+
+    expect(store.get(canCreateOrgAtom)).toBe(true)
   })
 })
 
