@@ -70,7 +70,7 @@
     "twemoji": "^14.0.2",
     "world-atlas": "^2.0.2",
     "wouter": "^3.11.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
