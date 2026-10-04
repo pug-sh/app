@@ -1,5 +1,6 @@
 import type { Theme } from 'protomaps-themes-base'
 
+import { formatColor, parseColor } from '@/lib/color/parse'
 import { cssColorToRgb } from '@/lib/maplibre'
 
 // Light mode uses protomaps' stock theme untouched. Only dark is overridden: its ocean sat at the
@@ -11,7 +12,7 @@ import { cssColorToRgb } from '@/lib/maplibre'
 
 // Authored in oklch to match src/index.css; resolved to rgb below since MapLibre parses neither
 // oklch nor var().
-const DARK = {
+export const DARK_BASEMAP = {
   background: 'oklch(0.235 0.018 235)',
   earth: 'oklch(0.285 0.008 265)',
   water: 'oklch(0.235 0.018 235)',
@@ -103,21 +104,40 @@ const DARK = {
   address_label_halo: 'oklch(0.285 0.008 265)',
 } satisfies Partial<Theme>
 
-// Resolution touches a canvas, so it can't run at module scope — resolve once, on first use.
-let resolved: Partial<Theme> | null = null
+// DARK_BASEMAP was authored against Pug dark's card (L 0.215) with neutrals at hue 265. Another dark
+// theme gets the same map seated on its own canvas: lightness moves by the card's offset, neutrals
+// take the canvas hue, water and vegetation keep theirs. On Pug dark this changes nothing.
+const AUTHORED_CARD_L = 0.215
+const NEUTRAL_HUE = 265
 
-const resolveDark = () => {
-  const out: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(DARK)) {
-    if (typeof value === 'string') out[key] = cssColorToRgb(value)
-    else out[key] = Object.fromEntries(Object.entries(value).map(([k, v]) => [k, cssColorToRgb(v)]))
-  }
-  return out as Partial<Theme>
+export type BasemapTheme = { dark: boolean; cardL: number; neutralHue: number }
+
+export const rebaseDarkEntry = (value: string, cardL: number, neutralHue: number) => {
+  const parsed = parseColor(value)
+  if (!parsed) throw new Error(`basemap palette: ${value} is not a colour`)
+  return formatColor({
+    ...parsed,
+    l: parsed.l + (cardL - AUTHORED_CARD_L),
+    h: parsed.h === NEUTRAL_HUE ? neutralHue : parsed.h,
+  })
 }
 
-/** Dark-mode overrides for the protomaps theme; light passes through untouched. */
-export const basemapPalette = (dark: boolean) => {
-  if (!dark) return {}
-  if (!resolved) resolved = resolveDark()
-  return resolved
+// Resolution touches a canvas, so it can't run at module scope — resolve on first use, per canvas.
+const resolved = new Map<string, Partial<Theme>>()
+
+/** Dark-mode overrides for the protomaps theme, seated on the active theme's canvas; light passes through. */
+export const basemapPalette = (theme: BasemapTheme) => {
+  if (!theme.dark) return {}
+  const key = `${theme.cardL}|${theme.neutralHue}`
+  const hit = resolved.get(key)
+  if (hit) return hit
+  const convert = (value: string) => cssColorToRgb(rebaseDarkEntry(value, theme.cardL, theme.neutralHue))
+  const out: Record<string, unknown> = {}
+  for (const [name, value] of Object.entries(DARK_BASEMAP)) {
+    if (typeof value === 'string') out[name] = convert(value)
+    else out[name] = Object.fromEntries(Object.entries(value).map(([k, v]) => [k, convert(v)]))
+  }
+  const palette = out as Partial<Theme>
+  resolved.set(key, palette)
+  return palette
 }

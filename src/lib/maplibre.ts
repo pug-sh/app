@@ -68,14 +68,11 @@ export const cssColorToRgb = (value: string) => {
   return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`
 }
 
-const readVar = (styles: CSSStyleDeclaration, name: string) => cssColorToRgb(styles.getPropertyValue(name).trim())
-
-export const resolveThemeColors = (): ThemeColors => {
-  const styles = getComputedStyle(document.documentElement)
-  return {
-    primary: readVar(styles, '--primary'),
-    border: readVar(styles, '--border'),
-    mutedForeground: readVar(styles, '--muted-foreground'),
-    dataHue: readVar(styles, '--chart-1'),
-  }
-}
+// MapLibre paint properties take concrete colour strings, not var(). The compiled theme's oklch values
+// go through the same canvas readback getComputedStyle's did, so Pug's map colours are unchanged.
+export const resolveThemeColors = (vars: Record<string, string>): ThemeColors => ({
+  primary: cssColorToRgb(vars['--primary']),
+  border: cssColorToRgb(vars['--border']),
+  mutedForeground: cssColorToRgb(vars['--muted-foreground']),
+  dataHue: cssColorToRgb(vars['--chart-1']),
+})

@@ -9,7 +9,7 @@ import { ClusterView, clusterSize, MARKER_SIZE, MarkerView } from '@/components/
 import { buildGroups, groupsToEntries, groupsToPoints, type MapEntry } from '@/components/live-map/markers'
 import { type Placement, type Rect, resolvePlacement } from '@/components/live-map/popover-placement'
 import { DECLUSTER_ZOOM, displayPos, scatterCellDeg } from '@/components/live-map/scatter'
-import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
+import { useMaplibreMap, useMapTheme } from '@/hooks/use-maplibre-map'
 import { INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
 
 type Props = {
@@ -118,7 +118,7 @@ const LiveVisitorMap = ({
   avoidRef,
   viewportPadding,
 }: Props) => {
-  const dark = useResolvedDark()
+  const mapTheme = useMapTheme()
   // Zoom past DECLUSTER_ZOOM breaks crowded city groups into individual faces.
   const [declustered, setDeclustered] = useState(false)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -136,7 +136,7 @@ const LiveVisitorMap = ({
   )
 
   const { containerRef, mapRef, ready } = useMaplibreMap({
-    style: buildBasemapStyle(dark),
+    style: buildBasemapStyle(mapTheme),
     // Applied before the style attaches, so the first tiles requested are already the framed ones.
     bounds: INITIAL_VIEW_BOUNDS,
     fitBoundsOptions: { padding: viewportPadding },
@@ -437,8 +437,8 @@ const LiveVisitorMap = ({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    map.setStyle(buildBasemapStyle(dark))
-  }, [dark, ready, mapRef])
+    map.setStyle(buildBasemapStyle(mapTheme))
+  }, [mapTheme, ready, mapRef])
 
   // Keep basemap/tile load failures (e.g. a missing or invalid /basemap.pmtiles) non-fatal —
   // the visitor markers still render over a blank background instead of crashing the map.
