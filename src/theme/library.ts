@@ -1,6 +1,7 @@
 import { BUILTIN_IDS, BUILTINS, type BuiltinId } from './builtin'
 import { compileVariant, hashString } from './compile'
-import { error, type Issue, type ParseResult, parseThemeText, readableName, type ThemeFamily } from './format'
+import { error, type Issue, parseThemeText, readableName, type ThemeFamily } from './format'
+import { memoize } from './memoize'
 import { POLARITIES, type Polarity } from './tokens'
 
 // The theme library: the built-ins plus whatever the person installed, and which one is active.
@@ -25,15 +26,7 @@ export type LibraryEntry =
 
 export type UsableEntry = LibraryEntry & { family: ThemeFamily }
 
-const parsedTexts = new Map<string, ParseResult>()
-const parseOnce = (text: string) => {
-  let parsed = parsedTexts.get(text)
-  if (!parsed) {
-    parsed = parseThemeText(text)
-    parsedTexts.set(text, parsed)
-  }
-  return parsed
-}
+const parseOnce = memoize(parseThemeText)
 
 /** Validation issues for every variant a family has, with paths that say which variant. */
 export const validateFamily = (id: string, family: ThemeFamily): Issue[] =>

@@ -1,4 +1,4 @@
-import { linearToOklch, normHue, type Oklch, srgbToLinear } from './oklch'
+import { clamp01, linearToOklch, normHue, type Oklch, srgbToLinear } from './oklch'
 
 // The theme colour grammar: hex, rgb()/rgba(), hsl()/hsla() and oklch(), nothing else. A strict
 // grammar rather than a denylist — var(), url(), calc(), color-mix(), relative syntax, `none` and
@@ -35,7 +35,6 @@ const OKLCH_RE = new RegExp(
   'i',
 )
 
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 const pct = (s: string) => Number.parseFloat(s) / 100
 const unitOrPct = (s: string, scale: number) => (s.endsWith('%') ? pct(s) : Number.parseFloat(s) / scale)
 const parseAlpha = (s: string | undefined) => (s === undefined ? 1 : clamp01(unitOrPct(s, 1)))

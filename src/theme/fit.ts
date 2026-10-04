@@ -1,5 +1,6 @@
 import { contrast } from '../lib/color/contrast'
 import { fitChroma, hexToOklch, type Oklch, oklchToHex } from '../lib/color/oklch'
+import { memoize } from './memoize'
 import { solveLightness } from './solve'
 import type { Contrast, Polarity } from './tokens'
 
@@ -22,7 +23,7 @@ const LIGHT_CHROMA_CAP = 0.14
 const ANCHOR: Record<Polarity, number> = { dark: 0.54, light: 0.52 }
 const HIGH_DATA_CONTRAST = 4.5
 
-const grey = (l: number): Oklch => ({ l, c: 0, h: 0, alpha: 1 })
+const grey = (l: number) => ({ l, c: 0, h: 0, alpha: 1 })
 
 /** How far the standard band moves on `canvas`. Rounded, so Pug's own canvas gives exactly 0. */
 export const bandShift = (polarity: Polarity, canvas: Oklch) => {
@@ -32,23 +33,10 @@ export const bandShift = (polarity: Polarity, canvas: Oklch) => {
   return Math.round((anchor - ANCHOR[polarity]) * 1e4) / 1e4 || 0
 }
 
-// Memoize a hex→hex transform for the session. Every hex a fit sees is a palette colour or a theme's,
-// so the caches stay small.
-const memoizeHex = (transform: (hex: string) => string) => {
-  const cache = new Map<string, string>()
-  return (hex: string) => {
-    const cached = cache.get(hex)
-    if (cached !== undefined) return cached
-    const out = transform(hex)
-    cache.set(hex, out)
-    return out
-  }
-}
-
 // Dark canvas: lift lightness into a legible band, taming extreme chroma. The band is deliberately
 // shallow — every point of lift spent is chroma the hue can no longer hold.
 const standardDark = (shift: number) =>
-  memoizeHex(hex => {
+  memoize(hex => {
     const [L, C, H] = hexToOklch(hex)
     const lifted = Math.min(1, 0.54 + shift + 0.22 * L)
     return oklchToHex(lifted, fitChroma(lifted, Math.min(C, DARK_CHROMA_CAP), H), H)
@@ -57,7 +45,7 @@ const standardDark = (shift: number) =>
 // Light canvas: cap lightness so pale shades read on white, and cap chroma so the most vivid hues
 // don't shout. A hue already under both caps passes through untouched.
 const standardLight = (shift: number) =>
-  memoizeHex(hex => {
+  memoize(hex => {
     const [L, C, H] = hexToOklch(hex)
     const cap = 0.52 + shift
     if (L <= cap && C <= LIGHT_CHROMA_CAP) return hex
@@ -67,14 +55,14 @@ const standardLight = (shift: number) =>
 // High contrast: the band starts where a grey first reaches 4.5:1 on the canvas, gamut-fitted. New in
 // the theme engine, so no identity constraint holds it to the old clipping.
 const highDark = (start: number) =>
-  memoizeHex(hex => {
+  memoize(hex => {
     const [L, C, H] = hexToOklch(hex)
     const lifted = Math.min(1, start + 0.2 * L)
     return oklchToHex(lifted, fitChroma(lifted, Math.min(C, 0.15), H), H)
   })
 
 const highLight = (cap: number) =>
-  memoizeHex(hex => {
+  memoize(hex => {
     const [L, C, H] = hexToOklch(hex)
     if (L <= cap && C <= LIGHT_CHROMA_CAP) return hex
     const l = Math.min(L, cap)

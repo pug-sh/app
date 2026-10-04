@@ -7,27 +7,27 @@ export type Oklch = { l: number; c: number; h: number; alpha: number }
 
 const RAD = Math.PI / 180
 
+export const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
+
 export const srgbToLinear = (c: number) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
 
 export const linearToSrgb = (c: number) => {
-  const v = Math.max(0, Math.min(1, c))
+  const v = clamp01(c)
   return v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055
 }
 
 export const linearToByte = (c: number) => Math.round(linearToSrgb(c) * 255)
 
+/** Linear sRGB for a 6-digit hex. */
+const hexToLinear = (hex: string) => {
+  const n = hex.replace('#', '')
+  const channel = (i: number) => srgbToLinear(Number.parseInt(n.slice(i, i + 2), 16) / 255)
+  return [channel(0), channel(2), channel(4)] as const
+}
+
 /** `[L, C, H in radians]` — radians because the series fit was written against atan2 output. */
 export const hexToOklch = (hex: string): [number, number, number] => {
-  const n = hex.replace('#', '')
-  const r = srgbToLinear(Number.parseInt(n.slice(0, 2), 16) / 255)
-  const g = srgbToLinear(Number.parseInt(n.slice(2, 4), 16) / 255)
-  const b = srgbToLinear(Number.parseInt(n.slice(4, 6), 16) / 255)
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-  const okl = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
-  const oka = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
-  const okb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  const [okl, oka, okb] = linearToOklab(...hexToLinear(hex))
   return [okl, Math.hypot(oka, okb), Math.atan2(okb, oka)]
 }
 
@@ -95,7 +95,4 @@ export const toHex = (c: Oklch) => {
   return oklchToHex(c.l, fitChroma(c.l, c.c, H), H)
 }
 
-export const fromHex = (hex: string): Oklch => {
-  const [l, c, h] = hexToOklch(hex)
-  return { l, c, h: c < 1e-7 ? 0 : normHue(h / RAD), alpha: 1 }
-}
+export const fromHex = (hex: string) => linearToOklch(...hexToLinear(hex))

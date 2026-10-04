@@ -12,7 +12,7 @@ export type Provenance = 'explicit' | 'computed' | 'built-in'
 export type Resolved = { tokens: Record<TokenName, Oklch>; provenance: Record<TokenName, Provenance> }
 
 /** Tokens ordered so each comes after everything its formula reads. Throws on a cycle. */
-export const RESOLUTION_ORDER: TokenName[] = (() => {
+export const RESOLUTION_ORDER = (() => {
   const order: TokenName[] = []
   const state = new Map<TokenName, 'visiting' | 'done'>()
   const visit = (token: TokenName, path: TokenName[]) => {

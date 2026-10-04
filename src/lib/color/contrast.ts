@@ -1,11 +1,9 @@
-import { linearToOklch, linearToSrgb, type Oklch, srgbToLinear, toLinearRgb } from './oklch'
+import { clamp01, linearToOklch, linearToSrgb, type Oklch, srgbToLinear, toLinearRgb } from './oklch'
 
 // Every contrast decision in the theme engine goes through this file. It is WCAG 2: the apca-w3
 // package ships under a licence that restricts use. Standard targets and floors are measured per mode
 // from Pug, so WCAG's polarity-blindness never sets one mode against the other; high contrast and text
 // on filled controls use absolute levels, the same in both modes.
-
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
 /** WCAG relative luminance, from unquantised linear sRGB. */
 export const luminance = (c: Oklch) => {

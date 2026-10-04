@@ -26,8 +26,7 @@ export const BUILTINS = Object.fromEntries(
 ) as Record<BuiltinId, ThemeFamily>
 
 /** The family an unset root falls back to: Pug, or Pug High Contrast for a high-contrast family. */
-const referenceFamily = (level: Contrast): ThemeFamily =>
-  level === 'high' ? BUILTINS['pug-high-contrast'] : BUILTINS.pug
+const referenceFamily = (level: Contrast) => (level === 'high' ? BUILTINS['pug-high-contrast'] : BUILTINS.pug)
 
 export const builtinRoots = (polarity: Polarity, level: Contrast) =>
   referenceFamily(level).variants[polarity]?.colors as Record<TokenName, Oklch>

@@ -1,8 +1,7 @@
 import { composite, contrast } from '../lib/color/contrast'
-import type { Oklch } from '../lib/color/oklch'
-import { parseThemeObject } from './format'
-import { pug } from './presets/pug'
-import { solveLightness } from './solve'
+import { clamp01, type Oklch } from '../lib/color/oklch'
+import { builtinRoots } from './builtin'
+import { bisectLightness, solveLightness } from './solve'
 import { type Contrast, POLARITIES, type Polarity, TOKENS, type TokenName } from './tokens'
 
 // The token registry: how every token a theme leaves out is computed from the ones it set — VSCode's
@@ -178,22 +177,13 @@ const groundOf = (rule: Rule, get: Get) => {
 
 // ── Parameters measured from Pug ────────────────────────────────────────────────────────────────
 
-const reference = (() => {
-  const parsed = parseThemeObject(pug)
-  if (!parsed.ok) throw new Error('registry: the Pug preset does not parse')
-  const out = {} as Record<Polarity, Record<TokenName, Oklch>>
-  for (const polarity of ['light', 'dark'] as const) {
-    out[polarity] = parsed.family.variants[polarity]?.colors as Record<TokenName, Oklch>
-  }
-  return out
-})()
-
 type Params = { l: number; dl: number; c: number; h: number; alpha: number; target: number; chromaRatio: number }
 
-const measure = (token: TokenName, rule: Rule, polarity: Polarity): Params => {
-  const pugGet: Get = t => reference[polarity][t]
-  const self = reference[polarity][token]
-  const params: Params = { l: self.l, dl: 0, c: self.c, h: self.h, alpha: self.alpha, target: 0, chromaRatio: 1 }
+const measure = (token: TokenName, rule: Rule, polarity: Polarity) => {
+  const pug = builtinRoots(polarity, 'standard')
+  const pugGet: Get = t => pug[t]
+  const self = pug[token]
+  const params = { l: self.l, dl: 0, c: self.c, h: self.h, alpha: self.alpha, target: 0, chromaRatio: 1 }
   if (rule.f === 'shift') {
     const base = pugGet(rule.base)
     params.dl = self.l - base.l
@@ -206,27 +196,15 @@ const measure = (token: TokenName, rule: Rule, polarity: Polarity): Params => {
   return params
 }
 
-const PARAMS = (() => {
-  const out = { light: {}, dark: {} } as Record<Polarity, Partial<Record<TokenName, Params>>>
-  for (const polarity of ['light', 'dark'] as const) {
-    for (const token of TOKENS) out[polarity][token] = measure(token, ruleFor(token, polarity, 'standard'), polarity)
-  }
-  return out
-})()
+const PARAMS = Object.fromEntries(
+  POLARITIES.map(polarity => [
+    polarity,
+    Object.fromEntries(TOKENS.map(token => [token, measure(token, ruleFor(token, polarity, 'standard'), polarity)])),
+  ]),
+) as Record<Polarity, Record<TokenName, Params>>
 
-// solveLightness for the worst hue: bisect on the minimum contrast across IDENTITY_HUES.
-const solveIdentityInk = (surface: Oklch, polarity: Polarity, target: number, c: number) => {
-  const at = (l: number) => identityContrast({ l, c, h: 0, alpha: 1 }, surface)
-  let near = surface.l
-  let far = polarity === 'dark' ? 1 : 0
-  if (at(far) <= target) return far
-  for (let i = 0; i < 40; i++) {
-    const mid = (near + far) / 2
-    if (at(mid) < target) near = mid
-    else far = mid
-  }
-  return far
-}
+// Whichever of two inks reads better on a ground — the first on a tie.
+const higherContrast = (a: Oklch, b: Oklch, ground: Oklch) => (contrast(a, ground) >= contrast(b, ground) ? a : b)
 
 // A grey ground has no hue to lend, so its inks keep Pug's — otherwise they'd take hue 0, a red cast.
 const hueOf = (ground: Oklch, p: Params) => (ground.c < 0.002 ? p.h : ground.h)
@@ -234,7 +212,7 @@ const hueOf = (ground: Oklch, p: Params) => (ground.c < 0.002 ? p.h : ground.h)
 /** Evaluates one computed token. `get` returns tokens already resolved this pass. */
 export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, get: Get): Oklch => {
   const rule = ruleFor(token, polarity, level)
-  const p = PARAMS[polarity][token] as Params
+  const p = PARAMS[polarity][token]
   const target = (tier: Tier) => (level === 'high' ? Math.max(HIGH_TARGETS[tier], p.target * 1.15) : p.target)
   switch (rule.f) {
     case 'root':
@@ -243,7 +221,7 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
       return get(rule.of)
     case 'shift': {
       const base = get(rule.base)
-      const l = Math.max(0, Math.min(1, base.l + p.dl))
+      const l = clamp01(base.l + p.dl)
       if (rule.absoluteChroma) return { l, c: p.c, h: p.h, alpha: 1 }
       return { l, c: base.c * p.chromaRatio, h: base.h, alpha: 1 }
     }
@@ -251,7 +229,11 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
       const ground = get(rule.ground)
       let goal = target(rule.tier)
       if (rule.capToBody) goal = Math.min(goal, contrast(get('foreground'), get('background')))
-      if (rule.allHues) return { l: solveIdentityInk(ground, polarity, goal, p.c), c: p.c, h: ground.h, alpha: 1 }
+      if (rule.allHues) {
+        // Solved for the worst hue: chips swap in the name's hue at render.
+        const worst = (l: number) => identityContrast({ l, c: p.c, h: 0, alpha: 1 }, ground)
+        return { l: bisectLightness(ground.l, polarity, goal, worst), c: p.c, h: ground.h, alpha: 1 }
+      }
       const h = hueOf(ground, p)
       return { l: solveLightness(ground, polarity, goal, p.c, h), c: p.c, h, alpha: 1 }
     }
@@ -271,17 +253,13 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
       const fill = get(rule.fill)
       const light = level === 'high' ? { l: 1, c: 0 } : { l: p.l, c: p.c }
       const dark = BLACK_ON_FILL
-      const candidates = [light, dark].map(x => ({ l: x.l, c: x.c, h: fill.h, alpha: 1 }))
-      return contrast(candidates[0], fill) >= contrast(candidates[1], fill) ? candidates[0] : candidates[1]
+      const [first, second] = [light, dark].map(x => ({ l: x.l, c: x.c, h: fill.h, alpha: 1 }))
+      return higherContrast(first, second, fill)
     }
     case 'translucent':
       return { l: p.l, c: p.c, h: hueOf(get(rule.ground), p), alpha: p.alpha }
-    case 'pick': {
-      const cell = get(rule.cell)
-      const a = get(rule.a)
-      const b = get(rule.b)
-      return contrast(a, cell) >= contrast(b, cell) ? a : b
-    }
+    case 'pick':
+      return higherContrast(get(rule.a), get(rule.b), get(rule.cell))
   }
 }
 

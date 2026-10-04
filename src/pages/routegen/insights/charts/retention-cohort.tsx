@@ -23,6 +23,12 @@ const HEAT_THRESHOLDS = [10, 20, 35, 50, 65, 80]
 
 export const heatStop = (value: number) => 1 + HEAT_THRESHOLDS.filter(min => value >= min).length
 
+// A cohort cell with no value yet: a faint well, not a heat step.
+const EMPTY_CELL_STYLE = {
+  backgroundColor: 'color-mix(in oklab, var(--muted) 35%, transparent)',
+  color: 'var(--muted-foreground)',
+}
+
 export const heatStyle = (value: number) => {
   const stop = heatStop(value)
   return { backgroundColor: `var(--heat-${stop})`, color: `var(--heat-${stop}-ink)` }
@@ -120,14 +126,7 @@ export const RetentionCohort = ({
                     <td key={ci} className="py-1.5 px-1.5">
                       <div
                         className="h-8 rounded-[6px] text-xs tabular-nums flex items-center justify-end px-2"
-                        style={
-                          hasValue
-                            ? heatStyle(value)
-                            : {
-                                backgroundColor: 'color-mix(in oklab, var(--muted) 35%, transparent)',
-                                color: 'var(--muted-foreground)',
-                              }
-                        }
+                        style={hasValue ? heatStyle(value) : EMPTY_CELL_STYLE}
                         title={title}
                       >
                         {hasValue ? `${Math.round(value)}%` : '—'}

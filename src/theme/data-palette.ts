@@ -1,4 +1,4 @@
-import { fromHex, type Oklch, toHex } from '../lib/color/oklch'
+import { clamp01, fromHex, type Oklch, toHex } from '../lib/color/oklch'
 import { fitFor } from './fit'
 import type { DataSpec } from './format'
 import { type Contrast, GROUPS, type GroupName, type Polarity } from './tokens'
@@ -374,7 +374,7 @@ export const moveHex = (memberHex: string, anchorHex: string, target: Oklch) => 
   const anchor = fromHex(anchorHex)
   const k = target.c / Math.max(anchor.c, 1e-6)
   return toHex({
-    l: Math.max(0, Math.min(1, member.l + (target.l - anchor.l))),
+    l: clamp01(member.l + (target.l - anchor.l)),
     c: member.c * k,
     h: member.h + (target.h - anchor.h),
     alpha: 1,

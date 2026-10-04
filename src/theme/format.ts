@@ -8,6 +8,7 @@ import {
   type GroupName,
   isGroupName,
   isTokenName,
+  POLARITIES,
   type Polarity,
   SURFACES,
   TOKENS,
@@ -202,7 +203,7 @@ export const parseThemeObject = (input: unknown): ParseResult => {
   }
 
   const variants: Partial<Record<Polarity, Variant>> = {}
-  for (const polarity of ['light', 'dark'] as const) {
+  for (const polarity of POLARITIES) {
     const source = file.variants[polarity]
     if (source) variants[polarity] = parseVariant(source, `variants.${polarity}`, issues)
   }

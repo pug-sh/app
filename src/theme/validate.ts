@@ -43,7 +43,7 @@ export const FILL_PAIRS: [TokenName, TokenName][] = [
   ['destructive-foreground', 'destructive'],
   ['sidebar-primary-foreground', 'sidebar-primary'],
 ]
-const BLACK: Oklch = { l: 0, c: 0, h: 0, alpha: 1 }
+const BLACK = { l: 0, c: 0, h: 0, alpha: 1 }
 
 export type Floors = {
   v2: Record<string, number>
@@ -149,6 +149,13 @@ const dataColors = (data: CompiledDataPalette) => [
 
 const minOf = (values: number[]) => Math.min(...values)
 
+// Each ratio is measured one way, shared by the floor generator and the rules, so the two can't drift.
+const HEAT_STOPS = [1, 2, 3, 4, 5, 6, 7] as const
+const heatRatio = (t: Record<TokenName, Oklch>, n: (typeof HEAT_STOPS)[number]) =>
+  contrast(t[`heat-${n}-ink`], t[`heat-${n}`])
+const dataRatio = (hex: string, canvas: Oklch) => contrast(fromHex(hex), canvas)
+const avatarRatio = (hex: string) => contrast(BLACK, fromHex(hex))
+
 // Pug's ratio less 10%, capped at 7:1 — past AAA, more contrast is taste, not legibility, and a
 // lighter canvas can't always reach what Pug's does.
 const floor90 = (ratio: number) => Math.min(7, Math.floor(ratio * 0.9 * 100) / 100)
@@ -165,17 +172,11 @@ export const measureFloors = (s: Subject): Floors => {
   const identityInk = s.tokens['identity-ink']
   return {
     v2,
-    data: floor90(minOf(dataColors(s.data).map(hex => contrast(fromHex(hex), s.tokens.background)))),
-    avatars: floor90(minOf(s.data.avatars.map(hex => contrast(BLACK, fromHex(hex))))),
+    data: floor90(minOf(dataColors(s.data).map(hex => dataRatio(hex, s.tokens.background)))),
+    avatars: floor90(minOf(s.data.avatars.map(avatarRatio))),
     // Chips are aria-hidden initials — AA is the bar, even where Pug clears more.
     identity: Math.min(4.5, floor90(identityContrast(identityInk, surface))),
-    heat: floor90(
-      minOf(
-        [1, 2, 3, 4, 5, 6, 7].map(n =>
-          contrast(s.tokens[`heat-${n}-ink` as TokenName], s.tokens[`heat-${n}` as TokenName]),
-        ),
-      ),
-    ),
+    heat: floor90(minOf(HEAT_STOPS.map(n => heatRatio(s.tokens, n)))),
   }
 }
 
@@ -247,14 +248,14 @@ export const validateTheme = (s: Subject): Issue[] => {
   // V7 — every fitted data colour reads against the canvas.
   const dataFloor = high ? Math.max(HIGH.data, floors.data) : floors.data
   for (const hex of new Set(dataColors(s.data))) {
-    const measured = contrast(fromHex(hex), t.background)
+    const measured = dataRatio(hex, t.background)
     if (measured < dataFloor)
       warn('V7', 'data', `data colour ${hex} is ${ratio(measured)} on the canvas; needs ${ratio(dataFloor)}`)
   }
 
   // V8 — avatar discs carry DiceBear's black line art.
   for (const hex of s.data.avatars) {
-    const measured = contrast(BLACK, fromHex(hex))
+    const measured = avatarRatio(hex)
     if (measured < floors.avatars)
       warn('V8', 'data.avatars', `avatar ${hex} is ${ratio(measured)} under black line art`)
   }
@@ -271,8 +272,8 @@ export const validateTheme = (s: Subject): Issue[] => {
 
   // V10 — heatmap cell text.
   const heatFloor = high ? Math.max(HIGH.heat, floors.heat) : floors.heat
-  for (let n = 1; n <= 7; n++) {
-    const measured = contrast(t[`heat-${n}-ink` as TokenName], t[`heat-${n}` as TokenName])
+  for (const n of HEAT_STOPS) {
+    const measured = heatRatio(t, n)
     if (measured < heatFloor)
       warn('V10', `heat-${n}-ink`, `heat-${n}-ink is ${ratio(measured)}; needs ${ratio(heatFloor)}`)
   }

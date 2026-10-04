@@ -1,4 +1,4 @@
-import { linearToOklab, type Oklch, toLinearRgb } from './oklch'
+import { clamp01, linearToOklab, type Oklch, toLinearRgb } from './oklch'
 
 // Colour-vision-deficiency simulation (Machado, Oliveira & Fernandes 2009, severity 1.0), applied in
 // linear sRGB. Used by the colourblind-safe preset's acceptance test.
@@ -10,8 +10,6 @@ const MACHADO: Record<Deficiency, number[]> = {
   deutan: [0.367322, 0.860646, -0.227968, 0.280085, 0.672501, 0.047413, -0.01182, 0.04294, 0.968881],
   tritan: [1.255528, -0.076749, -0.178779, -0.078411, 0.930809, 0.147602, 0.004733, 0.691367, 0.3039],
 }
-
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 
 const oklabOf = (c: Oklch, kind?: Deficiency) => {
   const [r, g, b] = toLinearRgb(c).map(clamp01)
