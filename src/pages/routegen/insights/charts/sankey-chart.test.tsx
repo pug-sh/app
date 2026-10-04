@@ -1,5 +1,8 @@
-import { fireEvent, render } from '@testing-library/react'
+import { act, fireEvent, render } from '@testing-library/react'
+import { createStore, Provider } from 'jotai'
 import { describe, expect, it } from 'vitest'
+import { compiledThemeAtom, installedThemesAtom, themeModeAtom, themeSelectionAtom } from '@/data/theme.atoms'
+import { setSeriesPalette } from '@/lib/event-colors'
 import type { SankeyGraph } from '../user-flow'
 import { SankeyChart } from './sankey-chart'
 
@@ -127,5 +130,43 @@ describe('SankeyChart accessibility', () => {
     const { container } = render(<SankeyChart data={single} />)
 
     expect(container.querySelector('svg')?.getAttribute('aria-label')).toBe('User flow: 1 transition across 2 steps')
+  })
+})
+
+// A dark theme whose breakdown palette differs from Pug's — path names hash into it.
+const EMBER = {
+  id: 'installed-ember',
+  text: JSON.stringify({
+    version: 1,
+    name: 'Ember',
+    variants: { dark: { data: { categorical: ['#ff5f5f', '#ffaf00', '#5fd7ff'] } } },
+  }),
+  hash: 'ember',
+  installedAt: 0,
+  source: 'file' as const,
+}
+
+// Two dark themes share a polarity, so node colours cached on anything but the theme revision stay
+// on the first theme's palette.
+describe('SankeyChart colours', () => {
+  it('re-colours its nodes when switching between two dark themes', () => {
+    const store = createStore()
+    store.set(themeModeAtom, 'dark')
+    setSeriesPalette(store.get(compiledThemeAtom).data)
+    const { container } = render(
+      <Provider store={store}>
+        <SankeyChart data={WHOLE} />
+      </Provider>,
+    )
+    const fill = () => container.querySelectorAll('rect')[0].getAttribute('fill')
+    const pugDark = fill()
+
+    act(() => {
+      store.set(installedThemesAtom, [EMBER])
+      store.set(themeSelectionAtom, { light: 'pug', dark: EMBER.id })
+      setSeriesPalette(store.get(compiledThemeAtom).data)
+    })
+
+    expect(fill()).not.toBe(pugDark)
   })
 })
