@@ -9,7 +9,7 @@ import LoadingSpinner from '@/components/loading-spinner'
 import { OptionChip } from '@/components/option-chip'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeOrgAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
 import { rpcErrorMessage, toastRPCError } from '@/lib/rpc-error'
 import { toProtoTimeRange, tsToDate, validDate } from '@/lib/timestamp'
@@ -142,7 +142,7 @@ const Usage = () => {
   const projects = useAtomValue(projectsAtom)
   const projectsLoaded = useAtomValue(projectsLoadedAtom)
   const usageRPC = useAtomValue(usageRPCAtom)
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  const themeRevision = useAtomValue(themeRevisionAtom)
 
   const [rangeDays, setRangeDays] = useState<RangeDays>(DEFAULT_RANGE_DAYS)
   const [loaded, setLoaded] = useState<Loaded | null>(null)
@@ -232,9 +232,9 @@ const Usage = () => {
     )
   }, [series.malformed, series.outOfWindow, series.rejected, org])
 
-  // resolvedTheme: getIndexedColor reads a module-level scheme the theme toggle mutates, which
-  // can't invalidate a memo on its own.
-  const seriesColors = useMemo(() => usageSeriesColors(series.names), [series.names, resolvedTheme])
+  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
+  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  const seriesColors = useMemo(() => usageSeriesColors(series.names), [series.names, themeRevision])
 
   if (!loaded) {
     if (!error) return <LoadingSpinner />

@@ -37,7 +37,7 @@ vi.mock('@visx/responsive', () => ({
 }))
 
 const { activeOrgAtom, commitProjectsAtom, projectsAtom } = await import('@/data/workspace.atoms')
-const { themeModeAtom } = await import('@/data/theme.atoms')
+const { compiledThemeAtom, installedThemesAtom, themeModeAtom, themeSelectionAtom } = await import('@/data/theme.atoms')
 const { setSeriesPalette } = await import('@/lib/event-colors')
 const { compileDataPalette } = await import('@/theme/data-palette')
 const { PUG_CANVAS } = await import('@/theme/fit')
@@ -470,7 +470,7 @@ describe('Usage page — theme', () => {
   // theme toggle mutates, and a module mutation cannot invalidate a useMemo. Both halves below are
   // required and that is exactly the point — flipping the scheme alone leaves the memo holding
   // stale colours, flipping the atom alone recomputes the identical values, and only listing
-  // resolvedTheme in the deps makes the two agree.
+  // themeRevision in the deps makes the two agree.
   it('re-colours the breakdown when the theme flips', async () => {
     getUsage.mockResolvedValueOnce(usage([day(recent(), 'p1', 10)]))
 
@@ -487,6 +487,40 @@ describe('Usage page — theme', () => {
     })
 
     expect(dot()).not.toBe(light)
+  })
+
+  // Two dark themes share a polarity, so a memo keyed on light/dark never sees the switch.
+  it('re-colours the breakdown when switching between two dark themes', async () => {
+    getUsage.mockResolvedValueOnce(usage([day(recent(), 'p1', 10)]))
+
+    const { container, store } = mount()
+    await screen.findByText(/10 events over the last 30 days/)
+
+    const dot = () => (container.querySelector('tbody tr td span span[style]') as HTMLElement).style.backgroundColor
+    act(() => {
+      store.set(themeModeAtom, 'dark')
+      setSeriesPalette(store.get(compiledThemeAtom).data)
+    })
+    const pugDark = dot()
+
+    const ember = {
+      id: 'installed-ember',
+      text: JSON.stringify({
+        version: 1,
+        name: 'Ember',
+        variants: { dark: { data: { categorical: ['#ff5f5f', '#ffaf00', '#5fd7ff'] } } },
+      }),
+      hash: 'ember',
+      installedAt: 0,
+      source: 'file' as const,
+    }
+    act(() => {
+      store.set(installedThemesAtom, [ember])
+      store.set(themeSelectionAtom, { light: 'pug', dark: ember.id })
+      setSeriesPalette(store.get(compiledThemeAtom).data)
+    })
+
+    expect(dot()).not.toBe(pugDark)
   })
 })
 

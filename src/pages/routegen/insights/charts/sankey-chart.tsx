@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { themeRevisionAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import type { SankeyChartData } from '../user-flow'
@@ -74,9 +74,9 @@ export const SankeyChart = ({
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [edges, setEdges] = useState({ above: false, below: false })
   const [hovered, setHovered] = useState<Hover | null>(null)
-  // Series colors are theme-adapted, and a module mutation can't invalidate a useMemo —
-  // subscribe so the palettes below re-derive on a theme toggle.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
+  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  const themeRevision = useAtomValue(themeRevisionAtom)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -185,11 +185,11 @@ export const SankeyChart = ({
 
   const nodeColors = useMemo(
     () => layout.nodes.map(node => getSeriesColor(node.name).line),
-    [layout.nodes, resolvedTheme],
+    [layout.nodes, themeRevision],
   )
   const linkColors = useMemo(
     () => layout.links.map(link => getSeriesColor(link.sourceName).line),
-    [layout.links, resolvedTheme],
+    [layout.links, themeRevision],
   )
 
   const depths = layout.nodes.map(node => node.stepDepth)

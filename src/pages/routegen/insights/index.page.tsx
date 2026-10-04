@@ -21,7 +21,7 @@ import NoProject from '@/components/no-project'
 import { OptionChip } from '@/components/option-chip'
 import { ShareChartButton } from '@/components/share-chart-button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeProjectAtom, activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { useDebouncedQuery } from '@/hooks/use-debounced-query'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
@@ -113,9 +113,9 @@ const Insights = () => {
   const schema = useAtomValue(filterSchemaAtom)
   const schemaError = useAtomValue(filterSchemaErrorAtom)
   const fetchSchema = useSetAtom(fetchFilterSchemaAtom)
-  // Series colors are theme-adapted (see event-colors.ts). Subscribe so a theme
-  // toggle re-renders and re-derives the memoized palettes below.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
+  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  const themeRevision = useAtomValue(themeRevisionAtom)
   const initialFilterState = useMemo(() => readFilterQueryParams(), [])
 
   useEffect(() => {
@@ -428,7 +428,7 @@ const Insights = () => {
       // Breakdown funnels: distinct color per split (see getIndexedColor).
       color: getIndexedColor(si).dot,
     }))
-  }, [funnelSeriesList, kindOrder, resolvedTheme])
+  }, [funnelSeriesList, kindOrder, themeRevision])
 
   const retentionLabels = useMemo(
     () => disambiguateLabels(retentionSeriesList.map((s, si) => breakdownLabel(s.breakdown, `Series ${si + 1}`))),
@@ -455,7 +455,7 @@ const Insights = () => {
       )
     }
     return seriesNames.map((name, i) => getSeriesColor(name, i))
-  }, [result.case, trendSeries, seriesNames, resolvedTheme])
+  }, [result.case, trendSeries, seriesNames, themeRevision])
 
   const seriesAggregations = useMemo(() => {
     if (result.case !== 'trends') return []
