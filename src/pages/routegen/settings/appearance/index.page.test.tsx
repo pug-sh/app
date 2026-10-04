@@ -58,6 +58,15 @@ describe('Settings → Appearance', () => {
     }
   })
 
+  // A pressed swatch used to differ from the rest by one pixel of border colour — the one cue the
+  // colourblind and high-contrast themes' own users are least able to see. It carries a mark too.
+  it('marks the selected swatch with more than colour', () => {
+    mount()
+    const row = screen.getByRole('group', { name: 'Light theme' })
+    expect(within(row).getByRole('button', { name: 'Pug' }).querySelector('.lucide-check')).not.toBeNull()
+    expect(within(row).getByRole('button', { name: 'Pug High Contrast' }).querySelector('.lucide-check')).toBeNull()
+  })
+
   it('installs a clean file, lists it, and selects it for its mode', async () => {
     const store = mount()
     pick(grape)

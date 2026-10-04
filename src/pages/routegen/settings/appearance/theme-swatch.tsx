@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { compileVariant } from '@/theme/compile'
@@ -29,7 +30,9 @@ const ThemeSwatch = ({
       onClick={onSelect}
       className={cn(
         'flex w-36 flex-col gap-2 rounded-lg border p-1.5 text-left transition-colors',
-        selected ? 'border-ring' : 'border-border hover:border-muted-foreground/50',
+        // Selected reads by shape as well as colour — a heavier ring and a check — since this page is
+        // where colourblind and high-contrast readers come to pick a theme.
+        selected ? 'border-ring ring-1 ring-ring' : 'border-border hover:border-muted-foreground/50',
       )}
     >
       <span aria-hidden className="flex h-20 rounded-md p-2" style={{ background: vars['--background'] }}>
@@ -44,7 +47,10 @@ const ThemeSwatch = ({
           </span>
         </span>
       </span>
-      <span className="truncate px-0.5 text-xs font-medium">{entry.name}</span>
+      <span className="flex items-center gap-1 px-0.5 text-xs font-medium">
+        {selected && <Check className="size-3 shrink-0" />}
+        <span className="truncate">{entry.name}</span>
+      </span>
     </button>
   )
 }
