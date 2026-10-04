@@ -1,6 +1,6 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { Trash2, Upload } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import {
   themeLibraryAtom,
 } from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
-import { MAX_THEME_BYTES } from '@/theme/format'
+import { type Issue, MAX_THEME_BYTES } from '@/theme/format'
 import { checkInstall, type InstallCheck, type LibraryEntry } from '@/theme/library'
 import { POLARITIES } from '@/theme/tokens'
 
@@ -29,19 +29,35 @@ const HEADER = 'py-2 text-left text-xs font-medium text-muted-foreground upperca
 const modesOf = (entry: LibraryEntry) =>
   entry.family ? POLARITIES.filter(p => entry.family?.variants[p]).join(' · ') : '—'
 
-const ChecksCell = ({ entry }: { entry: LibraryEntry }) => {
-  if (!entry.family) {
-    const errors = entry.issues.filter(i => i.severity === 'error').map(i => i.message)
-    return (
-      <span className="text-negative" title={errors.join('\n')}>
-        Can’t be used
-      </span>
-    )
-  }
+// What a theme's checks come to, for its row: null when it passed cleanly.
+const checksLabel = (entry: LibraryEntry) => {
+  if (!entry.family) return 'Can’t be used'
   const warnings = entry.issues.filter(i => i.severity === 'warning').length
-  if (warnings === 0) return <span className="text-muted-foreground">Passed</span>
-  return <span className="text-caution">{warnings === 1 ? '1 warning' : `${warnings} warnings`}</span>
+  if (warnings === 0) return null
+  return warnings === 1 ? '1 warning' : `${warnings} warnings`
 }
+
+// What a file's warnings are about. An ignored key is not a contrast problem — telling someone a
+// file with a typo'd key "may be hard to read" installs it as a copy of Pug.
+const warningSummary = (issues: Issue[]) => {
+  const lines: string[] = []
+  if (issues.some(issue => issue.rule !== 'V12')) {
+    lines.push('This theme has warnings. It still works, but some colours may be hard to read.')
+  }
+  if (issues.some(issue => issue.rule === 'V12')) lines.push('Parts of this file were ignored — they’re listed below.')
+  return lines.join(' ')
+}
+
+const IssueList = ({ issues }: { issues: Issue[] }) => (
+  <ul className="space-y-1 text-xs">
+    {issues.map((issue, i) => (
+      <li key={i} className={issue.severity === 'error' ? 'text-negative' : 'text-caution'}>
+        {issue.path && <span className="font-mono">{issue.path}: </span>}
+        {issue.message}
+      </li>
+    ))}
+  </ul>
+)
 
 // Confirmation by button state, not a dialog: the first click arms it, the second removes.
 const RemoveButton = ({ onRemove }: { onRemove: () => void }) => {
@@ -76,21 +92,8 @@ const InstallReport = ({
   const { check } = pending
   return (
     <div className="mt-4 space-y-2" role="status">
-      <p className="text-sm">
-        {check.ok
-          ? 'This theme has warnings. It still works, but some colours may be hard to read.'
-          : REFUSAL[check.reason]}
-      </p>
-      {check.issues.length > 0 && (
-        <ul className="space-y-1 text-xs">
-          {check.issues.map((issue, i) => (
-            <li key={i} className={issue.severity === 'error' ? 'text-negative' : 'text-caution'}>
-              {issue.path && <span className="font-mono">{issue.path}: </span>}
-              {issue.message}
-            </li>
-          ))}
-        </ul>
-      )}
+      <p className="text-sm">{check.ok ? warningSummary(check.issues) : REFUSAL[check.reason]}</p>
+      {check.issues.length > 0 && <IssueList issues={check.issues} />}
       <div className="flex gap-2">
         {check.ok && (
           <Button size="sm" onClick={onInstall}>
@@ -112,6 +115,8 @@ const InstalledThemes = () => {
   const remove = useSetAtom(removeThemeAtom)
   const fileRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<Pending | null>(null)
+  // The row whose issues are open — expanded in place, one at a time.
+  const [openId, setOpenId] = useState<string | null>(null)
 
   const commit = (text: string) => {
     const result = install(text)
@@ -156,25 +161,52 @@ const InstalledThemes = () => {
             </tr>
           </thead>
           <tbody>
-            {entries.map(entry => (
-              <tr key={entry.id} className="group border-b border-border/50 transition-colors hover:bg-muted/40">
-                <td className="py-2 text-sm">
-                  {entry.name}
-                  {entry.author && <span className="text-muted-foreground"> · {entry.author}</span>}
-                </td>
-                <td className="py-2 text-xs text-muted-foreground">{modesOf(entry)}</td>
-                <td className="py-2 text-xs">
-                  <ChecksCell entry={entry} />
-                </td>
-                <td className="py-2 text-right">
-                  <RemoveButton
-                    onRemove={() => {
-                      if (!remove(entry.id)) toast.error(STORAGE_REFUSED)
-                    }}
-                  />
-                </td>
-              </tr>
-            ))}
+            {entries.map(entry => {
+              const label = checksLabel(entry)
+              const open = openId === entry.id
+              return (
+                <Fragment key={entry.id}>
+                  <tr className="group border-b border-border/50 transition-colors hover:bg-muted/40">
+                    <td className="py-2 text-sm">
+                      {entry.name}
+                      {entry.author && <span className="text-muted-foreground"> · {entry.author}</span>}
+                    </td>
+                    <td className="py-2 text-xs text-muted-foreground">{modesOf(entry)}</td>
+                    <td className="py-2 text-xs">
+                      {label === null && <span className="text-muted-foreground">Passed</span>}
+                      {label !== null && (
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={`theme-issues-${entry.id}`}
+                          onClick={() => setOpenId(open ? null : entry.id)}
+                          className={cn(
+                            'underline-offset-4 hover:underline',
+                            entry.family ? 'text-caution' : 'text-negative',
+                          )}
+                        >
+                          {label}
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">
+                      <RemoveButton
+                        onRemove={() => {
+                          if (!remove(entry.id)) toast.error(STORAGE_REFUSED)
+                        }}
+                      />
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr id={`theme-issues-${entry.id}`} className="border-b border-border/50">
+                      <td colSpan={4} className="pt-1 pb-3">
+                        <IssueList issues={entry.issues} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       )}

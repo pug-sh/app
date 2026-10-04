@@ -157,4 +157,25 @@ describe('Settings → Appearance', () => {
     const row = screen.getByRole('group', { name: 'Dark theme' }).parentElement as HTMLElement
     expect(within(row).getByText(/Midnight can’t be used/)).toBeTruthy()
   })
+
+  // An ignored key is not a contrast problem. A file whose only issue is a typo'd key used to be
+  // offered with "some colours may be hard to read" — and installed as a copy of Pug.
+  it('tells ignored keys apart from colours that may be hard to read', async () => {
+    mount()
+    pick(JSON.stringify({ version: 1, name: 'Typo', variants: { dark: { colours: { background: '#1e1b2e' } } } }))
+    expect(await screen.findByText(/were ignored/)).toBeTruthy()
+    expect(screen.queryByText(/hard to read/)).toBeNull()
+  })
+
+  // The table's check used to be a bare count, or an error behind a tooltip. Either is readable now.
+  it("opens an installed theme's warnings in place", async () => {
+    mount()
+    pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Install anyway' }))
+    const toggle = await screen.findByRole('button', { name: /warnings?$/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(within(screen.getByRole('table')).getByText(/foreground on background is/)).toBeTruthy()
+  })
 })
