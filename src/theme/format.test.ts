@@ -62,7 +62,7 @@ describe('parseThemeObject', () => {
   })
 
   it('strips control and direction-override characters from metadata', () => {
-    const result = parseThemeObject({ ...minimal, name: 'Pug‮ (official)', author: 'a\u0007b' })
+    const result = parseThemeObject({ ...minimal, name: 'Pug\u202e (official)', author: 'a\u0007b' })
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.family.name).toBe('Pug (official)')

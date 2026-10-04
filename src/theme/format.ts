@@ -119,7 +119,7 @@ export const authoringSchema = (() => {
 const MIGRATIONS: Record<number, (input: Record<string, unknown>) => Record<string, unknown>> = {}
 
 // C0/C1 controls and bidi overrides — a theme name must not be able to reorder the text around it.
-const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g
+const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g
 
 const KNOWN = {
   root: ['$schema', 'version', 'name', 'author', 'description', 'contrast', 'variants', 'seeds'],
