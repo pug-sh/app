@@ -9,7 +9,8 @@ import type { Contrast, Polarity, TokenName } from './tokens'
 // sets see-through; here V5 catches an input the registry derived from a see-through line. Standard
 // floors are Pug's own measured ratio less 10%, pinned below as constants so retuning Pug forces a
 // deliberate floor update — the floors test re-measures them. High-contrast floors are the spec's APCA
-// Lc 90 / 75 / 60 in WCAG terms (12 / 7 / 4.5), with 7:1 text on fills and 3:1 for lines and data.
+// Lc 90 / 75 / 60 in WCAG terms (12 / 7 / 4.5), with 7:1 text on fills and 3:1 for lines and data —
+// and never below the standard floor, where that asks for more.
 
 type Ground = TokenName | 'syntax'
 type InkClass = 'body' | 'secondary' | 'faint'
@@ -249,7 +250,7 @@ export const validateTheme = (s: Subject): Issue[] => {
   }
 
   // V7 — every fitted data colour reads against the canvas.
-  const dataFloor = high ? HIGH.data : floors.data
+  const dataFloor = high ? Math.max(HIGH.data, floors.data) : floors.data
   for (const hex of new Set(dataColors(s.data))) {
     const measured = contrast(fromHex(hex), t.background)
     if (measured < dataFloor)
@@ -264,7 +265,7 @@ export const validateTheme = (s: Subject): Issue[] => {
   }
 
   // V9 — name chips, at every hue a name can hash to.
-  const identityFloor = high ? HIGH.identity : floors.identity
+  const identityFloor = high ? Math.max(HIGH.identity, floors.identity) : floors.identity
   for (const h of IDENTITY_HUES) {
     const measured = contrast({ ...t['identity-ink'], h }, { ...t['identity-surface'], h })
     if (measured < identityFloor) {
@@ -274,7 +275,7 @@ export const validateTheme = (s: Subject): Issue[] => {
   }
 
   // V10 — heatmap cell text.
-  const heatFloor = high ? HIGH.heat : floors.heat
+  const heatFloor = high ? Math.max(HIGH.heat, floors.heat) : floors.heat
   for (let n = 1; n <= 7; n++) {
     const measured = contrast(t[`heat-${n}-ink` as TokenName], t[`heat-${n}` as TokenName])
     if (measured < heatFloor)

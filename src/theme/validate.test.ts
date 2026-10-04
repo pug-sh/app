@@ -102,3 +102,18 @@ describe('partial themes across canvases', () => {
     expect(failures).toEqual([])
   })
 })
+
+// High contrast is meant to ask for more than standard everywhere. Its own level for data colours
+// is 3:1, below what standard asks on Pug's canvases (3.7:1 light), so it has to take the higher.
+it('never checks a high-contrast theme more leniently than a standard one', () => {
+  // Greys at about 3.4:1 on white: past 3:1, short of standard's 3.7:1.
+  const greys = { categorical: ['#8a8a8a', '#898989', '#8b8b8b'] }
+  const file = (contrast: 'standard' | 'high'): ThemeFile => ({
+    version: 1,
+    name: 'test',
+    contrast,
+    variants: { light: { colors: { background: '#ffffff' }, data: greys } },
+  })
+  expect(rules(file('standard'))).toContain('V7')
+  expect(rules(file('high'))).toContain('V7')
+})
