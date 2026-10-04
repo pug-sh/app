@@ -123,3 +123,10 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
     })
   }
 })
+
+/** Chooses the theme for one mode and reports which — a built-in by id, anything installed as 'custom'. */
+export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity; id: string }) => {
+  set(themeSelectionAtom, { ...get(themeSelectionAtom), [polarity]: id })
+  const builtin = get(themeLibraryAtom).some(entry => entry.id === id && entry.builtin)
+  trackEvent('theme_selected', { theme: builtin ? id : 'custom', mode: polarity })
+})

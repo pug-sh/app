@@ -1,0 +1,88 @@
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { Monitor, Moon, Sun } from 'lucide-react'
+import SectionHeader from '@/components/section-header'
+import { Switch } from '@/components/ui/switch'
+import {
+  autoContrastAtom,
+  selectThemeAtom,
+  type ThemeMode,
+  themeLibraryAtom,
+  themeModeAtom,
+  themeSelectionAtom,
+} from '@/data/theme.atoms'
+import { cn } from '@/lib/utils'
+import { POLARITIES } from '@/theme/tokens'
+import InstalledThemes from './installed-themes'
+import ThemeSwatch from './theme-swatch'
+
+const MODES: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+]
+
+const ROW_TITLE = { light: 'Light theme', dark: 'Dark theme' } as const
+
+const Appearance = () => {
+  const [mode, setMode] = useAtom(themeModeAtom)
+  const [autoContrast, setAutoContrast] = useAtom(autoContrastAtom)
+  const selection = useAtomValue(themeSelectionAtom)
+  const library = useAtomValue(themeLibraryAtom)
+  const selectTheme = useSetAtom(selectThemeAtom)
+
+  return (
+    <div className="max-w-3xl space-y-8">
+      <section>
+        <SectionHeader title="Mode" />
+        <div className="inline-flex rounded-lg border border-border p-0.5">
+          {MODES.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={mode === value}
+              onClick={() => setMode(value)}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                mode === value ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Icon className="size-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {POLARITIES.map(polarity => (
+        <section key={polarity}>
+          <SectionHeader title={ROW_TITLE[polarity]} />
+          <div className="flex flex-wrap gap-3">
+            {library
+              .filter(entry => entry.family?.variants[polarity])
+              .map(entry => (
+                <ThemeSwatch
+                  key={entry.id}
+                  entry={entry}
+                  polarity={polarity}
+                  selected={selection[polarity] === entry.id}
+                  onSelect={() => selectTheme({ polarity, id: entry.id })}
+                />
+              ))}
+          </div>
+        </section>
+      ))}
+
+      <section>
+        <SectionHeader title="High contrast" />
+        <label className="flex items-center gap-3 text-sm">
+          <Switch checked={autoContrast} onCheckedChange={setAutoContrast} />
+          Use High Contrast when my system asks for more contrast
+        </label>
+      </section>
+
+      <InstalledThemes />
+    </div>
+  )
+}
+
+export default Appearance
