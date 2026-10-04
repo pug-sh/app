@@ -7,7 +7,7 @@ import { roleLabel } from '@/auth/permissions'
 import { activeOrgAtom, activeProjectAtom, workspaceSettledAtom } from '@/data/workspace.atoms'
 import { analyticsEnabled, type CustomerTraits, identifyCustomer, resetIdentity } from './pug'
 
-// Keeps the SDK's identity in step with the session. Mounted from App.tsx alongside ThemeSync,
+// Keeps the SDK's identity in step with the session. Mounted from App.tsx alongside ThemeApplier,
 // which is the pattern for a null-rendering effect that syncs a module to atom state.
 //
 // awaitWorkspace says whether WorkspaceBootstrap is mounted and therefore whether org/project are

@@ -232,8 +232,7 @@ const Usage = () => {
     )
   }, [series.malformed, series.outOfWindow, series.rejected, org])
 
-  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
-  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
   const seriesColors = useMemo(() => usageSeriesColors(series.names), [series.names, themeRevision])
 
   if (!loaded) {

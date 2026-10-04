@@ -154,13 +154,15 @@ export const isRoot = (token: TokenName) => {
 
 export const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
-// Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black —
-// between them, any fill clears 4.5:1.
+// Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black. Pug's
+// light candidate isn't pure white, so a mid-grey fill can fall just short of 4.5:1 with both — V3
+// reports it. High contrast's light candidate is pure white, and against white or black every fill
+// clears 4.5:1.
 const BLACK_ON_FILL = { l: 0, c: 0 }
 
 export const IDENTITY_HUES = Array.from({ length: 12 }, (_, i) => i * 30)
 
-/** Worst contrast across every hue a name can hash to — chips swap in the hue at render. */
+/** Worst contrast across 12 hues, every 30° — chips swap in the name's hue at render. */
 export const identityContrast = (ink: Oklch, surface: Oklch) =>
   Math.min(...IDENTITY_HUES.map(h => contrast({ ...ink, h }, { ...surface, h })))
 

@@ -1,9 +1,9 @@
 import { linearToOklch, linearToSrgb, type Oklch, srgbToLinear, toLinearRgb } from './oklch'
 
 // Every contrast decision in the theme engine goes through this file. It is WCAG 2: the apca-w3
-// package ships under a restrictive licence (see the theme spec's Open items), and every target and
-// floor the engine uses is measured per mode from Pug, so WCAG's polarity-blindness never bites —
-// nothing here compares a light value against a dark one.
+// package ships under a licence that restricts use. Standard targets and floors are measured per mode
+// from Pug, so WCAG's polarity-blindness never sets one mode against the other; high contrast and text
+// on filled controls use absolute levels, the same in both modes.
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
 

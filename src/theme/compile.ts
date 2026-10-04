@@ -12,7 +12,7 @@ export type CompiledTheme = {
   builtin: boolean
   polarity: Polarity
   contrast: Contrast
-  /** Content hash of vars + data: equal themes share it, so it's a safe memo key. */
+  /** Content hash of the id, the mode, the vars and the data — any change to what draws changes it. */
   revision: string
   /** `--token` → canonical oklch, for every registry token. */
   vars: Record<`--${TokenName}`, CssColor>

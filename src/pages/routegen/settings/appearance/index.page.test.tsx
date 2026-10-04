@@ -46,7 +46,7 @@ describe('Settings → Appearance', () => {
     expect(store.get(themeModeAtom)).toBe('dark')
   })
 
-  // Review Focus 5: swatches are real buttons, named by their theme, carrying their state — and each
+  // Swatches are real buttons, named by their theme, carrying their state — and each
   // row is a labelled group, or a screen reader hears "Pug, pressed" twice with nothing to say which
   // mode either one sets.
   it('offers each built-in as a pressable button inside a labelled group per mode', () => {
@@ -80,7 +80,6 @@ describe('Settings → Appearance', () => {
     expect(trackEvent).toHaveBeenCalledWith('theme_selected', { theme: 'custom', mode: 'dark' })
   })
 
-  // Review Focus 2
   it('refuses a file that is not a theme', async () => {
     mount()
     pick('\u0089PNG\r\n', 'logo.png')
@@ -103,7 +102,6 @@ describe('Settings → Appearance', () => {
     expect(store.get(installedThemesAtom)).toHaveLength(1)
   })
 
-  // Review Focus 3
   it('shows a theme name containing markup as plain text', async () => {
     mount()
     const name = '<img src=x onerror=alert(1)>'

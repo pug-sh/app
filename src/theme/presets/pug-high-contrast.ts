@@ -1,8 +1,8 @@
 import type { ThemeFile } from '../format'
 
-// Pug High Contrast — roots only. Every other token is computed from the high-contrast targets
-// (WCAG AAA body, AA secondary, 3:1 faint and non-text), and the tracked builtin-themes.css turns any
-// change in them into a visible diff. Light sits on pure white; dark on a near-black ink ground with
+// Pug High Contrast — roots only. Every other token is solved to the high-contrast targets — 13:1 body,
+// 8:1 secondary, 4.8:1 faint, 3.3:1 for lines, headroom over validation's 12 / 7 / 4.5 / 3 floors —
+// and the tracked builtin-themes.css turns any change in them into a visible diff. Light sits on pure white; dark on a near-black ink ground with
 // light fills carrying dark text, so a button reads as a shape against the canvas as well.
 
 const RAMPS = {

@@ -127,7 +127,8 @@ export const checkInstall = (text: string, installed: InstalledTheme[], now = Da
   if (!parsed.ok) return { ok: false, reason: 'invalid', issues: parsed.issues }
   const issues = [...parsed.issues, ...validateFamily('candidate', parsed.family)]
   if (issues.some(i => i.severity === 'error')) return { ok: false, reason: 'invalid', issues }
-  // Hashed on the parsed family, so whitespace and key order don't make a second copy.
+  // Hashed on the parsed family, so whitespace and the order of most keys don't make a second copy.
+  // Event colours keep the file's order, so a copy with them reordered still does.
   const hash = hashString(JSON.stringify(parsed.family))
   if (installed.some(t => t.hash === hash)) return { ok: false, reason: 'duplicate', issues }
   if (installed.length >= MAX_INSTALLED) return { ok: false, reason: 'full', issues }

@@ -10,7 +10,7 @@ import { cssColorToRgb } from '@/lib/maplibre'
 // Everything is re-based on the app's ladder (hue 265 for neutrals, ink on the muted/faint tiers)
 // with the vegetation hues kept, at low chroma so they don't compete with the visitor markers.
 
-// Authored in oklch to match src/index.css; resolved to rgb below since MapLibre parses neither
+// Authored in oklch to match the Pug preset (theme/presets/pug.ts); resolved to rgb below since MapLibre parses neither
 // oklch nor var().
 export const DARK_BASEMAP = {
   background: 'oklch(0.235 0.018 235)',

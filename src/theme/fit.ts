@@ -3,13 +3,13 @@ import { fitChroma, hexToOklch, type Oklch, oklchToHex } from '../lib/color/oklc
 import { solveLightness } from './solve'
 import type { Contrast, Polarity } from './tokens'
 
-// The per-mode fit for event colours. On Pug's canvas the standard fit is event-colors.ts's original
-// toDarkHex/toLightHex exactly — Pug's pixel identity depends on it. On any other canvas the band
+// The per-mode fit for event colours. On Pug's canvas the standard fit reproduces Pug's series palette
+// exactly — series.json pins it, and Pug's pixel identity depends on it. On any other canvas the band
 // moves so its anchor keeps the contrast it has against Pug's canvas. Note the light path still caps
-// lightness and clips per channel without fitChroma: a known issue kept on purpose for v1 (see the
-// theme spec), not an oversight to fix in passing.
+// lightness and clips per channel without fitChroma: a known issue kept on purpose to hold Pug's
+// identity, to be changed as its own visual change — not an oversight to fix in passing.
 
-// Mirrors the Pug preset's backgrounds; fit.test.ts pins the two together.
+// Mirrors the Pug preset's backgrounds; presets/pug.test.ts pins the two together.
 export const PUG_CANVAS: Record<Polarity, Oklch> = {
   light: { l: 0.943, c: 0.005, h: 265, alpha: 1 },
   dark: { l: 0.215, c: 0.013, h: 265, alpha: 1 },
@@ -28,11 +28,12 @@ const grey = (l: number): Oklch => ({ l, c: 0, h: 0, alpha: 1 })
 export const bandShift = (polarity: Polarity, canvas: Oklch) => {
   const target = contrast(grey(ANCHOR[polarity]), PUG_CANVAS[polarity])
   const anchor = solveLightness(canvas, polarity, target, 0, 0)
-  // `|| 0` folds -0 into 0, so Pug's canvas hits the cache key the original fit used.
+  // `|| 0` folds the -0 Pug's light canvas yields into 0, so the shift there reads exactly 0.
   return Math.round((anchor - ANCHOR[polarity]) * 1e4) / 1e4 || 0
 }
 
-// Memoize a hex→hex transform. The palette is small and fixed, so results cache permanently.
+// Memoize a hex→hex transform for the session. Every hex a fit sees is a palette colour or a theme's,
+// so the caches stay small.
 const memoizeHex = (transform: (hex: string) => string) => {
   const cache = new Map<string, string>()
   return (hex: string) => {

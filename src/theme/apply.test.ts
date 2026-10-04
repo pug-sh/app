@@ -38,7 +38,7 @@ describe('applyCompiledTheme', () => {
     expect(inline()).toHaveLength(TOKENS.length)
   })
 
-  // Review Focus 4: when the active installed theme goes away, nothing of it may stay on <html> —
+  // When the active installed theme goes away, nothing of it may stay on <html> —
   // including variables the first-paint script set before React loaded.
   it('clears every inline variable when a built-in takes over, including ones it never set', () => {
     root.style.setProperty('--background', 'oklch(0.236563 0.03305 290.061)')

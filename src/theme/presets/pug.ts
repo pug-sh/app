@@ -223,6 +223,9 @@ export const pug = {
 // The sign-in pages' light ground — a third ramp shadowing light mode. Tuned to be read in fragments
 // between tiles; a full-screen field of the canvas reads as gray paper. Re-solved against the new
 // ground, holding the app's ratios to within 0.01. Pug-only: not part of the public format.
+// Only these nine are re-solved: popover, secondary, muted, accent and ring keep light mode's values,
+// and nothing on the sign-in pages uses them yet. --popover at 0.958 sits below this 0.985 ground, so
+// a popover added there would invert the elevation ramp — re-solve them at that point.
 export const PUG_AUTH_SURFACE: Partial<Record<TokenName, string>> = {
   background: 'oklch(0.985 0.002 265)',
   card: 'oklch(0.998 0.002 265)',

@@ -16,7 +16,8 @@ import {
 
 // Theme format v1: parsing a theme file (text or object) into a ThemeFamily plus a list of issues.
 // Errors refuse the theme; warnings let it load. Unknown keys are dropped with a warning — the rule
-// CSS uses for unknown properties — so a theme written for a newer Pug still loads here.
+// CSS uses for unknown properties — so a theme using keys a newer Pug added still loads here. A newer
+// version number is refused outright.
 
 // Every format version this build reads. Bumping CURRENT_VERSION means adding it here, and then
 // MIGRATIONS has to carry an upgrade from each older version — the compiler holds it to that.

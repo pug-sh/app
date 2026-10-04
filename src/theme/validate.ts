@@ -195,6 +195,7 @@ export const validateTheme = (s: Subject): Issue[] => {
 
   // V2 — ink on every ground it renders on.
   for (const pair of V2_PAIRS) {
+    // Faint is decorative at standard contrast: FLOORS measures it, but only high contrast holds it.
     if (pair.cls === 'faint' && !high) continue
     for (const ground of pair.grounds) {
       const measured = contrast(t[pair.ink], groundValue(s, ground))
@@ -258,7 +259,7 @@ export const validateTheme = (s: Subject): Issue[] => {
       warn('V8', 'data.avatars', `avatar ${hex} is ${ratio(measured)} under black line art`)
   }
 
-  // V9 — name chips, at every hue a name can hash to.
+  // V9 — name chips, sampled at 12 hues, every 30°: a name can hash to any degree in between.
   const identityFloor = high ? Math.max(HIGH.identity, floors.identity) : floors.identity
   for (const h of IDENTITY_HUES) {
     const measured = contrast({ ...t['identity-ink'], h }, { ...t['identity-surface'], h })

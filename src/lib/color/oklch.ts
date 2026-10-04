@@ -1,6 +1,6 @@
-// OKLCH maths shared by the theme engine and the series palette. The hex <-> OKLCH functions keep
-// the exact operation order they had in event-colors.ts: the series palette's pixel identity rests
-// on byte-identical hex output, and reordering float maths can flip a rounding.
+// OKLCH maths shared by the theme engine and the series palette. Keep the operation order of the
+// hex <-> OKLCH functions: series.json pins their byte-identical hex output, and reordering float
+// maths can flip a rounding.
 
 /** A colour in OKLCH. `h` is in degrees, [0, 360); `alpha` is 0–1. */
 export type Oklch = { l: number; c: number; h: number; alpha: number }
@@ -61,7 +61,7 @@ export const fitChroma = (L: number, C: number, H: number) => {
   return lo
 }
 
-/** 6-digit hex, clipping per channel (no gamut fit) — the series fit's original behaviour. */
+/** 6-digit hex, clipping per channel (no gamut fit) — what the standard series fit uses (see fit.ts). */
 export const oklchToHex = (L: number, C: number, H: number) => {
   const [r, g, b] = oklchToLinear(L, C, H)
   const hh = (v: number) => linearToByte(v).toString(16).padStart(2, '0')

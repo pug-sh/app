@@ -296,7 +296,7 @@ const FAILURE = new Set([
 ])
 const SUCCESS = new Set(['invoice_paid', 'payment_succeeded', 'trial_converted'])
 
-/** The colour group a named event belongs to (spec §4). Crossovers first, then by domain. */
+/** The colour group a named event belongs to. Crossovers first, then by domain. */
 export const groupOf = (event: string): GroupName => {
   if (FAILURE.has(event)) return 'failure'
   if (SUCCESS.has(event)) return 'success'
@@ -336,7 +336,7 @@ export const groupOf = (event: string): GroupName => {
   if (event.startsWith('integration_')) return 'integrations'
   if (event.startsWith('api_key_')) return 'api'
   if (event === 'share') return 'sharing'
-  throw new Error(`event-colors: "${event}" has no colour group — add it to groupOf`)
+  throw new Error(`data-palette: "${event}" has no colour group — add it to groupOf`)
 }
 
 /** Each group's anchor: the member whose default colour a theme's group value replaces exactly. */
@@ -433,5 +433,5 @@ export const compileDataPalette = (
 
 // Every group must have its anchor in the map — a renamed event would otherwise silently stop moving.
 for (const group of GROUPS) {
-  if (!EVENT_COLORS[ANCHORS[group]]) throw new Error(`event-colors: anchor for ${group} is missing`)
+  if (!EVENT_COLORS[ANCHORS[group]]) throw new Error(`data-palette: anchor for ${group} is missing`)
 }

@@ -114,8 +114,7 @@ export const InsightTileView = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
-  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
-  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
   const themeRevision = useAtomValue(themeRevisionAtom)
   // Reporting zone for the chart's bucket grid (UTC when no project, e.g. a public shared tile).
   const timeZone = useAtomValue(activeProjectTimezoneAtom)

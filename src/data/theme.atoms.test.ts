@@ -44,7 +44,7 @@ describe('the active theme', () => {
     expect(darkGrape().get(compiledThemeAtom)).toMatchObject({ id: grape.id, builtin: false, polarity: 'dark' })
   })
 
-  // Review Focus 4: another tab removes the theme this one is showing.
+  // Another tab removes the theme this one is showing.
   it('falls back to Pug when the selected theme disappears', () => {
     const store = darkGrape()
     store.set(installedThemesAtom, [])
@@ -145,7 +145,7 @@ describe('installing and removing', () => {
     expect(store.get(installedThemesAtom)).toEqual([])
   })
 
-  // Review Focus 1: Safari private mode, or a full quota.
+  // Safari private mode, or a full quota.
   it('reports storage that refuses the write, and leaves nothing half-installed', () => {
     const store = createStore()
     const refuse = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {

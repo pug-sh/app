@@ -74,8 +74,7 @@ export const SankeyChart = ({
   const [size, setSize] = useState({ width: 0, height: 0 })
   const [edges, setEdges] = useState({ above: false, below: false })
   const [hovered, setHovered] = useState<Hover | null>(null)
-  // Series colours come from the active theme's compiled palette — a module mutation a useMemo can't
-  // see — so key on the revision: it changes with any theme change, two dark themes included.
+  // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
   const themeRevision = useAtomValue(themeRevisionAtom)
 
   useEffect(() => {

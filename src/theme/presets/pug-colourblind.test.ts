@@ -5,7 +5,7 @@ import { BUILTINS } from '../builtin'
 import { compileVariant } from '../compile'
 import { groupOf } from '../data-palette'
 
-// Acceptance (spec §6): in each mode, under protan, deutan and tritan simulation, every categorical
+// Acceptance: in each mode, under protan, deutan and tritan simulation, every categorical
 // pair stays ≥ 0.05 apart and every failure × success pair ≥ 0.15 — measured on the colours as drawn.
 describe.each(['light', 'dark'] as const)('Pug Colourblind-safe %s', polarity => {
   const compiled = compileVariant({
