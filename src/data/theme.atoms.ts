@@ -78,12 +78,14 @@ export const installedThemesAtom = atom(
   (_get, set, themes: InstalledTheme[]) => set(storedInstalledAtom, themes),
 )
 
-// An OS-level preference, kept live via matchMedia.
+// An OS-level preference, kept live via matchMedia. Nothing listens while no atom reads it — light
+// and dark mode never ask the OS — so mounting reads the query again before listening.
 const mediaAtom = (query: string) => {
   const media = atom(typeof window !== 'undefined' && window.matchMedia(query).matches)
   media.onMount = set => {
     const mq = window.matchMedia(query)
     const handler = () => set(mq.matches)
+    handler()
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }

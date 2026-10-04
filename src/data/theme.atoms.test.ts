@@ -1,5 +1,5 @@
 import { createStore } from 'jotai'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InstalledTheme } from '@/theme/library'
 import {
   compiledThemeAtom,
@@ -61,6 +61,50 @@ describe('the active theme', () => {
     store.set(themeSelectionAtom, { light: 'pug', dark: 'pug' })
     expect(store.get(themeRevisionAtom)).not.toBe(grapeRevision)
     expect(store.get(resolvedThemeAtom)).toBe('dark')
+  })
+})
+
+// An OS whose colour scheme the test flips. Listeners are tracked per query, so a test can tell
+// whether anything was listening when the OS changed.
+const fakeOs = () => {
+  const state = { dark: false }
+  const listeners = new Map<string, Set<() => void>>()
+  const matchMedia = (query: string) => ({
+    media: query,
+    get matches() {
+      return query === '(prefers-color-scheme: dark)' && state.dark
+    },
+    addEventListener: (_: string, fn: () => void) => {
+      if (!listeners.has(query)) listeners.set(query, new Set())
+      listeners.get(query)?.add(fn)
+    },
+    removeEventListener: (_: string, fn: () => void) => listeners.get(query)?.delete(fn),
+  })
+  const goDark = () => {
+    state.dark = true
+    for (const fn of listeners.get('(prefers-color-scheme: dark)') ?? []) fn()
+  }
+  return { matchMedia, goDark }
+}
+
+describe('the OS colour scheme', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  // Light or Dark mode doesn't read the OS, so nothing listens while the user is in one. Coming back
+  // to System has to read the OS again, not reuse what it said before.
+  it('is read afresh when System mode comes back', async () => {
+    const os = fakeOs()
+    vi.stubGlobal('matchMedia', os.matchMedia)
+    vi.resetModules()
+    const fresh = await import('./theme.atoms')
+    const store = createStore()
+    store.set(fresh.themeModeAtom, 'light')
+    store.sub(fresh.compiledThemeAtom, () => {})
+
+    os.goDark()
+    store.set(fresh.themeModeAtom, 'system')
+
+    expect(store.get(fresh.compiledThemeAtom).polarity).toBe('dark')
   })
 })
 
