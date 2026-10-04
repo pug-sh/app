@@ -14,7 +14,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const { trackEvent } = await import('@/analytics/pug')
 const { toast } = await import('sonner')
-const { installedThemesAtom, themeModeAtom, themeSelectionAtom } = await import('@/data/theme.atoms')
+const { installedThemesAtom, STORAGE_REFUSED, themeModeAtom, themeSelectionAtom } = await import('@/data/theme.atoms')
 const Appearance = (await import('./index.page')).default
 
 const grape = JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } })
@@ -113,5 +113,25 @@ describe('Settings → Appearance', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm remove' }))
     expect(store.get(installedThemesAtom)).toEqual([])
     expect(store.get(themeSelectionAtom).dark).toBe('pug')
+  })
+
+  // A full quota or a blocked profile: the choice can't be kept, and saying nothing would leave the
+  // page looking as if the click did nothing at all.
+  it('says so when the browser refuses to save a choice, and keeps the old one', () => {
+    mount()
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      const row = screen.getByRole('group', { name: 'Light theme' })
+      fireEvent.click(within(row).getByRole('button', { name: 'Pug High Contrast' }))
+      expect(toast.error).toHaveBeenCalledWith(STORAGE_REFUSED)
+      expect(within(row).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+      expect(toast.error).toHaveBeenCalledTimes(2)
+    } finally {
+      refusal.mockRestore()
+    }
   })
 })

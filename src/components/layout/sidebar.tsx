@@ -40,7 +40,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { type ThemeMode, themeModeAtom } from '@/data/theme.atoms'
+import { STORAGE_REFUSED, type ThemeMode, themeModeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -174,7 +174,7 @@ const AppSidebar = () => {
 
   const cycleTheme = () => {
     const next: Record<ThemeMode, ThemeMode> = { light: 'dark', dark: 'system', system: 'light' }
-    setTheme(next[theme])
+    if (!setTheme(next[theme])) toast.error(STORAGE_REFUSED)
   }
 
   return (

@@ -4,7 +4,13 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { installedThemesAtom, installThemeAtom, removeThemeAtom, themeLibraryAtom } from '@/data/theme.atoms'
+import {
+  installedThemesAtom,
+  installThemeAtom,
+  removeThemeAtom,
+  STORAGE_REFUSED,
+  themeLibraryAtom,
+} from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
 import { MAX_THEME_BYTES } from '@/theme/format'
 import { checkInstall, type InstallCheck, type LibraryEntry } from '@/theme/library'
@@ -113,7 +119,7 @@ const InstalledThemes = () => {
       toast.success(`Installed ${result.name}`)
       setPending(null)
     } else if (result.reason === 'storage') {
-      toast.error('Couldn’t save the theme in this browser — storage is full or blocked.')
+      toast.error(STORAGE_REFUSED)
     } else {
       setPending({ text, check: result })
     }
@@ -161,7 +167,11 @@ const InstalledThemes = () => {
                   <ChecksCell entry={entry} />
                 </td>
                 <td className="py-2 text-right">
-                  <RemoveButton onRemove={() => remove(entry.id)} />
+                  <RemoveButton
+                    onRemove={() => {
+                      if (!remove(entry.id)) toast.error(STORAGE_REFUSED)
+                    }}
+                  />
                 </td>
               </tr>
             ))}

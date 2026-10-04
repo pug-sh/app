@@ -1,9 +1,11 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Monitor, Moon, Sun } from 'lucide-react'
+import { toast } from 'sonner'
 import SectionHeader from '@/components/section-header'
 import { Switch } from '@/components/ui/switch'
 import {
   autoContrastAtom,
+  STORAGE_REFUSED,
   selectThemeAtom,
   type ThemeMode,
   themeLibraryAtom,
@@ -29,6 +31,10 @@ const Appearance = () => {
   const selection = useAtomValue(themeSelectionAtom)
   const library = useAtomValue(themeLibraryAtom)
   const selectTheme = useSetAtom(selectThemeAtom)
+  // A write the browser refused changed nothing — say so, or the click looks like it did nothing.
+  const saved = (ok: boolean) => {
+    if (!ok) toast.error(STORAGE_REFUSED)
+  }
 
   return (
     <div className="max-w-3xl space-y-8">
@@ -40,7 +46,7 @@ const Appearance = () => {
               key={value}
               type="button"
               aria-pressed={mode === value}
-              onClick={() => setMode(value)}
+              onClick={() => saved(setMode(value))}
               className={cn(
                 'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 mode === value ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
@@ -66,7 +72,7 @@ const Appearance = () => {
                   entry={entry}
                   polarity={polarity}
                   selected={selection[polarity] === entry.id}
-                  onSelect={() => selectTheme({ polarity, id: entry.id })}
+                  onSelect={() => saved(selectTheme({ polarity, id: entry.id }))}
                 />
               ))}
           </div>
@@ -76,7 +82,7 @@ const Appearance = () => {
       <section>
         <SectionHeader title="High contrast" />
         <label className="flex items-center gap-3 text-sm">
-          <Switch checked={autoContrast} onCheckedChange={setAutoContrast} />
+          <Switch checked={autoContrast} onCheckedChange={on => saved(setAutoContrast(on))} />
           Use High Contrast when my system asks for more contrast
         </label>
       </section>

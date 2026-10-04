@@ -2,11 +2,13 @@ import { createStore } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { InstalledTheme } from '@/theme/library'
 import {
+  autoContrastAtom,
   compiledThemeAtom,
   installedThemesAtom,
   installThemeAtom,
   removeThemeAtom,
   resolvedThemeAtom,
+  selectThemeAtom,
   themeModeAtom,
   themeRevisionAtom,
   themeSelectionAtom,
@@ -144,6 +146,71 @@ describe('installing and removing', () => {
     expect(store.get(installedThemesAtom)).toEqual([])
     expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
   })
+})
+
+// A full quota, a blocked profile, a disk out of space. atomWithStorage moves memory before it writes,
+// so a refused write that isn't put back leaves the session showing what the next load won't have.
+describe('storage that refuses a write', () => {
+  // Refuses writes to `key`, or to every key when none is given; anything else is written for real.
+  let refusal: { mockRestore: () => void } | undefined
+  const refuse = (key?: string) => {
+    const write = localStorage.setItem.bind(localStorage)
+    refusal = vi.spyOn(localStorage, 'setItem').mockImplementation((k, v) => {
+      if (key && k !== key) return write(k, v)
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+  }
+  // restoreMocks doesn't reach a spy on the storage instance the setup file installs.
+  afterEach(() => refusal?.mockRestore())
+
+  it('leaves the selection as it was', () => {
+    const store = createStore()
+    refuse()
+    expect(store.set(selectThemeAtom, { polarity: 'dark', id: 'pug-colourblind' })).toBe(false)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
+  })
+
+  it('leaves the mode and auto contrast as they were', () => {
+    const store = createStore()
+    refuse()
+    expect(store.set(themeModeAtom, 'dark')).toBe(false)
+    expect(store.set(autoContrastAtom, false)).toBe(false)
+    expect(store.get(themeModeAtom)).toBe('system')
+    expect(store.get(autoContrastAtom)).toBe(true)
+  })
+
+  // Removing writes the selection and then the list. When only the list is refused, the selection
+  // that did land has to go back too, or a reload shows the theme installed but quietly deselected.
+  it('keeps a theme installed and selected when its removal is refused part-way', () => {
+    const store = createStore()
+    const result = store.set(installThemeAtom, grape.text)
+    if (!result.ok) throw new Error('grape did not install')
+    store.set(themeSelectionAtom, { light: 'pug', dark: result.theme.id })
+    refuse('pug:themes')
+
+    expect(store.set(removeThemeAtom, result.theme.id)).toBe(false)
+    expect(store.get(installedThemesAtom).map(t => t.id)).toEqual([result.theme.id])
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: result.theme.id })
+    expect(JSON.parse(localStorage.getItem('pug:theme-selection') ?? 'null')).toEqual({
+      light: 'pug',
+      dark: result.theme.id,
+    })
+  })
+})
+
+// Another build — a newer one with themes installed by URL, say — can store entries this one can't
+// read. They are skipped on read, and must survive this build's writes to the same list.
+it("keeps installed entries this build can't read through an install and a removal", () => {
+  const foreign = { id: 'installed-ref', url: 'https://example.com/theme.json', source: 'url' }
+  localStorage.setItem('pug:themes', JSON.stringify([foreign]))
+  const store = createStore()
+  store.sub(installedThemesAtom, () => {})
+
+  const result = store.set(installThemeAtom, grape.text)
+  if (!result.ok) throw new Error('grape did not install')
+  expect(JSON.parse(localStorage.getItem('pug:themes') ?? '[]')[0]).toEqual(foreign)
+  store.set(removeThemeAtom, result.theme.id)
+  expect(JSON.parse(localStorage.getItem('pug:themes') ?? '[]')).toEqual([foreign])
 })
 
 // Storage is untrusted: another build, an older shape after a rollback, or a hand edit can put
