@@ -1,6 +1,6 @@
 import { BUILTIN_IDS, BUILTINS } from './builtin'
 import { compileVariant, hashString } from './compile'
-import { type Issue, parseThemeText, type ThemeFamily } from './format'
+import { type Issue, parseThemeText, readableName, type ThemeFamily } from './format'
 import { POLARITIES, type Polarity } from './tokens'
 
 // The theme library: the built-ins plus whatever the person installed, and which one is active.
@@ -46,8 +46,13 @@ export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
   ...BUILTIN_IDS.map(id => ({ id, builtin: true, name: BUILTINS[id].name, family: BUILTINS[id], issues: [] })),
   ...installed.map(theme => {
     const parsed = parseOnce(theme.text)
-    if (!parsed.ok)
-      return { id: theme.id, builtin: false, name: 'Unreadable theme', family: null, issues: parsed.issues }
+    if (!parsed.ok) {
+      // It parsed when it was installed, so this build reads it differently — a stricter rule, or a
+      // rollback past its version. Its modes fall back to Pug; keep a trace of why.
+      console.warn('theme library: could not read', theme.id, parsed.issues)
+      const name = readableName(theme.text) ?? 'Unreadable theme'
+      return { id: theme.id, builtin: false, name, family: null, issues: parsed.issues }
+    }
     const { family } = parsed
     let issues: Issue[]
     try {

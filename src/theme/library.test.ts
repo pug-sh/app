@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildLibrary, checkInstall, chooseActive, type InstalledTheme, MAX_INSTALLED } from './library'
 
 const grape: InstalledTheme = {
@@ -56,7 +56,22 @@ describe('buildLibrary', () => {
     expect(buildLibrary([])[0]).toMatchObject({ id: 'pug', builtin: true, name: 'Pug' })
   })
 
+  // Installed text is re-parsed on every load, so a stricter parser — or a rollback to a build that
+  // predates the theme's version — can stop reading a theme someone is using. That must not be
+  // invisible: it is named as before, and it leaves a trace.
+  it('names a theme that stopped parsing, and says so in the console', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const midnight: InstalledTheme = {
+      ...grape,
+      id: 'installed-midnight',
+      text: JSON.stringify({ version: 2, name: 'Midnight', variants: {} }),
+    }
+    expect(buildLibrary([midnight]).find(e => e.id === midnight.id)).toMatchObject({ name: 'Midnight', family: null })
+    expect(warn).toHaveBeenCalledWith('theme library: could not read', midnight.id, expect.any(Array))
+  })
+
   it('keeps an installed theme that stopped parsing, unselectable', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
     const broken: InstalledTheme = { ...grape, id: 'installed-broken', text: '{' }
     const library = buildLibrary([broken])
     expect(library.find(e => e.id === broken.id)).toMatchObject({ family: null, name: 'Unreadable theme' })

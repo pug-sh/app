@@ -134,4 +134,27 @@ describe('Settings → Appearance', () => {
       refusal.mockRestore()
     }
   })
+
+  // The theme selected for a mode can stop parsing after an upgrade. Pug takes over; the row has to
+  // say why, or the page just looks like it lost the choice.
+  it('says when the theme selected for a mode can no longer be used', () => {
+    const store = createStore()
+    const midnight = {
+      id: 'installed-midnight',
+      text: JSON.stringify({ version: 2, name: 'Midnight', variants: {} }),
+      hash: 'midnight',
+      installedAt: 0,
+      source: 'file' as const,
+    }
+    store.set(installedThemesAtom, [midnight])
+    store.set(themeSelectionAtom, { light: 'pug', dark: midnight.id })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    const row = screen.getByRole('group', { name: 'Dark theme' }).parentElement as HTMLElement
+    expect(within(row).getByText(/Midnight can’t be used/)).toBeTruthy()
+  })
 })

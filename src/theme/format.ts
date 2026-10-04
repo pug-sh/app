@@ -281,6 +281,20 @@ const unknownKeys = (obj: object, known: string[], path: string, issues: Issue[]
   }
 }
 
+/**
+ * A theme's name read straight from its text, cleaned like any name — for a theme that no longer
+ * parses, so it can still be named. Null when there's no usable name in it.
+ */
+export const readableName = (text: string) => {
+  try {
+    const name = (JSON.parse(text) as { name?: unknown } | null)?.name
+    if (typeof name !== 'string') return null
+    return name.replace(UNSAFE_TEXT, '').trim().slice(0, 64) || null
+  } catch {
+    return null
+  }
+}
+
 const cleanText = (value: string, path: string, issues: Issue[]) => {
   const cleaned = value.replace(UNSAFE_TEXT, '')
   if (cleaned !== value) issues.push(warning('V12', path, 'Control and direction-override characters were removed'))

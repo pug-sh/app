@@ -59,25 +59,35 @@ const Appearance = () => {
         </div>
       </section>
 
-      {POLARITIES.map(polarity => (
-        <section key={polarity}>
-          <SectionHeader title={ROW_TITLE[polarity]} />
-          {/* A labelled group, so a screen reader says which mode a swatch sets — both rows hold a "Pug". */}
-          <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
-            {library
-              .filter(entry => entry.family?.variants[polarity])
-              .map(entry => (
-                <ThemeSwatch
-                  key={entry.id}
-                  entry={entry}
-                  polarity={polarity}
-                  selected={selection[polarity] === entry.id}
-                  onSelect={() => saved(selectTheme({ polarity, id: entry.id }))}
-                />
-              ))}
-          </div>
-        </section>
-      ))}
+      {POLARITIES.map(polarity => {
+        // The theme selected for this mode, when it can't be used — Pug is showing in its place.
+        const unusable = library.find(entry => entry.id === selection[polarity] && !entry.family)
+        const reason = unusable?.issues.find(issue => issue.severity === 'error')?.message
+        return (
+          <section key={polarity}>
+            <SectionHeader title={ROW_TITLE[polarity]} />
+            {/* A labelled group, so a screen reader says which mode a swatch sets — both rows hold a "Pug". */}
+            <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
+              {library
+                .filter(entry => entry.family?.variants[polarity])
+                .map(entry => (
+                  <ThemeSwatch
+                    key={entry.id}
+                    entry={entry}
+                    polarity={polarity}
+                    selected={selection[polarity] === entry.id}
+                    onSelect={() => saved(selectTheme({ polarity, id: entry.id }))}
+                  />
+                ))}
+            </div>
+            {unusable && (
+              <p className="mt-2 text-xs text-negative">
+                {unusable.name} can’t be used, so Pug is showing instead{reason ? ` — ${reason}` : '.'}
+              </p>
+            )}
+          </section>
+        )
+      })}
 
       <section>
         <SectionHeader title="High contrast" />
