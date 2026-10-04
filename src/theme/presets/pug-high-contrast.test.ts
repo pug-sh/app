@@ -31,6 +31,15 @@ describe.each(['light', 'dark'] as const)('Pug High Contrast %s', polarity => {
     }
   })
 
+  // The spec's high-contrast levels are APCA Lc 90 / 75 / 60 — about 12:1, 7:1 and 4.5:1 in WCAG
+  // terms. Clearing them on the lightest ground each ink lands on is what makes HC visibly stronger
+  // than Pug, rather than Pug on a different canvas.
+  it('reaches the spec’s contrast levels on every ground', () => {
+    expect(ratio(high, 'foreground', 'popover')).toBeGreaterThanOrEqual(12)
+    expect(ratio(high, 'muted-foreground', 'muted')).toBeGreaterThanOrEqual(7)
+    expect(ratio(high, 'faint', 'popover')).toBeGreaterThanOrEqual(4.5)
+  })
+
   it('computes everything but its roots', () => {
     expect(high.provenance.foreground).toBe('computed')
     expect(high.provenance.background).toBe('explicit')

@@ -8,8 +8,9 @@ import { type Contrast, type Polarity, TOKENS, type TokenName } from './tokens'
 // The token registry: how every token a theme leaves out is computed from the ones it set — VSCode's
 // colour-registry model. Standard-contrast parameters are measured from Pug at load, so applying the
 // formulas to Pug's own roots reproduces Pug. High contrast never sits below standard: each target is
-// the higher of WCAG's level for its tier (AAA body, AA secondary, 3:1 faint and non-text, with a
-// little headroom) and 115% of Pug's own ratio.
+// the higher of its tier's level and 115% of Pug's own ratio. The levels are the spec's APCA Lc
+// 90 / 75 / 60 in WCAG terms — 12:1 body, 7:1 secondary, 4.5:1 faint — plus headroom, because an ink
+// solved against the canvas also lands on popovers and chips, which sit a step lighter.
 
 export type Tier = 'body' | 'secondary' | 'faint' | 'nonText'
 
@@ -146,7 +147,7 @@ export const ruleFor = (token: TokenName, polarity: Polarity, level: Contrast): 
 
 export const isRoot = (token: TokenName) => RULES[token] === root
 
-export const HIGH_TARGETS: Record<Tier, number> = { body: 7.5, secondary: 5, faint: 3.3, nonText: 3.3 }
+export const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
 // Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black —
 // between them, any fill clears 4.5:1.
