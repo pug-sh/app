@@ -32,6 +32,9 @@ const maskPath = (pathname: string) => {
     case 'shared':
       if (segments[2]) segments[2] = ':shareId'
       break
+    case 'oauth':
+      if (segments[2] === 'callback' && segments[3]) segments[3] = ':connectionId'
+      break
   }
 
   return segments.join('/')

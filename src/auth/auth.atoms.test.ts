@@ -1,47 +1,49 @@
 import { create } from '@bufbuild/protobuf'
+import { createValidator } from '@bufbuild/protovalidate'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { createStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  type AuthProviderConfig,
+  AuthProviderConfigSchema,
   AuthProviderType,
+  CompleteOIDCSignInRequestSchema,
   type SSORequired,
   SSORequiredSchema,
 } from '@/api/genproto/public/auth/v1/auth_pb'
 
-const { completeOIDCSignIn, completeMagicLink, signInWithEmail, requestMagicLink } = vi.hoisted(() => ({
+const { completeOIDCSignIn, completeMagicLink, signInWithEmail, requestMagicLink, discoverSignIn } = vi.hoisted(() => ({
   completeOIDCSignIn: vi.fn(),
   completeMagicLink: vi.fn(),
   signInWithEmail: vi.fn(),
   requestMagicLink: vi.fn(),
+  discoverSignIn: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    authRPCAtom: atom({ completeOIDCSignIn, completeMagicLink, signInWithEmail, requestMagicLink }),
+    authRPCAtom: atom({ completeOIDCSignIn, completeMagicLink, signInWithEmail, requestMagicLink, discoverSignIn }),
     customersRPCAtom: atom({ getMe: vi.fn() }),
   }
 })
 
 vi.mock('@/analytics/pug', () => ({ trackEvent: vi.fn() }))
 
-const { completeMagicLinkAtom, completeOIDCAtom, requestMagicLinkAtom, signInAtom, signOutAtom } = await import(
-  './auth.atoms'
-)
+const { completeMagicLinkAtom, completeOIDCAtom, discoverSignInAtom, requestMagicLinkAtom, signInAtom, signOutAtom } =
+  await import('./auth.atoms')
 const { ssoBlockAtom } = await import('./sso-required')
 const { jwtAtom, refreshTokenAtom } = await import('./jwt.atoms')
 const { bootstrapStatusAtom, joinedOrgIdsAtom } = await import('@/data/workspace.atoms')
 const { isDemoSessionAtom } = await import('./demo')
 
-const provider = {
+const provider = create(AuthProviderConfigSchema, {
   id: 'company_sso',
   type: AuthProviderType.OIDC,
   displayName: 'Company SSO',
   clientId: 'pug',
   issuerUrl: 'https://login.example.com',
   scopes: ['openid'],
-} as AuthProviderConfig
+})
 
 const authorization = {
   code: 'authorization-code',
@@ -49,6 +51,15 @@ const authorization = {
   redirectURI: 'http://localhost/oauth/callback',
   nonce: '2ec3f0a1-6b1e-4f0e-9d0a-6a1c3b5d7e9f',
 }
+
+const connection = create(AuthProviderConfigSchema, {
+  connectionId: 'd3uqa6s1m7j9b2c4e5f0',
+  type: AuthProviderType.OIDC,
+  displayName: 'Acme SSO',
+  clientId: 'acme-client',
+  issuerUrl: 'https://acme.okta.com',
+  scopes: ['openid', 'profile', 'email'],
+})
 
 const ssoRefused = (detail: SSORequired) =>
   new ConnectError('acme.com accounts sign in through SSO', Code.FailedPrecondition, undefined, [
@@ -100,6 +111,43 @@ describe('completeOIDCAtom', () => {
         nonce: authorization.nonce,
       }),
     )
+  })
+
+  // The mocked RPC skips the transport's protovalidate check, so run it here; '' counts as set.
+  it.each([
+    ['a provider', provider, { providerId: 'company_sso' }],
+    ['a connection', connection, { connectionId: 'd3uqa6s1m7j9b2c4e5f0' }],
+  ])('names %s and nothing else', async (_kind, signedInWith, named) => {
+    completeOIDCSignIn.mockResolvedValue({ token: 'access-token', refreshToken: 'refresh-token', joinedOrgIds: [] })
+
+    await createStore().set(completeOIDCAtom, { provider: signedInWith, ...authorization })
+
+    const sent = create(CompleteOIDCSignInRequestSchema, completeOIDCSignIn.mock.calls[0][0])
+    expect(createValidator().validate(CompleteOIDCSignInRequestSchema, sent).kind).toBe('valid')
+    expect(sent).toMatchObject(named)
+  })
+
+  it("says when a connection can't sign in the account", async () => {
+    completeOIDCSignIn.mockRejectedValue(new ConnectError('refused', Code.PermissionDenied))
+
+    await expect(createStore().set(completeOIDCAtom, { provider: connection, ...authorization })).resolves.toEqual({
+      ok: false,
+      error: "Acme SSO can't sign in that account to Pug. Use an account on your organization's domain.",
+    })
+  })
+
+  it.each([
+    ['unavailable', Code.Unavailable],
+    ['an invalid request', Code.InvalidArgument],
+  ])('points at the admin when a connection answers %s, and logs why', async (_kind, code) => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    completeOIDCSignIn.mockRejectedValue(new ConnectError('email not verified by identity provider', code))
+
+    await expect(createStore().set(completeOIDCAtom, { provider: connection, ...authorization })).resolves.toEqual({
+      ok: false,
+      error: "Acme SSO couldn't sign you in. If it keeps happening, ask your administrator to check the connection.",
+    })
+    expect(logged).toHaveBeenCalledWith('SSO connection sign-in failed', expect.objectContaining({ code }))
   })
 
   it('sends the invite and hands back an SSO refusal', async () => {
@@ -204,6 +252,20 @@ describe('the sign-in form atoms', () => {
       ok: false,
       ssoRequired: { domain: 'acme.com' },
     })
+  })
+})
+
+describe('discoverSignInAtom', () => {
+  it('answers null from a server without discovery, so sign-in sends the link', async () => {
+    discoverSignIn.mockRejectedValue(new ConnectError('not implemented', Code.Unimplemented))
+
+    await expect(createStore().set(discoverSignInAtom, { email: 'bob@acme.com' })).resolves.toBeNull()
+  })
+
+  it("fails on any other error rather than skip the domain's SSO", async () => {
+    discoverSignIn.mockRejectedValue(new ConnectError('internal error', Code.Internal))
+
+    await expect(createStore().set(discoverSignInAtom, { email: 'bob@acme.com' })).rejects.toThrow('internal error')
   })
 })
 

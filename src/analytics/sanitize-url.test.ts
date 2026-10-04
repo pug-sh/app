@@ -20,6 +20,14 @@ describe('maskEventUrls', () => {
     expect(masked.autoProperties.$referrer).toBe('https://app.pug.sh/shared/:shareId')
   })
 
+  it('masks the SSO connection an OAuth callback returns to, and drops the code it carries', () => {
+    const masked = maskEventUrls(
+      event({ $url: 'https://app.pug.sh/oauth/callback/d3uqa6s1m7j9b2c4e5f0?code=live&state=s', $referrer: '' }),
+    )
+
+    expect(masked.autoProperties.$url).toBe('https://app.pug.sh/oauth/callback/:connectionId')
+  })
+
   // A direct visit reports '' — resolving that against the origin would report the landing page as
   // its own referrer, i.e. invent a navigation that never happened.
   it('leaves a referrer-less page view empty', () => {

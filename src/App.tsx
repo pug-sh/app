@@ -325,7 +325,7 @@ const App = () => {
   // RPCs never fire on a public page.
   const isSharedRoute = location.startsWith('/shared/')
   const isMagicLink = location === '/magic-link'
-  const isOAuthCallback = location === '/oauth/callback'
+  const isOAuthCallback = location === '/oauth/callback' || location.startsWith('/oauth/callback/')
   const isDemoRoute = location === '/demo'
   const failed = !!workspaceError || status === 'error'
 

@@ -11,7 +11,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file public/auth/v1/auth.proto.
  */
 export const file_public_auth_v1_auth: GenFile = /*@__PURE__*/
-  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiWQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhYKDmpvaW5lZF9vcmdfaWRzGAMgAygJIrcCChlDb21wbGV0ZU9JRENTaWduSW5SZXF1ZXN0EjMKC3Byb3ZpZGVyX2lkGAEgASgJQh66SBvIAQFyFhg/MhJeW2Etel1bYS16MC05Xy1dKiQSGwoEY29kZRgCIAEoCUINukgKyAEBcgUQARiAQBI4Cg1jb2RlX3ZlcmlmaWVyGAMgASgJQiG6SB7IAQFyGRArGIABMhJeW0EtWmEtejAtOS5ffi1dKyQSIQoMcmVkaXJlY3RfdXJpGAQgASgJQgu6SAjIAQFyAxiAEBIcCgVub25jZRgFIAEoCUINukgKyAEBcgUQEBiAARItCgh0aW1lem9uZRgGIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokEh4KDGludml0ZV90b2tlbhgHIAEoCUIIukgFcgMYgAEiZAoLU1NPUmVxdWlyZWQSDgoGZG9tYWluGAEgASgJEjUKCXByb3ZpZGVycxgCIAMoCzIiLnB1YmxpYy5hdXRoLnYxLkF1dGhQcm92aWRlckNvbmZpZxIOCgZpbnZpdGUYAyABKAgiWgoaQ29tcGxldGVPSURDU2lnbkluUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRIWCg5qb2luZWRfb3JnX2lkcxgDIAMoCSIWChRHZXRBdXRoQ29uZmlnUmVxdWVzdCKdAQoSQXV0aFByb3ZpZGVyQ29uZmlnEgoKAmlkGAEgASgJEi4KBHR5cGUYAiABKA4yIC5wdWJsaWMuYXV0aC52MS5BdXRoUHJvdmlkZXJUeXBlEhQKDGRpc3BsYXlfbmFtZRgDIAEoCRIRCgljbGllbnRfaWQYBCABKAkSEgoKaXNzdWVyX3VybBgFIAEoCRIOCgZzY29wZXMYBiADKAkiTgoVR2V0QXV0aENvbmZpZ1Jlc3BvbnNlEjUKCXByb3ZpZGVycxgBIAMoCzIiLnB1YmxpYy5hdXRoLnYxLkF1dGhQcm92aWRlckNvbmZpZyI2ChVSZWZyZXNoU2Vzc2lvblJlcXVlc3QSHQoNcmVmcmVzaF90b2tlbhgBIAEoCUIGukgDyAEBIj4KFlJlZnJlc2hTZXNzaW9uUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCSInCg5TaWduT3V0UmVxdWVzdBIVCg1yZWZyZXNoX3Rva2VuGAEgASgJIhEKD1NpZ25PdXRSZXNwb25zZSITChFEZW1vU2lnbkluUmVxdWVzdCJOChJEZW1vU2lnbkluUmVzcG9uc2USDQoFdG9rZW4YASABKAkSFQoNcmVmcmVzaF90b2tlbhgCIAEoCRISCgpwcm9qZWN0X2lkGAMgASgJKlMKEEF1dGhQcm92aWRlclR5cGUSIgoeQVVUSF9QUk9WSURFUl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQVVUSF9QUk9WSURFUl9UWVBFX09JREMQATKfBgoLQXV0aFNlcnZpY2USXgoNR2V0QXV0aENvbmZpZxIkLnB1YmxpYy5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0GiUucHVibGljLmF1dGgudjEuR2V0QXV0aENvbmZpZ1Jlc3BvbnNlIgASZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgASbQoSQ29tcGxldGVPSURDU2lnbkluEikucHVibGljLmF1dGgudjEuQ29tcGxldGVPSURDU2lnbkluUmVxdWVzdBoqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0lEQ1NpZ25JblJlc3BvbnNlIgASYQoOUmVmcmVzaFNlc3Npb24SJS5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlc3BvbnNlIgASTAoHU2lnbk91dBIeLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXF1ZXN0Gh8ucHVibGljLmF1dGgudjEuU2lnbk91dFJlc3BvbnNlIgASVQoKRGVtb1NpZ25JbhIhLnB1YmxpYy5hdXRoLnYxLkRlbW9TaWduSW5SZXF1ZXN0GiIucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
+  fileDesc("ChlwdWJsaWMvYXV0aC92MS9hdXRoLnByb3RvEg5wdWJsaWMuYXV0aC52MSJRChZTaWduSW5XaXRoRW1haWxSZXF1ZXN0EhkKBWVtYWlsGAEgASgJQgq6SAfIAQFyAmABEhwKCHBhc3N3b3JkGAIgASgJQgq6SAfIAQFyAihIIj8KF1NpZ25JbldpdGhFbWFpbFJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiNAoXUmVxdWVzdE1hZ2ljTGlua1JlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEiGgoYUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlImAKGENvbXBsZXRlTWFnaWNMaW5rUmVxdWVzdBIVCgV0b2tlbhgBIAEoCUIGukgDyAEBEi0KCHRpbWV6b25lGAIgASgJQhu6SBhyFhhAMhJeW0EtWmEtejAtOV8rLy1dKiQiWQoZQ29tcGxldGVNYWdpY0xpbmtSZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhYKDmpvaW5lZF9vcmdfaWRzGAMgAygJIucDChlDb21wbGV0ZU9JRENTaWduSW5SZXF1ZXN0EjAKC3Byb3ZpZGVyX2lkGAEgASgJQhu6SBhyFhg/MhJeW2Etel1bYS16MC05Xy1dKiQSGwoEY29kZRgCIAEoCUINukgKyAEBcgUQARiAQBI4Cg1jb2RlX3ZlcmlmaWVyGAMgASgJQiG6SB7IAQFyGRArGIABMhJeW0EtWmEtejAtOS5ffi1dKyQSIQoMcmVkaXJlY3RfdXJpGAQgASgJQgu6SAjIAQFyAxiAEBIcCgVub25jZRgFIAEoCUINukgKyAEBcgUQEBiAARItCgh0aW1lem9uZRgGIAEoCUIbukgYchYYQDISXltBLVphLXowLTlfKy8tXSokEh4KDGludml0ZV90b2tlbhgHIAEoCUIIukgFcgMYgAESHwoNY29ubmVjdGlvbl9pZBgIIAEoCUIIukgFcgOYARQ6jwG6SIsBGogBCiJjb21wbGV0ZV9vaWRjX3NpZ25faW4ub25lX3Byb3ZpZGVyEjBzZXQgZXhhY3RseSBvbmUgb2YgcHJvdmlkZXJfaWQgYW5kIGNvbm5lY3Rpb25faWQaMGhhcyh0aGlzLnByb3ZpZGVyX2lkKSAhPSBoYXModGhpcy5jb25uZWN0aW9uX2lkKSJkCgtTU09SZXF1aXJlZBIOCgZkb21haW4YASABKAkSNQoJcHJvdmlkZXJzGAIgAygLMiIucHVibGljLmF1dGgudjEuQXV0aFByb3ZpZGVyQ29uZmlnEg4KBmludml0ZRgDIAEoCCJaChpDb21wbGV0ZU9JRENTaWduSW5SZXNwb25zZRINCgV0b2tlbhgBIAEoCRIVCg1yZWZyZXNoX3Rva2VuGAIgASgJEhYKDmpvaW5lZF9vcmdfaWRzGAMgAygJIhYKFEdldEF1dGhDb25maWdSZXF1ZXN0IrQBChJBdXRoUHJvdmlkZXJDb25maWcSCgoCaWQYASABKAkSLgoEdHlwZRgCIAEoDjIgLnB1YmxpYy5hdXRoLnYxLkF1dGhQcm92aWRlclR5cGUSFAoMZGlzcGxheV9uYW1lGAMgASgJEhEKCWNsaWVudF9pZBgEIAEoCRISCgppc3N1ZXJfdXJsGAUgASgJEg4KBnNjb3BlcxgGIAMoCRIVCg1jb25uZWN0aW9uX2lkGAcgASgJIk4KFUdldEF1dGhDb25maWdSZXNwb25zZRI1Cglwcm92aWRlcnMYASADKAsyIi5wdWJsaWMuYXV0aC52MS5BdXRoUHJvdmlkZXJDb25maWciNgoVUmVmcmVzaFNlc3Npb25SZXF1ZXN0Eh0KDXJlZnJlc2hfdG9rZW4YASABKAlCBrpIA8gBASI+ChZSZWZyZXNoU2Vzc2lvblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiJwoOU2lnbk91dFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSIRCg9TaWduT3V0UmVzcG9uc2UiEwoRRGVtb1NpZ25JblJlcXVlc3QiTgoSRGVtb1NpZ25JblJlc3BvbnNlEg0KBXRva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkSEgoKcHJvamVjdF9pZBgDIAEoCSIyChVEaXNjb3ZlclNpZ25JblJlcXVlc3QSGQoFZW1haWwYASABKAlCCrpIB8gBAXICYAEidAoWRGlzY292ZXJTaWduSW5SZXNwb25zZRIOCgZkb21haW4YASABKAkSNQoJcHJvdmlkZXJzGAIgAygLMiIucHVibGljLmF1dGgudjEuQXV0aFByb3ZpZGVyQ29uZmlnEhMKC3JlcXVpcmVfc3NvGAMgASgIKlMKEEF1dGhQcm92aWRlclR5cGUSIgoeQVVUSF9QUk9WSURFUl9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXQVVUSF9QUk9WSURFUl9UWVBFX09JREMQATKCBwoLQXV0aFNlcnZpY2USXgoNR2V0QXV0aENvbmZpZxIkLnB1YmxpYy5hdXRoLnYxLkdldEF1dGhDb25maWdSZXF1ZXN0GiUucHVibGljLmF1dGgudjEuR2V0QXV0aENvbmZpZ1Jlc3BvbnNlIgASZAoPU2lnbkluV2l0aEVtYWlsEiYucHVibGljLmF1dGgudjEuU2lnbkluV2l0aEVtYWlsUmVxdWVzdBonLnB1YmxpYy5hdXRoLnYxLlNpZ25JbldpdGhFbWFpbFJlc3BvbnNlIgASZwoQUmVxdWVzdE1hZ2ljTGluaxInLnB1YmxpYy5hdXRoLnYxLlJlcXVlc3RNYWdpY0xpbmtSZXF1ZXN0GigucHVibGljLmF1dGgudjEuUmVxdWVzdE1hZ2ljTGlua1Jlc3BvbnNlIgASagoRQ29tcGxldGVNYWdpY0xpbmsSKC5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1JlcXVlc3QaKS5wdWJsaWMuYXV0aC52MS5Db21wbGV0ZU1hZ2ljTGlua1Jlc3BvbnNlIgASbQoSQ29tcGxldGVPSURDU2lnbkluEikucHVibGljLmF1dGgudjEuQ29tcGxldGVPSURDU2lnbkluUmVxdWVzdBoqLnB1YmxpYy5hdXRoLnYxLkNvbXBsZXRlT0lEQ1NpZ25JblJlc3BvbnNlIgASYQoOUmVmcmVzaFNlc3Npb24SJS5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5SZWZyZXNoU2Vzc2lvblJlc3BvbnNlIgASTAoHU2lnbk91dBIeLnB1YmxpYy5hdXRoLnYxLlNpZ25PdXRSZXF1ZXN0Gh8ucHVibGljLmF1dGgudjEuU2lnbk91dFJlc3BvbnNlIgASVQoKRGVtb1NpZ25JbhIhLnB1YmxpYy5hdXRoLnYxLkRlbW9TaWduSW5SZXF1ZXN0GiIucHVibGljLmF1dGgudjEuRGVtb1NpZ25JblJlc3BvbnNlIgASYQoORGlzY292ZXJTaWduSW4SJS5wdWJsaWMuYXV0aC52MS5EaXNjb3ZlclNpZ25JblJlcXVlc3QaJi5wdWJsaWMuYXV0aC52MS5EaXNjb3ZlclNpZ25JblJlc3BvbnNlIgBCQFo+Z2l0aHViLmNvbS9wdWctc2gvcHVnL2ludGVybmFsL2dlbi9wcm90by9wdWJsaWMvYXV0aC92MTthdXRodjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate]);
 
 /**
  * @generated from message public.auth.v1.SignInWithEmailRequest
@@ -158,6 +158,8 @@ export const CompleteMagicLinkResponseSchema: GenMessage<CompleteMagicLinkRespon
  */
 export type CompleteOIDCSignInRequest = Message<"public.auth.v1.CompleteOIDCSignInRequest"> & {
   /**
+   * A provider from GetAuthConfig.
+   *
    * @generated from field: string provider_id = 1;
    */
   providerId: string;
@@ -196,6 +198,13 @@ export type CompleteOIDCSignInRequest = Message<"public.auth.v1.CompleteOIDCSign
    * @generated from field: string invite_token = 7;
    */
   inviteToken: string;
+
+  /**
+   * An org's SSO connection, from AuthProviderConfig.connection_id.
+   *
+   * @generated from field: string connection_id = 8;
+   */
+  connectionId: string;
 };
 
 /**
@@ -316,6 +325,15 @@ export type AuthProviderConfig = Message<"public.auth.v1.AuthProviderConfig"> & 
    * @generated from field: repeated string scopes = 6;
    */
   scopes: string[];
+
+  /**
+   * Set for an org's SSO connection, which has no id. Its sign-in sends connection_id and the
+   * redirect_uri /oauth/callback/<connection_id>, without the query it lands with. Refuse a
+   * callback that lands on any other path.
+   *
+   * @generated from field: string connection_id = 7;
+   */
+  connectionId: string;
 };
 
 /**
@@ -466,6 +484,55 @@ export const DemoSignInResponseSchema: GenMessage<DemoSignInResponse> = /*@__PUR
   messageDesc(file_public_auth_v1_auth, 17);
 
 /**
+ * @generated from message public.auth.v1.DiscoverSignInRequest
+ */
+export type DiscoverSignInRequest = Message<"public.auth.v1.DiscoverSignInRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+};
+
+/**
+ * Describes the message public.auth.v1.DiscoverSignInRequest.
+ * Use `create(DiscoverSignInRequestSchema)` to create a new message.
+ */
+export const DiscoverSignInRequestSchema: GenMessage<DiscoverSignInRequest> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 18);
+
+/**
+ * @generated from message public.auth.v1.DiscoverSignInResponse
+ */
+export type DiscoverSignInResponse = Message<"public.auth.v1.DiscoverSignInResponse"> & {
+  /**
+   * @generated from field: string domain = 1;
+   */
+  domain: string;
+
+  /**
+   * The domain's connection and the config providers that list it, or Google when
+   * there are none.
+   *
+   * @generated from field: repeated public.auth.v1.AuthProviderConfig providers = 2;
+   */
+  providers: AuthProviderConfig[];
+
+  /**
+   * Accounts on the domain sign in only through SSO.
+   *
+   * @generated from field: bool require_sso = 3;
+   */
+  requireSso: boolean;
+};
+
+/**
+ * Describes the message public.auth.v1.DiscoverSignInResponse.
+ * Use `create(DiscoverSignInResponseSchema)` to create a new message.
+ */
+export const DiscoverSignInResponseSchema: GenMessage<DiscoverSignInResponse> = /*@__PURE__*/
+  messageDesc(file_public_auth_v1_auth, 19);
+
+/**
  * @generated from enum public.auth.v1.AuthProviderType
  */
 export enum AuthProviderType {
@@ -570,6 +637,17 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof DemoSignInRequestSchema;
     output: typeof DemoSignInResponseSchema;
+  },
+  /**
+   * DiscoverSignIn returns the providers that sign in the email's domain and whether
+   * it requires SSO. It never says whether an account exists.
+   *
+   * @generated from rpc public.auth.v1.AuthService.DiscoverSignIn
+   */
+  discoverSignIn: {
+    methodKind: "unary";
+    input: typeof DiscoverSignInRequestSchema;
+    output: typeof DiscoverSignInResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_public_auth_v1_auth, 0);

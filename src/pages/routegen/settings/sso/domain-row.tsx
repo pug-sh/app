@@ -1,10 +1,46 @@
 import { Loader2, Trash2 } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { DomainStatus, DomainVerificationMethod, type OrgDomain } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import CopyableCode from '@/components/copyable-code'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+
+export const RemoveControl = ({
+  name,
+  confirming,
+  removing,
+  onConfirm,
+  onRemove,
+}: {
+  name: string
+  confirming: boolean
+  removing: boolean
+  onConfirm: () => void
+  onRemove: () => void
+}) => {
+  if (removing) return <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+  if (confirming) {
+    return (
+      <button
+        type="button"
+        onClick={onRemove}
+        className="shrink-0 text-xs font-medium text-negative underline-offset-2 hover:underline"
+      >
+        Remove?
+      </button>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={onConfirm}
+      aria-label={`Remove ${name}`}
+      className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-negative group-hover:opacity-100"
+    >
+      <Trash2 className="size-3.5" />
+    </button>
+  )
+}
 
 export const DomainRow = ({
   domain,
@@ -32,32 +68,6 @@ export const DomainRow = ({
   const verified = domain.status === DomainStatus.VERIFIED
   const byOperator = domain.verificationMethod === DomainVerificationMethod.OPERATOR
 
-  let removeControl: ReactNode
-  if (removing) {
-    removeControl = <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
-  } else if (confirmingRemove) {
-    removeControl = (
-      <button
-        type="button"
-        onClick={onRemove}
-        className="shrink-0 text-xs font-medium text-negative underline-offset-2 hover:underline"
-      >
-        Remove?
-      </button>
-    )
-  } else {
-    removeControl = (
-      <button
-        type="button"
-        onClick={onConfirmRemove}
-        aria-label={`Remove ${domain.domain}`}
-        className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-negative group-hover:opacity-100"
-      >
-        <Trash2 className="size-3.5" />
-      </button>
-    )
-  }
-
   let recordHint =
     'Add this TXT record at your DNS provider, and keep it there. DNS changes can take a few minutes to show up.'
   if (verified) recordHint = 'Keep this TXT record at your DNS provider.'
@@ -81,7 +91,13 @@ export const DomainRow = ({
             </Button>
           </>
         )}
-        {removeControl}
+        <RemoveControl
+          name={domain.domain}
+          confirming={confirmingRemove}
+          removing={removing}
+          onConfirm={onConfirmRemove}
+          onRemove={onRemove}
+        />
       </div>
       {/* The operator's word needs no record; a DNS one is re-checked whenever a setting grants or restricts more. */}
       {!byOperator && (

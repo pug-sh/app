@@ -2,7 +2,7 @@ import { clone } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue } from 'jotai'
-import { Check, Globe, Loader2, Plus, X } from 'lucide-react'
+import { Check, Globe, KeyRound, Loader2, Plus, X } from 'lucide-react'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -13,6 +13,7 @@ import {
   type OrgDomain,
   OrgDomainSchema,
   OrgRole,
+  type SSOConnection,
 } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { orgsRPCAtom } from '@/api/rpc'
 import { Can } from '@/auth/can'
@@ -26,6 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
+import { ConnectionForm, type ConnectionFormData } from './connection-form'
+import { ConnectionRow } from './connection-row'
 import { DomainRow } from './domain-row'
 
 const notADomain = 'Enter a domain name such as acme.com'
@@ -63,6 +66,19 @@ const SettingRow = ({
 
 const adminOnly = <p className="text-sm text-muted-foreground">Only admins can manage SSO and domains.</p>
 
+// ListSSOConnections's only FailedPrecondition is connections being off on the server.
+const connectionsNoteFor = (err: unknown) => {
+  const code = err instanceof ConnectError ? err.code : undefined
+  if (code === Code.FailedPrecondition) {
+    return "SSO connections aren't turned on for this server. Ask its operator to set PUG_SSO_SECRET_KEY."
+  }
+  if (code === Code.Unimplemented) return "This server doesn't support SSO connections yet."
+  return 'Failed to load SSO connections'
+}
+
+// Can't collide with a connection id, which is a 20-character xid.
+const NEW_CONNECTION = 'new'
+
 const SsoDomains = () => {
   const org = useAtomValue(activeOrgAtom)
   const orgsRPC = useAtomValue(orgsRPCAtom)
@@ -77,6 +93,11 @@ const SsoDomains = () => {
   const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null)
   const [removing, setRemoving] = useState<string[]>([])
   const [updatingSSO, setUpdatingSSO] = useState<string[]>([])
+  const [connections, setConnections] = useState<SSOConnection[]>([])
+  const [connectionsNote, setConnectionsNote] = useState<string | null>(null)
+  const [editingConnection, setEditingConnection] = useState<string | null>(null)
+  const [confirmingRemoveConnection, setConfirmingRemoveConnection] = useState<string | null>(null)
+  const [removingConnections, setRemovingConnections] = useState<string[]>([])
   const addForm = useForm<AddDomainFormData>({
     resolver: zodResolver(addDomainSchema),
     defaultValues: { domain: '' },
@@ -84,13 +105,34 @@ const SsoDomains = () => {
   const adding = addForm.formState.isSubmitting
 
   const orgId = org?.id
+
+  const loadConnections = useCallback(
+    async ({ keepOnError = false } = {}) => {
+      if (!orgId) return
+      try {
+        setConnections((await orgsRPC.listSSOConnections({ orgId })).connections)
+        setConnectionsNote(null)
+      } catch (err) {
+        const code = err instanceof ConnectError ? err.code : undefined
+        // Connections being off shows as the note, not a toast on every reload.
+        if (keepOnError && code !== Code.FailedPrecondition && code !== Code.Unimplemented) {
+          toastRPCError(err, 'Failed to refresh SSO connections')
+          return
+        }
+        console.error('Failed to load SSO connections:', err)
+        setConnectionsNote(connectionsNoteFor(err))
+      }
+    },
+    [orgId, orgsRPC],
+  )
+
   const load = useCallback(async () => {
     if (!orgId) return
     setLoading(true)
     setError(null)
     setDenied(false)
     try {
-      const resp = await orgsRPC.listDomains({ orgId })
+      const [resp] = await Promise.all([orgsRPC.listDomains({ orgId }), loadConnections()])
       setSettings(resp.settings ?? null)
       setDomains(resp.domains)
     } catch (err) {
@@ -102,17 +144,18 @@ const SsoDomains = () => {
     } finally {
       setLoading(false)
     }
-  }, [orgId, orgsRPC])
+  }, [orgId, orgsRPC, loadConnections])
 
   useEffect(() => {
     load()
   }, [load])
 
   // After an action, worked or not: a failed reload toasts rather than swapping the page for an error.
+  // Connections too: a domain change edits its connection, and a connection change edits its domains.
   const refresh = async () => {
     if (!orgId) return
     try {
-      const resp = await orgsRPC.listDomains({ orgId })
+      const [resp] = await Promise.all([orgsRPC.listDomains({ orgId }), loadConnections({ keepOnError: true })])
       setSettings(resp.settings ?? null)
       setDomains(resp.domains)
     } catch (err) {
@@ -130,6 +173,7 @@ const SsoDomains = () => {
         const merged = clone(OrgDomainSchema, updated)
         merged.orgCreationRestrictedElsewhere = d.orgCreationRestrictedElsewhere
         merged.ssoRequiredElsewhere = d.ssoRequiredElsewhere
+        merged.ssoConnectionElsewhere = d.ssoConnectionElsewhere
         return merged
       }),
     )
@@ -203,6 +247,42 @@ const SsoDomains = () => {
     }
     await refresh()
     setUpdatingSSO(ids => ids.filter(id => id !== domain.id))
+  }
+
+  const handleSaveConnection = async (data: ConnectionFormData) => {
+    if (!orgId || !editingConnection) return
+    const connectionId = editingConnection === NEW_CONNECTION ? undefined : editingConnection
+    try {
+      const { connection } = await orgsRPC.setSSOConnection({ orgId, ...data, connectionId })
+      if (connection) {
+        setConnections(cs => {
+          if (!cs.some(c => c.id === connection.id)) return [...cs, connection]
+          return cs.map(c => (c.id === connection.id ? connection : c))
+        })
+      }
+      let saved = `${data.label} is saved`
+      if (!connectionId) saved += '. Add its redirect URL in your identity provider.'
+      toast.success(saved)
+      // Leave open an editor the user switched to mid-save.
+      setEditingConnection(current => (current === editingConnection ? null : current))
+    } catch (err) {
+      toastRPCError(err, 'Failed to save the SSO connection')
+    }
+    await refresh()
+  }
+
+  const handleRemoveConnection = async (connection: SSOConnection) => {
+    if (!orgId) return
+    setRemovingConnections(ids => [...ids, connection.id])
+    try {
+      await orgsRPC.deleteSSOConnection({ orgId, connectionId: connection.id })
+      setConnections(cs => cs.filter(c => c.id !== connection.id))
+    } catch (err) {
+      toastRPCError(err, 'Failed to remove the SSO connection')
+    }
+    setConfirmingRemoveConnection(null)
+    await refresh()
+    setRemovingConnections(ids => ids.filter(id => id !== connection.id))
   }
 
   if (loading) return <LoadingSpinner />
@@ -370,6 +450,70 @@ const SsoDomains = () => {
             <Plus className="size-4" />
             Add domain
           </button>
+        )}
+      </section>
+
+      <section>
+        <SectionHeader
+          title="SSO connections"
+          count={connectionsNote ? undefined : connections.length}
+          description="Sign people in through your company's identity provider, such as Okta, Microsoft Entra ID or Keycloak, over OIDC. Google Workspace needs no connection."
+        />
+        {connectionsNote ? (
+          <p className="text-sm text-muted-foreground">{connectionsNote}</p>
+        ) : (
+          <>
+            {connections.length === 0 && editingConnection !== NEW_CONNECTION && (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <KeyRound className="mb-3 size-8 opacity-15" />
+                <p className="text-sm text-muted-foreground">No SSO connections yet.</p>
+              </div>
+            )}
+            {connections.map(c =>
+              editingConnection === c.id ? (
+                <ConnectionForm
+                  key={c.id}
+                  connection={c}
+                  connections={connections}
+                  domains={domains}
+                  onSave={handleSaveConnection}
+                  onCancel={() => setEditingConnection(null)}
+                />
+              ) : (
+                <ConnectionRow
+                  key={c.id}
+                  connection={c}
+                  confirmingRemove={confirmingRemoveConnection === c.id}
+                  removing={removingConnections.includes(c.id)}
+                  onEdit={() => setEditingConnection(c.id)}
+                  onConfirmRemove={() => setConfirmingRemoveConnection(c.id)}
+                  onRemove={() => handleRemoveConnection(c)}
+                  onCancelRemove={() => setConfirmingRemoveConnection(null)}
+                />
+              ),
+            )}
+            {editingConnection === NEW_CONNECTION ? (
+              <ConnectionForm
+                connections={connections}
+                domains={domains}
+                onSave={handleSaveConnection}
+                onCancel={() => setEditingConnection(null)}
+              />
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditingConnection(NEW_CONNECTION)}
+                  disabled={!hasVerified}
+                  className="mt-3 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <Plus className="size-4" />
+                  Add connection
+                </button>
+                {needsDomain && <p className="mt-1 text-xs text-muted-foreground">{needsDomain}</p>}
+              </>
+            )}
+          </>
         )}
       </section>
     </div>

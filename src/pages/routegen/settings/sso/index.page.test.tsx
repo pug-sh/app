@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf'
+import { createValidator } from '@bufbuild/protovalidate'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
@@ -9,24 +10,51 @@ import {
   DomainStatus,
   DomainVerificationMethod,
   ListDomainsResponseSchema,
+  ListSSOConnectionsResponseSchema,
   OrgDomainSchema,
   OrgRole,
   OrgSchema,
+  SetSSOConnectionRequestSchema,
+  type SSOConnection,
+  SSOConnectionSchema,
 } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 
-const { listDomains, setDomainSettings, verifyDomain, addDomain, removeDomain, updateDomain } = vi.hoisted(() => ({
+const {
+  listDomains,
+  setDomainSettings,
+  verifyDomain,
+  addDomain,
+  removeDomain,
+  updateDomain,
+  listSSOConnections,
+  setSSOConnection,
+  deleteSSOConnection,
+} = vi.hoisted(() => ({
   listDomains: vi.fn(),
   setDomainSettings: vi.fn(),
   verifyDomain: vi.fn(),
   addDomain: vi.fn(),
   removeDomain: vi.fn(),
   updateDomain: vi.fn(),
+  listSSOConnections: vi.fn(),
+  setSSOConnection: vi.fn(),
+  deleteSSOConnection: vi.fn(),
 }))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    orgsRPCAtom: atom({ listDomains, setDomainSettings, verifyDomain, addDomain, removeDomain, updateDomain }),
+    orgsRPCAtom: atom({
+      listDomains,
+      setDomainSettings,
+      verifyDomain,
+      addDomain,
+      removeDomain,
+      updateDomain,
+      listSSOConnections,
+      setSSOConnection,
+      deleteSSOConnection,
+    }),
   }
 })
 
@@ -78,8 +106,11 @@ const typeDomain = async (value: string) => {
   fireEvent.click(screen.getByRole('button', { name: 'Add domain' }))
 }
 
+const connectionListing = (connections: SSOConnection[]) => create(ListSSOConnectionsResponseSchema, { connections })
+
 beforeEach(() => {
   vi.clearAllMocks()
+  listSSOConnections.mockResolvedValue(connectionListing([]))
 })
 
 describe('the SSO & domains tab', () => {
@@ -437,5 +468,312 @@ describe('the SSO & domains tab', () => {
 
     expect(screen.getByText('Only admins can manage SSO and domains.')).toBeTruthy()
     expect(listDomains).not.toHaveBeenCalled()
+  })
+})
+
+describe('SSO connections', () => {
+  const acmeSSOInit = {
+    id: 'd3uqa6s1m7j9b2c4e5f0',
+    label: 'Acme SSO',
+    issuerUrl: 'https://acme.okta.com',
+    clientId: 'acme-client',
+    domains: [{ id: 'd-verified', domain: 'acme.com' }],
+  }
+  const acmeSSO = create(SSOConnectionSchema, acmeSSOInit)
+  const signedInByAcmeSSO = create(OrgDomainSchema, { ...verifiedInit, ssoConnectionId: acmeSSO.id })
+  const globexInit = { ...verifiedInit, id: 'd-globex', domain: 'globex.com' }
+
+  // The mocked RPC skips the transport's protovalidate check, so run it here; '' counts as set.
+  const expectValidRequest = (request: unknown) => {
+    const message = create(SetSSOConnectionRequestSchema, request as object)
+    expect(createValidator().validate(SetSSOConnectionRequestSchema, message).kind).toBe('valid')
+  }
+
+  const fill = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } })
+
+  it('lists a connection with the redirect URL to add in the identity provider', async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    mount()
+
+    expect(await screen.findByText('Acme SSO')).toBeTruthy()
+    expect(screen.getByText('Signs in acme.com')).toBeTruthy()
+    expect(screen.getByText('https://acme.okta.com')).toBeTruthy()
+    expect(screen.getByText(`${window.location.origin}/oauth/callback/${acmeSSO.id}`)).toBeTruthy()
+  })
+
+  it('sets one up for a verified domain', async () => {
+    listDomains.mockResolvedValue(listing([verified, pending]))
+    listSSOConnections.mockResolvedValueOnce(connectionListing([])).mockResolvedValue(connectionListing([acmeSSO]))
+    setSSOConnection.mockResolvedValue({ connection: acmeSSO })
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+    fill('Button label', 'Acme SSO')
+    fill('Issuer URL', ' https://acme.okta.com ')
+    fill('Client ID', 'acme-client')
+    fill('Client secret', 's3cret')
+    // Only a verified domain can be signed in through a connection.
+    expect(screen.queryByRole('checkbox', { name: 'acme.io' })).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'acme.com' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(setSSOConnection).toHaveBeenCalledOnce())
+    const request = setSSOConnection.mock.calls[0][0]
+    expect(request).toEqual({
+      orgId: 'org-a',
+      label: 'Acme SSO',
+      issuerUrl: 'https://acme.okta.com',
+      clientId: 'acme-client',
+      clientSecret: 's3cret',
+      domainIds: ['d-verified'],
+    })
+    expectValidRequest(request)
+    expect(await screen.findByText(`${window.location.origin}/oauth/callback/${acmeSSO.id}`)).toBeTruthy()
+  })
+
+  it('keeps the stored secret when an edit leaves it blank', async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    setSSOConnection.mockResolvedValue({ connection: acmeSSO })
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fill('Button label', 'Acme Okta')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(setSSOConnection).toHaveBeenCalledOnce())
+    const request = setSSOConnection.mock.calls[0][0]
+    expect(request).toMatchObject({ connectionId: acmeSSO.id, label: 'Acme Okta', clientSecret: '' })
+    expectValidRequest(request)
+  })
+
+  it('leaves open an editor opened while another saved', async () => {
+    const globexSSO = create(SSOConnectionSchema, { ...acmeSSOInit, id: 'g1obexs5o0000000000a', label: 'Globex SSO' })
+    let landSave: (value: unknown) => void = () => {}
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO, globexSSO]))
+    setSSOConnection.mockReturnValue(new Promise(resolve => (landSave = resolve)))
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect(setSSOConnection).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Globex SSO' }))
+    await act(async () => landSave({ connection: acmeSSO }))
+
+    expect((screen.getByLabelText('Button label') as HTMLInputElement).value).toBe('Globex SSO')
+  })
+
+  it('drops a domain removed while the editor was open instead of sending it', async () => {
+    const both = create(SSOConnectionSchema, {
+      ...acmeSSOInit,
+      domains: [...acmeSSOInit.domains, { id: 'd-globex', domain: 'globex.com' }],
+    })
+    listDomains
+      .mockResolvedValueOnce(
+        listing([signedInByAcmeSSO, create(OrgDomainSchema, { ...globexInit, ssoConnectionId: acmeSSO.id })]),
+      )
+      .mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValueOnce(connectionListing([both])).mockResolvedValue(connectionListing([acmeSSO]))
+    removeDomain.mockResolvedValue({})
+    setSSOConnection.mockResolvedValue({ connection: acmeSSO })
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove globex.com' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'globex.com' })).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(setSSOConnection).toHaveBeenCalledOnce())
+    expect(setSSOConnection.mock.calls[0][0].domainIds).toEqual(['d-verified'])
+  })
+
+  it('reloads after a failed save, and lets the editor untick a domain taken meanwhile', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(toast, 'error').mockImplementation(() => '')
+    listDomains
+      .mockResolvedValueOnce(listing([signedInByAcmeSSO, create(OrgDomainSchema, globexInit)]))
+      .mockResolvedValue(
+        listing([signedInByAcmeSSO, create(OrgDomainSchema, { ...globexInit, ssoConnectionElsewhere: true })]),
+      )
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    setSSOConnection.mockRejectedValue(
+      new ConnectError('another SSO connection signs in globex.com', Code.AlreadyExists),
+    )
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'globex.com' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText("Another organization's connection signs it in.")).toBeTruthy()
+    expect(isDisabled(screen.getByRole('checkbox', { name: 'globex.com' }))).toBe(false)
+  })
+
+  it('asks for the secret again when the issuer changes', async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fill('Issuer URL', 'https://acme.okta.com/oauth2/default')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Enter the client secret again for the new issuer')).toBeTruthy()
+    expect(screen.getByText(/A new issuer unlinks the people who signed in through this connection/)).toBeTruthy()
+    expect(setSSOConnection).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['http://acme.okta.com', 'Enter an HTTPS URL such as https://acme.okta.com'],
+    ['https://acme.okta.com/?tenant=1', 'Enter an HTTPS URL such as https://acme.okta.com'],
+  ])('turns the issuer %s away before sending it', async (issuer, message) => {
+    listDomains.mockResolvedValue(listing([verified]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+    fill('Issuer URL', issuer)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText(message)).toBeTruthy()
+    expect(screen.getByText('Pick at least one domain')).toBeTruthy()
+    expect(setSSOConnection).not.toHaveBeenCalled()
+  })
+
+  it('says why the server would not save it, and keeps the form', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    const reason = "we couldn't read the issuer's OpenID configuration; check the issuer URL"
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    setSSOConnection.mockRejectedValue(new ConnectError(reason, Code.FailedPrecondition))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(error).toHaveBeenCalledWith(reason))
+    expect(screen.getByLabelText('Issuer URL')).toBeTruthy()
+  })
+
+  it("won't offer a domain another org's connection signs in", async () => {
+    listDomains.mockResolvedValue(listing([create(OrgDomainSchema, { ...verifiedInit, ssoConnectionElsewhere: true })]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+
+    expect(isDisabled(screen.getByRole('checkbox', { name: 'acme.com' }))).toBe(true)
+    expect(screen.getByText("Another organization's connection signs it in.")).toBeTruthy()
+  })
+
+  it("won't offer a domain another of this org's connections signs in", async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+
+    expect(isDisabled(screen.getByRole('checkbox', { name: 'acme.com' }))).toBe(true)
+    expect(screen.getByText('Acme SSO signs it in.')).toBeTruthy()
+  })
+
+  // Only ListDomains sets ssoConnectionElsewhere; UpdateDomain's reply leaves it false.
+  it("still won't offer it after a Require SSO change whose reload fails", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(toast, 'error').mockImplementation(() => '')
+    const elsewhereInit = { ...verifiedInit, ssoSeen: true, ssoConnectionElsewhere: true }
+    listDomains
+      .mockResolvedValueOnce(listing([create(OrgDomainSchema, elsewhereInit)]))
+      .mockRejectedValue(new Error('down'))
+    updateDomain.mockResolvedValue({
+      domain: create(OrgDomainSchema, { ...verifiedInit, ssoSeen: true, requireSso: true }),
+    })
+    mount()
+
+    fireEvent.click(await screen.findByRole('switch', { name: 'Require SSO for acme.com' }))
+    await waitFor(() => expect(updateDomain).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(screen.getByRole('switch', { name: 'Require SSO for acme.com' }).getAttribute('aria-checked')).toBe(
+        'true',
+      ),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add connection' }))
+
+    expect(isDisabled(screen.getByRole('checkbox', { name: 'acme.com' }))).toBe(true)
+  })
+
+  it('asks before removing one', async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValueOnce(connectionListing([acmeSSO])).mockResolvedValue(connectionListing([]))
+    deleteSSOConnection.mockResolvedValue({})
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove Acme SSO' }))
+    expect(deleteSSOConnection).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
+
+    await waitFor(() => expect(deleteSSOConnection).toHaveBeenCalledWith({ orgId: 'org-a', connectionId: acmeSSO.id }))
+    expect(await screen.findByText('No SSO connections yet.')).toBeTruthy()
+  })
+
+  it('needs a verified domain first', async () => {
+    listDomains.mockResolvedValue(listing([pending]))
+    mount()
+
+    expect(((await screen.findByRole('button', { name: 'Add connection' })) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('says when connections are off on this server, and keeps the domains', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    listDomains.mockResolvedValue(listing([verified]))
+    listSSOConnections.mockRejectedValue(
+      new ConnectError('SSO connections are not enabled on this server', Code.FailedPrecondition),
+    )
+    mount()
+
+    expect(
+      await screen.findByText(
+        "SSO connections aren't turned on for this server. Ask its operator to set PUG_SSO_SECRET_KEY.",
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add connection' })).toBeNull()
+    expect(screen.getByText('acme.com')).toBeTruthy()
+  })
+
+  it("doesn't toast connections being off on every reload", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    listDomains.mockResolvedValue(listing([verified]))
+    listSSOConnections.mockRejectedValue(
+      new ConnectError('SSO connections are not enabled on this server', Code.FailedPrecondition),
+    )
+    addDomain.mockResolvedValue({ domain: pending })
+    mount()
+
+    await typeDomain('acme.io')
+    await waitFor(() => expect(listSSOConnections).toHaveBeenCalledTimes(2))
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)))
+
+    expect(error).not.toHaveBeenCalled()
+  })
+
+  it('keeps the connections and says so when their reload fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO]))
+    listSSOConnections.mockResolvedValueOnce(connectionListing([acmeSSO])).mockRejectedValue(new Error('down'))
+    addDomain.mockResolvedValue({ domain: pending })
+    mount()
+
+    await typeDomain('acme.io')
+
+    await waitFor(() => expect(error).toHaveBeenCalledWith('Failed to refresh SSO connections'))
+    expect(screen.getByText('Acme SSO')).toBeTruthy()
   })
 })

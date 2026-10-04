@@ -31,6 +31,7 @@ vi.mock('@/analytics/pug', () => ({
 
 const App = (await import('@/App')).default
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
+const { connectionRedirectURI } = await import('@/auth/oidc')
 
 describe('the auth canvas across a change of screen', () => {
   // restoreMocks clears the factory's implementations before each test, and an undefined batchGet
@@ -123,5 +124,22 @@ describe('the auth canvas across a change of screen', () => {
     // Waited for: landOrg only starts the tail of bootstrap, which still awaits the projects call.
     await waitFor(() => expect(container.querySelector('[data-pug-no-capture]')).not.toBeNull())
     expect(container.querySelector('.auth-wall-track')).toBeNull()
+  })
+})
+
+describe('the OAuth callback route', () => {
+  it("opens the callback, not sign-in, on a connection's own path", async () => {
+    const path = new URL(connectionRedirectURI('d3uqa6s1m7j9b2c4e5f0')).pathname
+    render(
+      <Provider store={createStore()}>
+        <Router hook={memoryLocation({ path }).hook}>
+          <App />
+        </Router>
+      </Provider>,
+    )
+
+    // No sign-in was pending, so the callback fails, and only the callback can say so.
+    expect(await screen.findByText('Sign-in failed', {}, { timeout: 5000 })).toBeTruthy()
+    expect(screen.queryByText('Sign in to Pug')).toBeNull()
   })
 })
