@@ -366,11 +366,13 @@ export const ANCHORS: Record<GroupName, string> = {
 /**
  * Moves one member of a group by the change from the group's default anchor to the theme's value:
  * hue rotated, lightness shifted, chroma scaled, then fitted into sRGB. The group keeps its shape.
+ * Chroma scales by the anchor's own, so the anchor itself lands on the value — near-grey anchors
+ * included, which is what workspace and files have.
  */
 export const moveHex = (memberHex: string, anchorHex: string, target: Oklch) => {
   const member = fromHex(memberHex)
   const anchor = fromHex(anchorHex)
-  const k = target.c / Math.max(anchor.c, 0.02)
+  const k = target.c / Math.max(anchor.c, 1e-6)
   return toHex({
     l: Math.max(0, Math.min(1, member.l + (target.l - anchor.l))),
     c: member.c * k,

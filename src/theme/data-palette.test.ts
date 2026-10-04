@@ -33,17 +33,25 @@ describe('compileDataPalette', () => {
     expect(bandShift('dark', PUG_CANVAS.dark)).toBe(0)
   })
 
-  it('treats a group set to its own anchor as no change', () => {
-    const anchor = EVENT_COLORS[ANCHORS.failure]
+  // Every group, not just a vivid one: the near-grey workspace and files anchors once had their
+  // chroma scaled through a floor, so neither promise held for them.
+  it.each(GROUPS)('treats %s set to its own anchor as no change', group => {
+    const anchor = EVENT_COLORS[ANCHORS[group]]
     const moved = compileDataPalette(
-      spec({ groups: { failure: fromHex(anchor) } }),
+      spec({ groups: { [group]: fromHex(anchor) } }),
       'light',
       'standard',
       PUG_CANVAS.light,
     )
     const base = compileDataPalette(undefined, 'light', 'standard', PUG_CANVAS.light)
-    expect(moved.events.rage_click).toEqual(base.events.rage_click)
-    expect(moved.events.payment_failed).toEqual(base.events.payment_failed)
+    const members = Object.keys(EVENT_COLORS).filter(event => groupOf(event) === group)
+    for (const event of members) expect(moved.events[event]).toEqual(base.events[event])
+    expect(moved.families).toEqual(base.families)
+  })
+
+  it.each(GROUPS)("lands %s's anchor exactly on the theme's value", group => {
+    const data = spec({ groups: { [group]: color('#2563eb') }, adapt: false })
+    expect(compileDataPalette(data, 'light', 'standard', PUG_CANVAS.light).events[ANCHORS[group]].line).toBe('#2563eb')
   })
 
   it('moves every member of a group and nothing outside it', () => {
