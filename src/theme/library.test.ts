@@ -40,6 +40,47 @@ describe('chooseActive', () => {
     expect(choose({ autoContrast: true, moreContrast: false }).id).toBe('pug')
   })
 
+  // Auto contrast exists to give a standard theme more contrast. A theme that is already high contrast
+  // is what the person chose for that need, so it stays.
+  it('leaves an installed high-contrast theme in place when the OS asks for more contrast', () => {
+    const night: InstalledTheme = {
+      ...grape,
+      id: 'installed-night',
+      text: JSON.stringify({
+        version: 1,
+        name: 'Night',
+        contrast: 'high',
+        variants: { dark: { colors: { background: '#000000' } } },
+      }),
+    }
+    const library = buildLibrary([night])
+    const active = choose({
+      selection: { light: 'pug', dark: night.id },
+      autoContrast: true,
+      moreContrast: true,
+      library,
+    })
+    expect(active.id).toBe(night.id)
+  })
+
+  // A high-contrast theme with no variant for this mode falls back to the built-in at its own level.
+  it('falls back to Pug High Contrast for a high-contrast family without this mode', () => {
+    const night: InstalledTheme = {
+      ...grape,
+      id: 'installed-night',
+      text: JSON.stringify({
+        version: 1,
+        name: 'Night',
+        contrast: 'high',
+        variants: { dark: { colors: { background: '#000000' } } },
+      }),
+    }
+    const library = buildLibrary([night])
+    expect(choose({ polarity: 'light', selection: { light: night.id, dark: 'pug' }, library }).id).toBe(
+      'pug-high-contrast',
+    )
+  })
+
   it('falls back to Pug for a family without this mode', () => {
     const library = buildLibrary([grape])
     expect(choose({ polarity: 'light', selection: { light: grape.id, dark: 'pug' }, library }).id).toBe('pug')

@@ -110,6 +110,27 @@ describe('the OS colour scheme', () => {
   })
 })
 
+// On by default, so a regression here turns it off for everyone who relies on it — and the first
+// paint, which reads the OS itself, would then disagree with React on every load.
+describe('auto contrast', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('swaps in Pug High Contrast when the OS asks for more contrast, until it is turned off', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      media: query,
+      matches: query === '(prefers-contrast: more)',
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }))
+    vi.resetModules()
+    const fresh = await import('./theme.atoms')
+    const store = createStore()
+    expect(store.get(fresh.compiledThemeAtom).id).toBe('pug-high-contrast')
+    store.set(fresh.autoContrastAtom, false)
+    expect(store.get(fresh.compiledThemeAtom).id).toBe('pug')
+  })
+})
+
 describe('installing and removing', () => {
   it('installs a checked file', () => {
     const store = createStore()
