@@ -1,13 +1,18 @@
 import type { Oklch } from '../lib/color/oklch'
 import { parseThemeObject, type ThemeFamily, type ThemeFile } from './format'
 import { pug } from './presets/pug'
+import { pugColourblind } from './presets/pug-colourblind'
 import { pugHighContrast } from './presets/pug-high-contrast'
 import type { Contrast, Polarity, TokenName } from './tokens'
 
 // The built-in themes, parsed once at load. A built-in that doesn't parse is a programming error,
 // so it throws rather than reporting.
 
-const FILES = { pug, 'pug-high-contrast': pugHighContrast } satisfies Record<string, ThemeFile>
+const FILES = {
+  pug,
+  'pug-high-contrast': pugHighContrast,
+  'pug-colourblind': pugColourblind,
+} satisfies Record<string, ThemeFile>
 
 export type BuiltinId = keyof typeof FILES
 export const BUILTIN_IDS = Object.keys(FILES) as BuiltinId[]
