@@ -6,6 +6,10 @@ import { linearToOklch, normHue, type Oklch, srgbToLinear } from './oklch'
 
 export const MAX_COLOR_LENGTH = 64
 
+// Past any display's gamut. CSS accepts any chroma, but uncapped it serialises in exponent notation
+// and the gamut fit runs out of steps before reaching it.
+const MAX_CHROMA = 0.5
+
 const NUM = '[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)'
 const PCT = `${NUM}%`
 const ALPHA = `(${NUM}%?)`
@@ -75,7 +79,7 @@ export const parseColor = (input: string): Oklch | null => {
   if (ok) {
     const l = clamp01(unitOrPct(ok[1], 1))
     // CSS Color 4: 100% chroma is 0.4.
-    const c = ok[2].endsWith('%') ? pct(ok[2]) * 0.4 : Number.parseFloat(ok[2])
+    const c = Math.min(ok[2].endsWith('%') ? pct(ok[2]) * 0.4 : Number.parseFloat(ok[2]), MAX_CHROMA)
     if (c < 0) return null
     return { l, c, h: c === 0 ? 0 : normHue(Number.parseFloat(ok[3])), alpha: parseAlpha(ok[4]) }
   }

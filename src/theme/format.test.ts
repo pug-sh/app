@@ -95,6 +95,33 @@ describe('parseThemeObject', () => {
     expect(result.issues.filter(i => i.rule === 'V12')).toHaveLength(2)
   })
 
+  // A theme's keys and values come back inside its own issue messages, which the install report
+  // renders — so the cleaning that keeps a direction override out of a name keeps it out of those too.
+  it('keeps control and direction-override characters out of its own messages', () => {
+    const result = parseThemeObject({ ...minimal, 'x\u202eevil': 1 })
+    expect(result.issues).toHaveLength(1)
+    for (const issue of result.issues) {
+      expect(issue.path).not.toMatch(/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/)
+      expect(issue.message).not.toMatch(/[\u0000-\u001f\u202a-\u202e\u2066-\u2069]/)
+    }
+  })
+
+  // Both are reserved or meaningless today, and both used to vanish without a word.
+  it("warns that seeds and a data colour's alpha are ignored", () => {
+    const result = parseThemeObject({
+      ...minimal,
+      seeds: { primary: '#ff0000' },
+      variants: {
+        dark: { colors: { background: '#1e1b2e' }, data: { categorical: ['#ff000080', '#00ff00', '#0000ff'] } },
+      },
+    })
+    expect(result.ok).toBe(true)
+    expect(result.issues.map(i => `${i.severity} ${i.rule} ${i.path}`)).toEqual([
+      'warning V12 seeds',
+      'warning V12 variants.dark.data.categorical.0',
+    ])
+  })
+
   it('keys event colours by their canonical kind', () => {
     const result = parseThemeObject({ ...minimal, variants: { dark: { data: { events: { pageView: '#8be9fd' } } } } })
     expect(result.ok).toBe(true)

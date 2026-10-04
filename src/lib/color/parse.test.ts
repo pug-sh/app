@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toHex } from './oklch'
+import { fromHex, toHex } from './oklch'
 import { CANONICAL_COLOR_RE, formatColor, parseColor } from './parse'
 
 const canonical = (input: string) => {
@@ -52,6 +52,18 @@ describe('parseColor', () => {
   ])('rejects %s', input => {
     expect(parseColor(input)).toBeNull()
   })
+})
+
+// Any chroma reads as valid CSS, so a theme can say 10000000. Uncapped it serialised in exponent
+// notation — which the first-paint script rightly refuses — and the gamut fit ran out of steps and
+// drew it grey where the browser draws it vivid.
+it('caps chroma at what no display can show', () => {
+  const huge = parseColor('oklch(0.6 10000000 30)') as NonNullable<ReturnType<typeof parseColor>>
+  expect(huge.c).toBe(0.5)
+  expect(formatColor(huge)).toMatch(CANONICAL_COLOR_RE)
+  const drawn = fromHex(toHex(huge))
+  expect(drawn.c).toBeGreaterThan(0.15)
+  expect(Math.abs(drawn.h - 30)).toBeLessThan(10)
 })
 
 describe('formatColor', () => {

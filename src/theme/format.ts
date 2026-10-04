@@ -187,6 +187,9 @@ export const parseThemeObject = (input: unknown): ParseResult => {
   const file = shape.data
 
   unknownKeys(raw, KNOWN.root, '', issues)
+  if (file.seeds && Object.keys(file.seeds).length > 0) {
+    issues.push(warning('V12', 'seeds', 'Seeds are reserved for a later version and were ignored'))
+  }
   unknownKeys(file.variants, KNOWN.variants, 'variants', issues)
   if (!file.variants.light && !file.variants.dark) {
     return { ok: false, issues: [...issues, error('V13', 'variants', 'A theme needs a light or a dark variant')] }
@@ -234,9 +237,9 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   const data: DataSpec = { groups: {}, events: {}, adapt: rawData.adapt ?? true }
 
   if (rawData.categorical) {
-    data.categorical = colorList(rawData.categorical, `${path}.data.categorical`, issues)
+    data.categorical = dataColorList(rawData.categorical, `${path}.data.categorical`, issues)
   }
-  if (rawData.avatars) data.avatars = colorList(rawData.avatars, `${path}.data.avatars`, issues)
+  if (rawData.avatars) data.avatars = dataColorList(rawData.avatars, `${path}.data.avatars`, issues)
 
   const rawGroups = rawData.groups ?? {}
   for (const key of Object.keys(rawGroups)) {
@@ -246,7 +249,7 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   }
   for (const group of GROUPS) {
     if (!Object.hasOwn(rawGroups, group)) continue
-    const parsed = colorAt(rawGroups[group], `${path}.data.groups.${group}`, issues)
+    const parsed = dataColorAt(rawGroups[group], `${path}.data.groups.${group}`, issues)
     if (parsed) data.groups[group] = parsed
   }
 
@@ -257,7 +260,7 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   }
   for (const key of eventKeys.slice(0, MAX_EVENTS)) {
     const kind = resolveKind(key)
-    const parsed = colorAt(rawEvents[key], `${path}.data.events.${key}`, issues)
+    const parsed = dataColorAt(rawEvents[key], `${path}.data.events.${key}`, issues)
     if (parsed && kind) data.events[kind] = parsed
   }
   return { colors, data }
@@ -269,8 +272,16 @@ const colorAt = (value: unknown, path: string, issues: Issue[]) => {
   return parsed
 }
 
-const colorList = (values: string[], path: string, issues: Issue[]) =>
-  values.map((v, i) => colorAt(v, `${path}.${i}`, issues)).filter((c): c is Oklch => c !== null)
+// Data colours are drawn solid — series lines, dots, discs — so alpha on one is dropped. Say so.
+const dataColorAt = (value: unknown, path: string, issues: Issue[]) => {
+  const parsed = colorAt(value, path, issues)
+  if (parsed && parsed.alpha < 0.999)
+    issues.push(warning('V12', path, 'Data colours are drawn solid; its alpha was ignored'))
+  return parsed
+}
+
+const dataColorList = (values: string[], path: string, issues: Issue[]) =>
+  values.map((v, i) => dataColorAt(v, `${path}.${i}`, issues)).filter((c): c is Oklch => c !== null)
 
 const unknownKeys = (obj: object, known: string[], path: string, issues: Issue[]) => {
   for (const key of Object.keys(obj)) {
@@ -301,5 +312,13 @@ const cleanText = (value: string, path: string, issues: Issue[]) => {
   return cleaned
 }
 
-const error = (rule: string, path: string, message: string): Issue => ({ severity: 'error', rule, path, message })
-const warning = (rule: string, path: string, message: string): Issue => ({ severity: 'warning', rule, path, message })
+// An issue repeats the file's own keys and values, and the install report renders it — so it gets the
+// same cleaning as a name.
+const issue = (severity: Issue['severity'], rule: string, path: string, message: string): Issue => ({
+  severity,
+  rule,
+  path: path.replace(UNSAFE_TEXT, ''),
+  message: message.replace(UNSAFE_TEXT, ''),
+})
+const error = (rule: string, path: string, message: string) => issue('error', rule, path, message)
+const warning = (rule: string, path: string, message: string) => issue('warning', rule, path, message)
