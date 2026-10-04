@@ -13,6 +13,17 @@ describe('colour-vision simulation', () => {
     expect(worstDeltaE(fromHex('#d55e00'), fromHex('#0072b2'))).toBeGreaterThan(0.15)
   })
 
+  // Literals from an independent implementation of Machado 2009 (severity 1) and Oklab. Each pair
+  // lands differently under each deficiency, so a swapped or mistyped matrix moves its number.
+  it.each([
+    ['protan', 0.440861, 0.603439],
+    ['deutan', 0.222155, 0.656944],
+    ['tritan', 0.473013, 0.478009],
+  ] as const)('simulates %s as Machado 2009 does', (kind, redGreen, blueYellow) => {
+    expect(deltaE(fromHex('#ff0000'), fromHex('#00ff00'), kind)).toBeCloseTo(redGreen, 5)
+    expect(deltaE(fromHex('#0000ff'), fromHex('#ffff00'), kind)).toBeCloseTo(blueYellow, 5)
+  })
+
   it('is zero for identical colours', () => {
     expect(worstDeltaE(fromHex('#3b6cf0'), fromHex('#3b6cf0'))).toBe(0)
   })

@@ -71,6 +71,21 @@ describe('compileDataPalette', () => {
     expect(compileDataPalette(data, 'dark', 'standard', PUG_CANVAS.dark).events.payment_failed.line).toBe('#123456')
   })
 
+  // Every visitor without a photo wears one of these, so they're part of Pug's look like any token.
+  it.each(['light', 'dark'] as const)("keeps Pug's avatar discs exactly in %s", polarity => {
+    expect(compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]).avatars).toEqual([
+      '#da8282',
+      '#d38b59',
+      '#b99b46',
+      '#86ac62',
+      '#51b48d',
+      '#2cb2bf',
+      '#73a0e2',
+      '#a68fdb',
+      '#cc83b4',
+    ])
+  })
+
   it('uses categorical colours exactly as given', () => {
     const data = spec({ categorical: [color('#005181'), color('#9e6c00'), color('#007eb1')] })
     const palette = compileDataPalette(data, 'light', 'standard', PUG_CANVAS.light)

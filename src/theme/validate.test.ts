@@ -117,3 +117,39 @@ it('never checks a high-contrast theme more leniently than a standard one', () =
   expect(rules(file('standard'))).toContain('V7')
   expect(rules(file('high'))).toContain('V7')
 })
+
+// The sweep proves good themes pass and the per-rule cases sit far from any floor, so neither notices a
+// moved threshold. These sit just either side of one.
+describe('rule boundaries', () => {
+  const issuesFor = (file: ThemeFile, polarity: Polarity = 'light') => compileFile(file, polarity).report
+
+  it.each([
+    ['light', 0.51, false],
+    ['light', 0.49, true],
+    ['dark', 0.49, false],
+    ['dark', 0.51, true],
+  ] as const)('V1: a %s variant on a canvas at L %s is refused: %s', (polarity, l, refused) => {
+    const report = issuesFor(theme({ background: `oklch(${l} 0 0)` }, {}, polarity), polarity)
+    expect(report.some(i => i.rule === 'V1')).toBe(refused)
+  })
+
+  // Body ink on white at about 7.1:1 and 6.9:1, either side of the 7:1 floor.
+  it.each([
+    ['#585858', false],
+    ['#5a5a5a', true],
+  ])('V2: body ink %s on white warns: %s', (ink, warns) => {
+    const report = issuesFor(theme({ background: '#ffffff', foreground: ink }))
+    expect(report.some(i => i.rule === 'V2' && i.path === 'foreground')).toBe(warns)
+  })
+
+  // White on grey fills either side of 4.5:1, and of 7:1 for high contrast.
+  it.each([
+    ['#757575', 'standard', false],
+    ['#777777', 'standard', true],
+    ['#585858', 'high', false],
+    ['#5a5a5a', 'high', true],
+  ] as const)('V3: white text on %s (%s) warns: %s', (fill, contrast, warns) => {
+    const report = issuesFor(theme({ primary: fill, 'primary-foreground': '#ffffff' }, { contrast }))
+    expect(report.some(i => i.rule === 'V3' && i.path === 'primary-foreground')).toBe(warns)
+  })
+})

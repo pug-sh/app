@@ -268,6 +268,14 @@ describe('malformed storage', () => {
     expect(store.get(themeLibraryAtom).filter(entry => entry.id === 'pug')).toHaveLength(1)
   })
 
+  // The case above passes without the guard too — an unknown id falls back to Pug further down.
+  // This one reads the guard's own output.
+  it('reads a selection that is not a string as Pug', () => {
+    const store = createStore()
+    store.set(themeSelectionAtom, { light: 5, dark: 'pug-colourblind' } as never)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug-colourblind' })
+  })
+
   it('keeps the well-formed installed themes next to a broken entry', () => {
     const store = createStore()
     store.set(installedThemesAtom, [null, grape] as never)
@@ -281,5 +289,25 @@ describe('malformed storage', () => {
     vi.resetModules()
     const fresh = await import('./theme.atoms')
     expect(createStore().get(fresh.compiledThemeAtom)).toMatchObject(pug)
+  })
+})
+
+// Another tab's write arrives as a storage event and goes straight into the atoms, well-formed or not.
+describe('another tab', () => {
+  const fromAnotherTab = (key: string, value: string) => {
+    localStorage.setItem(key, value)
+    window.dispatchEvent(new StorageEvent('storage', { key, newValue: value, storageArea: localStorage }))
+  }
+
+  it('follows its theme changes, and falls back to Pug on a malformed one', () => {
+    const store = createStore()
+    store.sub(compiledThemeAtom, () => {})
+    fromAnotherTab('pug:themes', JSON.stringify([grape]))
+    fromAnotherTab('pug:theme-selection', JSON.stringify({ light: 'pug', dark: grape.id }))
+    fromAnotherTab('pug:theme', JSON.stringify('dark'))
+    expect(store.get(compiledThemeAtom).id).toBe(grape.id)
+
+    fromAnotherTab('pug:theme-selection', '{not json')
+    expect(store.get(compiledThemeAtom).id).toBe('pug')
   })
 })

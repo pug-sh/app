@@ -36,11 +36,23 @@ describe.each([
   })
 })
 
-it('resets the sign-in surface to Pug in both modes', () => {
+// The sign-in pages reset every token to Pug whatever the root carries — light with its own re-solved
+// ground. Compared against the frozen fixture, not the preset, so a regenerate can't paper over a change.
+describe.each([
+  ['light', '.auth-surface', { ...tokens.light, ...tokens.authSurface }],
+  ['dark', '.dark .auth-surface', tokens.dark],
+] as const)('the generated %s sign-in block', (_, selector, expected) => {
   const css = builtinThemesCss()
-  expect(css).toContain('\n.auth-surface {\n')
-  expect(css).toContain('\n.dark .auth-surface {\n')
-  expect(css).toContain(`  --background: ${formatColor(parseColor(tokens.authSurface.background) as never)};`)
+  const body = css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? ''
+  const declared = Object.fromEntries([...body.matchAll(/ {2}--([a-z0-9-]+): ([^;]+);/g)].map(m => [m[1], m[2]]))
+
+  it('resets every token to Pug', () => {
+    expect(Object.keys(declared)).toHaveLength(TOKENS.length)
+    for (const [token, value] of Object.entries(expected)) {
+      const parsed = parseColor(value)
+      expect(declared[token], token).toBe(parsed && formatColor(parsed))
+    }
+  })
 })
 
 // A token added to index.css's @theme inline without a registry entry would silently stay at Pug's

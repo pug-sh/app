@@ -12,8 +12,9 @@ describe('contrast', () => {
   it('composites a translucent ink onto its ground first', () => {
     const ground = fromHex('#ffffff')
     const half = { ...fromHex('#000000'), alpha: 0.5 }
-    expect(contrast(half, ground)).toBeCloseTo(contrast(composite(half, ground), ground), 6)
-    expect(contrast(half, ground)).toBeLessThan(contrast(fromHex('#000000'), ground))
+    // 50% black over white blends to sRGB grey 0.5 — the gamma midpoint, a hair under #808080 — which
+    // WCAG puts at 3.977:1 against white.
+    expect(contrast(half, ground)).toBeCloseTo(3.977, 3)
   })
 
   it('blends in gamma space, as browsers do', () => {
