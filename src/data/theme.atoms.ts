@@ -74,3 +74,6 @@ export const compiledThemeAtom = atom(get =>
 
 /** Content hash of the active theme — the memo key for anything that caches colours. */
 export const themeRevisionAtom = atom(get => get(compiledThemeAtom).revision)
+
+/** DiceBear disc colours for the active theme, as bare hex — a leading '#' emits fill="##…". */
+export const avatarPaletteAtom = atom(get => get(compiledThemeAtom).data.avatars.map(hex => hex.slice(1)))

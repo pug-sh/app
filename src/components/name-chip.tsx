@@ -25,8 +25,8 @@ export const NameChip = ({
     <span
       className={cn(
         'flex shrink-0 items-center justify-center rounded-md font-medium',
-        'bg-[oklch(0.93_0.035_var(--tone))] text-[oklch(0.45_0.08_var(--tone))]',
-        'dark:bg-[oklch(0.37_0.045_var(--tone))] dark:text-[oklch(0.86_0.05_var(--tone))]',
+        // Lightness and chroma from the theme's identity tokens, hue from the name.
+        'bg-[color:oklch(from_var(--identity-surface)_l_c_var(--tone))] text-[color:oklch(from_var(--identity-ink)_l_c_var(--tone))]',
         className,
       )}
       style={{ '--tone': nameHue(seed) } as CSSProperties}

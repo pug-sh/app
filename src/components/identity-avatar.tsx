@@ -2,26 +2,11 @@
 // only, rate-limited, and offers no uptime guarantee. The artwork is CC0 either way.
 import { Avatar, Style } from '@dicebear/core'
 import notionists from '@dicebear/styles/notionists.json'
+import { useAtomValue } from 'jotai'
 import { memo, useState } from 'react'
 
+import { avatarPaletteAtom } from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
-
-// Avatar discs carry identity, not meaning: one shared lightness, under the series-colour chroma
-// cap, hues spread wide — at this chroma the old orange/amber pair was indistinguishable.
-const AVATAR_COLORS = [
-  '#da8282',
-  '#d38b59',
-  '#b99b46',
-  '#86ac62',
-  '#51b48d',
-  '#2cb2bf',
-  '#73a0e2',
-  '#a68fdb',
-  '#cc83b4',
-]
-
-// DiceBear wants bare hex — a leading '#' emits fill="##da8282", silently invalid.
-const palette = AVATAR_COLORS.map(color => color.slice(1))
 
 const style = new Style(notionists)
 
@@ -31,13 +16,15 @@ const MAX_CACHE = 1000
 const cache = new Map<string, string>()
 
 // No `size` option: the SVG scales to the <img>, so one data URI serves every call site. Cached
-// across instances so a visitor drawn as both a marker and a row generates — and decodes — once.
-const generatedSrc = (id: string) => {
-  const hit = cache.get(id)
+// across instances so a visitor drawn as both a marker and a row generates — and decodes — once;
+// keyed on the palette too, so a theme that recolours avatars never serves a stale disc.
+const generatedSrc = (id: string, palette: string[]) => {
+  const key = `${palette.join(',')}|${id}`
+  const hit = cache.get(key)
   if (hit) return hit
   if (cache.size >= MAX_CACHE) cache.clear()
   const uri = new Avatar(style, { seed: id, backgroundColor: palette }).toDataUri()
-  cache.set(id, uri)
+  cache.set(key, uri)
   return uri
 }
 
@@ -51,6 +38,7 @@ type Props = {
 // The customer's own picture when they sent one, else a generated face. Notionists is monochrome
 // ink, so the palette disc stays the only colour on it.
 const IdentityAvatar = ({ id, src, alt, className }: Props) => {
+  const palette = useAtomValue(avatarPaletteAtom)
   // Keyed to the URL rather than the instance: the profile shell survives A → B, so a boolean would
   // suppress B's perfectly good picture because A's had 404'd.
   const [failedSrc, setFailedSrc] = useState<string>()
@@ -72,7 +60,14 @@ const IdentityAvatar = ({ id, src, alt, className }: Props) => {
 
   // An empty id lands on DiceBear's `hashSeed('') || 1` face; name the bucket so it's deliberate.
   return (
-    <img src={generatedSrc(id || 'unknown')} alt="" aria-hidden loading="lazy" decoding="async" className={classes} />
+    <img
+      src={generatedSrc(id || 'unknown', palette)}
+      alt=""
+      aria-hidden
+      loading="lazy"
+      decoding="async"
+      className={classes}
+    />
   )
 }
 
