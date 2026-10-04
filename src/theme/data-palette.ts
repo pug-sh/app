@@ -16,7 +16,7 @@ export type SeriesColor = {
 }
 
 /** Build a series color from a 6-char hex: solid line/dot, plus a 10%-alpha fill (`1a` suffix). */
-export const seriesColor = (hex: string): SeriesColor => ({ line: hex, fill: `${hex}1a`, dot: hex })
+const seriesColor = (hex: string): SeriesColor => ({ line: hex, fill: `${hex}1a`, dot: hex })
 
 export const EVENT_COLORS: Record<string, string> = {
   // navigation + interactions — blue (nav) · cyan (click) · red (degraded)
@@ -203,7 +203,7 @@ export const FALLBACK_COLORS = [
 // Non-well-known kinds borrow their domain family's hue by name prefix, matched against the
 // resolveKind() form. Each palette holds only on-hue shades — outcome crossovers are excluded so a
 // benign custom event never inherits "failure red".
-export const FAMILIES: { group: GroupName; prefixes: string[]; palette: string[] }[] = [
+const FAMILIES: { group: GroupName; prefixes: string[]; palette: string[] }[] = [
   { group: 'chat', prefixes: ['chat_'], palette: ['#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#0369a1', '#075985'] },
   {
     group: 'billing',
@@ -369,7 +369,7 @@ export const ANCHORS: Record<GroupName, string> = {
  * Chroma scales by the anchor's own, so the anchor itself lands on the value — near-grey anchors
  * included, which is what workspace and files have.
  */
-export const moveHex = (memberHex: string, anchorHex: string, target: Oklch) => {
+const moveHex = (memberHex: string, anchorHex: string, target: Oklch) => {
   const member = fromHex(memberHex)
   const anchor = fromHex(anchorHex)
   const k = target.c / Math.max(anchor.c, 1e-6)

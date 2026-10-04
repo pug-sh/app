@@ -1,4 +1,4 @@
-import { compileVariant } from './compile'
+import { compileOnce } from './compile'
 import { chooseActive, type LibraryEntry } from './library'
 import { POLARITIES, type Polarity } from './tokens'
 
@@ -22,7 +22,7 @@ export const buildPaintCache = (input: {
     const active = chooseActive({ ...input, polarity, autoContrast: false, moreContrast: false })
     const standard = active.family.contrast === 'standard'
     if (active.builtin) return { builtin: active.id, standard }
-    return { vars: compileVariant(active).vars, standard }
+    return { vars: compileOnce(active).vars, standard }
   }
   const [light, dark] = POLARITIES.map(paintFor)
   return { v: 1, autoContrast: input.autoContrast, light, dark }

@@ -21,7 +21,7 @@ import {
 // Every format version this build reads. Bumping CURRENT_VERSION means adding it here, and then
 // MIGRATIONS has to carry an upgrade from each older version — the compiler holds it to that.
 type Version = 1
-export const CURRENT_VERSION = 1 satisfies Version
+const CURRENT_VERSION = 1 satisfies Version
 export const MAX_THEME_BYTES = 64 * 1024
 const MAX_EVENTS = 300
 

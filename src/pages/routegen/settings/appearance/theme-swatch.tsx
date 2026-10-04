@@ -1,7 +1,6 @@
 import { Check } from 'lucide-react'
-import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { compileVariant } from '@/theme/compile'
+import { compileOnce } from '@/theme/compile'
 import type { UsableEntry } from '@/theme/library'
 import type { Polarity } from '@/theme/tokens'
 
@@ -18,10 +17,7 @@ const ThemeSwatch = ({
   selected: boolean
   onSelect: () => void
 }) => {
-  const { vars, data } = useMemo(
-    () => compileVariant({ id: entry.id, builtin: entry.builtin, family: entry.family, polarity }),
-    [entry, polarity],
-  )
+  const { vars, data } = compileOnce({ id: entry.id, builtin: entry.builtin, family: entry.family, polarity })
 
   return (
     <button

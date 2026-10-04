@@ -37,7 +37,6 @@ export const COUNTRIES_VIEW_ASPECT =
   (2 * Math.PI) / (mercatorY(COUNTRIES_VIEW_LAT[1]) - mercatorY(COUNTRIES_VIEW_LAT[0]))
 
 type ThemeColors = {
-  primary: string
   border: string
   mutedForeground: string
   // The choropleth's data hue. --chart-1, not --primary: they are the same colour in light, but
@@ -72,7 +71,6 @@ export const cssColorToRgb = (value: string) => {
 // MapLibre paint properties take concrete colour strings, not var(). The compiled theme's oklch values
 // go through the same canvas readback getComputedStyle's did, so Pug's map colours are unchanged.
 export const resolveThemeColors = (vars: CompiledTheme['vars']): ThemeColors => ({
-  primary: cssColorToRgb(vars['--primary']),
   border: cssColorToRgb(vars['--border']),
   mutedForeground: cssColorToRgb(vars['--muted-foreground']),
   dataHue: cssColorToRgb(vars['--chart-1']),

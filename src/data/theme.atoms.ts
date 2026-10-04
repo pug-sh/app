@@ -1,10 +1,9 @@
 import { atom, type Getter, type Setter } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import { trackEvent } from '@/analytics/pug'
-import { type CompiledTheme, compileVariant } from '@/theme/compile'
-import type { Issue, ThemeFamily } from '@/theme/format'
+import { compileOnce } from '@/theme/compile'
+import type { Issue } from '@/theme/format'
 import {
-  type ActiveTheme,
   buildLibrary,
   checkInstall,
   chooseActive,
@@ -16,19 +15,7 @@ import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-// Storage is untrusted input: another build, an older shape after a rollback, or a hand edit can put
-// anything under these keys, and cross-tab sync delivers it straight into the atoms. So each key is a
-// raw storage atom, and the exported atom reads it through a guard — a bad value degrades to the
-// default instead of throwing inside App's render. getOnInit: App renders before storage loads on
-// mount, and jotai 3 won't re-render it for that.
-const storedModeAtom = atomWithStorage<unknown>('pug:theme', 'system', undefined, { getOnInit: true })
-const storedSelectionAtom = atomWithStorage<unknown>('pug:theme-selection', { light: 'pug', dark: 'pug' }, undefined, {
-  getOnInit: true,
-})
-const storedAutoContrastAtom = atomWithStorage<unknown>('pug:theme-auto-contrast', true, undefined, { getOnInit: true })
-const storedInstalledAtom = atomWithStorage<unknown>('pug:themes', [], undefined, { getOnInit: true })
-
-type StoredAtom = typeof storedModeAtom
+type StoredAtom = ReturnType<typeof atomWithStorage<unknown>>
 
 /** What to tell someone whose browser refused to save a theme setting. */
 export const STORAGE_REFUSED = 'Couldn’t save that in this browser — storage is full or blocked.'
@@ -54,33 +41,43 @@ const persist = (get: Getter, set: Setter, writes: [StoredAtom, unknown][]) => {
   }
 }
 
-/** Light, dark or follow the OS. Anything else in storage reads as following the OS, as it always did. */
-export const themeModeAtom = atom(
-  (get): ThemeMode => {
-    const mode = get(storedModeAtom)
-    return mode === 'light' || mode === 'dark' || mode === 'system' ? mode : 'system'
-  },
-  (get, set, mode: ThemeMode) => persist(get, set, [[storedModeAtom, mode]]),
+// Storage is untrusted input: another build, an older shape after a rollback, or a hand edit can put
+// anything under these keys, and cross-tab sync delivers it straight into the atoms. So every key is a
+// raw storage atom read through a guard — a bad value degrades to the default instead of throwing
+// inside App's render — and written through persist. getOnInit: App renders before storage loads on
+// mount, and jotai 3 won't re-render it for that.
+const guardedStorage = <T>(key: string, initial: T, guard: (stored: unknown) => T) => {
+  const stored: StoredAtom = atomWithStorage<unknown>(key, initial, undefined, { getOnInit: true })
+  const guarded = atom(
+    get => guard(get(stored)),
+    (get, set, value: T) => persist(get, set, [[stored, value]]),
+  )
+  return { stored, guarded }
+}
+
+const modeStore = guardedStorage(
+  'pug:theme',
+  'system',
+  (stored): ThemeMode => (stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system'),
 )
+
+/** Light, dark or follow the OS. Anything else in storage reads as following the OS, as it always did. */
+export const themeModeAtom = modeStore.guarded
+
+const selectionStore = guardedStorage('pug:theme-selection', { light: 'pug', dark: 'pug' }, stored => {
+  const raw = stored as Partial<Record<Polarity, unknown>> | null
+  const idFor = (polarity: Polarity) => {
+    const id = raw?.[polarity]
+    return typeof id === 'string' ? id : 'pug'
+  }
+  return { light: idFor('light'), dark: idFor('dark') }
+})
 
 /** Which theme paints each mode. An id that's gone falls back to Pug at resolution, not here. */
-export const themeSelectionAtom = atom(
-  (get): Record<Polarity, string> => {
-    const raw = get(storedSelectionAtom) as Partial<Record<Polarity, unknown>> | null
-    const idFor = (polarity: Polarity) => {
-      const id = raw?.[polarity]
-      return typeof id === 'string' ? id : 'pug'
-    }
-    return { light: idFor('light'), dark: idFor('dark') }
-  },
-  (get, set, selection: Record<Polarity, string>) => persist(get, set, [[storedSelectionAtom, selection]]),
-)
+export const themeSelectionAtom = selectionStore.guarded
 
 /** Swap in Pug High Contrast when the OS asks for more contrast. Only an explicit false turns it off. */
-export const autoContrastAtom = atom(
-  get => get(storedAutoContrastAtom) !== false,
-  (get, set, on: boolean) => persist(get, set, [[storedAutoContrastAtom, on]]),
-)
+export const autoContrastAtom = guardedStorage('pug:theme-auto-contrast', true, stored => stored !== false).guarded
 
 // An installed entry needs an installed-theme id and its text; anything else about it can be defaulted.
 const asInstalledTheme = (value: unknown): InstalledTheme | null => {
@@ -95,26 +92,24 @@ const asInstalledTheme = (value: unknown): InstalledTheme | null => {
   }
 }
 
+const installedStore = guardedStorage<InstalledTheme[]>('pug:themes', [], stored => {
+  if (!Array.isArray(stored)) return []
+  // Each id once: a repeat would put two entries under one id into the library.
+  const seen = new Set<string>()
+  return stored.map(asInstalledTheme).filter((theme): theme is InstalledTheme => {
+    if (theme === null || seen.has(theme.id)) return false
+    seen.add(theme.id)
+    return true
+  })
+})
+
 /** Installed theme files, as their original text — re-parsed on load (theme/library.ts). */
-export const installedThemesAtom = atom(
-  (get): InstalledTheme[] => {
-    const raw = get(storedInstalledAtom)
-    if (!Array.isArray(raw)) return []
-    // Each id once: a repeat would put two entries under one id into the library.
-    const seen = new Set<string>()
-    return raw.map(asInstalledTheme).filter((theme): theme is InstalledTheme => {
-      if (theme === null || seen.has(theme.id)) return false
-      seen.add(theme.id)
-      return true
-    })
-  },
-  (get, set, themes: InstalledTheme[]) => persist(get, set, [[storedInstalledAtom, themes]]),
-)
+export const installedThemesAtom = installedStore.guarded
 
 // The stored list as it is, entries this build can't read included. Installs and removals write onto
 // it, so a theme another build stored — a newer shape, say — survives them.
 const storedList = (get: Getter): unknown[] => {
-  const raw = get(storedInstalledAtom)
+  const raw = get(installedStore.stored)
   return Array.isArray(raw) ? raw : []
 }
 
@@ -148,17 +143,6 @@ export const resolvedThemeAtom = atom<Polarity>(get => {
 
 export const themeLibraryAtom = atom(get => buildLibrary(get(installedThemesAtom)))
 
-// One compile per family and mode. Families are stable objects — built-ins parse once, installed
-// themes once per text — so the compiled theme keeps its identity until something it depends on
-// changes, and effects keyed on it don't re-run when an unrelated theme is installed.
-const compiledByFamily = new WeakMap<ThemeFamily, Partial<Record<Polarity, CompiledTheme>>>()
-const compileOnce = (active: ActiveTheme) => {
-  const byMode = compiledByFamily.get(active.family) ?? {}
-  compiledByFamily.set(active.family, byMode)
-  byMode[active.polarity] ??= compileVariant(active)
-  return byMode[active.polarity] as CompiledTheme
-}
-
 export const compiledThemeAtom = atom(get =>
   compileOnce(
     chooseActive({
@@ -183,7 +167,7 @@ export type InstallResult = InstallCheck | { ok: false; reason: 'storage'; issue
 export const installThemeAtom = atom(null, (get, set, text: string): InstallResult => {
   const check = checkInstall(text, get(installedThemesAtom))
   if (!check.ok) return check
-  if (!persist(get, set, [[storedInstalledAtom, [...storedList(get), check.theme]]])) {
+  if (!persist(get, set, [[installedStore.stored, [...storedList(get), check.theme]]])) {
     return { ok: false, reason: 'storage', issues: [] }
   }
   trackEvent('theme_installed', { source: 'file' })
@@ -196,11 +180,11 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
   const selection = get(themeSelectionAtom)
   if (selection.light === id || selection.dark === id) {
     writes.push([
-      storedSelectionAtom,
+      selectionStore.stored,
       { light: selection.light === id ? 'pug' : selection.light, dark: selection.dark === id ? 'pug' : selection.dark },
     ])
   }
-  writes.push([storedInstalledAtom, storedList(get).filter(entry => !hasId(entry, id))])
+  writes.push([installedStore.stored, storedList(get).filter(entry => !hasId(entry, id))])
   return persist(get, set, writes)
 })
 
@@ -209,7 +193,7 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
  * False when storage refused.
  */
 export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity; id: string }) => {
-  if (!persist(get, set, [[storedSelectionAtom, { ...get(themeSelectionAtom), [polarity]: id }]])) return false
+  if (!persist(get, set, [[selectionStore.stored, { ...get(themeSelectionAtom), [polarity]: id }]])) return false
   const builtin = get(themeLibraryAtom).some(entry => entry.id === id && entry.builtin)
   trackEvent('theme_selected', { theme: builtin ? id : 'custom', mode: polarity })
   return true

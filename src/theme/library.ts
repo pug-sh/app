@@ -29,7 +29,7 @@ export type UsableEntry = LibraryEntry & { family: ThemeFamily }
 const parseOnce = memoize(parseThemeText)
 
 /** Validation issues for every variant a family has, with paths that say which variant. */
-export const validateFamily = (id: string, family: ThemeFamily): Issue[] =>
+const validateFamily = (id: string, family: ThemeFamily): Issue[] =>
   POLARITIES.flatMap(polarity =>
     family.variants[polarity]
       ? compileVariant({ id, builtin: false, family, polarity }).report.map(i => ({

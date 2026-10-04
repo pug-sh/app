@@ -16,7 +16,7 @@ export const linearToSrgb = (c: number) => {
   return v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055
 }
 
-export const linearToByte = (c: number) => Math.round(linearToSrgb(c) * 255)
+const linearToByte = (c: number) => Math.round(linearToSrgb(c) * 255)
 
 /** Linear sRGB for a 6-digit hex. */
 const hexToLinear = (hex: string) => {
@@ -32,7 +32,7 @@ export const hexToOklch = (hex: string): [number, number, number] => {
 }
 
 /** Linear sRGB for an OKLCH colour, H in radians. Channels may fall outside [0, 1]. */
-export const oklchToLinear = (L: number, C: number, H: number) => {
+const oklchToLinear = (L: number, C: number, H: number) => {
   const a = C * Math.cos(H)
   const b = C * Math.sin(H)
   const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3

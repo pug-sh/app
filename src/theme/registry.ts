@@ -139,7 +139,7 @@ const RULES: Record<TokenName, Def> = {
   'syntax-class': { f: 'hueText', hue: 255, tier: 'secondary' },
 }
 
-export const ruleFor = (token: TokenName, polarity: Polarity, level: Contrast): Rule => {
+const ruleFor = (token: TokenName, polarity: Polarity, level: Contrast): Rule => {
   const def = RULES[token]
   if ('f' in def) return def
   if (level === 'high' && def.high) return def.high
@@ -151,7 +151,7 @@ export const isRoot = (token: TokenName) => {
   return 'f' in def && def.f === 'root'
 }
 
-export const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
+const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
 // Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black. Pug's
 // light candidate isn't pure white, so a mid-grey fill can fall just short of 4.5:1 with both — V3

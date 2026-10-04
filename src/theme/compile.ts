@@ -32,7 +32,9 @@ export const hashString = (text: string) => {
   return (h >>> 0).toString(16).padStart(8, '0')
 }
 
-export const compileVariant = (input: { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity }) => {
+type CompileInput = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity }
+
+export const compileVariant = (input: CompileInput) => {
   const { family, polarity } = input
   const level = family.contrast
   const variant = family.variants[polarity]
@@ -41,6 +43,28 @@ export const compileVariant = (input: { id: string; builtin: boolean; family: Th
   const report = validateTheme({ tokens, data, polarity, contrast: level })
   const vars = Object.fromEntries(TOKENS.map(t => [`--${t}`, formatColor(tokens[t])])) as CompiledTheme['vars']
   const revision = hashString(JSON.stringify([input.id, polarity, vars, data]))
-  const compiled: CompiledTheme = { ...input, contrast: level, revision, vars, tokens, provenance, data, report }
+  const compiled: CompiledTheme = {
+    id: input.id,
+    builtin: input.builtin,
+    polarity,
+    contrast: level,
+    revision,
+    vars,
+    tokens,
+    provenance,
+    data,
+    report,
+  }
   return compiled
+}
+
+// One compile per family and mode. Families are stable objects — built-ins parse once, installed
+// themes once per text — so a compiled theme keeps its identity until something it depends on
+// changes, and effects keyed on it don't re-run when an unrelated theme is installed. Each family
+// object only ever arrives with its own id, so the family is the whole key.
+const compiledByFamily = new WeakMap<ThemeFamily, Partial<Record<Polarity, CompiledTheme>>>()
+export const compileOnce = (input: CompileInput) => {
+  const byMode = compiledByFamily.get(input.family) ?? {}
+  compiledByFamily.set(input.family, byMode)
+  return (byMode[input.polarity] ??= compileVariant(input))
 }
