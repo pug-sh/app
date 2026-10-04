@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { formatColor, parseColor } from '../lib/color/parse'
 import { buildLibrary, type InstalledTheme } from './library'
-import { buildPaintCache } from './paint-cache'
+import { buildPaintCache, PAINT_CACHE_KEY, writePaintCache } from './paint-cache'
 
 const grape: InstalledTheme = {
   id: 'installed-grape',
@@ -32,5 +32,27 @@ describe('buildPaintCache', () => {
       library: buildLibrary([grape]),
     })
     expect(cache.light).toEqual({ builtin: 'pug', standard: true })
+  })
+})
+
+describe('writePaintCache', () => {
+  // A refused write leaves the old cache in place, and the next load would paint whatever it says —
+  // possibly a theme that has since been removed. With no cache it paints Pug, then React corrects.
+  it('drops the old cache when storage refuses the new one', () => {
+    localStorage.setItem(
+      PAINT_CACHE_KEY,
+      JSON.stringify({ v: 1, autoContrast: true, light: { builtin: 'pug-colourblind' } }),
+    )
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      writePaintCache(
+        buildPaintCache({ selection: { light: 'pug', dark: 'pug' }, autoContrast: true, library: buildLibrary([]) }),
+      )
+    } finally {
+      refusal.mockRestore()
+    }
+    expect(localStorage.getItem(PAINT_CACHE_KEY)).toBeNull()
   })
 })

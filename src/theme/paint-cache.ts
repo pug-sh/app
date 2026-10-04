@@ -32,6 +32,12 @@ export const writePaintCache = (cache: PaintCache) => {
   try {
     localStorage.setItem(PAINT_CACHE_KEY, JSON.stringify(cache))
   } catch {
-    // Private mode or a full quota: the next load paints Pug, then React corrects it.
+    // Private mode or a full quota. A refused write leaves the old cache, which may name a theme
+    // that's gone — drop it, so the next load paints Pug and React corrects it.
+    try {
+      localStorage.removeItem(PAINT_CACHE_KEY)
+    } catch {
+      // Storage refuses even that: the next load paints whatever is left, and React still corrects it.
+    }
   }
 }
