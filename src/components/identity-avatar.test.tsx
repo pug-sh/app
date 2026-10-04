@@ -21,7 +21,7 @@ it('paints the disc from the active theme', () => {
   expect(srcFor(store, 'visitor-1')).toMatch(/#(da8282|d38b59|b99b46|86ac62|51b48d|2cb2bf|73a0e2|a68fdb|cc83b4)/i)
 
   const lime = {
-    id: 'installed-lime',
+    id: 'installed-lime' as const,
     text: JSON.stringify({ version: 1, name: 'Lime', variants: { light: { data: { avatars: ['#d4f5a0'] } } } }),
     hash: 'lime',
     installedAt: 0,

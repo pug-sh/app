@@ -44,7 +44,7 @@ const { setSeriesPalette } = await import('@/lib/event-colors')
 
 // A dark theme that recolours page_view and nothing else of note.
 const EMBER = {
-  id: 'installed-ember',
+  id: 'installed-ember' as const,
   text: JSON.stringify({
     version: 1,
     name: 'Ember',

@@ -6,7 +6,7 @@ import { setSeriesPalette } from '@/lib/event-colors'
 import { FunnelChart } from './funnel-chart'
 
 const EMBER = {
-  id: 'installed-ember',
+  id: 'installed-ember' as const,
   text: JSON.stringify({
     version: 1,
     name: 'Ember',

@@ -504,7 +504,7 @@ describe('Usage page — theme', () => {
     const pugDark = dot()
 
     const ember = {
-      id: 'installed-ember',
+      id: 'installed-ember' as const,
       text: JSON.stringify({
         version: 1,
         name: 'Ember',

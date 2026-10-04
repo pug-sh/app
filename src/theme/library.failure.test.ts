@@ -13,7 +13,7 @@ const { buildLibrary, chooseActive } = await import('./library')
 it('keeps a theme the engine cannot compile out of use, and falls back to Pug', () => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
   const grape = {
-    id: 'installed-grape',
+    id: 'installed-grape' as const,
     text: JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } }),
     hash: 'grape',
     installedAt: 0,

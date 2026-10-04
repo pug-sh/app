@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { compileVariant } from '@/theme/compile'
-import type { LibraryEntry } from '@/theme/library'
+import type { UsableEntry } from '@/theme/library'
 import type { Polarity } from '@/theme/tokens'
 
 // A theme drawn from its own compiled variant — canvas, a card, the three ink tiers and five data
@@ -12,15 +12,15 @@ const ThemeSwatch = ({
   selected,
   onSelect,
 }: {
-  entry: LibraryEntry
+  entry: UsableEntry
   polarity: Polarity
   selected: boolean
   onSelect: () => void
 }) => {
-  const { vars, data } = useMemo(() => {
-    if (!entry.family) throw new Error(`ThemeSwatch: ${entry.id} has no usable theme`)
-    return compileVariant({ id: entry.id, builtin: entry.builtin, family: entry.family, polarity })
-  }, [entry, polarity])
+  const { vars, data } = useMemo(
+    () => compileVariant({ id: entry.id, builtin: entry.builtin, family: entry.family, polarity }),
+    [entry, polarity],
+  )
 
   return (
     <button

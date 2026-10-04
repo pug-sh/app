@@ -6,7 +6,7 @@ import { installedThemesAtom, themeModeAtom, themeSelectionAtom } from '@/data/t
 import { useMapTheme } from './use-maplibre-map'
 
 const GRAPE = {
-  id: 'installed-grape',
+  id: 'installed-grape' as const,
   text: JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } }),
   hash: 'grape',
   installedAt: 0,

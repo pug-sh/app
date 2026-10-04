@@ -140,7 +140,7 @@ describe('Settings → Appearance', () => {
   it('says when the theme selected for a mode can no longer be used', () => {
     const store = createStore()
     const midnight = {
-      id: 'installed-midnight',
+      id: 'installed-midnight' as const,
       text: JSON.stringify({ version: 2, name: 'Midnight', variants: {} }),
       hash: 'midnight',
       installedAt: 0,

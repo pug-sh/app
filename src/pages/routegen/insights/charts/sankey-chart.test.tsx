@@ -135,7 +135,7 @@ describe('SankeyChart accessibility', () => {
 
 // A dark theme whose breakdown palette differs from Pug's — path names hash into it.
 const EMBER = {
-  id: 'installed-ember',
+  id: 'installed-ember' as const,
   text: JSON.stringify({
     version: 1,
     name: 'Ember',

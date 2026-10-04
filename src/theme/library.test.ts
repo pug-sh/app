@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildLibrary, checkInstall, chooseActive, type InstalledTheme, MAX_INSTALLED } from './library'
 
 const grape: InstalledTheme = {
-  id: 'installed-grape',
+  id: 'installed-grape' as const,
   text: JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } }),
   hash: 'grape',
   installedAt: 0,
@@ -45,7 +45,7 @@ describe('chooseActive', () => {
   it('leaves an installed high-contrast theme in place when the OS asks for more contrast', () => {
     const night: InstalledTheme = {
       ...grape,
-      id: 'installed-night',
+      id: 'installed-night' as const,
       text: JSON.stringify({
         version: 1,
         name: 'Night',
@@ -67,7 +67,7 @@ describe('chooseActive', () => {
   it('falls back to Pug High Contrast for a high-contrast family without this mode', () => {
     const night: InstalledTheme = {
       ...grape,
-      id: 'installed-night',
+      id: 'installed-night' as const,
       text: JSON.stringify({
         version: 1,
         name: 'Night',
@@ -104,7 +104,7 @@ describe('buildLibrary', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const midnight: InstalledTheme = {
       ...grape,
-      id: 'installed-midnight',
+      id: 'installed-midnight' as const,
       text: JSON.stringify({ version: 2, name: 'Midnight', variants: {} }),
     }
     expect(buildLibrary([midnight]).find(e => e.id === midnight.id)).toMatchObject({ name: 'Midnight', family: null })
@@ -113,7 +113,7 @@ describe('buildLibrary', () => {
 
   it('keeps an installed theme that stopped parsing, unselectable', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const broken: InstalledTheme = { ...grape, id: 'installed-broken', text: '{' }
+    const broken: InstalledTheme = { ...grape, id: 'installed-broken' as const, text: '{' }
     const library = buildLibrary([broken])
     expect(library.find(e => e.id === broken.id)).toMatchObject({ family: null, name: 'Unreadable theme' })
     expect(choose({ selection: { light: 'pug', dark: broken.id }, library }).id).toBe('pug')
@@ -133,7 +133,7 @@ describe('checkInstall', () => {
     expect(checkInstall(` ${grape.text}\n`, [first.theme])).toMatchObject({ ok: false, reason: 'duplicate' })
     const full = Array.from(
       { length: MAX_INSTALLED },
-      (_, i): InstalledTheme => ({ ...first.theme, id: `t${i}`, hash: `h${i}` }),
+      (_, i): InstalledTheme => ({ ...first.theme, id: `installed-t${i}`, hash: `h${i}` }),
     )
     expect(checkInstall(grape.text, full)).toMatchObject({ ok: false, reason: 'full' })
   })

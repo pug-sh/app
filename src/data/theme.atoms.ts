@@ -10,6 +10,7 @@ import {
   chooseActive,
   type InstallCheck,
   type InstalledTheme,
+  isInstalledId,
 } from '@/theme/library'
 import type { Polarity } from '@/theme/tokens'
 
@@ -81,10 +82,10 @@ export const autoContrastAtom = atom(
   (get, set, on: boolean) => persist(get, set, [[storedAutoContrastAtom, on]]),
 )
 
-// An installed entry needs its id and its text; anything else about it can be defaulted.
+// An installed entry needs an installed-theme id and its text; anything else about it can be defaulted.
 const asInstalledTheme = (value: unknown): InstalledTheme | null => {
   const entry = value as Partial<Record<keyof InstalledTheme, unknown>> | null
-  if (typeof entry?.id !== 'string' || typeof entry.text !== 'string') return null
+  if (!isInstalledId(entry?.id) || typeof entry.text !== 'string') return null
   return {
     id: entry.id,
     text: entry.text,
@@ -99,7 +100,13 @@ export const installedThemesAtom = atom(
   (get): InstalledTheme[] => {
     const raw = get(storedInstalledAtom)
     if (!Array.isArray(raw)) return []
-    return raw.map(asInstalledTheme).filter((theme): theme is InstalledTheme => theme !== null)
+    // Each id once: a repeat would put two entries under one id into the library.
+    const seen = new Set<string>()
+    return raw.map(asInstalledTheme).filter((theme): theme is InstalledTheme => {
+      if (theme === null || seen.has(theme.id)) return false
+      seen.add(theme.id)
+      return true
+    })
   },
   (get, set, themes: InstalledTheme[]) => persist(get, set, [[storedInstalledAtom, themes]]),
 )

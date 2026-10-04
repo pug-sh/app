@@ -32,7 +32,7 @@ const { compiledThemeAtom, installedThemesAtom, themeModeAtom, themeSelectionAto
 const { setSeriesPalette } = await import('@/lib/event-colors')
 
 const EMBER = {
-  id: 'installed-ember',
+  id: 'installed-ember' as const,
   text: JSON.stringify({
     version: 1,
     name: 'Ember',

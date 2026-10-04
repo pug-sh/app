@@ -13,6 +13,7 @@ import {
   themeSelectionAtom,
 } from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
+import type { UsableEntry } from '@/theme/library'
 import { POLARITIES } from '@/theme/tokens'
 import InstalledThemes from './installed-themes'
 import ThemeSwatch from './theme-swatch'
@@ -69,7 +70,7 @@ const Appearance = () => {
             {/* A labelled group, so a screen reader says which mode a swatch sets — both rows hold a "Pug". */}
             <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
               {library
-                .filter(entry => entry.family?.variants[polarity])
+                .filter((entry): entry is UsableEntry => Boolean(entry.family?.variants[polarity]))
                 .map(entry => (
                   <ThemeSwatch
                     key={entry.id}

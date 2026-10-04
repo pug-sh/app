@@ -1,4 +1,4 @@
-import { BUILTIN_IDS, BUILTINS } from './builtin'
+import { BUILTIN_IDS, BUILTINS, type BuiltinId } from './builtin'
 import { compileVariant, hashString } from './compile'
 import { type Issue, parseThemeText, readableName, type ThemeFamily } from './format'
 import { POLARITIES, type Polarity } from './tokens'
@@ -9,17 +9,21 @@ import { POLARITIES, type Polarity } from './tokens'
 
 export const MAX_INSTALLED = 20
 
-export type InstalledTheme = { id: string; text: string; hash: string; installedAt: number; source: 'file' }
+// Installed ids carry their own prefix, so one can never collide with a built-in's.
+export type InstalledId = `installed-${string}`
+export const isInstalledId = (id: unknown): id is InstalledId => typeof id === 'string' && id.startsWith('installed-')
 
-export type LibraryEntry = {
-  id: string
-  builtin: boolean
-  name: string
-  author?: string
-  /** null when an installed theme no longer parses — kept in the list, but can't be selected. */
-  family: ThemeFamily | null
-  issues: Issue[]
-}
+export type InstalledTheme = { id: InstalledId; text: string; hash: string; installedAt: number; source: 'file' }
+
+type EntryInfo = { name: string; author?: string; issues: Issue[] }
+
+export type LibraryEntry =
+  | (EntryInfo & { id: BuiltinId; builtin: true; family: ThemeFamily })
+  // family is null when an installed theme can't be used — it no longer parses, or it has an error.
+  // It stays in the list, but can't be selected.
+  | (EntryInfo & { id: InstalledId; builtin: false; family: ThemeFamily | null })
+
+export type UsableEntry = LibraryEntry & { family: ThemeFamily }
 
 const parsedTexts = new Map<string, ReturnType<typeof parseThemeText>>()
 const parseOnce = (text: string) => {
@@ -43,7 +47,7 @@ export const validateFamily = (id: string, family: ThemeFamily): Issue[] =>
   )
 
 export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
-  ...BUILTIN_IDS.map(id => ({ id, builtin: true, name: BUILTINS[id].name, family: BUILTINS[id], issues: [] })),
+  ...BUILTIN_IDS.map(id => ({ id, builtin: true as const, name: BUILTINS[id].name, family: BUILTINS[id], issues: [] })),
   ...installed.map(theme => {
     const parsed = parseOnce(theme.text)
     if (!parsed.ok) {
@@ -51,7 +55,7 @@ export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
       // rollback past its version. Its modes fall back to Pug; keep a trace of why.
       console.warn('theme library: could not read', theme.id, parsed.issues)
       const name = readableName(theme.text) ?? 'Unreadable theme'
-      return { id: theme.id, builtin: false, name, family: null, issues: parsed.issues }
+      return { id: theme.id, builtin: false as const, name, family: null, issues: parsed.issues }
     }
     const { family } = parsed
     let issues: Issue[]
@@ -66,7 +70,7 @@ export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
     const usable = !issues.some(i => i.severity === 'error')
     return {
       id: theme.id,
-      builtin: false,
+      builtin: false as const,
       name: family.name,
       author: family.author,
       family: usable ? family : null,
@@ -90,19 +94,17 @@ export const chooseActive = (input: {
   library: LibraryEntry[]
 }): ActiveTheme => {
   const { polarity, library } = input
-  const usable = (id: string) => library.find(e => e.id === id && e.family)
-  const pug = usable('pug') as LibraryEntry
+  const usable = (id: string) => library.find((e): e is UsableEntry => e.id === id && e.family !== null)
+  const pug = usable('pug')
+  if (!pug) throw new Error('theme library: Pug is missing')
   let entry = usable(input.selection[polarity]) ?? pug
-  let family = entry.family as ThemeFamily
-  if (input.autoContrast && input.moreContrast && family.contrast === 'standard') {
+  if (input.autoContrast && input.moreContrast && entry.family.contrast === 'standard') {
     entry = usable('pug-high-contrast') ?? entry
-    family = entry.family as ThemeFamily
   }
-  if (!family.variants[polarity]) {
-    entry = (family.contrast === 'high' && usable('pug-high-contrast')) || pug
-    family = entry.family as ThemeFamily
+  if (!entry.family.variants[polarity]) {
+    entry = (entry.family.contrast === 'high' && usable('pug-high-contrast')) || pug
   }
-  return { id: entry.id, builtin: entry.builtin, family, polarity }
+  return { id: entry.id, builtin: entry.builtin, family: entry.family, polarity }
 }
 
 export type InstallCheck =

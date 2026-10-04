@@ -9,6 +9,7 @@ import {
   removeThemeAtom,
   resolvedThemeAtom,
   selectThemeAtom,
+  themeLibraryAtom,
   themeModeAtom,
   themeRevisionAtom,
   themeSelectionAtom,
@@ -256,6 +257,15 @@ describe('malformed storage', () => {
     seed(store)
     expect(store.get(compiledThemeAtom)).toMatchObject(pug)
     expect(['light', 'dark']).toContain(store.get(resolvedThemeAtom))
+  })
+
+  // An installed entry claiming a built-in's id, or one listed twice, would give the library two
+  // entries under one id: duplicate keys, two swatches pressed, and picking one selects the other.
+  it('takes only installed-theme ids, once each', () => {
+    const store = createStore()
+    store.set(installedThemesAtom, [{ ...grape, id: 'pug' }, grape, { ...grape, name: 'again' }] as never)
+    expect(store.get(installedThemesAtom).map(t => t.id)).toEqual([grape.id])
+    expect(store.get(themeLibraryAtom).filter(entry => entry.id === 'pug')).toHaveLength(1)
   })
 
   it('keeps the well-formed installed themes next to a broken entry', () => {
