@@ -1,6 +1,6 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
@@ -15,7 +15,7 @@ import { SocialNav } from '@/components/social-nav'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { applyTheme, resolvedThemeAtom, themeAtom } from '@/data/theme.atoms'
+import { compiledThemeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -36,9 +36,10 @@ import {
   selectOrgAtom,
   workspaceErrorAtom,
 } from '@/data/workspace.atoms'
-import { setSeriesColorScheme } from '@/lib/event-colors'
+import { setSeriesPalette } from '@/lib/event-colors'
 import { lazyWithRetry } from '@/lib/lazy'
 import { useRouteProjectId } from '@/lib/project-path'
+import { applyCompiledTheme } from '@/theme/apply'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
@@ -49,17 +50,12 @@ const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oau
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 
-const ThemeSync = () => {
-  const theme = useAtomValue(themeAtom)
-  useEffect(() => {
-    applyTheme(theme)
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      const handler = () => applyTheme('system')
-      mq.addEventListener('change', handler)
-      return () => mq.removeEventListener('change', handler)
-    }
-  }, [theme])
+// Puts the active theme on <html>. A layout effect, so the CSS variables land in the same frame as
+// the series palette App pushes during render. System-mode and contrast changes arrive through the
+// atoms' matchMedia subscriptions.
+const ThemeApplier = () => {
+  const compiled = useAtomValue(compiledThemeAtom)
+  useLayoutEffect(() => applyCompiledTheme(compiled), [compiled])
   return null
 }
 
@@ -310,15 +306,13 @@ const App = () => {
   const status = useAtomValue(bootstrapStatusAtom)
   const workspaceError = useAtomValue(workspaceErrorAtom)
 
-  // Event-series colors are JS-computed (badge inline styles + chart SVG fills),
-  // so unlike CSS-variable tokens they can't react to the .dark class on their
-  // own. Sync the color module to the resolved theme via a module-level mutation
-  // during render: App is the tree root, so descendants rendered later this pass
-  // read the new scheme. Inline getSeriesColor() callers pick it up for free;
-  // consumers that memoize palettes also subscribe to resolvedThemeAtom and key
-  // their memo on it, so the mutation has landed before they re-derive.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
-  setSeriesColorScheme(resolvedTheme === 'dark')
+  // Event-series colours are JS-computed (badge inline styles + chart SVG fills), so unlike CSS
+  // variables they can't follow the theme on their own. Push the active theme's compiled palette
+  // into the colour module during render: App is the tree root, so everything rendered later this
+  // pass reads it. Inline getSeriesColor() callers pick it up for free; consumers that memoize a
+  // palette key their memo on themeRevisionAtom, which changes with any theme change.
+  const compiledTheme = useAtomValue(compiledThemeAtom)
+  setSeriesPalette(compiledTheme.data)
 
   // The public shared-dashboard route renders standalone and must not touch the
   // authenticated workspace — skip bootstrap so a logged-in viewer's org/project
@@ -388,7 +382,7 @@ const App = () => {
 
   return (
     <>
-      <ThemeSync />
+      <ThemeApplier />
       <SessionUrlGuard />
       {/*
         Unconditional, including on the shared route: it issues no workspace RPCs, so it doesn't

@@ -40,7 +40,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { type ThemeMode, themeModeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -93,7 +93,7 @@ const AppSidebar = () => {
   const refreshOrgs = useSetAtom(refreshOrgsAtom)
   const signOut = useSetAtom(signOutAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
-  const [theme, setTheme] = useAtom(themeAtom)
+  const [theme, setTheme] = useAtom(themeModeAtom)
   const { setOpenMobile } = useSidebar()
 
   const routeProjectId = useRouteProjectId()
@@ -173,7 +173,7 @@ const AppSidebar = () => {
   }
 
   const cycleTheme = () => {
-    const next: Record<Theme, Theme> = { light: 'dark', dark: 'system', system: 'light' }
+    const next: Record<ThemeMode, ThemeMode> = { light: 'dark', dark: 'system', system: 'light' }
     setTheme(next[theme])
   }
 
@@ -335,7 +335,7 @@ const AppSidebar = () => {
         <UsageMeter href={`${prefix}/settings/billing`} />
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>
+            <SidebarMenuButton onClick={cycleTheme} tooltip={`Mode: ${theme}`}>
               {theme === 'light' && <Sun />}
               {theme === 'dark' && <Moon />}
               {theme === 'system' && <Monitor />}

@@ -37,8 +37,12 @@ vi.mock('@visx/responsive', () => ({
 }))
 
 const { activeOrgAtom, commitProjectsAtom, projectsAtom } = await import('@/data/workspace.atoms')
-const { themeAtom } = await import('@/data/theme.atoms')
-const { setSeriesColorScheme } = await import('@/lib/event-colors')
+const { themeModeAtom } = await import('@/data/theme.atoms')
+const { setSeriesPalette } = await import('@/lib/event-colors')
+const { compileDataPalette } = await import('@/theme/data-palette')
+const { PUG_CANVAS } = await import('@/theme/fit')
+const pugPalette = (polarity: 'light' | 'dark') =>
+  compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity])
 const Usage = (await import('./index.page')).default
 
 const org = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
@@ -117,7 +121,7 @@ beforeEach(() => {
 // The series palette is module-level state, so a test that flips it has to put it back or every
 // later file in the run inherits dark colours.
 afterEach(() => {
-  setSeriesColorScheme(false)
+  setSeriesPalette(pugPalette('light'))
 })
 
 describe('Usage page — superseded requests', () => {
@@ -478,8 +482,8 @@ describe('Usage page — theme', () => {
     expect(light).not.toBe('')
 
     act(() => {
-      setSeriesColorScheme(true)
-      store.set(themeAtom, 'dark')
+      setSeriesPalette(pugPalette('dark'))
+      store.set(themeModeAtom, 'dark')
     })
 
     expect(dot()).not.toBe(light)

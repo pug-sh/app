@@ -2,7 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { type ThemeMode, themeModeAtom } from '@/data/theme.atoms'
 
 // v6 otherwise resolves the worker next to its own chunk, where Vite never emits it.
 setWorkerUrl(workerUrl)
@@ -21,14 +21,14 @@ const subscribeDark = (onStoreChange: () => void) => {
   }
 }
 
-const getResolvedDark = (theme: Theme) => {
+const getResolvedDark = (theme: ThemeMode) => {
   if (theme === 'dark') return true
   if (theme === 'light') return false
   return document.documentElement.classList.contains('dark')
 }
 
 export const useResolvedDark = () => {
-  const theme = useAtomValue(themeAtom)
+  const theme = useAtomValue(themeModeAtom)
   return useSyncExternalStore(
     subscribeDark,
     () => getResolvedDark(theme),

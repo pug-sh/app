@@ -59,6 +59,3 @@ const HEX6 = /^#[0-9a-f]{6}$/i
 // lighter hex so it recedes on either canvas; a color that isn't a plain hex passes through.
 export const fadedSeriesColor = (sc: SeriesColor): SeriesColor =>
   HEX6.test(sc.line) ? { ...sc, line: `${sc.line}99`, dot: `${sc.dot}99` } : sc
-
-/** Transitional: Pug's palette for a mode. Removed in Task 8, once App pushes the compiled theme. */
-export const setSeriesColorScheme = (isDark: boolean) => setSeriesPalette(pugPalette(isDark))
