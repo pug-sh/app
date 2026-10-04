@@ -1,0 +1,1178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 280
+    },
+    "contrast": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "high"
+      ]
+    },
+    "variants": {
+      "type": "object",
+      "properties": {
+        "light": {
+          "type": "object",
+          "properties": {
+            "colors": {
+              "type": "object",
+              "properties": {
+                "background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "card": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "card-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "popover": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "popover-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "primary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "link": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "secondary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "secondary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "muted-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "faint": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "accent": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "accent-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "destructive": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "destructive-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "input": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "ring": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "success": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "warning": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "positive": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "caution": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "negative": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-1": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-2": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-3": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-4": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-5": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-primary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-accent": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-accent-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-ring": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-foreground-muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-label": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-line-primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-line-secondary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-crosshair": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-grid": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-brush-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-01": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-02": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-03": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-04": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-05": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-pattern-color": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-1": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-2": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-3": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-4": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-5": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-6": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-7": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-ink-dark": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-ink-light": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-1-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-2-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-3-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-4-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-5-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-6-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-7-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "identity-surface": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "identity-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-keyword": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-string": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-class": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                }
+              },
+              "additionalProperties": false
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "categorical": {
+                  "minItems": 3,
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "groups": {
+                  "type": "object",
+                  "properties": {
+                    "navigation": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "interaction": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "lifecycle": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "auth": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "commerce": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "discovery": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "forms": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "media": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "notifications": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "chat": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "billing": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "support": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "workspace": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "invitations": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "files": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "integrations": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "api": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "sharing": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "failure": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "success": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "events": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "avatars": {
+                  "minItems": 1,
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "adapt": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "dark": {
+          "type": "object",
+          "properties": {
+            "colors": {
+              "type": "object",
+              "properties": {
+                "background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "card": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "card-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "popover": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "popover-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "primary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "link": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "secondary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "secondary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "muted-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "faint": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "accent": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "accent-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "destructive": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "destructive-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "input": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "ring": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "success": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "warning": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "positive": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "caution": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "negative": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-1": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-2": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-3": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-4": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-5": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-primary-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-accent": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-accent-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "sidebar-ring": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-foreground-muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-label": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-line-primary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-line-secondary": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-crosshair": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-grid": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-brush-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-tooltip-muted": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-background": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-border": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-marker-foreground": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-01": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-02": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-03": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-04": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-05": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "chart-scale-pattern-color": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-1": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-2": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-3": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-4": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-5": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-6": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-7": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-ink-dark": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-ink-light": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-1-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-2-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-3-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-4-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-5-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-6-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "heat-7-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "identity-surface": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "identity-ink": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-keyword": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-string": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                },
+                "syntax-class": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "description": "A colour: hex, rgb(), hsl() or oklch()"
+                }
+              },
+              "additionalProperties": false
+            },
+            "data": {
+              "type": "object",
+              "properties": {
+                "categorical": {
+                  "minItems": 3,
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "groups": {
+                  "type": "object",
+                  "properties": {
+                    "navigation": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "interaction": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "lifecycle": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "auth": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "commerce": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "discovery": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "forms": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "media": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "notifications": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "chat": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "billing": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "support": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "workspace": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "invitations": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "files": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "integrations": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "api": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "sharing": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "failure": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    },
+                    "success": {
+                      "type": "string",
+                      "maxLength": 64,
+                      "description": "A colour: hex, rgb(), hsl() or oklch()"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "events": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "additionalProperties": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "avatars": {
+                  "minItems": 1,
+                  "maxItems": 24,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 64,
+                    "description": "A colour: hex, rgb(), hsl() or oklch()"
+                  }
+                },
+                "adapt": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "seeds": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "version",
+    "name",
+    "variants"
+  ],
+  "additionalProperties": false
+}
