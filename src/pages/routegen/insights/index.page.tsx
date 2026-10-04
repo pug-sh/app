@@ -463,7 +463,7 @@ const Insights = () => {
   }, [result.case, trendSeries, validEntries])
   const eventFilterColors = useMemo(
     () => eventFilters.entries.map((entry, i) => getSeriesColor(entry.kind || `step ${i + 1}`, i)),
-    [eventFilters.entries],
+    [eventFilters.entries, themeRevision],
   )
   const chartData = useMemo<ChartPoint[]>(
     () => buildChartData(trendSeries, granularity, reportingTimeZone),
@@ -472,7 +472,7 @@ const Insights = () => {
   const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
 
   // Render helpers.
-  const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [])
+  const getEventColorDot = useCallback((eventName: string) => getSeriesColor(eventName).dot, [themeRevision])
 
   const chartRef = useRef<HTMLDivElement>(null)
   let drawnCount = resultSeriesCount
