@@ -1,11 +1,13 @@
 import { BUILTIN_IDS, BUILTINS } from './builtin'
-import { compileVariant } from './compile'
+import { compileVariant, hashString } from './compile'
 import { type Issue, parseThemeText, type ThemeFamily } from './format'
 import { POLARITIES, type Polarity } from './tokens'
 
 // The theme library: the built-ins plus whatever the person installed, and which one is active.
 // Installed themes are stored as their original text and re-parsed on load, so a registry change
 // between releases (a token this build learned) applies to themes installed before it.
+
+export const MAX_INSTALLED = 20
 
 export type InstalledTheme = { id: string; text: string; hash: string; installedAt: number; source: 'file' }
 
@@ -96,4 +98,22 @@ export const chooseActive = (input: {
     family = entry.family as ThemeFamily
   }
   return { id: entry.id, builtin: entry.builtin, family, polarity }
+}
+
+export type InstallCheck =
+  | { ok: true; theme: InstalledTheme; name: string; issues: Issue[] }
+  | { ok: false; reason: 'invalid' | 'duplicate' | 'full'; issues: Issue[] }
+
+/** Everything the install flow needs to know about a file, without installing it. */
+export const checkInstall = (text: string, installed: InstalledTheme[], now = Date.now()): InstallCheck => {
+  const parsed = parseThemeText(text)
+  if (!parsed.ok) return { ok: false, reason: 'invalid', issues: parsed.issues }
+  const issues = [...parsed.issues, ...validateFamily('candidate', parsed.family)]
+  if (issues.some(i => i.severity === 'error')) return { ok: false, reason: 'invalid', issues }
+  // Hashed on the parsed family, so whitespace and key order don't make a second copy.
+  const hash = hashString(JSON.stringify(parsed.family))
+  if (installed.some(t => t.hash === hash)) return { ok: false, reason: 'duplicate', issues }
+  if (installed.length >= MAX_INSTALLED) return { ok: false, reason: 'full', issues }
+  const theme: InstalledTheme = { id: `installed-${hash}`, text, hash, installedAt: now, source: 'file' }
+  return { ok: true, theme, name: parsed.family.name, issues }
 }

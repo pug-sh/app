@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildLibrary, chooseActive, type InstalledTheme } from './library'
+import { buildLibrary, checkInstall, chooseActive, type InstalledTheme, MAX_INSTALLED } from './library'
 
 const grape: InstalledTheme = {
   id: 'installed-grape',
@@ -61,5 +61,46 @@ describe('buildLibrary', () => {
     const library = buildLibrary([broken])
     expect(library.find(e => e.id === broken.id)).toMatchObject({ family: null, name: 'Unreadable theme' })
     expect(choose({ selection: { light: 'pug', dark: broken.id }, library }).id).toBe('pug')
+  })
+})
+
+describe('checkInstall', () => {
+  it('accepts a clean theme', () => {
+    expect(checkInstall(grape.text, [])).toMatchObject({ ok: true, name: 'Grape', issues: [] })
+  })
+
+  it('refuses invalid files, duplicates and a full library', () => {
+    expect(checkInstall('{"version":1}', [])).toMatchObject({ ok: false, reason: 'invalid' })
+    const first = checkInstall(grape.text, [])
+    if (!first.ok) throw new Error('grape did not install')
+    // Whitespace doesn't make a second copy: the hash is over the parsed family.
+    expect(checkInstall(` ${grape.text}\n`, [first.theme])).toMatchObject({ ok: false, reason: 'duplicate' })
+    const full = Array.from(
+      { length: MAX_INSTALLED },
+      (_, i): InstalledTheme => ({ ...first.theme, id: `t${i}`, hash: `h${i}` }),
+    )
+    expect(checkInstall(grape.text, full)).toMatchObject({ ok: false, reason: 'full' })
+  })
+
+  it('refuses a variant whose canvas contradicts its mode', () => {
+    const inverted = JSON.stringify({
+      version: 1,
+      name: 'Inverted',
+      variants: { dark: { colors: { background: '#ffffff' } } },
+    })
+    const check = checkInstall(inverted, [])
+    expect(check).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(check.issues.some(i => i.rule === 'V1')).toBe(true)
+  })
+
+  it('reports warnings without refusing', () => {
+    const muddy = JSON.stringify({
+      version: 1,
+      name: 'Muddy',
+      variants: { light: { colors: { foreground: '#bbbbbb' } } },
+    })
+    const check = checkInstall(muddy, [])
+    expect(check.ok).toBe(true)
+    expect(check.issues.some(i => i.rule === 'V2' && i.path.startsWith('variants.light.'))).toBe(true)
   })
 })

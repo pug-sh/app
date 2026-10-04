@@ -1,9 +1,11 @@
 import { createStore } from 'jotai'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { InstalledTheme } from '@/theme/library'
 import {
   compiledThemeAtom,
   installedThemesAtom,
+  installThemeAtom,
+  removeThemeAtom,
   resolvedThemeAtom,
   themeModeAtom,
   themeRevisionAtom,
@@ -59,5 +61,43 @@ describe('the active theme', () => {
     store.set(themeSelectionAtom, { light: 'pug', dark: 'pug' })
     expect(store.get(themeRevisionAtom)).not.toBe(grapeRevision)
     expect(store.get(resolvedThemeAtom)).toBe('dark')
+  })
+})
+
+describe('installing and removing', () => {
+  it('installs a checked file', () => {
+    const store = createStore()
+    expect(store.set(installThemeAtom, grape.text)).toMatchObject({ ok: true, name: 'Grape' })
+    expect(store.get(installedThemesAtom)).toHaveLength(1)
+  })
+
+  it('refuses without writing anything', () => {
+    const store = createStore()
+    expect(store.set(installThemeAtom, '{')).toMatchObject({ ok: false, reason: 'invalid' })
+    expect(store.get(installedThemesAtom)).toEqual([])
+  })
+
+  // Review Focus 1: Safari private mode, or a full quota.
+  it('reports storage that refuses the write, and leaves nothing half-installed', () => {
+    const store = createStore()
+    const refuse = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      expect(store.set(installThemeAtom, grape.text)).toMatchObject({ ok: false, reason: 'storage' })
+      expect(store.get(installedThemesAtom)).toEqual([])
+    } finally {
+      refuse.mockRestore()
+    }
+  })
+
+  it('falls a mode back to Pug when its theme is removed', () => {
+    const store = createStore()
+    const result = store.set(installThemeAtom, grape.text)
+    if (!result.ok) throw new Error('grape did not install')
+    store.set(themeSelectionAtom, { light: 'pug', dark: result.theme.id })
+    store.set(removeThemeAtom, result.theme.id)
+    expect(store.get(installedThemesAtom)).toEqual([])
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
   })
 })

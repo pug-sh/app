@@ -1,8 +1,16 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { trackEvent } from '@/analytics/pug'
 import { type CompiledTheme, compileVariant } from '@/theme/compile'
-import type { ThemeFamily } from '@/theme/format'
-import { type ActiveTheme, buildLibrary, chooseActive, type InstalledTheme } from '@/theme/library'
+import type { Issue, ThemeFamily } from '@/theme/format'
+import {
+  type ActiveTheme,
+  buildLibrary,
+  checkInstall,
+  chooseActive,
+  type InstallCheck,
+  type InstalledTheme,
+} from '@/theme/library'
 import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -77,3 +85,41 @@ export const themeRevisionAtom = atom(get => get(compiledThemeAtom).revision)
 
 /** DiceBear disc colours for the active theme, as bare hex — a leading '#' emits fill="##…". */
 export const avatarPaletteAtom = atom(get => get(compiledThemeAtom).data.avatars.map(hex => hex.slice(1)))
+
+export type InstallResult = InstallCheck | { ok: false; reason: 'storage'; issues: Issue[] }
+
+/** Installs a theme file after checking it. Every refusal comes back as a result; nothing throws. */
+export const installThemeAtom = atom(null, (get, set, text: string): InstallResult => {
+  const previous = get(installedThemesAtom)
+  const check = checkInstall(text, previous)
+  if (!check.ok) return check
+  try {
+    set(installedThemesAtom, [...previous, check.theme])
+  } catch {
+    // atomWithStorage updates memory before it writes storage. Put memory back, so this session
+    // doesn't show a theme the next load won't have.
+    try {
+      set(installedThemesAtom, previous)
+    } catch {
+      // Storage still refusing — memory is already back to `previous`.
+    }
+    return { ok: false, reason: 'storage', issues: [] }
+  }
+  trackEvent('theme_installed', { source: 'file' })
+  return check
+})
+
+/** Removes an installed theme; a mode that was showing it falls back to Pug. */
+export const removeThemeAtom = atom(null, (get, set, id: string) => {
+  set(
+    installedThemesAtom,
+    get(installedThemesAtom).filter(t => t.id !== id),
+  )
+  const selection = get(themeSelectionAtom)
+  if (selection.light === id || selection.dark === id) {
+    set(themeSelectionAtom, {
+      light: selection.light === id ? 'pug' : selection.light,
+      dark: selection.dark === id ? 'pug' : selection.dark,
+    })
+  }
+})
