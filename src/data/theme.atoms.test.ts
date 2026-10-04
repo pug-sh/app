@@ -101,3 +101,43 @@ describe('installing and removing', () => {
     expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
   })
 })
+
+// Storage is untrusted: another build, an older shape after a rollback, or a hand edit can put
+// anything under these keys, and cross-tab sync delivers it straight into the atoms. A bad value
+// must degrade to the default — App reads compiledThemeAtom while rendering, so a throw here is a
+// blank app that a reload can't fix.
+describe('malformed storage', () => {
+  const pug = { id: 'pug', builtin: true }
+
+  it.each<[string, (store: ReturnType<typeof createStore>) => void]>([
+    ['mode "auto"', store => store.set(themeModeAtom, 'auto' as never)],
+    ['mode 5', store => store.set(themeModeAtom, 5 as never)],
+    ['mode null', store => store.set(themeModeAtom, null as never)],
+    ['selection null', store => store.set(themeSelectionAtom, null as never)],
+    ['selection with a number', store => store.set(themeSelectionAtom, { light: 5, dark: 'pug' } as never)],
+    ['installed {}', store => store.set(installedThemesAtom, {} as never)],
+    ['installed "x"', store => store.set(installedThemesAtom, 'x' as never)],
+    ['installed [null]', store => store.set(installedThemesAtom, [null] as never)],
+    ['installed [{ id }]', store => store.set(installedThemesAtom, [{ id: 'x' }] as never)],
+  ])('falls back to Pug for %s', (_, seed) => {
+    const store = createStore()
+    seed(store)
+    expect(store.get(compiledThemeAtom)).toMatchObject(pug)
+    expect(['light', 'dark']).toContain(store.get(resolvedThemeAtom))
+  })
+
+  it('keeps the well-formed installed themes next to a broken entry', () => {
+    const store = createStore()
+    store.set(installedThemesAtom, [null, grape] as never)
+    expect(store.get(installedThemesAtom).map(t => t.id)).toEqual([grape.id])
+  })
+
+  it('survives a bad value already in storage when the module loads', async () => {
+    localStorage.setItem('pug:theme', JSON.stringify('auto'))
+    localStorage.setItem('pug:theme-selection', 'null')
+    localStorage.setItem('pug:themes', JSON.stringify({}))
+    vi.resetModules()
+    const fresh = await import('./theme.atoms')
+    expect(createStore().get(fresh.compiledThemeAtom)).toMatchObject(pug)
+  })
+})

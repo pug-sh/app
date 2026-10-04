@@ -15,22 +15,68 @@ import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-// getOnInit: App renders before storage loads on mount, and jotai 3 won't re-render it for that.
-export const themeModeAtom = atomWithStorage<ThemeMode>('pug:theme', 'system', undefined, { getOnInit: true })
+// Storage is untrusted input: another build, an older shape after a rollback, or a hand edit can put
+// anything under these keys, and cross-tab sync delivers it straight into the atoms. So each key is a
+// raw storage atom, and the exported atom reads it through a guard — a bad value degrades to the
+// default instead of throwing inside App's render. getOnInit: App renders before storage loads on
+// mount, and jotai 3 won't re-render it for that.
+const storedModeAtom = atomWithStorage<unknown>('pug:theme', 'system', undefined, { getOnInit: true })
+const storedSelectionAtom = atomWithStorage<unknown>('pug:theme-selection', { light: 'pug', dark: 'pug' }, undefined, {
+  getOnInit: true,
+})
+const storedAutoContrastAtom = atomWithStorage<unknown>('pug:theme-auto-contrast', true, undefined, { getOnInit: true })
+const storedInstalledAtom = atomWithStorage<unknown>('pug:themes', [], undefined, { getOnInit: true })
 
-/** Which theme paints each mode. An id that's gone falls back to Pug at resolution, not here. */
-export const themeSelectionAtom = atomWithStorage<Record<Polarity, string>>(
-  'pug:theme-selection',
-  { light: 'pug', dark: 'pug' },
-  undefined,
-  { getOnInit: true },
+/** Light, dark or follow the OS. Anything else in storage reads as following the OS, as it always did. */
+export const themeModeAtom = atom(
+  (get): ThemeMode => {
+    const mode = get(storedModeAtom)
+    return mode === 'light' || mode === 'dark' || mode === 'system' ? mode : 'system'
+  },
+  (_get, set, mode: ThemeMode) => set(storedModeAtom, mode),
 )
 
-/** Swap in Pug High Contrast when the OS asks for more contrast. */
-export const autoContrastAtom = atomWithStorage('pug:theme-auto-contrast', true, undefined, { getOnInit: true })
+/** Which theme paints each mode. An id that's gone falls back to Pug at resolution, not here. */
+export const themeSelectionAtom = atom(
+  (get): Record<Polarity, string> => {
+    const raw = get(storedSelectionAtom) as Partial<Record<Polarity, unknown>> | null
+    const idFor = (polarity: Polarity) => {
+      const id = raw?.[polarity]
+      return typeof id === 'string' ? id : 'pug'
+    }
+    return { light: idFor('light'), dark: idFor('dark') }
+  },
+  (_get, set, selection: Record<Polarity, string>) => set(storedSelectionAtom, selection),
+)
+
+/** Swap in Pug High Contrast when the OS asks for more contrast. Only an explicit false turns it off. */
+export const autoContrastAtom = atom(
+  get => get(storedAutoContrastAtom) !== false,
+  (_get, set, on: boolean) => set(storedAutoContrastAtom, on),
+)
+
+// An installed entry needs its id and its text; anything else about it can be defaulted.
+const asInstalledTheme = (value: unknown): InstalledTheme | null => {
+  const entry = value as Partial<Record<keyof InstalledTheme, unknown>> | null
+  if (typeof entry?.id !== 'string' || typeof entry.text !== 'string') return null
+  return {
+    id: entry.id,
+    text: entry.text,
+    hash: typeof entry.hash === 'string' ? entry.hash : '',
+    installedAt: typeof entry.installedAt === 'number' ? entry.installedAt : 0,
+    source: 'file',
+  }
+}
 
 /** Installed theme files, as their original text — re-parsed on load (theme/library.ts). */
-export const installedThemesAtom = atomWithStorage<InstalledTheme[]>('pug:themes', [], undefined, { getOnInit: true })
+export const installedThemesAtom = atom(
+  (get): InstalledTheme[] => {
+    const raw = get(storedInstalledAtom)
+    if (!Array.isArray(raw)) return []
+    return raw.map(asInstalledTheme).filter((theme): theme is InstalledTheme => theme !== null)
+  },
+  (_get, set, themes: InstalledTheme[]) => set(storedInstalledAtom, themes),
+)
 
 // An OS-level preference, kept live via matchMedia.
 const mediaAtom = (query: string) => {
