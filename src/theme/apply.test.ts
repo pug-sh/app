@@ -46,4 +46,17 @@ describe('applyCompiledTheme', () => {
     expect(inline()).toEqual([])
     expect(root.classList.contains('dark')).toBe(false)
   })
+
+  it('selects a built-in other than Pug by attribute, with no inline variables', () => {
+    applyCompiledTheme(
+      compileVariant({
+        id: 'pug-high-contrast',
+        builtin: true,
+        family: BUILTINS['pug-high-contrast'],
+        polarity: 'light',
+      }),
+    )
+    expect(root.getAttribute('data-theme')).toBe('pug-high-contrast')
+    expect(inline()).toEqual([])
+  })
 })

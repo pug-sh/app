@@ -34,6 +34,12 @@ describe('chooseActive', () => {
     expect(choose({ selection: { light: 'gone', dark: 'gone' } }).id).toBe('pug')
   })
 
+  it('swaps in High Contrast only when the OS asks and auto-contrast is on', () => {
+    expect(choose({ autoContrast: true, moreContrast: true }).id).toBe('pug-high-contrast')
+    expect(choose({ autoContrast: false, moreContrast: true }).id).toBe('pug')
+    expect(choose({ autoContrast: true, moreContrast: false }).id).toBe('pug')
+  })
+
   it('falls back to Pug for a family without this mode', () => {
     const library = buildLibrary([grape])
     expect(choose({ polarity: 'light', selection: { light: grape.id, dark: 'pug' }, library }).id).toBe('pug')
