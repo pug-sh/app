@@ -1,7 +1,7 @@
 import { composite, contrast } from '../lib/color/contrast'
 import { fromHex, type Oklch } from '../lib/color/oklch'
 import type { CompiledDataPalette } from './data-palette'
-import type { Issue } from './format'
+import { error, type Issue, type RuleId, warning } from './format'
 import { IDENTITY_HUES, identityContrast, syntaxGround } from './registry'
 import type { Contrast, Polarity, TokenName } from './tokens'
 
@@ -184,19 +184,13 @@ export const validateTheme = (s: Subject): Issue[] => {
   const high = s.contrast === 'high'
   const floors = FLOORS[s.polarity]
   const t = s.tokens
-  const warn = (rule: string, path: string, message: string) =>
-    issues.push({ severity: 'warning', rule, path, message })
+  const warn = (rule: RuleId, path: string, message: string) => issues.push(warning(rule, path, message))
   const ratio = (r: number) => `${r.toFixed(2)}:1`
 
   // V1 — the variant's mode has to agree with its canvas, or every dark: style is wrong.
   const bgL = t.background.l
   if (s.polarity === 'dark' ? bgL >= 0.5 : bgL <= 0.5) {
-    issues.push({
-      severity: 'error',
-      rule: 'V1',
-      path: 'background',
-      message: `A ${s.polarity} variant needs a ${s.polarity} background`,
-    })
+    issues.push(error('V1', 'background', `A ${s.polarity} variant needs a ${s.polarity} background`))
   }
 
   // V2 — ink on every ground it renders on.

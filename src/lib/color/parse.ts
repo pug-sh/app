@@ -87,6 +87,9 @@ export const parseColor = (input: string): Oklch | null => {
   return null
 }
 
+/** A colour in the canonical form — the only thing that may reach CSS. Only formatColor makes one. */
+export type CssColor = string & { readonly __brand: 'CssColor' }
+
 const fixed = (v: number, digits: number) => String(Number(v.toFixed(digits)))
 
 /**
@@ -101,7 +104,7 @@ export const formatColor = (c: Oklch) => {
   if (h >= 360 || chroma === '0') h = 0
   const body = `${l} ${chroma} ${h}`
   const alpha = clamp01(c.alpha)
-  return alpha >= 0.9995 ? `oklch(${body})` : `oklch(${body} / ${fixed(alpha, 3)})`
+  return (alpha >= 0.9995 ? `oklch(${body})` : `oklch(${body} / ${fixed(alpha, 3)})`) as CssColor
 }
 
 /** Matches formatColor's output and nothing else — the first-paint script trusts only this. */

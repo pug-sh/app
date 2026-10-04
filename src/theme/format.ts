@@ -18,11 +18,17 @@ import {
 // Errors refuse the theme; warnings let it load. Unknown keys are dropped with a warning — the rule
 // CSS uses for unknown properties — so a theme written for a newer Pug still loads here.
 
-export const CURRENT_VERSION = 1
+// Every format version this build reads. Bumping CURRENT_VERSION means adding it here, and then
+// MIGRATIONS has to carry an upgrade from each older version — the compiler holds it to that.
+type Version = 1
+export const CURRENT_VERSION = 1 satisfies Version
 export const MAX_THEME_BYTES = 64 * 1024
 const MAX_EVENTS = 300
 
-export type Issue = { severity: 'error' | 'warning'; rule: string; path: string; message: string }
+/** V1–V11 are validation; V12 (ignored input) and V13 (refused input) come from parsing. */
+export type RuleId = `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13}`
+
+export type Issue = { severity: 'error' | 'warning'; rule: RuleId; path: string; message: string }
 
 export type DataSpec = {
   categorical?: Oklch[]
@@ -117,7 +123,8 @@ export const authoringSchema = (() => {
 })()
 
 // Upgrades from older versions, keyed by the version they upgrade from. Empty in v1.
-const MIGRATIONS: Record<number, (input: Record<string, unknown>) => Record<string, unknown>> = {}
+type Migration = (input: Record<string, unknown>) => Record<string, unknown>
+const MIGRATIONS: { [V in Exclude<Version, typeof CURRENT_VERSION>]: Migration } = {}
 
 // C0/C1 controls and bidi overrides — a theme name must not be able to reorder the text around it.
 const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g
@@ -149,9 +156,7 @@ const suggest = (name: string, options: readonly string[]) => {
 }
 
 export const parseThemeText = (text: string): ParseResult => {
-  if (text.length > MAX_THEME_BYTES) {
-    return { ok: false, issues: [error('V13', '', `Theme files are limited to ${MAX_THEME_BYTES / 1024} KB`)] }
-  }
+  if (text.length > MAX_THEME_BYTES) return { ok: false, issues: [tooLargeIssue()] }
   let json: unknown
   try {
     json = JSON.parse(text)
@@ -175,7 +180,7 @@ export const parseThemeObject = (input: unknown): ParseResult => {
   if (version > CURRENT_VERSION) {
     return { ok: false, issues: [error('V13', 'version', 'This theme needs a newer version of Pug')] }
   }
-  for (let v = version; v < CURRENT_VERSION; v++) raw = MIGRATIONS[v](raw)
+  for (let v = version; v < CURRENT_VERSION; v++) raw = (MIGRATIONS as Record<number, Migration>)[v](raw)
 
   const shape = fileShape.safeParse(raw)
   if (!shape.success) {
@@ -314,11 +319,14 @@ const cleanText = (value: string, path: string, issues: Issue[]) => {
 
 // An issue repeats the file's own keys and values, and the install report renders it — so it gets the
 // same cleaning as a name.
-const issue = (severity: Issue['severity'], rule: string, path: string, message: string): Issue => ({
+const issue = (severity: Issue['severity'], rule: RuleId, path: string, message: string): Issue => ({
   severity,
   rule,
   path: path.replace(UNSAFE_TEXT, ''),
   message: message.replace(UNSAFE_TEXT, ''),
 })
-const error = (rule: string, path: string, message: string) => issue('error', rule, path, message)
-const warning = (rule: string, path: string, message: string) => issue('warning', rule, path, message)
+export const error = (rule: RuleId, path: string, message: string) => issue('error', rule, path, message)
+export const warning = (rule: RuleId, path: string, message: string) => issue('warning', rule, path, message)
+
+/** The refusal for a file over MAX_THEME_BYTES — raised before parsing, and by the UI before reading. */
+export const tooLargeIssue = () => error('V13', '', `Theme files are limited to ${MAX_THEME_BYTES / 1024} KB`)

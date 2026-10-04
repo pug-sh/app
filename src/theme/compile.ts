@@ -1,5 +1,5 @@
 import type { Oklch } from '../lib/color/oklch'
-import { formatColor } from '../lib/color/parse'
+import { type CssColor, formatColor } from '../lib/color/parse'
 import { builtinRoots } from './builtin'
 import { type CompiledDataPalette, compileDataPalette } from './data-palette'
 import type { Issue, ThemeFamily } from './format'
@@ -15,7 +15,7 @@ export type CompiledTheme = {
   /** Content hash of vars + data: equal themes share it, so it's a safe memo key. */
   revision: string
   /** `--token` → canonical oklch, for every registry token. */
-  vars: Record<string, string>
+  vars: Record<`--${TokenName}`, CssColor>
   tokens: Record<TokenName, Oklch>
   provenance: Record<TokenName, Provenance>
   data: CompiledDataPalette
@@ -39,7 +39,7 @@ export const compileVariant = (input: { id: string; builtin: boolean; family: Th
   const { tokens, provenance } = resolveTokens(variant, polarity, level, builtinRoots(polarity, level))
   const data = compileDataPalette(variant?.data, polarity, level, tokens.background)
   const report = validateTheme({ tokens, data, polarity, contrast: level })
-  const vars = Object.fromEntries(TOKENS.map(t => [`--${t}`, formatColor(tokens[t])]))
+  const vars = Object.fromEntries(TOKENS.map(t => [`--${t}`, formatColor(tokens[t])])) as CompiledTheme['vars']
   const revision = hashString(JSON.stringify([input.id, polarity, vars, data]))
   const compiled: CompiledTheme = { ...input, contrast: level, revision, vars, tokens, provenance, data, report }
   return compiled

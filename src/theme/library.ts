@@ -1,6 +1,6 @@
 import { BUILTIN_IDS, BUILTINS, type BuiltinId } from './builtin'
 import { compileVariant, hashString } from './compile'
-import { type Issue, parseThemeText, readableName, type ThemeFamily } from './format'
+import { error, type Issue, type ParseResult, parseThemeText, readableName, type ThemeFamily } from './format'
 import { POLARITIES, type Polarity } from './tokens'
 
 // The theme library: the built-ins plus whatever the person installed, and which one is active.
@@ -25,7 +25,7 @@ export type LibraryEntry =
 
 export type UsableEntry = LibraryEntry & { family: ThemeFamily }
 
-const parsedTexts = new Map<string, ReturnType<typeof parseThemeText>>()
+const parsedTexts = new Map<string, ParseResult>()
 const parseOnce = (text: string) => {
   let parsed = parsedTexts.get(text)
   if (!parsed) {
@@ -46,37 +46,47 @@ export const validateFamily = (id: string, family: ThemeFamily): Issue[] =>
       : [],
   )
 
-export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
-  ...BUILTIN_IDS.map(id => ({ id, builtin: true as const, name: BUILTINS[id].name, family: BUILTINS[id], issues: [] })),
-  ...installed.map(theme => {
+// An installed theme that can't be used: listed, never selectable, named from its text if possible.
+const unusable = (theme: InstalledTheme, issues: Issue[]): LibraryEntry => ({
+  id: theme.id,
+  builtin: false,
+  name: readableName(theme.text) ?? 'Unreadable theme',
+  family: null,
+  issues,
+})
+
+const installedEntry = (theme: InstalledTheme): LibraryEntry => {
+  try {
     const parsed = parseOnce(theme.text)
     if (!parsed.ok) {
       // It parsed when it was installed, so this build reads it differently — a stricter rule, or a
       // rollback past its version. Its modes fall back to Pug; keep a trace of why.
       console.warn('theme library: could not read', theme.id, parsed.issues)
-      const name = readableName(theme.text) ?? 'Unreadable theme'
-      return { id: theme.id, builtin: false as const, name, family: null, issues: parsed.issues }
+      return unusable(theme, parsed.issues)
     }
     const { family } = parsed
-    let issues: Issue[]
-    try {
-      issues = [...parsed.issues, ...validateFamily(theme.id, family)]
-    } catch (err) {
-      // A theme the engine can't compile is a bug in the engine, not the file — but it must not take
-      // the app down with it. It stays listed, unselectable, and its mode falls back to Pug.
-      console.error('theme library: could not compile', theme.id, err)
-      issues = [{ severity: 'error', rule: 'V13', path: '', message: 'This theme couldn’t be compiled' }]
-    }
+    const issues = [...parsed.issues, ...validateFamily(theme.id, family)]
     const usable = !issues.some(i => i.severity === 'error')
     return {
       id: theme.id,
-      builtin: false as const,
+      builtin: false,
       name: family.name,
       author: family.author,
       family: usable ? family : null,
       issues,
     }
-  }),
+  } catch (err) {
+    // A theme the engine can't parse or compile is a bug in the engine, not the file — but it must not
+    // take the app down with it, since App reads the library while rendering. It stays listed,
+    // unselectable, and its mode falls back to Pug.
+    console.error('theme library: could not compile', theme.id, err)
+    return unusable(theme, [error('V13', '', 'This theme couldn’t be compiled')])
+  }
+}
+
+export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
+  ...BUILTIN_IDS.map(id => ({ id, builtin: true as const, name: BUILTINS[id].name, family: BUILTINS[id], issues: [] })),
+  ...installed.map(installedEntry),
 ]
 
 export type ActiveTheme = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity }

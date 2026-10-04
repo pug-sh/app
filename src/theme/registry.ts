@@ -3,7 +3,7 @@ import type { Oklch } from '../lib/color/oklch'
 import { parseThemeObject } from './format'
 import { pug } from './presets/pug'
 import { solveLightness } from './solve'
-import { type Contrast, type Polarity, TOKENS, type TokenName } from './tokens'
+import { type Contrast, POLARITIES, type Polarity, TOKENS, type TokenName } from './tokens'
 
 // The token registry: how every token a theme leaves out is computed from the ones it set — VSCode's
 // colour-registry model. Standard-contrast parameters are measured from Pug at load, so applying the
@@ -25,19 +25,21 @@ export type Rule =
   | { f: 'translucent'; ground: TokenName }
   | { f: 'pick'; cell: TokenName; a: TokenName; b: TokenName }
 
-type Def = Rule | { light: Rule; dark: Rule; high?: Rule }
+// A root is a token's whole definition or nothing: a per-mode or high-contrast branch always computes.
+type Formula = Exclude<Rule, { f: 'root' }>
+type Def = Rule | { light: Formula; dark: Formula; high?: Formula }
 
 const root: Rule = { f: 'root' }
-const ref = (of: TokenName): Rule => ({ f: 'ref', of })
-const shift = (base: TokenName): Rule => ({ f: 'shift', base })
-const ink = (ground: TokenName, tier: Tier): Rule => ({ f: 'ink', ground, tier })
-const textFrom = (source: TokenName, tier: Tier = 'secondary'): Rule => ({
+const ref = (of: TokenName): Formula => ({ f: 'ref', of })
+const shift = (base: TokenName): Formula => ({ f: 'shift', base })
+const ink = (ground: TokenName, tier: Tier): Formula => ({ f: 'ink', ground, tier })
+const textFrom = (source: TokenName, tier: Tier = 'secondary'): Formula => ({
   f: 'textFrom',
   source,
   ground: 'background',
   tier,
 })
-const pick = (cell: TokenName): Rule => ({ f: 'pick', cell, a: 'heat-ink-dark', b: 'heat-ink-light' })
+const pick = (cell: TokenName): Formula => ({ f: 'pick', cell, a: 'heat-ink-dark', b: 'heat-ink-light' })
 
 const RULES: Record<TokenName, Def> = {
   background: root,
@@ -145,7 +147,10 @@ export const ruleFor = (token: TokenName, polarity: Polarity, level: Contrast): 
   return def[polarity]
 }
 
-export const isRoot = (token: TokenName) => RULES[token] === root
+export const isRoot = (token: TokenName) => {
+  const def = RULES[token]
+  return 'f' in def && def.f === 'root'
+}
 
 export const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
@@ -278,23 +283,36 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
   }
 }
 
+// What one rule reads — a switch over every kind, so a new kind can't be added without saying.
+const readsOf = (rule: Rule): TokenName[] => {
+  switch (rule.f) {
+    case 'root':
+      return []
+    case 'ref':
+      return [rule.of]
+    case 'shift':
+      return [rule.base]
+    case 'ink':
+      return rule.capToBody ? [rule.ground, 'foreground', 'background'] : [rule.ground]
+    case 'textFrom':
+      return [rule.source, rule.ground]
+    case 'hueText':
+      return ['muted', 'background']
+    case 'onFill':
+      return [rule.fill]
+    case 'translucent':
+      return [rule.ground]
+    case 'pick':
+      return [rule.cell, rule.a, rule.b]
+  }
+}
+
 /** Every token a rule reads, across both modes and both contrast levels — for the resolution order. */
-export const dependenciesOf = (token: TokenName): TokenName[] => {
+export const dependenciesOf = (token: TokenName) => {
   const deps = new Set<TokenName>()
-  for (const polarity of ['light', 'dark'] as const) {
+  for (const polarity of POLARITIES) {
     for (const level of ['standard', 'high'] as const) {
-      const rule = ruleFor(token, polarity, level)
-      if (rule.f === 'ref') deps.add(rule.of)
-      if (rule.f === 'shift') deps.add(rule.base)
-      if (rule.f === 'ink') {
-        deps.add(rule.ground)
-        if (rule.capToBody) for (const t of ['foreground', 'background'] as const) deps.add(t)
-      }
-      if (rule.f === 'textFrom') for (const t of [rule.source, rule.ground]) deps.add(t)
-      if (rule.f === 'hueText') for (const t of ['muted', 'background'] as const) deps.add(t)
-      if (rule.f === 'onFill') deps.add(rule.fill)
-      if (rule.f === 'translucent') deps.add(rule.ground)
-      if (rule.f === 'pick') for (const t of [rule.cell, rule.a, rule.b]) deps.add(t)
+      for (const read of readsOf(ruleFor(token, polarity, level))) deps.add(read)
     }
   }
   return [...deps]

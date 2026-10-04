@@ -12,7 +12,7 @@ import {
   themeLibraryAtom,
 } from '@/data/theme.atoms'
 import { cn } from '@/lib/utils'
-import { type Issue, MAX_THEME_BYTES } from '@/theme/format'
+import { type Issue, MAX_THEME_BYTES, tooLargeIssue } from '@/theme/format'
 import { checkInstall, type InstallCheck, type LibraryEntry } from '@/theme/library'
 import { POLARITIES } from '@/theme/tokens'
 
@@ -135,10 +135,7 @@ const InstalledThemes = () => {
     if (fileRef.current) fileRef.current.value = ''
     if (!file) return
     if (file.size > MAX_THEME_BYTES) {
-      const issues = [
-        { severity: 'error' as const, rule: 'V13', path: '', message: 'Theme files are limited to 64 KB' },
-      ]
-      setPending({ text: '', check: { ok: false, reason: 'invalid', issues } })
+      setPending({ text: '', check: { ok: false, reason: 'invalid', issues: [tooLargeIssue()] } })
       return
     }
     const text = await file.text()

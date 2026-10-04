@@ -1,5 +1,6 @@
 import { addProtocol, type LngLatBoundsLike } from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
+import type { CompiledTheme } from '@/theme/compile'
 
 // Register the pmtiles:// protocol once so MapLibre can read self-hosted .pmtiles archives.
 let protocolRegistered = false
@@ -70,7 +71,7 @@ export const cssColorToRgb = (value: string) => {
 
 // MapLibre paint properties take concrete colour strings, not var(). The compiled theme's oklch values
 // go through the same canvas readback getComputedStyle's did, so Pug's map colours are unchanged.
-export const resolveThemeColors = (vars: Record<string, string>): ThemeColors => ({
+export const resolveThemeColors = (vars: CompiledTheme['vars']): ThemeColors => ({
   primary: cssColorToRgb(vars['--primary']),
   border: cssColorToRgb(vars['--border']),
   mutedForeground: cssColorToRgb(vars['--muted-foreground']),

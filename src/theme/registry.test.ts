@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { contrast } from '../lib/color/contrast'
 import { deltaE } from '../lib/color/cvd'
+import type { Oklch } from '../lib/color/oklch'
 import { BUILTINS, builtinRoots } from './builtin'
 import { parseThemeObject, type Variant } from './format'
-import { dependenciesOf, isRoot } from './registry'
+import { dependenciesOf, evaluate, isRoot } from './registry'
 import { RESOLUTION_ORDER, resolveTokens } from './resolve'
-import { TOKENS } from './tokens'
+import { TOKENS, type TokenName } from './tokens'
 
 const pug = BUILTINS.pug
 
@@ -18,6 +19,30 @@ describe('resolution order', () => {
         expect(position.get(dep), `${dep} before ${token}`).toBeLessThan(position.get(token) as number)
     }
   })
+})
+
+// The order above is only as good as dependenciesOf, which states the reads by hand. Evaluating every
+// formula with a get that records what it actually reads catches a read the list forgot — the one
+// thing checking the order against that same list never could.
+it('declares every token a formula reads', () => {
+  for (const polarity of ['light', 'dark'] as const) {
+    const tokens = (pug.variants[polarity] as Variant).colors as Record<TokenName, Oklch>
+    for (const level of ['standard', 'high'] as const) {
+      for (const token of TOKENS) {
+        if (isRoot(token)) continue
+        const read = new Set<TokenName>()
+        evaluate(token, polarity, level, t => {
+          read.add(t)
+          return tokens[t]
+        })
+        const declared = dependenciesOf(token)
+        expect(
+          [...read].filter(t => !declared.includes(t)),
+          `${token} (${polarity}, ${level})`,
+        ).toEqual([])
+      }
+    }
+  }
 })
 
 describe.each(['light', 'dark'] as const)('resolving %s', polarity => {
