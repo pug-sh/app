@@ -49,6 +49,31 @@ describe('parseThemeObject', () => {
     })
   })
 
+  // Contrast is measured against a surface as if it were solid, and other surfaces are derived from
+  // its lightness — a see-through one passes every check and renders unreadable.
+  it('refuses a see-through surface or fill, naming where it is', () => {
+    const result = parseThemeObject({
+      ...minimal,
+      variants: {
+        dark: { colors: { background: '#1e1b2e', sidebar: '#ffffff08', primary: 'oklch(0.55 0.18 265 / 0.1)' } },
+      },
+    })
+    expect(result.ok).toBe(false)
+    expect(result.issues.map(i => `${i.severity} ${i.rule} ${i.path}`)).toEqual([
+      'error V5 variants.dark.colors.primary',
+      'error V5 variants.dark.colors.sidebar',
+    ])
+  })
+
+  it('still takes a see-through line or ink', () => {
+    const colors = {
+      background: '#1e1b2e',
+      border: 'oklch(0.68 0.022 265 / 0.22)',
+      'muted-foreground': 'rgb(255 255 255 / 0.6)',
+    }
+    expect(parseThemeObject({ ...minimal, variants: { dark: { colors } } })).toMatchObject({ ok: true, issues: [] })
+  })
+
   it('refuses a newer version and an oversized file', () => {
     expect(parseThemeObject({ ...minimal, version: 2 })).toMatchObject({
       ok: false,

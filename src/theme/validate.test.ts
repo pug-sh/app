@@ -3,8 +3,8 @@ import { formatColor } from '../lib/color/parse'
 import { BUILTINS } from './builtin'
 import { compileVariant } from './compile'
 import { parseThemeObject, type ThemeFile } from './format'
-import type { Polarity } from './tokens'
-import { FLOORS, measureFloors } from './validate'
+import { type Polarity, SURFACES, type TokenName } from './tokens'
+import { FILL_PAIRS, FLOORS, measureFloors, V2_PAIRS } from './validate'
 
 const compileFile = (file: ThemeFile, polarity: Polarity) => {
   const parsed = parseThemeObject(file)
@@ -23,6 +23,19 @@ const theme = (
   name: 'test',
   ...extra,
   variants: { [polarity]: { colors } },
+})
+
+// Every ratio here treats its ground as a solid colour. That holds only for grounds the parser refuses
+// to take see-through, so a ground a rule starts measuring against has to join SURFACES too.
+it('measures only against grounds the parser keeps opaque', () => {
+  const grounds: TokenName[] = [
+    ...V2_PAIRS.flatMap(pair => pair.grounds).filter((ground): ground is TokenName => ground !== 'syntax'),
+    ...FILL_PAIRS.map(([, fill]) => fill),
+    'identity-surface',
+    'heat-1',
+    'heat-7',
+  ]
+  expect(grounds.filter(ground => !SURFACES.has(ground))).toEqual([])
 })
 
 describe.each(['light', 'dark'] as const)('Pug %s', polarity => {

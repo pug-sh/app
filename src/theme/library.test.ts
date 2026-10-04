@@ -82,6 +82,17 @@ describe('checkInstall', () => {
     expect(checkInstall(grape.text, full)).toMatchObject({ ok: false, reason: 'full' })
   })
 
+  // A button fill at 10% opacity measured 4.7:1 against itself as if it were solid; its text
+  // renders at about 1.1:1. It used to install and read "Passed".
+  it('refuses a see-through fill', () => {
+    const glass = JSON.stringify({
+      version: 1,
+      name: 'Glass',
+      variants: { light: { colors: { primary: 'oklch(0.55 0.18 265 / 0.1)' } } },
+    })
+    expect(checkInstall(glass, [])).toMatchObject({ ok: false, reason: 'invalid', issues: [{ rule: 'V5' }] })
+  })
+
   it('refuses a variant whose canvas contradicts its mode', () => {
     const inverted = JSON.stringify({
       version: 1,

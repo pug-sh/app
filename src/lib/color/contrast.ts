@@ -21,7 +21,10 @@ export const composite = (top: Oklch, ground: Oklch, alpha = top.alpha): Oklch =
   return linearToOklch(r, gg, b, 1)
 }
 
-/** WCAG 2 contrast ratio, 1–21. A translucent ink is composited onto its ground first. */
+/**
+ * WCAG 2 contrast ratio, 1–21. A translucent ink is composited onto its ground first; the ground is
+ * taken as solid, which holds because the theme parser refuses a see-through surface.
+ */
 export const contrast = (ink: Oklch, ground: Oklch) => {
   const a = luminance(ink.alpha < 1 ? composite(ink, ground) : ink)
   const b = luminance(ground)

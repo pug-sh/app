@@ -88,6 +88,35 @@ export const TOKENS = [
 
 export type TokenName = (typeof TOKENS)[number]
 
+// What text and other colours are drawn on: canvas, cards, chips, filled controls, heat cells. These
+// must be opaque — validation measures ink against them as solid colours, and the registry derives one
+// surface from another's lightness. Lines and inks may be see-through: contrast blends an ink onto
+// its ground.
+export const SURFACES: ReadonlySet<TokenName> = new Set<TokenName>([
+  'background',
+  'card',
+  'popover',
+  'primary',
+  'secondary',
+  'muted',
+  'accent',
+  'destructive',
+  'sidebar',
+  'sidebar-primary',
+  'sidebar-accent',
+  'chart-background',
+  'chart-tooltip-background',
+  'chart-marker-background',
+  'heat-1',
+  'heat-2',
+  'heat-3',
+  'heat-4',
+  'heat-5',
+  'heat-6',
+  'heat-7',
+  'identity-surface',
+])
+
 export const isTokenName = (name: string): name is TokenName => (TOKENS as readonly string[]).includes(name)
 
 export const GROUPS = [

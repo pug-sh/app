@@ -5,10 +5,11 @@ import type { Issue } from './format'
 import { IDENTITY_HUES, identityContrast, syntaxGround } from './registry'
 import type { Contrast, Polarity, TokenName } from './tokens'
 
-// Validation rules V1–V11 (V12/V13 are raised while parsing). Standard floors are Pug's own measured
-// ratio less 10%, pinned below as constants so retuning Pug forces a deliberate floor update — the
-// floors test re-measures them. High-contrast floors are the spec's APCA Lc 90 / 75 / 60 in WCAG terms
-// (12 / 7 / 4.5), with 7:1 text on fills and 3:1 for lines and data.
+// Validation rules V1–V11. V12 and V13 are raised while parsing, and so is V5 for a surface the file
+// sets see-through; here V5 catches an input the registry derived from a see-through line. Standard
+// floors are Pug's own measured ratio less 10%, pinned below as constants so retuning Pug forces a
+// deliberate floor update — the floors test re-measures them. High-contrast floors are the spec's APCA
+// Lc 90 / 75 / 60 in WCAG terms (12 / 7 / 4.5), with 7:1 text on fills and 3:1 for lines and data.
 
 type Ground = TokenName | 'syntax'
 type InkClass = 'body' | 'secondary' | 'faint'
@@ -36,7 +37,7 @@ export const V2_PAIRS: { ink: TokenName; grounds: Ground[]; cls: InkClass }[] = 
 
 const HIGH = { body: 12, secondary: 7, faint: 4.5, fill: 7, data: 3, identity: 4.5, heat: 4.5, nonText: 3 }
 const FILL_STANDARD = 4.5
-const FILL_PAIRS: [TokenName, TokenName][] = [
+export const FILL_PAIRS: [TokenName, TokenName][] = [
   ['primary-foreground', 'primary'],
   ['destructive-foreground', 'destructive'],
   ['sidebar-primary-foreground', 'sidebar-primary'],

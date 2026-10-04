@@ -9,6 +9,7 @@ import {
   isGroupName,
   isTokenName,
   type Polarity,
+  SURFACES,
   TOKENS,
   type TokenName,
 } from './tokens'
@@ -220,7 +221,11 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   // Read through the registry, never by copying the file's keys: __proto__ and friends stay inert.
   for (const token of TOKENS) {
     if (!Object.hasOwn(rawColors, token)) continue
-    const parsed = colorAt(rawColors[token], `${path}.colors.${token}`, issues)
+    const at = `${path}.colors.${token}`
+    const parsed = colorAt(rawColors[token], at, issues)
+    if (parsed && parsed.alpha < 0.999 && SURFACES.has(token)) {
+      issues.push(error('V5', at, `${token} must be opaque — text is drawn on it`))
+    }
     if (parsed) colors[token] = parsed
   }
 
