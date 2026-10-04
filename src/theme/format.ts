@@ -6,8 +6,6 @@ import {
   type Contrast,
   GROUPS,
   type GroupName,
-  isGroupName,
-  isTokenName,
   POLARITIES,
   type Polarity,
   SURFACES,
@@ -75,53 +73,47 @@ export type ThemeFile = {
 
 export type ParseResult = { ok: true; family: ThemeFamily; issues: Issue[] } | { ok: false; issues: Issue[] }
 
-// Structure only — colours are checked against the grammar afterwards so each failure gets a path.
-const colorString = z.string().max(MAX_COLOR_LENGTH)
-const dataShape = z.looseObject({
-  categorical: z.array(colorString).min(3).max(24).optional(),
-  groups: z.record(z.string(), colorString).optional(),
-  events: z.record(z.string().max(64), colorString).optional(),
-  avatars: z.array(colorString).min(1).max(24).optional(),
+// The file's structure, written once and built twice: loose for the parser — unknown keys pass through
+// to a warning, and colours are checked against the grammar afterwards so each failure gets a path —
+// and strict for editors, with every token and group listed so names autocomplete.
+const dataFields = <G extends z.ZodType>(color: z.ZodString, groups: G) => ({
+  categorical: z.array(color).min(3).max(24).optional(),
+  groups: groups.optional(),
+  events: z.record(z.string().max(64), color).optional(),
+  avatars: z.array(color).min(1).max(24).optional(),
   adapt: z.boolean().optional(),
 })
-const variantShape = z.looseObject({
-  colors: z.record(z.string(), colorString).optional(),
-  data: dataShape.optional(),
-})
-const fileShape = z.looseObject({
+const fileFields = <V extends z.ZodType, S extends z.ZodType>(version: V, variants: S) => ({
   $schema: z.string().optional(),
-  version: z.number().int(),
+  version,
   name: z.string().min(1).max(64),
   author: z.string().max(64).optional(),
   description: z.string().max(280).optional(),
   contrast: z.enum(['standard', 'high']).optional(),
-  variants: z.looseObject({ light: variantShape.optional(), dark: variantShape.optional() }),
+  variants,
   seeds: z.looseObject({}).optional(),
 })
+
+const colorString = z.string().max(MAX_COLOR_LENGTH)
+const dataShape = z.looseObject(dataFields(colorString, z.record(z.string(), colorString)))
+const variantShape = z.looseObject({
+  colors: z.record(z.string(), colorString).optional(),
+  data: dataShape.optional(),
+})
+const fileShape = z.looseObject(
+  fileFields(z.number().int(), z.looseObject({ light: variantShape.optional(), dark: variantShape.optional() })),
+)
 
 /** Strict mirror of the format for editors: every token and group is listed, so names autocomplete. */
 export const authoringSchema = (() => {
   const color = z.string().max(MAX_COLOR_LENGTH).describe('A colour: hex, rgb(), hsl() or oklch()')
   const colors = z.strictObject(Object.fromEntries(TOKENS.map(t => [t, color.optional()])))
   const groups = z.strictObject(Object.fromEntries(GROUPS.map(g => [g, color.optional()])))
-  const data = z.strictObject({
-    categorical: z.array(color).min(3).max(24).optional(),
-    groups: groups.optional(),
-    events: z.record(z.string().max(64), color).optional(),
-    avatars: z.array(color).min(1).max(24).optional(),
-    adapt: z.boolean().optional(),
-  })
+  const data = z.strictObject(dataFields(color, groups))
   const variant = z.strictObject({ colors: colors.optional(), data: data.optional() })
-  return z.strictObject({
-    $schema: z.string().optional(),
-    version: z.literal(CURRENT_VERSION),
-    name: z.string().min(1).max(64),
-    author: z.string().max(64).optional(),
-    description: z.string().max(280).optional(),
-    contrast: z.enum(['standard', 'high']).optional(),
-    variants: z.strictObject({ light: variant.optional(), dark: variant.optional() }),
-    seeds: z.looseObject({}).optional(),
-  })
+  return z.strictObject(
+    fileFields(z.literal(CURRENT_VERSION), z.strictObject({ light: variant.optional(), dark: variant.optional() })),
+  )
 })()
 
 // Upgrades from older versions, keyed by the version they upgrade from. Empty in v1.
@@ -131,11 +123,12 @@ const MIGRATIONS: { [V in Exclude<Version, typeof CURRENT_VERSION>]: Migration }
 // C0/C1 controls and bidi overrides — a theme name must not be able to reorder the text around it.
 const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g
 
+// The keys each level knows, read off the shapes above so a new field can't be warned about as unknown.
 const KNOWN = {
-  root: ['$schema', 'version', 'name', 'author', 'description', 'contrast', 'variants', 'seeds'],
-  variants: ['light', 'dark'],
-  variant: ['colors', 'data'],
-  data: ['categorical', 'groups', 'events', 'avatars', 'adapt'],
+  root: Object.keys(fileShape.shape),
+  variants: [...POLARITIES],
+  variant: Object.keys(variantShape.shape),
+  data: Object.keys(dataShape.shape),
 }
 
 const distance = (a: string, b: string) => {
@@ -221,23 +214,13 @@ export const parseThemeObject = (input: unknown): ParseResult => {
 
 const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues: Issue[]): Variant => {
   unknownKeys(source, KNOWN.variant, path, issues)
-  const colors: Partial<Record<TokenName, Oklch>> = {}
-  const rawColors = source.colors ?? {}
-  for (const key of Object.keys(rawColors)) {
-    if (!isTokenName(key)) {
-      issues.push(warning('V12', `${path}.colors.${key}`, `Unknown token "${key}"${suggest(key, TOKENS)}`))
-    }
-  }
-  // Read through the registry, never by copying the file's keys: __proto__ and friends stay inert.
-  for (const token of TOKENS) {
-    if (!Object.hasOwn(rawColors, token)) continue
-    const at = `${path}.colors.${token}`
-    const parsed = colorAt(rawColors[token], at, issues)
+  const colors = namedColors(source.colors ?? {}, TOKENS, 'token', `${path}.colors`, issues, (value, at, token) => {
+    const parsed = colorAt(value, at, issues)
     if (parsed && parsed.alpha < 0.999 && SURFACES.has(token)) {
       issues.push(error('V5', at, `${token} must be opaque — text is drawn on it`))
     }
-    if (parsed) colors[token] = parsed
-  }
+    return parsed
+  })
 
   const rawData = source.data ?? {}
   unknownKeys(rawData, KNOWN.data, `${path}.data`, issues)
@@ -248,17 +231,9 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   }
   if (rawData.avatars) data.avatars = dataColorList(rawData.avatars, `${path}.data.avatars`, issues)
 
-  const rawGroups = rawData.groups ?? {}
-  for (const key of Object.keys(rawGroups)) {
-    if (!isGroupName(key)) {
-      issues.push(warning('V12', `${path}.data.groups.${key}`, `Unknown group "${key}"${suggest(key, GROUPS)}`))
-    }
-  }
-  for (const group of GROUPS) {
-    if (!Object.hasOwn(rawGroups, group)) continue
-    const parsed = dataColorAt(rawGroups[group], `${path}.data.groups.${group}`, issues)
-    if (parsed) data.groups[group] = parsed
-  }
+  data.groups = namedColors(rawData.groups ?? {}, GROUPS, 'group', `${path}.data.groups`, issues, (value, at) =>
+    dataColorAt(value, at, issues),
+  )
 
   const rawEvents = rawData.events ?? {}
   const eventKeys = Object.keys(rawEvents)
@@ -271,6 +246,30 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
     if (parsed && kind) data.events[kind] = parsed
   }
   return { colors, data }
+}
+
+// Colours keyed by a registry name — tokens or groups. An unknown name gets a warning; known ones are
+// read through the registry, never by copying the file's keys, so __proto__ and friends stay inert.
+const namedColors = <N extends string>(
+  raw: Record<string, string>,
+  names: readonly N[],
+  noun: string,
+  path: string,
+  issues: Issue[],
+  read: (value: unknown, at: string, name: N) => Oklch | null,
+) => {
+  for (const key of Object.keys(raw)) {
+    if (!(names as readonly string[]).includes(key)) {
+      issues.push(warning('V12', `${path}.${key}`, `Unknown ${noun} "${key}"${suggest(key, names)}`))
+    }
+  }
+  const colors: Partial<Record<N, Oklch>> = {}
+  for (const name of names) {
+    if (!Object.hasOwn(raw, name)) continue
+    const parsed = read(raw[name], `${path}.${name}`, name)
+    if (parsed) colors[name] = parsed
+  }
+  return colors
 }
 
 const colorAt = (value: unknown, path: string, issues: Issue[]) => {

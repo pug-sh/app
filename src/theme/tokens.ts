@@ -117,8 +117,6 @@ export const SURFACES: ReadonlySet<TokenName> = new Set<TokenName>([
   'identity-surface',
 ])
 
-export const isTokenName = (name: string): name is TokenName => (TOKENS as readonly string[]).includes(name)
-
 export const GROUPS = [
   'navigation',
   'interaction',
@@ -143,8 +141,6 @@ export const GROUPS = [
 ] as const
 
 export type GroupName = (typeof GROUPS)[number]
-
-export const isGroupName = (name: string): name is GroupName => (GROUPS as readonly string[]).includes(name)
 
 export type Polarity = 'light' | 'dark'
 export type Contrast = 'standard' | 'high'
