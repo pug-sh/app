@@ -1,7 +1,8 @@
 import { useAtomValue } from 'jotai'
 import { type CSSProperties, Fragment, memo, type ReactNode } from 'react'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
-import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
+import { indexedColorIn, pugDataPalette, seriesColorIn } from '@/lib/event-colors'
+import type { CompiledDataPalette } from '@/theme/data-palette'
 
 // Decorative stand-ins for real dashboard tiles — hand-drawn SVG, never the vendored charts:
 // this sits behind a rotation at low contrast, so it must not pull in a chart runtime or any data.
@@ -39,14 +40,16 @@ const TrendCard = ({
   value,
   delta,
   points,
+  palette,
 }: {
+  palette: CompiledDataPalette
   event: string
   label: string
   value: string
   delta: string
   points: number[]
 }) => {
-  const c = getSeriesColor(event)
+  const c = seriesColorIn(palette, event)
   const line = sparkPath(points)
   return (
     <Shell>
@@ -66,8 +69,8 @@ const TrendCard = ({
   )
 }
 
-const FunnelCard = ({ label, steps }: { label: string; steps: number[] }) => {
-  const c = getSeriesColor('checkout_started')
+const FunnelCard = ({ palette, label, steps }: { palette: CompiledDataPalette; label: string; steps: number[] }) => {
+  const c = seriesColorIn(palette, 'checkout_started')
   return (
     <Shell>
       <Kicker>Funnel</Kicker>
@@ -98,7 +101,15 @@ const RetentionCard = ({ cells }: { cells: number[] }) => (
   </Shell>
 )
 
-const TopKCard = ({ label, rows }: { label: string; rows: { name: string; pct: number }[] }) => (
+const TopKCard = ({
+  palette,
+  label,
+  rows,
+}: {
+  palette: CompiledDataPalette
+  label: string
+  rows: { name: string; pct: number }[]
+}) => (
   <Shell>
     <Kicker>Breakdown</Kicker>
     <p className="mt-1 mb-2 text-sm text-foreground">{label}</p>
@@ -106,7 +117,7 @@ const TopKCard = ({ label, rows }: { label: string; rows: { name: string; pct: n
       {rows.map((r, i) => {
         // Indexed, not name-based: breakdown values carry no semantic identity, and these three
         // hash to one bucket in the fallback palette (CLAUDE.md names this exact trio).
-        const c = getIndexedColor(i)
+        const c = indexedColorIn(palette, i)
         return (
           <div key={r.name} className="relative flex items-center justify-between rounded-sm px-1.5 py-0.5">
             <div
@@ -123,17 +134,19 @@ const TopKCard = ({ label, rows }: { label: string; rows: { name: string; pct: n
 )
 
 const EventCard = ({
+  palette,
   event,
   property,
   value,
   time,
 }: {
+  palette: CompiledDataPalette
   event: string
   property: string
   value: string
   time: string
 }) => {
-  const c = getSeriesColor(event)
+  const c = seriesColorIn(palette, event)
   return (
     <Shell>
       <div className="flex items-center gap-2">
@@ -152,11 +165,11 @@ const EventCard = ({
   )
 }
 
-// One deck; each column takes it at a different rotation so no two columns read alike.
-// Built per render, not hoisted: a hoisted element is referentially stable, so React bails out
-// of re-rendering it and the inline getSeriesColor() fills freeze on a theme toggle.
-const buildDeck = () => [
+// One deck; each column takes it at a different rotation so no two columns read alike. Built per
+// render from the palette it's given, so a light/dark toggle repaints it.
+const buildDeck = (palette: CompiledDataPalette) => [
   <TrendCard
+    palette={palette}
     key="t1"
     event="signup"
     label="Signups"
@@ -164,14 +177,15 @@ const buildDeck = () => [
     delta="+12.4%"
     points={[8, 11, 9, 14, 13, 18, 17, 23, 26]}
   />,
-  <EventCard key="e1" event="page_view" property="$browser" value="Chrome" time="2m ago" />,
-  <FunnelCard key="f1" label="Checkout" steps={[100, 62, 38, 24]} />,
-  <EventCard key="e2" event="checkout_completed" property="$os" value="iOS" time="5m ago" />,
+  <EventCard palette={palette} key="e1" event="page_view" property="$browser" value="Chrome" time="2m ago" />,
+  <FunnelCard palette={palette} key="f1" label="Checkout" steps={[100, 62, 38, 24]} />,
+  <EventCard palette={palette} key="e2" event="checkout_completed" property="$os" value="iOS" time="5m ago" />,
   <RetentionCard
     key="r1"
     cells={[1, 0.82, 0.6, 0.44, 0.3, 0.22, 1, 0.74, 0.52, 0.38, 0.26, 0.16, 1, 0.88, 0.66, 0.48, 0.34, 0.24]}
   />,
   <TopKCard
+    palette={palette}
     key="k1"
     label="Top sources"
     rows={[
@@ -180,8 +194,9 @@ const buildDeck = () => [
       { name: 'twitter', pct: 23 },
     ]}
   />,
-  <EventCard key="e3" event="signup" property="$utmSource" value="github" time="11m ago" />,
+  <EventCard palette={palette} key="e3" event="signup" property="$utmSource" value="github" time="11m ago" />,
   <TrendCard
+    palette={palette}
     key="t2"
     event="page_view"
     label="Active users"
@@ -189,8 +204,9 @@ const buildDeck = () => [
     delta="+3.1%"
     points={[14, 13, 16, 15, 19, 18, 22, 21, 24]}
   />,
-  <EventCard key="e4" event="payment_failed" property="plan" value="pro" time="18m ago" />,
+  <EventCard palette={palette} key="e4" event="payment_failed" property="plan" value="pro" time="18m ago" />,
   <TrendCard
+    palette={palette}
     key="t3"
     event="checkout_completed"
     label="Revenue"
@@ -219,11 +235,12 @@ const COLUMNS = [
 // memo: this is an unmemoized child of AuthSplit, so without it every form interaction on the
 // page re-renders 150 cards. The theme subscription below still re-renders it on toggle.
 export const AuthWall = memo(() => {
-  // Subscribing to the theme is what re-renders the deck on toggle, so the inline
-  // getSeriesColor() fills re-resolve; the glow also wants more presence on dark.
+  // The sign-in pages stay Pug whatever theme is active: .auth-surface resets the CSS tokens, and the
+  // cards draw from Pug's own data palette for the mode, never the active theme's. So light/dark is
+  // all this depends on — and the glow wants more presence on dark.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const glow = resolvedTheme === 'dark' ? '22%' : '14%'
-  const deck = buildDeck()
+  const deck = buildDeck(pugDataPalette(resolvedTheme))
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
