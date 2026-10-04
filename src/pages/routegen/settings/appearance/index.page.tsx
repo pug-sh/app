@@ -56,7 +56,8 @@ const Appearance = () => {
       {POLARITIES.map(polarity => (
         <section key={polarity}>
           <SectionHeader title={ROW_TITLE[polarity]} />
-          <div className="flex flex-wrap gap-3">
+          {/* A labelled group, so a screen reader says which mode a swatch sets — both rows hold a "Pug". */}
+          <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
             {library
               .filter(entry => entry.family?.variants[polarity])
               .map(entry => (

@@ -46,13 +46,16 @@ describe('Settings → Appearance', () => {
     expect(store.get(themeModeAtom)).toBe('dark')
   })
 
-  // Review Focus 5: swatches are real buttons, named by their theme, carrying their state.
-  it('offers each built-in as a pressable button in each mode', () => {
+  // Review Focus 5: swatches are real buttons, named by their theme, carrying their state — and each
+  // row is a labelled group, or a screen reader hears "Pug, pressed" twice with nothing to say which
+  // mode either one sets.
+  it('offers each built-in as a pressable button inside a labelled group per mode', () => {
     mount()
-    const [light, dark] = screen.getAllByRole('button', { name: 'Pug' })
-    expect(light.getAttribute('aria-pressed')).toBe('true')
-    expect(dark.getAttribute('aria-pressed')).toBe('true')
-    expect(screen.getAllByRole('button', { name: 'Pug High Contrast' })).toHaveLength(2)
+    for (const mode of ['Light theme', 'Dark theme']) {
+      const row = screen.getByRole('group', { name: mode })
+      expect(within(row).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
+      expect(within(row).getByRole('button', { name: 'Pug High Contrast' }).getAttribute('aria-pressed')).toBe('false')
+    }
   })
 
   it('installs a clean file, lists it, and selects it for its mode', async () => {
