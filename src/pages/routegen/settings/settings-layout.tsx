@@ -18,6 +18,7 @@ const SETTINGS_TABS = [
   { path: 'usage', label: 'Usage', description: 'Event usage across this organization' },
   { path: 'billing', label: 'Billing', description: 'Plan and limits for this organization' },
   { path: 'account', label: 'Account', description: 'Your personal account settings' },
+  { path: 'appearance', label: 'Appearance', description: 'Theme and colours for this browser' },
   { path: 'organization', label: 'Organization', description: 'Organizations you belong to' },
   { path: 'sso', label: 'SSO & domains', description: 'Verified domains and who joins this organization' },
 ] as const

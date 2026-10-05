@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/figtree";
 @import "@fontsource-variable/geist-mono";
+/* Colour tokens: generated from src/theme/presets by `bun run generate:themes`. */
+@import "./theme/generated/builtin-themes.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -213,84 +215,7 @@
 }
 
 :root {
-  /* Shift these together — moving one alone collides with its neighbour. A third light-mode
-     ramp shadows these on the auth pages — re-solve `.auth-surface` too whenever this moves. */
-  --background: oklch(0.943 0.005 265);
-  --foreground: oklch(0.365 0.006 265);
-  --card: oklch(0.958 0.004 265);
-  --card-foreground: oklch(0.365 0.006 265);
-  --popover: oklch(0.958 0.004 265);
-  --popover-foreground: oklch(0.365 0.006 265);
-  --primary: oklch(0.55 0.18 265);
-  --primary-foreground: oklch(0.98 0.005 265);
-  /* Blue used AS text (links, tinted icons). Decoupled from --primary so each mode can
-     tune it without moving the button fill. */
-  --link: oklch(0.456 0.18 265);
-  --secondary: oklch(0.911 0.008 265);
-  --secondary-foreground: oklch(0.402 0.008 265);
-  --muted: oklch(0.911 0.008 265);
-  /* Coupled to the surface ramp — retune whenever it moves. */
-  --muted-foreground: oklch(0.49 0.008 265);
-  /* Fourth ink tier (text-faint) — timestamps, counts, hints. Solid, not alpha:
-     alpha composites to a different weight per mode. */
-  --faint: oklch(0.611 0.008 265);
-  --accent: oklch(0.911 0.008 265);
-  --accent-foreground: oklch(0.402 0.008 265);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.98 0.005 25);
-  --border: oklch(0.876 0.006 265);
-  --input: oklch(0.876 0.006 265);
-  --ring: oklch(0.55 0.18 265);
-  --success: oklch(0.6 0.17 145);
-  --warning: oklch(0.7 0.15 70);
-  /* Text tier for the three semantic fills above — same split as --link vs --primary,
-     since a fill and colored text pull lightness in opposite directions. Chroma is held
-     at the insights palette's cap so these don't shout against the near-grayscale UI. */
-  --positive: oklch(0.431 0.14 145);
-  --caution: oklch(0.451 0.14 70);
-  --negative: oklch(0.462 0.14 25);
-  /* charts — semantic hues, a touch darker than dark mode to read on the light bg */
-  --chart-1: oklch(0.55 0.18 265);
-  --chart-2: oklch(0.6 0.17 145);
-  --chart-3: oklch(0.7 0.15 70);
-  --chart-4: oklch(0.55 0.16 330);
-  --chart-5: oklch(0.58 0.2 25);
   --radius: 0.625rem;
-  /* sidebar */
-  --sidebar: oklch(0.926 0.005 265);
-  --sidebar-foreground: oklch(0.353 0.006 265);
-  --sidebar-primary: oklch(0.55 0.18 265);
-  --sidebar-primary-foreground: oklch(0.98 0.005 265);
-  --sidebar-accent: oklch(0.911 0.008 265);
-  --sidebar-accent-foreground: oklch(0.402 0.008 265);
-  --sidebar-border: oklch(0.886 0.005 265);
-  --sidebar-ring: oklch(0.55 0.18 265);
-  /* Aliases, declared once: `.dark` toggles on the same element `:root` matches, so these
-     track the theme on their own. Pinning the registry's own values breaks the grid. */
-  --chart-background: var(--background);
-  --chart-foreground: var(--foreground);
-  --chart-foreground-muted: var(--muted-foreground);
-  --chart-label: var(--muted-foreground);
-  --chart-line-primary: var(--chart-1);
-  --chart-line-secondary: var(--chart-2);
-  --chart-crosshair: oklch(0.4 0.1828 274.34);
-  --chart-grid: var(--border);
-  --chart-brush-border: var(--border);
-  --chart-tooltip-background: var(--popover);
-  --chart-tooltip-foreground: var(--popover-foreground);
-  --chart-tooltip-muted: var(--muted-foreground);
-  --chart-marker-background: oklch(0.97 0.005 265);
-  --chart-marker-border: oklch(0.85 0.01 265);
-  --chart-marker-foreground: oklch(0.3 0.01 265);
-  --chart-scale-01: oklch(0.98 0.003 106);
-  --chart-scale-02: oklch(0.92 0.008 106);
-  --chart-scale-03: oklch(0.82 0.015 106);
-  --chart-scale-04: oklch(0.68 0.02 106);
-  --chart-scale-05: oklch(0.55 0.025 106);
-  --chart-scale-pattern-color: oklch(0.96 0.005 106);
-}
-
-:root {
   --page-gutter: 1rem;
 }
 
@@ -304,118 +229,6 @@
   :root {
     --page-gutter: 2rem;
   }
-}
-
-.dark {
-  /* Solved against light with APCA, not WCAG. WCAG is polarity-blind: matching it across modes
-     scored both at 9:1 while dark measured 22–32 Lc *below* light on every ink tier, which is the
-     "washed out" everyone kept re-reporting. The ink ladder below hits light's APCA at the top and
-     widens as it descends — a bright top used sparingly, not a bright screen.
-
-     Ground is an ink blue-black, not a grey: chroma rides up as lightness comes down so the deep
-     surfaces read as a material. Ink stays near-neutral so text never takes the cast. */
-  /* EXPERIMENT: canvas pinned to the card tone — one flat plane, regions defined by hairlines
-     rather than by elevation. Revert to 0.175 0.014 to restore the elevated look. */
-  --background: oklch(0.215 0.013 265);
-  --foreground: oklch(0.818 0.004 265);
-  --card: oklch(0.215 0.013 265);
-  --card-foreground: oklch(0.818 0.004 265);
-  --popover: oklch(0.242 0.013 265);
-  --popover-foreground: oklch(0.818 0.004 265);
-
-  /* actions */
-  --primary: oklch(0.55 0.175 265); /* deep + saturated: white text clears AA */
-  --primary-foreground: oklch(0.985 0.005 265);
-  --link: oklch(0.685 0.135 265);
-  /* The floor is --accent keeping its gap over --popover: menu-item hovers render on
-     popovers, and closing it further makes them invisible. */
-  --secondary: oklch(0.252 0.014 265);
-  --secondary-foreground: oklch(0.779 0.005 265);
-  --muted: oklch(0.252 0.014 265);
-  --muted-foreground: oklch(0.709 0.006 265);
-  --faint: oklch(0.605 0.007 265);
-  --accent: oklch(0.285 0.016 265);
-  /* Capped below --foreground: solving it flat pushes chip ink past body ink. */
-  --accent-foreground: oklch(0.779 0.005 265);
-
-  /* semantic */
-  --destructive: oklch(0.55 0.175 25); /* deep + saturated: white text clears AA */
-  --destructive-foreground: oklch(0.985 0.005 25);
-  --success: oklch(0.62 0.15 145);
-  --warning: oklch(0.72 0.14 70);
-  /* Text tier — see :root. Seated at the secondary rung on purpose: a delta badge is a footnote
-     to its number, and body ink now sits above it, so it can't be the loudest thing. Chroma is
-     held well under the fills' — against a near-grayscale UI a saturated hue shouts on colour
-     alone, at any lightness, and five red pills in a KPI row is the whole page's attention. */
-  --positive: oklch(0.71 0.1 145);
-  --caution: oklch(0.72 0.1 70);
-  --negative: oklch(0.7 0.1 25);
-
-  /* --border is translucent so it takes the tint of whatever surface it sits on. Keep
-     alpha low — call sites dim it further with border-border/30..70. --input stays
-     SOLID: form controls use dark:bg-input/30, and /NN multiplies alpha away. */
-  --border: oklch(0.68 0.022 265 / 0.22);
-  --input: oklch(0.252 0.014 265);
-  --ring: oklch(0.62 0.15 265);
-
-  /* Chart hues sit a rung below body ink — data reads as data, never as the loudest thing
-     on the page. Same band the JS series palette lifts into (lib/event-colors.ts). */
-  --chart-1: oklch(0.66 0.165 265);
-  --chart-2: oklch(0.672 0.16 145);
-  --chart-3: oklch(0.715 0.15 70);
-  --chart-4: oklch(0.65 0.15 330);
-  --chart-5: oklch(0.666 0.165 25);
-
-  /* sidebar */
-  --sidebar: oklch(0.158 0.014 265);
-  --sidebar-foreground: oklch(0.8 0.005 265);
-  /* Must match --primary — white text on it is sub-AA otherwise. */
-  --sidebar-primary: oklch(0.55 0.175 265);
-  --sidebar-primary-foreground: oklch(0.985 0.005 265);
-  /* Seated on the sidebar, not pinned to --accent: the sidebar sits below the canvas
-     while chips sit above, so one shared value made every nav hover the loudest step.
-     Held below --card so the active pill can never outshine content on the canvas —
-     the active item is marked by its ink, not by a brighter fill. */
-  --sidebar-accent: oklch(0.205 0.016 265);
-  --sidebar-accent-foreground: oklch(0.86 0.004 265);
-  --sidebar-border: oklch(0.68 0.022 265 / 0.14);
-  --sidebar-ring: oklch(0.62 0.15 265);
-  /* Only what genuinely differs per mode — the rest are :root aliases that track the
-     theme; redeclaring one here pins it to light. */
-  --chart-crosshair: oklch(0.55 0.02 265);
-  --chart-marker-background: oklch(0.242 0.013 265);
-  --chart-marker-border: oklch(0.36 0.016 265);
-  --chart-marker-foreground: oklch(0.87 0.003 265);
-  /* Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface. */
-  --chart-scale-01: oklch(0.205 0.028 265);
-  --chart-scale-02: oklch(0.32 0.055 265);
-  --chart-scale-03: oklch(0.44 0.08 265);
-  --chart-scale-04: oklch(0.56 0.105 265);
-  --chart-scale-05: oklch(0.7 0.13 265);
-  --chart-scale-pattern-color: oklch(0.2 0.012 265);
-}
-
-/* Auth surface (sign-in, magic-link, demo) — light mode only, a third ground shadowing :root.
-   The canvas is tuned to be read in fragments between tiles; a full-screen field of it, with
-   nothing lighter beside it, reads as gray paper. The nine tokens below are re-solved against
-   the new ground and hold the app's ratios to within 0.01 — re-solve them whenever :root moves.
-   `color` is re-anchored too: overriding --foreground only reaches elements that resolve it, and
-   Label/Input set no colour class, so without this they inherit :root ink and land a step dark.
-   Deliberately NOT re-solved: --popover, --secondary/--muted/--accent, --ring. Nothing on these
-   pages uses them; --popover at 0.958 is *darker* than this ground, so a popover added here
-   would invert the elevation ramp. Re-solve them at that point. */
-:root:not(.dark) .auth-surface {
-  --background: oklch(0.985 0.002 265);
-  --card: oklch(0.998 0.002 265);
-  --foreground: oklch(0.395 0.006 265);
-  --muted-foreground: oklch(0.519 0.008 265);
-  --faint: oklch(0.642 0.008 265);
-  --link: oklch(0.484 0.18 265);
-  --negative: oklch(0.491 0.14 25);
-  --border: oklch(0.916 0.006 265);
-  --input: oklch(0.916 0.006 265);
-
-  color: var(--foreground);
 }
 
 /* Lift hovered/selected live-visitor markers above their neighbours so popovers aren't clipped. */
@@ -448,8 +261,8 @@
   }
 }
 
-/* sugar-high palette for the SDK setup snippets. Structural tokens reuse the theme vars so
-   they adapt for free; only keyword/string/class are tuned per theme. */
+/* sugar-high palette for the SDK setup snippets. Everything reads theme tokens — keyword, string
+   and class have their own (syntax-*), solved against the snippet's bg-muted/50 ground. */
 .sugar-high {
   --sh-identifier: var(--foreground);
   --sh-property: var(--foreground);
@@ -457,15 +270,9 @@
   --sh-jsxliterals: var(--foreground);
   --sh-sign: var(--muted-foreground);
   --sh-comment: var(--muted-foreground);
-  --sh-keyword: oklch(0.55 0.16 18);
-  --sh-string: oklch(0.5 0.1 160);
-  --sh-class: oklch(0.52 0.12 255);
-}
-
-.dark .sugar-high {
-  --sh-keyword: oklch(0.77 0.13 18);
-  --sh-string: oklch(0.8 0.11 160);
-  --sh-class: oklch(0.8 0.1 255);
+  --sh-keyword: var(--syntax-keyword);
+  --sh-string: var(--syntax-string);
+  --sh-class: var(--syntax-class);
 }
 
 /* Thin scrollbars — the platform default is chunky against these surfaces. Styling

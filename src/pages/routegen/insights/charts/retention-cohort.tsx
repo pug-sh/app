@@ -17,14 +17,21 @@ const toPercent = (value: number, ratioInput: boolean) => {
   return Math.max(0, Math.min(100, percent))
 }
 
-const retentionColor = (value: number) => {
-  if (value >= 80) return '#14532d'
-  if (value >= 65) return '#166534'
-  if (value >= 50) return '#15803d'
-  if (value >= 35) return '#16a34a'
-  if (value >= 20) return '#4ade80'
-  if (value >= 10) return '#86efac'
-  return '#dcfce7'
+// Value-intensity stops, low to high. Fill and text come from the theme's heat ramp — heat-1…7 and
+// heat-1-ink…heat-7-ink — with each stop's ink already picked for contrast by the registry.
+const HEAT_THRESHOLDS = [10, 20, 35, 50, 65, 80]
+
+export const heatStop = (value: number) => 1 + HEAT_THRESHOLDS.filter(min => value >= min).length
+
+// A cohort cell with no value yet: a faint well, not a heat step.
+const EMPTY_CELL_STYLE = {
+  backgroundColor: 'color-mix(in oklab, var(--muted) 35%, transparent)',
+  color: 'var(--muted-foreground)',
+}
+
+export const heatStyle = (value: number) => {
+  const stop = heatStop(value)
+  return { backgroundColor: `var(--heat-${stop})`, color: `var(--heat-${stop}-ink)` }
 }
 
 const formatCohortLabel = (value: string) => {
@@ -67,8 +74,8 @@ export const RetentionCohort = ({
         <p className="text-xs text-muted-foreground">Retention by cohort</p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>Low</span>
-          {['#dcfce7', '#86efac', '#4ade80', '#16a34a', '#166534'].map((c, i) => (
-            <span key={i} className="w-4 h-2 rounded-xs" style={{ backgroundColor: c }} />
+          {[1, 2, 3, 4, 6].map(stop => (
+            <span key={stop} className="w-4 h-2 rounded-xs" style={{ backgroundColor: `var(--heat-${stop})` }} />
           ))}
           <span>High</span>
         </div>
@@ -119,13 +126,7 @@ export const RetentionCohort = ({
                     <td key={ci} className="py-1.5 px-1.5">
                       <div
                         className="h-8 rounded-[6px] text-xs tabular-nums flex items-center justify-end px-2"
-                        style={{
-                          backgroundColor: hasValue
-                            ? retentionColor(value)
-                            : 'color-mix(in oklab, var(--muted) 35%, transparent)',
-                          // Text contrasts the value-intensity green (theme-independent); empty cells use the muted token.
-                          color: !hasValue ? 'var(--muted-foreground)' : value >= 35 ? '#f8fafc' : '#14532d',
-                        }}
+                        style={hasValue ? heatStyle(value) : EMPTY_CELL_STYLE}
                         title={title}
                       >
                         {hasValue ? `${Math.round(value)}%` : '—'}

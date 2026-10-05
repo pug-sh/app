@@ -1,3 +1,4 @@
+import { useAtomValue } from 'jotai'
 import { type ErrorEvent, Marker, type PaddingOptions } from 'maplibre-gl'
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -6,10 +7,17 @@ import { buildBasemapStyle } from '@/components/live-map/basemap'
 import { EMPTY_JOURNEY } from '@/components/live-map/live-visitors'
 import { ClusterPopover, POPOVER_SURFACE, VisitorPopover } from '@/components/live-map/map-popover'
 import { ClusterView, clusterSize, MARKER_SIZE, MarkerView } from '@/components/live-map/marker-views'
-import { buildGroups, groupsToEntries, groupsToPoints, type MapEntry } from '@/components/live-map/markers'
+import {
+  buildGroups,
+  entrySignature,
+  groupsToEntries,
+  groupsToPoints,
+  type MapEntry,
+} from '@/components/live-map/markers'
 import { type Placement, type Rect, resolvePlacement } from '@/components/live-map/popover-placement'
 import { DECLUSTER_ZOOM, displayPos, scatterCellDeg } from '@/components/live-map/scatter'
-import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
+import { themeRevisionAtom } from '@/data/theme.atoms'
+import { useMaplibreMap, useMapTheme } from '@/hooks/use-maplibre-map'
 import { INITIAL_VIEW_BOUNDS } from '@/lib/maplibre'
 
 type Props = {
@@ -42,23 +50,6 @@ type Entry = {
 }
 
 const entryId = (entry: MapEntry) => (entry.type === 'cluster' ? `cluster:${entry.groupKey}` : entry.distinctId)
-
-// Gates whether an entry's React content is re-rendered, so it has to cover everything the marker
-// paints or reads — including iso/region, which feed its aria-label. Position is excluded: it's
-// reapplied every reconcile via setLngLat.
-const entrySignature = (entry: MapEntry, selectedId: string | null, highlightedId: string | null) => {
-  // lng/lat are in here because ClusterView closes over them as its zoom target.
-  if (entry.type === 'cluster') return `c|${entry.count}|${entry.topKind}|${entry.lng}|${entry.lat}`
-  return [
-    'v',
-    entry.distinctId === selectedId ? 'sel' : '',
-    entry.distinctId === highlightedId ? 'hl' : '',
-    entry.kind,
-    entry.iso,
-    entry.region ?? '',
-    entry.avatarUrl ?? '',
-  ].join('|')
-}
 
 // Pinned and pointed-at markers rise above their neighbours, the pointer's target highest — its halo
 // is the thinner of the two and would otherwise be hidden under a face beside it.
@@ -118,7 +109,11 @@ const LiveVisitorMap = ({
   avoidRef,
   viewportPadding,
 }: Props) => {
-  const dark = useResolvedDark()
+  const mapTheme = useMapTheme()
+  // Marker rings and halos take their colour from the active theme's palette, so a theme change has
+  // to repaint them: it's part of every marker's signature, and a new repaint reruns the effects
+  // that walk the entries.
+  const themeRevision = useAtomValue(themeRevisionAtom)
   // Zoom past DECLUSTER_ZOOM breaks crowded city groups into individual faces.
   const [declustered, setDeclustered] = useState(false)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
@@ -136,7 +131,7 @@ const LiveVisitorMap = ({
   )
 
   const { containerRef, mapRef, ready } = useMaplibreMap({
-    style: buildBasemapStyle(dark),
+    style: buildBasemapStyle(mapTheme),
     // Applied before the style attaches, so the first tiles requested are already the framed ones.
     bounds: INITIAL_VIEW_BOUNDS,
     fitBoundsOptions: { padding: viewportPadding },
@@ -414,12 +409,12 @@ const LiveVisitorMap = ({
       if (entry.data.type === 'visitor') {
         entry.marker.getElement().style.zIndex = stackFor(entry.data.distinctId, selectedId, highlightedId)
       }
-      const signature = entrySignature(entry.data, selectedId, highlightedId)
+      const signature = entrySignature(entry.data, selectedId, highlightedId, themeRevision)
       if (signature === entry.signature) return
       entry.signature = signature
       renderEntry(entry.root, entry.data, selectedId, highlightedId)
     },
-    [renderEntry],
+    [renderEntry, themeRevision],
   )
 
   // Repaint only the two markers whose halo changes, not the whole reconcile.
@@ -437,8 +432,8 @@ const LiveVisitorMap = ({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    map.setStyle(buildBasemapStyle(dark))
-  }, [dark, ready, mapRef])
+    map.setStyle(buildBasemapStyle(mapTheme))
+  }, [mapTheme, ready, mapRef])
 
   // Keep basemap/tile load failures (e.g. a missing or invalid /basemap.pmtiles) non-fatal —
   // the visitor markers still render over a blank background instead of crashing the map.

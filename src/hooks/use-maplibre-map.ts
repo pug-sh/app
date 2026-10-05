@@ -1,38 +1,26 @@
 import { useAtomValue } from 'jotai'
 import { Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { compiledThemeAtom } from '@/data/theme.atoms'
 
 // v6 otherwise resolves the worker next to its own chunk, where Vite never emits it.
 setWorkerUrl(workerUrl)
 
-// --- Resolved dark mode (shared by both maps + theme-aware styling) ---
+// --- The active theme, as the maps need it ---
 
-const subscribeDark = (onStoreChange: () => void) => {
-  const mq = window.matchMedia('(prefers-color-scheme: dark)')
-  const handler = () => onStoreChange()
-  mq.addEventListener('change', handler)
-  const obs = new MutationObserver(handler)
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-  return () => {
-    mq.removeEventListener('change', handler)
-    obs.disconnect()
-  }
-}
-
-const getResolvedDark = (theme: Theme) => {
-  if (theme === 'dark') return true
-  if (theme === 'light') return false
-  return document.documentElement.classList.contains('dark')
-}
-
-export const useResolvedDark = () => {
-  const theme = useAtomValue(themeAtom)
-  return useSyncExternalStore(
-    subscribeDark,
-    () => getResolvedDark(theme),
-    () => false,
+// Memoised on the compiled theme, so map effects keyed on it run on any theme change — two dark
+// themes included — and on nothing else.
+export const useMapTheme = () => {
+  const compiled = useAtomValue(compiledThemeAtom)
+  return useMemo(
+    () => ({
+      dark: compiled.polarity === 'dark',
+      vars: compiled.vars,
+      cardL: compiled.tokens.card.l,
+      neutralHue: compiled.tokens.background.h,
+    }),
+    [compiled],
   )
 }
 
