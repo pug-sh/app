@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -100,6 +100,26 @@ describe('Settings → Appearance', () => {
     pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
     fireEvent.click(await screen.findByRole('button', { name: 'Install anyway' }))
     expect(store.get(installedThemesAtom)).toHaveLength(1)
+  })
+
+  // Reads finish in any order. A slow file landing after a newer pick used to install itself over that
+  // pick's report — the person is left looking at a theme they moved on from.
+  it('lets only the latest pick land when an earlier read finishes last', async () => {
+    const store = mount()
+    let release = () => {}
+    const slow = new File([grape], 'slow.json')
+    slow.text = () =>
+      new Promise(resolve => {
+        release = () => resolve(grape)
+      })
+    fireEvent.change(screen.getByLabelText('Theme file'), { target: { files: [slow] } })
+    pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
+    await screen.findByRole('button', { name: 'Install anyway' })
+
+    await act(async () => release())
+    expect(screen.getByRole('button', { name: 'Install anyway' })).toBeTruthy()
+    expect(store.get(installedThemesAtom)).toEqual([])
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it('shows a theme name containing markup as plain text', async () => {

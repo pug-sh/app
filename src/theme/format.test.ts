@@ -95,6 +95,27 @@ describe('parseThemeObject', () => {
     expect(result.issues.filter(i => i.rule === 'V12')).toHaveLength(2)
   })
 
+  // The shape asks the raw name for one character, but cleaning runs after it — and a zero-width space
+  // survives cleaning and trimming both. Each of these installed blank: an unlabelled row, a nameless
+  // swatch, "Installed " in a toast.
+  it.each([
+    ['spaces', '   '],
+    ['a direction override', '\u202e'],
+    ['controls, an override and a space', '\u0007\u202e '],
+    ['a zero-width space', '\u200b'],
+  ])('refuses a name of only %s', (_label, name) => {
+    const result = parseThemeObject({ ...minimal, name })
+    expect(result.ok).toBe(false)
+    expect(result.issues).toContainEqual(expect.objectContaining({ severity: 'error', rule: 'V13', path: 'name' }))
+  })
+
+  it('trims the space around a name', () => {
+    const result = parseThemeObject({ ...minimal, name: '  Nord  ' })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.family.name).toBe('Nord')
+  })
+
   // A theme's keys and values come back inside its own issue messages, which the install report
   // renders — so the cleaning that keeps a direction override out of a name keeps it out of those too.
   it('keeps control and direction-override characters out of its own messages', () => {

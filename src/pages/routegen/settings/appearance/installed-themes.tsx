@@ -114,6 +114,7 @@ const InstalledThemes = () => {
   const install = useSetAtom(installThemeAtom)
   const remove = useSetAtom(removeThemeAtom)
   const fileRef = useRef<HTMLInputElement>(null)
+  const pickRef = useRef(0)
   const [pending, setPending] = useState<Pending | null>(null)
   // The row whose issues are open — expanded in place, one at a time.
   const [openId, setOpenId] = useState<string | null>(null)
@@ -134,11 +135,15 @@ const InstalledThemes = () => {
     // Cleared so picking the same file again still fires a change.
     if (fileRef.current) fileRef.current.value = ''
     if (!file) return
+    const seq = ++pickRef.current
     if (file.size > MAX_THEME_BYTES) {
       setPending({ text: '', check: { ok: false, reason: 'invalid', issues: [tooLargeIssue()] } })
       return
     }
     const text = await file.text()
+    // Reads finish in any order: a large file picked first can land after a small one picked next,
+    // and would replace that pick's report — or install itself over it.
+    if (seq !== pickRef.current) return
     const check = checkInstall(text, installed)
     if (check.ok && check.issues.length === 0) commit(text)
     else setPending({ text, check })

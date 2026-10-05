@@ -200,10 +200,13 @@ export const parseThemeObject = (input: unknown): ParseResult => {
     const source = file.variants[polarity]
     if (source) variants[polarity] = parseVariant(source, `variants.${polarity}`, issues)
   }
+  // Ahead of the gate, so a file whose variants and name are both broken hears about both at once.
+  const name = cleanText(file.name, 'name', issues).trim()
+  if (!hasVisibleText(name)) issues.push(error('V13', 'name', 'A theme needs a visible name'))
   if (issues.some(i => i.severity === 'error')) return { ok: false, issues }
 
   const family: ThemeFamily = {
-    name: cleanText(file.name, 'name', issues),
+    name,
     contrast: file.contrast ?? 'standard',
     variants,
   }
@@ -317,6 +320,13 @@ const cleanText = (value: string, path: string, issues: Issue[]) => {
   if (cleaned !== value) issues.push(warning('V12', path, 'Control and direction-override characters were removed'))
   return cleaned
 }
+
+// Whether a name — already cleaned and trimmed — has anything that draws: a letter, number, punctuation
+// mark or symbol. The installed list, the swatch's accessible name and the install toast show the name
+// and nothing else, so one of only zero-width, combining or private-use characters is refused like an
+// empty one. Unicode has no "draws nothing" property, so this is a line rather than a proof — a blank
+// letter (U+3164) or symbol (U+2800) still passes.
+const hasVisibleText = (name: string) => /[\p{L}\p{N}\p{P}\p{S}]/u.test(name)
 
 // An issue repeats the file's own keys and values, and the install report renders it — so it gets the
 // same cleaning as a name.
