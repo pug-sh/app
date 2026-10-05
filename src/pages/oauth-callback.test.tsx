@@ -5,7 +5,12 @@ import { StrictMode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
-import { type AuthProviderConfig, AuthProviderType, SSORequiredSchema } from '@/api/genproto/public/auth/v1/auth_pb'
+import {
+  type AuthProviderConfig,
+  AuthProviderConfigSchema,
+  AuthProviderType,
+  SSORequiredSchema,
+} from '@/api/genproto/public/auth/v1/auth_pb'
 import type { AuthResult } from '@/auth/auth.atoms'
 
 const state = vi.hoisted(() => ({ providers: null as AuthProviderConfig[] | null }))
@@ -16,9 +21,9 @@ const oidc = vi.hoisted(() => ({
   clearPendingOIDCProvider: vi.fn(),
   completeOIDCRedirect: vi.fn(),
   pendingOIDCProviderID: vi.fn(() => 'company_sso'),
+  pendingOIDCConnection: vi.fn((): AuthProviderConfig | null => null),
   pendingOIDCInviteToken: vi.fn(() => ''),
   startOIDCSignIn: vi.fn(),
-  isGoogleProvider: (provider: AuthProviderConfig) => provider.issuerUrl.startsWith('https://accounts.google.com'),
 }))
 
 vi.mock('@/auth/auth.atoms', async () => {
@@ -30,7 +35,8 @@ vi.mock('@/auth/auth.atoms', async () => {
 })
 
 // Like the real one, which clears the pending invite along with the provider however it settles.
-vi.mock('@/auth/oidc', () => ({
+vi.mock('@/auth/oidc', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/auth/oidc')>()),
   ...oidc,
   completeOIDCRedirect: async (provider: AuthProviderConfig) => {
     try {
@@ -43,14 +49,15 @@ vi.mock('@/auth/oidc', () => ({
 
 const OAuthCallback = (await import('./oauth-callback')).default
 
-const companySSO = {
+const companySSOInit = {
   id: 'company_sso',
   type: AuthProviderType.OIDC,
   displayName: 'Company SSO',
   clientId: 'pug',
   issuerUrl: 'https://login.example.com',
   scopes: ['openid'],
-} as AuthProviderConfig
+}
+const companySSO = create(AuthProviderConfigSchema, companySSOInit)
 
 const authorization = {
   code: 'authorization-code',
@@ -59,8 +66,11 @@ const authorization = {
   nonce: '2ec3f0a1-6b1e-4f0e-9d0a-6a1c3b5d7e9f',
 }
 
-const renderCallback = (wrapper: (node: React.ReactNode) => React.ReactNode = node => node) => {
-  const location = memoryLocation({ path: '/oauth/callback', record: true })
+const renderCallback = (
+  wrapper: (node: React.ReactNode) => React.ReactNode = node => node,
+  path = '/oauth/callback',
+) => {
+  const location = memoryLocation({ path, record: true })
   render(
     wrapper(
       <Provider>
@@ -79,6 +89,7 @@ describe('OAuth callback provider lookup', () => {
     oidc.clearPendingOIDCProvider.mockReset()
     oidc.completeOIDCRedirect.mockReset()
     oidc.pendingOIDCProviderID.mockReset().mockReturnValue('company_sso')
+    oidc.pendingOIDCConnection.mockReset().mockReturnValue(null)
     oidc.pendingOIDCInviteToken.mockReset().mockReturnValue('')
     oidc.startOIDCSignIn.mockReset()
     completeOIDC.mockClear().mockResolvedValue({ ok: true })
@@ -103,7 +114,9 @@ describe('OAuth callback provider lookup', () => {
   })
 
   it('clears pending state for a provider that is no longer configured', async () => {
-    state.providers = [{ ...companySSO, id: 'other_sso', displayName: 'Other SSO' }]
+    state.providers = [
+      create(AuthProviderConfigSchema, { ...companySSOInit, id: 'other_sso', displayName: 'Other SSO' }),
+    ]
 
     renderCallback()
 
@@ -135,9 +148,35 @@ describe('OAuth callback provider lookup', () => {
     )
   })
 
+  it("completes a connection's sign-in, which GetAuthConfig doesn't list", async () => {
+    const acmeSSO = create(AuthProviderConfigSchema, {
+      connectionId: 'd3uqa6s1m7j9b2c4e5f0',
+      type: AuthProviderType.OIDC,
+      displayName: 'Acme SSO',
+      clientId: 'acme-client',
+      issuerUrl: 'https://acme.okta.com',
+      scopes: ['openid', 'profile', 'email'],
+    })
+    oidc.pendingOIDCConnection.mockReturnValue(acmeSSO)
+    oidc.completeOIDCRedirect.mockResolvedValue(authorization)
+
+    const location = renderCallback(undefined, '/oauth/callback/d3uqa6s1m7j9b2c4e5f0')
+
+    await vi.waitFor(() =>
+      expect(completeOIDC.mock.calls[0]?.[2]).toEqual({ provider: acmeSSO, ...authorization, inviteToken: '' }),
+    )
+    expect(oidc.completeOIDCRedirect).toHaveBeenCalledWith(acmeSSO)
+    await vi.waitFor(() => expect(location.history.at(-1)).toBe('/'))
+  })
+
   // E.g. a personal Google account using a work address. The retry keeps the invite it was started for.
   it("offers the domain's providers again when the sign-in didn't prove the domain", async () => {
-    const google = { ...companySSO, id: 'google', displayName: 'Google', issuerUrl: 'https://accounts.google.com' }
+    const google = create(AuthProviderConfigSchema, {
+      ...companySSOInit,
+      id: 'google',
+      displayName: 'Google',
+      issuerUrl: 'https://accounts.google.com',
+    })
     state.providers = [google]
     oidc.pendingOIDCProviderID.mockReturnValue('google')
     oidc.pendingOIDCInviteToken.mockReturnValue('invite-token')
@@ -191,6 +230,17 @@ describe('OAuth callback provider lookup', () => {
 
     await screen.findByText('Invalid or expired Company SSO sign-in. Try again.')
     expect(location.history.at(-1)).toBe('/oauth/callback')
+  })
+
+  it("keeps a failure, which can name the org's connection, out of click autocapture", async () => {
+    state.providers = [companySSO]
+    oidc.completeOIDCRedirect.mockResolvedValue(authorization)
+    completeOIDC.mockResolvedValue({ ok: false, error: "Acme SSO can't sign in that account to Pug." })
+
+    renderCallback()
+
+    const message = await screen.findByText("Acme SSO can't sign in that account to Pug.")
+    expect(message.closest('[data-pug-no-capture]')).not.toBeNull()
   })
 
   // An authorization code is single-use and readSigninResponseState consumes the stored state, so a
