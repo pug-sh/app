@@ -2,7 +2,7 @@ import { ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AuthProviderType, type SSORequired } from '@/api/genproto/public/auth/v1/auth_pb'
 import { AuthStatus } from './auth-status'
-import { isGoogleProvider } from './oidc'
+import { isGoogleProvider, providerKey } from './oidc'
 import { OIDCSignInButton } from './oidc-sign-in-button'
 
 const orList = new Intl.ListFormat('en', { type: 'disjunction' })
@@ -41,39 +41,42 @@ export const SSORequiredScreen = ({
 
   const providers = detail.providers.filter(provider => provider.type === AuthProviderType.OIDC)
   const names = providers.map(provider => provider.displayName)
+  // Names the customer's domain and connection, and this screen is outside <main>'s capture marker.
   return (
-    <AuthStatus
-      icon={ShieldCheck}
-      title={`${detail.domain} accounts sign in with ${names.length > 0 ? orList.format(names) : 'SSO'}`}
-      description={names.length > 0 ? description : 'Ask your administrator how to sign in.'}
-    >
-      <div className="mt-6 space-y-2">
-        {providers.map(provider => (
-          <OIDCSignInButton
-            key={provider.id}
-            provider={provider}
-            options={{ loginHint: email, domain: detail.domain, inviteToken }}
-            disabled={pending !== null}
-            loading={pending === provider.id}
-            onBegin={() => {
-              setError('')
-              setPending(provider.id)
-            }}
-            onError={message => {
-              setPending(null)
-              setError(message)
-            }}
-          />
-        ))}
-      </div>
-      {error && <p className="mt-4 rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
-      <button
-        type="button"
-        className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
-        onClick={onUseDifferentEmail}
+    <div data-pug-no-capture>
+      <AuthStatus
+        icon={ShieldCheck}
+        title={`${detail.domain} accounts sign in with ${names.length > 0 ? orList.format(names) : 'SSO'}`}
+        description={names.length > 0 ? description : 'Ask your administrator how to sign in.'}
       >
-        Use a different email
-      </button>
-    </AuthStatus>
+        <div className="mt-6 space-y-2">
+          {providers.map(provider => (
+            <OIDCSignInButton
+              key={providerKey(provider)}
+              provider={provider}
+              options={{ loginHint: email, domain: detail.domain, inviteToken }}
+              disabled={pending !== null}
+              loading={pending === providerKey(provider)}
+              onBegin={() => {
+                setError('')
+                setPending(providerKey(provider))
+              }}
+              onError={message => {
+                setPending(null)
+                setError(message)
+              }}
+            />
+          ))}
+        </div>
+        {error && <p className="mt-4 rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
+        <button
+          type="button"
+          className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
+          onClick={onUseDifferentEmail}
+        >
+          Use a different email
+        </button>
+      </AuthStatus>
+    </div>
   )
 }

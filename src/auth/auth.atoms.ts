@@ -167,6 +167,16 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
   }
 })
 
+// null from a server without discovery, and sign-in then sends the email link.
+export const discoverSignInAtom = atom(null, async (get, _set, { email }: { email: string }) => {
+  try {
+    return await get(authRPCAtom).discoverSignIn({ email })
+  } catch (error) {
+    if (error instanceof ConnectError && error.code === Code.Unimplemented) return null
+    throw error
+  }
+})
+
 // Magic-link sign-in or sign-up; session handling (token pair, me state reset, demo marker) is
 // delegated to applySessionAtom. The workspace reset is not its job — WorkspaceBootstrap watches
 // customerIdAtom and rebuilds on a switch (see App.tsx).
@@ -215,7 +225,8 @@ export const completeOIDCAtom = atom(
     try {
       // timezone seeds the auto-created project's reporting zone (parity with completeMagicLink).
       const resp = await authRPC.completeOIDCSignIn({
-        providerId: provider.id,
+        // Exactly one of the two must be set, and under explicit presence '' counts as set.
+        ...(provider.connectionId ? { connectionId: provider.connectionId } : { providerId: provider.id }),
         code,
         codeVerifier,
         redirectUri: redirectURI,
@@ -229,10 +240,29 @@ export const completeOIDCAtom = atom(
     } catch (error) {
       const refused = ssoRefusal(error)
       if (refused) return refused
-      if (inviteToken && error instanceof ConnectError && error.code === Code.PermissionDenied) {
+      if (error instanceof ConnectError && error.code === Code.PermissionDenied) {
+        // With an invite, a connection's refusal reads the same: the invite's address is on its domain.
+        if (inviteToken) {
+          return {
+            ok: false,
+            error: 'This invite was sent to another email address. Open it again and sign in with that account.',
+          }
+        }
+        if (provider.connectionId) {
+          return {
+            ok: false,
+            error: `${provider.displayName} can't sign in that account to Pug. Use an account on your organization's domain.`,
+          }
+        }
+      }
+      const unavailableOrInvalid =
+        error instanceof ConnectError && (error.code === Code.Unavailable || error.code === Code.InvalidArgument)
+      if (provider.connectionId && unavailableOrInvalid) {
+        // Usually the connection's setup, such as its secret or the email claim, which only an admin can fix.
+        console.error('SSO connection sign-in failed', connectDetail(error))
         return {
           ok: false,
-          error: 'This invite was sent to another email address. Open it again and sign in with that account.',
+          error: `${provider.displayName} couldn't sign you in. If it keeps happening, ask your administrator to check the connection.`,
         }
       }
       return { ok: false, error: mapOAuthConnectError(error, provider.displayName) }

@@ -8,6 +8,7 @@ import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import {
   clearPendingOIDCProvider,
   completeOIDCRedirect,
+  pendingOIDCConnection,
   pendingOIDCInviteToken,
   pendingOIDCProviderID,
 } from '@/auth/oidc'
@@ -26,14 +27,15 @@ const OAuthCallback = () => {
     if (started.current) return
     started.current = true
 
-    const providerId = pendingOIDCProviderID()
-    if (!providers) {
+    const connection = pendingOIDCConnection()
+    if (!connection && !providers) {
       setError('Sign-in options could not be loaded. Try again.')
       return
     }
-    const provider = providers.find(
-      candidate => candidate.id === providerId && candidate.type === AuthProviderType.OIDC,
-    )
+    const providerId = pendingOIDCProviderID()
+    const provider =
+      connection ??
+      providers?.find(candidate => candidate.id === providerId && candidate.type === AuthProviderType.OIDC)
     if (!provider) {
       clearPendingOIDCProvider()
       setError('This sign-in request is no longer available. Start again from the sign-in page.')
@@ -72,16 +74,19 @@ const OAuthCallback = () => {
 
   // A failed sign-in leaves the invite link unused, so going back to it starts over with the invite.
   const backTo = inviteToken ? `/magic-link?token=${encodeURIComponent(inviteToken)}` : '/'
+  // The error can name an org's connection, and this screen is outside <main>'s capture marker.
   return (
-    <AuthStatus icon={AlertCircle} tone="negative" title="Sign-in failed" description={error}>
-      <button
-        type="button"
-        className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
-        onClick={() => navigate(backTo, { replace: true })}
-      >
-        {inviteToken ? 'Back to your invite' : 'Back to sign in'}
-      </button>
-    </AuthStatus>
+    <div data-pug-no-capture>
+      <AuthStatus icon={AlertCircle} tone="negative" title="Sign-in failed" description={error}>
+        <button
+          type="button"
+          className="mt-6 text-sm font-medium text-link underline-offset-4 hover:underline"
+          onClick={() => navigate(backTo, { replace: true })}
+        >
+          {inviteToken ? 'Back to your invite' : 'Back to sign in'}
+        </button>
+      </AuthStatus>
+    </div>
   )
 }
 
