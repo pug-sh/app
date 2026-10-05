@@ -109,7 +109,7 @@ const typeDomain = async (value: string) => {
 const connectionListing = (connections: SSOConnection[]) => create(ListSSOConnectionsResponseSchema, { connections })
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   listSSOConnections.mockResolvedValue(connectionListing([]))
 })
 
@@ -141,7 +141,7 @@ describe('the SSO & domains tab', () => {
     })
     mount()
 
-    fireEvent.click(await screen.findByRole('switch', { name: 'Let members create their own organizations' }))
+    fireEvent.click(await screen.findByRole('switch', { name: 'Let people on your domains create organizations' }))
 
     await waitFor(() =>
       expect(setDomainSettings).toHaveBeenCalledWith({
@@ -186,7 +186,42 @@ describe('the SSO & domains tab', () => {
     mount()
 
     expect(isDisabled(await screen.findByRole('switch', { name: 'Auto-join' }))).toBe(true)
-    expect(screen.getAllByText('Verify a domain first.').length).toBeGreaterThan(0)
+    expect(
+      screen.getByText('These apply to every verified domain, including ones verified later. Verify a domain first.'),
+    ).toBeTruthy()
+  })
+
+  it('warns that new people get no organization with auto-join and org creation both off', async () => {
+    listDomains.mockResolvedValue(listing([verified], OrgRole.UNSPECIFIED, false))
+    mount()
+
+    expect(
+      await screen.findByText(
+        'With auto-join off too, new people on your domains start with no organization until someone invites them.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it("warns that people who don't sign in through SSO get no organization with auto-join on", async () => {
+    listDomains.mockResolvedValue(listing([verified], OrgRole.VIEWER, false))
+    mount()
+
+    expect(
+      await screen.findByText(
+        "New people on your domains who don't sign in through SSO start with no organization until someone invites them.",
+      ),
+    ).toBeTruthy()
+  })
+
+  it.each([
+    ['org creation is on', verified, true],
+    ['no domain is verified', pending, false],
+  ])("doesn't warn about a missing organization when %s", async (_, domain, membersCanCreateOrgs) => {
+    listDomains.mockResolvedValue(listing([domain], OrgRole.UNSPECIFIED, membersCanCreateOrgs))
+    mount()
+
+    await screen.findByRole('switch', { name: 'Auto-join' })
+    expect(screen.queryByText(/start with no organization/)).toBeNull()
   })
 
   it('can always turn a setting back off', async () => {
@@ -194,7 +229,9 @@ describe('the SSO & domains tab', () => {
     mount()
 
     expect(isDisabled(await screen.findByRole('switch', { name: 'Auto-join' }))).toBe(false)
-    expect(isDisabled(screen.getByRole('switch', { name: 'Let members create their own organizations' }))).toBe(false)
+    expect(isDisabled(screen.getByRole('switch', { name: 'Let people on your domains create organizations' }))).toBe(
+      false,
+    )
   })
 
   it('offers Member only once a domain is verified', async () => {
@@ -242,7 +279,8 @@ describe('the SSO & domains tab', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Verify now' }))
 
-    expect(await screen.findByText('No domains yet.')).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('acme.io')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Add domain' })).toBeTruthy()
   })
 
   it('keeps a domain removed during its verify from coming back', async () => {
@@ -259,10 +297,11 @@ describe('the SSO & domains tab', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Verify now' }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove acme.io' }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
-    await screen.findByText('No domains yet.')
+    await waitFor(() => expect(screen.queryByText('acme.io')).toBeNull())
     await act(async () => landVerify({ domain: pending }))
 
-    expect(screen.getByText('No domains yet.')).toBeTruthy()
+    expect(screen.queryByText('acme.io')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add domain' })).toBeTruthy()
   })
 
   it('keeps each verify spinner to its own row', async () => {
@@ -293,7 +332,33 @@ describe('the SSO & domains tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
 
     await waitFor(() => expect(removeDomain).toHaveBeenCalledWith({ orgId: 'org-a', domainId: 'd-verified' }))
-    expect(await screen.findByText('No domains yet.')).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('acme.com')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Add domain' })).toBeTruthy()
+  })
+
+  it("folds a verified domain's record away until asked", async () => {
+    listDomains.mockResolvedValue(
+      listing([create(OrgDomainSchema, { ...verifiedInit, txtRecordName: '_pug-verification.acme.com' })]),
+    )
+    mount()
+
+    const show = await screen.findByRole('button', { name: 'Show record' })
+    expect(screen.queryByText('_pug-verification.acme.com')).toBeNull()
+    fireEvent.click(show)
+    expect(screen.getByText('_pug-verification.acme.com')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Hide record' }))
+
+    expect(screen.queryByText('_pug-verification.acme.com')).toBeNull()
+  })
+
+  it('shows no record for a domain the operator verified', async () => {
+    listDomains.mockResolvedValue(
+      listing([create(OrgDomainSchema, { ...verifiedInit, verificationMethod: DomainVerificationMethod.OPERATOR })]),
+    )
+    mount()
+
+    expect(await screen.findByText('Verified by your administrator')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Show record' })).toBeNull()
   })
 
   it('adds a domain and shows its record', async () => {
@@ -514,9 +579,9 @@ describe('SSO connections', () => {
     fill('Issuer URL', ' https://acme.okta.com ')
     fill('Client ID', 'acme-client')
     fill('Client secret', 's3cret')
-    // Only a verified domain can be signed in through a connection.
+    // Only a verified domain can be signed in through a connection, and the only free one starts ticked.
     expect(screen.queryByRole('checkbox', { name: 'acme.io' })).toBeNull()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'acme.com' }))
+    expect(screen.getByRole('checkbox', { name: 'acme.com' }).getAttribute('aria-checked')).toBe('true')
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => expect(setSSOConnection).toHaveBeenCalledOnce())
@@ -531,6 +596,57 @@ describe('SSO connections', () => {
     })
     expectValidRequest(request)
     expect(await screen.findByText(`${window.location.origin}/oauth/callback/${acmeSSO.id}`)).toBeTruthy()
+  })
+
+  it('ticks the one free domain, not one another connection signs in', async () => {
+    listDomains.mockResolvedValue(listing([signedInByAcmeSSO, create(OrgDomainSchema, globexInit)]))
+    listSSOConnections.mockResolvedValue(connectionListing([acmeSSO]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+
+    expect(screen.getByRole('checkbox', { name: 'acme.com' }).getAttribute('aria-checked')).toBe('false')
+    expect(screen.getByRole('checkbox', { name: 'globex.com' }).getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('ticks nothing when more than one domain is free', async () => {
+    listDomains.mockResolvedValue(listing([verified, create(OrgDomainSchema, globexInit)]))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Pick at least one domain')).toBeTruthy()
+  })
+
+  it('ticks nothing for an edit, even with one domain free', async () => {
+    listDomains.mockResolvedValue(listing([create(OrgDomainSchema, globexInit)]))
+    listSSOConnections.mockResolvedValue(
+      connectionListing([create(SSOConnectionSchema, { ...acmeSSOInit, domains: [] })]),
+    )
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit Acme SSO' }))
+
+    expect(screen.getByRole('checkbox', { name: 'globex.com' }).getAttribute('aria-checked')).toBe('false')
+  })
+
+  it("won't tick a domain a connection was just saved with", async () => {
+    listDomains.mockResolvedValueOnce(listing([verified])).mockReturnValue(new Promise(() => {}))
+    listSSOConnections.mockResolvedValueOnce(connectionListing([])).mockReturnValue(new Promise(() => {}))
+    setSSOConnection.mockResolvedValue({ connection: acmeSSO })
+    vi.spyOn(toast, 'success').mockImplementation(() => '')
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+    fill('Button label', 'Acme SSO')
+    fill('Issuer URL', 'https://acme.okta.com')
+    fill('Client ID', 'acme-client')
+    fill('Client secret', 's3cret')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+
+    expect(screen.getByRole('checkbox', { name: 'acme.com' }).getAttribute('aria-checked')).toBe('false')
   })
 
   it('keeps the stored secret when an edit leaves it blank', async () => {
@@ -594,6 +710,25 @@ describe('SSO connections', () => {
     expect(setSSOConnection.mock.calls[0][0].domainIds).toEqual(['d-verified'])
   })
 
+  it('asks for a domain again when the ticked one is removed while the form is open', async () => {
+    listDomains.mockResolvedValueOnce(listing([verified])).mockResolvedValue(listing([]))
+    removeDomain.mockResolvedValue({})
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add connection' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove acme.com' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'acme.com' })).toBeNull())
+    fill('Button label', 'Acme SSO')
+    fill('Issuer URL', 'https://acme.okta.com')
+    fill('Client ID', 'acme-client')
+    fill('Client secret', 's3cret')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Pick at least one domain')).toBeTruthy()
+    expect(setSSOConnection).not.toHaveBeenCalled()
+  })
+
   it('reloads after a failed save, and lets the editor untick a domain taken meanwhile', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(toast, 'error').mockImplementation(() => '')
@@ -614,6 +749,9 @@ describe('SSO connections', () => {
 
     expect(await screen.findByText("Another organization's connection signs it in.")).toBeTruthy()
     expect(isDisabled(screen.getByRole('checkbox', { name: 'globex.com' }))).toBe(false)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'globex.com' }))
+
+    expect(screen.getByRole('checkbox', { name: 'globex.com' }).getAttribute('aria-checked')).toBe('false')
   })
 
   it('asks for the secret again when the issuer changes', async () => {
@@ -642,7 +780,6 @@ describe('SSO connections', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByText(message)).toBeTruthy()
-    expect(screen.getByText('Pick at least one domain')).toBeTruthy()
     expect(setSSOConnection).not.toHaveBeenCalled()
   })
 
@@ -719,7 +856,8 @@ describe('SSO connections', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove?' }))
 
     await waitFor(() => expect(deleteSSOConnection).toHaveBeenCalledWith({ orgId: 'org-a', connectionId: acmeSSO.id }))
-    expect(await screen.findByText('No SSO connections yet.')).toBeTruthy()
+    await waitFor(() => expect(screen.queryByText('Acme SSO')).toBeNull())
+    expect(screen.getByRole('button', { name: 'Add connection' })).toBeTruthy()
   })
 
   it('needs a verified domain first', async () => {
@@ -727,6 +865,7 @@ describe('SSO connections', () => {
     mount()
 
     expect(((await screen.findByRole('button', { name: 'Add connection' })) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByText('Verify a domain first.')).toBeTruthy()
   })
 
   it('says when connections are off on this server, and keeps the domains', async () => {

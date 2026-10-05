@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 
+const pickADomain = 'Pick at least one domain'
+
 // The server's rule: HTTPS, or HTTP on localhost, with no credentials, query or fragment.
 const isIssuerURL = (raw: string) => {
   try {
@@ -33,7 +35,7 @@ const connectionSchema = (saved?: SSOConnection) =>
         .refine(isIssuerURL, 'Enter an HTTPS URL such as https://acme.okta.com'),
       clientId: z.string().trim().min(1, 'Enter the client ID').max(255, 'Use at most 255 characters'),
       clientSecret: z.string().trim().max(4096, 'Use at most 4096 characters'),
-      domainIds: z.array(z.string()).min(1, 'Pick at least one domain').max(10, 'Pick at most 10 domains'),
+      domainIds: z.array(z.string()).min(1, pickADomain).max(10, 'Pick at most 10 domains'),
     })
     .superRefine((data, ctx) => {
       if (data.clientSecret) return
@@ -50,9 +52,13 @@ export type ConnectionFormData = z.infer<ReturnType<typeof connectionSchema>>
 // Why a verified domain can't be picked: one connection signs a domain in, across every org.
 const takenBy = (domain: OrgDomain, connection: SSOConnection | undefined, connections: SSOConnection[]) => {
   if (domain.ssoConnectionElsewhere) return "Another organization's connection signs it in."
+  // A just-saved connection lists its domains before the reload marks them.
+  const other = connections.find(
+    c => c.id !== connection?.id && (c.id === domain.ssoConnectionId || c.domains.some(d => d.id === domain.id)),
+  )
+  if (other) return `${other.label} signs it in.`
   if (!domain.ssoConnectionId || domain.ssoConnectionId === connection?.id) return ''
-  const other = connections.find(c => c.id === domain.ssoConnectionId)
-  return `${other?.label ?? 'Another connection'} signs it in.`
+  return 'Another connection signs it in.'
 }
 
 export const ConnectionForm = ({
@@ -68,6 +74,8 @@ export const ConnectionForm = ({
   onSave: (data: ConnectionFormData) => Promise<void>
   onCancel: () => void
 }) => {
+  const verified = domains.filter(d => d.status === DomainStatus.VERIFIED)
+  const free = verified.filter(d => !takenBy(d, connection, connections))
   const form = useForm<ConnectionFormData>({
     resolver: zodResolver(connectionSchema(connection)),
     defaultValues: {
@@ -75,15 +83,17 @@ export const ConnectionForm = ({
       issuerUrl: connection?.issuerUrl ?? '',
       clientId: connection?.clientId ?? '',
       clientSecret: '',
-      domainIds: connection?.domains.map(d => d.id) ?? [],
+      domainIds: connection?.domains.map(d => d.id) ?? (free.length === 1 ? [free[0].id] : []),
     },
   })
   const { errors, isSubmitting: saving } = form.formState
-  const verified = domains.filter(d => d.status === DomainStatus.VERIFIED)
   const issuerChanged = !!connection && form.watch('issuerUrl').trim() !== connection.issuerUrl
   // A domain removed above while this was open has no checkbox left to untick.
-  const save = (data: ConnectionFormData) =>
-    onSave({ ...data, domainIds: data.domainIds.filter(id => verified.some(d => d.id === id)) })
+  const save = (data: ConnectionFormData) => {
+    const domainIds = data.domainIds.filter(id => verified.some(d => d.id === id))
+    if (domainIds.length > 0) return onSave({ ...data, domainIds })
+    form.setError('domainIds', { message: pickADomain })
+  }
 
   return (
     <form

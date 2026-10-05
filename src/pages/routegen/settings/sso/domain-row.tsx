@@ -1,4 +1,5 @@
 import { Loader2, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { DomainStatus, DomainVerificationMethod, type OrgDomain } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import CopyableCode from '@/components/copyable-code'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +36,7 @@ export const RemoveControl = ({
       type="button"
       onClick={onConfirm}
       aria-label={`Remove ${name}`}
-      className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-negative group-hover:opacity-100"
+      className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-negative focus-visible:opacity-100 group-hover:opacity-100"
     >
       <Trash2 className="size-3.5" />
     </button>
@@ -65,17 +66,25 @@ export const DomainRow = ({
   updatingSSO: boolean
   onRequireSSO: (on: boolean) => void
 }) => {
+  const [recordOpen, setRecordOpen] = useState(false)
   const verified = domain.status === DomainStatus.VERIFIED
   const byOperator = domain.verificationMethod === DomainVerificationMethod.OPERATOR
 
   let recordHint =
     'Add this TXT record at your DNS provider, and keep it there. DNS changes can take a few minutes to show up.'
-  if (verified) recordHint = 'Keep this TXT record at your DNS provider.'
+  if (verified) recordHint = 'Keep its TXT record at your DNS provider.'
 
   return (
     <div className="group border-b border-border/50 py-3" onMouseLeave={onCancelRemove}>
       <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1 truncate font-mono text-sm">{domain.domain}</span>
+        <RemoveControl
+          name={domain.domain}
+          confirming={confirmingRemove}
+          removing={removing}
+          onConfirm={onConfirmRemove}
+          onRemove={onRemove}
+        />
         {verified ? (
           <Badge variant="secondary" className="shrink-0 text-xs">
             {byOperator ? 'Verified by your administrator' : 'Verified'}
@@ -91,20 +100,29 @@ export const DomainRow = ({
             </Button>
           </>
         )}
-        <RemoveControl
-          name={domain.domain}
-          confirming={confirmingRemove}
-          removing={removing}
-          onConfirm={onConfirmRemove}
-          onRemove={onRemove}
-        />
       </div>
       {/* The operator's word needs no record; a DNS one is re-checked whenever a setting grants or restricts more. */}
       {!byOperator && (
         <div className="mt-2 pl-4">
-          <p className="mb-1 text-xs text-muted-foreground">{recordHint}</p>
-          <CopyableCode label="TXT name" value={domain.txtRecordName} />
-          <CopyableCode label="TXT value" value={domain.txtRecordValue} />
+          <p className="mb-1 text-xs text-muted-foreground">
+            {recordHint}
+            {verified && (
+              <button
+                type="button"
+                onClick={() => setRecordOpen(open => !open)}
+                aria-expanded={recordOpen}
+                className="ml-1.5 underline underline-offset-2 transition-colors hover:text-foreground"
+              >
+                {recordOpen ? 'Hide record' : 'Show record'}
+              </button>
+            )}
+          </p>
+          {(!verified || recordOpen) && (
+            <>
+              <CopyableCode label="TXT name" value={domain.txtRecordName} />
+              <CopyableCode label="TXT value" value={domain.txtRecordValue} />
+            </>
+          )}
         </div>
       )}
       {verified && (

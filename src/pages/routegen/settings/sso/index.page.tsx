@@ -2,7 +2,7 @@ import { clone } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAtomValue } from 'jotai'
-import { Check, Globe, KeyRound, Loader2, Plus, X } from 'lucide-react'
+import { Check, Loader2, Plus, X } from 'lucide-react'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -306,103 +306,38 @@ const SsoDomains = () => {
   // Turning auto-join on, raising it to Member, or restricting org creation acts on other people, so
   // each needs a verified domain. Going back to the default always works.
   const needsDomain = hasVerified ? undefined : 'Verify a domain first.'
+  let joiningNote = 'These apply to every verified domain, including ones verified later.'
+  if (needsDomain) joiningNote += ` ${needsDomain}`
+  let noOrgNote =
+    'With auto-join off too, new people on your domains start with no organization until someone invites them.'
+  if (autoJoinOn) {
+    noOrgNote =
+      "New people on your domains who don't sign in through SSO start with no organization until someone invites them."
+  }
 
   return (
     <div className="max-w-2xl space-y-8">
       <section>
-        <SectionHeader title="Joining" />
-        <SettingRow
-          title="Auto-join"
-          description="People who sign in through SSO with an email on a verified domain join this organization."
-          control={
-            <Switch
-              checked={autoJoinOn}
-              disabled={saving || (!autoJoinOn && !hasVerified)}
-              aria-label="Auto-join"
-              onCheckedChange={on =>
-                save({
-                  autoJoinRole: on ? OrgRole.VIEWER : OrgRole.UNSPECIFIED,
-                  membersCanCreateOrgs: canCreateOrgs,
-                })
-              }
-            />
-          }
-        >
-          {autoJoinOn ? (
-            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              Role for new people
-              <Select
-                value={settings.autoJoinRole}
-                disabled={saving}
-                onValueChange={role =>
-                  role !== null && save({ autoJoinRole: role, membersCanCreateOrgs: canCreateOrgs })
-                }
-              >
-                <SelectTrigger size="sm">
-                  <SelectValue>{v => roleLabel(v ?? settings.autoJoinRole)}</SelectValue>
-                </SelectTrigger>
-                <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
-                  <SelectItem value={OrgRole.VIEWER}>Viewer</SelectItem>
-                  <SelectItem value={OrgRole.MEMBER} disabled={!hasVerified}>
-                    Member
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            needsDomain && <p className="mt-1 text-xs text-muted-foreground">{needsDomain}</p>
-          )}
-        </SettingRow>
-
-        <SettingRow
-          title="Let members create their own organizations"
-          description="When off, people with an email on a verified domain can't create new organizations, and get none when they sign up. Admins of this organization still can."
-          control={
-            <Switch
-              checked={canCreateOrgs}
-              disabled={saving || (canCreateOrgs && !hasVerified)}
-              aria-label="Let members create their own organizations"
-              onCheckedChange={on => save({ autoJoinRole: settings.autoJoinRole, membersCanCreateOrgs: on })}
-            />
-          }
-        >
-          {restrictedElsewhere.length > 0 && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Also turned off by another organization that verified {restrictedElsewhere.join(', ')}.
-            </p>
-          )}
-          {canCreateOrgs && needsDomain && <p className="mt-1 text-xs text-muted-foreground">{needsDomain}</p>}
-        </SettingRow>
-      </section>
-
-      <section>
         <SectionHeader
           title="Domains"
           count={domains.length}
-          description="Prove your organization owns a domain with a DNS record. The settings above apply to every verified domain, including ones verified later."
+          description="Prove your organization owns a domain with a DNS record. Where Google sign-in is available, signing in with a Google Workspace account on a verified domain counts as SSO."
         />
-        {domains.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <Globe className="mb-3 size-8 opacity-15" />
-            <p className="text-sm text-muted-foreground">No domains yet.</p>
-          </div>
-        ) : (
-          domains.map(d => (
-            <DomainRow
-              key={d.id}
-              domain={d}
-              verifying={verifying.includes(d.id)}
-              confirmingRemove={confirmingRemove === d.id}
-              removing={removing.includes(d.id)}
-              onVerify={() => handleVerify(d)}
-              onConfirmRemove={() => setConfirmingRemove(d.id)}
-              onRemove={() => handleRemove(d)}
-              onCancelRemove={() => setConfirmingRemove(null)}
-              updatingSSO={updatingSSO.includes(d.id)}
-              onRequireSSO={on => handleRequireSSO(d, on)}
-            />
-          ))
-        )}
+        {domains.map(d => (
+          <DomainRow
+            key={d.id}
+            domain={d}
+            verifying={verifying.includes(d.id)}
+            confirmingRemove={confirmingRemove === d.id}
+            removing={removing.includes(d.id)}
+            onVerify={() => handleVerify(d)}
+            onConfirmRemove={() => setConfirmingRemove(d.id)}
+            onRemove={() => handleRemove(d)}
+            onCancelRemove={() => setConfirmingRemove(null)}
+            updatingSSO={updatingSSO.includes(d.id)}
+            onRequireSSO={on => handleRequireSSO(d, on)}
+          />
+        ))}
 
         {showAdd ? (
           <form onSubmit={addForm.handleSubmit(handleAdd)} className="mt-3">
@@ -463,12 +398,6 @@ const SsoDomains = () => {
           <p className="text-sm text-muted-foreground">{connectionsNote}</p>
         ) : (
           <>
-            {connections.length === 0 && editingConnection !== NEW_CONNECTION && (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <KeyRound className="mb-3 size-8 opacity-15" />
-                <p className="text-sm text-muted-foreground">No SSO connections yet.</p>
-              </div>
-            )}
             {connections.map(c =>
               editingConnection === c.id ? (
                 <ConnectionForm
@@ -515,6 +444,70 @@ const SsoDomains = () => {
             )}
           </>
         )}
+      </section>
+
+      <section>
+        <SectionHeader title="People on your domains" description={joiningNote} />
+        <SettingRow
+          title="Auto-join"
+          description="People who sign in through SSO with an email on a verified domain join this organization."
+          control={
+            <Switch
+              checked={autoJoinOn}
+              disabled={saving || (!autoJoinOn && !hasVerified)}
+              aria-label="Auto-join"
+              onCheckedChange={on =>
+                save({
+                  autoJoinRole: on ? OrgRole.VIEWER : OrgRole.UNSPECIFIED,
+                  membersCanCreateOrgs: canCreateOrgs,
+                })
+              }
+            />
+          }
+        >
+          {autoJoinOn && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              Role for new people
+              <Select
+                value={settings.autoJoinRole}
+                disabled={saving}
+                onValueChange={role =>
+                  role !== null && save({ autoJoinRole: role, membersCanCreateOrgs: canCreateOrgs })
+                }
+              >
+                <SelectTrigger size="sm">
+                  <SelectValue>{v => roleLabel(v ?? settings.autoJoinRole)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent align="start" alignItemWithTrigger={false} className="w-auto min-w-0 p-1">
+                  <SelectItem value={OrgRole.VIEWER}>Viewer</SelectItem>
+                  <SelectItem value={OrgRole.MEMBER} disabled={!hasVerified}>
+                    Member
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </SettingRow>
+
+        <SettingRow
+          title="Let people on your domains create organizations"
+          description="When off, they can't create organizations, and don't get one at sign-up. Admins of this organization still can."
+          control={
+            <Switch
+              checked={canCreateOrgs}
+              disabled={saving || (canCreateOrgs && !hasVerified)}
+              aria-label="Let people on your domains create organizations"
+              onCheckedChange={on => save({ autoJoinRole: settings.autoJoinRole, membersCanCreateOrgs: on })}
+            />
+          }
+        >
+          {restrictedElsewhere.length > 0 && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Also turned off by another organization that verified {restrictedElsewhere.join(', ')}.
+            </p>
+          )}
+          {hasVerified && !canCreateOrgs && <p className="mt-1 text-xs text-muted-foreground">{noOrgNote}</p>}
+        </SettingRow>
       </section>
     </div>
   )
