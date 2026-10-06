@@ -221,8 +221,8 @@ export const WorkspaceBootstrap = () => {
   const activeOrgId = activeOrg?.id
   useEffect(() => {
     if (status !== 'ready' || !activeOrgId) return
-    // Already committed by the restore path's prefetch. A switch still falls through: selectOrg
-    // clears the key alongside the list.
+    // Already committed by the restore path's prefetch. A switch or a project delete still falls
+    // through: each clears the key alongside the list.
     if (projectsLoaded) return
     setActiveProject(null)
     fetchProjects()
@@ -243,8 +243,8 @@ export const WorkspaceBootstrap = () => {
     if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
     // The URL has no opinion, so restore the last project visited in this org before falling back to
     // the first: landing on the bare app URL should return you where you left off, the way lastOrgId
-    // already restores the org around it. The settings org switcher prefers the same stored pick, so
-    // this is what makes a switch survive the trip back through '/'.
+    // already restores the org around it. A sidebar org switch lands on '/' too, so this is also what
+    // restores that org's last project.
     const lastProjectId = activeOrg ? lastProjectByOrg[activeOrg.id] : undefined
     setActiveProject(projects.find(project => project.id === lastProjectId) ?? projects[0])
   }, [projects, activeProject, routeProjectId, activeOrg, lastProjectByOrg, setActiveProject])
