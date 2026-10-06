@@ -9,7 +9,10 @@
       "!**/src/gen",
       "!**/src/api/genproto/**",
       "!**/src/components/charts/**",
-      "!**/src/components/shimmering-text.tsx"
+      "!**/src/components/shimmering-text.tsx",
+      "!**/src/theme/__fixtures__/**",
+      "!**/src/theme/generated/**",
+      "!**/schemas/**"
     ]
   },
   "formatter": {

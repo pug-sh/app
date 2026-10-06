@@ -2,7 +2,7 @@ import { useAtomValue } from 'jotai'
 import { Check } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { FunnelChart as VendoredFunnel } from '@/components/charts/funnel-chart'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { themeRevisionAtom } from '@/data/theme.atoms'
 import { getSeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -44,9 +44,8 @@ const SingleFunnel = ({
   compact?: boolean
 }) => {
   const [hovered, setHovered] = useState<number | null>(null)
-  // getSeriesColor resolves against theme-dependent module state, which can't
-  // invalidate a memo on its own — read the theme so a toggle re-derives.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
+  const themeRevision = useAtomValue(themeRevisionAtom)
 
   const stages = useMemo(() => {
     const labels = uniqueStepLabels(steps)
@@ -55,7 +54,7 @@ const SingleFunnel = ({
       value: step.count,
       color: colorByStep ? getSeriesColor(step.name, i).line : color,
     }))
-  }, [steps, color, colorByStep, resolvedTheme])
+  }, [steps, color, colorByStep, themeRevision])
 
   const detail = useMemo(() => {
     const step = hovered === null ? undefined : steps[hovered]

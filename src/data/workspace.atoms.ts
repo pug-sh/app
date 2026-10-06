@@ -1,12 +1,15 @@
+import { isFieldSet } from '@bufbuild/protobuf'
+import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
-import type { Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { trackFeature } from '@/analytics/pug'
+import { type ListResponse, ListResponseSchema, type Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
 
-// Task 2: lastOrgIdAtom — synchronous initial read avoids first-render flash
+// Synchronous initial read avoids a first-render flash.
 export const LAST_ORG_ID_KEY = 'pug:lastOrgId'
 
 const storedLastOrgId = (() => {
@@ -25,11 +28,35 @@ export const lastOrgIdAtom = atomWithStorage(LAST_ORG_ID_KEY, storedLastOrgId)
 export const orgsAtom = atom<Org[]>([])
 export const workspaceErrorAtom = atom<string | null>(null)
 
+// False until the org list answers. Only hides the button; the server refuses the create on its own.
+export const canCreateOrgAtom = atom(false)
+// A server that predates the field doesn't send it, which must read as allowed.
+const canCreateOrg = (resp: ListResponse) =>
+  !isFieldSet(resp, ListResponseSchema.field.canCreateOrg) || resp.canCreateOrg
+
+// The orgs a sign-in just added the account to. Bootstrap opens the first and announces them; kept
+// out of resetWorkspaceAtom so an account switch in the same tab doesn't drop them.
+export const joinedOrgIdsAtom = atom<string[]>([])
+
+// Restarts bootstrap even over a loaded workspace, or a sign-in landing on 'ready' never opens the org.
+// The open org goes too, or its project is remembered under the joined one and it skips the picker.
+export const openJoinedOrgsAtom = atom(null, (_get, set, orgIds: string[]) => {
+  set(joinedOrgIdsAtom, orgIds)
+  if (orgIds.length === 0) return
+  set(activeOrgAtom, null)
+  set(activeProjectAtom, null)
+  set(projectsAtom, [])
+  set(projectsOrgIdAtom, null)
+  set(bootstrapStatusAtom, 'loading-org')
+})
+
+// Null when the list could not be loaded, so an account with no orgs isn't mistaken for a failure.
 export const fetchOrgsAtom = atom(null, async (get, set) => {
   const orgsRPC = get(orgsRPCAtom)
   try {
     const resp = await orgsRPC.list({})
     set(orgsAtom, resp.orgs)
+    set(canCreateOrgAtom, canCreateOrg(resp))
     set(workspaceErrorAtom, null)
     return resp.orgs
   } catch (err) {
@@ -40,7 +67,7 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
     set(activeProjectAtom, null)
     set(projectsOrgIdAtom, null)
     set(workspaceErrorAtom, 'Failed to load your workspace. Please check your connection and try again.')
-    return []
+    return null
   }
 })
 
@@ -52,6 +79,7 @@ export const refreshOrgsAtom = atom(null, async (get, set) => {
   try {
     const resp = await orgsRPC.list({})
     set(orgsAtom, resp.orgs)
+    set(canCreateOrgAtom, canCreateOrg(resp))
     return resp.orgs
   } catch (err) {
     console.error('refreshOrgs failed:', err)
@@ -59,24 +87,24 @@ export const refreshOrgsAtom = atom(null, async (get, set) => {
   }
 })
 
-// Task 3: loadOrgAtom — fetch a single org by ID and set it as active
-export const loadOrgAtom = atom(null, async (get, set, orgId: string) => {
+// Null when the org is gone, undefined when it couldn't be checked. The caller makes it active, so a
+// cancelled load can't overwrite a newer one.
+export const loadOrgAtom = atom(null, async (get, _set, orgId: string) => {
   if (!orgId) return null
   const orgsRPC = get(orgsRPCAtom)
   try {
     const resp = await orgsRPC.get({ orgId })
-    if (!resp.org) return null
-    set(activeOrgAtom, resp.org)
-    return resp.org
+    return resp.org ?? null
   } catch (err) {
     console.error('loadOrg failed:', err)
-    return null
+    // Someone removed from the org is refused, not told it's missing.
+    if (err instanceof ConnectError && (err.code === Code.NotFound || err.code === Code.PermissionDenied)) return null
+    return undefined
   }
 })
 
 export const activeOrgAtom = atom<Org | null>(null)
 
-// Task 4: selectOrgAtom — sets active org and persists its ID for next session
 export const selectOrgAtom = atom(null, (_get, set, org: Org) => {
   set(activeOrgAtom, org)
   set(lastOrgIdAtom, org.id)
@@ -86,7 +114,6 @@ export const selectOrgAtom = atom(null, (_get, set, org: Org) => {
   set(projectsOrgIdAtom, null)
 })
 
-// Task 5: bootstrapStatusAtom — tracks the org-bootstrap lifecycle
 export type BootstrapStatus = 'idle' | 'loading-org' | 'needs-selection' | 'ready' | 'error'
 
 export const bootstrapStatusAtom = atom<BootstrapStatus>('idle')
@@ -255,6 +282,7 @@ export const rememberLastProjectAtom = atom(
   },
 )
 
+// Null when the org changed before it landed, or the caller navigates to a project the active org doesn't have.
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)
   if (!org) return null
@@ -263,17 +291,46 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   // adjust per-project later in settings.
   const resp = await projectsRPC.create({ displayName, orgId: org.id, reportingTimezone: browserTimezone() })
   // Refresh the project list — if this fails, the project was still created server-side
-  try {
-    const refreshed = await projectsRPC.batchGet({ orgId: org.id })
-    set(projectsAtom, refreshed.projects)
-  } catch (err) {
+  const refreshed = await projectsRPC.batchGet({ orgId: org.id }).catch(err => {
     console.error('Project created but list refresh failed:', err)
-  }
+    return null
+  })
+  if (get(activeOrgAtom)?.id !== org.id) return null
+  if (refreshed) set(projectsAtom, refreshed.projects)
+  else if (resp.project) set(projectsAtom, [...get(projectsAtom), resp.project])
   if (resp.project) set(activeProjectAtom, resp.project)
   return resp.project ?? null
 })
 
-// Task 6: createOrgAtom / leaveOrgAtom
+// True when it deleted the active project; the caller then goes to '/'. The list is cleared rather than committed,
+// or WorkspaceBootstrap's pick lands in the commit that mounts ProjectRedirect, before it subscribes.
+export const deleteProjectAtom = atom(null, async (get, set, projectId: string) => {
+  const org = get(activeOrgAtom)
+  if (!org) throw new Error('No organization selected')
+  const projectsRPC = get(projectsRPCAtom)
+  try {
+    await projectsRPC.delete({}, { headers: { 'x-project-id': projectId } })
+  } catch (err) {
+    // A project that's already gone is refused at auth as Unauthenticated, never NotFound.
+    const remaining = await projectsRPC.batchGet({ orgId: org.id }).catch(() => null)
+    if (!remaining || remaining.projects.some(p => p.id === projectId)) throw err
+  }
+  trackFeature({ featureId: 'project.delete', featureName: 'Delete project' })
+
+  if (get(activeOrgAtom)?.id !== org.id) return false
+  if (get(activeProjectAtom)?.id !== projectId) {
+    set(
+      projectsAtom,
+      get(projectsAtom).filter(p => p.id !== projectId),
+    )
+    return false
+  }
+  set(projectsAtom, [])
+  set(activeProjectAtom, null)
+  set(projectsOrgIdAtom, null)
+  return true
+})
+
 export const createOrgAtom = atom(null, async (get, set, displayName: string) => {
   const orgsRPC = get(orgsRPCAtom)
   const resp = await orgsRPC.create({ displayName })
@@ -328,9 +385,9 @@ export const projectHeaderAtom = atom(get => {
 // and the right default when the project stores `''` (the server's canonical UTC).
 export const activeProjectTimezoneAtom = atom(get => get(activeProjectAtom)?.reportingTimezone || 'UTC')
 
-// Task 7: resetWorkspaceAtom — also clears lastOrgId and resets bootstrap status
 export const resetWorkspaceAtom = atom(null, (_, set) => {
   set(orgsAtom, [])
+  set(canCreateOrgAtom, false)
   set(activeOrgAtom, null)
   set(projectsAtom, [])
   set(activeProjectAtom, null)

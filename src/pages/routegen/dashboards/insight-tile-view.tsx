@@ -12,7 +12,7 @@ import {
   InsightType,
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { fadedSeriesColor, getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import type { ChartComparison } from '../insights/charts'
@@ -114,9 +114,8 @@ export const InsightTileView = ({
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
-  // Series colors are theme-adapted (see event-colors.ts). Subscribe so a theme
-  // toggle re-renders and re-derives the memoized palettes below.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
+  const themeRevision = useAtomValue(themeRevisionAtom)
   // Reporting zone for the chart's bucket grid (UTC when no project, e.g. a public shared tile).
   const timeZone = useAtomValue(activeProjectTimezoneAtom)
 
@@ -159,7 +158,7 @@ export const InsightTileView = ({
       // Breakdown funnels: distinct color per split (see getIndexedColor).
       color: getIndexedColor(index).dot,
     }))
-  }, [funnelSeriesList, kindOrder, resolvedTheme])
+  }, [funnelSeriesList, kindOrder, themeRevision])
   const retentionLabels = useMemo(
     () =>
       disambiguateLabels(
@@ -198,7 +197,7 @@ export const InsightTileView = ({
       )
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
-  }, [result.case, trendSeries, seriesNames, resolvedTheme])
+  }, [result.case, trendSeries, seriesNames, themeRevision])
   // The prior window as a dashed reference series, in a receded shade of the live one's color.
   // Single-series only: a dashed twin per split doubles a breakdown's lines with no way to tell
   // which pairs with which, and the two windows' splits need not match.

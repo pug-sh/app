@@ -1,14 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { Eye, EyeOff, Loader2, Lock, Mail, MailCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
-import { AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
-import { authProvidersAtom, demoEnabledAtom, requestMagicLinkAtom, signInAtom } from '@/auth/auth.atoms'
+import { type AuthProviderConfig, AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
+import {
+  authProvidersAtom,
+  demoEnabledAtom,
+  discoverSignInAtom,
+  requestMagicLinkAtom,
+  signInAtom,
+} from '@/auth/auth.atoms'
 import { AuthStatus } from '@/auth/auth-status'
+import { providerKey } from '@/auth/oidc'
 import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
+import { ssoBlockAtom } from '@/auth/sso-required'
+import { SSORequiredScreen } from '@/auth/sso-required-screen'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -26,7 +35,7 @@ const MODE_COPY = {
   link: {
     title: 'Sign in to Pug',
     blurb: "We'll email you a secure link to sign in or create your account.",
-    submit: 'Email me a sign-in link',
+    submit: 'Continue',
     toggle: 'Sign in with password',
   },
   password: {
@@ -37,9 +46,12 @@ const MODE_COPY = {
   },
 }
 
+type SSOStep = { email: string; domain: string; providers: AuthProviderConfig[]; requireSso: boolean }
+
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
+  const discoverSignIn = useSetAtom(discoverSignInAtom)
   const authProviders = useAtomValue(authProvidersAtom)
   const demoEnabled = useAtomValue(demoEnabledAtom)
   const [, navigate] = useLocation()
@@ -48,12 +60,14 @@ const SignIn = () => {
   // people who set a password via the in-app SetPassword flow.
   const [mode, setMode] = useState<'link' | 'password'>('link')
   const [error, setError] = useState('')
-  // One in-flight action at a time. The value is either an email method or a
-  // server-configured provider ID, so any number of external buttons share the gate.
+  // One in-flight action at a time: an email method or a sign-in button's key, so every button shares the gate.
   const [pending, setPending] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   // Doubles as the "link sent" flag — a separate boolean lets sent-with-no-email be represented.
   const [magicLinkEmail, setMagicLinkEmail] = useState('')
+  // Also set by the transport when a session refresh is refused for the same reason.
+  const [ssoBlock, setSSOBlock] = useAtom(ssoBlockAtom)
+  const [ssoStep, setSSOStep] = useState<SSOStep | null>(null)
 
   const oidcProviders = authProviders?.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
 
@@ -78,7 +92,9 @@ const SignIn = () => {
     setPending('password')
     try {
       const result = await signIn(data)
-      if (!result.ok) setError(result.error)
+      if (result.ok) return
+      if (result.ssoRequired) setSSOBlock({ detail: result.ssoRequired, email: data.email })
+      else setError(result.error)
     } catch (err) {
       console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
@@ -87,28 +103,42 @@ const SignIn = () => {
     }
   }
 
-  // Requesting a link only needs the email — validate that field alone so an empty
+  // Both email actions only need the email — validate that field alone so an empty
   // password (link mode never renders one) can't block the request.
-  const handleMagicLink = async () => {
+  const withEmail = async (action: (email: string) => Promise<void>) => {
     setError('')
     authForm.clearErrors('password')
     const valid = await authForm.trigger('email')
     if (!valid) return
-    const email = authForm.getValues('email')
     setPending('link')
     try {
-      const res = await requestMagicLink({ email })
-      if (!res.ok) {
-        setError(res.error)
-        return
-      }
-      setMagicLinkEmail(email)
+      await action(authForm.getValues('email'))
     } catch (err) {
-      console.error('magic link request failed', err)
+      console.error('email sign-in failed', err)
       setError('Something went wrong. Please try again.')
     } finally {
       setPending(null)
     }
+  }
+
+  const sendLink = async (email: string) => {
+    const res = await requestMagicLink({ email })
+    if (res.ok) setMagicLinkEmail(email)
+    else if (res.ssoRequired) setSSOBlock({ detail: res.ssoRequired, email })
+    else setError(res.error)
+  }
+
+  // Only a connection or Require SSO skips the link, not Google listed for a domain like gmail.com.
+  const continueWithEmail = async (email: string) => {
+    const discovery = await discoverSignIn({ email })
+    if (authForm.getValues('email') !== email) return
+    const providers = discovery?.providers.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
+    const viaSSO = discovery?.requireSso || providers.some(provider => provider.connectionId)
+    if (discovery && providers.length > 0 && viaSSO) {
+      setSSOStep({ email, domain: discovery.domain, providers, requireSso: discovery.requireSso })
+      return
+    }
+    await sendLink(email)
   }
 
   const toggleMode = () => {
@@ -119,6 +149,24 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
+  const email = authForm.watch('email')
+  // Derived from the current email, so editing it hides the step.
+  const step = mode === 'link' && ssoStep?.email === email ? ssoStep : null
+
+  if (ssoBlock) {
+    const { domain } = ssoBlock.detail
+    let description = `Passwords and email links are turned off for ${domain}.`
+    if (ssoBlock.sessionEnded) description = `SSO is now required for ${domain}. Sign in again to continue.`
+    return (
+      <SSORequiredScreen
+        detail={ssoBlock.detail}
+        email={ssoBlock.email}
+        description={description}
+        onUseDifferentEmail={() => setSSOBlock(null)}
+      />
+    )
+  }
+
   return (
     <>
       {magicLinkEmail ? (
@@ -149,22 +197,25 @@ const SignIn = () => {
           </AuthStatus>
         </div>
       ) : (
-        <>
+        // Click autocapture would send the SSO step's text or an error, either of which can name a connection.
+        <div data-pug-no-capture={step || error ? '' : undefined}>
           <h1 className="text-center text-3xl tracking-tight">{copy.title}</h1>
-          <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">{copy.blurb}</p>
+          <p className="mt-2 mb-6 text-center text-sm text-muted-foreground">
+            {step ? `${step.domain} accounts sign in through SSO.` : copy.blurb}
+          </p>
 
           {oidcProviders.length > 0 && (
             <>
               <div className="space-y-2">
                 {oidcProviders.map(provider => (
                   <OIDCSignInButton
-                    key={provider.id}
+                    key={providerKey(provider)}
                     provider={provider}
                     disabled={authBusy}
-                    loading={pending === provider.id}
+                    loading={pending === providerKey(provider)}
                     onBegin={() => {
                       setError('')
-                      setPending(provider.id)
+                      setPending(providerKey(provider))
                     }}
                     onError={message => {
                       setPending(null)
@@ -187,7 +238,7 @@ const SignIn = () => {
               if (mode === 'password') {
                 authForm.handleSubmit(submitPassword)()
               } else {
-                handleMagicLink()
+                withEmail(continueWithEmail)
               }
             }}
             className="space-y-4"
@@ -218,7 +269,7 @@ const SignIn = () => {
                   <FieldLabel htmlFor="password">Password</FieldLabel>
                   <button
                     type="button"
-                    onClick={handleMagicLink}
+                    onClick={() => withEmail(sendLink)}
                     disabled={authBusy}
                     className="text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                   >
@@ -258,22 +309,50 @@ const SignIn = () => {
 
             {error && <p className="rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
 
-            <Button type="submit" className={`${controlHeight} w-full`} disabled={authBusy}>
-              {pending === mode && <Loader2 className="animate-spin" />}
-              {copy.submit}
-            </Button>
+            {step ? (
+              <div className="space-y-2">
+                {step.providers.map(provider => {
+                  // Its own key, so a provider also listed above doesn't spin both buttons.
+                  const key = `step:${providerKey(provider)}`
+                  return (
+                    <OIDCSignInButton
+                      key={key}
+                      provider={provider}
+                      options={{ loginHint: step.email, domain: step.domain }}
+                      disabled={authBusy}
+                      loading={pending === key}
+                      onBegin={() => {
+                        setError('')
+                        setPending(key)
+                      }}
+                      onError={message => {
+                        setPending(null)
+                        setError(message)
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            ) : (
+              <Button type="submit" className={`${controlHeight} w-full`} disabled={authBusy}>
+                {pending === mode && <Loader2 className="animate-spin" />}
+                {copy.submit}
+              </Button>
+            )}
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={toggleMode}
-              disabled={authBusy}
-              className="text-sm font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
-            >
-              {copy.toggle}
-            </button>
-          </div>
+          {!step?.requireSso && (
+            <div className="mt-6 text-center">
+              <button
+                type="button"
+                onClick={step ? () => withEmail(sendLink) : toggleMode}
+                disabled={authBusy}
+                className="text-sm font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
+              >
+                {step ? 'Email me a link instead' : copy.toggle}
+              </button>
+            </div>
+          )}
 
           {demoEnabled && (
             <div className="mt-3 text-center">
@@ -287,7 +366,7 @@ const SignIn = () => {
               </button>
             </div>
           )}
-        </>
+        </div>
       )}
     </>
   )

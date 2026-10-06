@@ -1,6 +1,6 @@
 import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Route, useLocation } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
@@ -15,7 +15,7 @@ import { SocialNav } from '@/components/social-nav'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
-import { applyTheme, resolvedThemeAtom, themeAtom } from '@/data/theme.atoms'
+import { autoContrastAtom, compiledThemeAtom, themeLibraryAtom, themeSelectionAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -23,9 +23,11 @@ import {
   commitProjectsAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
+  joinedOrgIdsAtom,
   lastOrgIdAtom,
   lastProjectByOrgAtom,
   loadOrgAtom,
+  orgsAtom,
   prefetchProjectsAtom,
   projectsAtom,
   projectsLoadedAtom,
@@ -34,9 +36,11 @@ import {
   selectOrgAtom,
   workspaceErrorAtom,
 } from '@/data/workspace.atoms'
-import { setSeriesColorScheme } from '@/lib/event-colors'
+import { setSeriesPalette } from '@/lib/event-colors'
 import { lazyWithRetry } from '@/lib/lazy'
 import { useRouteProjectId } from '@/lib/project-path'
+import { applyCompiledTheme } from '@/theme/apply'
+import { buildPaintCache, writePaintCache } from '@/theme/paint-cache'
 
 const AppSidebar = lazyWithRetry(() => import('@/components/layout/sidebar'), 'sidebar')
 const Router = lazyWithRetry(() => import('@/pages/router'), 'router')
@@ -47,17 +51,20 @@ const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oau
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 
-const ThemeSync = () => {
-  const theme = useAtomValue(themeAtom)
-  useEffect(() => {
-    applyTheme(theme)
-    if (theme === 'system') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)')
-      const handler = () => applyTheme('system')
-      mq.addEventListener('change', handler)
-      return () => mq.removeEventListener('change', handler)
-    }
-  }, [theme])
+// Puts the active theme on <html>. A layout effect, so the CSS variables land in the same frame as
+// the series palette App pushes during render. System-mode and contrast changes arrive through the
+// atoms' matchMedia subscriptions.
+const ThemeApplier = () => {
+  const compiled = useAtomValue(compiledThemeAtom)
+  const selection = useAtomValue(themeSelectionAtom)
+  const autoContrast = useAtomValue(autoContrastAtom)
+  const library = useAtomValue(themeLibraryAtom)
+  useLayoutEffect(() => applyCompiledTheme(compiled), [compiled])
+  // What index.html paints on the next load, before React: both modes, since the OS can flip.
+  useEffect(
+    () => writePaintCache(buildPaintCache({ selection, autoContrast, library })),
+    [selection, autoContrast, library],
+  )
   return null
 }
 
@@ -97,10 +104,12 @@ export const WorkspaceBootstrap = () => {
   const customerId = useAtomValue(customerIdAtom)
   const [status, setStatus] = useAtom(bootstrapStatusAtom)
   const projects = useAtomValue(projectsAtom)
-  const activeOrg = useAtomValue(activeOrgAtom)
+  const orgs = useAtomValue(orgsAtom)
+  const [activeOrg, setActiveOrg] = useAtom(activeOrgAtom)
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const routeProjectId = useRouteProjectId()
-  const lastOrgId = useAtomValue(lastOrgIdAtom)
+  const [lastOrgId, setLastOrgId] = useAtom(lastOrgIdAtom)
+  const [joinedOrgIds, setJoinedOrgIds] = useAtom(joinedOrgIdsAtom)
   const loadOrg = useSetAtom(loadOrgAtom)
   const fetchOrgs = useSetAtom(fetchOrgsAtom)
   const fetchProjects = useSetAtom(fetchProjectsAtom)
@@ -115,10 +124,11 @@ export const WorkspaceBootstrap = () => {
   useEffect(() => {
     if (!authenticated) {
       resetWorkspace()
+      setJoinedOrgIds([])
     } else if (status === 'idle') {
       setStatus('loading-org')
     }
-  }, [authenticated, status, setStatus, resetWorkspace])
+  }, [authenticated, status, setStatus, resetWorkspace, setJoinedOrgIds])
 
   // The one place an account switch tears the workspace down, in-tab and cross-tab alike. The JWT
   // syncs across tabs (atomWithStorage listens for storage events); the workspace does not. Sign in
@@ -137,28 +147,37 @@ export const WorkspaceBootstrap = () => {
     if (status !== 'loading-org') return
     let cancelled = false
     ;(async () => {
-      if (lastOrgId) {
+      const joinedOrgId = joinedOrgIds[0]
+      const restoreOrgId = joinedOrgId || lastOrgId
+      if (restoreOrgId) {
         // Both calls need only the org id, so they go out together rather than the list waiting on
         // the org. prefetchProjects resolves null on a miss; the org-keyed effect below then fetches.
-        const prefetched = prefetchProjects(lastOrgId)
-        const org = await loadOrg(lastOrgId)
+        const prefetched = prefetchProjects(restoreOrgId)
+        const org = await loadOrg(restoreOrgId)
         if (cancelled) return
         if (org) {
-          // Before 'ready': the org-keyed effect runs off that change and skips on a landed list.
+          setActiveOrg(org)
+          // Committed before 'ready': the org-keyed effect runs off 'ready' and skips a landed list.
           const projects = await prefetched
           if (cancelled) return
           // Keyed to the org the list was fetched for, not the one that came back: if they differ
           // the commit is dropped and the effect below refetches, rather than mis-filing the list.
-          if (projects) commitProjects({ orgId: lastOrgId, projects })
+          if (projects) commitProjects({ orgId: restoreOrgId, projects })
           setStatus('ready')
+          // After 'ready': lastOrgId is a dependency, and changing it mid-flight restarts the load.
+          if (org.id !== lastOrgId) setLastOrgId(org.id)
           return
         }
-        toast.message('Your previous organization is no longer available')
+        if (org === null && !joinedOrgId) toast.message('Your previous organization is no longer available')
       }
       const list = await fetchOrgs()
       if (cancelled) return
-      if (list.length === 0) {
+      if (!list) {
         setStatus('error')
+        return
+      }
+      if (list.length === 0) {
+        setStatus('needs-selection')
         return
       }
       if (list.length === 1) {
@@ -171,7 +190,29 @@ export const WorkspaceBootstrap = () => {
     return () => {
       cancelled = true
     }
-  }, [status, lastOrgId, loadOrg, prefetchProjects, commitProjects, fetchOrgs, selectOrg, setStatus])
+  }, [
+    status,
+    joinedOrgIds,
+    lastOrgId,
+    setLastOrgId,
+    setActiveOrg,
+    loadOrg,
+    prefetchProjects,
+    commitProjects,
+    fetchOrgs,
+    selectOrg,
+    setStatus,
+  ])
+
+  useEffect(() => {
+    if (status !== 'ready' || joinedOrgIds.length === 0 || !activeOrg) return
+    const name = [activeOrg, ...orgs].find(org => org.id === joinedOrgIds[0])?.displayName ?? 'a new organization'
+    const others = joinedOrgIds.length - 1
+    let message = `You joined ${name}.`
+    if (others > 0) message = `You joined ${name} and ${others} more organization${others > 1 ? 's' : ''}.`
+    toast.success(message)
+    setJoinedOrgIds([])
+  }, [status, joinedOrgIds, activeOrg, orgs, setJoinedOrgIds])
 
   // Keyed on the org id, not the org object: renameOrgAtom writes a fresh object for the same org,
   // and this effect blanks the active project and refetches the list — so a rename would clear the
@@ -180,8 +221,8 @@ export const WorkspaceBootstrap = () => {
   const activeOrgId = activeOrg?.id
   useEffect(() => {
     if (status !== 'ready' || !activeOrgId) return
-    // Already committed by the restore path's prefetch. A switch still falls through: selectOrg
-    // clears the key alongside the list.
+    // Already committed by the restore path's prefetch. A switch or a project delete still falls
+    // through: each clears the key alongside the list.
     if (projectsLoaded) return
     setActiveProject(null)
     fetchProjects()
@@ -202,8 +243,8 @@ export const WorkspaceBootstrap = () => {
     if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
     // The URL has no opinion, so restore the last project visited in this org before falling back to
     // the first: landing on the bare app URL should return you where you left off, the way lastOrgId
-    // already restores the org around it. The settings org switcher prefers the same stored pick, so
-    // this is what makes a switch survive the trip back through '/'.
+    // already restores the org around it. A sidebar org switch lands on '/' too, so this is also what
+    // restores that org's last project.
     const lastProjectId = activeOrg ? lastProjectByOrg[activeOrg.id] : undefined
     setActiveProject(projects.find(project => project.id === lastProjectId) ?? projects[0])
   }, [projects, activeProject, routeProjectId, activeOrg, lastProjectByOrg, setActiveProject])
@@ -274,22 +315,20 @@ const App = () => {
   const status = useAtomValue(bootstrapStatusAtom)
   const workspaceError = useAtomValue(workspaceErrorAtom)
 
-  // Event-series colors are JS-computed (badge inline styles + chart SVG fills),
-  // so unlike CSS-variable tokens they can't react to the .dark class on their
-  // own. Sync the color module to the resolved theme via a module-level mutation
-  // during render: App is the tree root, so descendants rendered later this pass
-  // read the new scheme. Inline getSeriesColor() callers pick it up for free;
-  // consumers that memoize palettes also subscribe to resolvedThemeAtom and key
-  // their memo on it, so the mutation has landed before they re-derive.
-  const resolvedTheme = useAtomValue(resolvedThemeAtom)
-  setSeriesColorScheme(resolvedTheme === 'dark')
+  // Event-series colours are JS-computed (badge inline styles + chart SVG fills), so unlike CSS
+  // variables they can't follow the theme on their own. Push the active theme's compiled palette
+  // into the colour module during render: App is the tree root, so everything rendered later this
+  // pass reads it. Inline getSeriesColor() callers pick it up for free; consumers that memoize a
+  // palette key their memo on themeRevisionAtom, which changes with any theme change.
+  const compiledTheme = useAtomValue(compiledThemeAtom)
+  setSeriesPalette(compiledTheme.data)
 
   // The public shared-dashboard route renders standalone and must not touch the
   // authenticated workspace — skip bootstrap so a logged-in viewer's org/project
   // RPCs never fire on a public page.
   const isSharedRoute = location.startsWith('/shared/')
   const isMagicLink = location === '/magic-link'
-  const isOAuthCallback = location === '/oauth/callback'
+  const isOAuthCallback = location === '/oauth/callback' || location.startsWith('/oauth/callback/')
   const isDemoRoute = location === '/demo'
   const failed = !!workspaceError || status === 'error'
 
@@ -322,7 +361,7 @@ const App = () => {
     // <Demo />'s confirm step (entering the demo signs them out), not be routed past it.
     if (isDemoRoute) return <Demo />
     if (!authenticated) return <SignIn />
-    if (failed) return <WorkspaceError message={workspaceError ?? 'No organizations available for this account.'} />
+    if (failed) return <WorkspaceError message={workspaceError ?? 'Please try again.'} />
     if (status === 'needs-selection') return <SelectOrg />
     return <AuthPending label="Loading your workspace…" />
   }
@@ -352,7 +391,7 @@ const App = () => {
 
   return (
     <>
-      <ThemeSync />
+      <ThemeApplier />
       <SessionUrlGuard />
       {/*
         Unconditional, including on the shared route: it issues no workspace RPCs, so it doesn't

@@ -22,9 +22,9 @@ const SettingsLayout = (await import('./settings-layout')).default
 
 const org = create(OrgSchema, { id: 'org-a', displayName: 'A', role: OrgRole.ADMIN })
 
-const mount = (path: string) => {
+const mount = (path: string, role = OrgRole.ADMIN) => {
   const store = createStore()
-  store.set(activeOrgAtom, org)
+  store.set(activeOrgAtom, { ...org, role })
   const { hook } = memoryLocation({ path })
   render(
     <Provider store={store}>
@@ -83,5 +83,21 @@ describe('the billing tab', () => {
     getBillingStatus.mockRejectedValue(new ConnectError('down', Code.Unavailable))
     await settled(mount('/p/p1/settings/general'))
     expect(screen.getByText('Billing')).toBeTruthy()
+  })
+})
+
+describe('the SSO & domains tab', () => {
+  beforeEach(() => {
+    getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
+  })
+
+  it('is offered to an admin', async () => {
+    await settled(mount('/p/p1/settings/general'))
+    expect(screen.getByText('SSO & domains')).toBeTruthy()
+  })
+
+  it('is hidden from a member', async () => {
+    await settled(mount('/p/p1/settings/general', OrgRole.MEMBER))
+    expect(screen.queryByText('SSO & domains')).toBeNull()
   })
 })

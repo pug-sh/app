@@ -1,11 +1,12 @@
-import maplibregl, { type LngLatBoundsLike } from 'maplibre-gl'
+import { addProtocol, type LngLatBoundsLike } from 'maplibre-gl'
 import { Protocol } from 'pmtiles'
+import type { CompiledTheme } from '@/theme/compile'
 
 // Register the pmtiles:// protocol once so MapLibre can read self-hosted .pmtiles archives.
 let protocolRegistered = false
 export const ensurePmtilesProtocol = () => {
   if (protocolRegistered) return
-  maplibregl.addProtocol('pmtiles', new Protocol().tile)
+  addProtocol('pmtiles', new Protocol().tile)
   protocolRegistered = true
 }
 
@@ -36,7 +37,6 @@ export const COUNTRIES_VIEW_ASPECT =
   (2 * Math.PI) / (mercatorY(COUNTRIES_VIEW_LAT[1]) - mercatorY(COUNTRIES_VIEW_LAT[0]))
 
 type ThemeColors = {
-  primary: string
   border: string
   mutedForeground: string
   // The choropleth's data hue. --chart-1, not --primary: they are the same colour in light, but
@@ -68,14 +68,10 @@ export const cssColorToRgb = (value: string) => {
   return a === 255 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`
 }
 
-const readVar = (styles: CSSStyleDeclaration, name: string) => cssColorToRgb(styles.getPropertyValue(name).trim())
-
-export const resolveThemeColors = (): ThemeColors => {
-  const styles = getComputedStyle(document.documentElement)
-  return {
-    primary: readVar(styles, '--primary'),
-    border: readVar(styles, '--border'),
-    mutedForeground: readVar(styles, '--muted-foreground'),
-    dataHue: readVar(styles, '--chart-1'),
-  }
-}
+// MapLibre paint properties take concrete colour strings, not var(). The compiled theme's oklch values
+// go through the same canvas readback getComputedStyle's did, so Pug's map colours are unchanged.
+export const resolveThemeColors = (vars: CompiledTheme['vars']): ThemeColors => ({
+  border: cssColorToRgb(vars['--border']),
+  mutedForeground: cssColorToRgb(vars['--muted-foreground']),
+  dataHue: cssColorToRgb(vars['--chart-1']),
+})

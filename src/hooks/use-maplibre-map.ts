@@ -1,34 +1,26 @@
 import { useAtomValue } from 'jotai'
-import maplibregl, { type MapOptions } from 'maplibre-gl'
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { type Theme, themeAtom } from '@/data/theme.atoms'
+import { Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { compiledThemeAtom } from '@/data/theme.atoms'
 
-// --- Resolved dark mode (shared by both maps + theme-aware styling) ---
+// v6 otherwise resolves the worker next to its own chunk, where Vite never emits it.
+setWorkerUrl(workerUrl)
 
-const subscribeDark = (onStoreChange: () => void) => {
-  const mq = window.matchMedia('(prefers-color-scheme: dark)')
-  const handler = () => onStoreChange()
-  mq.addEventListener('change', handler)
-  const obs = new MutationObserver(handler)
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-  return () => {
-    mq.removeEventListener('change', handler)
-    obs.disconnect()
-  }
-}
+// --- The active theme, as the maps need it ---
 
-const getResolvedDark = (theme: Theme) => {
-  if (theme === 'dark') return true
-  if (theme === 'light') return false
-  return document.documentElement.classList.contains('dark')
-}
-
-export const useResolvedDark = () => {
-  const theme = useAtomValue(themeAtom)
-  return useSyncExternalStore(
-    subscribeDark,
-    () => getResolvedDark(theme),
-    () => false,
+// Memoised on the compiled theme, so map effects keyed on it run on any theme change — two dark
+// themes included — and on nothing else.
+export const useMapTheme = () => {
+  const compiled = useAtomValue(compiledThemeAtom)
+  return useMemo(
+    () => ({
+      dark: compiled.polarity === 'dark',
+      vars: compiled.vars,
+      cardL: compiled.tokens.card.l,
+      neutralHue: compiled.tokens.background.h,
+    }),
+    [compiled],
   )
 }
 
@@ -41,7 +33,7 @@ type Options = Omit<MapOptions, 'container'>
 // (on mount); change the style/paint imperatively via mapRef afterwards.
 export const useMaplibreMap = (options: Options) => {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<maplibregl.Map | null>(null)
+  const mapRef = useRef<MapLibreMap | null>(null)
   const optionsRef = useRef(options)
   const [ready, setReady] = useState(false)
 
@@ -49,7 +41,7 @@ export const useMaplibreMap = (options: Options) => {
     const container = containerRef.current
     if (!container) return
 
-    const map = new maplibregl.Map({ container, ...optionsRef.current })
+    const map = new MapLibreMap({ container, ...optionsRef.current })
     mapRef.current = map
     const onLoad = () => setReady(true)
     map.on('load', onLoad)

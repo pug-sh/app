@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { createOrgAtom, orgsAtom, selectOrgAtom } from '@/data/workspace.atoms'
+import { canCreateOrgAtom, createOrgAtom, orgsAtom, selectOrgAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 
 // trim() before min(1), so the checks run on the trimmed value and a name of nothing but spaces is
@@ -32,6 +32,7 @@ const rowClass =
 
 const SelectOrg = () => {
   const orgs = useAtomValue(orgsAtom)
+  const canCreateOrg = useAtomValue(canCreateOrgAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const createOrg = useSetAtom(createOrgAtom)
   const signOut = useSetAtom(signOutAtom)
@@ -54,12 +55,18 @@ const SelectOrg = () => {
     }
   }
 
+  const noOrgs = orgs.length === 0
+  let subtitle = 'You belong to more than one organization.'
+  if (noOrgs) subtitle = canCreateOrg ? 'Create one, or ask an admin to invite you.' : 'Ask an admin to invite you.'
+
   return (
     <>
-      <h1 className="text-center text-3xl tracking-tight">Pick where to start</h1>
-      <p className="mt-2 mb-8 text-center text-sm text-muted-foreground">You belong to more than one organization.</p>
+      <h1 className="text-center text-3xl tracking-tight">
+        {noOrgs ? "You're not in an org yet" : 'Pick where to start'}
+      </h1>
+      <p className="mt-2 mb-8 text-center text-sm text-muted-foreground">{subtitle}</p>
 
-      <SectionHeader title="Organizations" count={orgs.length} />
+      {!noOrgs && <SectionHeader title="Organizations" count={orgs.length} />}
 
       {/* -mx-2: the hover fill bleeds past the text column, the labels still line up with the header. */}
       <div className="-mx-2 flex flex-col gap-0.5">
@@ -79,53 +86,54 @@ const SelectOrg = () => {
           )
         })}
 
-        {showCreate ? (
-          <form onSubmit={createForm.handleSubmit(onCreate)} className="mt-1 px-2">
-            <Field data-invalid={!!createForm.formState.errors.displayName}>
-              <Input
-                {...createForm.register('displayName')}
-                placeholder="Organization name"
-                autoFocus
-                className={controlHeight}
-                aria-invalid={!!createForm.formState.errors.displayName}
-                disabled={creating}
-              />
-              {createForm.formState.errors.displayName && (
-                <FieldError errors={[createForm.formState.errors.displayName]} />
-              )}
-            </Field>
-            <div className="mt-2 flex gap-2">
-              <Button type="submit" disabled={creating} className={`${controlHeight} flex-1`}>
-                {creating && <Loader2 className="animate-spin" />}
-                Create
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                className={controlHeight}
-                onClick={() => {
-                  setShowCreate(false)
-                  createForm.reset()
-                }}
-                disabled={creating}
+        {canCreateOrg &&
+          (showCreate ? (
+            <form onSubmit={createForm.handleSubmit(onCreate)} className="mt-1 px-2">
+              <Field data-invalid={!!createForm.formState.errors.displayName}>
+                <Input
+                  {...createForm.register('displayName')}
+                  placeholder="Organization name"
+                  autoFocus
+                  className={controlHeight}
+                  aria-invalid={!!createForm.formState.errors.displayName}
+                  disabled={creating}
+                />
+                {createForm.formState.errors.displayName && (
+                  <FieldError errors={[createForm.formState.errors.displayName]} />
+                )}
+              </Field>
+              <div className="mt-2 flex gap-2">
+                <Button type="submit" disabled={creating} className={`${controlHeight} flex-1`}>
+                  {creating && <Loader2 className="animate-spin" />}
+                  Create
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={controlHeight}
+                  onClick={() => {
+                    setShowCreate(false)
+                    createForm.reset()
+                  }}
+                  disabled={creating}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <button type="button" onClick={() => setShowCreate(true)} className={rowClass}>
+              <span
+                className="flex size-8 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors group-hover:text-foreground"
+                aria-hidden
               >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <button type="button" onClick={() => setShowCreate(true)} className={rowClass}>
-            <span
-              className="flex size-8 shrink-0 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground transition-colors group-hover:text-foreground"
-              aria-hidden
-            >
-              <Plus className="size-4" />
-            </span>
-            <span className="flex-1 text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
-              Create new organization
-            </span>
-          </button>
-        )}
+                <Plus className="size-4" />
+              </span>
+              <span className="flex-1 text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                Create new organization
+              </span>
+            </button>
+          ))}
       </div>
 
       <p className="mt-10 text-center text-sm text-muted-foreground">

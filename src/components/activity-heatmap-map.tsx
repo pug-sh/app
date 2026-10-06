@@ -1,7 +1,7 @@
 import type { FeatureCollection, Geometry } from 'geojson'
 import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useMaplibreMap, useResolvedDark } from '@/hooks/use-maplibre-map'
+import { useMaplibreMap, useMapTheme } from '@/hooks/use-maplibre-map'
 import { COUNTRIES_VIEW_ASPECT, COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
 import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
 import type { CountryActivity } from './activity-map-view'
@@ -43,7 +43,7 @@ const lineColorExpr = (dataHue: string, border: string): ExpressionSpecification
 ]
 
 const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => {
-  const dark = useResolvedDark()
+  const mapTheme = useMapTheme()
   const [tooltip, setTooltip] = useState<{ name: string; count: number; x: number; y: number } | null>(null)
 
   // Keep interaction enabled (so layer hover events fire for the tooltip) but disable every
@@ -92,7 +92,7 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
     const map = mapRef.current
     if (!map || !ready || !worldCountries) return
 
-    const { dataHue, mutedForeground, border } = resolveThemeColors()
+    const { dataHue, mutedForeground, border } = resolveThemeColors(mapTheme.vars)
     map.addSource(SOURCE, { type: 'geojson', data: worldCountries })
     map.addLayer({
       id: FILL_LAYER,
@@ -184,10 +184,10 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready || !map.getLayer(FILL_LAYER)) return
-    const { dataHue, mutedForeground, border } = resolveThemeColors()
+    const { dataHue, mutedForeground, border } = resolveThemeColors(mapTheme.vars)
     map.setPaintProperty(FILL_LAYER, 'fill-color', fillColorExpr(dataHue, mutedForeground))
     map.setPaintProperty(LINE_LAYER, 'line-color', lineColorExpr(dataHue, border))
-  }, [dark, ready, mapRef, worldCountries])
+  }, [mapTheme, ready, mapRef, worldCountries])
 
   // Keep the canvas sized to the container.
   useEffect(() => {

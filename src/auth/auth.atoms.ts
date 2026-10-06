@@ -3,17 +3,24 @@ import { atom, type Getter, type Setter } from 'jotai'
 import { toast } from 'sonner'
 import { trackEvent } from '@/analytics/pug'
 import type { GetMeResponse } from '@/api/genproto/dashboard/customers/v1/customers_pb'
-import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
+import type { AuthProviderConfig, SSORequired } from '@/api/genproto/public/auth/v1/auth_pb'
 import { authRPCAtom, customersRPCAtom } from '@/api/rpc'
 import { resetBillingAtom } from '@/data/billing.atoms'
-import { resetWorkspaceAtom } from '@/data/workspace.atoms'
+import { openJoinedOrgsAtom, resetWorkspaceAtom } from '@/data/workspace.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isDemoEnabled, isDemoSessionAtom } from './demo'
 import { customerIdAtom, jwtAtom, refreshTokenAtom } from './jwt.atoms'
 import { mapOAuthConnectError } from './oauth'
+import { ssoBlockAtom, ssoRequiredOf } from './sso-required'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
-export type AuthResult = { ok: true } | { ok: false; error: string }
+// ssoRequired: refused because the account must sign in through SSO; show its providers, not error.
+export type AuthResult = { ok: true } | { ok: false; error: string; ssoRequired?: SSORequired }
+
+const ssoRefusal = (error: unknown): AuthResult | undefined => {
+  const ssoRequired = ssoRequiredOf(error)
+  return ssoRequired && { ok: false, error: `${ssoRequired.domain} accounts sign in through SSO.`, ssoRequired }
+}
 
 // A ConnectError's own fields survive console serialization; the whole error doesn't.
 const connectDetail = (err: unknown) => (err instanceof ConnectError ? { code: err.code, message: err.message } : err)
@@ -44,6 +51,8 @@ export const signInAtom = atom(
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'password' })
       return { ok: true }
     } catch (error) {
+      const refused = ssoRefusal(error)
+      if (refused) return refused
       if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
       const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
       return { ok: false, error: msg }
@@ -150,9 +159,21 @@ export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { em
     await authRPC.requestMagicLink({ email })
     return { ok: true }
   } catch (error) {
+    const refused = ssoRefusal(error)
+    if (refused) return refused
     if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
     const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
     return { ok: false, error: msg }
+  }
+})
+
+// null from a server without discovery, and sign-in then sends the email link.
+export const discoverSignInAtom = atom(null, async (get, _set, { email }: { email: string }) => {
+  try {
+    return await get(authRPCAtom).discoverSignIn({ email })
+  } catch (error) {
+    if (error instanceof ConnectError && error.code === Code.Unimplemented) return null
+    throw error
   }
 })
 
@@ -166,8 +187,11 @@ export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { to
     // Malformed/empty values are coerced to UTC server-side; correct later in settings.
     const resp = await authRPC.completeMagicLink({ token, timezone: browserTimezone() })
     set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'magic_link' })
+    set(openJoinedOrgsAtom, resp.joinedOrgIds)
     return { ok: true }
   } catch (error) {
+    const refused = ssoRefusal(error)
+    if (refused) return refused
     if (error instanceof ConnectError && error.code === Code.InvalidArgument) {
       return { ok: false, error: 'This link is invalid or has expired. Request a new one.' }
     }
@@ -187,28 +211,60 @@ export const completeOIDCAtom = atom(
       codeVerifier,
       redirectURI,
       nonce,
+      inviteToken = '',
     }: {
       provider: AuthProviderConfig
       code: string
       codeVerifier: string
       redirectURI: string
       nonce: string
+      inviteToken?: string
     },
   ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
       // timezone seeds the auto-created project's reporting zone (parity with completeMagicLink).
       const resp = await authRPC.completeOIDCSignIn({
-        providerId: provider.id,
+        // Exactly one of the two must be set, and under explicit presence '' counts as set.
+        ...(provider.connectionId ? { connectionId: provider.connectionId } : { providerId: provider.id }),
         code,
         codeVerifier,
         redirectUri: redirectURI,
         nonce,
         timezone: browserTimezone(),
+        inviteToken,
       })
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'oidc' })
+      set(openJoinedOrgsAtom, resp.joinedOrgIds)
       return { ok: true }
     } catch (error) {
+      const refused = ssoRefusal(error)
+      if (refused) return refused
+      if (error instanceof ConnectError && error.code === Code.PermissionDenied) {
+        // With an invite, a connection's refusal reads the same: the invite's address is on its domain.
+        if (inviteToken) {
+          return {
+            ok: false,
+            error: 'This invite was sent to another email address. Open it again and sign in with that account.',
+          }
+        }
+        if (provider.connectionId) {
+          return {
+            ok: false,
+            error: `${provider.displayName} can't sign in that account to Pug. Use an account on your organization's domain.`,
+          }
+        }
+      }
+      const unavailableOrInvalid =
+        error instanceof ConnectError && (error.code === Code.Unavailable || error.code === Code.InvalidArgument)
+      if (provider.connectionId && unavailableOrInvalid) {
+        // Usually the connection's setup, such as its secret or the email claim, which only an admin can fix.
+        console.error('SSO connection sign-in failed', connectDetail(error))
+        return {
+          ok: false,
+          error: `${provider.displayName} couldn't sign you in. If it keeps happening, ask your administrator to check the connection.`,
+        }
+      }
       return { ok: false, error: mapOAuthConnectError(error, provider.displayName) }
     }
   },
@@ -243,8 +299,8 @@ export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> =
 })
 
 // Authenticated whenever a refresh token is present. The access JWT is short-lived
-// (~1h) and the transport silently re-mints it, so access-token expiry must NOT gate
-// the UI or active users would be bounced to sign-in hourly. A failed refresh clears
+// (24h) and the transport silently re-mints it, so access-token expiry must NOT gate
+// the UI or active users would be bounced to sign-in daily. A failed refresh clears
 // the refresh token (clearSession), flipping this to false.
 export const isAuthenticatedAtom = atom(get => get(refreshTokenAtom) !== '')
 
@@ -274,6 +330,7 @@ export const signOutAtom = atom(null, async (get, set) => {
   set(refreshTokenAtom, '')
   clearMe(set)
   set(isDemoSessionAtom, false)
+  set(ssoBlockAtom, null)
   set(resetWorkspaceAtom)
   // Only matters when the next account lands on the SAME org — a shared workspace, which is exactly
   // when leaving the previous person's numbers on screen would be worst.

@@ -66,6 +66,31 @@ export type ClusterMapMarker = {
 
 export type MapEntry = ({ type: 'visitor' } & VisitorMapMarker) | ({ type: 'cluster' } & ClusterMapMarker)
 
+/**
+ * Gates whether an entry's React content is re-rendered, so it has to cover everything the marker
+ * paints or reads — including iso/region, which feed its aria-label, and the theme revision, which
+ * sets its colours. Position is excluded: it's reapplied every reconcile via setLngLat.
+ */
+export const entrySignature = (
+  entry: MapEntry,
+  selectedId: string | null,
+  highlightedId: string | null,
+  themeRevision: string,
+) => {
+  // lng/lat are in here because ClusterView closes over them as its zoom target.
+  if (entry.type === 'cluster') return `c|${themeRevision}|${entry.count}|${entry.topKind}|${entry.lng}|${entry.lat}`
+  return [
+    'v',
+    themeRevision,
+    entry.distinctId === selectedId ? 'sel' : '',
+    entry.distinctId === highlightedId ? 'hl' : '',
+    entry.kind,
+    entry.iso,
+    entry.region ?? '',
+    entry.avatarUrl ?? '',
+  ].join('|')
+}
+
 // Visitors who share a point (everyone in a city gets the same GeoIP coords) are fanned out with a
 // sunflower layout: even ~1-cell spacing between neighbours at any count, with no random collisions.
 // Offsets are in abstract "cells" — the map converts a cell to degrees per zoom so the on-screen gap

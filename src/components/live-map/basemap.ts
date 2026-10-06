@@ -6,7 +6,7 @@ import {
 } from 'maplibre-gl'
 import { layersWithPartialCustomTheme } from 'protomaps-themes-base'
 
-import { basemapPalette } from '@/components/live-map/basemap-palette'
+import { type BasemapTheme, basemapPalette } from '@/components/live-map/basemap-palette'
 import { BASEMAP_FILENAME, POV_CLAIM_LINES_PATH, POV_DISPUTED_LINES_PATH } from '@/lib/map-assets'
 import { ensurePmtilesProtocol, mapAssetsOrigin } from '@/lib/maplibre'
 
@@ -82,7 +82,7 @@ const overlayClaimLines = (layers: LayerSpecification[]) => {
   return [...layers.slice(0, at), ...overlays, ...layers.slice(at)]
 }
 
-export const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
+export const buildBasemapStyle = (theme: BasemapTheme): StyleSpecification => ({
   version: 8,
   glyphs: `${mapAssetsOrigin()}/fonts/{fontstack}/{range}.pbf`,
   sources: {
@@ -99,7 +99,7 @@ export const buildBasemapStyle = (dark: boolean): StyleSpecification => ({
     dropSpriteIcons(
       hideDisputedBoundaries(
         englishLabels(
-          layersWithPartialCustomTheme(BASEMAP_SOURCE, dark ? 'dark' : 'light', basemapPalette(dark), 'en'),
+          layersWithPartialCustomTheme(BASEMAP_SOURCE, theme.dark ? 'dark' : 'light', basemapPalette(theme), 'en'),
         ),
       ),
     ),
