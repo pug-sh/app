@@ -15,28 +15,51 @@ import { ssoBlockAtom, ssoRequiredOf } from './sso-required'
 
 // Result shape shared by every auth write atom: `error` is present iff the call failed.
 // ssoRequired: refused because the account must sign in through SSO; show its providers, not error.
-export type AuthResult = { ok: true } | { ok: false; error: string; ssoRequired?: SSORequired }
+export type AuthResult =
+  | { ok: true }
+  | { ok: false; error: string; ssoRequired?: SSORequired; turnstile?: 'failed' | 'unavailable' }
 
 const ssoRefusal = (error: unknown): AuthResult | undefined => {
   const ssoRequired = ssoRequiredOf(error)
   return ssoRequired && { ok: false, error: `${ssoRequired.domain} accounts sign in through SSO.`, ssoRequired }
 }
 
+// On the two email sign-ins, only the Turnstile check answers either code.
+const turnstileRefusal = (error: unknown): AuthResult | undefined => {
+  if (!(error instanceof ConnectError)) return
+  if (error.code === Code.PermissionDenied) {
+    return { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
+  }
+  if (error.code === Code.Unavailable) {
+    return {
+      ok: false,
+      error: 'Verification is unavailable right now. Try again in a few minutes.',
+      turnstile: 'unavailable',
+    }
+  }
+}
+
 // A ConnectError's own fields survive console serialization; the whole error doesn't.
 const connectDetail = (err: unknown) => (err instanceof ConnectError ? { code: err.code, message: err.message } : err)
 
-// Suspends the signed-out canvas briefly while the public config loads.
-export const authProvidersAtom = atom(async get => {
+const loadAuthConfig = async (get: Getter) => {
   try {
-    const response = await get(authRPCAtom).getAuthConfig({})
-    return response.providers
+    return await get(authRPCAtom).getAuthConfig({})
   } catch (error) {
     // Swallowed so provider discovery can't take password or magic-link sign-in down with it.
-    // null rather than []: an empty list means "none configured", and sign-in hides SSO on that.
-    console.error('Could not load external auth providers', error)
+    console.error('Could not load the auth config', error)
     return null
   }
-})
+}
+
+// Suspends the signed-out canvas briefly while the public config loads.
+export const authConfigAtom = atom(loadAuthConfig)
+
+// null rather than []: an empty list means "none configured", and sign-in hides SSO on that.
+export const authProvidersAtom = atom(async get => (await get(authConfigAtom))?.providers ?? null)
+
+// A write atom, so a reload doesn't suspend the page.
+export const reloadAuthConfigAtom = atom(null, loadAuthConfig)
 
 // Build-time gate for the sign-in page's "Explore the live demo" link — not the in-app banner,
 // which follows the active demo session (see isDemoSessionAtom).
@@ -44,14 +67,18 @@ export const demoEnabledAtom = atom(() => isDemoEnabled())
 
 export const signInAtom = atom(
   null,
-  async (get, set, { email, password }: { email: string; password: string }): Promise<AuthResult> => {
+  async (
+    get,
+    set,
+    { email, password, turnstileToken }: { email: string; password: string; turnstileToken: string },
+  ): Promise<AuthResult> => {
     const authRPC = get(authRPCAtom)
     try {
-      const resp = await authRPC.signInWithEmail({ email, password })
+      const resp = await authRPC.signInWithEmail({ email, password, turnstileToken })
       set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'password' })
       return { ok: true }
     } catch (error) {
-      const refused = ssoRefusal(error)
+      const refused = ssoRefusal(error) ?? turnstileRefusal(error)
       if (refused) return refused
       if (!(error instanceof ConnectError)) console.error('signIn unexpected error', error)
       const msg = error instanceof ConnectError ? error.message : 'Sign in failed'
@@ -153,19 +180,22 @@ export const fetchMeAtom = atom(null, async (get, set) => {
   }
 })
 
-export const requestMagicLinkAtom = atom(null, async (get, _set, { email }: { email: string }): Promise<AuthResult> => {
-  const authRPC = get(authRPCAtom)
-  try {
-    await authRPC.requestMagicLink({ email })
-    return { ok: true }
-  } catch (error) {
-    const refused = ssoRefusal(error)
-    if (refused) return refused
-    if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
-    const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
-    return { ok: false, error: msg }
-  }
-})
+export const requestMagicLinkAtom = atom(
+  null,
+  async (get, _set, { email, turnstileToken }: { email: string; turnstileToken: string }): Promise<AuthResult> => {
+    const authRPC = get(authRPCAtom)
+    try {
+      await authRPC.requestMagicLink({ email, turnstileToken })
+      return { ok: true }
+    } catch (error) {
+      const refused = ssoRefusal(error) ?? turnstileRefusal(error)
+      if (refused) return refused
+      if (!(error instanceof ConnectError)) console.error('requestMagicLink unexpected error', error)
+      const msg = error instanceof ConnectError ? error.message : 'Could not send the sign-in link'
+      return { ok: false, error: msg }
+    }
+  },
+)
 
 // null from a server without discovery, and sign-in then sends the email link.
 export const discoverSignInAtom = atom(null, async (get, _set, { email }: { email: string }) => {

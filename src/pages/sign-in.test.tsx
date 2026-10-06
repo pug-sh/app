@@ -10,33 +10,74 @@ import {
   AuthProviderType,
   type DiscoverSignInResponse,
   DiscoverSignInResponseSchema,
+  type GetAuthConfigResponse,
+  GetAuthConfigResponseSchema,
   SSORequiredSchema,
 } from '@/api/genproto/public/auth/v1/auth_pb'
 import type { AuthResult } from '@/auth/auth.atoms'
 import type { OIDCSignInOptions } from '@/auth/oidc'
 import { ssoBlockAtom } from '@/auth/sso-required'
+import type { Turnstile } from '@/auth/turnstile'
 
 const state = vi.hoisted(() => ({
   providers: null as AuthProviderConfig[] | null,
+  siteKey: '',
+  reloadedConfig: null as GetAuthConfigResponse | null,
   linkResult: { ok: true } as AuthResult,
+  passwordResult: { ok: true } as AuthResult,
   discovery: null as DiscoverSignInResponse | null,
 }))
 const requestMagicLink = vi.hoisted(() => vi.fn())
+const signIn = vi.hoisted(() => vi.fn())
+const reloadConfig = vi.hoisted(() => vi.fn(async () => state.reloadedConfig))
 const discover = vi.hoisted(() => vi.fn(async () => state.discovery))
 const renderedButton = vi.hoisted(() => vi.fn())
 
 vi.mock('@/auth/auth.atoms', async () => {
   const { atom } = await import('jotai')
   return {
-    authProvidersAtom: atom(() => state.providers),
+    // A failed config fetch has no site key either.
+    authConfigAtom: atom(() => state.providers && { providers: state.providers, turnstileSiteKey: state.siteKey }),
     demoEnabledAtom: atom(false),
     discoverSignInAtom: atom(null, () => discover()),
-    requestMagicLinkAtom: atom(null, async (_get, _set, input: { email: string }) => {
+    reloadAuthConfigAtom: atom(null, () => reloadConfig()),
+    requestMagicLinkAtom: atom(null, async (_get, _set, input: { email: string; turnstileToken: string }) => {
       requestMagicLink(input)
       return state.linkResult
     }),
-    signInAtom: atom(null, async () => ({ ok: true })),
+    signInAtom: atom(null, async (_get, _set, input: { email: string; password: string; turnstileToken: string }) => {
+      signIn(input)
+      return state.passwordResult
+    }),
   }
+})
+
+const turnstile = vi.hoisted(() => {
+  const fake = {
+    params: undefined as Parameters<Turnstile['render']>[1] | undefined,
+    resets: 0,
+    render: (_container: HTMLElement, params: Parameters<Turnstile['render']>[1]) => {
+      fake.params = params
+      return 'widget-1'
+    },
+    reset: () => {
+      fake.resets++
+    },
+    remove: () => {
+      fake.params = undefined
+    },
+  }
+  return fake
+})
+
+vi.mock('@/auth/turnstile', () => ({ loadTurnstile: async () => turnstile }))
+
+beforeEach(() => {
+  state.siteKey = ''
+  state.reloadedConfig = null
+  state.passwordResult = { ok: true }
+  turnstile.params = undefined
+  turnstile.resets = 0
 })
 
 vi.mock('@/auth/oidc-sign-in-button', () => ({
@@ -215,7 +256,7 @@ describe('email-first sign-in', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Email me a link instead' }))
     expect(await screen.findByText('Check your inbox')).toBeTruthy()
-    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'bob@acme.com' })
+    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'bob@acme.com', turnstileToken: '' })
   })
 
   // The SSO_REQUIRED refusal stays as the server's backstop, but the page needn't wait for it.
@@ -243,7 +284,7 @@ describe('email-first sign-in', () => {
     await continueAs('jane@gmail.com')
 
     expect(await screen.findByText('Check your inbox')).toBeTruthy()
-    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com' })
+    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com', turnstileToken: '' })
   })
 
   it("sends the link when the server can't say", async () => {
@@ -291,5 +332,108 @@ describe('email-first sign-in', () => {
 
     const message = screen.getByText('Acme SSO sign-in could not be started. Try again.')
     expect(message.closest('[data-pug-no-capture]')).not.toBeNull()
+  })
+})
+
+describe('Turnstile', () => {
+  beforeEach(() => {
+    state.providers = []
+    state.linkResult = { ok: true }
+    state.discovery = null
+  })
+
+  const continueAs = async (email: string) => {
+    fireEvent.change(await screen.findByLabelText('Email'), { target: { value: email } })
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  }
+
+  it("waits for the widget's token, and spends it on one password attempt", async () => {
+    state.siteKey = 'site-key'
+    renderSignIn()
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with password' }))
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'bob@acme.com' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    // Disabled once it's waiting on a token.
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toHaveProperty('disabled', true))
+    await waitFor(() => expect(turnstile.params).toMatchObject({ sitekey: 'site-key', appearance: 'interaction-only' }))
+    expect(signIn).not.toHaveBeenCalled()
+
+    act(() => turnstile.params?.callback?.('turnstile-token'))
+
+    await waitFor(() =>
+      expect(signIn).toHaveBeenCalledWith({
+        email: 'bob@acme.com',
+        password: 'correct-horse',
+        turnstileToken: 'turnstile-token',
+      }),
+    )
+    expect(turnstile.resets).toBe(1)
+  })
+
+  it("sends the widget's token with the email link", async () => {
+    state.siteKey = 'site-key'
+    renderSignIn()
+    await waitFor(() => expect(turnstile.params).toBeDefined())
+    act(() => turnstile.params?.callback?.('turnstile-token'))
+
+    await continueAs('jane@gmail.com')
+
+    expect(await screen.findByText('Check your inbox')).toBeTruthy()
+    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com', turnstileToken: 'turnstile-token' })
+  })
+
+  it('fetches the config again when refused on a page that had no site key', async () => {
+    state.linkResult = { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
+    state.reloadedConfig = create(GetAuthConfigResponseSchema, { turnstileSiteKey: 'site-key' })
+    renderSignIn()
+
+    await continueAs('jane@gmail.com')
+
+    expect(await screen.findByText('Verification failed. Try again.')).toBeTruthy()
+    expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com', turnstileToken: '' })
+    await waitFor(() => expect(turnstile.params?.sitekey).toBe('site-key'))
+  })
+
+  it('points to provider sign-in when verification is unavailable', async () => {
+    state.providers = [
+      create(AuthProviderConfigSchema, {
+        id: 'google',
+        type: AuthProviderType.OIDC,
+        displayName: 'Google',
+        issuerUrl: 'https://accounts.google.com',
+      }),
+    ]
+    state.linkResult = {
+      ok: false,
+      error: 'Verification is unavailable right now. Try again in a few minutes.',
+      turnstile: 'unavailable',
+    }
+    renderSignIn()
+
+    await continueAs('jane@gmail.com')
+
+    expect(
+      await screen.findByText(
+        'Verification is unavailable right now. Try again in a few minutes. You can still continue with Google.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it('sends nothing while the widget keeps failing', async () => {
+    state.siteKey = 'site-key'
+    renderSignIn()
+    await waitFor(() => expect(turnstile.params).toBeDefined())
+    act(() => turnstile.params?.['error-callback']?.('600010'))
+
+    await continueAs('jane@gmail.com')
+    await waitFor(() => expect(turnstile.resets).toBe(1))
+    act(() => turnstile.params?.['error-callback']?.('600010'))
+
+    expect(
+      await screen.findByText("Verification couldn't run in this browser. Reload the page and try again."),
+    ).toBeTruthy()
+    expect(requestMagicLink).not.toHaveBeenCalled()
   })
 })
