@@ -63,7 +63,7 @@ export const useTurnstile = (siteKey: string) => {
     [siteKey, theme, state],
   )
 
-  const take = useCallback(async () => {
+  const take = async () => {
     if (!siteKey) return ''
     let token: string | null = state.token
     state.token = ''
@@ -80,7 +80,7 @@ export const useTurnstile = (siteKey: string) => {
     // Single use, whatever the server answers.
     state.widget?.turnstile.reset(state.widget.id)
     return token
-  }, [siteKey, state])
+  }
 
   return { ref, take }
 }

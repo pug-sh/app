@@ -1,4 +1,5 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, render, renderHook } from '@testing-library/react'
+import { createElement, StrictMode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { Turnstile } from './turnstile'
 
@@ -66,11 +67,14 @@ describe('useTurnstile', () => {
     await expect(next).resolves.toBe('fresh')
   })
 
-  it('gives up when the widget fails, and asks it again on the next try', async () => {
+  it.each([
+    ['errors', (params?: Params) => params?.['error-callback']?.('600010')],
+    ["isn't supported", (params?: Params) => params?.['unsupported-callback']?.()],
+  ])('gives up when the widget %s, and asks it again on the next try', async (_, fail) => {
     const { turnstile, take } = await mount()
 
     const waiting = take()
-    turnstile.params?.['error-callback']?.('600010')
+    fail(turnstile.params)
     await expect(waiting).resolves.toBeNull()
 
     const retry = take()
@@ -108,5 +112,18 @@ describe('useTurnstile', () => {
 
     expect(turnstile.remove).toHaveBeenCalledWith('widget-1')
     expect(await settledSoon(take())).toBe(false)
+  })
+
+  it('renders one widget when StrictMode attaches it twice', async () => {
+    const turnstile = fakeTurnstile()
+    load.mockResolvedValue(turnstile)
+    const Widget = () => createElement('div', { ref: useTurnstile('site-key').ref })
+
+    await act(async () => {
+      render(createElement(StrictMode, null, createElement(Widget)))
+    })
+
+    expect(load).toHaveBeenCalledTimes(2)
+    expect(turnstile.render).toHaveBeenCalledTimes(1)
   })
 })

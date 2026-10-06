@@ -120,6 +120,24 @@ const acmeRequiresSSO = create(SSORequiredSchema, {
   ],
 })
 
+const acmeSSO = create(AuthProviderConfigSchema, {
+  connectionId: 'd3uqa6s1m7j9b2c4e5f0',
+  type: AuthProviderType.OIDC,
+  displayName: 'Acme SSO',
+  issuerUrl: 'https://acme.okta.com',
+})
+const google = create(AuthProviderConfigSchema, {
+  id: 'google',
+  type: AuthProviderType.OIDC,
+  displayName: 'Google',
+  issuerUrl: 'https://accounts.google.com',
+})
+
+const continueAs = async (email: string) => {
+  fireEvent.change(await screen.findByLabelText('Email'), { target: { value: email } })
+  fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+}
+
 describe('configured external provider buttons', () => {
   beforeEach(() => {
     state.providers = null
@@ -215,19 +233,6 @@ describe('a domain that requires SSO', () => {
 })
 
 describe('email-first sign-in', () => {
-  const acmeSSO = create(AuthProviderConfigSchema, {
-    connectionId: 'd3uqa6s1m7j9b2c4e5f0',
-    type: AuthProviderType.OIDC,
-    displayName: 'Acme SSO',
-    issuerUrl: 'https://acme.okta.com',
-  })
-  const google = create(AuthProviderConfigSchema, {
-    id: 'google',
-    type: AuthProviderType.OIDC,
-    displayName: 'Google',
-    issuerUrl: 'https://accounts.google.com',
-  })
-
   beforeEach(() => {
     state.providers = []
     state.linkResult = { ok: true }
@@ -235,11 +240,6 @@ describe('email-first sign-in', () => {
     requestMagicLink.mockReset()
     renderedButton.mockReset()
   })
-
-  const continueAs = async (email: string) => {
-    fireEvent.change(await screen.findByLabelText('Email'), { target: { value: email } })
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
-  }
 
   it('sends a domain with a connection to it, and keeps the link as the other way in', async () => {
     state.discovery = create(DiscoverSignInResponseSchema, { domain: 'acme.com', providers: [acmeSSO] })
@@ -342,20 +342,18 @@ describe('Turnstile', () => {
     state.discovery = null
   })
 
-  const continueAs = async (email: string) => {
-    fireEvent.change(await screen.findByLabelText('Email'), { target: { value: email } })
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+  const signInWithPassword = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with password' }))
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'bob@acme.com' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
   }
 
   it("waits for the widget's token, and spends it on one password attempt", async () => {
     state.siteKey = 'site-key'
     renderSignIn()
-    fireEvent.click(await screen.findByRole('button', { name: 'Sign in with password' }))
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'bob@acme.com' } })
-    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'correct-horse' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    await signInWithPassword()
 
-    // Disabled once it's waiting on a token.
     await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toHaveProperty('disabled', true))
     await waitFor(() => expect(turnstile.params).toMatchObject({ sitekey: 'site-key', appearance: 'interaction-only' }))
     expect(signIn).not.toHaveBeenCalled()
@@ -384,7 +382,22 @@ describe('Turnstile', () => {
     expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com', turnstileToken: 'turnstile-token' })
   })
 
-  it('fetches the config again when refused on a page that had no site key', async () => {
+  it('drops the link for an email edited while waiting on the widget', async () => {
+    state.siteKey = 'site-key'
+    renderSignIn()
+    await waitFor(() => expect(turnstile.params).toBeDefined())
+
+    await continueAs('bob@acme.co')
+    await waitFor(() => expect(discover).toHaveBeenCalled())
+    await act(async () => {})
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'bob@acme.com' } })
+    act(() => turnstile.params?.callback?.('turnstile-token'))
+
+    await waitFor(() => expect(turnstile.resets).toBe(1))
+    expect(requestMagicLink).not.toHaveBeenCalled()
+  })
+
+  it('fetches the config again when refused on a page that had no site key, then sends a token', async () => {
     state.linkResult = { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
     state.reloadedConfig = create(GetAuthConfigResponseSchema, { turnstileSiteKey: 'site-key' })
     renderSignIn()
@@ -394,17 +407,42 @@ describe('Turnstile', () => {
     expect(await screen.findByText('Verification failed. Try again.')).toBeTruthy()
     expect(requestMagicLink).toHaveBeenCalledWith({ email: 'jane@gmail.com', turnstileToken: '' })
     await waitFor(() => expect(turnstile.params?.sitekey).toBe('site-key'))
+
+    state.linkResult = { ok: true }
+    act(() => turnstile.params?.callback?.('turnstile-token'))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+
+    expect(await screen.findByText('Check your inbox')).toBeTruthy()
+    expect(requestMagicLink).toHaveBeenLastCalledWith({ email: 'jane@gmail.com', turnstileToken: 'turnstile-token' })
+  })
+
+  it('fetches the config again when a password is refused', async () => {
+    state.passwordResult = { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
+    state.reloadedConfig = create(GetAuthConfigResponseSchema, { turnstileSiteKey: 'site-key' })
+    renderSignIn()
+
+    await signInWithPassword()
+
+    expect(await screen.findByText('Verification failed. Try again.')).toBeTruthy()
+    await waitFor(() => expect(turnstile.params?.sitekey).toBe('site-key'))
+  })
+
+  it('picks up a site key rotated since the page loaded', async () => {
+    state.siteKey = 'old-key'
+    state.linkResult = { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
+    state.reloadedConfig = create(GetAuthConfigResponseSchema, { turnstileSiteKey: 'new-key' })
+    renderSignIn()
+    await waitFor(() => expect(turnstile.params).toBeDefined())
+    act(() => turnstile.params?.callback?.('turnstile-token'))
+
+    await continueAs('jane@gmail.com')
+
+    expect(await screen.findByText('Verification failed. Try again.')).toBeTruthy()
+    await waitFor(() => expect(turnstile.params?.sitekey).toBe('new-key'))
   })
 
   it('points to provider sign-in when verification is unavailable', async () => {
-    state.providers = [
-      create(AuthProviderConfigSchema, {
-        id: 'google',
-        type: AuthProviderType.OIDC,
-        displayName: 'Google',
-        issuerUrl: 'https://accounts.google.com',
-      }),
-    ]
+    state.providers = [google]
     state.linkResult = {
       ok: false,
       error: 'Verification is unavailable right now. Try again in a few minutes.',
@@ -421,19 +459,44 @@ describe('Turnstile', () => {
     ).toBeTruthy()
   })
 
-  it('sends nothing while the widget keeps failing', async () => {
+  it("points to the SSO step's own providers when verification is unavailable", async () => {
+    state.discovery = create(DiscoverSignInResponseSchema, { domain: 'acme.com', providers: [acmeSSO] })
+    state.linkResult = {
+      ok: false,
+      error: 'Verification is unavailable right now. Try again in a few minutes.',
+      turnstile: 'unavailable',
+    }
+    renderSignIn()
+
+    await continueAs('bob@acme.com')
+    fireEvent.click(await screen.findByRole('button', { name: 'Email me a link instead' }))
+
+    expect(
+      await screen.findByText(
+        'Verification is unavailable right now. Try again in a few minutes. You can still continue with Acme SSO.',
+      ),
+    ).toBeTruthy()
+  })
+
+  it.each([
+    ['an email link', () => continueAs('jane@gmail.com'), requestMagicLink],
+    ['a password', signInWithPassword, signIn],
+  ])('sends nothing while the widget keeps failing, for %s', async (_, submit, send) => {
     state.siteKey = 'site-key'
+    state.providers = [google]
     renderSignIn()
     await waitFor(() => expect(turnstile.params).toBeDefined())
     act(() => turnstile.params?.['error-callback']?.('600010'))
 
-    await continueAs('jane@gmail.com')
+    await submit()
     await waitFor(() => expect(turnstile.resets).toBe(1))
     act(() => turnstile.params?.['error-callback']?.('600010'))
 
     expect(
-      await screen.findByText("Verification couldn't run in this browser. Reload the page and try again."),
+      await screen.findByText(
+        "Verification didn't complete. Try again, or reload the page. You can still continue with Google.",
+      ),
     ).toBeTruthy()
-    expect(requestMagicLink).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
   })
 })

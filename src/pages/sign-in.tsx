@@ -5,11 +5,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useLocation } from 'wouter'
 import { z } from 'zod'
-import {
-  type AuthProviderConfig,
-  AuthProviderType,
-  type GetAuthConfigResponse,
-} from '@/api/genproto/public/auth/v1/auth_pb'
+import { type AuthProviderConfig, AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
 import {
   type AuthResult,
   authConfigAtom,
@@ -78,9 +74,8 @@ const SignIn = () => {
   // Also set by the transport when a session refresh is refused for the same reason.
   const [ssoBlock, setSSOBlock] = useAtom(ssoBlockAtom)
   const [ssoStep, setSSOStep] = useState<SSOStep | null>(null)
-  const [reloadedConfig, setReloadedConfig] = useState<GetAuthConfigResponse | null>(null)
+  const [config, setConfig] = useState(authConfig)
 
-  const config = reloadedConfig ?? authConfig
   const oidcProviders = config?.providers.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
   const siteKey = config?.turnstileSiteKey ?? ''
   const turnstile = useTurnstile(siteKey)
@@ -111,16 +106,16 @@ const SignIn = () => {
   const verify = async () => {
     const token = await turnstile.take()
     if (token === null) {
-      setError(withProviders("Verification couldn't run in this browser. Reload the page and try again."))
+      setError(withProviders("Verification didn't complete. Try again, or reload the page."))
     }
     return token
   }
 
   const showFailure = async (result: Extract<AuthResult, { ok: false }>) => {
-    // No site key: the check went on after this page loaded, or the first config fetch failed.
-    if (result.turnstile === 'failed' && !siteKey) {
+    // The key may have been set or rotated since this page loaded, or the first config fetch failed.
+    if (result.turnstile === 'failed') {
       const reloaded = await reloadAuthConfig()
-      if (reloaded) setReloadedConfig(reloaded)
+      if (reloaded) setConfig(reloaded)
     }
     setError(result.turnstile === 'unavailable' ? withProviders(result.error) : result.error)
   }
@@ -164,7 +159,7 @@ const SignIn = () => {
 
   const sendLink = async (email: string) => {
     const turnstileToken = await verify()
-    if (turnstileToken === null) return
+    if (turnstileToken === null || authForm.getValues('email') !== email) return
     const res = await requestMagicLink({ email, turnstileToken })
     if (res.ok) setMagicLinkEmail(email)
     else if (res.ssoRequired) setSSOBlock({ detail: res.ssoRequired, email })

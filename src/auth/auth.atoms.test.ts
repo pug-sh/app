@@ -279,12 +279,28 @@ describe('the sign-in form atoms', () => {
       'Verification is unavailable right now. Try again in a few minutes.',
     ],
   ])('says when Turnstile verification was %s', async (_kind, code, turnstile, error) => {
-    signInWithEmail.mockRejectedValue(new ConnectError('verification failed, try again', code))
-    requestMagicLink.mockRejectedValue(new ConnectError('verification failed, try again', code))
+    // As the server sends it: every refusal carries an ErrorInfo.
+    const refused = new ConnectError('verification failed, try again', code)
+    refused.details.push({ type: 'google.rpc.ErrorInfo', value: new Uint8Array() })
+    signInWithEmail.mockRejectedValue(refused)
+    requestMagicLink.mockRejectedValue(refused)
     const store = createStore()
 
     await expect(store.set(signInAtom, password)).resolves.toEqual({ ok: false, error, turnstile })
     await expect(store.set(requestMagicLinkAtom, link)).resolves.toEqual({ ok: false, error, turnstile })
+  })
+
+  it.each([
+    ['403', Code.PermissionDenied],
+    ['503', Code.Unavailable],
+  ])("doesn't blame Turnstile for a proxy's bare %s", async (status, code) => {
+    const bare = new ConnectError(`HTTP ${status}`, code)
+    signInWithEmail.mockRejectedValue(bare)
+    requestMagicLink.mockRejectedValue(bare)
+    const store = createStore()
+
+    await expect(store.set(signInAtom, password)).resolves.toEqual({ ok: false, error: bare.message })
+    await expect(store.set(requestMagicLinkAtom, link)).resolves.toEqual({ ok: false, error: bare.message })
   })
 })
 

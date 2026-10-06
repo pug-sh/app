@@ -6,7 +6,7 @@ describe('loadTurnstile', () => {
     window.turnstile = undefined
   })
 
-  // Not inserted, so happy-dom never fetches from Cloudflare.
+  // Not inserted: happy-dom would fail the load itself before the test could settle it.
   const captureScripts = () => {
     const scripts: HTMLScriptElement[] = []
     vi.spyOn(document.head, 'append').mockImplementation((...nodes) => {

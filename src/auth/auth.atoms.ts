@@ -24,9 +24,10 @@ const ssoRefusal = (error: unknown): AuthResult | undefined => {
   return ssoRequired && { ok: false, error: `${ssoRequired.domain} accounts sign in through SSO.`, ssoRequired }
 }
 
-// On the two email sign-ins, only the Turnstile check answers either code.
+// On the two email sign-ins only the Turnstile check answers either code, but a proxy's bare 403/5xx
+// maps to them too. The server's own refusal always carries a detail; a status-derived one never does.
 const turnstileRefusal = (error: unknown): AuthResult | undefined => {
-  if (!(error instanceof ConnectError)) return
+  if (!(error instanceof ConnectError) || error.details.length === 0) return
   if (error.code === Code.PermissionDenied) {
     return { ok: false, error: 'Verification failed. Try again.', turnstile: 'failed' }
   }
@@ -46,7 +47,7 @@ const loadAuthConfig = async (get: Getter) => {
   try {
     return await get(authRPCAtom).getAuthConfig({})
   } catch (error) {
-    // Swallowed so provider discovery can't take password or magic-link sign-in down with it.
+    // Swallowed so a failed config fetch can't take password or magic-link sign-in down with it.
     console.error('Could not load the auth config', error)
     return null
   }
@@ -55,7 +56,7 @@ const loadAuthConfig = async (get: Getter) => {
 // Suspends the signed-out canvas briefly while the public config loads.
 export const authConfigAtom = atom(loadAuthConfig)
 
-// null rather than []: an empty list means "none configured", and sign-in hides SSO on that.
+// null rather than []: the OAuth callback tells a failed fetch apart from a provider that's gone.
 export const authProvidersAtom = atom(async get => (await get(authConfigAtom))?.providers ?? null)
 
 // A write atom, so a reload doesn't suspend the page.
