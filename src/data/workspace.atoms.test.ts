@@ -224,6 +224,29 @@ describe('createProjectAtom', () => {
 
     expect(store.get(projectsAtom)).toEqual([...projectsOfA, created])
   })
+
+  it.each([
+    ['succeeds', () => batchGet.mockResolvedValueOnce({ projects: [...projectsOfA, project('a3')] })],
+    ['fails', () => batchGet.mockRejectedValueOnce(new Error('down'))],
+  ])('leaves the org it was switched to alone when the create lands late and the refresh %s', async (_, refresh) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })
+    let landCreate = () => {}
+    projectsCreate.mockReturnValueOnce(new Promise(resolve => (landCreate = () => resolve({ project: project('a3') }))))
+    refresh()
+    const pending = store.set(createProjectAtom, 'a3')
+
+    store.set(selectOrgAtom, orgB)
+    store.set(commitProjectsAtom, { orgId: 'org-b', projects: projectsOfB })
+    store.set(activeProjectAtom, projectsOfB[0])
+    landCreate()
+    expect(await pending).toBeNull()
+
+    expect(store.get(projectsAtom)).toEqual(projectsOfB)
+    expect(store.get(activeProjectAtom)).toBe(projectsOfB[0])
+  })
 })
 
 describe('refreshOrgsAtom', () => {

@@ -282,6 +282,7 @@ export const rememberLastProjectAtom = atom(
   },
 )
 
+// Null when the org changed before it landed, or the caller navigates to a project the active org doesn't have.
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)
   if (!org) return null
@@ -290,13 +291,13 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   // adjust per-project later in settings.
   const resp = await projectsRPC.create({ displayName, orgId: org.id, reportingTimezone: browserTimezone() })
   // Refresh the project list — if this fails, the project was still created server-side
-  try {
-    const refreshed = await projectsRPC.batchGet({ orgId: org.id })
-    set(projectsAtom, refreshed.projects)
-  } catch (err) {
+  const refreshed = await projectsRPC.batchGet({ orgId: org.id }).catch(err => {
     console.error('Project created but list refresh failed:', err)
-    if (resp.project) set(projectsAtom, [...get(projectsAtom), resp.project])
-  }
+    return null
+  })
+  if (get(activeOrgAtom)?.id !== org.id) return null
+  if (refreshed) set(projectsAtom, refreshed.projects)
+  else if (resp.project) set(projectsAtom, [...get(projectsAtom), resp.project])
   if (resp.project) set(activeProjectAtom, resp.project)
   return resp.project ?? null
 })
