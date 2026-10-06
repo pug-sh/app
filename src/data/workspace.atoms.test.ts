@@ -5,8 +5,10 @@ import { ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
+const { batchGet, projectsCreate, projectsDelete, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
   batchGet: vi.fn(),
+  projectsCreate: vi.fn(),
+  projectsDelete: vi.fn(),
   orgsList: vi.fn(),
   orgsGet: vi.fn(),
   orgsUpdateDisplayName: vi.fn(),
@@ -17,10 +19,19 @@ const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    projectsRPCAtom: atom({ batchGet }),
+    projectsRPCAtom: atom({ batchGet, create: projectsCreate, delete: projectsDelete }),
     orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
   }
 })
+
+vi.mock('@/analytics/pug', () => ({
+  trackEvent: vi.fn(),
+  trackFeature: vi.fn(),
+  identifyCustomer: vi.fn(),
+  resetIdentity: vi.fn(),
+  initAnalytics: vi.fn(),
+  analyticsEnabled: false,
+}))
 
 const {
   activeOrgAtom,
@@ -28,10 +39,13 @@ const {
   bootstrapStatusAtom,
   canCreateOrgAtom,
   commitProjectsAtom,
+  createProjectAtom,
+  deleteProjectAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
   orgsAtom,
   projectsAtom,
+  projectsLoadedAtom,
   refreshOrgsAtom,
   renameOrgAtom,
   resetWorkspaceAtom,
@@ -172,6 +186,66 @@ describe('commitProjectsAtom', () => {
 
     expect(store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })).toBe(false)
     expect(store.get(projectsAtom)).toEqual([])
+  })
+})
+
+describe('deleteProjectAtom', () => {
+  it('leaves the org it was switched to alone when the delete lands late', async () => {
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })
+    let landDelete = () => {}
+    projectsDelete.mockReturnValueOnce(new Promise(resolve => (landDelete = () => resolve({}))))
+    const pending = store.set(deleteProjectAtom, 'a1')
+
+    store.set(selectOrgAtom, orgB)
+    store.set(commitProjectsAtom, { orgId: 'org-b', projects: projectsOfB })
+    store.set(activeProjectAtom, projectsOfB[0])
+    landDelete()
+    expect(await pending).toBe(false)
+
+    expect(store.get(projectsAtom)).toEqual(projectsOfB)
+    expect(store.get(activeProjectAtom)).toBe(projectsOfB[0])
+    expect(store.get(projectsLoadedAtom)).toBe(true)
+  })
+})
+
+describe('createProjectAtom', () => {
+  it('lists the new project even when the refresh fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })
+    const created = project('a3')
+    projectsCreate.mockResolvedValueOnce({ project: created })
+    batchGet.mockRejectedValueOnce(new Error('down'))
+
+    await store.set(createProjectAtom, 'a3')
+
+    expect(store.get(projectsAtom)).toEqual([...projectsOfA, created])
+  })
+
+  it.each([
+    ['succeeds', () => batchGet.mockResolvedValueOnce({ projects: [...projectsOfA, project('a3')] })],
+    ['fails', () => batchGet.mockRejectedValueOnce(new Error('down'))],
+  ])('leaves the org it was switched to alone when the create lands late and the refresh %s', async (_, refresh) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })
+    let landCreate = () => {}
+    projectsCreate.mockReturnValueOnce(new Promise(resolve => (landCreate = () => resolve({ project: project('a3') }))))
+    refresh()
+    const pending = store.set(createProjectAtom, 'a3')
+
+    store.set(selectOrgAtom, orgB)
+    store.set(commitProjectsAtom, { orgId: 'org-b', projects: projectsOfB })
+    store.set(activeProjectAtom, projectsOfB[0])
+    landCreate()
+    expect(await pending).toBeNull()
+
+    expect(store.get(projectsAtom)).toEqual(projectsOfB)
+    expect(store.get(activeProjectAtom)).toBe(projectsOfB[0])
   })
 })
 

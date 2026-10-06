@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { browserTimezone } from '@/lib/timezone'
+import { DeleteProject } from './delete-project'
 import { TimezonePicker } from './timezone-picker'
 
 const projectSchema = z.object({
@@ -164,6 +165,9 @@ const General = () => {
                 {savedProject && <span className="text-xs text-positive animate-in fade-in">Saved</span>}
               </div>
             </form>
+          </Can>
+          <Can action="delete" resource="project">
+            <DeleteProject project={project} />
           </Can>
         </section>
       )}

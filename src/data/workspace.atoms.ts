@@ -2,6 +2,7 @@ import { isFieldSet } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
+import { trackFeature } from '@/analytics/pug'
 import { type ListResponse, ListResponseSchema, type Org } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
@@ -281,6 +282,7 @@ export const rememberLastProjectAtom = atom(
   },
 )
 
+// Null when the org changed before it landed, or the caller navigates to a project the active org doesn't have.
 export const createProjectAtom = atom(null, async (get, set, displayName: string) => {
   const org = get(activeOrgAtom)
   if (!org) return null
@@ -289,14 +291,44 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   // adjust per-project later in settings.
   const resp = await projectsRPC.create({ displayName, orgId: org.id, reportingTimezone: browserTimezone() })
   // Refresh the project list — if this fails, the project was still created server-side
-  try {
-    const refreshed = await projectsRPC.batchGet({ orgId: org.id })
-    set(projectsAtom, refreshed.projects)
-  } catch (err) {
+  const refreshed = await projectsRPC.batchGet({ orgId: org.id }).catch(err => {
     console.error('Project created but list refresh failed:', err)
-  }
+    return null
+  })
+  if (get(activeOrgAtom)?.id !== org.id) return null
+  if (refreshed) set(projectsAtom, refreshed.projects)
+  else if (resp.project) set(projectsAtom, [...get(projectsAtom), resp.project])
   if (resp.project) set(activeProjectAtom, resp.project)
   return resp.project ?? null
+})
+
+// True when it deleted the active project; the caller then goes to '/'. The list is cleared rather than committed,
+// or WorkspaceBootstrap's pick lands in the commit that mounts ProjectRedirect, before it subscribes.
+export const deleteProjectAtom = atom(null, async (get, set, projectId: string) => {
+  const org = get(activeOrgAtom)
+  if (!org) throw new Error('No organization selected')
+  const projectsRPC = get(projectsRPCAtom)
+  try {
+    await projectsRPC.delete({}, { headers: { 'x-project-id': projectId } })
+  } catch (err) {
+    // A project that's already gone is refused at auth as Unauthenticated, never NotFound.
+    const remaining = await projectsRPC.batchGet({ orgId: org.id }).catch(() => null)
+    if (!remaining || remaining.projects.some(p => p.id === projectId)) throw err
+  }
+  trackFeature({ featureId: 'project.delete', featureName: 'Delete project' })
+
+  if (get(activeOrgAtom)?.id !== org.id) return false
+  if (get(activeProjectAtom)?.id !== projectId) {
+    set(
+      projectsAtom,
+      get(projectsAtom).filter(p => p.id !== projectId),
+    )
+    return false
+  }
+  set(projectsAtom, [])
+  set(activeProjectAtom, null)
+  set(projectsOrgIdAtom, null)
+  return true
 })
 
 export const createOrgAtom = atom(null, async (get, set, displayName: string) => {
