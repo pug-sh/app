@@ -295,6 +295,7 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
     set(projectsAtom, refreshed.projects)
   } catch (err) {
     console.error('Project created but list refresh failed:', err)
+    if (resp.project) set(projectsAtom, [...get(projectsAtom), resp.project])
   }
   if (resp.project) set(activeProjectAtom, resp.project)
   return resp.project ?? null

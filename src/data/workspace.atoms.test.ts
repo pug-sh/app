@@ -5,8 +5,9 @@ import { ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, projectsDelete, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
+const { batchGet, projectsCreate, projectsDelete, orgsList, orgsGet, orgsUpdateDisplayName } = vi.hoisted(() => ({
   batchGet: vi.fn(),
+  projectsCreate: vi.fn(),
   projectsDelete: vi.fn(),
   orgsList: vi.fn(),
   orgsGet: vi.fn(),
@@ -18,7 +19,7 @@ const { batchGet, projectsDelete, orgsList, orgsGet, orgsUpdateDisplayName } = v
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    projectsRPCAtom: atom({ batchGet, delete: projectsDelete }),
+    projectsRPCAtom: atom({ batchGet, create: projectsCreate, delete: projectsDelete }),
     orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
   }
 })
@@ -38,6 +39,7 @@ const {
   bootstrapStatusAtom,
   canCreateOrgAtom,
   commitProjectsAtom,
+  createProjectAtom,
   deleteProjectAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
@@ -205,6 +207,22 @@ describe('deleteProjectAtom', () => {
     expect(store.get(projectsAtom)).toEqual(projectsOfB)
     expect(store.get(activeProjectAtom)).toBe(projectsOfB[0])
     expect(store.get(projectsLoadedAtom)).toBe(true)
+  })
+})
+
+describe('createProjectAtom', () => {
+  it('lists the new project even when the refresh fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const store = createStore()
+    store.set(activeOrgAtom, orgA)
+    store.set(commitProjectsAtom, { orgId: 'org-a', projects: projectsOfA })
+    const created = project('a3')
+    projectsCreate.mockResolvedValueOnce({ project: created })
+    batchGet.mockRejectedValueOnce(new Error('down'))
+
+    await store.set(createProjectAtom, 'a3')
+
+    expect(store.get(projectsAtom)).toEqual([...projectsOfA, created])
   })
 })
 
