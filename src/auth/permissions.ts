@@ -69,7 +69,8 @@ const ROLE_GRANTS: Record<OrgRole, Grants> = {
     // exposes GetUsage alone. Mirrors the backend registry, which puts it on the viewer floor.
     // Nothing in the UI reads this grant yet; the Usage tab renders for every role.
     usage: ['read'],
-    // On the viewer floor beside usage: whoever notices the allowance banner is rarely the admin.
+    // On the viewer floor beside usage: whoever notices a billing banner (allowance or failed payment)
+    // is rarely the admin.
     billing: ['read'],
   },
   // Inherits VIEWER's reads (org/member/project + analytics) via INHERITS; adds full CRUD on

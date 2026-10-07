@@ -332,8 +332,8 @@ describe('the usage section', () => {
   })
 
   // A subscriber past the allowance is billed by tier over the provider's period, which is not the
-  // window this count covers, so a bar against the allowance would read as over a limit there is no
-  // longer any of.
+  // window this count covers, so a bar against the allowance would read as a breach, when past it is
+  // simply billed.
   it("counts a subscriber's events without measuring them against the allowance", async () => {
     getBillingStatus.mockResolvedValue(subscribed())
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 1_234_567n, counted: true }))
@@ -490,8 +490,8 @@ describe('the plan catalog', () => {
     expect(screen.getAllByRole('button', { name: 'Subscribe to Acme Enterprise' })).toHaveLength(1)
   })
 
-  // The allowance is what a plan is sold by now that no price reaches the page, and "100,000
-  // events" alone reads as a cap.
+  // The allowance is what a plan is sold by, since no price reaches the page, and "100,000 events"
+  // alone reads as a cap.
   it('names the free allowance and the history each plan keeps', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
     listPlans.mockResolvedValue({ plans: [usagePlan()] })

@@ -32,6 +32,8 @@ const bannerAlert = (
     return { tone: 'past_due', message: `Your last payment failed. Update your payment method${by} to keep your plan.` }
   }
   if (!usage || usage.tone === 'normal') return null
+  // Nothing is enforced, so the over message says nothing is dropped, or "past your free events" reads
+  // as an outage.
   if (usage.tone === 'over') {
     return {
       tone: 'over',
@@ -57,7 +59,6 @@ const UsageBanner = () => {
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !org || !status?.billingEnabled || !can('read', 'billing')) return null
 
-  // The allowance drives a banner, never a rejected event, or "past your allowance" reads as an outage.
   const pastDue = isPastDue(status)
   const alert = bannerAlert(pastDue, graceDeadline(status), usage)
   if (!alert) return null

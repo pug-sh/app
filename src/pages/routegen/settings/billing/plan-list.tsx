@@ -9,7 +9,7 @@ const allowanceLabel = (plan: PlanOption) => {
   return `${formatEvents(plan.includedEvents)} free events / month`
 }
 
-// Absent shows the allowance alone.
+// Absent is a deal's, never 0 days, so the row ends at the allowance label.
 const detailLabel = (plan: PlanOption) => {
   if (plan.retentionDays === undefined) return allowanceLabel(plan)
   return `${allowanceLabel(plan)} · ${retentionLabel(plan.retentionDays)}`

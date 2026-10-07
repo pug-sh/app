@@ -73,8 +73,8 @@ describe('the sidebar usage meter', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('24')
   })
 
-  // Past the allowance a subscriber is billed by tier, not warned: a bar turning red at 100K would
-  // tell every paying customer they are over something.
+  // Past the allowance a subscriber is billed by tier, not warned: a bar turning red at 100K would flag
+  // every subscriber past it, which is the plan working as sold.
   it('renders nothing for a subscriber', async () => {
     getBillingStatus.mockResolvedValue(
       status({ status: BillingStatus.ACTIVE, subscriptionStatus: SubscriptionStatus.ACTIVE, includedEvents: 100_000n }),

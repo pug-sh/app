@@ -22,7 +22,7 @@ import {
 describe('usageFor', () => {
   // Either half missing means no meter to draw; substituting a zero for the other is the one thing
   // this must never do.
-  it('has nothing to draw when the quota is absent', () => {
+  it('has nothing to draw when the allowance is absent', () => {
     expect(usageFor(undefined, 1_000)).toBeNull()
   })
 
@@ -40,7 +40,7 @@ describe('usageFor', () => {
     expect(usage?.tone).toBe('caution')
   })
 
-  it('turns caution at the warn ratio and over at the limit', () => {
+  it('turns caution at the warn ratio and over at the allowance', () => {
     expect(usageFor(1_000n, Math.ceil(1_000 * USAGE_WARN_RATIO) - 1)?.tone).toBe('normal')
     expect(usageFor(1_000n, 1_000 * USAGE_WARN_RATIO)?.tone).toBe('caution')
     expect(usageFor(1_000n, 1_000)?.tone).toBe('over')
@@ -51,8 +51,8 @@ describe('usageFor', () => {
     expect(usageFor(1_000n, 5_000)?.percent).toBe(100)
   })
 
-  // The server says "no quota" by absence, but a 0 would divide into a bar of width "NaN%".
-  it('does not divide by a zero quota', () => {
+  // The server says "no allowance" by absence, but a 0 would divide into a bar of width "NaN%".
+  it('does not divide by a zero allowance', () => {
     expect(usageFor(0n, 10)).toEqual({ used: 10, included: 0, percent: 100, tone: 'over' })
     expect(usageFor(0n, 0)).toEqual({ used: 0, included: 0, percent: 0, tone: 'normal' })
   })
@@ -67,7 +67,7 @@ describe('allowanceApplies', () => {
   })
 
   // A subscriber's events past it are billed by tier, over the provider's period rather than the
-  // usage period the meter counts, so "over" would tell every paying customer they are over.
+  // usage period the count covers, so "over" would flag every subscriber past it.
   it('leaves a subscriber to the tiers', () => {
     expect(allowanceApplies(withStatus(BillingStatus.ACTIVE))).toBe(false)
   })
@@ -86,7 +86,7 @@ describe('retentionLabel', () => {
     expect(retentionLabel(1n)).toBe('1 day of event history')
   })
 
-  // Grouped the way the quota beside it is, not the way the browser locale would.
+  // Grouped the way the allowance beside it is, not the way the browser locale would.
   it('groups in en-US', () => {
     expect(retentionLabel(3_650n)).toBe('3,650 days of event history')
   })

@@ -78,19 +78,19 @@ const subscribed = (extra: StatusFields = {}) =>
   status({ status: BillingStatus.ACTIVE, subscriptionStatus: SubscriptionStatus.ACTIVE, ...extra })
 
 describe('the free allowance banner', () => {
-  it('says nothing well under the limit', async () => {
+  it('says nothing well under the allowance', async () => {
     const { store } = renderBanner()
     await settled(store)
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  it('warns near the limit', async () => {
+  it('warns near the allowance', async () => {
     getUsage.mockResolvedValue(used(460_000))
     renderBanner()
     expect(await screen.findByText(/You've used 92% of your 500,000 free events/)).toBeTruthy()
   })
 
-  // Nothing is enforced, so "over your limit" alone reads as an outage they are already having.
+  // Nothing is enforced, so "past your free events" alone reads as an outage they are already having.
   it('says nothing is being dropped when over', async () => {
     getUsage.mockResolvedValue(used(600_000))
     renderBanner()
@@ -110,7 +110,8 @@ describe('the free allowance banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // Past the allowance a subscriber is billing working as sold, so the warning is for free orgs only.
+  // A subscriber's usage past the allowance is billing working as sold, so the warning is for free orgs
+  // only.
   it('says nothing to a subscriber past the allowance', async () => {
     getBillingStatus.mockResolvedValue(subscribed())
     getUsage.mockResolvedValue(used(600_000))
@@ -119,11 +120,9 @@ describe('the free allowance banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // "Your payment failed" in a soft amber understates the only thing needing action. Usage sits in
-  // the caution band, where the two tones differ.
+  // "Your payment failed" in a soft amber understates the only thing needing action.
   it('reports a failed payment in its own tone', async () => {
     getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
-    getUsage.mockResolvedValue(used(460_000))
     renderBanner()
 
     const message = await screen.findByText(/Your last payment failed/)
