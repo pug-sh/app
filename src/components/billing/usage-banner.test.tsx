@@ -10,6 +10,7 @@ import {
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
+import { formatDateTime } from '@/lib/timestamp'
 
 const { getBillingStatus, getUsage } = vi.hoisted(() => ({ getBillingStatus: vi.fn(), getUsage: vi.fn() }))
 
@@ -126,7 +127,11 @@ describe('the free allowance banner', () => {
       }),
     )
     renderBanner()
-    expect(await screen.findByText(/Update your payment method by Jan 15, \d{2}:\d{2} to keep your plan/)).toBeTruthy()
+    // Built, not written out: a local time, which east of UTC+11 is already the 16th.
+    const by = formatDateTime(new Date('2099-01-15T12:00:00Z'))
+    expect(
+      await screen.findByText(`Your last payment failed. Update your payment method by ${by} to keep your plan.`),
+    ).toBeTruthy()
   })
 
   // Served until the server sees whether the provider held or cancelled, and "by" a date already
@@ -143,8 +148,8 @@ describe('the free allowance banner', () => {
     expect(message.textContent).not.toContain(' by ')
   })
 
-  // The quota is present anyway, which is the only way to see the flag read rather than the
-  // absent quota doing the work.
+  // The allowance is present anyway, which is the only way to see the flag read rather than the
+  // absent allowance doing the work.
   it('stays quiet on a deployment with billing off', async () => {
     getBillingStatus.mockResolvedValue(
       create(GetBillingStatusResponseSchema, { billingEnabled: false, includedEvents: 500_000n }),
@@ -155,7 +160,7 @@ describe('the free allowance banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // The demo is a shared viewer of someone else's org, whose quota is not the visitor's business.
+  // The demo is a shared viewer of someone else's org, whose allowance is not the visitor's business.
   it('stays quiet in the demo', async () => {
     getUsage.mockResolvedValue(used(600_000))
     const store = createStore()

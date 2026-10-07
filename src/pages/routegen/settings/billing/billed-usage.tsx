@@ -2,9 +2,10 @@ import type { GetBillingStatusResponse } from '@/api/genproto/dashboard/billing/
 import HoverSwap from '@/components/hover-swap'
 import SectionHeader from '@/components/section-header'
 import { formatRelative } from '@/hooks/use-relative-time'
-import { formatEvents, tierRows } from '@/lib/billing'
+import { formatEvents } from '@/lib/billing'
 import { formatDateTime, formatLocalDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { tierRows } from './tier-rows'
 
 const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Date | null }) => {
   // Empty until the period's first statement, which is not a tier at 0.
@@ -61,7 +62,7 @@ const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Da
 // What the meter last stated to the provider for this billing period, which is the provider's own and
 // not the usage period counted above. The provider bills each tier the most it was told by the period's
 // end, so this is a running count, never an invoice — and quantities only, since no rate reaches here.
-const TierUsage = ({ status }: { status: GetBillingStatusResponse }) => {
+const BilledUsage = ({ status }: { status: GetBillingStatusResponse }) => {
   const periodEnd = validDate(tsToDate(status.currentPeriodEnd))
   const period = periodEnd ? `The billing period ending ${formatLocalDate(periodEnd)}` : 'This billing period'
 
@@ -76,4 +77,4 @@ const TierUsage = ({ status }: { status: GetBillingStatusResponse }) => {
   )
 }
 
-export default TierUsage
+export default BilledUsage

@@ -5,7 +5,6 @@ import {
   BillingStatus,
   GetBillingStatusResponseSchema,
   SubscriptionStatus,
-  TierUsageSchema,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import {
   allowanceApplies,
@@ -15,7 +14,6 @@ import {
   retentionLabel,
   statusLabel,
   subStatusLabel,
-  tierRows,
   USAGE_WARN_RATIO,
   usageBannerKey,
   usageFor,
@@ -79,53 +77,6 @@ describe('allowanceApplies', () => {
     expect(allowanceApplies(withStatus(BillingStatus.UNSPECIFIED))).toBe(false)
     expect(allowanceApplies(withStatus(99 as BillingStatus))).toBe(false)
     expect(allowanceApplies(null)).toBe(false)
-  })
-})
-
-describe('tierRows', () => {
-  const tier = (fromEvents: bigint, upToEvents: bigint | undefined, events = 0n) =>
-    create(TierUsageSchema, { fromEvents, upToEvents, events })
-
-  // The usage plan as a subscriber holds it: a 100K allowance under the catalog's six tiers.
-  const usagePlanTiers = [
-    tier(100_000n, 2_000_000n, 1_234_567n),
-    tier(2_000_000n, 15_000_000n),
-    tier(15_000_000n, 50_000_000n),
-    tier(50_000_000n, 100_000_000n),
-    tier(100_000_000n, 250_000_000n),
-    tier(250_000_000n, undefined),
-  ]
-
-  it("labels each tier's range and keeps its count", () => {
-    expect(tierRows(usagePlanTiers)).toEqual([
-      { tier: 1, range: '100K – 2M', events: 1_234_567n },
-      { tier: 2, range: '2M – 15M', events: 0n },
-      { tier: 3, range: '15M – 50M', events: 0n },
-      { tier: 4, range: '50M – 100M', events: 0n },
-      { tier: 5, range: '100M – 250M', events: 0n },
-      { tier: 6, range: '250M+', events: 0n },
-    ])
-  })
-
-  // A deal's 5M allowance swallows the first tier whole. Its row would print "5M – 2M", and
-  // renumbering the rest would point each one at the wrong line of the provider's invoice.
-  it('drops a tier the allowance covers, keeping the numbering', () => {
-    const rows = tierRows([tier(5_000_000n, 2_000_000n), tier(5_000_000n, 15_000_000n, 3_000_000n)])
-    expect(rows).toEqual([{ tier: 2, range: '5M – 15M', events: 3_000_000n }])
-  })
-
-  // Covered means it holds nothing. A count there contradicts that, and hiding it hides billing.
-  it('keeps a covered tier that holds events', () => {
-    expect(tierRows([tier(5_000_000n, 2_000_000n, 10n)])).toHaveLength(1)
-  })
-
-  // Catalog bounds are round, but a deal's allowance can be any number, and "1.2M" for 1,234,567
-  // would misstate where its billing starts.
-  it('compacts a bound only where that is exact', () => {
-    expect(tierRows([tier(1_234_567n, 2_000_000n)])[0].range).toBe('1,234,567 – 2M')
-    expect(tierRows([tier(1_500_000n, 2_000_000n)])[0].range).toBe('1.5M – 2M')
-    expect(tierRows([tier(2_500n, 2_000_000n)])[0].range).toBe('2.5K – 2M')
-    expect(tierRows([tier(1n, 2_000_000n)])[0].range).toBe('1 – 2M')
   })
 })
 

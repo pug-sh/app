@@ -14,7 +14,7 @@ import {
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
-import { formatLocalDate } from '@/lib/timestamp'
+import { formatDateTime, formatLocalDate } from '@/lib/timestamp'
 
 const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession, confirmCheckout } =
   vi.hoisted(() => ({
@@ -55,6 +55,7 @@ vi.mock('@/analytics/pug', () => ({
 }))
 
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
+const { billingAtom } = await import('@/data/billing.atoms')
 const Billing = (await import('./index.page')).default
 
 const org = (role: OrgRole) => create(OrgSchema, { id: 'org-a', displayName: 'Org A', role })
@@ -103,11 +104,12 @@ const deal = () => plan('custom', 'Acme Enterprise', true, { includedEvents: und
 const renderPage = (role = OrgRole.ADMIN) => {
   const store = createStore()
   store.set(activeOrgAtom, org(role))
-  return render(
+  const view = render(
     <Provider store={store}>
       <Billing />
     </Provider>,
   )
+  return { ...view, store }
 }
 
 beforeEach(() => {
@@ -129,7 +131,8 @@ describe('the plan section', () => {
   it('shows the billing date when there is one, and the allowance reset otherwise', async () => {
     getBillingStatus.mockResolvedValue(subscribed())
     renderPage()
-    expect(await screen.findByText('Renews Jun 28, 2026')).toBeTruthy()
+    // Built, not written out: a local date, which west of UTC is the 27th.
+    expect(await screen.findByText(`Renews ${formatLocalDate(new Date('2026-06-28T00:00:00Z'))}`)).toBeTruthy()
 
     vi.clearAllMocks()
     getBillingStatus.mockResolvedValue(status())
@@ -183,7 +186,22 @@ describe('the plan section', () => {
       }),
     )
     renderPage()
-    expect(await screen.findByText(/update your payment method by Jan 15, \d{2}:\d{2}/)).toBeTruthy()
+    const by = formatDateTime(new Date('2099-01-15T12:00:00Z'))
+    expect(await screen.findByText(new RegExp(`update your payment method by ${by} to avoid`))).toBeTruthy()
+  })
+
+  // Served until the server sees whether the provider held or cancelled, and "by" a date already
+  // gone asks for the impossible.
+  it('drops a grace deadline that has passed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2020-01-15T12:00:00Z')),
+      }),
+    )
+    renderPage()
+    const notice = await screen.findByText(/We couldn't charge your card/)
+    expect(notice.textContent).toContain('update your payment method to avoid')
   })
 })
 
@@ -275,6 +293,25 @@ describe('billed usage', () => {
     // The last tier is unbounded: its absent bound is open-ended, never a 0.
     expect(within(table).getByText('250M+')).toBeTruthy()
     expect(screen.getByText('5m ago')).toBeTruthy()
+  })
+
+  // Every tier's count is billed, the last as much as the first.
+  it('totals every tier', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        tierUsage: [
+          tier(100_000n, 2_000_000n, 1_900_000n),
+          tier(2_000_000n, 15_000_000n, 13_000_000n),
+          tier(15_000_000n, 50_000_000n, 35_000_000n),
+          tier(50_000_000n, 100_000_000n, 50_000_000n),
+          tier(100_000_000n, 250_000_000n, 150_000_000n),
+          tier(250_000_000n, undefined, 12_345n),
+        ],
+      }),
+    )
+    renderPage()
+    const total = (await screen.findByText('Total')).closest('tr')
+    expect(total && within(total).getByText('249,912,345')).toBeTruthy()
   })
 
   // Until the period's first statement nothing has been reported, which is not a tier at 0.
@@ -578,9 +615,11 @@ describe('the checkout return', () => {
 })
 
 // With no billing at all, a blank body under a tab bar is worse than leaving for the general tab.
+// Waits on the answer having landed: before it the page is a spinner, so any "renders nothing" passes.
 it('renders nothing when billing is switched off', async () => {
   getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
-  renderPage()
-  await waitFor(() => expect(screen.queryByText('Free')).toBeNull())
+  const { store } = renderPage()
+  await waitFor(() => expect(store.get(billingAtom).loaded).toBe(true))
+  await waitFor(() => expect(screen.queryByText('Events this period')).toBeNull())
   expect(screen.queryByRole('progressbar')).toBeNull()
 })

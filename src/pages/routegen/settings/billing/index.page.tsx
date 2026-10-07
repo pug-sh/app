@@ -38,6 +38,7 @@ import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { formatPeriod } from '../usage/usage-helpers'
+import BilledUsage from './billed-usage'
 import {
   clearCheckoutPending,
   closeCheckoutOverlay,
@@ -46,7 +47,6 @@ import {
   takeCheckoutPending,
 } from './checkout'
 import PlanList from './plan-list'
-import TierUsage from './tier-usage'
 
 // Not muted: "we couldn't load this" must not read as "you have none".
 const ListError = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
@@ -112,8 +112,9 @@ const usagePeriodNote = (status: GetBillingStatusResponse) => {
 // A denylist: guessing wrong here toasts a failure at someone who just paid.
 const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'expired'])
 
-// No rate reaches this page: they live on the provider's product, which the checkout shows.
-const PLANS_NOTE = 'Usage past the free allowance is billed by tier. Rates are shown at checkout.'
+// No rate reaches this page: they live on the provider's product, which the checkout shows. The note
+// is for an org with no subscription, which nothing bills, so it says what a plan would do.
+const PLANS_NOTE = 'With a plan, usage past the free allowance is billed by tier. Rates are shown at checkout.'
 const PLANS_NOTE_SUBSCRIBED = 'Change or cancel your plan in the billing portal.'
 
 const Billing = () => {
@@ -351,7 +352,7 @@ const Billing = () => {
       </section>
 
       {/* Nothing bills an org with no subscription, so only a live one has tiers to show. */}
-      {status.status === BillingStatus.ACTIVE && <TierUsage status={status} />}
+      {status.status === BillingStatus.ACTIVE && <BilledUsage status={status} />}
 
       {canBrowsePlans && (
         <section>
