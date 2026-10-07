@@ -96,6 +96,10 @@ export const usageFor = (includedEvents: bigint | undefined, usedEvents: number 
   return { used, included, percent: Math.min(100, Math.floor(ratio * 100)), tone: toneFor(ratio) }
 }
 
+// Usage against the free allowance, for the orgs it applies to; null for everyone else.
+export const allowanceUsage = (status: GetBillingStatusResponse | null, usedEvents: number | null) =>
+  allowanceApplies(status) ? usageFor(status?.includedEvents, usedEvents) : null
+
 export type BannerTone = Exclude<UsageTone, 'normal'> | 'past_due'
 
 export const BANNER_BOX: Record<BannerTone, string> = {

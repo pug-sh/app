@@ -75,7 +75,7 @@ const TierTable = ({ tiers, asOf }: { tiers: TierUsage[]; asOf: Timestamp | unde
 // Each tier's count carries the previous period's late days, so the total can exceed this period's own.
 const CARRY_NOTE = 'Includes any events from the previous period that were counted late.'
 
-const billedUsageNote = (status: GetBillingStatusResponse, now: Date) => {
+const billedUsageNote = (status: GetBillingStatusResponse, now = new Date()) => {
   const end = validDate(tsToDate(status.currentPeriodEnd))
   // Nothing is stated past a period's end, so until the provider starts the next one this count is final.
   if (end && end <= now) {
@@ -91,7 +91,7 @@ const billedUsageNote = (status: GetBillingStatusResponse, now: Date) => {
 // invoice — and quantities only, since no rate reaches here.
 const BilledUsage = ({ status }: { status: GetBillingStatusResponse }) => (
   <section>
-    <SectionHeader title="Billed usage" description={billedUsageNote(status, new Date())} />
+    <SectionHeader title="Billed usage" description={billedUsageNote(status)} />
     <TierTable tiers={status.tierUsage} asOf={status.tierUsageAsOf} />
   </section>
 )

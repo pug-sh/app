@@ -22,6 +22,7 @@ import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
   allowanceApplies,
+  allowanceUsage,
   billingSignature,
   formatEvents,
   graceDeadline,
@@ -31,7 +32,6 @@ import {
   statusLabel,
   subStatusLabel,
   TONE_FILL,
-  usageFor,
 } from '@/lib/billing'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
@@ -291,9 +291,7 @@ const Billing = () => {
   // Not a spinner, which would read as still loading; the effect above is already redirecting.
   if (!status?.billingEnabled || !canReadBilling) return null
 
-  // A subscriber's events past the allowance are billed by tier over the provider's period, not the
-  // window counted here, so only an org with no subscription is measured against it.
-  const usage = allowanceApplies(status) ? usageFor(status.includedEvents, usedEvents) : null
+  const usage = allowanceUsage(status, usedEvents)
   const period = periodLine(status)
   // The free plan is named after its own state, so the badge would repeat the plan name.
   const planStatus = statusLabel(status.status)
@@ -301,6 +299,9 @@ const Billing = () => {
   const pastDue = isPastDue(status)
   const graceEndsAt = graceDeadline(status)
   const liveSubscription = hasLiveSubscription(status)
+  // Nothing bills an org with no subscription. Tiers sent under a status this build cannot place show
+  // anyway, since hiding a billed count is the worse mistake.
+  const showBilledUsage = status.status === BillingStatus.ACTIVE || status.tierUsage.length > 0
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -359,9 +360,7 @@ const Billing = () => {
         )}
       </section>
 
-      {/* Nothing bills an org with no subscription. Tiers sent under a status this build cannot place
-          show anyway, since hiding a billed count is the worse mistake. */}
-      {(status.status === BillingStatus.ACTIVE || status.tierUsage.length > 0) && <BilledUsage status={status} />}
+      {showBilledUsage && <BilledUsage status={status} />}
 
       {canBrowsePlans && (
         <section>

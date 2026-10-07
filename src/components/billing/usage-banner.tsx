@@ -8,7 +8,7 @@ import { dismissedUsageBannerAtom } from '@/data/billing.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
-  allowanceApplies,
+  allowanceUsage,
   BANNER_BOX,
   BANNER_TEXT,
   type BannerTone,
@@ -17,7 +17,6 @@ import {
   isPastDue,
   type Usage,
   usageBannerKey,
-  usageFor,
 } from '@/lib/billing'
 import { formatDateTime } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
@@ -54,8 +53,7 @@ const UsageBanner = () => {
   const dismiss = useSetAtom(dismissedUsageBannerAtom)
   const can = useCan()
 
-  // A subscriber past the allowance is billed for it, which is the plan working, not news.
-  const usage = allowanceApplies(status) ? usageFor(status?.includedEvents, usedEvents) : null
+  const usage = allowanceUsage(status, usedEvents)
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !org || !status?.billingEnabled || !can('read', 'billing')) return null
 

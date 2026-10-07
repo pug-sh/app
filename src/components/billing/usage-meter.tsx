@@ -5,7 +5,7 @@ import { useCan } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
 import { useBilling } from '@/hooks/use-billing'
-import { allowanceApplies, formatEvents, TONE_FILL, TONE_TEXT, usageFor } from '@/lib/billing'
+import { allowanceUsage, formatEvents, TONE_FILL, TONE_TEXT } from '@/lib/billing'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -14,11 +14,10 @@ const UsageMeter = ({ href }: { href: string }) => {
   const isDemo = useAtomValue(isDemoSessionAtom)
   const { status, usedEvents } = useBilling()
   const can = useCan()
-  const usage = usageFor(status?.includedEvents, usedEvents)
+  const usage = allowanceUsage(status, usedEvents)
 
-  // Gated on the same permission as the page it links to, or it links into a redirect. A subscriber has
-  // no meter: past the allowance their events are billed, not warned about.
-  if (isDemo || !status?.billingEnabled || !usage || !allowanceApplies(status) || !can('read', 'billing')) return null
+  // Gated on the same permission as the page it links to, or it links into a redirect.
+  if (isDemo || !status?.billingEnabled || !usage || !can('read', 'billing')) return null
 
   const label = `${formatEvents(usage.used)} of ${formatEvents(usage.included)} free events`
 

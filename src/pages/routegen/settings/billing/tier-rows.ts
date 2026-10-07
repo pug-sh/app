@@ -4,10 +4,12 @@ import { compactNumber } from '@/lib/format'
 
 // Compact only where that is exact: the catalog's bounds are round, but an allowance override (a deal's,
 // or a comp that rode onto the plan) can be any number, and "1.2M" for 1,234,567 would misstate where its
-// billing starts.
+// billing starts. compactNumber keeps one decimal, so that is a multiple of 100K in millions, of 100 in
+// thousands, and never below.
 const boundLabel = (n: bigint) => {
-  const exact = (n >= 1_000_000n && n % 100_000n === 0n) || (n >= 1_000n && n < 1_000_000n && n % 100n === 0n)
-  return exact ? compactNumber(n) : formatEvents(n)
+  if (n >= 1_000_000n) return n % 100_000n === 0n ? compactNumber(n) : formatEvents(n)
+  if (n >= 1_000n) return n % 100n === 0n ? compactNumber(n) : formatEvents(n)
+  return formatEvents(n)
 }
 
 // Numbered in the server's order, the tier meters' keys (t1, t2, …), so Tier k is always the provider's
