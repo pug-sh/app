@@ -1,20 +1,37 @@
-import type { GetBillingStatusResponse } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import type { Timestamp } from '@bufbuild/protobuf/wkt'
+import { useMemo } from 'react'
+import type { GetBillingStatusResponse, TierUsage } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import HoverSwap from '@/components/hover-swap'
 import SectionHeader from '@/components/section-header'
-import { formatRelative } from '@/hooks/use-relative-time'
+import { useRelativeTime } from '@/hooks/use-relative-time'
 import { formatEvents } from '@/lib/billing'
 import { formatDateTime, formatLocalDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { tierRows } from './tier-rows'
 
-const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Date | null }) => {
-  // Empty until the period's first statement, which is not a tier at 0.
-  if (rows.length === 0) {
+// Live, since the billing pass states hourly and a tab left open would say "5m ago" for hours. Memoized
+// on the message, so the hook's timer is not reset by every render's fresh Date.
+const Reported = ({ at }: { at: Timestamp | undefined }) => {
+  const asOf = useMemo(() => validDate(tsToDate(at)), [at])
+  const relative = useRelativeTime(asOf)
+  if (!asOf) return null
+  return (
+    <p className="mt-2 text-xs text-muted-foreground">
+      Reported <HoverSwap primary={relative} secondary={formatDateTime(asOf)} />
+    </p>
+  )
+}
+
+const TierTable = ({ tiers, asOf }: { tiers: TierUsage[]; asOf: Timestamp | undefined }) => {
+  // Empty until the period's first statement, which is not a tier at 0. Read off what the server sent:
+  // a row can be dropped from what is drawn without anything having gone unreported.
+  if (tiers.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">Nothing reported to the payment provider yet this billing period.</p>
     )
   }
 
+  const rows = tierRows(tiers)
   const total = rows.reduce((sum, row) => sum + row.events, 0n)
 
   return (
@@ -50,11 +67,7 @@ const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Da
           </tr>
         </tfoot>
       </table>
-      {asOf && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Reported <HoverSwap primary={formatRelative(asOf)} secondary={formatDateTime(asOf)} />
-        </p>
-      )}
+      <Reported at={asOf} />
     </>
   )
 }
@@ -79,7 +92,7 @@ const billedUsageNote = (status: GetBillingStatusResponse, now: Date) => {
 const BilledUsage = ({ status }: { status: GetBillingStatusResponse }) => (
   <section>
     <SectionHeader title="Billed usage" description={billedUsageNote(status, new Date())} />
-    <TierTable rows={tierRows(status.tierUsage)} asOf={validDate(tsToDate(status.tierUsageAsOf))} />
+    <TierTable tiers={status.tierUsage} asOf={status.tierUsageAsOf} />
   </section>
 )
 

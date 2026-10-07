@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -380,6 +380,45 @@ describe('billed usage', () => {
     renderPage()
     const note = await screen.findByText(new RegExp(`in the billing period that ended ${formatLocalDate(endedAt)},`))
     expect(note.textContent).not.toContain('running count')
+  })
+
+  // Hiding a billed count is the worse mistake, so tiers the server sent show under a status this build
+  // cannot place.
+  it('shows tiers sent under a status this build cannot place', async () => {
+    getBillingStatus.mockResolvedValue(status({ status: 99 as BillingStatus, tierUsage: statedTiers }))
+    renderPage()
+    expect(await screen.findByRole('table')).toBeTruthy()
+  })
+
+  // Something was reported, so "nothing reported" would be false even with no row left to draw.
+  it('reads the empty state off what the server sent, not off the rows drawn', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        tierUsage: [tier(5_000_000n, 2_000_000n)],
+        tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)),
+      }),
+    )
+    renderPage()
+    expect(await screen.findByText('5m ago')).toBeTruthy()
+    expect(screen.queryByText(/Nothing reported to the payment provider yet/)).toBeNull()
+  })
+
+  // The billing pass states hourly, so a tab left open would otherwise say "5m ago" for hours.
+  it('keeps the reported time current', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      getBillingStatus.mockResolvedValue(
+        subscribed({ tierUsage: statedTiers, tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)) }),
+      )
+      renderPage()
+      expect(await screen.findByText('5m ago')).toBeTruthy()
+      await act(async () => {
+        vi.advanceTimersByTime(2 * 60_000)
+      })
+      expect(await screen.findByText('7m ago')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // Nothing bills an org with no subscription, so it has no tiers to show.

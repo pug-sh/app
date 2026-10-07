@@ -359,8 +359,9 @@ const Billing = () => {
         )}
       </section>
 
-      {/* Nothing bills an org with no subscription, so only a live one has tiers to show. */}
-      {status.status === BillingStatus.ACTIVE && <BilledUsage status={status} />}
+      {/* Nothing bills an org with no subscription. Tiers sent under a status this build cannot place
+          show anyway, since hiding a billed count is the worse mistake. */}
+      {(status.status === BillingStatus.ACTIVE || status.tierUsage.length > 0) && <BilledUsage status={status} />}
 
       {canBrowsePlans && (
         <section>
