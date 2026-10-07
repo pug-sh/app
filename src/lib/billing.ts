@@ -34,6 +34,15 @@ export const subStatusLabel = (status: SubscriptionStatus) => SUB_STATUS_LABEL[s
 export const isPastDue = (status: GetBillingStatusResponse | null) =>
   status?.subscriptionStatus === SubscriptionStatus.PAST_DUE
 
+// When the provider stops waiting for the failed card and holds or cancels: the "update your card by".
+// The server can serve it past due until it sees which, and a date already gone asks for the
+// impossible, so only one still ahead counts. A hold, or no grace period configured, has none.
+export const graceDeadline = (status: GetBillingStatusResponse | null, now = new Date()) => {
+  if (!isPastDue(status)) return null
+  const endsAt = validDate(tsToDate(status?.gracePeriodEndsAt))
+  return endsAt && endsAt > now ? endsAt : null
+}
+
 // The allowance warns only an org with no subscription. A subscriber's events past it are billed by
 // tier, over the provider's period rather than the usage period, so the meter's "over" would say it of
 // every paying customer. Keyed on FREE, so a state this build cannot place warns nobody.
@@ -100,10 +109,14 @@ export const BANNER_TEXT: Record<BannerTone, string> = {
   past_due: 'text-negative',
 }
 
-// A dismissal expires with the period, or — lacking one — with the day.
+// A dismissal expires with the period, or — lacking one — with the day. A failed payment's also expires
+// with its grace window, since a new window is a new failure.
 export const usageBannerKey = (status: GetBillingStatusResponse, tone: BannerTone) => {
   const periodEnd = validDate(tsToDate(status.periodEnd))
-  return `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
+  const key = `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
+  const graceEndsAt = validDate(tsToDate(status.gracePeriodEndsAt))
+  if (tone !== 'past_due' || !graceEndsAt) return key
+  return `${key}:${graceEndsAt.getTime()}`
 }
 
 // What a completed checkout changes; null while nothing is loaded.

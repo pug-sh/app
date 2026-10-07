@@ -13,16 +13,23 @@ import {
   BANNER_TEXT,
   type BannerTone,
   formatEvents,
+  graceDeadline,
   isPastDue,
   type Usage,
   usageBannerKey,
   usageFor,
 } from '@/lib/billing'
+import { formatDateTime } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 
-const bannerAlert = (pastDue: boolean, usage: Usage | null): { tone: BannerTone; message: string } | null => {
+const bannerAlert = (
+  pastDue: boolean,
+  graceEndsAt: Date | null,
+  usage: Usage | null,
+): { tone: BannerTone; message: string } | null => {
   if (pastDue) {
-    return { tone: 'past_due', message: 'Your last payment failed. Update your payment method to keep this plan.' }
+    const by = graceEndsAt ? ` by ${formatDateTime(graceEndsAt)}` : ''
+    return { tone: 'past_due', message: `Your last payment failed. Update your payment method${by} to keep your plan.` }
   }
   if (!usage || usage.tone === 'normal') return null
   if (usage.tone === 'over') {
@@ -52,7 +59,7 @@ const UsageBanner = () => {
 
   // The allowance drives a banner, never a rejected event, or "past your allowance" reads as an outage.
   const pastDue = isPastDue(status)
-  const alert = bannerAlert(pastDue, usage)
+  const alert = bannerAlert(pastDue, graceDeadline(status), usage)
   if (!alert) return null
 
   const key = usageBannerKey(status, alert.tone)

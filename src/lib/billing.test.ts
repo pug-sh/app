@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf'
+import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { describe, expect, it, vi } from 'vitest'
 import {
   BillingStatus,
@@ -9,6 +10,7 @@ import {
 import {
   allowanceApplies,
   formatEvents,
+  graceDeadline,
   hasLiveSubscription,
   retentionLabel,
   statusLabel,
@@ -176,6 +178,56 @@ describe('usageBannerKey', () => {
       periodEnd: { seconds: BigInt(periodEnd.getTime() / 1000), nanos: 0 },
     })
     expect(usageBannerKey(status, 'over')).toBe(`${periodEnd.getTime()}:over`)
+  })
+
+  // A new grace window is a new failure, and a dismissed "update your card by" must not hide it.
+  it('brings a failed payment back for a new grace window', () => {
+    const failed = (graceEndsAt: string) =>
+      create(GetBillingStatusResponseSchema, {
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        periodEnd: timestampFromDate(new Date('2026-10-01T00:00:00Z')),
+        gracePeriodEndsAt: timestampFromDate(new Date(graceEndsAt)),
+      })
+    expect(usageBannerKey(failed('2026-09-10T00:00:00Z'), 'past_due')).not.toBe(
+      usageBannerKey(failed('2026-09-24T00:00:00Z'), 'past_due'),
+    )
+  })
+})
+
+describe('graceDeadline', () => {
+  const now = new Date('2026-09-01T12:00:00Z')
+  const failed = (extra: { subscriptionStatus?: SubscriptionStatus; graceEndsAt?: string } = {}) =>
+    create(GetBillingStatusResponseSchema, {
+      subscriptionStatus: extra.subscriptionStatus ?? SubscriptionStatus.PAST_DUE,
+      gracePeriodEndsAt: extra.graceEndsAt ? timestampFromDate(new Date(extra.graceEndsAt)) : undefined,
+    })
+
+  // The provider's "update your card by": when it stops waiting and holds or cancels.
+  it("dates a failed card's grace window", () => {
+    expect(graceDeadline(failed({ graceEndsAt: '2026-09-08T12:00:00Z' }), now)).toEqual(
+      new Date('2026-09-08T12:00:00Z'),
+    )
+  })
+
+  // The server can serve a passed deadline until it sees whether the provider held or cancelled, and
+  // "update your card by" a date already gone asks for the impossible.
+  it('has no date once the window has passed', () => {
+    expect(graceDeadline(failed({ graceEndsAt: '2026-08-31T12:00:00Z' }), now)).toBeNull()
+  })
+
+  // A hold, or a provider with no grace period configured, sends no date at all.
+  it('has no date without a window', () => {
+    expect(graceDeadline(failed(), now)).toBeNull()
+  })
+
+  // The proto sets it only beside PAST_DUE. Anywhere else there is no failed card to date.
+  it('has no date without a failed card', () => {
+    expect(
+      graceDeadline(
+        failed({ subscriptionStatus: SubscriptionStatus.ACTIVE, graceEndsAt: '2026-09-08T12:00:00Z' }),
+        now,
+      ),
+    ).toBeNull()
   })
 })
 

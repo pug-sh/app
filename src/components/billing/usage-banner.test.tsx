@@ -117,6 +117,32 @@ describe('the free allowance banner', () => {
     expect(message.className).not.toContain('caution')
   })
 
+  // The provider's own deadline, so whoever can fix the card knows how long they have.
+  it('asks for the card by the end of the grace window', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2099-01-15T12:00:00Z')),
+      }),
+    )
+    renderBanner()
+    expect(await screen.findByText(/Update your payment method by Jan 15, \d{2}:\d{2} to keep your plan/)).toBeTruthy()
+  })
+
+  // Served until the server sees whether the provider held or cancelled, and "by" a date already
+  // gone asks for the impossible.
+  it('drops a grace deadline that has passed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2020-01-15T12:00:00Z')),
+      }),
+    )
+    renderBanner()
+    const message = await screen.findByText(/Your last payment failed/)
+    expect(message.textContent).not.toContain(' by ')
+  })
+
   // The quota is present anyway, which is the only way to see the flag read rather than the
   // absent quota doing the work.
   it('stays quiet on a deployment with billing off', async () => {

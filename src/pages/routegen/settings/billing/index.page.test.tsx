@@ -172,6 +172,18 @@ describe('the plan section', () => {
     expect(await screen.findByText('Payment failed')).toBeTruthy()
     expect(screen.getByText(/Nothing has changed about your plan or your free allowance/)).toBeTruthy()
   })
+
+  // The provider's "update your card by", beside the notice it dates.
+  it('dates the grace window beside a failed payment', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2099-01-15T12:00:00Z')),
+      }),
+    )
+    renderPage()
+    expect(await screen.findByText(/update your payment method by Jan 15, \d{2}:\d{2}/)).toBeTruthy()
+  })
 })
 
 describe('the usage section', () => {

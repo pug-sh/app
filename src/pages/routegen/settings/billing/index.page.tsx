@@ -24,6 +24,7 @@ import {
   allowanceApplies,
   billingSignature,
   formatEvents,
+  graceDeadline,
   hasLiveSubscription,
   isPastDue,
   retentionLabel,
@@ -34,7 +35,7 @@ import {
 } from '@/lib/billing'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
-import { formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
+import { formatDateTime, formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import {
   clearCheckoutPending,
@@ -279,6 +280,7 @@ const Billing = () => {
   const planStatus = statusLabel(status.status)
   const badge = planStatus === status.plan?.displayName ? '' : planStatus
   const pastDue = isPastDue(status)
+  const graceEndsAt = graceDeadline(status)
   const liveSubscription = hasLiveSubscription(status)
 
   return (
@@ -296,7 +298,7 @@ const Billing = () => {
         {pastDue && (
           <p className="mt-2 text-xs text-caution">
             We couldn't charge your card. Nothing has changed about your plan or your free allowance — update your
-            payment method to avoid an interruption.
+            payment method{graceEndsAt && ` by ${formatDateTime(graceEndsAt)}`} to avoid an interruption.
           </p>
         )}
 
