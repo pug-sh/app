@@ -204,9 +204,10 @@ describe('hasLiveSubscription', () => {
     expect(hasLiveSubscription(sub(subscriptionStatus))).toBe(false)
   })
 
-  // manageable is the server's own answer to "would a portal session open".
-  it('is not live without a customer at the provider', () => {
-    expect(hasLiveSubscription(sub(SubscriptionStatus.ACTIVE, false))).toBe(false)
+  // manageable reads false on a failed lookup, and that must not offer a paying customer a second
+  // checkout.
+  it('stays live when the portal cannot open', () => {
+    expect(hasLiveSubscription(sub(SubscriptionStatus.ACTIVE, false))).toBe(true)
   })
 })
 

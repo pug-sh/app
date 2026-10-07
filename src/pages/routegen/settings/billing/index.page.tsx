@@ -384,7 +384,7 @@ const Billing = () => {
                 readOnly={liveSubscription}
                 onSelect={handleSelectPlan}
               />
-              {liveSubscription && (
+              {liveSubscription && status.manageable && (
                 <PortalButton
                   label="Change plan in the billing portal"
                   busy={openingPortal}

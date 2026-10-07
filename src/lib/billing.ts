@@ -46,10 +46,11 @@ export const graceDeadline = (status: GetBillingStatusResponse | null, now = new
 // every paying customer. Keyed on FREE, so a state this build cannot place warns nobody.
 export const allowanceApplies = (status: GetBillingStatusResponse | null) => status?.status === BillingStatus.FREE
 
-// A terminal state has no card to carry over, so it must not send the buyer to the portal.
+// Live whatever the portal can do: `manageable` reads false on a failed lookup, and a paying customer
+// must never be offered a second checkout over one. A terminal state has no card to carry over, so it
+// is not live.
 export const hasLiveSubscription = (status: GetBillingStatusResponse) =>
-  status.manageable &&
-  (status.subscriptionStatus === SubscriptionStatus.ACTIVE || status.subscriptionStatus === SubscriptionStatus.PAST_DUE)
+  status.subscriptionStatus === SubscriptionStatus.ACTIVE || status.subscriptionStatus === SubscriptionStatus.PAST_DUE
 
 export type UsageTone = 'normal' | 'caution' | 'over'
 

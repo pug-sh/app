@@ -457,6 +457,32 @@ describe('the plan catalog', () => {
     expect(screen.queryByRole('button', { name: 'Subscribe to Pay as you go' })).toBeNull()
   })
 
+  // The server offers every plan on sale, and a staged deal, whatever the org already holds, so the
+  // page is all that stops a subscriber paying for a second subscription the confirm then refuses.
+  it('offers a live subscriber no second checkout, only the portal', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ purchasable: true, plan: { slug: 'custom', displayName: 'Acme Enterprise' } }),
+    )
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: /^Subscribe to/ })).toBeNull()
+    expect(screen.getByText('Change or cancel your plan in the billing portal.')).toBeTruthy()
+    expect(screen.getByText('Change plan in the billing portal')).toBeTruthy()
+  })
+
+  // manageable reads false on a failed lookup: no portal button then, but no checkout either.
+  it('keeps a live subscriber read-only when the portal cannot open', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ purchasable: true, manageable: false, plan: { slug: 'custom', displayName: 'Acme Enterprise' } }),
+    )
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: /^Subscribe to/ })).toBeNull()
+    expect(screen.queryByText('Change plan in the billing portal')).toBeNull()
+  })
+
   // Spending money is admin-only on the server too.
   it('is hidden from a role that cannot start a checkout', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
