@@ -94,7 +94,20 @@ describe('the free allowance banner', () => {
   it('says nothing is being dropped when over', async () => {
     getUsage.mockResolvedValue(used(600_000))
     renderBanner()
-    expect(await screen.findByText(/Nothing is being dropped/)).toBeTruthy()
+    expect(
+      await screen.findByText(
+        "You're past your 500,000 free events — 600,000 so far this period. Nothing is being dropped.",
+      ),
+    ).toBeTruthy()
+  })
+
+  // Proto enums are open: a status this build cannot place warns nobody rather than everybody.
+  it.each([BillingStatus.UNSPECIFIED, 99 as BillingStatus])('stays quiet on a status it cannot place (%s)', async s => {
+    getBillingStatus.mockResolvedValue(status({ status: s }))
+    getUsage.mockResolvedValue(used(600_000))
+    const { store } = renderBanner()
+    await settled(store)
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
   // Past the allowance a subscriber is billing working as sold, so the warning is for free orgs only.
@@ -148,11 +161,15 @@ describe('the free allowance banner', () => {
     expect(message.textContent).not.toContain(' by ')
   })
 
-  // The allowance is present anyway, which is the only way to see the flag read rather than the
-  // absent allowance doing the work.
+  // Billing off resolves FREE on the server. The allowance is added anyway, which the server never sends
+  // with billing off, so the flag is the only thing left that can keep this quiet.
   it('stays quiet on a deployment with billing off', async () => {
     getBillingStatus.mockResolvedValue(
-      create(GetBillingStatusResponseSchema, { billingEnabled: false, includedEvents: 500_000n }),
+      create(GetBillingStatusResponseSchema, {
+        billingEnabled: false,
+        status: BillingStatus.FREE,
+        includedEvents: 500_000n,
+      }),
     )
     getUsage.mockResolvedValue(used(600_000))
     const { store } = renderBanner()

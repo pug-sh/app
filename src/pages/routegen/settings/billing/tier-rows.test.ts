@@ -35,6 +35,13 @@ describe('tierRows', () => {
     expect(rows).toEqual([{ tier: 2, range: '5M – 15M', events: 3_000_000n }])
   })
 
+  // An allowance equal to a bound, as a deal's often is, covers that tier exactly.
+  it('drops a tier the allowance exactly reaches', () => {
+    expect(tierRows([tier(2_000_000n, 2_000_000n), tier(2_000_000n, 15_000_000n, 7n)])).toEqual([
+      { tier: 2, range: '2M – 15M', events: 7n },
+    ])
+  })
+
   // Covered should mean it holds nothing, but the meter keeps the larger count when an allowance is
   // raised mid-period. Those events are billed, so the row stays, under the tier's own bounds: its
   // from_events, the new allowance, would print the range backwards.
@@ -52,6 +59,8 @@ describe('tierRows', () => {
     expect(tierRows([tier(1_500_000n, 2_000_000n)])[0].range).toBe('1.5M – 2M')
     expect(tierRows([tier(2_500n, 2_000_000n)])[0].range).toBe('2.5K – 2M')
     expect(tierRows([tier(1_234n, 2_000_000n)])[0].range).toBe('1,234 – 2M')
+    expect(tierRows([tier(1_050_000n, 2_000_000n)])[0].range).toBe('1,050,000 – 2M')
+    expect(tierRows([tier(1_250n, 2_000_000n)])[0].range).toBe('1,250 – 2M')
     expect(tierRows([tier(1n, 2_000_000n)])[0].range).toBe('1 – 2M')
   })
 })

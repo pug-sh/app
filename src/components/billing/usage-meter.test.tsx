@@ -84,6 +84,17 @@ describe('the sidebar usage meter', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
+  // Proto enums are open: a status this build cannot place warns nobody rather than everybody.
+  it.each([BillingStatus.UNSPECIFIED, 99 as BillingStatus])(
+    'renders nothing on a status it cannot place (%s)',
+    async s => {
+      getBillingStatus.mockResolvedValue(status({ status: s }))
+      const { store } = renderMeter()
+      await settled(store)
+      expect(screen.queryByRole('progressbar')).toBeNull()
+    },
+  )
+
   // No allowance is no fraction, and a bar at 0% would read as an org that has sent nothing.
   it('renders nothing for a plan with no allowance', async () => {
     getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
@@ -121,9 +132,15 @@ describe('the sidebar usage meter', () => {
     await vi.waitFor(() => expect(getBillingStatus).toHaveBeenCalledTimes(2))
   })
 
+  // Billing off resolves FREE on the server, and the allowance is added anyway, so the flag is the only
+  // thing left that can hide the meter.
   it('renders nothing on a deployment with billing off', async () => {
     getBillingStatus.mockResolvedValue(
-      create(GetBillingStatusResponseSchema, { billingEnabled: false, includedEvents: 500_000n }),
+      create(GetBillingStatusResponseSchema, {
+        billingEnabled: false,
+        status: BillingStatus.FREE,
+        includedEvents: 500_000n,
+      }),
     )
     const { store } = renderMeter()
     await settled(store)

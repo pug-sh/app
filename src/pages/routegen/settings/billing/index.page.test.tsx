@@ -15,6 +15,7 @@ import {
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 import { formatDateTime, formatLocalDate } from '@/lib/timestamp'
+import { inZoneAsync } from '@/test/timezone'
 
 const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession, confirmCheckout } =
   vi.hoisted(() => ({
@@ -247,6 +248,41 @@ describe('the plan section', () => {
 })
 
 describe('the usage section', () => {
+  // CI runs in UTC, where a local formatter and a UTC one print the same day, so only a zone west of
+  // it can tell which one dated these.
+  it('keeps the usage period and its reset in UTC', () =>
+    inZoneAsync('America/Los_Angeles', async () => {
+      getBillingStatus.mockResolvedValue(status({ periodStart: timestampFromDate(new Date('2026-06-10T00:00:00Z')) }))
+      renderPage()
+      expect(await screen.findByText(/^Jun 10 – Jul 9, 2026 \(UTC\)/)).toBeTruthy()
+      expect(screen.getByText('Free allowance resets Jul 10, 2026')).toBeTruthy()
+    }))
+
+  it("dates the provider's billing period in the viewer's zone", () =>
+    inZoneAsync('America/Los_Angeles', async () => {
+      getBillingStatus.mockResolvedValue(
+        subscribed({
+          currentPeriodEnd: timestampFromDate(new Date('2099-06-28T00:00:00Z')),
+          tierUsage: [create(TierUsageSchema, { fromEvents: 100_000n, events: 5n })],
+        }),
+      )
+      renderPage()
+      expect(await screen.findByText('Renews Jun 27, 2099')).toBeTruthy()
+      expect(screen.getByText(/in the billing period ending Jun 27, 2099,/)).toBeTruthy()
+    }))
+
+  // Proto enums are open: a status this build cannot place is counted, never measured or billed.
+  it.each([BillingStatus.UNSPECIFIED, 99 as BillingStatus])(
+    'measures nothing on a status it cannot place (%s)',
+    async s => {
+      getBillingStatus.mockResolvedValue(status({ status: s }))
+      renderPage()
+      expect(await screen.findByText('120,000')).toBeTruthy()
+      expect(screen.queryByRole('progressbar')).toBeNull()
+      expect(screen.queryByText('Billed usage')).toBeNull()
+    },
+  )
+
   // A subscriber's billed usage runs over the provider's period, so this total says which window it
   // counts; two undated "this period" figures invite a subtraction across different windows.
   it('dates the usage period it counts', async () => {
@@ -380,6 +416,15 @@ describe('billed usage', () => {
     renderPage()
     const note = await screen.findByText(new RegExp(`in the billing period that ended ${formatLocalDate(endedAt)},`))
     expect(note.textContent).not.toContain('running count')
+  })
+
+  // PAST_DUE is still a live subscription, and its card just failed: the bill is what it needs to see.
+  it('shows a past-due subscriber what is billed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE, tierUsage: statedTiers }),
+    )
+    renderPage()
+    expect(await screen.findByRole('table')).toBeTruthy()
   })
 
   // Hiding a billed count is the worse mistake, so tiers the server sent show under a status this build
