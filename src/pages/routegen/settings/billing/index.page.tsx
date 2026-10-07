@@ -20,6 +20,7 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
+  allowanceApplies,
   billingSignature,
   formatEvents,
   hasLiveSubscription,
@@ -67,14 +68,14 @@ const PortalButton = ({ label, busy, onClick }: { label: string; busy: boolean; 
   </Can>
 )
 
-// Stands in for the bar, which needs both halves; without it a trialing org has no number at all.
-const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => (
-  <p className="mt-2 text-xs text-muted-foreground">
-    {includedEvents === undefined
-      ? 'This plan has no event limit.'
-      : `${formatEvents(includedEvents)} events included this period.`}
-  </p>
-)
+// Absent is NO allowance, from a plan the server no longer knows, so it says nothing: "0 free
+// events" is the one reading it must never get.
+const AllowanceNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => {
+  if (includedEvents === undefined) return null
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">{`${formatEvents(includedEvents)} free events each month`}</p>
+  )
+}
 
 // Absent is NO BOUND, not zero. Nothing deletes on this number today, so it promises rather than
 // warns.
@@ -84,14 +85,14 @@ const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined })
   </p>
 )
 
-// `currentPeriodEnd` is the provider's next bill, `periodEnd` the quota turnover; only the second is
-// a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
+// `currentPeriodEnd` is the provider's next bill, `periodEnd` the allowance turnover; only the second
+// is a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
 const periodLine = (status: GetBillingStatusResponse) => {
   const at = (ts: Timestamp | undefined) => validDate(tsToDate(ts))
   const renewsAt = at(status.currentPeriodEnd)
   if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
   const periodEnd = at(status.periodEnd)
-  if (periodEnd) return `Quota resets ${formatUTCDate(periodEnd)}`
+  if (periodEnd) return `Free allowance resets ${formatUTCDate(periodEnd)}`
   return ''
 }
 
@@ -268,7 +269,9 @@ const Billing = () => {
   // Not a spinner, which would read as still loading; the effect above is already redirecting.
   if (!status?.billingEnabled || !canReadBilling) return null
 
-  const usage = usageFor(status.includedEvents, usedEvents)
+  // A subscriber's events past the allowance are billed by tier over the provider's period, not the
+  // window counted here, so only an org with no subscription is measured against it.
+  const usage = allowanceApplies(status) ? usageFor(status.includedEvents, usedEvents) : null
   const period = periodLine(status)
   // The free plan is named after its own state, so the badge would repeat the plan name.
   const planStatus = statusLabel(status.status)
@@ -286,11 +289,12 @@ const Billing = () => {
           {pastDue && <Badge variant="destructive">{subStatusLabel(status.subscriptionStatus)}</Badge>}
         </div>
         {period && <p className="mt-1 text-xs text-muted-foreground">{period}</p>}
+        <AllowanceNote includedEvents={status.includedEvents} />
         <RetentionNote retentionDays={status.retentionDays} />
         {pastDue && (
           <p className="mt-2 text-xs text-caution">
-            We couldn't charge your card. Nothing has changed about your plan or your limits — update your payment
-            method to avoid an interruption.
+            We couldn't charge your card. Nothing has changed about your plan or your free allowance — update your
+            payment method to avoid an interruption.
           </p>
         )}
 
@@ -310,26 +314,24 @@ const Billing = () => {
           {usage && <span className="text-muted-foreground"> / {formatEvents(usage.included)}</span>}
           {usedEvents !== null && <span className="ml-2 text-sm text-muted-foreground">events</span>}
         </div>
-        {usage ? (
+        {usage && (
           <div
             className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
             role="progressbar"
-            aria-label="Events used this billing period"
+            aria-label="Free events used this period"
             aria-valuenow={usage.percent}
             aria-valuemin={0}
             aria-valuemax={100}
           >
             <div className={cn('h-full rounded-full', TONE_FILL[usage.tone])} style={{ width: `${usage.percent}%` }} />
           </div>
-        ) : (
-          <QuotaNote includedEvents={status.includedEvents} />
         )}
         <p className="mt-2 text-xs text-muted-foreground">
           Counted in UTC and refreshed periodically, so this can lag the events page by up to an hour.
         </p>
         {usage?.tone === 'over' && (
           <p className="mt-1 text-xs text-negative">
-            You're over the included events for this plan. Nothing is being dropped — every event is still collected.
+            You're past this period's free allowance. Nothing is being dropped — every event is still collected.
           </p>
         )}
       </section>

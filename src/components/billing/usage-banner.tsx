@@ -8,6 +8,7 @@ import { dismissedUsageBannerAtom } from '@/data/billing.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
+  allowanceApplies,
   BANNER_BOX,
   BANNER_TEXT,
   type BannerTone,
@@ -27,12 +28,12 @@ const bannerAlert = (pastDue: boolean, usage: Usage | null): { tone: BannerTone;
   if (usage.tone === 'over') {
     return {
       tone: 'over',
-      message: `You're over the ${formatEvents(usage.included)} events included in this plan — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`,
+      message: `You're past your ${formatEvents(usage.included)} free events — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`,
     }
   }
   return {
     tone: 'caution',
-    message: `You've used ${usage.percent}% of the ${formatEvents(usage.included)} events included in this plan.`,
+    message: `You've used ${usage.percent}% of your ${formatEvents(usage.included)} free events this period.`,
   }
 }
 
@@ -44,11 +45,12 @@ const UsageBanner = () => {
   const dismiss = useSetAtom(dismissedUsageBannerAtom)
   const can = useCan()
 
-  const usage = usageFor(status?.includedEvents, usedEvents)
+  // A subscriber past the allowance is billed for it, which is the plan working, not news.
+  const usage = allowanceApplies(status) ? usageFor(status?.includedEvents, usedEvents) : null
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !org || !status?.billingEnabled || !can('read', 'billing')) return null
 
-  // A quota drives a banner, never a rejected event, or "over your limit" reads as an outage.
+  // The allowance drives a banner, never a rejected event, or "past your allowance" reads as an outage.
   const pastDue = isPastDue(status)
   const alert = bannerAlert(pastDue, usage)
   if (!alert) return null

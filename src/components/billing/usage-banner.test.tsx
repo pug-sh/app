@@ -3,7 +3,11 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GetBillingStatusResponseSchema, SubscriptionStatus } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import {
+  BillingStatus,
+  GetBillingStatusResponseSchema,
+  SubscriptionStatus,
+} from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 
@@ -35,6 +39,7 @@ type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatus
 const status = (extra: StatusFields = {}) =>
   create(GetBillingStatusResponseSchema, {
     billingEnabled: true,
+    status: BillingStatus.FREE,
     includedEvents: 500_000n,
     periodEnd: timestampFromDate(new Date('2026-07-10T00:00:00Z')),
     ...extra,
@@ -67,7 +72,11 @@ beforeEach(() => {
   getUsage.mockResolvedValue(used(10_000))
 })
 
-describe('the over-quota banner', () => {
+// A live subscription: the card can fail, and usage past the allowance is billed rather than warned.
+const subscribed = (extra: StatusFields = {}) =>
+  status({ status: BillingStatus.ACTIVE, subscriptionStatus: SubscriptionStatus.ACTIVE, ...extra })
+
+describe('the free allowance banner', () => {
   it('says nothing well under the limit', async () => {
     const { store } = renderBanner()
     await settled(store)
@@ -77,7 +86,7 @@ describe('the over-quota banner', () => {
   it('warns near the limit', async () => {
     getUsage.mockResolvedValue(used(460_000))
     renderBanner()
-    expect(await screen.findByText(/You've used 92% of the 500,000 events/)).toBeTruthy()
+    expect(await screen.findByText(/You've used 92% of your 500,000 free events/)).toBeTruthy()
   })
 
   // Nothing is enforced, so "over your limit" alone reads as an outage they are already having.
@@ -87,15 +96,23 @@ describe('the over-quota banner', () => {
     expect(await screen.findByText(/Nothing is being dropped/)).toBeTruthy()
   })
 
-  // Outranks the quota in message AND tone: "your payment failed" in a soft amber understates the
-  // only thing needing action. Usage sits in the caution band, where the two tones differ.
-  it('reports a failed payment ahead of the quota, in its own tone', async () => {
-    getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+  // Past the allowance a subscriber is billing working as sold, so the warning is for free orgs only.
+  it('says nothing to a subscriber past the allowance', async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
+    getUsage.mockResolvedValue(used(600_000))
+    const { store } = renderBanner()
+    await settled(store)
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  })
+
+  // "Your payment failed" in a soft amber understates the only thing needing action. Usage sits in
+  // the caution band, where the two tones differ.
+  it('reports a failed payment in its own tone', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
     getUsage.mockResolvedValue(used(460_000))
     renderBanner()
 
     const message = await screen.findByText(/Your last payment failed/)
-    expect(screen.queryByText(/You've used 92%/)).toBeNull()
     expect(message.className).toContain('negative')
     expect(message.className).not.toContain('caution')
   })

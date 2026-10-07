@@ -2,7 +2,11 @@ import { create } from '@bufbuild/protobuf'
 import { act, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GetBillingStatusResponseSchema } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import {
+  BillingStatus,
+  GetBillingStatusResponseSchema,
+  SubscriptionStatus,
+} from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
 
@@ -30,7 +34,12 @@ const UsageMeter = (await import('./usage-meter')).default
 type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatusResponseSchema>>[1]>
 
 const status = (extra: StatusFields = {}) =>
-  create(GetBillingStatusResponseSchema, { billingEnabled: true, includedEvents: 500_000n, ...extra } as StatusFields)
+  create(GetBillingStatusResponseSchema, {
+    billingEnabled: true,
+    status: BillingStatus.FREE,
+    includedEvents: 500_000n,
+    ...extra,
+  } as StatusFields)
 
 const renderMeter = () => {
   const store = createStore()
@@ -64,8 +73,19 @@ describe('the sidebar usage meter', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('24')
   })
 
-  // No limit is no fraction, and a bar at 0% would read as an org that has sent nothing.
-  it('renders nothing for a plan with no quota', async () => {
+  // Past the allowance a subscriber is billed by tier, not warned: a bar turning red at 100K would
+  // tell every paying customer they are over something.
+  it('renders nothing for a subscriber', async () => {
+    getBillingStatus.mockResolvedValue(
+      status({ status: BillingStatus.ACTIVE, subscriptionStatus: SubscriptionStatus.ACTIVE, includedEvents: 100_000n }),
+    )
+    const { store } = renderMeter()
+    await settled(store)
+    expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
+  // No allowance is no fraction, and a bar at 0% would read as an org that has sent nothing.
+  it('renders nothing for a plan with no allowance', async () => {
     getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
     const { store } = renderMeter()
     await settled(store)
@@ -84,7 +104,7 @@ describe('the sidebar usage meter', () => {
   // in the DOM and are merely clipped — so without a name of its own the link is announced unnamed.
   it('names the link independently of the span the collapsed sidebar hides', async () => {
     renderMeter()
-    expect(await screen.findByRole('link', { name: '120,000 of 500,000 events' })).toBeTruthy()
+    expect(await screen.findByRole('link', { name: '120,000 of 500,000 free events' })).toBeTruthy()
   })
 
   // Returning from the portal, where the plan can be cancelled, is a tab switch and not a mount — so

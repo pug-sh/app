@@ -6,6 +6,7 @@ import {
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import {
+  allowanceApplies,
   formatEvents,
   hasLiveSubscription,
   retentionLabel,
@@ -52,6 +53,28 @@ describe('usageFor', () => {
   it('does not divide by a zero quota', () => {
     expect(usageFor(0n, 10)).toEqual({ used: 10, included: 0, percent: 100, tone: 'over' })
     expect(usageFor(0n, 0)).toEqual({ used: 0, included: 0, percent: 0, tone: 'normal' })
+  })
+})
+
+describe('allowanceApplies', () => {
+  const withStatus = (status: BillingStatus) => create(GetBillingStatusResponseSchema, { status })
+
+  // Past the allowance, an org with no subscription sees a banner and nothing else.
+  it('applies to an org with no subscription', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.FREE))).toBe(true)
+  })
+
+  // A subscriber's events past it are billed by tier, over the provider's period rather than the
+  // usage period the meter counts, so "over" would tell every paying customer they are over.
+  it('leaves a subscriber to the tiers', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.ACTIVE))).toBe(false)
+  })
+
+  // Proto enums are open: a state this build cannot place warns nobody rather than everybody.
+  it('applies to nothing it cannot place', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.UNSPECIFIED))).toBe(false)
+    expect(allowanceApplies(withStatus(99 as BillingStatus))).toBe(false)
+    expect(allowanceApplies(null)).toBe(false)
   })
 })
 

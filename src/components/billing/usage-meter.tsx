@@ -5,7 +5,7 @@ import { useCan } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
 import { useBilling } from '@/hooks/use-billing'
-import { formatEvents, TONE_FILL, TONE_TEXT, usageFor } from '@/lib/billing'
+import { allowanceApplies, formatEvents, TONE_FILL, TONE_TEXT, usageFor } from '@/lib/billing'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -16,10 +16,11 @@ const UsageMeter = ({ href }: { href: string }) => {
   const can = useCan()
   const usage = usageFor(status?.includedEvents, usedEvents)
 
-  // Gated on the same permission as the page it links to, or it links into a redirect.
-  if (isDemo || !status?.billingEnabled || !usage || !can('read', 'billing')) return null
+  // Gated on the same permission as the page it links to, or it links into a redirect. A subscriber has
+  // no meter: past the allowance their events are billed, not warned about.
+  if (isDemo || !status?.billingEnabled || !usage || !allowanceApplies(status) || !can('read', 'billing')) return null
 
-  const label = `${formatEvents(usage.used)} of ${formatEvents(usage.included)} events`
+  const label = `${formatEvents(usage.used)} of ${formatEvents(usage.included)} free events`
 
   return (
     <SidebarMenu>
@@ -53,7 +54,7 @@ const UsageMeter = ({ href }: { href: string }) => {
             <span
               className="h-1 w-full overflow-hidden rounded-full bg-sidebar-accent"
               role="progressbar"
-              aria-label="Events used this billing period"
+              aria-label="Free events used this period"
               aria-valuenow={usage.percent}
               aria-valuemin={0}
               aria-valuemax={100}

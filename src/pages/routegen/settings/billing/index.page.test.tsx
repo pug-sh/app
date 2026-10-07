@@ -59,13 +59,26 @@ const org = (role: OrgRole) => create(OrgSchema, { id: 'org-a', displayName: 'Or
 
 type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatusResponseSchema>>[1]>
 
+// An org with no subscription: the free allowance, and a banner beyond it.
 const status = (extra: StatusFields = {}) =>
   create(GetBillingStatusResponseSchema, {
     billingEnabled: true,
-    plan: { slug: 'growth', displayName: 'Growth' },
-    status: BillingStatus.ACTIVE,
+    plan: { slug: 'free', displayName: 'Free' },
+    status: BillingStatus.FREE,
     includedEvents: 500_000n,
     periodEnd: timestampFromDate(new Date('2026-07-10T00:00:00Z')),
+    ...extra,
+  } as StatusFields)
+
+// A live subscription, billed by tier past the allowance over the provider's own period.
+const subscribed = (extra: StatusFields = {}) =>
+  status({
+    plan: { slug: 'usage-2026-10', displayName: 'Pay as you go' },
+    status: BillingStatus.ACTIVE,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    manageable: true,
+    includedEvents: 100_000n,
+    currentPeriodEnd: timestampFromDate(new Date('2026-06-28T00:00:00Z')),
     ...extra,
   } as StatusFields)
 
@@ -106,15 +119,13 @@ beforeEach(() => {
 describe('the plan section', () => {
   it('names the plan', async () => {
     renderPage()
-    expect(await screen.findByText('Growth')).toBeTruthy()
+    expect(await screen.findByText('Free')).toBeTruthy()
   })
 
-  // The quota turns over on the org's anniversary; the subscription's period is when the provider
-  // bills. Conflating them is the mistake the two fields exist to prevent.
-  it('shows the billing date when there is one, and the quota reset otherwise', async () => {
-    getBillingStatus.mockResolvedValue(
-      status({ currentPeriodEnd: timestampFromDate(new Date('2026-06-28T00:00:00Z')) }),
-    )
+  // The allowance turns over on the org's anniversary; the subscription's period is when the
+  // provider bills. Conflating them is the mistake the two fields exist to prevent.
+  it('shows the billing date when there is one, and the allowance reset otherwise', async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
     renderPage()
     expect(await screen.findByText('Renews Jun 28, 2026')).toBeTruthy()
 
@@ -123,7 +134,22 @@ describe('the plan section', () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: true }))
     listPlans.mockResolvedValue({ plans: [] })
     renderPage()
-    expect(await screen.findByText('Quota resets Jul 10, 2026')).toBeTruthy()
+    expect(await screen.findByText('Free allowance resets Jul 10, 2026')).toBeTruthy()
+  })
+
+  it('names the free allowance', async () => {
+    renderPage()
+    expect(await screen.findByText('500,000 free events each month')).toBeTruthy()
+  })
+
+  // Absent is NO allowance, from a plan the server no longer knows. "0 free events" is the one
+  // thing it must not say, and a bar at zero would say it too.
+  it('says nothing of an allowance the server did not send', async () => {
+    getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
+    renderPage()
+    await screen.findByText('Free')
+    expect(screen.queryByText(/free events/)).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
   it('names the history the plan keeps', async () => {
@@ -138,12 +164,12 @@ describe('the plan section', () => {
     expect(await screen.findByText('Unlimited event history')).toBeTruthy()
   })
 
-  // The server keeps the quota through PAST_DUE, so the page must not imply anything was cut off.
+  // The server keeps the plan through PAST_DUE, so the page must not imply anything was cut off.
   it('says a payment failed without claiming the plan changed', async () => {
-    getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE, manageable: true }))
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
     renderPage()
     expect(await screen.findByText('Payment failed')).toBeTruthy()
-    expect(screen.getByText(/Nothing has changed about your plan or your limits/)).toBeTruthy()
+    expect(screen.getByText(/Nothing has changed about your plan or your free allowance/)).toBeTruthy()
   })
 })
 
@@ -172,28 +198,33 @@ describe('the usage section', () => {
     expect(screen.queryByText('Not measured yet')).toBeNull()
   })
 
-  // The bar needs both halves, and dropping the known one leaves a trialing org no number at all.
-  it('still names the included quota when the meter has no count', async () => {
+  // The bar needs both halves, and dropping the known one leaves the org no number at all.
+  it('still names the free allowance when the meter has no count', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
     renderPage()
     expect(await screen.findByText('Not measured yet')).toBeTruthy()
-    expect(screen.getByText('500,000 events included this period.')).toBeTruthy()
-  })
-
-  // Absent means no limit at all, which is a plan without a bar rather than a bar at zero.
-  it('draws no bar for a plan with no quota', async () => {
-    getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
-    renderPage()
-    expect(await screen.findByText('This plan has no event limit.')).toBeTruthy()
-    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText('500,000 free events each month')).toBeTruthy()
   })
 
   // Nothing is enforced, and unsaid that reads as an outage.
-  it('says nothing is dropped when over the limit', async () => {
+  it('says nothing is dropped when past the allowance', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 900_000n, counted: true }))
     renderPage()
     expect(await screen.findByText(/every event is still collected/)).toBeTruthy()
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100')
+  })
+
+  // A subscriber past the allowance is billed by tier over the provider's period, which is not the
+  // window this count covers, so a bar against the allowance would read as over a limit there is no
+  // longer any of.
+  it("counts a subscriber's events without measuring them against the allowance", async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
+    getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 1_234_567n, counted: true }))
+    renderPage()
+    expect(await screen.findByText('1,234,567')).toBeTruthy()
+    expect(screen.queryByText('/ 100,000')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.queryByText(/every event is still collected/)).toBeNull()
   })
 })
 
@@ -279,7 +310,7 @@ describe('the plan catalog', () => {
     listPlans.mockResolvedValue({ plans: [usagePlan()] })
     renderPage(OrgRole.MEMBER)
 
-    await screen.findByText('Growth')
+    await screen.findByText('Free')
     expect(screen.queryByText('Pay as you go')).toBeNull()
     expect(listPlans).not.toHaveBeenCalled()
   })
@@ -295,7 +326,7 @@ describe('the portal', () => {
 
   it('offers nothing to an org that has never checked out', async () => {
     renderPage()
-    await screen.findByText('Growth')
+    await screen.findByText('Free')
     expect(screen.queryByText('Manage payment method and invoices')).toBeNull()
   })
 
@@ -464,7 +495,7 @@ describe('the checkout return', () => {
     pending('cs_1', 'org-b')
     renderPage()
 
-    expect(await screen.findByText('Growth')).toBeTruthy()
+    expect(await screen.findByText('Free')).toBeTruthy()
     expect(confirmCheckout).not.toHaveBeenCalled()
     expect(toastError).not.toHaveBeenCalled()
     expect(toastInfo).not.toHaveBeenCalled()
@@ -476,6 +507,6 @@ describe('the checkout return', () => {
 it('renders nothing when billing is switched off', async () => {
   getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
   renderPage()
-  await waitFor(() => expect(screen.queryByText('Growth')).toBeNull())
+  await waitFor(() => expect(screen.queryByText('Free')).toBeNull())
   expect(screen.queryByRole('progressbar')).toBeNull()
 })

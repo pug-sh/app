@@ -28,9 +28,14 @@ const SUB_STATUS_LABEL: Record<SubscriptionStatus, string> = {
 
 export const subStatusLabel = (status: SubscriptionStatus) => SUB_STATUS_LABEL[status] ?? ''
 
-// A failed card is a banner, not a degraded product: the server keeps the quota through PAST_DUE.
+// A failed card is a banner, not a degraded product: the server keeps the plan through PAST_DUE.
 export const isPastDue = (status: GetBillingStatusResponse | null) =>
   status?.subscriptionStatus === SubscriptionStatus.PAST_DUE
+
+// The allowance warns only an org with no subscription. A subscriber's events past it are billed by
+// tier, over the provider's period rather than the usage period, so the meter's "over" would say it of
+// every paying customer. Keyed on FREE, so a state this build cannot place warns nobody.
+export const allowanceApplies = (status: GetBillingStatusResponse | null) => status?.status === BillingStatus.FREE
 
 // A terminal state has no card to carry over, so it must not send the buyer to the portal.
 export const hasLiveSubscription = (status: GetBillingStatusResponse) =>
