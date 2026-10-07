@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -10,6 +10,7 @@ import {
   GetBillingStatusResponseSchema,
   PlanOptionSchema,
   SubscriptionStatus,
+  TierUsageSchema,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
@@ -225,6 +226,50 @@ describe('the usage section', () => {
     expect(screen.queryByText('/ 100,000')).toBeNull()
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.queryByText(/every event is still collected/)).toBeNull()
+  })
+})
+
+describe('billed usage', () => {
+  const tier = (fromEvents: bigint, upToEvents: bigint | undefined, events = 0n) =>
+    create(TierUsageSchema, { fromEvents, upToEvents, events })
+
+  const statedTiers = [
+    tier(100_000n, 2_000_000n, 1_234_567n),
+    tier(2_000_000n, 15_000_000n),
+    tier(15_000_000n, 50_000_000n),
+    tier(50_000_000n, 100_000_000n),
+    tier(100_000_000n, 250_000_000n),
+    tier(250_000_000n, undefined),
+  ]
+
+  it('shows what each tier was reported at for a subscriber', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ tierUsage: statedTiers, tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)) }),
+    )
+    renderPage()
+
+    const table = await screen.findByRole('table')
+    const first = within(table).getByText('100K – 2M').closest('tr')
+    expect(first && within(first).getByText('1,234,567')).toBeTruthy()
+    // The last tier is unbounded: its absent bound is open-ended, never a 0.
+    expect(within(table).getByText('250M+')).toBeTruthy()
+    expect(screen.getByText('5m ago')).toBeTruthy()
+  })
+
+  // Until the period's first statement nothing has been reported, which is not a tier at 0.
+  it('says nothing has been reported yet rather than drawing zeros', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ tierUsage: [] }))
+    renderPage()
+    expect(await screen.findByText(/Nothing reported to the payment provider yet/)).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+
+  // Nothing bills an org with no subscription, so it has no tiers to show.
+  it('is absent for an org with no subscription', async () => {
+    renderPage()
+    await screen.findByText('Free')
+    expect(screen.queryByText('Billed usage')).toBeNull()
+    expect(screen.queryByText(/Nothing reported to the payment provider yet/)).toBeNull()
   })
 })
 

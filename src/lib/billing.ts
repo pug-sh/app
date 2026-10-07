@@ -2,7 +2,9 @@ import {
   BillingStatus,
   type GetBillingStatusResponse,
   SubscriptionStatus,
+  type TierUsage,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import { compactNumber } from '@/lib/format'
 import { tsToDate, validDate } from '@/lib/timestamp'
 
 const STATUS_LABEL: Record<BillingStatus, string> = {
@@ -112,3 +114,22 @@ export const billingSignature = (status: GetBillingStatusResponse | null) =>
 export const formatEvents = (n: number | bigint) => n.toLocaleString('en-US')
 
 export const retentionLabel = (days: bigint) => `${formatEvents(days)} ${days === 1n ? 'day' : 'days'} of event history`
+
+// Compact only where that is exact: the catalog's bounds are round, but a deal's allowance can be any
+// number, and "1.2M" for 1,234,567 would misstate where its billing starts.
+const boundLabel = (n: bigint) => {
+  const exact = (n >= 1_000_000n && n % 100_000n === 0n) || (n >= 1_000n && n < 1_000_000n && n % 100n === 0n)
+  return exact ? compactNumber(n) : formatEvents(n)
+}
+
+// Numbered in the server's order, which is the meters' (t1, t2, …), so each row matches its line on
+// the provider's invoice. A tier the allowance covers holds nothing and has no range to print, so it is
+// dropped rather than renumbered — unless it holds events anyway, since hiding a count hides billing.
+// An absent bound is the unbounded last tier, never a 0.
+export const tierRows = (tiers: TierUsage[]) =>
+  tiers.flatMap((t, i) => {
+    const from = boundLabel(t.fromEvents)
+    if (t.upToEvents === undefined) return [{ tier: i + 1, range: `${from}+`, events: t.events }]
+    if (t.fromEvents >= t.upToEvents && t.events === 0n) return []
+    return [{ tier: i + 1, range: `${from} – ${boundLabel(t.upToEvents)}`, events: t.events }]
+  })

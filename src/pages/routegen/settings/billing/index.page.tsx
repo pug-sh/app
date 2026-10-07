@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { useLocation, useSearch } from 'wouter'
 import { trackFeature } from '@/analytics/pug'
 import {
+  BillingStatus,
   CheckoutTheme,
   type GetBillingStatusResponse,
   type PlanOption,
@@ -43,6 +44,7 @@ import {
   takeCheckoutPending,
 } from './checkout'
 import PlanList from './plan-list'
+import TierUsage from './tier-usage'
 
 // Not muted: "we couldn't load this" must not read as "you have none".
 const ListError = ({ message, onRetry }: { message: string; onRetry: () => void }) => (
@@ -335,6 +337,9 @@ const Billing = () => {
           </p>
         )}
       </section>
+
+      {/* Nothing bills an org with no subscription, so only a live one has tiers to show. */}
+      {status.status === BillingStatus.ACTIVE && <TierUsage status={status} />}
 
       {canBrowsePlans && (
         <section>
