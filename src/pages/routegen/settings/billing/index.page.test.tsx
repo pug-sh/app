@@ -14,6 +14,7 @@ import {
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
+import { formatLocalDate } from '@/lib/timestamp'
 
 const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession, confirmCheckout } =
   vi.hoisted(() => ({
@@ -187,6 +188,14 @@ describe('the plan section', () => {
 })
 
 describe('the usage section', () => {
+  // A subscriber's billed usage runs over the provider's period, so this total says which window it
+  // counts; two undated "this period" figures invite a subtraction across different windows.
+  it('dates the usage period it counts', async () => {
+    getBillingStatus.mockResolvedValue(status({ periodStart: timestampFromDate(new Date('2026-06-10T00:00:00Z')) }))
+    renderPage()
+    expect(await screen.findByText(/Jun 10 – Jul 9, 2026 \(UTC\)/)).toBeTruthy()
+  })
+
   it('renders X of Y once the meter has counted', async () => {
     renderPage()
     expect(await screen.findByText('120,000')).toBeTruthy()
@@ -274,6 +283,14 @@ describe('billed usage', () => {
     renderPage()
     expect(await screen.findByText(/Nothing reported to the payment provider yet/)).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+  })
+
+  // The provider's period, not the usage period the section above counts.
+  it('dates the billing period the tiers cover', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ tierUsage: statedTiers }))
+    renderPage()
+    const ending = formatLocalDate(new Date('2026-06-28T00:00:00Z'))
+    expect(await screen.findByText(new RegExp(`^The billing period ending ${ending},`))).toBeTruthy()
   })
 
   // Nothing bills an org with no subscription, so it has no tiers to show.

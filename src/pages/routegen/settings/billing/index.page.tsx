@@ -37,6 +37,7 @@ import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { formatPeriod } from '../usage/usage-helpers'
 import {
   clearCheckoutPending,
   closeCheckoutOverlay,
@@ -97,6 +98,15 @@ const periodLine = (status: GetBillingStatusResponse) => {
   const periodEnd = at(status.periodEnd)
   if (periodEnd) return `Free allowance resets ${formatUTCDate(periodEnd)}`
   return ''
+}
+
+// Dated, in the UTC the usage period turns over in: a subscriber's billed usage below runs over the
+// provider's period instead, and two undated totals invite a subtraction across different windows.
+const usagePeriodNote = (status: GetBillingStatusResponse) => {
+  const start = validDate(tsToDate(status.periodStart))
+  const end = validDate(tsToDate(status.periodEnd))
+  if (!start || !end) return 'Across every project in this organization.'
+  return `${formatPeriod(start, end)} (UTC), across every project in this organization.`
 }
 
 // A denylist: guessing wrong here toasts a failure at someone who just paid.
@@ -308,7 +318,7 @@ const Billing = () => {
       </section>
 
       <section>
-        <SectionHeader title="Events this period" description="Across every project in this organization." />
+        <SectionHeader title="Events this period" description={usagePeriodNote(status)} />
         <div className="text-2xl tabular-nums">
           {usedEvents === null ? (
             <span className="text-muted-foreground">{meterError ? 'Count unavailable' : 'Not measured yet'}</span>

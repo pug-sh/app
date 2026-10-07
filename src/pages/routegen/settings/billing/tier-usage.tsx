@@ -3,7 +3,7 @@ import HoverSwap from '@/components/hover-swap'
 import SectionHeader from '@/components/section-header'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { formatEvents, tierRows } from '@/lib/billing'
-import { formatDateTime, tsToDate, validDate } from '@/lib/timestamp'
+import { formatDateTime, formatLocalDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 
 const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Date | null }) => {
@@ -61,14 +61,19 @@ const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Da
 // What the meter last stated to the provider for this billing period, which is the provider's own and
 // not the usage period counted above. The provider bills each tier the most it was told by the period's
 // end, so this is a running count, never an invoice — and quantities only, since no rate reaches here.
-const TierUsage = ({ status }: { status: GetBillingStatusResponse }) => (
-  <section>
-    <SectionHeader
-      title="Billed usage"
-      description="This billing period, past your free allowance, as last reported to the payment provider. A running count, not an invoice."
-    />
-    <TierTable rows={tierRows(status.tierUsage)} asOf={validDate(tsToDate(status.tierUsageAsOf))} />
-  </section>
-)
+const TierUsage = ({ status }: { status: GetBillingStatusResponse }) => {
+  const periodEnd = validDate(tsToDate(status.currentPeriodEnd))
+  const period = periodEnd ? `The billing period ending ${formatLocalDate(periodEnd)}` : 'This billing period'
+
+  return (
+    <section>
+      <SectionHeader
+        title="Billed usage"
+        description={`${period}, past your free allowance, as last reported to the payment provider. A running count, not an invoice.`}
+      />
+      <TierTable rows={tierRows(status.tierUsage)} asOf={validDate(tsToDate(status.tierUsageAsOf))} />
+    </section>
+  )
+}
 
 export default TierUsage
