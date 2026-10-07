@@ -315,7 +315,7 @@ const Billing = () => {
         <AllowanceNote includedEvents={status.includedEvents} />
         <RetentionNote retentionDays={status.retentionDays} />
         {pastDue && (
-          <p className="mt-2 text-xs text-caution">
+          <p className="mt-2 text-xs text-negative">
             We couldn't charge your card. Nothing has changed about your plan or your free allowance — update your
             payment method{graceEndsAt && ` by ${formatDateTime(graceEndsAt)}`} to avoid an interruption.
           </p>

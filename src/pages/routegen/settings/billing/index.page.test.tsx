@@ -208,6 +208,16 @@ describe('the plan section', () => {
     expect(screen.getByText(/Nothing has changed about your plan or your free allowance/)).toBeTruthy()
   })
 
+  // The banner's tone too: a failed payment in the amber of a soft warning understates the only thing
+  // here that needs acting on, and it now carries a deadline.
+  it('marks a failed payment in the negative tone', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+    renderPage()
+    const notice = await screen.findByText(/We couldn't charge your card/)
+    expect(notice.className).toContain('text-negative')
+    expect(notice.className).not.toContain('text-caution')
+  })
+
   // The provider's "update your card by", beside the notice it dates.
   it('dates the grace window beside a failed payment', async () => {
     getBillingStatus.mockResolvedValue(
