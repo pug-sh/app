@@ -73,6 +73,11 @@ const status = (extra: StatusFields = {}) =>
     ...extra,
   } as StatusFields)
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Relative to the clock, since the page reads a period end in the past as one that has ended.
+const renewsAt = new Date(Date.now() + 20 * DAY_MS)
+
 // A live subscription, billed by tier past the allowance over the provider's own period.
 const subscribed = (extra: StatusFields = {}) =>
   status({
@@ -81,7 +86,7 @@ const subscribed = (extra: StatusFields = {}) =>
     subscriptionStatus: SubscriptionStatus.ACTIVE,
     manageable: true,
     includedEvents: 100_000n,
-    currentPeriodEnd: timestampFromDate(new Date('2026-06-28T00:00:00Z')),
+    currentPeriodEnd: timestampFromDate(renewsAt),
     ...extra,
   } as StatusFields)
 
@@ -126,13 +131,13 @@ describe('the plan section', () => {
     expect(await screen.findByText('Free')).toBeTruthy()
   })
 
-  // The allowance turns over on the org's anniversary; the subscription's period is when the
-  // provider bills. Conflating them is the mistake the two fields exist to prevent.
+  // A free org's allowance turns over on its anniversary; a subscriber's is spent per billing period,
+  // which ends when the provider bills. Conflating them is the mistake the two fields exist to prevent.
   it('shows the billing date when there is one, and the allowance reset otherwise', async () => {
     getBillingStatus.mockResolvedValue(subscribed())
     renderPage()
-    // Built, not written out: a local date, which west of UTC is the 27th.
-    expect(await screen.findByText(`Renews ${formatLocalDate(new Date('2026-06-28T00:00:00Z'))}`)).toBeTruthy()
+    // Built, not written out: a local date.
+    expect(await screen.findByText(`Renews ${formatLocalDate(renewsAt)}`)).toBeTruthy()
 
     vi.clearAllMocks()
     getBillingStatus.mockResolvedValue(status())
@@ -140,6 +145,32 @@ describe('the plan section', () => {
     listPlans.mockResolvedValue({ plans: [] })
     renderPage()
     expect(await screen.findByText('Free allowance resets Jul 10, 2026')).toBeTruthy()
+  })
+
+  // The provider renews about an hour late, and a renewal whose payment never resolves holds the old
+  // period, so an end already past is not a renewal to promise.
+  it('says when a past billing period ended instead of promising a renewal', async () => {
+    const endedAt = new Date(Date.now() - 2 * DAY_MS)
+    getBillingStatus.mockResolvedValue(subscribed({ currentPeriodEnd: timestampFromDate(endedAt) }))
+    renderPage()
+    expect(await screen.findByText(`Billing period ended ${formatLocalDate(endedAt)}`)).toBeTruthy()
+    expect(screen.queryByText(/^Renews/)).toBeNull()
+  })
+
+  // A declined card may not renew at all, so the date is when the period ends, not a renewal.
+  it('does not promise a renewal while a payment has failed', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+    renderPage()
+    expect(await screen.findByText(`Billing period ends ${formatLocalDate(renewsAt)}`)).toBeTruthy()
+    expect(screen.queryByText(/^Renews/)).toBeNull()
+  })
+
+  // period_end is the usage period's, which is a free org's allowance turnover and not a subscriber's.
+  it('gives a subscriber no allowance reset, even without a billing date', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ currentPeriodEnd: undefined }))
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByText(/Free allowance resets/)).toBeNull()
   })
 
   it('names the free allowance', async () => {
@@ -326,8 +357,19 @@ describe('billed usage', () => {
   it('dates the billing period the tiers cover', async () => {
     getBillingStatus.mockResolvedValue(subscribed({ tierUsage: statedTiers }))
     renderPage()
-    const ending = formatLocalDate(new Date('2026-06-28T00:00:00Z'))
-    expect(await screen.findByText(new RegExp(`^The billing period ending ${ending},`))).toBeTruthy()
+    const ending = formatLocalDate(renewsAt)
+    expect(await screen.findByText(new RegExp(`in the billing period ending ${ending},`))).toBeTruthy()
+  })
+
+  // Nothing is stated past a period's end, so a period that has ended is not running any more.
+  it('calls an ended period ended, not running', async () => {
+    const endedAt = new Date(Date.now() - 2 * DAY_MS)
+    getBillingStatus.mockResolvedValue(
+      subscribed({ tierUsage: statedTiers, currentPeriodEnd: timestampFromDate(endedAt) }),
+    )
+    renderPage()
+    const note = await screen.findByText(new RegExp(`in the billing period that ended ${formatLocalDate(endedAt)},`))
+    expect(note.textContent).not.toContain('running count')
   })
 
   // Nothing bills an org with no subscription, so it has no tiers to show.

@@ -89,14 +89,22 @@ const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined })
   </p>
 )
 
-// `currentPeriodEnd` is the provider's next bill, `periodEnd` the allowance turnover; only the second
-// is a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
-const periodLine = (status: GetBillingStatusResponse) => {
+// `currentPeriodEnd` ends the provider's billing period, over which a subscriber's allowance is spent;
+// `periodEnd` ends the usage period, the allowance's turnover only for an org with no subscription.
+// Only the second is a UTC boundary, hence two formatters. Takes the status so the two cannot be passed
+// the wrong way.
+const periodLine = (status: GetBillingStatusResponse, now = new Date()) => {
   const at = (ts: Timestamp | undefined) => validDate(tsToDate(ts))
-  const renewsAt = at(status.currentPeriodEnd)
-  if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
+  const billingEnd = at(status.currentPeriodEnd)
+  if (billingEnd) {
+    // Neither is a renewal to promise: past its end the provider has not renewed yet (it renews about
+    // an hour late, and holds a renewal that never got paid), and a failed card may not renew at all.
+    if (billingEnd <= now) return `Billing period ended ${formatLocalDate(billingEnd)}`
+    if (isPastDue(status)) return `Billing period ends ${formatLocalDate(billingEnd)}`
+    return `Renews ${formatLocalDate(billingEnd)}`
+  }
   const periodEnd = at(status.periodEnd)
-  if (periodEnd) return `Free allowance resets ${formatUTCDate(periodEnd)}`
+  if (periodEnd && allowanceApplies(status)) return `Free allowance resets ${formatUTCDate(periodEnd)}`
   return ''
 }
 

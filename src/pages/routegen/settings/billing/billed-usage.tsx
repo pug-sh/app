@@ -59,22 +59,28 @@ const TierTable = ({ rows, asOf }: { rows: ReturnType<typeof tierRows>; asOf: Da
   )
 }
 
-// What the meter last stated to the provider for this billing period, which is the provider's own and
-// not the usage period counted above. The provider bills each tier the most it was told by the period's
-// end, so this is a running count, never an invoice — and quantities only, since no rate reaches here.
-const BilledUsage = ({ status }: { status: GetBillingStatusResponse }) => {
-  const periodEnd = validDate(tsToDate(status.currentPeriodEnd))
-  const period = periodEnd ? `The billing period ending ${formatLocalDate(periodEnd)}` : 'This billing period'
+// Each tier's count carries the previous period's late days, so the total can exceed this period's own.
+const CARRY_NOTE = 'Includes any events from the previous period that were counted late.'
 
-  return (
-    <section>
-      <SectionHeader
-        title="Billed usage"
-        description={`${period}, past your free allowance, as last reported to the payment provider. A running count, not an invoice.`}
-      />
-      <TierTable rows={tierRows(status.tierUsage)} asOf={validDate(tsToDate(status.tierUsageAsOf))} />
-    </section>
-  )
+const billedUsageNote = (status: GetBillingStatusResponse, now: Date) => {
+  const end = validDate(tsToDate(status.currentPeriodEnd))
+  // Nothing is stated past a period's end, so until the provider starts the next one this count is final.
+  if (end && end <= now) {
+    return `Events past your free allowance in the billing period that ended ${formatLocalDate(end)}, as last reported to the payment provider, which has not started the next one yet. ${CARRY_NOTE}`
+  }
+  const period = end ? `the billing period ending ${formatLocalDate(end)}` : 'this billing period'
+  return `Events past your free allowance in ${period}, as last reported to the payment provider: a running count, not an invoice. ${CARRY_NOTE}`
 }
+
+// What the billing pass last stated to the provider's per-tier meters for the provider's billing
+// period, not the usage period counted above. The provider bills each tier the most it was told by the
+// period's end, and the last statement may not be acknowledged yet, so this is a running count, never an
+// invoice — and quantities only, since no rate reaches here.
+const BilledUsage = ({ status }: { status: GetBillingStatusResponse }) => (
+  <section>
+    <SectionHeader title="Billed usage" description={billedUsageNote(status, new Date())} />
+    <TierTable rows={tierRows(status.tierUsage)} asOf={validDate(tsToDate(status.tierUsageAsOf))} />
+  </section>
+)
 
 export default BilledUsage
