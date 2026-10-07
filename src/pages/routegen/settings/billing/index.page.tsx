@@ -98,6 +98,10 @@ const periodLine = (status: GetBillingStatusResponse) => {
 // A denylist: guessing wrong here toasts a failure at someone who just paid.
 const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'expired'])
 
+// No rate reaches this page: they live on the provider's product, which the checkout shows.
+const PLANS_NOTE = 'Usage past the free allowance is billed by tier. Rates are shown at checkout.'
+const PLANS_NOTE_SUBSCRIBED = 'Change or cancel your plan in the billing portal.'
+
 const Billing = () => {
   const org = useAtomValue(activeOrgAtom)
   const billingRPC = useAtomValue(billingRPCAtom)
@@ -332,14 +336,7 @@ const Billing = () => {
 
       {canBrowsePlans && (
         <section>
-          <SectionHeader
-            title="Plans"
-            description={
-              liveSubscription
-                ? 'Switch tiers from the billing portal — your card and billing date carry over.'
-                : 'Changing plans takes effect immediately.'
-            }
-          />
+          <SectionHeader title="Plans" description={liveSubscription ? PLANS_NOTE_SUBSCRIBED : PLANS_NOTE} />
           {plans === null ? (
             <LoadingSpinner />
           ) : plans.error ? (

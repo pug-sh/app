@@ -75,10 +75,15 @@ const plan = (slug: string, displayName: string, purchasable = true, extra: Plan
   create(PlanOptionSchema, {
     slug,
     displayName,
-    includedEvents: 500_000n,
+    includedEvents: 100_000n,
     purchasable,
     ...extra,
   } as PlanFields)
+
+const usagePlan = (purchasable = true) => plan('usage-2026-10', 'Pay as you go', purchasable, { retentionDays: 365n })
+
+// A deal's terms are the org's own once bought, so the server sends neither number.
+const deal = () => plan('custom', 'Acme Enterprise', true, { includedEvents: undefined })
 
 const renderPage = (role = OrgRole.ADMIN) => {
   const store = createStore()
@@ -193,46 +198,49 @@ describe('the usage section', () => {
 })
 
 describe('the plan catalog', () => {
-  it('offers the tiers this deployment sells', async () => {
-    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('growth', 'Growth'), plan('scale', 'Scale')] })
+  const onUsagePlan = { slug: 'usage-2026-10', displayName: 'Pay as you go' }
+
+  it('offers the plans this deployment sells', async () => {
+    getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: onUsagePlan }))
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
     renderPage()
 
-    await screen.findByText('Scale')
-    // The current tier is marked, never offered.
+    await screen.findByText('Acme Enterprise')
+    // The plan the org holds is marked, never offered.
     expect(screen.getByText('Current')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Choose Scale' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Subscribe to Pay as you go' })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Subscribe to Acme Enterprise' })).toHaveLength(1)
   })
 
-  it('names the quota and the history each tier keeps', async () => {
+  // The allowance is what a plan is sold by now that no price reaches the page, and "100,000
+  // events" alone reads as a cap.
+  it('names the free allowance and the history each plan keeps', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', true, { retentionDays: 90n })] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     renderPage()
-    expect(await screen.findByText('500,000 events / month · 90 days of event history')).toBeTruthy()
+    expect(await screen.findByText('100,000 free events / month · 365 days of event history')).toBeTruthy()
   })
 
-  // Both numbers are absent on the custom tier, where the row must not trail a separator with
-  // nothing after it.
-  it('leaves the custom tier its one line', async () => {
+  // Both numbers are absent on a deal, where the row must not trail a separator with nothing after
+  // it, nor read the absence as an allowance of 0.
+  it('leaves a deal its one line', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({
-      plans: [plan('custom', 'Custom', true, { includedEvents: undefined })],
-    })
+    listPlans.mockResolvedValue({ plans: [deal()] })
     renderPage()
-    expect(await screen.findByText('Quota agreed with us')).toBeTruthy()
+    expect(await screen.findByText('Terms agreed with us')).toBeTruthy()
   })
 
   // The spinner replaces the button's only text and is aria-hidden, so an unlabelled button loses
   // its name exactly while it is busy.
-  it('keeps the choose button named while its checkout opens', async () => {
+  it('keeps the subscribe button named while its checkout opens', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
 
-    const button = await screen.findByRole('button', { name: 'Choose Scale' })
+    const button = await screen.findByRole('button', { name: 'Subscribe to Pay as you go' })
     await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
   })
 
@@ -244,35 +252,35 @@ describe('the plan catalog', () => {
   ])('sends the %s the overlay opens over', async (theme, want) => {
     localStorage.setItem('pug:theme', JSON.stringify(theme))
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
 
     await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled())
     expect(createCheckoutSession.mock.calls[0][0]).toMatchObject({ theme: want })
   })
 
-  // purchasable is the server's own "would a checkout open" — an unconfigured tier lists without
+  // purchasable is the server's own "would a checkout open" — an unconfigured plan lists without
   // a button rather than with one that cannot work.
-  it('does not offer a tier the server cannot check out', async () => {
+  it('does not offer a plan the server cannot check out', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: { slug: 'free', displayName: 'Free' } }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', false)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan(false)] })
     renderPage()
 
-    await screen.findByText('Scale')
-    expect(screen.queryByRole('button', { name: 'Choose Scale' })).toBeNull()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: 'Subscribe to Pay as you go' })).toBeNull()
   })
 
   // Spending money is admin-only on the server too.
   it('is hidden from a role that cannot start a checkout', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     renderPage(OrgRole.MEMBER)
 
     await screen.findByText('Growth')
-    expect(screen.queryByText('Scale')).toBeNull()
+    expect(screen.queryByText('Pay as you go')).toBeNull()
     expect(listPlans).not.toHaveBeenCalled()
   })
 })
@@ -337,10 +345,10 @@ describe('the checkout outcome', () => {
       return outcome
     })
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockResolvedValue({ checkoutUrl: 'https://test.dodo/x', sessionId: 'cs_9' })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
     await waitFor(() => expect(openCheckoutOverlay).toHaveBeenCalled())
     expect(pendingAtOpen).toContain('cs_9')
   }
