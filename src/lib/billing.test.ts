@@ -7,7 +7,6 @@ import {
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import {
   formatEvents,
-  formatMoney,
   hasLiveSubscription,
   retentionLabel,
   statusLabel,
@@ -53,32 +52,6 @@ describe('usageFor', () => {
   it('does not divide by a zero quota', () => {
     expect(usageFor(0n, 10)).toEqual({ used: 10, included: 0, percent: 100, tone: 'over' })
     expect(usageFor(0n, 0)).toEqual({ used: 0, included: 0, percent: 0, tone: 'normal' })
-  })
-})
-
-describe('formatMoney', () => {
-  it('drops the cents on a whole amount', () => {
-    expect(formatMoney(2_000n, 'USD')).toBe('$20')
-  })
-
-  it('keeps them when there are any', () => {
-    expect(formatMoney(1_999n, 'USD')).toBe('$19.99')
-  })
-
-  // Named cents but carries the smallest unit, and JPY has none.
-  it('respects a currency with no minor unit', () => {
-    expect(formatMoney(2_000n, 'JPY')).toBe('¥2,000')
-  })
-
-  // Intl throws on a malformed code, where minor units are unknowable. Printing the raw integer
-  // where a price goes would state 2000 for what may be $20.00.
-  it('says nothing rather than a wrong number on a malformed code', () => {
-    expect(formatMoney(2_000n, 'not a currency')).toBe('—')
-  })
-
-  // "$20" would state a price the server never sent.
-  it('never guesses dollars for a plan with no currency', () => {
-    expect(formatMoney(2_000n, '')).toBe('—')
   })
 })
 

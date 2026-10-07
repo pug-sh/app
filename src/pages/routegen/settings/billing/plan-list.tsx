@@ -1,7 +1,7 @@
 import { Check, Loader2 } from 'lucide-react'
 import type { PlanOption } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { Button } from '@/components/ui/button'
-import { formatEvents, formatMoney, retentionLabel } from '@/lib/billing'
+import { formatEvents, retentionLabel } from '@/lib/billing'
 
 // Absent is the custom tier, never 0.
 const quotaLabel = (plan: PlanOption) =>
@@ -10,10 +10,6 @@ const quotaLabel = (plan: PlanOption) =>
 // Absent shows the quota alone.
 const detailLabel = (plan: PlanOption) =>
   plan.retentionDays === undefined ? quotaLabel(plan) : `${quotaLabel(plan)} · ${retentionLabel(plan.retentionDays)}`
-
-// Absent is the custom tier, distinct from the free floor's price of zero.
-const priceLabel = (plan: PlanOption) =>
-  plan.priceCents === undefined ? 'Agreed price' : `${formatMoney(plan.priceCents, plan.currency)} / month`
 
 const PlanList = ({
   plans,
@@ -30,7 +26,7 @@ const PlanList = ({
 }) => {
   // `purchasable` is the server's "would a checkout open"; the rest is this page's.
   const isSelectable = (plan: PlanOption) => !readOnly && plan.slug !== currentSlug && plan.purchasable
-  // Reserved only when some row can fill it, or every price hangs short of the rule.
+  // Reserved only when some row can fill it, or every row ends in a blank gutter.
   const anySelectable = plans.some(isSelectable)
 
   return (
@@ -49,7 +45,6 @@ const PlanList = ({
             </div>
             <p className="text-xs text-muted-foreground">{detailLabel(plan)}</p>
           </div>
-          <div className="shrink-0 text-right text-sm tabular-nums">{priceLabel(plan)}</div>
           {anySelectable && (
             <div className="w-20 shrink-0 text-right">
               {isSelectable(plan) && (

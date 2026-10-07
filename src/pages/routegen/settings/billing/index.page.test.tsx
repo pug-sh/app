@@ -62,7 +62,7 @@ type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatus
 const status = (extra: StatusFields = {}) =>
   create(GetBillingStatusResponseSchema, {
     billingEnabled: true,
-    plan: { slug: 'growth', displayName: 'Growth', priceCents: 2_000n, currency: 'USD' },
+    plan: { slug: 'growth', displayName: 'Growth' },
     status: BillingStatus.ACTIVE,
     includedEvents: 500_000n,
     periodEnd: timestampFromDate(new Date('2026-07-10T00:00:00Z')),
@@ -71,12 +71,10 @@ const status = (extra: StatusFields = {}) =>
 
 type PlanFields = NonNullable<Parameters<typeof create<typeof PlanOptionSchema>>[1]>
 
-const plan = (slug: string, displayName: string, priceCents: bigint, purchasable = true, extra: PlanFields = {}) =>
+const plan = (slug: string, displayName: string, purchasable = true, extra: PlanFields = {}) =>
   create(PlanOptionSchema, {
     slug,
     displayName,
-    priceCents,
-    currency: 'USD',
     includedEvents: 500_000n,
     purchasable,
     ...extra,
@@ -101,10 +99,9 @@ beforeEach(() => {
 })
 
 describe('the plan section', () => {
-  it('names the plan and its list price', async () => {
+  it('names the plan', async () => {
     renderPage()
     expect(await screen.findByText('Growth')).toBeTruthy()
-    expect(screen.getByText('$20 / month')).toBeTruthy()
   })
 
   // The quota turns over on the org's anniversary; the subscription's period is when the provider
@@ -198,7 +195,7 @@ describe('the usage section', () => {
 describe('the plan catalog', () => {
   it('offers the tiers this deployment sells', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('growth', 'Growth', 2_000n), plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [plan('growth', 'Growth'), plan('scale', 'Scale')] })
     renderPage()
 
     await screen.findByText('Scale')
@@ -209,7 +206,7 @@ describe('the plan catalog', () => {
 
   it('names the quota and the history each tier keeps', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, true, { retentionDays: 90n })] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', true, { retentionDays: 90n })] })
     renderPage()
     expect(await screen.findByText('500,000 events / month · 90 days of event history')).toBeTruthy()
   })
@@ -219,18 +216,17 @@ describe('the plan catalog', () => {
   it('leaves the custom tier its one line', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
     listPlans.mockResolvedValue({
-      plans: [plan('custom', 'Custom', 0n, true, { priceCents: undefined, includedEvents: undefined })],
+      plans: [plan('custom', 'Custom', true, { includedEvents: undefined })],
     })
     renderPage()
     expect(await screen.findByText('Quota agreed with us')).toBeTruthy()
-    expect(screen.getByText('Agreed price')).toBeTruthy()
   })
 
   // The spinner replaces the button's only text and is aria-hidden, so an unlabelled button loses
   // its name exactly while it is busy.
   it('keeps the choose button named while its checkout opens', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
@@ -248,7 +244,7 @@ describe('the plan catalog', () => {
   ])('sends the %s the overlay opens over', async (theme, want) => {
     localStorage.setItem('pug:theme', JSON.stringify(theme))
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
@@ -262,7 +258,7 @@ describe('the plan catalog', () => {
   // a button rather than with one that cannot work.
   it('does not offer a tier the server cannot check out', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: { slug: 'free', displayName: 'Free' } }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, false)] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', false)] })
     renderPage()
 
     await screen.findByText('Scale')
@@ -272,7 +268,7 @@ describe('the plan catalog', () => {
   // Spending money is admin-only on the server too.
   it('is hidden from a role that cannot start a checkout', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
     renderPage(OrgRole.MEMBER)
 
     await screen.findByText('Growth')
@@ -341,7 +337,7 @@ describe('the checkout outcome', () => {
       return outcome
     })
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale')] })
     createCheckoutSession.mockResolvedValue({ checkoutUrl: 'https://test.dodo/x', sessionId: 'cs_9' })
     renderPage()
     fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))

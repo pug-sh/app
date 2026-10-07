@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import { useLocation, useSearch } from 'wouter'
 import { trackFeature } from '@/analytics/pug'
 import {
-  BillingStatus,
   CheckoutTheme,
   type GetBillingStatusResponse,
   type PlanOption,
@@ -23,7 +22,6 @@ import { useBilling } from '@/hooks/use-billing'
 import {
   billingSignature,
   formatEvents,
-  formatMoney,
   hasLiveSubscription,
   isPastDue,
   retentionLabel,
@@ -90,8 +88,6 @@ const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined })
 // a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
 const periodLine = (status: GetBillingStatusResponse) => {
   const at = (ts: Timestamp | undefined) => validDate(tsToDate(ts))
-  const trialEndsAt = at(status.trialEndsAt)
-  if (status.status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
   const renewsAt = at(status.currentPeriodEnd)
   if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
   const periodEnd = at(status.periodEnd)
@@ -284,11 +280,6 @@ const Billing = () => {
           <span className="text-sm font-medium">{status.plan?.displayName || '—'}</span>
           {badge && <Badge variant="secondary">{badge}</Badge>}
           {pastDue && <Badge variant="destructive">{subStatusLabel(status.subscriptionStatus)}</Badge>}
-          {status.plan?.priceCents !== undefined && status.plan.priceCents > 0n && (
-            <span className="text-sm text-muted-foreground tabular-nums">
-              {formatMoney(status.plan.priceCents, status.plan.currency)} / month
-            </span>
-          )}
         </div>
         {period && <p className="mt-1 text-xs text-muted-foreground">{period}</p>}
         <RetentionNote retentionDays={status.retentionDays} />

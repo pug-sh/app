@@ -103,27 +103,7 @@ export const usageBannerKey = (status: GetBillingStatusResponse, tone: BannerTon
 export const billingSignature = (status: GetBillingStatusResponse | null) =>
   status ? `${status.plan?.slug ?? ''}:${status.status}:${status.subscriptionStatus}` : null
 
-// en-US, or a quota renders "1,20,000 / 5,00,000" beside its "$20".
+// en-US like the dates beside it, or a machine defaulting to en-IN renders "1,20,000 / 5,00,000".
 export const formatEvents = (n: number | bigint) => n.toLocaleString('en-US')
 
 export const retentionLabel = (days: bigint) => `${formatEvents(days)} ${days === 1n ? 'day' : 'days'} of event history`
-
-export const formatMoney = (cents: bigint, currency: string) => {
-  // "$20" would state a price the server never sent.
-  if (!currency) return '—'
-  try {
-    const options = { style: 'currency', currency } as const
-    // Cents by name only: it is the currency's smallest unit, and a fixed /100 renders JPY 100x low.
-    const digits = new Intl.NumberFormat('en-US', options).resolvedOptions().maximumFractionDigits ?? 2
-    const amount = Number(cents) / 10 ** digits
-    return new Intl.NumberFormat('en-US', {
-      ...options,
-      minimumFractionDigits: Number.isInteger(amount) ? 0 : digits,
-    }).format(amount)
-  } catch (err) {
-    // Minor units are unknowable on a code Intl rejects, and "2000" where a price goes is worse
-    // than nothing.
-    console.error('unformattable currency:', currency, err)
-    return '—'
-  }
-}
