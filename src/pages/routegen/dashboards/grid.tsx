@@ -82,6 +82,7 @@ export const DashboardGrid = ({
   mode = 'view',
   selectedTileId,
   highlightTileId,
+  flaggedTileIds,
   onDuplicateTile,
   onSelectTile,
   onPatchTile,
@@ -96,6 +97,9 @@ export const DashboardGrid = ({
   selectedTileId?: string | null
   // A just-added tile to briefly highlight and scroll into view.
   highlightTileId?: string | null
+  // Tiles the assistant could not make valid — outlined so they're findable
+  // without opening each one.
+  flaggedTileIds?: Set<string>
   onDuplicateTile?: (tile: DashboardTile) => void
   onSelectTile?: (tileId: string) => void
   onPatchTile?: (tileId: string, patch: Partial<DashboardTile>) => void
@@ -143,6 +147,17 @@ export const DashboardGrid = ({
     onSelectTile(tile.id)
   }
 
+  // One outline per tile, flagged first: a flagged tile must stay recognisable while
+  // selected or highlighted, and Tailwind orders competing outline colours by its
+  // stylesheet, not by className order.
+  const tileOutline = (tileId: string) => {
+    let color = ''
+    if (flaggedTileIds?.has(tileId)) color = 'outline-caution/60'
+    else if (highlightTileId === tileId) color = 'outline-amber-400'
+    else if (selectedTileId === tileId) color = 'outline-primary/40'
+    return color ? `rounded-lg outline outline-2 outline-offset-2 ${color}` : ''
+  }
+
   // The inner tile node, shared by the desktop grid and the mobile stack.
   // Selection, the highlight ref, and the click handler live here — not on the
   // grid-item root: react-grid-layout clones the root (wrapping it in
@@ -152,12 +167,12 @@ export const DashboardGrid = ({
     <div
       ref={highlightTileId === tile.id ? highlightRef : undefined}
       onMouseDown={handleTileSelect(tile)}
-      className={[
-        'min-h-0 flex-1',
-        selectedTileId === tile.id ? 'rounded-lg outline outline-2 outline-primary/40 outline-offset-2' : '',
-        highlightTileId === tile.id ? 'rounded-lg outline outline-2 outline-amber-400 outline-offset-2' : '',
-      ].join(' ')}
+      className={['min-h-0 flex-1', tileOutline(tile.id)].join(' ')}
     >
+      {/* The caution outline is the only visual marker; this is what a screen reader gets instead. */}
+      {flaggedTileIds?.has(tile.id) ? (
+        <span className="sr-only">Needs a fix before this dashboard can be saved</span>
+      ) : null}
       {renderTile ? (
         renderTile(tile)
       ) : (
