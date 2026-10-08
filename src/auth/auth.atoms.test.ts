@@ -237,21 +237,70 @@ describe('completeMagicLinkAtom', () => {
 describe('the sign-in form atoms', () => {
   const detail = create(SSORequiredSchema, { domain: 'acme.com' })
 
+  const password = { email: 'bob@acme.com', password: 'correct-horse', turnstileToken: 'turnstile-token' }
+  const link = { email: 'bob@acme.com', turnstileToken: 'turnstile-token' }
+
   it('hands back an SSO refusal for a password', async () => {
     signInWithEmail.mockRejectedValue(ssoRefused(detail))
 
-    await expect(
-      createStore().set(signInAtom, { email: 'bob@acme.com', password: 'correct-horse' }),
-    ).resolves.toMatchObject({ ok: false, ssoRequired: { domain: 'acme.com' } })
+    await expect(createStore().set(signInAtom, password)).resolves.toMatchObject({
+      ok: false,
+      ssoRequired: { domain: 'acme.com' },
+    })
   })
 
   it('hands back an SSO refusal for an email link', async () => {
     requestMagicLink.mockRejectedValue(ssoRefused(detail))
 
-    await expect(createStore().set(requestMagicLinkAtom, { email: 'bob@acme.com' })).resolves.toMatchObject({
+    await expect(createStore().set(requestMagicLinkAtom, link)).resolves.toMatchObject({
       ok: false,
       ssoRequired: { domain: 'acme.com' },
     })
+  })
+
+  it('sends the Turnstile token with both', async () => {
+    signInWithEmail.mockResolvedValue({ token: 'access-token', refreshToken: 'refresh-token' })
+    requestMagicLink.mockResolvedValue({})
+    const store = createStore()
+
+    await store.set(signInAtom, password)
+    await store.set(requestMagicLinkAtom, link)
+
+    expect(signInWithEmail).toHaveBeenCalledWith(password)
+    expect(requestMagicLink).toHaveBeenCalledWith(link)
+  })
+
+  it.each([
+    ['refused', Code.PermissionDenied, 'failed', 'Verification failed. Try again.'],
+    [
+      'unavailable',
+      Code.Unavailable,
+      'unavailable',
+      'Verification is unavailable right now. Try again in a few minutes.',
+    ],
+  ])('says when Turnstile verification was %s', async (_kind, code, turnstile, error) => {
+    // As the server sends it: every refusal carries an ErrorInfo.
+    const refused = new ConnectError('verification failed, try again', code)
+    refused.details.push({ type: 'google.rpc.ErrorInfo', value: new Uint8Array() })
+    signInWithEmail.mockRejectedValue(refused)
+    requestMagicLink.mockRejectedValue(refused)
+    const store = createStore()
+
+    await expect(store.set(signInAtom, password)).resolves.toEqual({ ok: false, error, turnstile })
+    await expect(store.set(requestMagicLinkAtom, link)).resolves.toEqual({ ok: false, error, turnstile })
+  })
+
+  it.each([
+    ['403', Code.PermissionDenied],
+    ['503', Code.Unavailable],
+  ])("doesn't blame Turnstile for a proxy's bare %s", async (status, code) => {
+    const bare = new ConnectError(`HTTP ${status}`, code)
+    signInWithEmail.mockRejectedValue(bare)
+    requestMagicLink.mockRejectedValue(bare)
+    const store = createStore()
+
+    await expect(store.set(signInAtom, password)).resolves.toEqual({ ok: false, error: bare.message })
+    await expect(store.set(requestMagicLinkAtom, link)).resolves.toEqual({ ok: false, error: bare.message })
   })
 })
 

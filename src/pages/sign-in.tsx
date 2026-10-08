@@ -7,9 +7,11 @@ import { useLocation } from 'wouter'
 import { z } from 'zod'
 import { type AuthProviderConfig, AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
 import {
-  authProvidersAtom,
+  type AuthResult,
+  authConfigAtom,
   demoEnabledAtom,
   discoverSignInAtom,
+  reloadAuthConfigAtom,
   requestMagicLinkAtom,
   signInAtom,
 } from '@/auth/auth.atoms'
@@ -18,6 +20,7 @@ import { providerKey } from '@/auth/oidc'
 import { OIDCSignInButton } from '@/auth/oidc-sign-in-button'
 import { ssoBlockAtom } from '@/auth/sso-required'
 import { SSORequiredScreen } from '@/auth/sso-required-screen'
+import { useTurnstile } from '@/auth/use-turnstile'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -48,11 +51,14 @@ const MODE_COPY = {
 
 type SSOStep = { email: string; domain: string; providers: AuthProviderConfig[]; requireSso: boolean }
 
+const orList = new Intl.ListFormat('en', { type: 'disjunction' })
+
 const SignIn = () => {
   const signIn = useSetAtom(signInAtom)
   const requestMagicLink = useSetAtom(requestMagicLinkAtom)
   const discoverSignIn = useSetAtom(discoverSignInAtom)
-  const authProviders = useAtomValue(authProvidersAtom)
+  const authConfig = useAtomValue(authConfigAtom)
+  const reloadAuthConfig = useSetAtom(reloadAuthConfigAtom)
   const demoEnabled = useAtomValue(demoEnabledAtom)
   const [, navigate] = useLocation()
   // Magic link is the primary path — the backend creates the account on first use,
@@ -68,8 +74,11 @@ const SignIn = () => {
   // Also set by the transport when a session refresh is refused for the same reason.
   const [ssoBlock, setSSOBlock] = useAtom(ssoBlockAtom)
   const [ssoStep, setSSOStep] = useState<SSOStep | null>(null)
+  const [config, setConfig] = useState(authConfig)
 
-  const oidcProviders = authProviders?.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
+  const oidcProviders = config?.providers.filter(provider => provider.type === AuthProviderType.OIDC) ?? []
+  const siteKey = config?.turnstileSiteKey ?? ''
+  const turnstile = useTurnstile(siteKey)
 
   // A provider redirect leaves the page with `pending` set; bfcache restores it that way on Back,
   // which would leave every control disabled.
@@ -86,15 +95,42 @@ const SignIn = () => {
     defaultValues: { email: '', password: '' },
   })
 
+  // Derived from the current email, so editing it hides the step.
+  const step = mode === 'link' && ssoStep?.email === authForm.watch('email') ? ssoStep : null
+
+  const withProviders = (message: string) => {
+    const names = (step?.providers ?? oidcProviders).map(provider => provider.displayName)
+    return names.length > 0 ? `${message} You can still continue with ${orList.format(names)}.` : message
+  }
+
+  const verify = async () => {
+    const token = await turnstile.take()
+    if (token === null) {
+      setError(withProviders("Verification didn't complete. Try again, or reload the page."))
+    }
+    return token
+  }
+
+  const showFailure = async (result: Extract<AuthResult, { ok: false }>) => {
+    // The key may have been set or rotated since this page loaded, or the first config fetch failed.
+    if (result.turnstile === 'failed') {
+      const reloaded = await reloadAuthConfig()
+      if (reloaded) setConfig(reloaded)
+    }
+    setError(result.turnstile === 'unavailable' ? withProviders(result.error) : result.error)
+  }
+
   // Password sign-in. handleSubmit runs the full schema (email + password) first.
   const submitPassword = async (data: AuthFormData) => {
     setError('')
     setPending('password')
     try {
-      const result = await signIn(data)
+      const turnstileToken = await verify()
+      if (turnstileToken === null) return
+      const result = await signIn({ ...data, turnstileToken })
       if (result.ok) return
       if (result.ssoRequired) setSSOBlock({ detail: result.ssoRequired, email: data.email })
-      else setError(result.error)
+      else await showFailure(result)
     } catch (err) {
       console.error('sign-in submit failed', err)
       setError('Something went wrong. Please try again.')
@@ -122,10 +158,12 @@ const SignIn = () => {
   }
 
   const sendLink = async (email: string) => {
-    const res = await requestMagicLink({ email })
+    const turnstileToken = await verify()
+    if (turnstileToken === null || authForm.getValues('email') !== email) return
+    const res = await requestMagicLink({ email, turnstileToken })
     if (res.ok) setMagicLinkEmail(email)
     else if (res.ssoRequired) setSSOBlock({ detail: res.ssoRequired, email })
-    else setError(res.error)
+    else await showFailure(res)
   }
 
   // Only a connection or Require SSO skips the link, not Google listed for a domain like gmail.com.
@@ -149,9 +187,6 @@ const SignIn = () => {
 
   const authBusy = pending !== null
   const copy = MODE_COPY[mode]
-  const email = authForm.watch('email')
-  // Derived from the current email, so editing it hides the step.
-  const step = mode === 'link' && ssoStep?.email === email ? ssoStep : null
 
   if (ssoBlock) {
     const { domain } = ssoBlock.detail
@@ -306,6 +341,9 @@ const SignIn = () => {
                 {authForm.formState.errors.password && <FieldError errors={[authForm.formState.errors.password]} />}
               </Field>
             )}
+
+            {/* Empty until Cloudflare wants a click, so it adds no gap. */}
+            {siteKey && <div ref={turnstile.ref} />}
 
             {error && <p className="rounded-md bg-destructive/5 px-3 py-2 text-sm text-negative">{error}</p>}
 
