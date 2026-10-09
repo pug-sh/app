@@ -2,6 +2,7 @@ import { Pencil } from 'lucide-react'
 import type { SSOConnection } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { connectionRedirectURI } from '@/auth/oidc'
 import CopyableCode from '@/components/copyable-code'
+import StatusLabel from '@/components/status-label'
 import { RemoveControl } from './domain-row'
 
 export const ConnectionRow = ({
@@ -21,8 +22,7 @@ export const ConnectionRow = ({
   onRemove: () => void
   onCancelRemove: () => void
 }) => {
-  let domains = 'Signs in no domains yet.'
-  if (connection.domains.length > 0) domains = `Signs in ${connection.domains.map(d => d.domain).join(', ')}`
+  const domains = connection.domains.map(d => d.domain).join(', ')
 
   return (
     <div className="group border-b border-border/50 py-3" onMouseLeave={onCancelRemove}>
@@ -44,9 +44,10 @@ export const ConnectionRow = ({
           onConfirm={onConfirmRemove}
           onRemove={onRemove}
         />
+        {connection.domains.length === 0 && <StatusLabel tone="caution">No domains</StatusLabel>}
       </div>
       <div className="mt-2 pl-4">
-        <p className="text-xs text-muted-foreground">{domains}</p>
+        {connection.domains.length > 0 && <p className="text-xs text-muted-foreground">{`Signs in ${domains}`}</p>}
         <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">{connection.issuerUrl}</p>
         <p className="mt-2 mb-1 text-xs text-muted-foreground">Add this redirect URL in your identity provider.</p>
         <CopyableCode label="Redirect URL" value={connectionRedirectURI(connection.id)} />

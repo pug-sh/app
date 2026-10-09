@@ -209,6 +209,14 @@ describe('the plan section', () => {
     expect(screen.getByText(/Nothing has changed about your plan or your free allowance/)).toBeTruthy()
   })
 
+  // A green Active beside it would contradict the failed payment.
+  it('shows a failed payment in place of the active state', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+    renderPage()
+    await screen.findByText('Payment failed')
+    expect(screen.queryByText('Active')).toBeNull()
+  })
+
   // The banner's tone too: a failed payment in the amber of a soft warning understates the only thing
   // here that needs acting on, and it now carries a deadline.
   it('marks a failed payment in the negative tone', async () => {

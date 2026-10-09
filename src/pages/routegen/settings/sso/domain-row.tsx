@@ -2,7 +2,7 @@ import { Loader2, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { DomainStatus, DomainVerificationMethod, type OrgDomain } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import CopyableCode from '@/components/copyable-code'
-import { Badge } from '@/components/ui/badge'
+import StatusLabel from '@/components/status-label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 
@@ -86,14 +86,10 @@ export const DomainRow = ({
           onRemove={onRemove}
         />
         {verified ? (
-          <Badge variant="secondary" className="shrink-0 text-xs">
-            {byOperator ? 'Verified by your administrator' : 'Verified'}
-          </Badge>
+          <StatusLabel tone="positive">{byOperator ? 'Verified by your administrator' : 'Verified'}</StatusLabel>
         ) : (
           <>
-            <Badge variant="outline" className="shrink-0 text-xs text-muted-foreground">
-              Pending
-            </Badge>
+            <StatusLabel tone="caution">Pending</StatusLabel>
             <Button variant="outline" size="sm" className="shrink-0" onClick={onVerify} disabled={verifying}>
               {verifying && <Loader2 className="animate-spin" />}
               Verify now
