@@ -457,6 +457,8 @@ describe('billed usage', () => {
       )
       renderPage()
       expect(await screen.findByText('5m ago')).toBeTruthy()
+      // A slow render paints the text before the effect that starts the label's timer has run.
+      await act(async () => {})
       await act(async () => {
         vi.advanceTimersByTime(2 * 60_000)
       })
