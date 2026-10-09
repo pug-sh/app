@@ -250,10 +250,7 @@ const Members = () => {
                           </SelectContent>
                         </Select>
                       ) : (
-                        <Badge
-                          variant={m.role === OrgRole.ADMIN ? 'default' : 'secondary'}
-                          className="text-xs shrink-0"
-                        >
+                        <Badge variant="secondary" className="text-xs shrink-0">
                           {roleLabel(m.role)}
                         </Badge>
                       )}
@@ -373,7 +370,7 @@ const Members = () => {
                       <span className="text-xs font-medium text-muted-foreground">{initials(inv.email)}</span>
                     </div>
                     <p className="flex-1 text-sm font-mono text-muted-foreground truncate">{inv.email}</p>
-                    <Badge variant={inv.role === OrgRole.ADMIN ? 'default' : 'secondary'} className="text-xs shrink-0">
+                    <Badge variant="secondary" className="text-xs shrink-0">
                       {roleLabel(inv.role)}
                     </Badge>
                     <InvitationState expiresAt={inv.expiresAt} />

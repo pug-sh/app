@@ -220,7 +220,7 @@ const ApiKeys = () => {
                           {k.displayName || <span className="text-muted-foreground">—</span>}
                         </td>
                         <td className="py-2.5 pr-4">
-                          <Badge variant={k.kind === ApiKeyKind.PRIVATE ? 'default' : 'secondary'} className="text-xs">
+                          <Badge variant="secondary" className="text-xs">
                             {kindLabel(k.kind)}
                           </Badge>
                         </td>
