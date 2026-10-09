@@ -21,21 +21,24 @@ import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
+  allowanceApplies,
+  allowanceUsage,
   billingSignature,
   formatEvents,
-  formatMoney,
+  graceDeadline,
   hasLiveSubscription,
   isPastDue,
   retentionLabel,
   statusLabel,
   subStatusLabel,
   TONE_FILL,
-  usageFor,
 } from '@/lib/billing'
 import { useRouteParams } from '@/lib/route-params'
 import { toastRPCError } from '@/lib/rpc-error'
-import { formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
+import { formatDateTime, formatLocalDate, formatUTCDate, tsToDate, validDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
+import { formatPeriod } from '../usage/usage-helpers'
+import BilledUsage from './billed-usage'
 import {
   clearCheckoutPending,
   closeCheckoutOverlay,
@@ -69,14 +72,14 @@ const PortalButton = ({ label, busy, onClick }: { label: string; busy: boolean; 
   </Can>
 )
 
-// Stands in for the bar, which needs both halves; without it a trialing org has no number at all.
-const QuotaNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => (
-  <p className="mt-2 text-xs text-muted-foreground">
-    {includedEvents === undefined
-      ? 'This plan has no event limit.'
-      : `${formatEvents(includedEvents)} events included this period.`}
-  </p>
-)
+// Absent is NO allowance, from a plan the server no longer knows, so it says nothing: "0 free
+// events" is the one reading it must never get.
+const AllowanceNote = ({ includedEvents }: { includedEvents: bigint | undefined }) => {
+  if (includedEvents === undefined) return null
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">{`${formatEvents(includedEvents)} free events each month`}</p>
+  )
+}
 
 // Absent is NO BOUND, not zero. Nothing deletes on this number today, so it promises rather than
 // warns.
@@ -86,21 +89,41 @@ const RetentionNote = ({ retentionDays }: { retentionDays: bigint | undefined })
   </p>
 )
 
-// `currentPeriodEnd` is the provider's next bill, `periodEnd` the quota turnover; only the second is
-// a UTC boundary, hence two formatters. Takes the status so the two cannot be passed the wrong way.
-const periodLine = (status: GetBillingStatusResponse) => {
+// `currentPeriodEnd` ends the provider's billing period, over which a subscriber's allowance is spent;
+// `periodEnd` ends the usage period, the allowance's turnover only for an org with no subscription.
+// Only the second is a UTC boundary, hence two formatters. Takes the status so the two cannot be passed
+// the wrong way.
+const periodLine = (status: GetBillingStatusResponse, now = new Date()) => {
   const at = (ts: Timestamp | undefined) => validDate(tsToDate(ts))
-  const trialEndsAt = at(status.trialEndsAt)
-  if (status.status === BillingStatus.TRIALING && trialEndsAt) return `Trial ends ${formatLocalDate(trialEndsAt)}`
-  const renewsAt = at(status.currentPeriodEnd)
-  if (renewsAt) return `Renews ${formatLocalDate(renewsAt)}`
+  const billingEnd = at(status.currentPeriodEnd)
+  if (billingEnd) {
+    // Neither is a renewal to promise: past its end the provider has not renewed yet (it renews about
+    // an hour late, and holds a renewal that never got paid), and a failed card may not renew at all.
+    if (billingEnd <= now) return `Billing period ended ${formatLocalDate(billingEnd)}`
+    if (isPastDue(status)) return `Billing period ends ${formatLocalDate(billingEnd)}`
+    return `Renews ${formatLocalDate(billingEnd)}`
+  }
   const periodEnd = at(status.periodEnd)
-  if (periodEnd) return `Quota resets ${formatUTCDate(periodEnd)}`
+  if (periodEnd && allowanceApplies(status)) return `Free allowance resets ${formatUTCDate(periodEnd)}`
   return ''
+}
+
+// Dated, in the UTC the usage period turns over in: a subscriber's billed usage below runs over the
+// provider's period instead, and two undated totals invite a subtraction across different windows.
+const usagePeriodNote = (status: GetBillingStatusResponse) => {
+  const start = validDate(tsToDate(status.periodStart))
+  const end = validDate(tsToDate(status.periodEnd))
+  if (!start || !end) return 'Across every project in this organization.'
+  return `${formatPeriod(start, end)} (UTC), across every project in this organization.`
 }
 
 // A denylist: guessing wrong here toasts a failure at someone who just paid.
 const FAILED_CHECKOUT_STATUSES = new Set(['failed', 'cancelled', 'canceled', 'expired'])
+
+// No rate reaches this page: they live on the provider's product, which the checkout shows. The note
+// is for an org with no subscription, which nothing bills, so it says what a plan would do.
+const PLANS_NOTE = 'With a plan, usage past the free allowance is billed by tier. Rates are shown at checkout.'
+const PLANS_NOTE_SUBSCRIBED = 'Change or cancel your plan in the billing portal.'
 
 const Billing = () => {
   const org = useAtomValue(activeOrgAtom)
@@ -268,13 +291,17 @@ const Billing = () => {
   // Not a spinner, which would read as still loading; the effect above is already redirecting.
   if (!status?.billingEnabled || !canReadBilling) return null
 
-  const usage = usageFor(status.includedEvents, usedEvents)
+  const usage = allowanceUsage(status, usedEvents)
   const period = periodLine(status)
   // The free plan is named after its own state, so the badge would repeat the plan name.
   const planStatus = statusLabel(status.status)
   const badge = planStatus === status.plan?.displayName ? '' : planStatus
   const pastDue = isPastDue(status)
+  const graceEndsAt = graceDeadline(status)
   const liveSubscription = hasLiveSubscription(status)
+  // Nothing bills an org with no subscription. Tiers sent under a status this build cannot place show
+  // anyway, since hiding a billed count is the worse mistake.
+  const showBilledUsage = status.status === BillingStatus.ACTIVE || status.tierUsage.length > 0
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -284,18 +311,14 @@ const Billing = () => {
           <span className="text-sm font-medium">{status.plan?.displayName || '—'}</span>
           {badge && <Badge variant="secondary">{badge}</Badge>}
           {pastDue && <Badge variant="destructive">{subStatusLabel(status.subscriptionStatus)}</Badge>}
-          {status.plan?.priceCents !== undefined && status.plan.priceCents > 0n && (
-            <span className="text-sm text-muted-foreground tabular-nums">
-              {formatMoney(status.plan.priceCents, status.plan.currency)} / month
-            </span>
-          )}
         </div>
         {period && <p className="mt-1 text-xs text-muted-foreground">{period}</p>}
+        <AllowanceNote includedEvents={status.includedEvents} />
         <RetentionNote retentionDays={status.retentionDays} />
         {pastDue && (
-          <p className="mt-2 text-xs text-caution">
-            We couldn't charge your card. Nothing has changed about your plan or your limits — update your payment
-            method to avoid an interruption.
+          <p className="mt-2 text-xs text-negative">
+            We couldn't charge your card. Nothing has changed about your plan or your free allowance — update your
+            payment method{graceEndsAt && ` by ${formatDateTime(graceEndsAt)}`} to avoid an interruption.
           </p>
         )}
 
@@ -305,7 +328,7 @@ const Billing = () => {
       </section>
 
       <section>
-        <SectionHeader title="Events this period" description="Across every project in this organization." />
+        <SectionHeader title="Events this period" description={usagePeriodNote(status)} />
         <div className="text-2xl tabular-nums">
           {usedEvents === null ? (
             <span className="text-muted-foreground">{meterError ? 'Count unavailable' : 'Not measured yet'}</span>
@@ -315,40 +338,33 @@ const Billing = () => {
           {usage && <span className="text-muted-foreground"> / {formatEvents(usage.included)}</span>}
           {usedEvents !== null && <span className="ml-2 text-sm text-muted-foreground">events</span>}
         </div>
-        {usage ? (
+        {usage && (
           <div
             className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
             role="progressbar"
-            aria-label="Events used this billing period"
+            aria-label="Free events used this period"
             aria-valuenow={usage.percent}
             aria-valuemin={0}
             aria-valuemax={100}
           >
             <div className={cn('h-full rounded-full', TONE_FILL[usage.tone])} style={{ width: `${usage.percent}%` }} />
           </div>
-        ) : (
-          <QuotaNote includedEvents={status.includedEvents} />
         )}
         <p className="mt-2 text-xs text-muted-foreground">
           Counted in UTC and refreshed periodically, so this can lag the events page by up to an hour.
         </p>
         {usage?.tone === 'over' && (
           <p className="mt-1 text-xs text-negative">
-            You're over the included events for this plan. Nothing is being dropped — every event is still collected.
+            You're past this period's free allowance. Nothing is being dropped — every event is still collected.
           </p>
         )}
       </section>
 
+      {showBilledUsage && <BilledUsage status={status} />}
+
       {canBrowsePlans && (
         <section>
-          <SectionHeader
-            title="Plans"
-            description={
-              liveSubscription
-                ? 'Switch tiers from the billing portal — your card and billing date carry over.'
-                : 'Changing plans takes effect immediately.'
-            }
-          />
+          <SectionHeader title="Plans" description={liveSubscription ? PLANS_NOTE_SUBSCRIBED : PLANS_NOTE} />
           {plans === null ? (
             <LoadingSpinner />
           ) : plans.error ? (
@@ -368,7 +384,7 @@ const Billing = () => {
                 readOnly={liveSubscription}
                 onSelect={handleSelectPlan}
               />
-              {liveSubscription && (
+              {liveSubscription && status.manageable && (
                 <PortalButton
                   label="Change plan in the billing portal"
                   busy={openingPortal}

@@ -579,7 +579,7 @@ export const AuthProviderTypeSchema: GenEnum<AuthProviderType> = /*@__PURE__*/
  */
 export const AuthService: GenService<{
   /**
-   * GetAuthConfig returns the non-secret provider settings the browser needs to
+   * GetAuthConfig returns the non-secret settings the browser needs to
    * render sign-in options and start Authorization Code + PKCE flows.
    *
    * @generated from rpc public.auth.v1.AuthService.GetAuthConfig

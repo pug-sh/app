@@ -10,7 +10,7 @@ import { billingSignature } from '@/lib/billing'
 import { rpcErrorMessage } from '@/lib/rpc-error'
 import { toProtoTimeRange } from '@/lib/timestamp'
 
-// Paired with its org: a switch must not leave the previous org's quota on screen.
+// Paired with its org: a switch must not leave the previous org's billing on screen.
 type BillingResult = {
   orgId: string
   status: GetBillingStatusResponse | null

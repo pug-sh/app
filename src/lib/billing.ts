@@ -28,14 +28,31 @@ const SUB_STATUS_LABEL: Record<SubscriptionStatus, string> = {
 
 export const subStatusLabel = (status: SubscriptionStatus) => SUB_STATUS_LABEL[status] ?? ''
 
-// A failed card is a banner, not a degraded product: the server keeps the quota through PAST_DUE.
+// A failed card is a banner, not a degraded product: the server keeps the plan through PAST_DUE.
 export const isPastDue = (status: GetBillingStatusResponse | null) =>
   status?.subscriptionStatus === SubscriptionStatus.PAST_DUE
 
-// A terminal state has no card to carry over, so it must not send the buyer to the portal.
+// When the provider stops waiting for the failed card and holds or cancels: the "update your card by".
+// The server can keep serving it after it has passed, until it sees which, and a date already gone
+// asks for the impossible, so only one still ahead counts. A hold, or no grace period configured, has
+// none.
+export const graceDeadline = (status: GetBillingStatusResponse | null, now = new Date()) => {
+  if (!isPastDue(status)) return null
+  const endsAt = validDate(tsToDate(status?.gracePeriodEndsAt))
+  return endsAt && endsAt > now ? endsAt : null
+}
+
+// The allowance warns only an org with no subscription. A subscriber's events past it are billed by
+// tier, over the provider's period rather than the usage period, so "over" would flag every subscriber
+// past it, which is the plan working as sold. Keyed on FREE, so a state this build cannot place warns
+// nobody.
+export const allowanceApplies = (status: GetBillingStatusResponse | null) => status?.status === BillingStatus.FREE
+
+// Live whatever the portal can do: `manageable` reads false on a failed lookup, and a paying customer
+// must never be offered a second checkout over one. A terminal state has no card to carry over, so it
+// is not live.
 export const hasLiveSubscription = (status: GetBillingStatusResponse) =>
-  status.manageable &&
-  (status.subscriptionStatus === SubscriptionStatus.ACTIVE || status.subscriptionStatus === SubscriptionStatus.PAST_DUE)
+  status.subscriptionStatus === SubscriptionStatus.ACTIVE || status.subscriptionStatus === SubscriptionStatus.PAST_DUE
 
 export type UsageTone = 'normal' | 'caution' | 'over'
 
@@ -73,11 +90,15 @@ export const usageFor = (includedEvents: bigint | undefined, usedEvents: number 
   if (includedEvents === undefined || usedEvents === null) return null
   const included = Number(includedEvents)
   const used = usedEvents
-  // A quota of zero is not absence: any use is already past it.
+  // An allowance of zero is not absence: any use is already past it.
   const ratio = included > 0 ? used / included : used > 0 ? 1 : 0
   // Floored, or 99.6% renders "100%" while the tone still says caution.
   return { used, included, percent: Math.min(100, Math.floor(ratio * 100)), tone: toneFor(ratio) }
 }
+
+// Usage against the free allowance, for the orgs it applies to; null for everyone else.
+export const allowanceUsage = (status: GetBillingStatusResponse | null, usedEvents: number | null) =>
+  allowanceApplies(status) ? usageFor(status?.includedEvents, usedEvents) : null
 
 export type BannerTone = Exclude<UsageTone, 'normal'> | 'past_due'
 
@@ -93,37 +114,21 @@ export const BANNER_TEXT: Record<BannerTone, string> = {
   past_due: 'text-negative',
 }
 
-// A dismissal expires with the period, or — lacking one — with the day.
+// A dismissal expires with the period, or — lacking one — with the day. A failed payment's also expires
+// with its grace window, since a new window is a new failure.
 export const usageBannerKey = (status: GetBillingStatusResponse, tone: BannerTone) => {
   const periodEnd = validDate(tsToDate(status.periodEnd))
-  return `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
+  const key = `${periodEnd ? periodEnd.getTime() : new Date().toDateString()}:${tone}`
+  const graceEndsAt = validDate(tsToDate(status.gracePeriodEndsAt))
+  if (tone !== 'past_due' || !graceEndsAt) return key
+  return `${key}:${graceEndsAt.getTime()}`
 }
 
 // What a completed checkout changes; null while nothing is loaded.
 export const billingSignature = (status: GetBillingStatusResponse | null) =>
   status ? `${status.plan?.slug ?? ''}:${status.status}:${status.subscriptionStatus}` : null
 
-// en-US, or a quota renders "1,20,000 / 5,00,000" beside its "$20".
+// en-US like the dates beside it, or a machine defaulting to en-IN renders "1,20,000 / 5,00,000".
 export const formatEvents = (n: number | bigint) => n.toLocaleString('en-US')
 
 export const retentionLabel = (days: bigint) => `${formatEvents(days)} ${days === 1n ? 'day' : 'days'} of event history`
-
-export const formatMoney = (cents: bigint, currency: string) => {
-  // "$20" would state a price the server never sent.
-  if (!currency) return '—'
-  try {
-    const options = { style: 'currency', currency } as const
-    // Cents by name only: it is the currency's smallest unit, and a fixed /100 renders JPY 100x low.
-    const digits = new Intl.NumberFormat('en-US', options).resolvedOptions().maximumFractionDigits ?? 2
-    const amount = Number(cents) / 10 ** digits
-    return new Intl.NumberFormat('en-US', {
-      ...options,
-      minimumFractionDigits: Number.isInteger(amount) ? 0 : digits,
-    }).format(amount)
-  } catch (err) {
-    // Minor units are unknowable on a code Intl rejects, and "2000" where a price goes is worse
-    // than nothing.
-    console.error('unformattable currency:', currency, err)
-    return '—'
-  }
-}

@@ -3,9 +3,14 @@ import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GetBillingStatusResponseSchema, SubscriptionStatus } from '@/api/genproto/dashboard/billing/v1/billing_pb'
+import {
+  BillingStatus,
+  GetBillingStatusResponseSchema,
+  SubscriptionStatus,
+} from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
+import { formatDateTime } from '@/lib/timestamp'
 
 const { getBillingStatus, getUsage } = vi.hoisted(() => ({ getBillingStatus: vi.fn(), getUsage: vi.fn() }))
 
@@ -35,6 +40,7 @@ type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatus
 const status = (extra: StatusFields = {}) =>
   create(GetBillingStatusResponseSchema, {
     billingEnabled: true,
+    status: BillingStatus.FREE,
     includedEvents: 500_000n,
     periodEnd: timestampFromDate(new Date('2026-07-10T00:00:00Z')),
     ...extra,
@@ -67,44 +73,102 @@ beforeEach(() => {
   getUsage.mockResolvedValue(used(10_000))
 })
 
-describe('the over-quota banner', () => {
-  it('says nothing well under the limit', async () => {
+// A live subscription: the card can fail, and usage past the allowance is billed rather than warned.
+const subscribed = (extra: StatusFields = {}) =>
+  status({ status: BillingStatus.ACTIVE, subscriptionStatus: SubscriptionStatus.ACTIVE, ...extra })
+
+describe('the free allowance banner', () => {
+  it('says nothing well under the allowance', async () => {
     const { store } = renderBanner()
     await settled(store)
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  it('warns near the limit', async () => {
+  it('warns near the allowance', async () => {
     getUsage.mockResolvedValue(used(460_000))
     renderBanner()
-    expect(await screen.findByText(/You've used 92% of the 500,000 events/)).toBeTruthy()
+    expect(await screen.findByText(/You've used 92% of your 500,000 free events/)).toBeTruthy()
   })
 
-  // Nothing is enforced, so "over your limit" alone reads as an outage they are already having.
+  // Nothing is enforced, so "past your free events" alone reads as an outage they are already having.
   it('says nothing is being dropped when over', async () => {
     getUsage.mockResolvedValue(used(600_000))
     renderBanner()
-    expect(await screen.findByText(/Nothing is being dropped/)).toBeTruthy()
+    expect(
+      await screen.findByText(
+        "You're past your 500,000 free events — 600,000 so far this period. Nothing is being dropped.",
+      ),
+    ).toBeTruthy()
   })
 
-  // Outranks the quota in message AND tone: "your payment failed" in a soft amber understates the
-  // only thing needing action. Usage sits in the caution band, where the two tones differ.
-  it('reports a failed payment ahead of the quota, in its own tone', async () => {
-    getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
-    getUsage.mockResolvedValue(used(460_000))
+  // Proto enums are open: a status this build cannot place warns nobody rather than everybody.
+  it.each([BillingStatus.UNSPECIFIED, 99 as BillingStatus])('stays quiet on a status it cannot place (%s)', async s => {
+    getBillingStatus.mockResolvedValue(status({ status: s }))
+    getUsage.mockResolvedValue(used(600_000))
+    const { store } = renderBanner()
+    await settled(store)
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  })
+
+  // A subscriber's usage past the allowance is billing working as sold, so the warning is for free orgs
+  // only.
+  it('says nothing to a subscriber past the allowance', async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
+    getUsage.mockResolvedValue(used(600_000))
+    const { store } = renderBanner()
+    await settled(store)
+    expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  })
+
+  // "Your payment failed" in a soft amber understates the only thing needing action.
+  it('reports a failed payment in its own tone', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
     renderBanner()
 
     const message = await screen.findByText(/Your last payment failed/)
-    expect(screen.queryByText(/You've used 92%/)).toBeNull()
     expect(message.className).toContain('negative')
     expect(message.className).not.toContain('caution')
   })
 
-  // The quota is present anyway, which is the only way to see the flag read rather than the
-  // absent quota doing the work.
+  // The provider's own deadline, so whoever can fix the card knows how long they have.
+  it('asks for the card by the end of the grace window', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2099-01-15T12:00:00Z')),
+      }),
+    )
+    renderBanner()
+    // Built, not written out: a local time, which east of UTC+11 is already the 16th.
+    const by = formatDateTime(new Date('2099-01-15T12:00:00Z'))
+    expect(
+      await screen.findByText(`Your last payment failed. Update your payment method by ${by} to keep your plan.`),
+    ).toBeTruthy()
+  })
+
+  // Served until the server sees whether the provider held or cancelled, and "by" a date already
+  // gone asks for the impossible.
+  it('drops a grace deadline that has passed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2020-01-15T12:00:00Z')),
+      }),
+    )
+    renderBanner()
+    const message = await screen.findByText(/Your last payment failed/)
+    expect(message.textContent).not.toContain(' by ')
+  })
+
+  // Billing off resolves FREE on the server. The allowance is added anyway, which the server never sends
+  // with billing off, so the flag is the only thing left that can keep this quiet.
   it('stays quiet on a deployment with billing off', async () => {
     getBillingStatus.mockResolvedValue(
-      create(GetBillingStatusResponseSchema, { billingEnabled: false, includedEvents: 500_000n }),
+      create(GetBillingStatusResponseSchema, {
+        billingEnabled: false,
+        status: BillingStatus.FREE,
+        includedEvents: 500_000n,
+      }),
     )
     getUsage.mockResolvedValue(used(600_000))
     const { store } = renderBanner()
@@ -112,7 +176,7 @@ describe('the over-quota banner', () => {
     expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
   })
 
-  // The demo is a shared viewer of someone else's org, whose quota is not the visitor's business.
+  // The demo is a shared viewer of someone else's org, whose allowance is not the visitor's business.
   it('stays quiet in the demo', async () => {
     getUsage.mockResolvedValue(used(600_000))
     const store = createStore()

@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf'
+import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { describe, expect, it, vi } from 'vitest'
 import {
   BillingStatus,
@@ -6,8 +7,9 @@ import {
   SubscriptionStatus,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import {
+  allowanceApplies,
   formatEvents,
-  formatMoney,
+  graceDeadline,
   hasLiveSubscription,
   retentionLabel,
   statusLabel,
@@ -20,7 +22,7 @@ import {
 describe('usageFor', () => {
   // Either half missing means no meter to draw; substituting a zero for the other is the one thing
   // this must never do.
-  it('has nothing to draw when the quota is absent', () => {
+  it('has nothing to draw when the allowance is absent', () => {
     expect(usageFor(undefined, 1_000)).toBeNull()
   })
 
@@ -38,7 +40,7 @@ describe('usageFor', () => {
     expect(usage?.tone).toBe('caution')
   })
 
-  it('turns caution at the warn ratio and over at the limit', () => {
+  it('turns caution at the warn ratio and over at the allowance', () => {
     expect(usageFor(1_000n, Math.ceil(1_000 * USAGE_WARN_RATIO) - 1)?.tone).toBe('normal')
     expect(usageFor(1_000n, 1_000 * USAGE_WARN_RATIO)?.tone).toBe('caution')
     expect(usageFor(1_000n, 1_000)?.tone).toBe('over')
@@ -49,36 +51,32 @@ describe('usageFor', () => {
     expect(usageFor(1_000n, 5_000)?.percent).toBe(100)
   })
 
-  // The server says "no quota" by absence, but a 0 would divide into a bar of width "NaN%".
-  it('does not divide by a zero quota', () => {
+  // The server says "no allowance" by absence, but a 0 would divide into a bar of width "NaN%".
+  it('does not divide by a zero allowance', () => {
     expect(usageFor(0n, 10)).toEqual({ used: 10, included: 0, percent: 100, tone: 'over' })
     expect(usageFor(0n, 0)).toEqual({ used: 0, included: 0, percent: 0, tone: 'normal' })
   })
 })
 
-describe('formatMoney', () => {
-  it('drops the cents on a whole amount', () => {
-    expect(formatMoney(2_000n, 'USD')).toBe('$20')
+describe('allowanceApplies', () => {
+  const withStatus = (status: BillingStatus) => create(GetBillingStatusResponseSchema, { status })
+
+  // Past the allowance, an org with no subscription sees a banner and nothing else.
+  it('applies to an org with no subscription', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.FREE))).toBe(true)
   })
 
-  it('keeps them when there are any', () => {
-    expect(formatMoney(1_999n, 'USD')).toBe('$19.99')
+  // A subscriber's events past it are billed by tier, over the provider's period rather than the
+  // usage period the count covers, so "over" would flag every subscriber past it.
+  it('leaves a subscriber to the tiers', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.ACTIVE))).toBe(false)
   })
 
-  // Named cents but carries the smallest unit, and JPY has none.
-  it('respects a currency with no minor unit', () => {
-    expect(formatMoney(2_000n, 'JPY')).toBe('¥2,000')
-  })
-
-  // Intl throws on a malformed code, where minor units are unknowable. Printing the raw integer
-  // where a price goes would state 2000 for what may be $20.00.
-  it('says nothing rather than a wrong number on a malformed code', () => {
-    expect(formatMoney(2_000n, 'not a currency')).toBe('—')
-  })
-
-  // "$20" would state a price the server never sent.
-  it('never guesses dollars for a plan with no currency', () => {
-    expect(formatMoney(2_000n, '')).toBe('—')
+  // Proto enums are open: a state this build cannot place warns nobody rather than everybody.
+  it('applies to nothing it cannot place', () => {
+    expect(allowanceApplies(withStatus(BillingStatus.UNSPECIFIED))).toBe(false)
+    expect(allowanceApplies(withStatus(99 as BillingStatus))).toBe(false)
+    expect(allowanceApplies(null)).toBe(false)
   })
 })
 
@@ -88,7 +86,7 @@ describe('retentionLabel', () => {
     expect(retentionLabel(1n)).toBe('1 day of event history')
   })
 
-  // Grouped the way the quota beside it is, not the way the browser locale would.
+  // Grouped the way the allowance beside it is, not the way the browser locale would.
   it('groups in en-US', () => {
     expect(retentionLabel(3_650n)).toBe('3,650 days of event history')
   })
@@ -132,6 +130,56 @@ describe('usageBannerKey', () => {
     })
     expect(usageBannerKey(status, 'over')).toBe(`${periodEnd.getTime()}:over`)
   })
+
+  // A new grace window is a new failure, and a dismissed "update your card by" must not hide it.
+  it('brings a failed payment back for a new grace window', () => {
+    const failed = (graceEndsAt: string) =>
+      create(GetBillingStatusResponseSchema, {
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        periodEnd: timestampFromDate(new Date('2026-10-01T00:00:00Z')),
+        gracePeriodEndsAt: timestampFromDate(new Date(graceEndsAt)),
+      })
+    expect(usageBannerKey(failed('2026-09-10T00:00:00Z'), 'past_due')).not.toBe(
+      usageBannerKey(failed('2026-09-24T00:00:00Z'), 'past_due'),
+    )
+  })
+})
+
+describe('graceDeadline', () => {
+  const now = new Date('2026-09-01T12:00:00Z')
+  const failed = (extra: { subscriptionStatus?: SubscriptionStatus; graceEndsAt?: string } = {}) =>
+    create(GetBillingStatusResponseSchema, {
+      subscriptionStatus: extra.subscriptionStatus ?? SubscriptionStatus.PAST_DUE,
+      gracePeriodEndsAt: extra.graceEndsAt ? timestampFromDate(new Date(extra.graceEndsAt)) : undefined,
+    })
+
+  // The provider's "update your card by": when it stops waiting and holds or cancels.
+  it("dates a failed card's grace window", () => {
+    expect(graceDeadline(failed({ graceEndsAt: '2026-09-08T12:00:00Z' }), now)).toEqual(
+      new Date('2026-09-08T12:00:00Z'),
+    )
+  })
+
+  // The server can serve a passed deadline until it sees whether the provider held or cancelled, and
+  // "update your card by" a date already gone asks for the impossible.
+  it('has no date once the window has passed', () => {
+    expect(graceDeadline(failed({ graceEndsAt: '2026-08-31T12:00:00Z' }), now)).toBeNull()
+  })
+
+  // A hold, or a provider with no grace period configured, sends no date at all.
+  it('has no date without a window', () => {
+    expect(graceDeadline(failed(), now)).toBeNull()
+  })
+
+  // The proto sets it only beside PAST_DUE. Anywhere else there is no failed card to date.
+  it('has no date without a failed card', () => {
+    expect(
+      graceDeadline(
+        failed({ subscriptionStatus: SubscriptionStatus.ACTIVE, graceEndsAt: '2026-09-08T12:00:00Z' }),
+        now,
+      ),
+    ).toBeNull()
+  })
 })
 
 describe('hasLiveSubscription', () => {
@@ -156,9 +204,10 @@ describe('hasLiveSubscription', () => {
     expect(hasLiveSubscription(sub(subscriptionStatus))).toBe(false)
   })
 
-  // manageable is the server's own answer to "would a portal session open".
-  it('is not live without a customer at the provider', () => {
-    expect(hasLiveSubscription(sub(SubscriptionStatus.ACTIVE, false))).toBe(false)
+  // manageable reads false on a failed lookup, and that must not offer a paying customer a second
+  // checkout.
+  it('stays live when the portal cannot open', () => {
+    expect(hasLiveSubscription(sub(SubscriptionStatus.ACTIVE, false))).toBe(true)
   })
 })
 

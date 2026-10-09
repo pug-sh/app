@@ -8,31 +8,40 @@ import { dismissedUsageBannerAtom } from '@/data/billing.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
 import { useBilling } from '@/hooks/use-billing'
 import {
+  allowanceUsage,
   BANNER_BOX,
   BANNER_TEXT,
   type BannerTone,
   formatEvents,
+  graceDeadline,
   isPastDue,
   type Usage,
   usageBannerKey,
-  usageFor,
 } from '@/lib/billing'
+import { formatDateTime } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 
-const bannerAlert = (pastDue: boolean, usage: Usage | null): { tone: BannerTone; message: string } | null => {
+const bannerAlert = (
+  pastDue: boolean,
+  graceEndsAt: Date | null,
+  usage: Usage | null,
+): { tone: BannerTone; message: string } | null => {
   if (pastDue) {
-    return { tone: 'past_due', message: 'Your last payment failed. Update your payment method to keep this plan.' }
+    const by = graceEndsAt ? ` by ${formatDateTime(graceEndsAt)}` : ''
+    return { tone: 'past_due', message: `Your last payment failed. Update your payment method${by} to keep your plan.` }
   }
   if (!usage || usage.tone === 'normal') return null
+  // Nothing is enforced, so the over message says nothing is dropped, or "past your free events" reads
+  // as an outage.
   if (usage.tone === 'over') {
     return {
       tone: 'over',
-      message: `You're over the ${formatEvents(usage.included)} events included in this plan — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`,
+      message: `You're past your ${formatEvents(usage.included)} free events — ${formatEvents(usage.used)} so far this period. Nothing is being dropped.`,
     }
   }
   return {
     tone: 'caution',
-    message: `You've used ${usage.percent}% of the ${formatEvents(usage.included)} events included in this plan.`,
+    message: `You've used ${usage.percent}% of your ${formatEvents(usage.included)} free events this period.`,
   }
 }
 
@@ -44,13 +53,12 @@ const UsageBanner = () => {
   const dismiss = useSetAtom(dismissedUsageBannerAtom)
   const can = useCan()
 
-  const usage = usageFor(status?.includedEvents, usedEvents)
+  const usage = allowanceUsage(status, usedEvents)
   // Gated on the same permission as the page it links to, or it links into a redirect.
   if (isDemo || !org || !status?.billingEnabled || !can('read', 'billing')) return null
 
-  // A quota drives a banner, never a rejected event, or "over your limit" reads as an outage.
   const pastDue = isPastDue(status)
-  const alert = bannerAlert(pastDue, usage)
+  const alert = bannerAlert(pastDue, graceDeadline(status), usage)
   if (!alert) return null
 
   const key = usageBannerKey(status, alert.tone)

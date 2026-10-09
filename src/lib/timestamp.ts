@@ -26,7 +26,7 @@ export const formatClock = (d: Date) => {
   return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 }
 
-// For quota-period bounds, which the server anchors in UTC; a local zone dates them a day off.
+// For usage-period bounds, which the server anchors in UTC; a local zone dates them a day off.
 export const formatUTCDate = (d: Date) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
 }

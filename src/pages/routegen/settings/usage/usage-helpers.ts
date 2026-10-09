@@ -43,7 +43,7 @@ const STAMP_FMT = utcFormat({ month: 'short', day: 'numeric', hour: '2-digit', m
 
 export const formatUtcStamp = (d: Date) => `${STAMP_FMT.format(d)} UTC`
 
-// periodEnd is exclusive — the 1st of the next month.
+// periodEnd is exclusive — the next period's first day (the anniversary, at UTC midnight).
 export const formatPeriod = (start: Date, end: Date) =>
   `${DAY_NO_YEAR_FMT.format(start)} – ${DAY_FMT.format(new Date(end.getTime() - DAY_MS))}`
 

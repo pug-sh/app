@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -10,9 +10,12 @@ import {
   GetBillingStatusResponseSchema,
   PlanOptionSchema,
   SubscriptionStatus,
+  TierUsageSchema,
 } from '@/api/genproto/dashboard/billing/v1/billing_pb'
 import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { GetUsageResponseSchema } from '@/api/genproto/dashboard/usage/v1/usage_pb'
+import { formatDateTime, formatLocalDate } from '@/lib/timestamp'
+import { inZoneAsync } from '@/test/timezone'
 
 const { getBillingStatus, getUsage, listPlans, createCheckoutSession, createPortalSession, confirmCheckout } =
   vi.hoisted(() => ({
@@ -53,43 +56,66 @@ vi.mock('@/analytics/pug', () => ({
 }))
 
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
+const { billingAtom } = await import('@/data/billing.atoms')
 const Billing = (await import('./index.page')).default
 
 const org = (role: OrgRole) => create(OrgSchema, { id: 'org-a', displayName: 'Org A', role })
 
 type StatusFields = NonNullable<Parameters<typeof create<typeof GetBillingStatusResponseSchema>>[1]>
 
+// An org with no subscription: the free allowance, and a banner beyond it.
 const status = (extra: StatusFields = {}) =>
   create(GetBillingStatusResponseSchema, {
     billingEnabled: true,
-    plan: { slug: 'growth', displayName: 'Growth', priceCents: 2_000n, currency: 'USD' },
-    status: BillingStatus.ACTIVE,
+    plan: { slug: 'free', displayName: 'Free' },
+    status: BillingStatus.FREE,
     includedEvents: 500_000n,
     periodEnd: timestampFromDate(new Date('2026-07-10T00:00:00Z')),
     ...extra,
   } as StatusFields)
 
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Relative to the clock, since the page reads a period end in the past as one that has ended.
+const renewsAt = new Date(Date.now() + 20 * DAY_MS)
+
+// A live subscription, billed by tier past the allowance over the provider's own period.
+const subscribed = (extra: StatusFields = {}) =>
+  status({
+    plan: { slug: 'usage-2026-10', displayName: 'Pay as you go' },
+    status: BillingStatus.ACTIVE,
+    subscriptionStatus: SubscriptionStatus.ACTIVE,
+    manageable: true,
+    includedEvents: 100_000n,
+    currentPeriodEnd: timestampFromDate(renewsAt),
+    ...extra,
+  } as StatusFields)
+
 type PlanFields = NonNullable<Parameters<typeof create<typeof PlanOptionSchema>>[1]>
 
-const plan = (slug: string, displayName: string, priceCents: bigint, purchasable = true, extra: PlanFields = {}) =>
+const plan = (slug: string, displayName: string, purchasable = true, extra: PlanFields = {}) =>
   create(PlanOptionSchema, {
     slug,
     displayName,
-    priceCents,
-    currency: 'USD',
-    includedEvents: 500_000n,
+    includedEvents: 100_000n,
     purchasable,
     ...extra,
   } as PlanFields)
 
+const usagePlan = (purchasable = true) => plan('usage-2026-10', 'Pay as you go', purchasable, { retentionDays: 365n })
+
+// A deal's terms are the org's own once bought, so the server sends neither number.
+const deal = () => plan('custom', 'Acme Enterprise', true, { includedEvents: undefined })
+
 const renderPage = (role = OrgRole.ADMIN) => {
   const store = createStore()
   store.set(activeOrgAtom, org(role))
-  return render(
+  const view = render(
     <Provider store={store}>
       <Billing />
     </Provider>,
   )
+  return { ...view, store }
 }
 
 beforeEach(() => {
@@ -101,27 +127,66 @@ beforeEach(() => {
 })
 
 describe('the plan section', () => {
-  it('names the plan and its list price', async () => {
+  it('names the plan', async () => {
     renderPage()
-    expect(await screen.findByText('Growth')).toBeTruthy()
-    expect(screen.getByText('$20 / month')).toBeTruthy()
+    expect(await screen.findByText('Free')).toBeTruthy()
   })
 
-  // The quota turns over on the org's anniversary; the subscription's period is when the provider
-  // bills. Conflating them is the mistake the two fields exist to prevent.
-  it('shows the billing date when there is one, and the quota reset otherwise', async () => {
-    getBillingStatus.mockResolvedValue(
-      status({ currentPeriodEnd: timestampFromDate(new Date('2026-06-28T00:00:00Z')) }),
-    )
+  // A free org's allowance turns over on its anniversary; a subscriber's is spent per billing period,
+  // which ends when the provider bills. Conflating them is the mistake the two fields exist to prevent.
+  it('shows the billing date when there is one, and the allowance reset otherwise', async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
     renderPage()
-    expect(await screen.findByText('Renews Jun 28, 2026')).toBeTruthy()
+    // Built, not written out: a local date.
+    expect(await screen.findByText(`Renews ${formatLocalDate(renewsAt)}`)).toBeTruthy()
 
     vi.clearAllMocks()
     getBillingStatus.mockResolvedValue(status())
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: true }))
     listPlans.mockResolvedValue({ plans: [] })
     renderPage()
-    expect(await screen.findByText('Quota resets Jul 10, 2026')).toBeTruthy()
+    expect(await screen.findByText('Free allowance resets Jul 10, 2026')).toBeTruthy()
+  })
+
+  // The provider renews about an hour late, and a renewal whose payment never resolves holds the old
+  // period, so an end already past is not a renewal to promise.
+  it('says when a past billing period ended instead of promising a renewal', async () => {
+    const endedAt = new Date(Date.now() - 2 * DAY_MS)
+    getBillingStatus.mockResolvedValue(subscribed({ currentPeriodEnd: timestampFromDate(endedAt) }))
+    renderPage()
+    expect(await screen.findByText(`Billing period ended ${formatLocalDate(endedAt)}`)).toBeTruthy()
+    expect(screen.queryByText(/^Renews/)).toBeNull()
+  })
+
+  // A declined card may not renew at all, so the date is when the period ends, not a renewal.
+  it('does not promise a renewal while a payment has failed', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+    renderPage()
+    expect(await screen.findByText(`Billing period ends ${formatLocalDate(renewsAt)}`)).toBeTruthy()
+    expect(screen.queryByText(/^Renews/)).toBeNull()
+  })
+
+  // period_end is the usage period's, which is a free org's allowance turnover and not a subscriber's.
+  it('gives a subscriber no allowance reset, even without a billing date', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ currentPeriodEnd: undefined }))
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByText(/Free allowance resets/)).toBeNull()
+  })
+
+  it('names the free allowance', async () => {
+    renderPage()
+    expect(await screen.findByText('500,000 free events each month')).toBeTruthy()
+  })
+
+  // Absent is NO allowance, from a plan the server no longer knows. "0 free events" is the one
+  // thing it must not say, and a bar at zero would say it too.
+  it('says nothing of an allowance the server did not send', async () => {
+    getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
+    renderPage()
+    await screen.findByText('Free')
+    expect(screen.queryByText(/free events/)).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
   it('names the history the plan keeps', async () => {
@@ -136,16 +201,96 @@ describe('the plan section', () => {
     expect(await screen.findByText('Unlimited event history')).toBeTruthy()
   })
 
-  // The server keeps the quota through PAST_DUE, so the page must not imply anything was cut off.
+  // The server keeps the plan through PAST_DUE, so the page must not imply anything was cut off.
   it('says a payment failed without claiming the plan changed', async () => {
-    getBillingStatus.mockResolvedValue(status({ subscriptionStatus: SubscriptionStatus.PAST_DUE, manageable: true }))
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
     renderPage()
     expect(await screen.findByText('Payment failed')).toBeTruthy()
-    expect(screen.getByText(/Nothing has changed about your plan or your limits/)).toBeTruthy()
+    expect(screen.getByText(/Nothing has changed about your plan or your free allowance/)).toBeTruthy()
+  })
+
+  // The banner's tone too: a failed payment in the amber of a soft warning understates the only thing
+  // here that needs acting on, and it now carries a deadline.
+  it('marks a failed payment in the negative tone', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE }))
+    renderPage()
+    const notice = await screen.findByText(/We couldn't charge your card/)
+    expect(notice.className).toContain('text-negative')
+    expect(notice.className).not.toContain('text-caution')
+  })
+
+  // The provider's "update your card by", beside the notice it dates.
+  it('dates the grace window beside a failed payment', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2099-01-15T12:00:00Z')),
+      }),
+    )
+    renderPage()
+    const by = formatDateTime(new Date('2099-01-15T12:00:00Z'))
+    expect(await screen.findByText(new RegExp(`update your payment method by ${by} to avoid`))).toBeTruthy()
+  })
+
+  // Served until the server sees whether the provider held or cancelled, and "by" a date already
+  // gone asks for the impossible.
+  it('drops a grace deadline that has passed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        subscriptionStatus: SubscriptionStatus.PAST_DUE,
+        gracePeriodEndsAt: timestampFromDate(new Date('2020-01-15T12:00:00Z')),
+      }),
+    )
+    renderPage()
+    const notice = await screen.findByText(/We couldn't charge your card/)
+    expect(notice.textContent).toContain('update your payment method to avoid')
   })
 })
 
 describe('the usage section', () => {
+  // CI runs in UTC, where a local formatter and a UTC one print the same day, so only a zone west of
+  // it can tell which one dated these.
+  it('keeps the usage period and its reset in UTC', () =>
+    inZoneAsync('America/Los_Angeles', async () => {
+      getBillingStatus.mockResolvedValue(status({ periodStart: timestampFromDate(new Date('2026-06-10T00:00:00Z')) }))
+      renderPage()
+      expect(await screen.findByText(/^Jun 10 – Jul 9, 2026 \(UTC\)/)).toBeTruthy()
+      expect(screen.getByText('Free allowance resets Jul 10, 2026')).toBeTruthy()
+    }))
+
+  it("dates the provider's billing period in the viewer's zone", () =>
+    inZoneAsync('America/Los_Angeles', async () => {
+      getBillingStatus.mockResolvedValue(
+        subscribed({
+          currentPeriodEnd: timestampFromDate(new Date('2099-06-28T00:00:00Z')),
+          tierUsage: [create(TierUsageSchema, { fromEvents: 100_000n, events: 5n })],
+        }),
+      )
+      renderPage()
+      expect(await screen.findByText('Renews Jun 27, 2099')).toBeTruthy()
+      expect(screen.getByText(/in the billing period ending Jun 27, 2099,/)).toBeTruthy()
+    }))
+
+  // Proto enums are open: a status this build cannot place is counted, never measured or billed.
+  it.each([BillingStatus.UNSPECIFIED, 99 as BillingStatus])(
+    'measures nothing on a status it cannot place (%s)',
+    async s => {
+      getBillingStatus.mockResolvedValue(status({ status: s }))
+      renderPage()
+      expect(await screen.findByText('120,000')).toBeTruthy()
+      expect(screen.queryByRole('progressbar')).toBeNull()
+      expect(screen.queryByText('Billed usage')).toBeNull()
+    },
+  )
+
+  // A subscriber's billed usage runs over the provider's period, so this total says which window it
+  // counts; two undated "this period" figures invite a subtraction across different windows.
+  it('dates the usage period it counts', async () => {
+    getBillingStatus.mockResolvedValue(status({ periodStart: timestampFromDate(new Date('2026-06-10T00:00:00Z')) }))
+    renderPage()
+    expect(await screen.findByText(/Jun 10 – Jul 9, 2026 \(UTC\)/)).toBeTruthy()
+  })
+
   it('renders X of Y once the meter has counted', async () => {
     renderPage()
     expect(await screen.findByText('120,000')).toBeTruthy()
@@ -170,73 +315,212 @@ describe('the usage section', () => {
     expect(screen.queryByText('Not measured yet')).toBeNull()
   })
 
-  // The bar needs both halves, and dropping the known one leaves a trialing org no number at all.
-  it('still names the included quota when the meter has no count', async () => {
+  // The bar needs both halves, and dropping the known one leaves the org no number at all.
+  it('still names the free allowance when the meter has no count', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 0n, counted: false }))
     renderPage()
     expect(await screen.findByText('Not measured yet')).toBeTruthy()
-    expect(screen.getByText('500,000 events included this period.')).toBeTruthy()
-  })
-
-  // Absent means no limit at all, which is a plan without a bar rather than a bar at zero.
-  it('draws no bar for a plan with no quota', async () => {
-    getBillingStatus.mockResolvedValue(status({ includedEvents: undefined }))
-    renderPage()
-    expect(await screen.findByText('This plan has no event limit.')).toBeTruthy()
-    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.getByText('500,000 free events each month')).toBeTruthy()
   })
 
   // Nothing is enforced, and unsaid that reads as an outage.
-  it('says nothing is dropped when over the limit', async () => {
+  it('says nothing is dropped when past the allowance', async () => {
     getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 900_000n, counted: true }))
     renderPage()
     expect(await screen.findByText(/every event is still collected/)).toBeTruthy()
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('100')
   })
+
+  // A subscriber past the allowance is billed by tier over the provider's period, which is not the
+  // window this count covers, so a bar against the allowance would read as a breach, when past it is
+  // simply billed.
+  it("counts a subscriber's events without measuring them against the allowance", async () => {
+    getBillingStatus.mockResolvedValue(subscribed())
+    getUsage.mockResolvedValue(create(GetUsageResponseSchema, { usedEvents: 1_234_567n, counted: true }))
+    renderPage()
+    expect(await screen.findByText('1,234,567')).toBeTruthy()
+    expect(screen.queryByText('/ 100,000')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    expect(screen.queryByText(/every event is still collected/)).toBeNull()
+  })
+})
+
+describe('billed usage', () => {
+  const tier = (fromEvents: bigint, upToEvents: bigint | undefined, events = 0n) =>
+    create(TierUsageSchema, { fromEvents, upToEvents, events })
+
+  const statedTiers = [
+    tier(100_000n, 2_000_000n, 1_234_567n),
+    tier(2_000_000n, 15_000_000n),
+    tier(15_000_000n, 50_000_000n),
+    tier(50_000_000n, 100_000_000n),
+    tier(100_000_000n, 250_000_000n),
+    tier(250_000_000n, undefined),
+  ]
+
+  it('shows what each tier was reported at for a subscriber', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ tierUsage: statedTiers, tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)) }),
+    )
+    renderPage()
+
+    const table = await screen.findByRole('table')
+    const first = within(table).getByText('100K – 2M').closest('tr')
+    expect(first && within(first).getByText('1,234,567')).toBeTruthy()
+    // The last tier is unbounded: its absent bound is open-ended, never a 0.
+    expect(within(table).getByText('250M+')).toBeTruthy()
+    expect(screen.getByText('5m ago')).toBeTruthy()
+  })
+
+  // Every tier's count is billed, the last as much as the first.
+  it('totals every tier', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        tierUsage: [
+          tier(100_000n, 2_000_000n, 1_900_000n),
+          tier(2_000_000n, 15_000_000n, 13_000_000n),
+          tier(15_000_000n, 50_000_000n, 35_000_000n),
+          tier(50_000_000n, 100_000_000n, 50_000_000n),
+          tier(100_000_000n, 250_000_000n, 150_000_000n),
+          tier(250_000_000n, undefined, 12_345n),
+        ],
+      }),
+    )
+    renderPage()
+    const total = (await screen.findByText('Total')).closest('tr')
+    expect(total && within(total).getByText('249,912,345')).toBeTruthy()
+  })
+
+  // Until the period's first statement nothing has been reported, which is not a tier at 0.
+  it('says nothing has been reported yet rather than drawing zeros', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ tierUsage: [] }))
+    renderPage()
+    expect(await screen.findByText(/Nothing reported to the payment provider yet/)).toBeTruthy()
+    expect(screen.queryByRole('table')).toBeNull()
+  })
+
+  // The provider's period, not the usage period the section above counts.
+  it('dates the billing period the tiers cover', async () => {
+    getBillingStatus.mockResolvedValue(subscribed({ tierUsage: statedTiers }))
+    renderPage()
+    const ending = formatLocalDate(renewsAt)
+    expect(await screen.findByText(new RegExp(`in the billing period ending ${ending},`))).toBeTruthy()
+  })
+
+  // Nothing is stated past a period's end, so a period that has ended is not running any more.
+  it('calls an ended period ended, not running', async () => {
+    const endedAt = new Date(Date.now() - 2 * DAY_MS)
+    getBillingStatus.mockResolvedValue(
+      subscribed({ tierUsage: statedTiers, currentPeriodEnd: timestampFromDate(endedAt) }),
+    )
+    renderPage()
+    const note = await screen.findByText(new RegExp(`in the billing period that ended ${formatLocalDate(endedAt)},`))
+    expect(note.textContent).not.toContain('running count')
+  })
+
+  // PAST_DUE is still a live subscription, and its card just failed: the bill is what it needs to see.
+  it('shows a past-due subscriber what is billed', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ subscriptionStatus: SubscriptionStatus.PAST_DUE, tierUsage: statedTiers }),
+    )
+    renderPage()
+    expect(await screen.findByRole('table')).toBeTruthy()
+  })
+
+  // Hiding a billed count is the worse mistake, so tiers the server sent show under a status this build
+  // cannot place.
+  it('shows tiers sent under a status this build cannot place', async () => {
+    getBillingStatus.mockResolvedValue(status({ status: 99 as BillingStatus, tierUsage: statedTiers }))
+    renderPage()
+    expect(await screen.findByRole('table')).toBeTruthy()
+  })
+
+  // Something was reported, so "nothing reported" would be false even with no row left to draw.
+  it('reads the empty state off what the server sent, not off the rows drawn', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({
+        tierUsage: [tier(5_000_000n, 2_000_000n)],
+        tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)),
+      }),
+    )
+    renderPage()
+    expect(await screen.findByText('5m ago')).toBeTruthy()
+    expect(screen.queryByText(/Nothing reported to the payment provider yet/)).toBeNull()
+  })
+
+  // The billing pass states hourly, so a tab left open would otherwise say "5m ago" for hours.
+  it('keeps the reported time current', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      getBillingStatus.mockResolvedValue(
+        subscribed({ tierUsage: statedTiers, tierUsageAsOf: timestampFromDate(new Date(Date.now() - 5 * 60_000)) }),
+      )
+      renderPage()
+      expect(await screen.findByText('5m ago')).toBeTruthy()
+      // A slow render paints the text before the effect that starts the label's timer has run.
+      await act(async () => {})
+      await act(async () => {
+        vi.advanceTimersByTime(2 * 60_000)
+      })
+      expect(await screen.findByText('7m ago')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // Nothing bills an org with no subscription, so it has no tiers to show.
+  it('is absent for an org with no subscription', async () => {
+    renderPage()
+    await screen.findByText('Free')
+    expect(screen.queryByText('Billed usage')).toBeNull()
+    expect(screen.queryByText(/Nothing reported to the payment provider yet/)).toBeNull()
+  })
 })
 
 describe('the plan catalog', () => {
-  it('offers the tiers this deployment sells', async () => {
-    getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('growth', 'Growth', 2_000n), plan('scale', 'Scale', 3_000n)] })
+  const onUsagePlan = { slug: 'usage-2026-10', displayName: 'Pay as you go' }
+
+  it('offers the plans this deployment sells', async () => {
+    getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: onUsagePlan }))
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
     renderPage()
 
-    await screen.findByText('Scale')
-    // The current tier is marked, never offered.
+    await screen.findByText('Acme Enterprise')
+    // The plan the org holds is marked, never offered.
     expect(screen.getByText('Current')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Choose Scale' })).toHaveLength(1)
+    expect(screen.queryByRole('button', { name: 'Subscribe to Pay as you go' })).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Subscribe to Acme Enterprise' })).toHaveLength(1)
   })
 
-  it('names the quota and the history each tier keeps', async () => {
+  // The allowance is what a plan is sold by, since no price reaches the page, and "100,000 events"
+  // alone reads as a cap.
+  it('names the free allowance and the history each plan keeps', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, true, { retentionDays: 90n })] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     renderPage()
-    expect(await screen.findByText('500,000 events / month · 90 days of event history')).toBeTruthy()
+    expect(await screen.findByText('100,000 free events / month · 365 days of event history')).toBeTruthy()
   })
 
-  // Both numbers are absent on the custom tier, where the row must not trail a separator with
-  // nothing after it.
-  it('leaves the custom tier its one line', async () => {
+  // Both numbers are absent on a deal, where the row must not trail a separator with nothing after
+  // it, nor read the absence as an allowance of 0.
+  it('leaves a deal its one line', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({
-      plans: [plan('custom', 'Custom', 0n, true, { priceCents: undefined, includedEvents: undefined })],
-    })
+    listPlans.mockResolvedValue({ plans: [deal()] })
     renderPage()
-    expect(await screen.findByText('Quota agreed with us')).toBeTruthy()
-    expect(screen.getByText('Agreed price')).toBeTruthy()
+    expect(await screen.findByText('Terms agreed with us')).toBeTruthy()
   })
 
   // The spinner replaces the button's only text and is aria-hidden, so an unlabelled button loses
   // its name exactly while it is busy.
-  it('keeps the choose button named while its checkout opens', async () => {
+  it('keeps the subscribe button named while its checkout opens', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
 
-    const button = await screen.findByRole('button', { name: 'Choose Scale' })
+    const button = await screen.findByRole('button', { name: 'Subscribe to Pay as you go' })
     await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'))
   })
 
@@ -248,35 +532,61 @@ describe('the plan catalog', () => {
   ])('sends the %s the overlay opens over', async (theme, want) => {
     localStorage.setItem('pug:theme', JSON.stringify(theme))
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockImplementation(() => new Promise(() => {}))
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
 
     await waitFor(() => expect(createCheckoutSession).toHaveBeenCalled())
     expect(createCheckoutSession.mock.calls[0][0]).toMatchObject({ theme: want })
   })
 
-  // purchasable is the server's own "would a checkout open" — an unconfigured tier lists without
+  // purchasable is the server's own "would a checkout open" — an unconfigured plan lists without
   // a button rather than with one that cannot work.
-  it('does not offer a tier the server cannot check out', async () => {
+  it('does not offer a plan the server cannot check out', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true, plan: { slug: 'free', displayName: 'Free' } }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n, false)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan(false)] })
     renderPage()
 
-    await screen.findByText('Scale')
-    expect(screen.queryByRole('button', { name: 'Choose Scale' })).toBeNull()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: 'Subscribe to Pay as you go' })).toBeNull()
+  })
+
+  // The server offers every plan on sale, and a staged deal, whatever the org already holds, so the
+  // page is all that stops a subscriber paying for a second subscription the confirm then refuses.
+  it('offers a live subscriber no second checkout, only the portal', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ purchasable: true, plan: { slug: 'custom', displayName: 'Acme Enterprise' } }),
+    )
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: /^Subscribe to/ })).toBeNull()
+    expect(screen.getByText('Change or cancel your plan in the billing portal.')).toBeTruthy()
+    expect(screen.getByText('Change plan in the billing portal')).toBeTruthy()
+  })
+
+  // manageable reads false on a failed lookup: no portal button then, but no checkout either.
+  it('keeps a live subscriber read-only when the portal cannot open', async () => {
+    getBillingStatus.mockResolvedValue(
+      subscribed({ purchasable: true, manageable: false, plan: { slug: 'custom', displayName: 'Acme Enterprise' } }),
+    )
+    listPlans.mockResolvedValue({ plans: [usagePlan(), deal()] })
+    renderPage()
+    await screen.findByText('Pay as you go')
+    expect(screen.queryByRole('button', { name: /^Subscribe to/ })).toBeNull()
+    expect(screen.queryByText('Change plan in the billing portal')).toBeNull()
   })
 
   // Spending money is admin-only on the server too.
   it('is hidden from a role that cannot start a checkout', async () => {
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     renderPage(OrgRole.MEMBER)
 
-    await screen.findByText('Growth')
-    expect(screen.queryByText('Scale')).toBeNull()
+    await screen.findByText('Free')
+    expect(screen.queryByText('Pay as you go')).toBeNull()
     expect(listPlans).not.toHaveBeenCalled()
   })
 })
@@ -291,7 +601,7 @@ describe('the portal', () => {
 
   it('offers nothing to an org that has never checked out', async () => {
     renderPage()
-    await screen.findByText('Growth')
+    await screen.findByText('Free')
     expect(screen.queryByText('Manage payment method and invoices')).toBeNull()
   })
 
@@ -341,10 +651,10 @@ describe('the checkout outcome', () => {
       return outcome
     })
     getBillingStatus.mockResolvedValue(status({ purchasable: true }))
-    listPlans.mockResolvedValue({ plans: [plan('scale', 'Scale', 3_000n)] })
+    listPlans.mockResolvedValue({ plans: [usagePlan()] })
     createCheckoutSession.mockResolvedValue({ checkoutUrl: 'https://test.dodo/x', sessionId: 'cs_9' })
     renderPage()
-    fireEvent.click(await screen.findByRole('button', { name: 'Choose Scale' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Subscribe to Pay as you go' }))
     await waitFor(() => expect(openCheckoutOverlay).toHaveBeenCalled())
     expect(pendingAtOpen).toContain('cs_9')
   }
@@ -460,7 +770,7 @@ describe('the checkout return', () => {
     pending('cs_1', 'org-b')
     renderPage()
 
-    expect(await screen.findByText('Growth')).toBeTruthy()
+    expect(await screen.findByText('Free')).toBeTruthy()
     expect(confirmCheckout).not.toHaveBeenCalled()
     expect(toastError).not.toHaveBeenCalled()
     expect(toastInfo).not.toHaveBeenCalled()
@@ -469,9 +779,11 @@ describe('the checkout return', () => {
 })
 
 // With no billing at all, a blank body under a tab bar is worse than leaving for the general tab.
+// Waits on the answer having landed: before it the page is a spinner, so any "renders nothing" passes.
 it('renders nothing when billing is switched off', async () => {
   getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
-  renderPage()
-  await waitFor(() => expect(screen.queryByText('Growth')).toBeNull())
+  const { store } = renderPage()
+  await waitFor(() => expect(store.get(billingAtom).loaded).toBe(true))
+  await waitFor(() => expect(screen.queryByText('Events this period')).toBeNull())
   expect(screen.queryByRole('progressbar')).toBeNull()
 })
