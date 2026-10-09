@@ -11,6 +11,7 @@ import { roleLabel } from '@/auth/permissions'
 import Page from '@/components/layout/page'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
+import StatusLabel from '@/components/status-label'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,13 @@ const inviteEmail = z.string().trim().email()
 const omitKey = <T,>(obj: Record<string, T>, key: string): Record<string, T> => {
   const { [key]: _, ...rest } = obj
   return rest
+}
+
+// Still listed once it lapses, though accepting it is refused until a resend renews it.
+const InvitationState = ({ expiresAt }: { expiresAt: string }) => {
+  const at = Date.parse(expiresAt)
+  if (Number.isFinite(at) && at <= Date.now()) return <StatusLabel tone="caution">Expired</StatusLabel>
+  return <StatusLabel tone="neutral">Pending</StatusLabel>
 }
 
 const initials = (name: string) =>
@@ -103,6 +111,10 @@ const Members = () => {
       toast.error('Enter a valid email address')
       return
     }
+    if (pendingInvitations.some(inv => inv.email.toLowerCase() === parsed.data.toLowerCase())) {
+      toast.error('This address already has an invitation. Resend it from the list below.')
+      return
+    }
     setInviting(true)
     try {
       await orgsRPC.inviteMember({ orgId: org.id, email: parsed.data, role: inviteRole })
@@ -137,7 +149,9 @@ const Members = () => {
     if (!org) return
     setResending(invitationId)
     try {
-      await orgsRPC.resendInvite({ orgId: org.id, invitationId })
+      const { invitation } = await orgsRPC.resendInvite({ orgId: org.id, invitationId })
+      // A resend renews the expiry, so an expired row reads pending again.
+      if (invitation) setInvitations(list => list.map(inv => (inv.id === invitation.id ? invitation : inv)))
       toast.success('Invitation resent')
     } catch (err) {
       toastRPCError(err, 'Failed to resend invitation')
@@ -344,10 +358,10 @@ const Members = () => {
             </Can>
           </section>
 
-          {/* Pending invitations */}
+          {/* Invitations */}
           {pendingInvitations.length > 0 && (
             <section>
-              <SectionHeader title="Pending invitations" count={pendingInvitations.length} />
+              <SectionHeader title="Invitations" count={pendingInvitations.length} />
               <div className="space-y-0.5">
                 {pendingInvitations.map(inv => (
                   <div
@@ -362,9 +376,7 @@ const Members = () => {
                     <Badge variant={inv.role === OrgRole.ADMIN ? 'default' : 'secondary'} className="text-xs shrink-0">
                       {roleLabel(inv.role)}
                     </Badge>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      Pending
-                    </Badge>
+                    <InvitationState expiresAt={inv.expiresAt} />
                     <Can action="update" resource="invitation">
                       <button
                         onClick={() => handleResend(inv.id)}
