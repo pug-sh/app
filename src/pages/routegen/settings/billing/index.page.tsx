@@ -15,7 +15,7 @@ import { billingRPCAtom } from '@/api/rpc'
 import { Can, useCan } from '@/auth/can'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
-import { Badge } from '@/components/ui/badge'
+import StatusLabel from '@/components/status-label'
 import { confirmCheckoutAtom, loadBillingAtom, pollBillingAfterCheckoutAtom } from '@/data/billing.atoms'
 import { resolvedThemeAtom } from '@/data/theme.atoms'
 import { activeOrgAtom } from '@/data/workspace.atoms'
@@ -293,9 +293,10 @@ const Billing = () => {
 
   const usage = allowanceUsage(status, usedEvents)
   const period = periodLine(status)
-  // The free plan is named after its own state, so the badge would repeat the plan name.
+  // The free plan is named after its own state, so the label would repeat the plan name.
   const planStatus = statusLabel(status.status)
-  const badge = planStatus === status.plan?.displayName ? '' : planStatus
+  const stateLabel = planStatus === status.plan?.displayName ? '' : planStatus
+  const stateTone = status.status === BillingStatus.ACTIVE ? 'positive' : 'neutral'
   const pastDue = isPastDue(status)
   const graceEndsAt = graceDeadline(status)
   const liveSubscription = hasLiveSubscription(status)
@@ -309,8 +310,9 @@ const Billing = () => {
         <SectionHeader title="Plan" />
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-sm font-medium">{status.plan?.displayName || '—'}</span>
-          {badge && <Badge variant="secondary">{badge}</Badge>}
-          {pastDue && <Badge variant="destructive">{subStatusLabel(status.subscriptionStatus)}</Badge>}
+          {/* One state: a green Active beside the failed payment would contradict it. */}
+          {pastDue && <StatusLabel tone="negative">{subStatusLabel(status.subscriptionStatus)}</StatusLabel>}
+          {!pastDue && stateLabel && <StatusLabel tone={stateTone}>{stateLabel}</StatusLabel>}
         </div>
         {period && <p className="mt-1 text-xs text-muted-foreground">{period}</p>}
         <AllowanceNote includedEvents={status.includedEvents} />
