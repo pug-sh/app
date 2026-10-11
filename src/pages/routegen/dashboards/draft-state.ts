@@ -18,10 +18,16 @@ const DEFAULT_POSITION = { x: 0, y: 0, w: 36, h: 18 }
 export const tilePosition = (tile: DashboardTile): GridPosition =>
   tile.position ?? create(GridPositionSchema, DEFAULT_POSITION)
 
-export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<DashboardTile>): Dashboard => ({
-  ...dashboard,
-  tiles: dashboard.tiles.map(tile => (tile.id === tileId ? ({ ...tile, ...patch } as DashboardTile) : tile)),
-})
+// Rebuild on a fresh message: spreading one drops the zero values protobuf-es keeps on the
+// prototype, and countDashboardChanges then counts every unset field as a change.
+const withTiles = (dashboard: Dashboard, tiles: DashboardTile[]): Dashboard =>
+  Object.assign(create(DashboardSchema), dashboard, { tiles })
+
+export const patchTile = (dashboard: Dashboard, tileId: string, patch: Partial<DashboardTile>): Dashboard =>
+  withTiles(
+    dashboard,
+    dashboard.tiles.map(tile => (tile.id === tileId ? Object.assign(create(DashboardTileSchema), tile, patch) : tile)),
+  )
 
 // Append a new tile built from a template or duplicate. We synthesize a local id
 // so the side panel can address it before Upsert assigns the real one. The tile
@@ -50,22 +56,21 @@ export const appendDraftTile = (dashboard: Dashboard, input: DashboardTileInput)
     header: input.header,
     visualization: input.visualization,
   })
-  return { ...dashboard, tiles: [...dashboard.tiles, tile] }
+  return withTiles(dashboard, [...dashboard.tiles, tile])
 }
 
-export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard => ({
-  ...dashboard,
-  tiles: dashboard.tiles.filter(tile => tile.id !== tileId),
-})
+export const removeDraftTile = (dashboard: Dashboard, tileId: string): Dashboard =>
+  withTiles(
+    dashboard,
+    dashboard.tiles.filter(tile => tile.id !== tileId),
+  )
 
 export type DashboardMetaPatch = Partial<
   Pick<Dashboard, 'displayName' | 'description' | 'defaultTimeRange' | 'defaultGranularity'>
 >
 
-export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard => ({
-  ...dashboard,
-  ...patch,
-})
+export const patchDashboardMetadata = (dashboard: Dashboard, patch: DashboardMetaPatch): Dashboard =>
+  Object.assign(create(DashboardSchema), dashboard, patch)
 
 // Count the fields that differ between two dashboards (name, description, and
 // each added/removed/changed tile). Drives the dirty-count badge in edit mode.
