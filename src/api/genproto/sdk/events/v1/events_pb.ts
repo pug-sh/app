@@ -114,7 +114,7 @@ export type Event = Message<"sdk.events.v1.Event"> & {
 
   /**
    * A UUID whenever set; omit entirely in cookieless mode (an explicit "" is
-   * also rejected — set fields must satisfy the uuid rule).
+   * also rejected: set fields must satisfy the uuid rule).
    *
    * @generated from field: string session_id = 7;
    */

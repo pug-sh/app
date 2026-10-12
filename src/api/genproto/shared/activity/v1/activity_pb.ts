@@ -401,7 +401,7 @@ export type GetProfileSessionsRequest = Message<"shared.activity.v1.GetProfileSe
    * Opaque cursor from a previous response's next_page_token. Empty for the first page.
    * A token is bound to the sort it was issued under, since the seek predicate is
    * built from the ordering column; send the same sort back, or restart from an
-   * empty token to change it. It is not bound to the other fields — changing
+   * empty token to change it. It is not bound to the other fields; changing
    * time_range or include_bots mid-pagination gives undefined paging.
    *
    * @generated from field: string page_token = 3;
@@ -687,7 +687,7 @@ export const GetProfileStatsResponseSchema: GenMessage<GetProfileStatsResponse> 
 
 /**
  * ProfileSessionSort names the ordering of GetProfileSessions. Ordering is always
- * descending — newest, longest, or busiest first — with the session id breaking ties.
+ * descending (newest, longest, or busiest first), with the session id breaking ties.
  *
  * @generated from enum shared.activity.v1.ProfileSessionSort
  */
@@ -798,13 +798,13 @@ export const ActivityService: GenService<{
    * GetProfileSessions returns a paginated list of one user profile's sessions,
    * newest first unless sort says otherwise. Requires that user's distinct_id (the
    * pug profile id a profile lookup gives you). Sessions are aggregated server-side
-   * — one row per session with its start, end, event count and device context — so
+   * (one row per session with its start, end, event count and device context), so
    * a profile with more events than any one page can hold still lists every
    * session, with exact durations and counts. Resolves profile aliases so merged anonymous events are
    * included.
    * To page, send the previous response's next_page_token back as page_token; an
    * empty next_page_token means there are no more pages. A token is only valid for
-   * the sort it was issued under — to change sort, start again with no page_token.
+   * the sort it was issued under; to change sort, start again with no page_token.
    * sort defaults to PROFILE_SESSION_SORT_STARTED_AT and every sort is descending,
    * so DURATION lists the longest sessions first and EVENT_COUNT the busiest.
    * Traffic tagged as a bot at ingest is excluded unless include_bots is true, and
@@ -824,7 +824,7 @@ export const ActivityService: GenService<{
    * Resolves aliases so merged anonymous events are included.
    * Traffic tagged as a bot at ingest is excluded unless include_bots is true, so a
    * profile whose events are all bot-tagged omits stats entirely and returns no heatmap
-   * days — not a NotFound, and profile properties are still returned.
+   * days, not a NotFound, and profile properties are still returned.
    *
    * @generated from rpc shared.activity.v1.ActivityService.GetProfileStats
    */

@@ -29,14 +29,14 @@ export type SubscribeRequest = Message<"sdk.devices.v1.SubscribeRequest"> & {
   platform: string;
 
   /**
-   * Optional — when provided, links the device to a profile.
+   * Optional: when provided, links the device to a profile.
    *
    * @generated from field: string profile_external_id = 3;
    */
   profileExternalId: string;
 
   /**
-   * Optional — alternative to profile_external_id for linking.
+   * Optional: alternative to profile_external_id for linking.
    *
    * @generated from field: string profile_id = 4;
    */

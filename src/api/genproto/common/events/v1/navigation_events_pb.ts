@@ -20,7 +20,7 @@ export const file_common_events_v1_navigation_events: GenFile = /*@__PURE__*/
  * Page URL, title, referrer, and UTM parameters are provided by SDK-injected
  * auto-properties ($url, $pageTitle, $referrer, $utmSource, $utmMedium,
  * $utmCampaign, $utmTerm, $utmContent) on every event. SDK authors:
- * do not add these as typed fields here — let the auto-property pipeline
+ * do not add these as typed fields here; let the auto-property pipeline
  * supply them so they stay consistent across all event kinds.
  *
  * @generated from message common.events.v1.PageViewProperties

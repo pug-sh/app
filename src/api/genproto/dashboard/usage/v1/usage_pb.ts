@@ -29,7 +29,7 @@ export type GetUsageRequest = Message<"dashboard.usage.v1.GetUsageRequest"> & {
   /**
    * Bounds the daily series only; used_events always covers the current period.
    * Absent means the current period. The bounds snap outwards to whole UTC days,
-   * since that is the grain the counts are stored at — asking for half a day
+   * since that is the grain the counts are stored at: asking for half a day
    * returns that day's whole cell. Metered days are pruned once they age past the
    * retention window, so a longer range simply returns fewer rows than it asked
    * for rather than failing.
@@ -88,7 +88,7 @@ export const UsageDaySchema: GenMessage<UsageDay> = /*@__PURE__*/
 export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & {
   /**
    * Distinct events recorded across all of the org's projects this period.
-   * MEANINGLESS unless `counted` is true — never render it as 0 on its own.
+   * MEANINGLESS unless `counted` is true; never render it as 0 on its own.
    *
    * It is absent on the wire until the meter has summed this period, but do not
    * rely on that: protoc-gen-es renders an edition-2023 singular scalar as a
@@ -110,7 +110,7 @@ export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & 
 
   /**
    * When the meter last ran for this org, in any period. ABSENT means it never
-   * has — there is no answer at all, which a deployment not running
+   * has: there is no answer at all, which a deployment not running
    * `pug cron usage` must render as "unknown" rather than "0".
    *
    * @generated from field: google.protobuf.Timestamp usage_computed_at = 4;
@@ -139,7 +139,7 @@ export type GetUsageResponse = Message<"dashboard.usage.v1.GetUsageResponse"> & 
    * Read this rather than comparing usage_computed_at against period_start.
    *
    * A plain bool rather than a wrapper: it is only ever emitted true, so a
-   * generator that drops the presence bit reads absence as false — which is the
+   * generator that drops the presence bit reads absence as false, which is the
    * right answer, unlike the 0 the same erasure makes of used_events.
    *
    * @generated from field: bool counted = 6;
@@ -160,8 +160,8 @@ export const GetUsageResponseSchema: GenMessage<GetUsageResponse> = /*@__PURE__*
 export const UsageService: GenService<{
   /**
    * Returns how many events the org's projects recorded in the current billing
-   * period — which runs from the org's billing anchor, defaulting to its signup
-   * anniversary rather than the 1st of the month — plus the per-project daily
+   * period (which runs from the org's billing anchor, defaulting to its signup
+   * anniversary rather than the 1st of the month) plus the per-project daily
    * series behind it. The numbers come from a scheduled meter whose cadence the
    * deployment sets, so read usage_computed_at for how stale they are rather than
    * assuming one, and read counted before rendering used_events at all.

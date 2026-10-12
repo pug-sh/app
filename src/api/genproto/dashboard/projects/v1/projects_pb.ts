@@ -222,7 +222,7 @@ export type ApiKey = Message<"dashboard.projects.v1.ApiKey"> & {
   kind: ApiKeyKind;
 
   /**
-   * Full value for a public key; empty for a private key — use `masked` to
+   * Full value for a public key; empty for a private key. Use `masked` to
    * identify one of those.
    *
    * @generated from field: string key = 5;
@@ -308,7 +308,7 @@ export type CreateApiKeyResponse = Message<"dashboard.projects.v1.CreateApiKeyRe
   apiKey?: ApiKey | undefined;
 
   /**
-   * The full key. For a private key this is the only time it is ever returned —
+   * The full key. For a private key this is the only time it is ever returned:
    * it is unrecoverable afterwards.
    *
    * @generated from field: string key = 2;
@@ -372,7 +372,7 @@ export type UpdateMetaRequest = Message<"dashboard.projects.v1.UpdateMetaRequest
   /**
    * IANA timezone (e.g. "Asia/Kolkata") aligning insight/dashboard bucket
    * boundaries to the project's calendar. Empty = UTC. Unlike creation, a malformed
-   * value is rejected (CodeInvalidArgument) rather than coerced — this is an
+   * value is rejected (CodeInvalidArgument) rather than coerced: this is an
    * explicit settings action.
    *
    * @generated from field: string reporting_timezone = 2;

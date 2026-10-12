@@ -107,7 +107,7 @@ export const GetFilterSchemaRequestSchema: GenMessage<GetFilterSchemaRequest> = 
   messageDesc(file_common_v1_filter_schema, 2);
 
 /**
- * GetFilterSchemaResponse mirrors the shared request shape — same reason.
+ * GetFilterSchemaResponse mirrors the shared request shape (same reason).
  *
  * @generated from message common.v1.GetFilterSchemaResponse
  */

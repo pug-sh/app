@@ -814,7 +814,7 @@ export const ChatCallRecordingStartedPropertiesSchema: GenMessage<ChatCallRecord
   messageDesc(file_common_events_v1_chat_events, 25);
 
 /**
- * mute_duration is optional — populate when the mute is time-bounded
+ * mute_duration is optional: populate when the mute is time-bounded
  * (e.g. "mute for 1h"); leave unset for indefinite mutes.
  *
  * @generated from message common.events.v1.ChatMemberMutedProperties

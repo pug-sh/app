@@ -62,7 +62,7 @@ export const ProductViewedPropertiesSchema: GenMessage<ProductViewedProperties> 
   messageDesc(file_common_events_v1_commerce_events, 0);
 
 /**
- * A list/category/search-results impression — fired when the user views a
+ * A list/category/search-results impression, fired when the user views a
  * collection of products rather than a single product detail page.
  *
  * @generated from message common.events.v1.ProductListViewedProperties

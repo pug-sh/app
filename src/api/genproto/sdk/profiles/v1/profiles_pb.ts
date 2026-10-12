@@ -24,7 +24,7 @@ export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
    * reserved-prefix rule on BatchCreateRequest.distinct_id already refuses them
    * from clients. external_id needs the same guard because post-identify events
    * are keyed by external_id, so an id accepted here comes back as a distinct_id
-   * that the batch rule then rejects — and because that rule is `all()`, one such
+   * that the batch rule then rejects, and because that rule is `all()`, one such
    * user fails the WHOLE batch, taking unrelated users' events with it.
    *
    * @generated from field: string external_id = 1;
@@ -32,7 +32,7 @@ export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
   externalId: string;
 
   /**
-   * Profile properties — shallow-merged into existing properties. On key conflict,
+   * Profile properties: shallow-merged into existing properties. On key conflict,
    * these values take precedence over previously stored values.
    *
    * @generated from field: google.protobuf.Struct traits = 2;
@@ -49,7 +49,7 @@ export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
 
   /**
    * The device to assign to this profile. The SDK should send this on first
-   * identify and on account switch (external_id changed) — not on every call,
+   * identify and on account switch (external_id changed), not on every call,
    * to avoid unnecessary DB writes. Omit for web SDKs without push support.
    *
    * @generated from field: string device_id = 4;

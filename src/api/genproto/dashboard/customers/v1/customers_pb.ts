@@ -59,7 +59,7 @@ export const GetMeResponseSchema: GenMessage<GetMeResponse> = /*@__PURE__*/
 export type SetPasswordRequest = Message<"dashboard.customers.v1.SetPasswordRequest"> & {
   /**
    * min_len is a character count (>= 6); max_bytes is bcrypt's 72-byte input
-   * ceiling. Enforced here on the password-creation path — SignInWithEmail
+   * ceiling. Enforced here on the password-creation path; SignInWithEmail
    * deliberately omits a min so a tightened policy never locks out an account
    * whose password predates it.
    *
@@ -90,7 +90,7 @@ export const SetPasswordResponseSchema: GenMessage<SetPasswordResponse> = /*@__P
 
 /**
  * CustomersService exposes the authenticated caller's own account. JWT-only
- * (dashboard) — it never reveals any other customer's data.
+ * (dashboard); it never reveals any other customer's data.
  *
  * @generated from service dashboard.customers.v1.CustomersService
  */
