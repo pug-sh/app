@@ -12,7 +12,7 @@ export const ProfileAvatar = ({ identity, bot, className }: Props) =>
     <span
       className={cn('flex shrink-0 items-center justify-center bg-muted text-muted-foreground', className)}
       role="img"
-      aria-label={`${identity.name} — automated traffic`}
+      aria-label={`${identity.name}, automated traffic`}
       title="Automated traffic"
     >
       <Bot className="size-[62%]" aria-hidden />

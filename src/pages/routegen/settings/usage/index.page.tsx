@@ -78,20 +78,20 @@ const PeriodTotal = ({ state, usedEvents }: { state: PeriodState; usedEvents: bi
 
 const PeriodNote = ({ state }: { state: PeriodState }) => {
   if (state.kind === 'never') {
-    return <>Usage has never been metered for this organization, so there is no count to show — not a zero.</>
+    return <>Usage has never been metered for this organization, so there is no count to show, which is not a zero.</>
   }
   if (state.kind === 'unreadable') {
     return (
       <>
-        The server reported a negative total for this period, so there is no count to show — not a zero. Last metered{' '}
-        {formatUtcStamp(state.meteredAt)}.
+        The server reported a negative total for this period, so there is no count to show, which is not a zero. Last
+        metered {formatUtcStamp(state.meteredAt)}.
       </>
     )
   }
   if (state.kind === 'computing') {
     return (
       <>
-        The meter has not reached this period yet, so there is no total for it — not a zero. Last metered{' '}
+        The meter has not reached this period yet, so there is no total for it, which is not a zero. Last metered{' '}
         {formatUtcStamp(state.meteredAt)}.
       </>
     )
@@ -117,7 +117,8 @@ const EmptyWindow = ({
       <div className={EMPTY_STATE_CLASS}>
         <p className="text-sm font-medium mb-1">Usage could not be read for this window</p>
         <p className="text-xs">
-          {unusable === 1 ? '1 row was' : `${unusable} rows were`} unusable, so there is no total to show — not a zero.
+          {unusable === 1 ? '1 row was' : `${unusable} rows were`} unusable, so there is no total to show, which is not
+          a zero.
         </p>
       </div>
     )
@@ -284,7 +285,7 @@ const Usage = () => {
 
   return (
     <div className="space-y-8 max-w-4xl">
-      {error && <p className="text-xs text-negative">{error} — showing the last data that loaded.</p>}
+      {error && <p className="text-xs text-negative">{error}. Showing the last data that loaded.</p>}
       <section>
         <SectionHeader
           title="Events this period"
@@ -344,7 +345,7 @@ const Usage = () => {
               stacked
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              {series.windowTotal.toLocaleString()} events {windowLabel(loaded.key, loaded.range)} — a different window
+              {series.windowTotal.toLocaleString()} events {windowLabel(loaded.key, loaded.range)}, a different window
               from the period total above.
             </p>
           </>
@@ -352,7 +353,7 @@ const Usage = () => {
         {unmeteredDays > 0 && meteredAt && (
           <p className="mt-2 text-xs text-caution">
             The meter last ran {formatUtcStamp(meteredAt)}, so{' '}
-            {unmeteredDays === 1 ? 'today is' : `the ${unmeteredDays} days through today are`} unmetered — not zero.
+            {unmeteredDays === 1 ? 'today is' : `the ${unmeteredDays} days through today are`} unmetered, not zero.
           </p>
         )}
       </section>

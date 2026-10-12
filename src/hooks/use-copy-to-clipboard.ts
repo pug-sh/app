@@ -19,7 +19,7 @@ export function useCopyToClipboard() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error('Copy failed — select and copy the text manually')
+      toast.error('Copy failed. Select and copy the text manually')
     }
   }
   return { copied, copy }

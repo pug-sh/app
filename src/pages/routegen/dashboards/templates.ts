@@ -236,7 +236,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
     id: 'custom-chart',
     group: 'blank',
     displayName: 'Custom chart',
-    description: 'Empty insight — configure from scratch.',
+    description: 'Empty insight. Configure from scratch.',
     icon: ListOrdered,
     build: () =>
       create(DashboardTileInputSchema, {

@@ -25,7 +25,7 @@ describe('parseThemeObject', () => {
     if (!result.ok) return
     const messages = result.issues.map(i => `${i.rule} ${i.path}: ${i.message}`)
     expect(messages).toContain('V12 radius: Unknown key "radius" was ignored')
-    expect(messages.some(m => m.includes('foregrund') && m.includes('did you mean "foreground"'))).toBe(true)
+    expect(messages.some(m => m.includes('foregrund') && m.includes('Did you mean "foreground"'))).toBe(true)
     expect(messages.some(m => m.includes('font-sans'))).toBe(true)
   })
 

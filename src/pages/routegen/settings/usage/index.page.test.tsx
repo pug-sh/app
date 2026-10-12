@@ -178,7 +178,7 @@ describe('Usage page — superseded requests', () => {
     stale.fail(new Error('too late'))
     await flush(stale.promise)
 
-    expect(screen.queryByText(/showing the last data that loaded/)).toBeNull()
+    expect(screen.queryByText(/Showing the last data that loaded/)).toBeNull()
     expect(caption()).toMatch(/333 events over the last 365 days/)
   })
 
@@ -267,7 +267,7 @@ describe('Usage page — the window on screen', () => {
     expect(rangeChip()).toContain('30 days')
 
     second.fail(new Error('nope'))
-    await screen.findByText(/showing the last data that loaded/)
+    await screen.findByText(/Showing the last data that loaded/)
     // And a change that never applied must never be left named on the control that applies it.
     expect(rangeChip()).toContain('30 days')
     expect(caption()).toMatch(/111 events over the last 30 days/)
@@ -306,7 +306,7 @@ describe('Usage page — the window on screen', () => {
     fireEvent.click(screen.getByLabelText('Refresh usage'))
     second.fail(new Error('nope'))
 
-    await screen.findByText(/showing the last data that loaded/)
+    await screen.findByText(/Showing the last data that loaded/)
     // The reader keeps the numbers rather than being dropped onto a bare error page whose only
     // control retries the query that just failed.
     expect(caption()).toMatch(/111 events over the last 30 days/)
@@ -409,7 +409,7 @@ describe('Usage page — billing period', () => {
 
     mount()
 
-    await screen.findByText(/the 6 days through today are unmetered — not zero/)
+    await screen.findByText(/the 6 days through today are unmetered, not zero/)
     expect(screen.queryByText(/stored as no row at all/)).toBeNull()
   })
 
@@ -592,7 +592,7 @@ describe('Usage page — refusing to assert a zero', () => {
 
     mount()
 
-    await screen.findByText(/the 7 days through today are unmetered — not zero/)
+    await screen.findByText(/the 7 days through today are unmetered, not zero/)
   })
 
   // protobuf-es returns a truthy Invalid Date for an out-of-range int64 rather than throwing, and

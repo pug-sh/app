@@ -214,7 +214,7 @@ const SignIn = () => {
             description={
               <>
                 We sent a sign-in link to{' '}
-                <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>. Click it to continue —
+                <span className="font-medium break-all text-foreground">{magicLinkEmail}</span>. Click it to continue;
                 it expires in 15 minutes.
               </>
             }

@@ -96,7 +96,7 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const country = structGet(event.autoProperties, '$country')
   const region = structGet(event.autoProperties, '$region')
   const cookieless = isCookielessId(event.distinctId)
-  const noProfile = cookieless ? ' — cookieless, no profile' : ''
+  const noProfile = cookieless ? ' (cookieless, no profile)' : ''
 
   return (
     <>

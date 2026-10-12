@@ -83,7 +83,7 @@ const Appearance = () => {
             </div>
             {unusable && (
               <p className="mt-2 text-xs text-negative">
-                {unusable.name} can’t be used, so Pug is showing instead{reason ? ` — ${reason}` : '.'}
+                {unusable.name} can’t be used, so Pug is showing instead{reason ? `: ${reason}` : '.'}
               </p>
             )}
           </section>

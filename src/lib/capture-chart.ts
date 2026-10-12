@@ -237,7 +237,7 @@ const MAX_CAPTURE_ELEMENTS = 25_000
 // itself is never re-themed.
 export const captureElementToImage = async (node: HTMLElement): Promise<CapturedChart> => {
   if (node.querySelectorAll('*').length > MAX_CAPTURE_ELEMENTS) {
-    throw new Error('This view is too detailed to export — narrow the date range or use a coarser granularity')
+    throw new Error('This view is too detailed to export. Narrow the date range or use a coarser granularity')
   }
 
   // Scrollable tiles (retention heatmaps, data tables) clip their content to the
@@ -398,7 +398,7 @@ export const composeShareCard = async ({
   // the canvas silently encode blank, fail with a message the caller can surface so
   // the user knows to narrow the range instead of downloading a broken image.
   if (pxW > MAX_CANVAS_DIM || pxH > MAX_CANVAS_DIM || pxW * pxH > MAX_CANVAS_AREA) {
-    throw new Error('Chart is too large to export — narrow the date range or remove a breakdown')
+    throw new Error('Chart is too large to export. Narrow the date range or remove a breakdown')
   }
 
   const canvas = document.createElement('canvas')

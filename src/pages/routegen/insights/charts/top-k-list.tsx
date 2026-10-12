@@ -7,7 +7,7 @@ import { resolveIdentity } from '../../profiles/_identity'
 import { EMPTY_VALUE_LABEL } from '../helpers'
 import { topKShareInfo } from '../top-k'
 
-const OTHERS_HINT = '$others — everything outside the top results, aggregated into a single bucket.'
+const OTHERS_HINT = '$others: everything outside the top results, aggregated into a single bucket.'
 const EMPTY_HINT = 'Events carrying no value for this property. Ranked as a real bucket, not an error.'
 
 const formatValue = (value: number) => {
@@ -142,7 +142,7 @@ export const TopKList = ({
               </div>
               <span
                 className="w-16 shrink-0 text-right text-xs font-medium tabular-nums"
-                title={`${exactValue(row.value)}${row.isOthers ? ` — ${OTHERS_HINT}` : ''}`}
+                title={`${exactValue(row.value)}${row.isOthers ? `\n${OTHERS_HINT}` : ''}`}
               >
                 {formatValue(row.value)}
               </span>

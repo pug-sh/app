@@ -18,7 +18,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
 type StoredAtom = ReturnType<typeof atomWithStorage<unknown>>
 
 /** What to tell someone whose browser refused to save a theme setting. */
-export const STORAGE_REFUSED = 'Couldn’t save that in this browser — storage is full or blocked.'
+export const STORAGE_REFUSED = 'Couldn’t save that in this browser: storage is full or blocked.'
 
 // A full quota, a blocked profile or a full disk refuses a write by throwing — after atomWithStorage
 // has already moved memory, so the session would show what the next load won't have. Every theme

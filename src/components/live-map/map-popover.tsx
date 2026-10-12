@@ -191,7 +191,7 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
           </Link>
         ) : (
           <div className="rounded-b-xl border-t border-border/40 px-3 py-2 text-center text-muted-foreground">
-            Cookieless visitor — no profile
+            Cookieless visitor, no profile
           </div>
         ))}
     </div>

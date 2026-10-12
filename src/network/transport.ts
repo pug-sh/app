@@ -122,7 +122,7 @@ const doRefresh = async (): Promise<string | null> => {
       // The domain now requires SSO: sign-in shows its providers instead of a generic expiry.
       const detail = ssoRequiredOf(err)
       if (detail) store.set(ssoBlockAtom, { detail, sessionEnded: true })
-      else toast.error('Session expired — please sign in again')
+      else toast.error('Session expired. Please sign in again')
       return null
     }
     // Transient — keep the session intact.

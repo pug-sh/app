@@ -147,7 +147,7 @@ const distance = (a: string, b: string) => {
 
 const suggest = (name: string, options: readonly string[]) => {
   const best = options.map(o => [o, distance(name, o)] as const).sort((x, y) => x[1] - y[1])[0]
-  return best && best[1] <= 2 ? ` — did you mean "${best[0]}"?` : ''
+  return best && best[1] <= 2 ? `. Did you mean "${best[0]}"?` : ''
 }
 
 export const parseThemeText = (text: string): ParseResult => {
@@ -220,7 +220,7 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
   const colors = namedColors(source.colors ?? {}, TOKENS, 'token', `${path}.colors`, issues, (value, at, token) => {
     const parsed = colorAt(value, at, issues)
     if (parsed && parsed.alpha < 0.999 && SURFACES.has(token)) {
-      issues.push(error('V5', at, `${token} must be opaque — text is drawn on it`))
+      issues.push(error('V5', at, `${token} must be opaque, since text is drawn on it`))
     }
     return parsed
   })

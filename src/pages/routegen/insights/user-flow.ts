@@ -207,7 +207,7 @@ export const sankeyIncompleteReason = ({ droppedLinks, collapsedNodes }: SankeyG
     parts.push(`${collapsedNodes} duplicate ${collapsedNodes === 1 ? 'step was' : 'steps were'} merged`)
   }
   if (parts.length === 0) return null
-  return `${parts.join(' and ')} — flow totals may be incomplete`
+  return `${parts.join(' and ')}, so flow totals may be incomplete`
 }
 
 // The overflow bucket is identified by is_others (never by id/label string).

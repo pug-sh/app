@@ -94,7 +94,7 @@ const SetupMode = ({ project }: { project: Project }) => {
     try {
       // An explicit user action deserves feedback the silent background poll skips.
       const ok = await poll()
-      if (!ok) toast.error('Could not check for events — please try again')
+      if (!ok) toast.error('Could not check for events. Please try again')
     } finally {
       setRefreshing(false)
     }
@@ -173,8 +173,8 @@ const SetupMode = ({ project }: { project: Project }) => {
             The server SDK authenticates with a private key.{' '}
             <ProjectLink href="/settings/api-keys" className="text-link underline-offset-4 hover:underline">
               Create one in settings
-            </ProjectLink>{' '}
-            — it is shown once, when created.
+            </ProjectLink>
+            . It is shown once, when created.
           </p>
         )}
 
@@ -200,7 +200,7 @@ const SetupMode = ({ project }: { project: Project }) => {
           <span className="relative inline-flex size-2 rounded-full bg-link" />
         </span>
         <p className="text-xs text-muted-foreground">
-          Waiting for your first events — this page switches to your dashboard automatically.
+          Waiting for your first events. This page switches to your dashboard automatically.
         </p>
         <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
           <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />

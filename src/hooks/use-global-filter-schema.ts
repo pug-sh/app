@@ -44,7 +44,7 @@ export const fetchSchemaForKind = (
   if (!opts?.force) {
     const failedAt = failureCache.get(key)
     if (failedAt && Date.now() - failedAt < FAILURE_TTL) {
-      return Promise.reject(new Error('Schema fetch recently failed — retry in a few seconds'))
+      return Promise.reject(new Error('Schema fetch recently failed. Retry in a few seconds'))
     }
   } else {
     failureCache.delete(key)
@@ -153,7 +153,7 @@ export const useGlobalFilterSchema = ({
       if (schemas.length === 0) {
         error = `Failed to load filter schema for ${failedKinds.join(', ')}`
       } else if (failedKinds.length > 0) {
-        error = `Filter schemas failed for: ${failedKinds.join(', ')} — filter properties may be incomplete`
+        error = `Filter schemas failed for: ${failedKinds.join(', ')}. Filter properties may be incomplete`
       }
       if (error && schemas.length > 0) toast.warning(error)
       setResult({

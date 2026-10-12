@@ -53,6 +53,6 @@ describe('a refused session refresh', () => {
     await expect(request()).rejects.toMatchObject({ code: Code.Unauthenticated })
 
     expect(store.get(ssoBlockAtom)).toBeNull()
-    expect(error).toHaveBeenCalledWith('Session expired — please sign in again')
+    expect(error).toHaveBeenCalledWith('Session expired. Please sign in again')
   })
 })

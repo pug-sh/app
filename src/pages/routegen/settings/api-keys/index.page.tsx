@@ -70,7 +70,7 @@ const NewPrivateKey = ({ value, onDismiss }: { value: string; onDismiss: () => v
     <div className="mb-4 rounded-md border border-border bg-muted/40 p-3">
       <div className="mb-2 flex items-center gap-2">
         <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
-        <p className="text-xs font-medium">Copy this key now — it is never shown again.</p>
+        <p className="text-xs font-medium">Copy this key now. It is never shown again.</p>
       </div>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded bg-background px-2 py-1.5 font-mono text-xs">{value}</code>

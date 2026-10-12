@@ -44,7 +44,7 @@ const warningSummary = (issues: Issue[]) => {
   if (issues.some(issue => issue.rule !== 'V12')) {
     lines.push('This theme has warnings. It still works, but some colours may be hard to read.')
   }
-  if (issues.some(issue => issue.rule === 'V12')) lines.push('Parts of this file were ignored — they’re listed below.')
+  if (issues.some(issue => issue.rule === 'V12')) lines.push('Parts of this file were ignored. They’re listed below.')
   return lines.join(' ')
 }
 

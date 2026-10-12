@@ -220,7 +220,7 @@ export const InsightsContent = memo(function InsightsContent({
     if (breakdowns.length === 0 || count < breakdownResponseLimit) return null
     return (
       <p className="text-xs text-muted-foreground mt-2">
-        Showing top {breakdownResponseLimit} — additional breakdown values may be hidden.
+        Showing top {breakdownResponseLimit}. Additional breakdown values may be hidden.
       </p>
     )
   }
@@ -341,7 +341,7 @@ export const InsightsContent = memo(function InsightsContent({
               : 'flex h-48 items-center justify-center text-muted-foreground'
           }
         >
-          <p className="max-w-xs text-center text-sm">This flow could not be drawn — {degraded}</p>
+          <p className="max-w-xs text-center text-sm">This flow could not be drawn: {degraded}</p>
         </div>
       )
     }
@@ -466,7 +466,7 @@ export const InsightsContent = memo(function InsightsContent({
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-        <p className="text-sm">No results — try adjusting your query</p>
+        <p className="text-sm">No results. Try adjusting your query</p>
         <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
           Retry
         </Button>

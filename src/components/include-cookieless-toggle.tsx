@@ -16,7 +16,7 @@ const IncludeCookielessToggle = ({
   className?: string
 }) => {
   const countedTitle = personBased
-    ? 'Counting visitors who declined cookies. Their id never recurs after the day it was issued, so they can only read as drop-off — retention and funnel rates fall.'
+    ? 'Counting visitors who declined cookies. Their id never recurs after the day it was issued, so they can only read as drop-off, so retention and funnel rates fall.'
     : 'Counting visitors who declined cookies. Their id rotates daily, so one person counts once per day.'
   return (
     <button

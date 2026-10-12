@@ -129,7 +129,7 @@ const SessionSummary = ({
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             {formatDateTime(startTime)}
-            {endTime && ` — ${formatClock(endTime)}`}
+            {endTime && ` – ${formatClock(endTime)}`}
           </span>
         )}
         {(browser || os || device) && (

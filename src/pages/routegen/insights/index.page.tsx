@@ -603,7 +603,7 @@ const Insights = () => {
                       Without a scope, all events participate.
                     </TooltipContent>
                   </Tooltip>
-                  <span>Event scope is optional — leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
+                  <span>Event scope is optional. Leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
                 </div>
               )}
             </>

@@ -222,7 +222,7 @@ const fmtAmountReason: Formatter = p => {
   const amt = fmtAmount(p)
   const reason = structGet(p, 'reason')
   if (!amt && !reason) return null
-  return [amt, reason].filter(Boolean).join(' — ')
+  return [amt, reason].filter(Boolean).join(' · ')
 }
 
 // ── Well-known event registry ────────────────────────────────────────────────
@@ -309,7 +309,7 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
       const amt = fmtAmount(p)
       const reason = structGet(p, 'reason')
       if (!amt && !reason) return null
-      return [amt, reason].filter(Boolean).join(' — ')
+      return [amt, reason].filter(Boolean).join(' · ')
     },
   },
 

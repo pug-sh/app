@@ -145,7 +145,7 @@ track('signed_up', { plan: 'pro' })`,
         credential: 'none',
         code: () => `import { Pug } from '@pug-sh/node'
 
-// Server-side: use your private key, read from the environment — never hardcode it
+// Server-side: use your private key, read from the environment, never hardcode it
 const pug = new Pug({ apiKey: process.env.PUG_API_KEY })
 
 await pug.identify('user_123', { email: 'ada@example.com', plan: 'pro' })
@@ -167,7 +167,7 @@ pug.track('user_123', 'order_completed', { revenue: 49 })`,
         lang: 'ruby',
         code: () => `require "pug"
 
-# Server-side: use your private key, read from the environment — never hardcode it
+# Server-side: use your private key, read from the environment, never hardcode it
 pug = Pug::Client.new(api_key: ENV.fetch("PUG_API_KEY"))
 
 pug.identify("user_123", email: "ada@example.com", plan: "pro")
