@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Dashboard frontend for Pug — an analytics + communication platform (similar to CleverTap). Built for growth managers. React + Vite + TypeScript. Talks to the backend via ConnectRPC (binary protobuf).
+Dashboard frontend for Pug, a product analytics platform built for growth managers. React + Vite + TypeScript. Talks to the backend via ConnectRPC (binary protobuf).
 
 ## Commands
 
@@ -14,23 +14,29 @@ bun run build      # Type-check + production build (tsc -b && vite build)
 bun run generate   # Regenerate TypeScript proto types from backend protos
 bun run generate:themes # Regenerate built-in theme CSS (from src/theme/presets) + the theme JSON Schema (from src/theme/format.ts)
 bun run format     # Biome formatter (format only)
-bun run lint       # Biome check — format + lint + import organization (safe fixes)
-bun run lint:ci    # Biome check, reporting only — never writes (what CI runs)
+bun run lint       # Biome check: format + lint + import organization (safe fixes)
+bun run lint:ci    # Biome check, reporting only, never writes (what CI runs)
 bun run test       # Vitest, single run
 bun run test:watch # Vitest, watch mode
-bun run knip       # Knip — unused files, exports and dependencies (CI gate)
+bun run knip       # Knip: unused files, exports and dependencies (CI gate)
 ```
 
-## Knip
+## Area Rules
 
-`knip.jsonc`, run in CI after the build. It gates on unused files, unused/unlisted dependencies, and exports nothing imports.
+Rules that only matter in one part of the codebase live in `.claude/rules/`, one topic per file. Each file lists the paths it covers in `paths:` frontmatter, and Claude Code loads it the first time it reads or edits a matching file, so it costs nothing elsewhere. They are plain markdown: read the relevant one before changing that area by hand.
 
-- **Three zones are ignored: `src/api/genproto/`, `src/components/charts/`, `src/components/ui/`.** All are regenerated or re-added from a registry, so a finding in one is never something we would act on. The cost is that knip no longer reports dead *files* there either — `components/ui/{card,table,tabs,toggle-group}.tsx` were all found and deleted that way before the zone was ignored, and a future one won't be. Dead files are the lesser reason for the ignore in any case: un-ignoring `components/ui/` also reports ~44 unused exports that are legitimate registry API.
-- **An ignored file still contributes dependency usage — unless nothing *reachable from an entry point* imports it.** Then knip never parses it, and a dependency only it pulls in reads as dead. Being imported is not enough, which is the trap: `@visx/pattern` needs a line in `ignoreDependencies` even though its importer `charts/visx-pattern.tsx` *is* imported, because the chain above it dead-ends — `@visx/pattern` ← `visx-pattern.tsx` ← `pattern-preset.tsx` ← `bar-squares.tsx` ← nothing. `cmdk`, `react-day-picker` and `class-variance-authority` are equally exclusive to `components/ui/`, and need nothing, because app code imports the files that use them.
-- **Don't add `src/components/shimmering-text.tsx` to `ignore`.** It is vendored, but it is reachable through the chart zone, so listing it earns a "Remove from ignore" config hint instead.
-- **`ignoreExportsUsedInFile: true`.** Flipping it surfaces a second tier of ~35 `export` keywords on symbols only used in their own file — worth a periodic sweep, but not a gate: some are deliberate module API (`lib/granularity.ts`, `analytics/sanitize-url.ts`).
-- `@bufbuild/protoc-gen-es` is also in `ignoreDependencies` — `buf.gen.yaml` runs it as a `local:` plugin binary, so there is no import site to find.
-- `scripts/generate-themes.ts` needs no `entry` line: knip finds it through the `generate:themes` package script, and naming it as well earns a redundant-entry hint.
+| File | Covers |
+| --- | --- |
+| `.claude/rules/billing.md` | Plan, free allowance, billed usage, checkout (Dodo Payments) |
+| `.claude/rules/charts.md` | The vendored bklit charts and the wrappers around them |
+| `.claude/rules/theme.md` | Theme engine, colour tokens, dark-mode contrast, series-colour fitting |
+| `.claude/rules/typography.md` | Changing or evaluating the UI face |
+| `.claude/rules/brand-icons.md` | Browser, OS and device marks |
+| `.claude/rules/analytics.md` | Dogfooding through `@pug-sh/browser` |
+| `.claude/rules/auth.md` | Sign-in flows and Turnstile |
+| `.claude/rules/insights.md` | Per-event aggregations and filter semantics |
+
+Every rule file needs a `paths:` list; one without it loads at launch like this file. A rule that matters before any file in its area is opened, such as what to build or which dependency to reach for, belongs here instead.
 
 ## Tests
 
@@ -38,42 +44,54 @@ Vitest + happy-dom + Testing Library, in `src/**/*.test.{ts,tsx}` next to the co
 
 This is a young suite covering load-order and state bugs, not a coverage regime. What's worth knowing before adding to it:
 
-- **A regression test must be shown to fail against the unfixed code.** Break the fix, watch it go red, restore. Several of these looked right and passed against the bug — a React-timing test in particular is easy to write so that it can't observe the thing it's named after.
-- **Test through the structure that produces the bug.** The default-project race only reproduces when `ProjectRedirect` renders inside a `Switch` — rendered bare it never unmounts and self-corrects, passing either way.
-- **The environment has to install its own storage.** Node 25 defines inert `localStorage`/`sessionStorage` globals, and vitest won't overwrite a global that already exists, so happy-dom's real Storage never lands. `src/test/setup.ts` puts it back — don't assume the environment did.
+- **A regression test must be shown to fail against the unfixed code.** Break the fix, watch it go red, restore. Several of these looked right and passed against the bug; a React-timing test in particular is easy to write so that it can't observe the thing it's named after.
+- **Test through the structure that produces the bug.** The default-project race only reproduces when `ProjectRedirect` renders inside a `Switch`: rendered bare it never unmounts and self-corrects, passing either way.
+- **The environment has to install its own storage.** Node 25 defines inert `localStorage`/`sessionStorage` globals, and vitest won't overwrite a global that already exists, so happy-dom's real Storage never lands. `src/test/setup.ts` puts it back; don't assume the environment did.
 - **Fake the RPC atoms, not the transport** (`vi.mock('@/api/rpc', …)`); a hand-held `batchGet` lets a test decide when a call resolves, which is the only way to land a response into a workspace that has moved on.
 
 ## Proto Code Generation
 
-Proto definitions live in `proto/` — a gitignored symlink to the pug backend checkout at `$GOPATH/src/github.com/pug-sh/pug/proto` (recreate with `ln -sfn "$(go env GOPATH)/src/github.com/pug-sh/pug/proto" proto`). Generated TypeScript goes to `src/api/genproto/` — these files are tracked in the repo, so commit the regenerated output. After backend proto changes, run `bun run generate` and commit the diff. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
+Proto definitions live in `proto/`, a gitignored symlink to the `proto/` directory of your pug backend checkout (recreate with `ln -sfn <backend-checkout>/proto proto`). Generated TypeScript goes to `src/api/genproto/`; these files are tracked in the repo, so commit the regenerated output. After backend proto changes, run `bun run generate` and commit the diff. The `--include-imports` flag is required for dependency types (buf/validate, common/v1).
+
+## Knip
+
+`knip.jsonc`, run in CI after the build, gates on unused files, unused or unlisted dependencies, and exports nothing imports. Its comments explain every ignore, entry and dependency exception; read them before changing the config.
 
 ## Architecture
 
-### State Management — Jotai atoms for shared state
+### State Management: Jotai atoms for shared state
 
-All *shared* state is Jotai atoms. No React Context, no Redux. Pattern:
+All *shared* state is Jotai atoms. No React Context for app state, no Redux. Pattern:
 
 - **RPC clients** are atoms: `atom(get => createClient(Service, get(transportAtom)))` in `src/api/rpc.ts`
 - **Async operations** use write atoms: `atom(null, async (get, set) => { ... })`
 - **Persistent state** uses `atomWithStorage` (JWT token, theme preference)
 
-State only one page reads is not shared state and stays in `useState` — see Page Decomposition below.
+State only one page reads is not shared state and stays in `useState` (see Page Decomposition below).
 
 ### ConnectRPC Transport
 
-`src/network/transport.ts` — single transport with two interceptors:
+`src/network/transport.ts`: a single transport with two interceptors:
 
-1. **authBearer** — reads JWT from localStorage, sets Authorization header on every request. No per-call `{ headers }` needed for auth.
-2. **protovalidate** — validates outgoing messages against proto buf.validate constraints before sending.
+1. **authBearer** reads the JWT from localStorage and sets the Authorization header on every request. No per-call `{ headers }` needed for auth.
+2. **protovalidate** validates outgoing messages against proto buf.validate constraints before sending.
 
-For project-scoped endpoints (campaigns, insights), pass `{ headers }` from `projectHeaderAtom` which only contains `x-project-id`. Auth is automatic.
+For project-scoped endpoints (insights, dashboards, events, profiles), pass `{ headers }` from `projectHeaderAtom`, which only contains `x-project-id`. Auth is automatic.
+
+### Backend Auth Model
+
+- JWT `sub` claim = customerID (not email)
+- Org + project auto-created on signup
+- Dashboard endpoints need the JWT (handled by the interceptor); project-scoped endpoints need the JWT + `x-project-id`
+- SDK endpoints (devices, events, profiles) use API key auth and are not called from this frontend
+- Sign-in flows (magic link, OIDC, SSO connections) and Turnstile: `.claude/rules/auth.md`
 
 ### File-Based Routing
 
 Pages live in `src/pages/routegen/<name>/index.page.tsx`. Vite's `import.meta.glob` auto-discovers them at build time. No manual route registration.
 
-- `routegen/campaigns/index.page.tsx` → `/campaigns`
-- `routegen/campaigns/[id]/index.page.tsx` → `/campaigns/:id` (dynamic segments)
+- `routegen/dashboards/index.page.tsx` → `/dashboards`
+- `routegen/dashboards/[dashboardId]/index.page.tsx` → `/dashboards/:dashboardId` (dynamic segments)
 - Co-located files (atoms, helpers) next to `index.page.tsx` are not routed
 
 Feature-local modules should stay with the owning feature:
@@ -84,21 +102,21 @@ Feature-local modules should stay with the owning feature:
 
 Do not move feature-specific helpers into `src/lib/` just because they are "pure TS".
 
-Sign-in page is outside `routegen/` since it's unauthenticated.
+The sign-in pages live outside `routegen/` since they're unauthenticated.
 
 ### Page Decomposition
 
-When a page file (`index.page.tsx`) grows too large, decompose it by extracting **components** and **pure helper modules** — not by wrapping every cluster of state in a custom hook. Keep the page's own `useState`/`useMemo`/`useCallback` inline. The Insights page is the reference: ~430 lines with ~30 inline hooks, split into `content.tsx` (component), `controls.tsx` (components), `helpers.ts` (pure fns), `constants.ts` — and zero custom state hooks.
+When a page file (`index.page.tsx`) grows too large, decompose it by extracting **components** and **pure helper modules**, not by wrapping every cluster of state in a custom hook. Keep the page's own `useState`/`useMemo`/`useCallback` inline. The Insights page is the reference: its state stays inline in `index.page.tsx`, with `content.tsx` (component), `controls.tsx` (components), `helpers.ts` (pure fns) and `constants.ts` split out, and no page-local state hooks.
 
-- **Components** — presentational chunks (`dashboard-header.tsx`, `dashboard-canvas.tsx`, `resume-banner.tsx`). Co-locate them next to `index.page.tsx`. A component may take the whole hook return as a prop, typed `ReturnType<typeof useThatHook>`, to avoid re-listing two dozen props.
-- **Pure helpers** — deterministic functions and constants (`controls-helpers.ts`, `draft-state.ts`). No React.
+- **Components**: presentational chunks (`dashboard-header.tsx`, `dashboard-canvas.tsx`, `resume-banner.tsx`). Co-locate them next to `index.page.tsx`. A component may take the whole hook return as a prop, typed `ReturnType<typeof useThatHook>`, to avoid re-listing two dozen props.
+- **Pure helpers**: deterministic functions and constants (`controls-helpers.ts`, `draft-state.ts`). No React.
 
 Custom hooks (`use-*.ts`) are reserved for **reusable behavior**, not per-page state:
 
 - Cross-feature behavior lives in `src/hooks/` (`use-mobile`, `use-relative-time`, `use-debounced-query`, `use-event-filters`).
-- A feature-local hook is justified only for a genuinely cohesive, self-contained unit — a keyboard-shortcut binder (`use-editor-shortcuts.ts`) or a complex state machine (`use-dashboard-editor.ts`: edit mode, draft persistence, tile mutations). Do not split a single page into several thin state hooks (`use-page-data`, `use-page-controls`, `use-page-delete`) — fold that state back into the page.
+- A feature-local hook is justified only for a genuinely cohesive, self-contained unit: a keyboard-shortcut binder (`use-editor-shortcuts.ts`) or a complex state machine (`use-dashboard-editor.ts`: edit mode, draft persistence, tile mutations). Do not split a single page into several thin state hooks (`use-page-data`, `use-page-controls`, `use-page-delete`); fold that state back into the page.
 
-### UI Components — shadcn/ui (default style)
+### UI Components: shadcn/ui (default style)
 
 Standard shadcn/ui with default Base UI primitives. Uses `render` prop for composition (not `asChild`):
 
@@ -106,197 +124,36 @@ Standard shadcn/ui with default Base UI primitives. Uses `render` prop for compo
 <SidebarMenuButton render={<Link href="/overview" />}>
 ```
 
-Update components: `bunx shadcn@latest add <component> --overwrite`
+Update components with `bunx shadcn@latest add <component> --overwrite`, then follow "After any `shadcn add`" below.
 
-### Charts — vendored, never edit
+### Charts: vendored, never edit
 
-`src/components/charts/` is third-party code vendored from the `@bklit` shadcn registry (declared in `components.json`), pulled with `bunx shadcn@latest add @bklit/<component> --overwrite`. Keeping it identical to upstream is what makes an upgrade a re-run of that command instead of a manual merge.
+Every chart (trends area, line and bar, plus the funnel) renders through the `@bklit` shadcn registry, vendored in `src/components/charts/` and pulled with `bunx shadcn@latest add @bklit/<component> --overwrite`. Keeping it identical to upstream is what makes an upgrade a re-run of that command instead of a manual merge.
 
-Every chart renders through it — trends area, line and bar (`insights/charts/{area,line,bar}-chart.tsx`) plus the funnel (`insights/charts/funnel-chart.tsx`). **recharts is gone**, and with it `components/ui/chart.tsx`; don't reintroduce either. The vendored funnel draws exactly one funnel, so a breakdown renders as small multiples (one taper per split) rather than grouped series — that shape difference is the reason the wrapper, not the chart, owns the layout.
+- **Never edit anything under `src/components/charts/`, or `src/components/shimmering-text.tsx`**, which the registry drops outside the directory. A local fix there is silently overwritten by the next add. Customize by wrapping: the wrappers live in `src/pages/routegen/insights/charts/`, and `.claude/rules/charts.md` has the three ways to solve something that looks like it needs a vendored edit.
+- **recharts and `components/ui/chart.tsx` are gone; don't reintroduce either.**
+- **There is no log scale or zero-baseline option.** The vendored shell hardcodes `scaleLinear` (`y-domain-utils.ts`, `time-series-chart-shell.tsx`) and tweens the y-domain itself. `VisualizationOptions.logScale` / `zeroBaseline` still exist on the proto and may sit `true` on old tiles; they are ignored. Don't re-add the checkboxes without first solving a non-linear scale in the wrapper (a data-space transform plus a matching y-tick formatter); zero-baseline needs nothing, since the domain already pins `[0, max]` for non-negative data.
+- Series colours come from `getSeriesColor()` and are passed in, never hardcoded upstream.
 
-**Log scale and zero-baseline are gone.** The vendored shell hardcodes `scaleLinear` (`y-domain-utils.ts`, `time-series-chart-shell.tsx`) and tweens the y-domain itself, so both tile options were dropped from the format panel and the render path. `VisualizationOptions.logScale` / `zeroBaseline` still exist on the proto and may sit `true` on tiles saved before the migration — they are vestigial and silently ignored. Don't re-add the checkboxes without first solving a non-linear scale in the wrapper (a data-space transform plus a matching y-tick formatter); zero-baseline needs nothing, since the domain already pins `[0, max]` for non-negative data.
+### After any `shadcn add`
 
-- **Never edit anything under `src/components/charts/` — or `src/components/shimmering-text.tsx`.** The registry drops that one dependency outside the directory, so the vendored zone is the directory *plus* that file. A local fix there is silently overwritten by the next re-add, and any drift turns an upgrade into a manual three-way merge. The directory currently matches upstream byte for byte; `git diff src/components/charts/` after an add should be empty, and anything else is either collateral to revert or a real upstream change to read.
-- **Customize by wrapping.** Build a wrapper next to the feature that owns it and compose the vendored chart through props / `className`. Series colors come from `getSeriesColor()` (see Insights Color System) and are passed in — never hardcoded upstream. `useVendoredChartPrep` (`insights/charts/common.ts`) holds the prep all three wrappers share: keyed rows, tooltip rows, and the two date formatters (axis + tooltip; the pill always carries the day an hour bucket lands on, while the axis stays terse and adds the day only when the window crosses one — see the label-uniqueness rule below).
-- Both paths are excluded from Biome (`biome.json` → `files.includes`) so the formatter can't rewrite them either. The registry's style (double quotes, semicolons) is expected there and is not a violation. `shimmering-text.tsx` is the trap — it sits in our namespace but is not ours.
-- **The shell paints its first frame finished.** Mounted with data it rests in `ready`, series drawn and reveal clip open, and starts the reveal from an effect, so every area, line and bar chart flashed its data before wiping it to animate. `useRevealGate` (`common.ts`) keeps each wrapper `invisible` until the shell's first `onPhaseChange`, which lands in the same flush as the reveal; any phase opens it, so a shell that skips the reveal still shows. `reveal-gate.test.tsx` guards both. A core remount under a mounted wrapper (plot below 10px and back) still flashes once. bklit's own loading flow (`status="loading"` → `"ready"` on one instance) never flashes, but `ComposedChart` has no `status`, so bars can't use it. Re-check on each add, and drop the gate once upstream starts the reveal before first paint.
-- **Prefer a vendored component over a local one, and re-check on every add.** The registry gained a `YAxis` after we had hand-rolled one, and adopting it deleted our file along with its whole failure mode — ours drew SVG `<text>` at negative x and depended on `displayName` surviving minification to stay outside the series reveal clip, while upstream portals HTML and sidesteps that entirely. It also tweens tick position with the y-domain. Pass `formatValue`, not upstream's `formatLargeNumbers`: that does `(v/1000).toFixed(0)`, so 1500 renders `2k` and 1.2M renders `1200k`. The wrappers pass `yTickFormatter ?? compactNumber`.
+`src/components/charts/` and `src/components/ui/` are registry-managed. After an add, `git diff` the whole tree, not just the component's directory. `git diff src/components/charts/` should be empty; anything else there is either collateral to revert or a real upstream change to read. These always need a manual revert:
 
-**No file in the vendored zone is patched. Keep it that way.** There used to be two patches, and every `add` reverted them — silently, in the case of the date labels. Both are now solved from outside, so re-running an add is safe. If you hit something that looks like it needs a vendored edit, these are the three shapes of answer that worked:
-
-1. **A broken import path → satisfy the path instead of changing it.** `chart-loading-label.tsx` ships `import … from "../components/shimmering-text"`, valid only in the registry author's `src/charts/` layout; at our target (`components/charts/`) it resolves to `components/components/`. Rather than rewrite the import, `src/components/components/shimmering-text.ts` re-exports the real module. Ugly path, but it is upstream's expectation and it never needs reapplying.
-2. **Missing behaviour → re-provide the chart context.** Upstream computes x labels internally with `shortDateFmt` (`Intl.DateTimeFormat("en-US", …)`) — browser-local and granularity-blind — and exposes no prop. But the labels reach both consumers (axis and tooltip) through `dateLabels` on the chart context, and `ChartStableContext` is exported, so `insights/charts/date-labels.tsx` wraps `XAxis` and `ChartTooltip` in a provider that overrides that one field. Bucket labels must render in the project's reporting zone to match the server's bucket boundaries, and vary by granularity or every hour bucket reads `Jul 19`.
-3. **An upstream bug with no seam → rewrite it in the build, not in the file, and report it upstream.** Two charts of one type on a page used to share a hardcoded reveal `<clipPath id>`, so `url(#id)` cropped the later chart to the first one's rect. A `vite.config.ts` transform swapped the literal for `useId()` at build time — files on disk untouched, so an add couldn't revert it, and it threw if the literal moved — until bklit scoped the id itself (bklit#232) and the transform was dropped. `insights/charts/vendored-clip-id.test.tsx` stays as the guard: the crop is invisible whenever the two plots are the same size, and every add pulls whatever upstream ships.
-
-Four things make the date-label override work, and all are easy to break:
-
-- The wrappers must keep `displayName = 'XAxis'` / `'ChartTooltip'`. The shell sorts children into layers by component name, and `XAxis` is in its clip-excluded set — an unrecognised name puts the labels inside the series reveal clip. Set it explicitly; minification mangles the function name.
-- Don't reach for `CHART_CLIP_PASSTHROUGH` to inject a provider. It looks like the right seam, but the shell renders the *unwrapped* child, so the wrapper is dropped.
-- **An axis label is the tick's identity, so it has to be unique.** `dedupeIndicesByLabel` (vendored `x-axis.tsx`) skips any candidate tick whose label text it has already seen, so a duplicate doesn't just repeat — it costs the layout a tick, and the scorer ends up bunching what's left. A rolling 24h window floors to 25 hourly buckets whose first and last both read `16:00`, and the axis drew its only three ticks on buckets 0/1/2, one bucket apart. `formatAxisDate` takes `withDay`, which `useVendoredChartPrep` sets via `spansMultipleDays`, so hour labels carry the day once the window crosses one; single-day windows stay terse. Don't simplify them back to a bare `HH:MM`.
-- **A tooltip label gets at most two space-separated tokens.** Below 60 buckets the hover pill uses `DateTickerInner` (`tooltip/date-ticker.tsx`), which splits the label on `" "`, renders `parts[0]` as the scrolling month column and `parts[1]` as the day column, and **drops everything after** — `Jul 22, 02:00` displayed as `Jul 22,`, and a WEEK label `Jul 13 - Jul 19` as `Jul 13`. Above 60 buckets `DateTickerCompact` prints the label whole, which is why this looks fine on long hourly ranges and breaks on short ones. Two helpers in `insights/charts/helpers.ts` keep labels inside that grammar, and which one you want depends on whether the label has a month to hoist: `asTickerLabel` NBSP-joins everything after the month so the two columns read `Jul` + `22, 02:00`, while `asWholeTickerLabel` NBSP-joins the whole string into one column. Ranges need the latter — they already name their own months, so hoisting the first left `Jun  21 - Jun 27`, the gap widened by the day column centring items against its widest entry.
-
-Two files guard the override across all three charts, both stubbing `@visx/responsive` because happy-dom reports the container as 0×0 and without a size the chart renders nothing and every assertion passes vacuously: `insights/charts/vendored-date-labels.test.tsx` (axis labels land in the project reporting zone, plus the hover-pill scaling) and `insights/charts/vendored-tooltip-date.test.tsx` (the pill carries the day, not just the clock time, and every non-padding label stays within the ticker's two-column grammar — the first version of that test asserted the label string only, which passed while the pill was visibly dropping the hour). Each surface re-provides the context independently, so each needs its own guard.
-
-**Collateral still needs a manual revert after any add** — this part is not solved. `git diff` the whole tree, not just the component's directory:
-
-- `src/index.css` gets re-broken the same two ways every time: three `--chart-line-primary: var(----chart-line-primary)` mappings with a doubled prefix that silently kill every utility built on them, and a `.dark` block re-pinning `--chart-background`/`--chart-grid`/`--chart-label` to bklit's own darks. Those three are theme tokens now — the generated `:root.dark` block sets them for every theme, and its selector outranks a bare `.dark`, so the re-pin is dead CSS; bklit's values were authored against a much darker canvas anyway. Both hunks are pure regressions — revert the file.
-- `src/lib/utils.ts` gets rewritten (quote style, and `cn` from an arrow to a `function` declaration). `bun run lint` repairs the formatting; the arrow needs reverting by hand.
-- The add also rewrites files its registry entry never lists — `composed-chart` rewrote `line-chart.tsx` — and adds dependencies (`@visx/pattern`). Check `package.json` too.
+- `src/index.css` gets re-broken the same two ways every time: three `--chart-line-primary: var(----chart-line-primary)` mappings with a doubled prefix that silently kill every utility built on them, and a `.dark` block re-pinning `--chart-background`/`--chart-grid`/`--chart-label` to bklit's own darks (dead CSS, since the generated `:root.dark` block outranks a bare `.dark`). Both hunks are pure regressions; revert the file.
+- `src/lib/utils.ts` gets rewritten. `bun run lint` repairs the quote style, but `cn` turning from an arrow into a `function` declaration needs reverting by hand.
+- The add also rewrites files its registry entry never lists (`composed-chart` rewrote `line-chart.tsx`) and adds dependencies (`@visx/pattern`). Check `package.json` too.
 
 ### Design Aesthetic
 
-Light and minimal. This is a deliberate design direction — do not add visual or interaction weight:
+Light and minimal. This is a deliberate design direction; do not add visual or interaction weight:
 
-- **No Cards** — use section divider headers (see below) instead of wrapping content in Card components
-- **No nested menus** — no DropdownMenuSub, no multi-level popover trees. Use flat inline interactions: expand/collapse in-place, inline inputs, single-level dropdowns at most
-- **No modals for simple actions** — inline editing, inline create forms, confirmation via button state (not confirm dialogs)
-- **No external CDN dependencies** for UI assets — bundle or self-host everything. Turnstile's `api.js` is the one exception (see Turnstile)
-- **12px is the type floor.** `text-xs` is the smallest size in the UI — there is no `text-[11px]`, `text-[10px]`, or `text-[9px]` (all 121 uses were retired). It matches the vendored charts, which label axes at `text-xs` and set tooltip values at `text-sm`. Micro-labels get their emphasis from `uppercase tracking-wider text-muted-foreground`, not from shrinking.
-- **Corners stay soft** — `--radius: 0.625rem`, ramp at 8/10/12/16px. A tightening to 6px was tried and reverted; the soft corners are the intended look. The trap if you do retune them: the `--radius-sm/md/lg/xl` ramp in `@theme inline` is **hardcoded, not derived from `--radius`**, and `rounded-md`/`rounded-lg` (115 uses between them) read from the ramp. Only `rounded-2xl/3xl/4xl` derive. Changing `--radius` alone will look like it did nothing.
-
-### Typography
-
-UI sans is **Figtree** (`@fontsource-variable/figtree`, `wght` **300–900**), mono is **Geist Mono** (`@fontsource-variable/geist-mono`, `wght` 100–900). npm packages imported at the top of `src/index.css` and bundled — no CDN, nothing in `public/`. Lineage: Apfel Grotezk → Figtree + JetBrains Mono → Geist → Onest → back to Figtree, now paired with Geist Mono and set on a real weight ladder.
-
-**The brief was "airy", and that is a measurable property — bench it, don't eyeball it.** Rasterise a sample at a *fixed cap height* (not a fixed px size, or a small-on-the-body face wins by cheating) and count covered subpixels: ink-per-area is the texture weight, advance-per-cap is the letterfit. That bench is how Geist was ruled out as too tight; it also correctly identified Work Sans as the airiest, which was then rejected on looks — so the bench narrows the field, it does not pick the winner. Two traps: `canvas.measureText` silently falls back for a face the browser has not loaded, and an unused `@font-face` is never fetched — `await document.fonts.load(...)` every candidate first or every row comes back identical. Then check the numerals separately (`font-variant-numeric: tabular-nums` really collapsing to one advance, `0` distinguishable from `O`, `1` from `I`) — an airy face that fails those is unusable on a data surface.
-
-- **Headings carry no weight. Every heading and every display size is 400; weight is reserved for labels and controls.** Size, ink tier and tracking make something a heading — `font-medium` (500) marks a *label*: table headers, buttons, section captions, chips. That split is the rule; a bold heading is the exception that doesn't exist here. Weight that reads as emphasis at 14px reads as heft at 24px+, where size already carries it.
-- **It is enforced in `@layer base`, not per call site** — `h1/h2/h3` and `.text-xl/2xl/3xl/4xl/5xl` (plus `.markdown-body :is(h1,h2,h3)`) all set `font-weight: 400`, so new headings and new large text are right by default. **Utilities beat `@layer base`**, so a weight class on a heading or a display size silently opts out of the rule. Two greps should stay empty: `grep -E 'text-(xl|2xl|3xl|4xl|5xl)' src --include=*.tsx | grep font-` and the same over `<h1|h2|h3` lines. `font-semibold`/`font-bold` are unused in app code. `<strong>`/`<b>` are pinned to 500 in `@layer base` too — nothing in app code emits them, but snarkdown turns `**x**` into `<strong>` in markdown tiles, so the UA's 700 was the last bold reaching the screen.
-- **`--font-weight-medium: 500`** in `@theme inline`, so the `font-medium` sites (labels, table headers, buttons, section captions) are a real step above body. This reverses a long-standing pin to 400 — it dated from Apfel shipping no 500 cut and was kept on the first Figtree adoption because its real 500 read heavy at these sizes. So the whole system is two weights: 400 for everything that is read, 500 for everything that is a label or a control. This matters beyond typography: before the 2026-07-27 revamp *nothing* had weight contrast, so hierarchy rested entirely on ink brightness, which is half of why dark read flat. The ladder is also what buys headroom to run the dark ink dimmer.
-- Reverting the pin to 400 was tried on 2026-07-27 and undone again; if it comes up a third time, the thing to watch is table headers and section captions, which lose their only differentiator from body text.
-- **Large type is tracked in, but only just.** `h1/h2/h3` set `-0.014em`; `.text-3xl/4xl/5xl` set `-0.018em` in `@layer base` so any large text is right by default. Text spacing is drawn for 14px and a 36px figure needs the gaps closed — but overdo it and an airy face stops being one, which is why these are half what a tight grotesque wanted. Utilities beat the base layer, so a `tracking-tight` at the call site still wins.
-- **`tabular-nums` is load-bearing.** Figtree ships real tabular figures (its digits otherwise span a 1.55× width range); keep it on numeric columns and live-updating values or they reflow as they tick.
-- **Axis-tick fitting is calibrated to the face.** `AXIS_LABEL_PX_PER_CHAR` (`insights/charts/helpers.ts`) is the face's *widest* realistic label (Figtree: an all-digit clock at 7.0px/char, vs ~4.9 for a spaced label), not its average — fitting to the average overprints exactly the labels that are hardest to read. **Re-measure it on every face change**; it has read 6.5 / 7.2 / 6.7 / 7.0 across four faces, and the old 6.5 for Figtree was measured against the *average* label rather than the worst one.
-- **The share-card renderer embeds the font separately and will not error if you forget it.** `lib/capture-chart.ts` loads the SVG through an `<img>`, which cannot see the page's `@font-face`, so it fetches the woff2 via a Vite `?url` import and inlines it as a base64 `@font-face` built in a template string. Changing `--font-sans` means also updating `FONT_FAMILY`, the import path, **and the `font-weight` range** in that string — **Figtree's axis starts at 300, not the `100 900` most variable faces ship**, so a copied-over range renders the export off-weight. Get it wrong and exported tiles fall back to system sans or render off-weight — silently, and only in the export.
-
-### Emoji — Twemoji only
-
-All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji) (currently v14.0.2), self-hosted under `public/twemoji/`. Do not render native Unicode emoji in JSX and do not load Twemoji from a CDN.
-
-- **Tile icons:** `TwemojiIcon` (`src/components/twemoji-icon.tsx`); the editable palette is `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts` (wrapped with a "no icon" entry in `src/pages/routegen/dashboards/tile-icons.ts`), SVGs in `public/twemoji/`
-- **Country flags:** `CountryFlag` / `LocationLabel` (`src/components/country-flag.tsx`), SVGs in `public/twemoji/flags/`, resolved via `twemojiFlagSrc()` in `src/lib/twemoji.ts`
-- **Adding emoji:** download the SVG from the Twemoji repo and name it after the emoji's lowercase, hyphen-joined Unicode codepoint(s) — matching `twemoji.convert.toCodePoint` — e.g. `1f4c8.svg` for a tile or `1f1ee-1f1f3.svg` for a flag; place it in `public/twemoji/` (or `public/twemoji/flags/` for ISO flags), add the character to `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts`, and render through the shared components. A mis-named file 404s silently, since the `<img>` is `aria-hidden`.
-
-Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji — leave those as plain text unless explicitly moving them to the emoji system.
-
-### Brand icons — self-hosted, no icon dependency
-
-Browser, OS and device marks on profiles and events. **The `devicon` package is gone** — it covered
-four browsers, shipped the *retired* Firefox logo (which we were already overriding), and its
-`linux-original` was a 194KB gradient-mesh Tux being painted into a 16px box, five times the weight
-of every other icon combined. Everything is self-hosted now.
-
-- **Assets:** `public/brands/` (browser/OS), mapped in `src/lib/brand-icon-assets.ts`. That object
-  is the source of truth for both the names and the paths — `BrandIconName = keyof typeof
-  BRAND_ICON_ASSETS` — so the two cannot drift and adding a brand is one entry. It does **not**
-  prove a path resolves: `public/` is copied verbatim and never enters the module graph, so a typo
-  or a renamed file is an `<img>` that 404s silently behind `aria-hidden` and still clears `tsc`,
-  `vite build`, `knip` and `biome`. **`brand-icon-assets.test.ts` is that check** — it walks both
-  directions (every mapped path exists, case-exact; no orphan files) and covers `public/sdk/` too,
-  whose four language/framework marks are plain literals on `Platform.icon` in `setup-platforms.ts`
-  with no type guarantee of their own.
-- **Mapping:** `src/lib/brand-icons.ts` — string heuristics over the `$browser`, `$os`, `$device`
-  auto-properties.
-- **Components:** `BrandIcon` / `UnknownBrowserIcon` / `BotBrowserIcon` (`src/components/brand-icon.tsx`),
-  `BrowserLabel` / `OsLabel` / `DeviceLabel` / `PlatformLabel` (`src/components/platform-label.tsx`).
-- Named **brand**, not platform: `Platform` already means two different things here — the SDK target
-  in `setup-platforms.ts` (web/script/node/flutter) and browser+OS+device in `platform-label.tsx`.
-
-**`$browser` is an open set, so the table can never be finished.** It is whatever the browser
-declares in `navigator.userAgentData.brands` (`sdk-web/src/parsers.ts`), or a ua-parser family
-normalized by the backend (`internal/useragent/normalize.go`) — normally a clean name like
-`"Google Chrome"` or `"Brave"`, though the resolver keeps raw-UA tokens as a backstop. An unlisted browser falls through to `null`, not to Chrome. Anything
-unmatched renders `UnknownBrowserIcon`, a neutral globe — that branch is reached routinely and is
-the point. On a row flagged `bot` the same slot takes `BotBrowserIcon` instead.
-
-**A bot is marked in two places, and only one of them is the icon.** `PlatformLabel` /
-`PlatformStackLabel` / `PlatformTooltip` take a `bot` prop that swaps the *unknown* glyph for a
-robot — so a **recognised** browser keeps its real mark, which matters because half of bot detection
-is ASN-based and tags an ordinary `Google Chrome` from a datacenter range (`HeadlessChrome` resolves
-to the Chrome mark too). Those rows say nothing in the icon slot, so `PlatformTooltip` also prints a
-plain **Automated** item: that is the only signal a datacenter Chrome carries, and the only one a
-screen reader reaches. Per-event the flag is `botOf()` (`lib/auto-properties.ts`, reading `$bot`,
-present only on tagged rows); per-profile it is `activity.bot`, which is true only when *every*
-counted event was tagged.
-
-**A named browser owns the icon slot outright, so the neutral glyph is not a last resort.** The single-icon
-labels (`PlatformLabel`, `PlatformStackLabel`) read the OS mark *only* when no browser is named —
-they used to chain `resolveBrowserIcon(browser) ?? resolveOsIcon(os)`, which quietly handed an
-unrecognised browser the OS glyph and never reached the globe, so `Epiphany · Linux` drew Tux. An
-OS-only row still gets its OS mark; what it never gets is the globe, which would claim a browser the
-row doesn't name — that also means an OS-only row shows no bot glyph, bot or not. Guarded by
-`platform-label.test.tsx`, which pins the glyph by lucide's `lucide-*` class rather than by "an svg
-rendered": the slot now has two possible glyphs, and asserting mere presence let an inverted ternary
-pass green.
-
-**Ordering in `resolveBrowserIcon` is load-bearing — do not alphabetise it.** The `edg`, `crios`,
-`fxios`, `opr`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and
-a raw UA names the derivative *alongside* Chrome and Safari — `Chrome/120 … Safari/537.36 OPR/106`.
-So **every branch that names a specific brand has to sit above the generic `chrome`/`safari` pair**,
-or its raw-UA token is unreachable: Opera, UC and Samsung Internet each drew Chrome, and Firefox iOS
-drew Safari, for exactly that reason. `chrome` above `safari` is the same rule, since every Chromium
-UA ends in `Safari`. Clean family names cannot catch a reorder, which is why `brand-icons.test.ts`
-pins the whole order with raw UA strings.
-
-Two tokens are deliberately narrower than the brand name, and both would misfire if widened:
-`samsung` is matched as `samsung internet`/`samsungbrowser`, because a plain Chrome UA carries the
-handset in the same string (`SAMSUNG SM-S918B`) and from above the `chrome` branch a bare `samsung`
-turns Chrome-on-a-Galaxy into Samsung Internet — pinned by its own test. `uc` is two letters that sit
-inside `DuckDuckGo`, kept right by both the multi-token guard *and* DuckDuckGo's earlier branch.
-
-Known gap, same shape but not an ordering fix: Yandex and Coc Coc match only their clean family
-names, so their raw UAs (`YaBrowser/…`, `coc_coc_browser/…`) still fall through to Chrome. Closing
-it means adding those tokens, not moving the branches.
-
-`android` stays **last** for the opposite reason — a Chrome-on-Android UA names the platform in the
-same string, so from higher up it would claim every Android row.
-
-Two substring traps, both guarded by tests in `brand-icons.test.ts`:
-
-- **`'ios'` must stay word-anchored.** `"kaios".includes("ios")` is true, so KaiOS — a Firefox OS
-  descendant with no Apple lineage — drew the Apple glyph. The other tokens *in that function* stay
-  unanchored because they also run against `$device` model strings, where a trailing `\b` would
-  reject `"iPhone15,3"`; `APPLE_DESKTOP_MODEL` and `ANDROID_BRAND_MODEL` further down are anchored,
-  for the opposite reason. **`isMobileOS` (`lib/format.ts`) still matches `ios` unanchored, and
-  should** — KaiOS *is* mobile, and anchoring it would label a feature phone "Desktop". The fix
-  belongs in `resolveDeviceIcon`, which must not read "mobile and not Apple" as Android; a named OS
-  it has no glyph for stays iconless.
-- **ChromeOS matches on the full `"chrome os"`, never a bare `chrome`** — that would also swallow the
-  four `Chromecast *` OS families. It reuses the Chrome mark deliberately: ChromeOS has no square
-  logo of its own. Every Linux distro resolves to Tux; the backend collapses those families anyway.
-
-**Licensing is the real constraint when adding an icon, and it is not the source's headline
-licence.** Simple Icons is CC0 *as a project* but says outright that its icons are not — the per-icon
-`license` field in its `data/simple-icons.json` is the thing to read, and it turned up CC-BY-SA-3.0
-on Debian and CC-BY-3.0 on Android. Wikimedia Commons is worse: its Ubuntu logo is GPLv3, its Debian
-CC-BY-SA, and the obvious Tux hit is GPLv2. **Copyleft on a bundled asset is the thing to avoid**;
-prefer public domain, then attribution-only, and record every source in `public/brands/NOTICE.md`
-(served, because CC-BY attribution should be discoverable). The Debian/Ubuntu/Fedora glyphs were
-dropped for exactly this reason — they were unreachable code carrying real obligations.
-
-Practical sourcing notes:
-
-- [browser-logos](https://github.com/alrra/browser-logos) is the best browser set, but only some entries ship SVG (Samsung Internet and UC
-  do; Yandex, Tor, Silk and Opera Mini are PNG-only). Its Safari is the macOS *app icon*, with a
-  gradient background plate that reads as a light tile on the dark canvas — use the flat mark.
-- **A Simple Icons path has no `fill`.** It inherits `currentColor`, which an `<img>` cannot provide,
-  so it renders solid black unless you inject the brand hex.
-- **Tint for both canvases, and don't trade away the identity to get there.** Linux's published
-  `#FCC624` is illegible on light — but a flat gold Tux is also just wrong, since Tux is
-  black/white/yellow. The authentic full-colour Larry Ewing Tux reads *better* than any flat tint on
-  both, including the deepest dark surface, because the white belly carries the silhouette. Its 31
-  `<filter>` elements were stripped: blur and shading passes invisible at 16px but recomputed on
-  every paint, in tables that render hundreds of rows.
-- **Verify against the dark surface ladder, not one flat canvas** — a dark glyph fails on `--sidebar`
-  (`0.158`), not on the average surface.
-
-**GNOME Web reports as `Safari 60.5` on Linux, and that is not our bug.** Epiphany returns
-WebKitGTK's default UA verbatim (`ephy_user_agent_get()`, no application name), and WebKitGTK builds
-a Safari UA on purpose for site compatibility, hardcoding an inflated `Version/60.5` to dodge sites
-that discriminate against older Safari. ua-parser *has* Epiphany rules; they never fire because no
-`Epiphany/` token is sent. Real Safari is at ~18–26, so **a "Safari 60.5" row on Linux is
-WebKitGTK** — distinguishable in the data, just not by name. Fixing it belongs in the backend's UA
-parser, if anywhere.
+- **No Cards**: use section divider headers (below) instead of wrapping content in Card components
+- **No nested menus**: no DropdownMenuSub, no multi-level popover trees. Use flat inline interactions: expand/collapse in place, inline inputs, single-level dropdowns at most
+- **No modals for simple actions**: inline editing, inline create forms, confirmation via button state (not confirm dialogs)
+- **No external CDN dependencies** for UI assets: bundle or self-host everything. Turnstile's `api.js` is the one exception (`.claude/rules/auth.md`). Brand marks (browser, OS, device) are self-hosted under `public/brands/`; don't add an icon package for them
+- **12px is the type floor.** `text-xs` is the smallest size in the UI; there is no `text-[11px]`, `text-[10px]` or `text-[9px]`. It matches the vendored charts, which label axes at `text-xs`. Micro-labels get their emphasis from `uppercase tracking-wider text-muted-foreground`, not from shrinking.
+- **Corners stay soft**: `--radius: 0.625rem`, ramp at 8/10/12/16px. Tightening them was tried and reverted. If you do retune them, the `--radius-sm/md/lg/xl` ramp is hardcoded, not derived from `--radius` (see the comment in `index.css`), so changing `--radius` alone will look like it did nothing.
+- **Elevation has to be painted, not implied.** Shadows are invisible on a dark ground, so anything that is conceptually a tile uses `bg-card`, not `bg-background` with a border.
 
 Section divider header pattern:
 
@@ -314,180 +171,68 @@ Tables use plain `<table>` elements (not the Table component), with:
 - Rows: `border-b border-border/50 transition-colors hover:bg-muted/40`
 - Destructive/edit actions hidden until row hover (`opacity-0 group-hover:opacity-100`)
 
-Empty states are minimal — a faded icon + one or two lines of text. No illustrations, no big CTAs, no onboarding wizards.
+Empty states are minimal: a faded icon (`opacity-15`) and one or two lines of text. No illustrations, no big CTAs, no onboarding wizards.
 
-Event kinds use colored `Badge` with `getSeriesColor()` from `src/lib/event-colors.ts` (consistent palette across pages). IDs and codes use `font-mono`. Times use 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-primary hover:underline underline-offset-4`.
+Event kinds use a coloured `Badge` with `getSeriesColor()` from `src/lib/event-colors.ts` (consistent palette across pages). IDs and codes use `font-mono`. Times use the 24-hour clock, with `HoverSwap` to toggle between relative and absolute. Links use `text-link hover:underline underline-offset-4`.
 
-### Insights Color System
+### Typography
 
-For Insights (event filters + charts), do **not** use index-based colors or `kindStyle()` colors.
+UI sans is **Figtree** (`@fontsource-variable/figtree`, `wght` 300–900), mono is **Geist Mono** (`@fontsource-variable/geist-mono`). Both are npm packages imported at the top of `src/index.css` and bundled; nothing comes from a CDN or `public/`.
 
-- Single source of truth: `src/theme/data-palette.ts` (tables, groups, anchors); `src/lib/event-colors.ts` is the lookup
-- Use `getSeriesColor(name, fallbackIndex)` to resolve colors
-- Color assignment is name-based and deterministic — events in the semantic map get their assigned color, unmapped events get a stable hash-based fallback. Related events are manually grouped under the same hue.
-- **Breakdowns are the exception:** splits by a dimension (`$os`, `$utmSource`, …) are colored **by index** via `getIndexedColor(i)`, not by value name — applies to trends, funnel, and top-K series. Breakdown values carry no semantic identity, and name-based coloring fails them two ways: an `event · value` series label inherits the event's family hue (every `page_view`-by-`$os` split came out blue), and bare values hash-collide in the 12-color fallback (e.g. `github` / `newsletter` / `twitter`). Index assignment guarantees distinct, in-order palette hues.
-- Keep colors consistent across:
-  - event row markers (A/B/C)
-  - selected event chips
-  - event dropdown dots
-  - summary stat dots
-  - line/area/bar/funnel series
-  - chart tooltip indicators
-- Retention cohort:
-  - Heatmap cell colors stay value-intensity based
-  - Cohort label markers should still use the shared series/family color mapping
-- Theme adaptation: the base hexes are mid-tones that don't all read against either canvas (darkest vanish on dark, palest vanish on white), so `getSeriesColor` adapts them on the fly per theme — lift toward light on dark (`L' = 0.54 + 0.22·L`, chroma capped at `0.165`, then **gamut-fitted**), cap lightness *and* chroma on light (`L' = min(L, 0.52)`, `C' = min(C, 0.14)` — pale hues darken to the 0.52 ceiling, the most vivid hues desaturate to the 0.14 ceiling so they don't shout against the near-grayscale UI, hues already under both caps pass through unchanged; the light chroma cap sits below the dark `0.165` because mid-lightness colors on white read as more saturated than lifted ones on dark); hue is preserved (so semantic families and the failure-red / success-green crossovers stay meaningful). Tune the bands in `theme/fit.ts`; do **not** add per-mode hexes. JS-driven because these are inline styles / SVG fills, not CSS vars: App pushes the active theme's compiled palette via `setSeriesPalette` during render, so badges + charts re-color on any theme change. Inline `getSeriesColor()` calls re-color for free, but any component that **memoizes** a derived palette (`useMemo`) must read `themeRevisionAtom` and list it in the memo deps — not `resolvedThemeAtom`, which two dark themes share. See `seriesColors` in `insights/index.page.tsx` and `dashboards/insight-tile-view.tsx`.
-- **The dark lift must be gamut-fitted, and shallow.** `fitChroma` binary-searches chroma down until the colour fits sRGB, holding L and H. Without it `linearToByte` clamps each channel independently, which drops chroma *and* shifts hue while still returning a valid hex — nothing downstream notices. That silent clipping is what turned every dark series colour into a pastel (blue `#2563eb` asked for C 0.16 at L 0.78, where sRGB holds only 0.109, and landed as periwinkle). Two rules follow: **spend lift sparingly, because every point of it is chroma the hue can no longer hold** (sRGB's ceiling falls away toward white, blue first), and **a deep ground needs less lift anyway**. The band deliberately lands a rung *below* body ink so data never out-shouts the type.
-- **The choropleth reads `--chart-1`, not `--primary`** (`lib/maplibre.ts` → `dataHue`). They are the same colour in light, but `--primary` is a fill tuned to carry white button text, so in dark it stays deep — and the map washes it over the canvas at opacities from 0.16, where a deep hue on a deep ground is mud. `--chart-1` is the per-mode data band. Any *data* surface painted with alpha wants the data band, not the action colour.
+- **Two weights. Every heading and every display size is 400; `font-medium` (500) marks a label or a control**: table headers, buttons, section captions, chips. Size, ink tier and tracking make something a heading. `font-semibold`/`font-bold` are unused in app code.
+- **It is enforced in `@layer base`, not per call site.** `h1/h2/h3`, `.text-xl/2xl/3xl/4xl/5xl` and `.markdown-body :is(h1,h2,h3)` all set `font-weight: 400`, and `<strong>`/`<b>` are pinned to 500 (snarkdown turns `**x**` into `<strong>` in markdown tiles). **Utilities beat `@layer base`**, so a weight class on a heading or a display size silently opts out. Two greps should stay empty: `grep -E 'text-(xl|2xl|3xl|4xl|5xl)' src --include=*.tsx | grep font-` and the same over `<h1|h2|h3` lines.
+- **Don't pin `--font-weight-medium` back to 400.** It was tried and undone: table headers and section captions lose their only difference from body text.
+- **Large type is tracked in, but only just**: `h1/h2/h3` at `-0.014em`, `.text-3xl/4xl/5xl` at `-0.018em`, both in `@layer base`. A call-site `tracking-tight` still wins.
+- **`tabular-nums` is load-bearing.** Figtree's digits otherwise span a 1.55× width range; keep it on numeric columns and live-updating values or they reflow as they tick.
+- Changing the face touches more than `index.css`: see `.claude/rules/typography.md`.
 
-### Themes
+### Colour
 
-Colours are data. A theme is a file in format v1 (`src/theme/format.ts`; JSON Schema in `schemas/theme/v1.json`, uploaded by hand to R2 at `/theme/v1.json` — nothing in the repo publishes it). Pug is the built-in `pug` theme (`src/theme/presets/pug.ts`), alongside `pug-high-contrast` and `pug-colourblind`. The design and its reasoning are in `docs/superpowers/specs/2026-10-04-theme-engine-design.md` (local; `docs/superpowers/` is gitignored).
+Colours are data: every token value lives in a theme preset (`src/theme/presets/`), generated into CSS by `bun run generate:themes`. `.claude/rules/theme.md` has the engine, the contrast model and the fitting bands. These rules apply everywhere:
 
-- **A token registry computes what a theme leaves out** (`src/theme/registry.ts`, VSCode's colour-registry model). Roots — `background`, `primary`, the three semantic hues, `chart-1…5`, the fixed ramps — fall back to the built-in for the mode and contrast level. Every other token has a formula whose parameters are measured from Pug at load, so applying the formulas to Pug's roots reproduces Pug. `validate.test.ts` sweeps 432 partial themes across canvases and requires zero warnings; keep it that way when you touch a formula.
-- **The values live in the presets now, not `index.css`.** `bun run generate:themes` writes `src/theme/generated/builtin-themes.css` (tracked, imported by `index.css`) and the schema; `builtin-themes.test.ts` fails while either is stale. Edit a preset, regenerate, and the CSS diff is the review.
-- **Pug must stay pixel-identical.** `src/theme/__fixtures__/` holds what `index.css`, `event-colors.ts`, `name-chip.tsx` and `retention-cohort.tsx` produced before the engine existed. Never regenerate them. A deliberate retune changes the preset and the golden expectation in the same commit, and says so.
-- **Contrast is WCAG 2** (`src/lib/color/contrast.ts`), not APCA — `apca-w3`'s licence restricts use. Standard floors are Pug's own ratio less 10%, capped at 7:1 (4.5:1 for name chips), pinned as `FLOORS` in `validate.ts` (`measureFloors` regenerates them) — except text on a filled control, a flat 4.5:1. High contrast validates at the spec's APCA levels in WCAG terms — 12:1 body, 7:1 secondary, 4.5:1 faint, 7:1 on fills, 3:1 for lines — and never below a standard floor; the registry solves its inks to the higher of 115% of Pug's ratio and 13 / 8 / 4.8, headroom over those floors, so it reads visibly stronger. A **surface** — anything text is drawn on (`SURFACES` in `tokens.ts`) — must be opaque: contrast treats grounds as solid, so the parser refuses a see-through one. Measuring with APCA offline while tuning Pug is still right — the Dark Mode Contrast lessons below are about that.
-- **Event colours** live in `theme/data-palette.ts` as 20 groups with anchors; outcome crossovers sit in `failure`/`success`, so one anchor remaps every red/green pair. `lib/event-colors.ts` is only the lookup. A theme's own breakdown (categorical) colours are used exactly; left out, Pug's are fitted to the canvas. `adapt` fits event colours only, through `theme/fit.ts`, which reproduces Pug's series palette exactly on Pug's canvas and moves with any other.
-- **Runtime:** `themeModeAtom` (`pug:theme`, values unchanged), `themeSelectionAtom` (one theme per mode), `autoContrastAtom` (OS `prefers-contrast: more` → Pug High Contrast), `installedThemesAtom` (≤ 20, stored as original text and re-parsed on load). Built-ins apply through `data-theme` and the generated CSS; installed themes as inline variables on `<html>` (`theme/apply.ts`). `index.html` paints from `pug:theme-paint` before React — keep it in step with `theme/paint-cache.ts`; `paint-script.test.ts` runs the real script.
-- **Anything that caches colours keys on `themeRevisionAtom`**, never `resolvedThemeAtom`: two dark themes share a polarity. `resolvedThemeAtom` is for code that genuinely branches on light vs dark (checkout, the share-card plate, the sign-in wall — which draws Pug's own palette for the mode, `pugDataPalette`, never the active theme's).
-- **Sign-in pages stay Pug**: the generated `.auth-surface` blocks reset every token.
-- **Known issues kept for identity**, each to be fixed as its own reviewed visual change: the light fit clips 27 palette colours per channel (no `fitChroma`), and the retention ramp is the same in both modes, so low cells glow on dark.
+- **Coloured text is decoupled from fills.** `text-link` is the blue used as text (links, primary-tinted icons), and `--positive`/`--caution`/`--negative` are the semantic text tier. `bg-primary` and `bg-destructive` are fills tuned to carry white text. Never point links at `text-primary`, never use `text-destructive` for text, and never lighten a fill to fix coloured text.
+- **Event and series colours come from `getSeriesColor(name, fallbackIndex)`** (`src/lib/event-colors.ts`, a lookup over `src/theme/data-palette.ts`): name-based and deterministic, with related events grouped under one hue. Never index-based, never hardcoded. An event keeps one colour everywhere it appears: event row markers (A/B/C), selected event chips, dropdown dots, summary stat dots, chart series and tooltip indicators. Retention heatmap cells stay value-intensity based, but cohort label markers use the series colour.
+- **Breakdowns are the exception: splits by a dimension (`$os`, `$utmSource`, …) are coloured by index with `getIndexedColor(i)`**, in trends, funnel and top-K alike. A breakdown value carries no semantic identity, and name-based colouring fails it two ways: an `event · value` series label inherits the event's hue, and bare values hash-collide in the 12-colour fallback (`github` / `newsletter` / `twitter`).
+- **Anything that caches a colour keys on `themeRevisionAtom`**, never `resolvedThemeAtom`, which two dark themes share. Inline `getSeriesColor()` calls re-colour for free; a component that memoizes a derived palette must list `themeRevisionAtom` in its deps (see `seriesColors` in `insights/index.page.tsx` and `dashboards/insight-tile-view.tsx`).
+- **A data surface painted with alpha uses the data band (`--chart-1`), not `--primary`**, which stays deep in dark to carry white button text.
 
-### Dark Mode Contrast
+### Emoji: Twemoji only
 
-Color tokens live in the Pug preset (`src/theme/presets/pug.ts`, a light and a dark variant), generated into CSS — see Themes. Light is the reference mode and is considered finished; dark is solved *against* it. Temperature is unified: every neutral sits at hue `265` — a cool tint on surfaces, near-neutral ink — in both modes. A token that reads bluer or grayer than its neighbours is a regression, not a style choice.
+All emoji shown in the UI must use [Twemoji](https://github.com/twitter/twemoji) (currently v14.0.2), self-hosted under `public/twemoji/`. Do not render native Unicode emoji in JSX and do not load Twemoji from a CDN.
 
-**Compare the modes with APCA, never with WCAG.** This is the single most expensive lesson in this file. WCAG is polarity-blind: for five passes both modes measured an identical 9:1 body contrast while dark kept being reported as washed out, because at that same ratio every dark ink tier sat **22–32 Lc below** its light twin. Matching WCAG across modes structurally under-delivers dark. **But APCA parity is the ceiling, not the target.** Solved for it, dark read as *hot* — halation is a physical effect of emitted light that no contrast model captures, and it only happens in the reverse polarity. The shipped ladder sits two notches below parity, at roughly `78 → 70 → 63 → 51 → 35` Lc from hero numerals down to hint text. Anchor any retune against those two poles rather than a ratio: the original washed-out body measured 62, full parity with light is 83, and the comfortable landing was 70. Note dark's WCAG numbers still look high (body ~10.8:1) — that is normal for this polarity and not a reason to walk it down.
+- **Tile icons:** `TwemojiIcon` (`src/components/twemoji-icon.tsx`); the editable palette is `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts` (wrapped with a "no icon" entry in `src/pages/routegen/dashboards/tile-icons.ts`), SVGs in `public/twemoji/`
+- **Country flags:** `CountryFlag` / `LocationLabel` (`src/components/country-flag.tsx`), SVGs in `public/twemoji/flags/`, resolved via `twemojiFlagSrc()` in `src/lib/twemoji.ts`
+- **Adding emoji:** download the SVG from the Twemoji repo and name it after the emoji's lowercase, hyphen-joined Unicode codepoint(s), matching `twemoji.convert.toCodePoint` (e.g. `1f4c8.svg` for a tile or `1f1ee-1f1f3.svg` for a flag); place it in `public/twemoji/` (or `public/twemoji/flags/` for ISO flags), add the character to `TILE_ICON_EMOJIS` in `src/lib/twemoji.ts`, and render through the shared components. A mis-named file 404s silently, since the `<img>` is `aria-hidden`.
 
-- **There is no display ink tier.** `--display-foreground` was removed on 2026-07-27 and every consumer now uses body ink — **size alone carries display type**. The token had been introduced to hold large text *below* body ink so 36px figures wouldn't out-weigh their labels, which made the most important number on an analytics dashboard its softest type; briefly inverting it to sit *above* body ink worked but was one tier more than the system needed. If you reintroduce a display tier, note that its highest-traffic consumer is invisible to a grep of the markup — it reached every dashboard KPI number indirectly through `accentTextClass`/`toneTextClass` in `dashboards/accent-palette.ts`.
-- **Saturation reads as heat, independently of brightness.** Cooling dark meant pulling *chroma* out of the accents (`--primary`, `--link`, the semantic text tier, the series band) as well as lightness out of the ink. A vivid hue on a dark ground is felt as glare at a lightness that measures identically to a muted one.
-- **Ground depth is not the contrast lever; ink is.** APCA's black clamp floors the background's contribution below Y≈0.022, so once the canvas is genuinely dark, taking it deeper changes required ink lightness by <0.005 L. Deepen the ground for *material* (it gives colour room), never as a fix for text that reads weak.
-- Dark `--primary` (`0.55/0.175`) and `--destructive` (`0.55/0.175`) are deep + saturated so **white button text clears AA** (4.8 and 5.1). These are **fills**. Don't lift them to fix colored *text* — see the decoupling rule below.
-- **Chip ink (`--accent-foreground`/`--secondary-foreground`) must stay softer than `--foreground`.** Solving it for a flat target ratio pushes it *past* body ink, because the chip grounds are lighter than the canvas — cap it below body instead of solving it independently (validation rule V6; `capToBody` in the registry). `--sidebar-accent-foreground` is the deliberate exception: the active nav item sits *above* body ink in dark.
-- **The surface ladder mirrors light's proportions, including the sidebar.** Dark steps sidebar `0.158` → canvas `0.215` = card `0.215` → popover `0.242` → chips `0.252` → hover `0.285`. Canvas and card share one tone for now — an experiment in a flat plane, regions drawn by hairlines rather than elevation, marked in the preset; the elevated ladder put the canvas at `0.175`, a `0.017` L step above the sidebar, the same as light's — pulling that step wider is what made attention land on the sidebar in dark and not in light. Two floors: `--accent` must stay above `--popover` (menu-item hovers render on popovers), and `--sidebar-accent` (`0.205`) must stay below `--card`, so the active nav pill can never outshine content on the canvas. The active nav item is marked by its **ink** (`--sidebar-accent-foreground` at display brightness), not by a brighter fill.
-- **A filled button and colored body text pull lightness in opposite directions** — the fill wants to stay dark (white text on it), colored text wants to be light (to read on the dark canvas); no single token satisfies both at AA. So **colored text is decoupled from the fill:** `--link` (`0.685/0.135` dark, `0.456/0.18` light) is the blue used *as text* (links, primary-tinted icons) via the `text-link` utility, while `--primary` stays the **fill** (`bg-primary`). Do **not** point links at `text-primary` or lighten `--primary` to fix them.
-- **Semantic text (`--positive`/`--caution`/`--negative`) is held at low chroma in dark (`0.1` vs the fills' `0.14`–`0.175`).** Against a near-grayscale UI a saturated hue shouts on *colour* alone, at any lightness — a KPI row of five red delta pills was the loudest thing on the page while measuring as ordinary secondary text. Lightness sets the rung; chroma sets the volume. Tune the volume with chroma.
-- Still deferred — **deliberate, not a bug:** `text-destructive` *text* on the dark canvas is sub-AA (the same fill-vs-text conflict). Use `--negative`; that is what it is for. Don't lighten `--destructive` itself.
-- `--faint` is a decorative tier and sits below AA on its brightest ground in **both** modes (light ~3.2:1, dark ~4.2:1 on a popover). That is the established treatment, not a regression — but it is the tier that breaks first, so re-check it against `--popover` whenever the ladder moves. Everything above it clears AA on every ground it lands on; the tightest real floor is white-on-`--primary` at 4.8.
-
-`--border` is translucent (`0.68 0.022 265 / 0.22`) so one token works on canvas, card and popover; call sites dim it further with `border-border/30..70`. `--input` cannot be translucent: every form control styles itself `dark:bg-input/30` (some `/50`, `/80`), and Tailwind's `/NN` modifier *multiplies* alpha, so the fill disappears — it stays opaque.
-
-**Elevation has to be painted, not implied.** Shadows are invisible on a dark ground, so a surface that wants to read as an object needs `bg-card`. The overview tiles were `bg-background` with a border — in light that is nearly indistinguishable from `bg-card`, but in dark it meant the entire page was one flat field with outlines drawn on it. Prefer `bg-card` for anything that is conceptually a tile.
-
-### Insights Aggregations
-
-Trends event rows support per-event aggregation selection:
-
-- `Total events`
-- `Unique users`
-- `Avg per user`
-- `Sum`
-- `Average`
-- `Min`
-- `Max`
-
-Rules:
-
-- Aggregation is event-row scoped, not global.
-- `Sum` / `Average` / `Min` / `Max` require an `aggregationProperty`.
-- The aggregation-property picker must only show numeric properties (`INTEGER` / `FLOAT` from schema `valueType`).
-- For non-numeric aggregations, clear/ignore `aggregationProperty`.
-- Funnel and retention ignore per-event aggregation and should continue using total counts.
-- Summary stats should adapt to aggregation type instead of always presenting totals.
+Filter operator symbols (`=`, `≠`, `✓`, etc.) are typography, not Twemoji; leave those as plain text unless explicitly moving them to the emoji system.
 
 ### Insights Granularity & Time Range
 
-The backend enforces a max time-range span per granularity (buf.validate CEL constraints on `QueryRequest` in `proto/shared/insights/v1/insights.proto`) — e.g. `GRANULARITY_HOUR requires a time range of at most 14 days`. The frontend must keep granularity and time range compatible so these never reach the server.
+The backend enforces a max time-range span per granularity (buf.validate CEL constraints on `QueryRequest` in `proto/shared/insights/v1/insights.proto`), e.g. `GRANULARITY_HOUR requires a time range of at most 14 days`. The frontend must keep granularity and time range compatible so these never reach the server.
 
-- Single source of truth: `src/lib/granularity.ts` (mirrors the proto caps — keep them in sync). The cap map is total over `Granularity`, so a new enum member without a cap is a compile error.
-- Any page with both a time-range picker and a granularity picker must use these helpers — do not re-derive or duplicate the ladder per page:
+- Single source of truth: `src/lib/granularity.ts` (mirrors the proto caps; keep them in sync). The cap map is total over `Granularity`, so a new enum member without a cap is a compile error.
+- Any page with both a time-range picker and a granularity picker must use these helpers; do not re-derive or duplicate the ladder per page:
   - `granularityDisabledReason(granularity, range)` → pass as `OptionChip`'s `isOptionDisabled` so over-cap granularities render disabled with a tooltip.
   - `clampRange(range)` and `clampGranularity(granularity, range)` → call both from the time-range `onChange`: `clampRange` caps a range too wide for *any* granularity to the supported max, then `clampGranularity` keeps a still-valid pick as-is, leaves `UNSPECIFIED` ("Auto") untouched, and bumps a now-disabled pick to the **smallest/finest** granularity that still fits.
-  - `autoGranularity(range)` → resolve `UNSPECIFIED` ("Auto") to a concrete value at the consumption point (including before passing a granularity down to dashboard tiles). This is the only place the auto ladder lives. Note: `autoGranularity` (coarser-biased default) and `clampGranularity` (finest-that-still-fits) deliberately use **different** ladders — they can return different granularities for the same range.
+  - `autoGranularity(range)` → resolve `UNSPECIFIED` ("Auto") to a concrete value at the consumption point (including before passing a granularity down to dashboard tiles). This is the only place the auto ladder lives. Note: `autoGranularity` (coarser-biased default) and `clampGranularity` (finest-that-still-fits) deliberately use **different** ladders, so they can return different granularities for the same range.
 - Behavior must be identical across Insights, Overview, and Dashboard (the three current consumers): same disabled options, same clamp-to-finest-valid on range change, same `autoGranularity` resolution of "Auto".
-
-### Billing
-
-Plan, free allowance, billed usage and checkout. **Dodo Payments** is the provider, and the dashboard never sees it except as URLs the server mints — `CreatePortalSession` returns a link and nothing else, `CreateCheckoutSession` a link plus the `session_id` that `ConfirmCheckout` is later handed. There is no product id on the wire, no price at all, and no plan catalog in this repo: `ListPlans` serves it, because mirroring it here would put a second authority on what a plan includes. Billing is **by usage**: the plan on sale is pug's quantities only — a monthly free allowance and tier bounds — while every rate lives on the Dodo product, and an hourly backend pass states each subscriber's per-tier counts to that product's meters. There is no trial.
-
-- **The checkout SDK is `dodopayments-checkout`** (Dodo's web SDK — there is no React one; `@dodopayments/react` is not published). Imported *dynamically*, from `settings/billing/checkout.ts` only, and given its own rollup chunk (`vendor-checkout` in `vite.config.ts`) — in `vendor-misc` it lands in a chunk the entry already imports and every visitor pays for it on first paint. The overlay's `mode` is read off the returned URL's hostname (`test.` prefix), never a build flag: the SDK validates the iframe's postMessage origin against it, so a mode disagreeing with the session silently swallows every checkout event.
-- **No rate reaches the dashboard.** `price_cents`/`currency` (on `Plan` and `PlanOption`) and `trial_ends_at` are reserved on the wire, and `BILLING_STATUS_TRIALING` is never sent. A plan row carries quantities only — its free allowance, or "Terms agreed with us" for a deal, whose numbers the server leaves absent — and, for an org with no subscription, the Plans section says the rates are shown at checkout. Real rates would be a backend change, not a copy here: the backend already fetches the product that carries them — `VerifyMetering`, in the meter cron and reconcile, calls Dodo's `Products.Get` — but reads only the fee and the meter wiring, never `price_per_unit`, so they would arrive as a new field on `ListPlans`. Don't link pug.sh/pricing for them until it lists any.
-- **Absences are never zero.** An absent `included_events` is NO allowance (billing off, or a subscription on a plan the catalog no longer knows), so the page says nothing — never "0 free events". `counted` false means the meter has not summed this period, so `used_events` is a placeholder; either missing means there is nothing to draw, which is why `usageFor` returns null rather than substituting a zero for the half it does have. An absent `up_to_events` is the unbounded last tier (rendered `N+`), an empty `tier_usage` is "not reported yet" rather than a table of zeros — read off what the server sent, not the rows drawn (the server also sends it empty for a period split by a plan the catalog lost, which the backend's catalog rule makes unreachable, so the copy speaks to the first hour of a period), and an absent `grace_period_ends_at` is no grace window (a hold, or none configured). Rendering any of them as 0 states a billing figure the server never claimed.
-- **The free allowance warns only an org with no subscription.** `allowanceApplies` (`BillingStatus.FREE`) gates the sidebar meter, the caution/over banner (`USAGE_WARN_RATIO`) and the page's bar. A subscriber's events past the allowance are billed by tier, over the provider's period rather than the usage period the count covers, so "over" would flag every subscriber past it, which is the plan working as sold; they get the billed-usage table instead. Keyed positively on `FREE`, so a status this build cannot place warns nobody. The past-due banner is outside this gate: PAST_DUE is only ever a subscriber's, so it never competes with the allowance warning.
-- **A live subscriber's plan list is read-only, whatever `manageable` says.** The server offers every plan on sale, and a staged deal, to an org that already holds one, so `readOnly` (`hasLiveSubscription`: ACTIVE or PAST_DUE) is all that stops a second checkout — one `ConfirmCheckout` refuses only after the card is charged. `manageable` reads false on a failed lookup, so it gates only the portal button, never the list.
-- **The return from checkout confirms against the provider; the poll is the fallback.** `confirmCheckoutAtom` calls `ConfirmCheckout` with the `session_id` `createCheckoutSession` returned, carried across the provider's full-page redirect in `sessionStorage` beside the pre-checkout plan signature and the org that started it (`markCheckoutPending`). The org is stamped because a second tab can move the session's org while this one is at the provider: confirming would then send the new org's id with the old org's session — refused, and reported to someone who paid as a payment needing support — and the poll would read the new org's plan against the old org's baseline as the purchase landing. A mismatched record is put back rather than confirmed, so returning to the org that started it still confirms. Ask first, poll second — `pollBillingAfterCheckoutAtom` only watches *our* state, which nothing but a webhook changes, so on its own it can never terminate on a deployment whose webhook URL is unreachable (local dev, self-hosted): it burns ~17.5s and tells a paying customer their payment is "still confirming". `confirmed: false` is "not settled yet", never a failure. **`ConfirmCheckout` is idempotent, and the dashboard relies on it** — it returns the PROVIDER's state (`event.Status.Live()`), not whether its own write landed, and `ApplyBillingSubscription` upserts on `(provider, provider_sub_id)`, so a repeat carries the same id, takes the UPDATE branch and never reaches the one-live-per-org index. `ErrTwoLiveSubscriptions` needs a *different* subscription id, so a duplicate confirm cannot raise it. Pinned backend-side by `TestConfirmCheckoutConfirmsWhenTheWebhookLandedFirst`, which confirms after a webhook has already applied the same subscription and asserts one stored row. The two terminal refusals — `PermissionDenied` (a session id for another org) and `FailedPrecondition` (paid, unplaceable) — are rethrown so the page toasts something true instead of promising an update that will never come; everything else falls through to the poll, since the webhook is still coming.
-- **Buttons come from the server's own booleans, never re-derived.** `purchasable` (on the status, gating the Plans section; and per plan on `ListPlans`, gating each row's button) and `manageable` are each read from the same helper the corresponding RPC refuses on — a button that cannot work is worse than no button. `manageable` is specifically NOT implied by `subscription_status`: a cancelled org reports UNSPECIFIED and still has invoices to fetch and a card to re-add.
-- **`current_period_end` is the money's period; `period_start`/`period_end` are the usage period's.** The usage period runs from the org's billing anniversary and is what `GetUsage`, the sidebar meter and the allowance banner count; the provider bills on its own cycle from the checkout day, and `tier_usage` covers that one — over which a subscriber's allowance is spent, so the "Free allowance resets" line is for an org with no subscription only. They do not coincide, so never subtract the allowance from `used_events` and call the rest billable — that mixes two windows. The page dates both: the usage section names its UTC period (`formatPeriod`, shared with the Usage tab) and billed usage names its billing period by the day it ends (`current_period_end`, local time), because two undated "this period" totals read as being billed for more events than were sent. That end is not always a renewal: the provider renews about an hour late and holds a renewal nobody paid, so a past end reads "ended", and a past-due one "ends" rather than "Renews".
-- **Tier rows keep the server's numbering** (`tierRows`, `settings/billing/tier-rows.ts`). Tiers arrive in the order of the tier meters' keys (`t1`…`tN`), so Tier k is always the provider's `tk` meter, the line to reconcile an invoice against; a tier the org's allowance covers (`from_events` reaching `up_to_events`, holding nothing) has its row dropped, and the rest keep their numbers. A covered tier that holds events anyway — the billing pass keeps the larger count when an allowance is raised mid-period, and carry can arrive from a period split under a lower one — stays, under its own bounds (the previous tier's upper one, or 0), since `from_events` would print the range backwards. A bound is compacted only where that is exact (`100K – 2M`, but `1,234,567 – 2M`): the catalog's bounds are round, an allowance override (a deal's, or a comp that rode onto the plan) need not be. `tier_usage` is a running count of what was last stated, not an invoice: the provider bills each tier the most it was told by the period's end, the last statement may not be acknowledged yet, and each count includes the previous period's late-counted carry. The section shows whenever tiers arrive, so a status this build cannot place never hides a billed count.
-- **`past_due` keeps the plan.** The server does not degrade a paying customer's product over an expired card, so the UI says the payment failed *and* that nothing about the plan or the free allowance has changed. Both the banner and the page give it the negative tone, not the caution amber — "your payment failed" in the amber of a soft warning understates the only thing here that needs acting on. Inside Dodo's grace period both surfaces ask for the card "by" `grace_period_ends_at`, through `graceDeadline`, which drops a date already passed: the server can keep serving one after it has passed, until it sees whether the provider held or cancelled. A dismissed banner comes back when its grace window changes: a new one opens, or it ends in a hold (`usageBannerKey`).
-- **Nothing is enforced anywhere in this system.** The free allowance drives a banner and never a rejected event, so every past-allowance surface has to say "nothing is being dropped" or it reads as an outage the customer is already having.
-- **`formatEvents` is pinned to `en-US`**, like the dates beside it: the browser locale renders `1,20,000 / 5,00,000` on a machine defaulting to en-IN.
-- Surfaces: `settings/billing` (the page, with `billed-usage.tsx` for a subscriber's tiers), `components/billing/usage-meter.tsx` (sidebar footer), `components/billing/usage-banner.tsx` (above the header, beside `DemoBanner`), `settings-layout.tsx`, which reads it only to decide whether the Billing tab exists, and the Usage tab, where one range picker drives the headline, chart and project table, so the headline is always the sum of the rows on screen and never `used_events`. It defaults to the org's current period: for a subscriber the money's period while it has a day left, `[day(current_period_start), day(current_period_end))` in UTC (the days the billing meter counts less any a previous subscription already counted), and never the usage period, which matches neither their bill nor their allowance; for anyone else the usage period; otherwise the last 30 days. Either period is drawn whole with the days not yet reached empty (their tooltip shows no value, not a zero). That tab waits up to 3s for billing before its first request, or a cold load draws 30 days and then swaps. All five go through `useBilling`, so mounting them in one commit is still one billing request, and a window focus queues one shared reload, not one per surface; the atom fetches `GetBillingStatus` and `GetUsage` together and passes a one-day range to the latter, since `range` bounds the daily series only while `used_events` always covers the period.
-- The read is on the viewer floor (`can('read','billing')`) and `create` is admin-only — it is what starts a checkout and opens the portal. The tab hides on a deployment with billing off, but never while it is the tab being viewed, or a fresh load of `/settings/billing` draws its bar with nothing highlighted.
 
 ### Form Validation
 
-Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for client-side validation. Define constraints in the Zod schema — required fields, string lengths, formats — so errors surface immediately in the UI before any RPC call. The protovalidate interceptor still runs as a safety net but is not the primary validation layer for forms.
+Forms use Zod schemas (via `zodResolver` from `@hookform/resolvers/zod`) for client-side validation. Define constraints (required fields, string lengths, formats) in the Zod schema so errors surface immediately in the UI before any RPC call. The protovalidate interceptor still runs as a safety net but is not the primary validation layer for forms.
 
-### Dogfooding (`src/analytics/`)
+### Dogfooding
 
-The dashboard reports its own usage into Pug through `@pug-sh/browser`, the same public-key ingest path customers use. Off unless `VITE_PUG_PROJECT_ID` + `VITE_PUG_PUBLIC_KEY` are both set, so dev sends nothing by default. `initAnalytics()` runs at module scope in `main.tsx` (not an effect — StrictMode would double-fire the first `page_view`). `pug.sh` (repo `../pug-site`) is instrumented the same way and **must stay on the same project + public key**: `crossSubdomainTracking` shares identity through a cookie keyed by project ID, so a mismatch splits every visitor into two profiles and the signup funnel stops resolving.
+The dashboard reports its own usage into Pug through `@pug-sh/browser` (`src/analytics/`; the rest is in `.claude/rules/analytics.md`). These rules apply anywhere in the app:
 
-The SDK is installed from **npm** (`^0.1.0`). It was previously pinned to the repo's `dist` branch, which existed because the SDK carried unreleased work and bun never runs `prepare` on a git install; 0.1.0 is the release that made that unnecessary. **The version has to match pug.sh's, the same way the project ID does:** the stored identity envelope changed shape after 0.0.4, and builds on either side of that boundary can't read each other's, so a visitor crossing between them thrashes their anonymous ID on the shared `.pug.sh` cookie. Move both repos together.
-
-Three invariants worth knowing before you touch this:
-
-- **`data-pug-no-capture` on `<main>` (App.tsx) is load-bearing — don't remove it.** Click and dead-click autocapture send the clicked element's `innerText`, and everything under `<main>` is *customer* data (their end-users' emails and distinct IDs, their property values). The marker resolves via `closest()`, so one boundary covers every page mounted there, present and future. **A data surface rendered outside `<main>` needs its own marker** — `shared-dashboard.tsx` does, since it renders standalone. Structural fields (`tag`/`id`/`class`/coords) are still sent, so keep PII out of `id`/`class` too.
-- **`sanitizeUrl` (`analytics/sanitize-url.ts`) drops the whole query string**, not a denylist. `ef`/`pf` carry property-filter *values*, `/magic-link` carries a live token, and forgetting to add a new param to a denylist fails silently and permanently. Path IDs are masked (`:profileId`, `:sessionId`, `:dashboardId`, `:shareId`, `:connectionId`) because a profileId is another company's end-user and a shareId is a bearer credential. This costs no UTM attribution — the SDK parses `$utm*` from `window.location.search` directly and never routes it through the sanitizer. Note `$pageTitle` is **not** sanitized; it's safe only because `index.html` sets a static `<title>Pug</title>` and nothing mutates it. Per-page titles carrying customer data would leak. It reaches the SDK through `beforeSend` (`maskEventUrls`, covering `$url`, `$referrer` and a `form_submit`'s `action`) — the SDK's own `sanitizeUrl` option is gone. Two consequences: the hook must not throw, since a throw now drops the **whole event** rather than blanking one URL, and `''` has to pass through untouched or a referrer-less page view resolves into a fabricated self-referral.
-- **`trackingConsent: 'granted'` is stated in `init()` and has to stay.** The SDK defaults to `'cookieless'` — events still flow, but no identifier is written to the device and `identify()` is a no-op, which makes `crossSubdomainTracking` dead config and leaves every signed-in session anonymous. Nothing errors; the funnel just stops resolving.
-
-Answering "what are users clicking" is `trackFeature(featureId, featureName)` → the well-known `feature_used` event, so a single `featureId` breakdown reports it. Manual calls are required, not optional: the `<main>` marker blanks button labels, and icon-only buttons (every hover-revealed row action) autocapture as `tag: svg` with empty text. Put the call on the **atom**, not the button, so every entry point counts. Never pass customer text (dashboard names, key names) as props — the `featureId` already says what happened. Demo sessions deliberately are not `identify()`d (`analytics/identity.tsx`): the demo signs everyone in as the shared `snoop@pug.sh` viewer, so identifying it would fuse every demo visitor into one profile and absorb their anonymous histories.
-
-**Event props carry labels and our own resource IDs — never secrets, never customer PII, never a copied value.** The rule that keeps this honest: an event property is a *category* (`scope: Private`, `insightType: trends`, `context: sdk_snippet:web`), a count, or one of our own object IDs (`apiKeyId`, `dashboardId`) — never a key value, a filter value, an end-user email, or free customer text. `useCopyToClipboard`'s `copy(text, context?)` is opt-in by this rule: it tracks a `copied` event **only** when a call site passes a stable `context` label, and the copied `text` is never sent (it's frequently a credential). Secret-copy sites (the once-shown private key) pass **no** context, so they stay silent — the minting event (`api_key_created`, `scope: Private`) is the signal, not the copy.
-
-Current manual events beyond `feature_used`: `signin` (`method`), `signout`, `api_key_created`/`api_key_revoked`, `insight_queried` (shape only — type + counts, no filter values; fired inside the debounced query fn, one per settled query), `dashboard_viewed` (`dashboardId`, deduped by ref), `copied` (`context` label), `theme_selected` (`theme`: a built-in id or `custom`, `mode`), `theme_installed` (`source`).
-
-**Identity is the customerId, and the signed-in email is a trait on it — don't swap them.** A profile is keyed by `(project, externalId)` with no rename path (the only merge is anonymous→identified, on the first `identify()`), so an address as the external ID strands the profile whenever someone changes theirs; post-identify it is also the distinct ID on every event and sits in plaintext in the identity cookie shared across `.pug.sh`. As a trait it still identifies the person and stays filterable, but note it does **not** become the profile's label: `resolveIdentity` (`profiles/_identity.ts`) resolves that from a *name* trait only, falling back to the external ID, and renders `email` on the secondary line — so with no name trait in `GetMe`, our own dogfood profiles head with the customerId. The email isn't in the JWT, so `analytics/identity.tsx` owns a `GetMe` and holds the first `identify()` until it lands — gated on `analyticsEnabled`, since a request is the one thing there that isn't already a no-op on an unconfigured build, and matched against the current `customerId`, since a cross-tab sign-in moves the JWT without clearing `meAtom`.
-
-### Backend Auth Model
-
-- JWT in `sub` claim = customerID (not email)
-- Org + project auto-created on signup
-- Unauthenticated sign-in: magic link (`/magic-link?token=…`), a server-configured OIDC provider (`/oauth/callback`, Authorization Code + PKCE), or an org's SSO connection (`/oauth/callback/<connectionId>`, found through `DiscoverSignIn`). Google uses the same generic OIDC path.
-- External sign-in: fetch safe provider settings from `GetAuthConfig`; every provider, including Google, uses Authorization Code + PKCE and `/oauth/callback`. A connection isn't in `GetAuthConfig`, so its config rides the redirect in sessionStorage, and the callback refuses a code that lands on another path (OAuth mix-up). The callback sends `providerId` (or `connectionId`), code, PKCE verifier, redirect URI, and nonce to `CompleteOIDCSignIn`; the server performs the token exchange, so provider secrets and tokens never enter the dashboard.
-- Dashboard endpoints need JWT (handled by interceptor)
-- Project-scoped endpoints need JWT + `x-project-id` header
-- SDK endpoints (devices, events, profiles) use API key auth — not called from this frontend
-
-### Turnstile
-
-`RequestMagicLink` and `SignInWithEmail` carry a Cloudflare Turnstile token when `GetAuthConfig` returns a `turnstileSiteKey`. Without a key nothing changes: no script, no widget, an empty token. `auth/turnstile.ts` loads the API and `auth/use-turnstile.ts` drives the one widget on the sign-in form.
-
-- **`api.js` loads from `challenges.cloudflare.com`, never from a bundled or self-hosted copy.** Cloudflare breaks a proxied or cached one. It loads only on the sign-in page and only with a key, so a deployment with the check off never contacts Cloudflare. A Content-Security-Policy added later must allow that origin for scripts and frames.
-- **With a key, `take()` never lets a request go out without a token.** It waits for one that isn't ready. It resets the widget as it hands one out, because a token works once and a wrong password spends it too. It returns `null` when the widget errors or can't load.
-- **The refusals are mapped on the code, like OAuth's, but only on an error that carries a detail.** On these two RPCs only the check answers `PermissionDenied` (`TURNSTILE_FAILED`) or `Unavailable` (`TURNSTILE_UNAVAILABLE`), but Connect turns a proxy's bare 403 or 429/502/503/504 into the same codes. The server's own refusal always carries an `ErrorInfo` detail, and a status-derived error never does. A `PermissionDenied` fetches the config again. That covers a page opened before the keys were set or rotated, and a failed first fetch.
-- **The widget is `interaction-only`**, an empty box until Cloudflare wants a click, and an empty box adds no gap to the form's `space-y` stack. Cloudflare's test site keys work on localhost with the dummy secrets in the backend's `.env.example`, since a real secret refuses their tokens: `1x00000000000000000000AA` always passes, `3x00000000000000000000FF` forces the click.
-
-### Filters & Query Semantics
-
-- Shared insights proto now uses grouped global filters:
-  - `QueryRequest.filter_groups` + `filter_groups_operator`
-  - `SegmentUsersRequest.filter_groups` + `filter_groups_operator`
-  - Do not send legacy top-level `filters` in these requests.
-- Current frontend behavior for global filters:
-  - If no event kinds are selected, use the base/unscoped schema.
-  - If event kinds are selected, show only property keys common to all selected kinds (intersection for auto/custom keys).
-  - Keep profile keys available in global filters.
-- Event-row filters are event-scoped (`kindFilter`) and should only show properties for that event kind.
-- Value input UX:
-  - Always allow free text for values (suggestions are optional, not required).
-  - Multi-value operators (`in`, `not in`) support manual multi-entry via Enter/comma + Add. `contains` / `not contains` are single-value (substring match) — the backend's `PropertyFilter` CEL constraints require a non-empty `value` and forbid `values` for them, so they are not list-arity.
-  - Presence operators (`is set`, `is not set`) are no-value operators and should commit immediately.
+- **`data-pug-no-capture` on `<main>` (`App.tsx`) is load-bearing; don't remove it.** Click and dead-click autocapture send the clicked element's `innerText`, and everything under `<main>` is customer data. The marker resolves via `closest()`, so one boundary covers every page mounted there. **A data surface rendered outside `<main>` needs its own marker** (`shared-dashboard.tsx` has one). Structural fields (`tag`/`id`/`class`/coords) are still sent, so keep PII out of `id`/`class` too.
+- **An event property is a category (`scope: Private`, `insightType: trends`), a count, or one of our own resource IDs (`apiKeyId`, `dashboardId`)**: never a secret, customer PII, free customer text or a copied value.
+- **Track features with `trackFeature(featureId, featureName)`, on the atom rather than the button**, so every entry point counts. The calls are required: the `<main>` marker blanks button labels, and icon-only buttons autocapture as `tag: svg` with empty text.
+- **Keep the page `<title>` static.** `$pageTitle` is not sanitized, so a per-page title carrying customer data would leak.
 
 ### TypeScript Style
 
-Prefer implicit types — don't annotate what TypeScript can infer:
+Prefer implicit types; don't annotate what TypeScript can infer:
 
 - **No return types on functions** unless the inferred type would be wrong or the function is exported from a shared library with a complex return shape
 - **No explicit variable types** when the RHS makes it obvious (`const x = 'hello'` not `const x: string = 'hello'`)
@@ -498,4 +243,4 @@ Prefer implicit types — don't annotate what TypeScript can infer:
 
 ### Biome
 
-Config in `biome.json`: 2-space indent, no semis, single quotes, 120 char width, trailing commas, and import organization enabled.
+Config in `biome.json`: 2-space indent, no semis, single quotes, 120 char width, trailing commas, and import organization enabled. `src/components/charts/` and `src/components/shimmering-text.tsx` are excluded (`files.includes`), so the registry's double quotes and semicolons there are expected.

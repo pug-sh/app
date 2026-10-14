@@ -66,8 +66,8 @@ export const resolveOsIcon = (os?: string) => {
   if (matchToken(os, ['android'])) return 'android'
   // Every distro resolves to Tux. The backend already collapses these families to "Linux", so the
   // tokens only arrive from an SDK sending $os raw — and a per-distro mark isn't worth the
-  // copyleft and trademark terms on the Debian, Ubuntu and Fedora logos (see the Brand icons
-  // section of CLAUDE.md).
+  // copyleft and trademark terms on the Debian, Ubuntu and Fedora logos (see
+  // .claude/rules/brand-icons.md).
   if (matchToken(os, ['linux', 'ubuntu', 'debian', 'fedora'])) return 'linux'
 
   return null
