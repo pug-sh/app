@@ -2,6 +2,8 @@ import { z } from 'zod'
 import type { Oklch } from '../lib/color/oklch'
 import { MAX_COLOR_LENGTH, parseColor } from '../lib/color/parse'
 import { resolveKind } from '../lib/event-aliases'
+import { CALENDAR_DAY_PATTERN, isCalendarDay } from './metadata'
+import { MAX_RELEASE_LENGTH, parseRelease, RELEASE_PATTERN } from './release'
 import {
   type Contrast,
   GROUPS,
@@ -44,9 +46,14 @@ export type ThemeFamily = {
   name: string
   author?: string
   description?: string
+  created?: string
+  release?: string
   contrast: Contrast
   variants: Partial<Record<Polarity, Variant>>
 }
+
+/** What a file says about itself. Nothing in it draws, so a problem in it never refuses the theme. */
+export type ThemeMetadata = { author?: string; description?: string; created?: string; release?: string }
 
 /** The file shape as authored: what presets are written in and what parseThemeObject reads. */
 type VariantFile = {
@@ -64,8 +71,7 @@ export type ThemeFile = {
   $schema?: string
   version: number
   name: string
-  author?: string
-  description?: string
+  metadata?: ThemeMetadata
   contrast?: Contrast
   variants: { light?: VariantFile; dark?: VariantFile }
   seeds?: Record<string, unknown>
@@ -83,16 +89,26 @@ const dataFields = <G extends z.ZodType>(color: z.ZodString, groups: G) => ({
   avatars: z.array(color).min(1).max(24).optional(),
   adapt: z.boolean().optional(),
 })
-const fileFields = <V extends z.ZodType, S extends z.ZodType>(version: V, variants: S) => ({
+const fileFields = <V extends z.ZodType, S extends z.ZodType, M extends z.ZodType>(
+  version: V,
+  variants: S,
+  metadata: M,
+) => ({
   $schema: z.string().optional(),
   version,
   name: z.string().min(1).max(64),
-  author: z.string().max(64).optional(),
-  description: z.string().max(280).optional(),
+  metadata: metadata.optional(),
   contrast: z.enum(['standard', 'high']).optional(),
   variants,
   seeds: z.looseObject({}).optional(),
 })
+
+// Files written before metadata had its own field carry these two at the top level. Still read, and
+// refused when malformed as they always were, but no longer offered to editors.
+const legacyFields = {
+  author: z.string().max(64).optional(),
+  description: z.string().max(280).optional(),
+}
 
 const colorString = z.string().max(MAX_COLOR_LENGTH)
 const dataShape = z.looseObject(dataFields(colorString, z.record(z.string(), colorString)))
@@ -100,9 +116,19 @@ const variantShape = z.looseObject({
   colors: z.record(z.string(), colorString).optional(),
   data: dataShape.optional(),
 })
-const fileShape = z.looseObject(
-  fileFields(z.number().int(), z.looseObject({ light: variantShape.optional(), dark: variantShape.optional() })),
-)
+// metadata passes through unread here: readMetadata turns each problem in it into a warning, where a
+// typed field would refuse the whole theme.
+const fileShape = z.looseObject({
+  ...fileFields(
+    z.number().int(),
+    z.looseObject({ light: variantShape.optional(), dark: variantShape.optional() }),
+    z.unknown(),
+  ),
+  ...legacyFields,
+})
+
+const METADATA_TEXT = { author: 64, description: 280 } as const
+const METADATA_KEYS = ['author', 'description', 'created', 'release']
 
 /** Strict mirror of the format for editors: every token and group is listed, so names autocomplete. */
 export const authoringSchema = (() => {
@@ -111,8 +137,27 @@ export const authoringSchema = (() => {
   const groups = z.strictObject(Object.fromEntries(GROUPS.map(g => [g, color.optional()])))
   const data = z.strictObject(dataFields(color, groups))
   const variant = z.strictObject({ colors: colors.optional(), data: data.optional() })
+  const metadata = z.strictObject({
+    author: z.string().max(METADATA_TEXT.author).describe('Who made the theme').optional(),
+    description: z.string().max(METADATA_TEXT.description).describe('One line about the theme').optional(),
+    created: z
+      .string()
+      .regex(new RegExp(CALENDAR_DAY_PATTERN))
+      .describe('The day the theme was first made, YYYY-MM-DD')
+      .optional(),
+    release: z
+      .string()
+      .max(MAX_RELEASE_LENGTH)
+      .regex(new RegExp(RELEASE_PATTERN))
+      .describe('This file’s release, MAJOR.MINOR.PATCH')
+      .optional(),
+  })
   return z.strictObject(
-    fileFields(z.literal(CURRENT_VERSION), z.strictObject({ light: variant.optional(), dark: variant.optional() })),
+    fileFields(
+      z.literal(CURRENT_VERSION),
+      z.strictObject({ light: variant.optional(), dark: variant.optional() }),
+      metadata,
+    ),
   )
 })()
 
@@ -215,9 +260,64 @@ export const parseThemeObject = (input: unknown): ParseResult => {
     contrast: file.contrast ?? 'standard',
     variants,
   }
-  if (file.author !== undefined) family.author = cleanText(file.author, 'author', issues)
-  if (file.description !== undefined) family.description = cleanText(file.description, 'description', issues)
+  const metadata = readMetadata(file.metadata, issues)
+  const author = metadata.author ?? legacyText(file.author, 'author', issues)
+  const description = metadata.description ?? legacyText(file.description, 'description', issues)
+  if (author !== undefined) family.author = author
+  if (description !== undefined) family.description = description
+  if (metadata.created !== undefined) family.created = metadata.created
+  if (metadata.release !== undefined) family.release = metadata.release
   return { ok: true, family, issues }
+}
+
+const legacyText = (value: string | undefined, path: string, issues: Issue[]) =>
+  value === undefined ? undefined : cleanText(value, path, issues)
+
+// Everything in metadata describes the theme and nothing in it draws, so a problem there is a warning and
+// the value is dropped: a typo in a date must never cost a project its colours.
+const readMetadata = (input: unknown, issues: Issue[]) => {
+  const metadata: ThemeMetadata = {}
+  if (input === undefined) return metadata
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    issues.push(warning('V12', 'metadata', '"metadata" must be an object, so it was ignored'))
+    return metadata
+  }
+  const raw = input as Record<string, unknown>
+  unknownKeys(raw, METADATA_KEYS, 'metadata', issues)
+  const text = (key: string) => {
+    if (!Object.hasOwn(raw, key)) return undefined
+    const value = raw[key]
+    if (typeof value === 'string') return value
+    issues.push(warning('V12', `metadata.${key}`, `"${key}" must be text, so it was ignored`))
+    return undefined
+  }
+  for (const key of ['author', 'description'] as const) {
+    const value = text(key)
+    if (value === undefined) continue
+    const limit = METADATA_TEXT[key]
+    if (value.length > limit) {
+      issues.push(warning('V12', `metadata.${key}`, `"${key}" is limited to ${limit} characters, so it was ignored`))
+    } else {
+      metadata[key] = cleanText(value, `metadata.${key}`, issues)
+    }
+  }
+  const created = text('created')
+  if (created !== undefined) {
+    if (isCalendarDay(created)) metadata.created = created
+    else {
+      const message = `${JSON.stringify(created)} isn’t a day written YYYY-MM-DD, so it was ignored`
+      issues.push(warning('V12', 'metadata.created', message))
+    }
+  }
+  const release = text('release')
+  if (release !== undefined) {
+    if (parseRelease(release)) metadata.release = release
+    else {
+      const message = `${JSON.stringify(release)} isn’t a release written MAJOR.MINOR.PATCH, so it was ignored`
+      issues.push(warning('V12', 'metadata.release', message))
+    }
+  }
+  return metadata
 }
 
 // zod drops a "__proto__" record key, so it never reaches the parsed file to be warned about. JSON.parse

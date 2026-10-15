@@ -14,13 +14,32 @@
       "minLength": 1,
       "maxLength": 64
     },
-    "author": {
-      "type": "string",
-      "maxLength": 64
-    },
-    "description": {
-      "type": "string",
-      "maxLength": 280
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Who made the theme"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "One line about the theme"
+        },
+        "created": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "The day the theme was first made, YYYY-MM-DD"
+        },
+        "release": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$",
+          "description": "This file’s release, MAJOR.MINOR.PATCH"
+        }
+      },
+      "additionalProperties": false
     },
     "contrast": {
       "type": "string",
