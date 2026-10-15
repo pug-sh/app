@@ -16,6 +16,7 @@
     "preview": "vite preview",
     "generate": "rm -rf src/api/genproto && buf generate --template buf.gen.yaml --include-imports proto",
     "generate:themes": "bun scripts/generate-themes.ts",
+    "build:theme-kit": "bun scripts/build-theme-kit.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "knip": "knip"
