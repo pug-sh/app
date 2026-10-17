@@ -19,7 +19,7 @@ import type { TopKState } from './top-k'
 // Counts add across buckets; nothing else does. The same person active on two days is one unique
 // user rather than two, and per-bucket averages, minimums and maximums don't add at all. For the
 // user counts this is not a compromise but the only reading available: the series carry counts, not
-// identities, so a range-wide unique total can't be recovered from them at any price — it would take
+// identities, so a range-wide unique total can't be recovered from them at any price; it would take
 // its own query. A caller that shows an averaged number should name it as one.
 //
 // Total over AggregationType (`satisfies Record<…>`, as GRANULARITY_MAX_RANGE_MS does for
@@ -29,7 +29,7 @@ export type SeriesCollapse = 'sum' | 'avg' | 'min' | 'max'
 
 export const SERIES_COLLAPSE = {
   // A spec that never set an aggregation carries UNSPECIFIED (proto enums default to 0, so `??`
-  // never sees it) and the backend reads that as TOTAL — insights/builder.go does the same coercion.
+  // never sees it) and the backend reads that as TOTAL (insights/builder.go does the same coercion).
   [AggregationType.UNSPECIFIED]: 'sum',
   [AggregationType.TOTAL]: 'sum',
   [AggregationType.SUM]: 'sum',
@@ -40,9 +40,9 @@ export const SERIES_COLLAPSE = {
   [AggregationType.MAX]: 'max',
 } as const satisfies Record<AggregationType, SeriesCollapse>
 
-// Session specs carry no event rows, so their series collapse by metric instead — named as the
+// Session specs carry no event rows, so their series collapse by metric instead, named as the
 // AggregationType that behaves alike, which is what SERIES_COLLAPSE and the summary ladder read.
-// Session counts add across buckets (a session lands in exactly one, keyed on its start — the same
+// Session counts add across buckets (a session lands in exactly one, keyed on its start: the same
 // reasoning rankSessionBreakdown sums on); an average and a rate don't add at all. Bucket-weighted
 // averaging is the only reading a series affords; the exact window figure is the separate scalar
 // query the traffic stat tiles show. Total over SessionMetric, as SERIES_COLLAPSE is over AggregationType.
@@ -75,14 +75,14 @@ export type SeriesAggregationResolver = (series: TrendSeries) => AggregationType
 // Which event row's aggregation produced a given series.
 //
 // A resolver rather than an array of aggregations, because a positional array only describes the
-// series list it was built from — and a KPI's comparison window is a separate query with its own
+// series list it was built from, and a KPI's comparison window is a separate query with its own
 // series, which may differ in count and order (a breakdown value present in one window and not the
 // other). Handing it the current window's indices is how a compare delta goes wrong.
 export const seriesAggregationResolver = (
   events: readonly EventAggregation[],
   sessionMetric?: SessionMetric,
 ): SeriesAggregationResolver => {
-  // A session spec has no event rows at all — the metric owns every series it returns, under
+  // A session spec has no event rows at all: the metric owns every series it returns, under
   // whatever kind its scope stamped them with. Checked first: the row logic below would otherwise
   // take the empty row list down the "no row claims this" path and sum a rate.
   if (sessionMetric !== undefined) {
@@ -90,7 +90,7 @@ export const seriesAggregationResolver = (
     return () => aggregation
   }
 
-  // A lone row owns every series in the response, whatever a breakdown split them into — and
+  // A lone row owns every series in the response, whatever a breakdown split them into, and
   // whatever kind they came back under, which matters because `kind: ''` means "all events" and
   // those series are named for the real kinds, matching no row by name.
   if (events.length === 1) {
@@ -100,15 +100,15 @@ export const seriesAggregationResolver = (
 
   // Several rows: kind is the only link back. The backend keys series by (event_kind, breakdown)
   // and TrendSeries carries no event index, so two rows of the same kind are indistinguishable
-  // here — it merges them into one series before this ever runs.
+  // here; it merges them into one series before this ever runs.
   const byKind = new Map(events.map(entry => [entry.kind, entry.aggregation ?? AggregationType.TOTAL]))
   let warned = false
   return series => {
     const aggregation = byKind.get(series.eventKind)
     if (aggregation !== undefined) return aggregation
     // No row claims this series, so there is no honest answer to give. Summing is the only guess
-    // available and it is the wrong one for every collapse above that isn't 'sum' — inflating by
-    // roughly the bucket count — so don't let it pass unremarked.
+    // available and it is the wrong one for every collapse above that isn't 'sum' (inflating by
+    // roughly the bucket count), so don't let it pass unremarked.
     if (!warned) {
       warned = true
       console.error('Insights: no event row matches series kind', {
@@ -132,6 +132,21 @@ export const specAggregationResolver = (spec: InsightQuerySpec | undefined) =>
     spec?.session?.metric,
   )
 
+// A count or sum of nothing is a real zero; an average, minimum or maximum of nothing has no value.
+const ZERO_WHEN_EMPTY = new Set([
+  AggregationType.UNSPECIFIED,
+  AggregationType.TOTAL,
+  AggregationType.SUM,
+  AggregationType.UNIQUE_USERS,
+])
+
+export const emptyReadsAsZero = (spec: InsightQuerySpec | undefined) => {
+  const aggregations = spec?.session
+    ? [SESSION_METRIC_AGGREGATION[spec.session.metric]]
+    : (spec?.events ?? []).map(entry => entry.aggregation)
+  return aggregations.length > 0 && aggregations.every(aggregation => ZERO_WHEN_EMPTY.has(aggregation))
+}
+
 type ChartPoint = {
   date: Date
   values: number[]
@@ -142,11 +157,11 @@ export const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[
   return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
 }
 
-// Shown wherever a property value is empty — an event carrying no $utmSource, no $os,
+// Shown wherever a property value is empty: an event carrying no $utmSource, no $os,
 // and so on. The backend counts those events as a real bucket rather than dropping them,
 // in breakdowns and in top-k alike, so both render this. Deliberately generic: the
 // property decides what "empty" means, and one label serves every key. Resist naming it
-// for one property's story — "(direct)" would be wrong even for $utmSource, whose empty
+// for one property's story; "(direct)" would be wrong even for $utmSource, whose empty
 // bucket is every untagged visit (app sessions, organic search, untagged referrals),
 // not the referrer-derived direct traffic that name implies.
 export const EMPTY_VALUE_LABEL = '(none)'
@@ -164,11 +179,11 @@ export const breakdownLabel = (breakdown: Record<string, string>, fallback: stri
     .join(' / ')
 }
 
-// Names for trends series, for everything that displays them alike — chart tooltip and legend, table
+// Names for trends series, for everything that displays them alike: chart tooltip and legend, table
 // headers, the summary grid. One source, so they can't disagree about what a series is called.
 //
 // The "event · value" prefix only earns its place when there is more than one event kind on the
-// chart to tell apart. With a single event — every Overview tile, and most insights — the chart
+// chart to tell apart. With a single event (every Overview tile, and most insights) the chart
 // already says which event it is, and the prefix only repeats it on every row: "click · Linux",
 // "click · macOS", "click · Android". Keyed on distinct kinds rather than the number of event rows
 // because that is what the prefix disambiguates; same-kind rows would read alike either way, and the
@@ -300,7 +315,7 @@ export const buildChartData = (
 // x-axis. The windows are separate queries and their bucket counts can differ (a 30-day month
 // against a 31-day one), so a shorter series is resampled to full width rather than stopping short:
 // the vendored line can't skip a point, and a tail left unfilled is zeroed downstream and reads as
-// a real collapse. Nearest-neighbour — values repeat when widening, drop when narrowing.
+// a real collapse. Nearest-neighbour: values repeat when widening, drop when narrowing.
 export const alignComparisonValues = (points: readonly DataPoint[], bucketCount: number): number[] => {
   if (points.length === 0 || bucketCount <= 0) return []
   const scale = bucketCount > 1 ? (points.length - 1) / (bucketCount - 1) : 0

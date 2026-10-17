@@ -1,7 +1,7 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 
 // Browser IANA zone, e.g. "Asia/Kolkata". Empty string on the rare engine that
-// can't resolve one — the server treats "" as UTC.
+// can't resolve one; the server treats "" as UTC.
 export const browserTimezone = () => {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''
@@ -31,23 +31,30 @@ export const supportedTimezones = () => {
 // is a partial slice and renders as a "dip" at the left edge of the chart. Flooring
 // `from` to the bucket start *in the project zone* makes that first bucket complete.
 
+// Constructing a DateTimeFormat costs far more than formatting with one, and charts call this per bucket.
+const partsFormatters = new Map<string, Intl.DateTimeFormat>()
+
 // Civil wall-clock parts of `instant` as seen in `timeZone`.
 const zonedParts = (timeZone: string, instant: Date) => {
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
+  let dtf = partsFormatters.get(timeZone)
+  if (!dtf) {
+    dtf = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    partsFormatters.set(timeZone, dtf)
+  }
   const out: Record<string, number> = {}
   for (const part of dtf.formatToParts(instant)) {
     if (part.type !== 'literal') out[part.type] = Number(part.value)
   }
-  // h23 can surface hour 24 at midnight on some engines — normalize to 0.
+  // h23 can surface hour 24 at midnight on some engines, so normalize to 0.
   if (out.hour === 24) out.hour = 0
   return out
 }
@@ -89,7 +96,7 @@ const wallToInstant = (timeZone: string, y: number, mo: number, d: number, h: nu
 // Floor `instant` to the start of its bucket at `granularity`, computed in `timeZone`,
 // matching the server's ClickHouse bucket functions (week = Sunday start, per
 // toStartOfWeek default mode 0). HOUR also aligns in-zone, which matters for
-// fractional-offset zones (e.g. IST's :30 boundary). A bad zone throws in Intl —
+// fractional-offset zones (e.g. IST's :30 boundary). A bad zone throws in Intl:
 // return the instant unchanged (the server falls back to UTC).
 export const floorToZoneBucket = (instant: Date, granularity: Granularity, timeZone: string): Date => {
   try {
@@ -103,7 +110,7 @@ export const floorToZoneBucket = (instant: Date, granularity: Granularity, timeZ
       return wallToInstant(timeZone, sun.getUTCFullYear(), sun.getUTCMonth() + 1, sun.getUTCDate(), 0)
     }
     if (granularity === Granularity.DAY) return wallToInstant(timeZone, p.year, p.month, p.day, 0)
-    // MINUTE / UNSPECIFIED / anything else — don't second-guess the boundary.
+    // MINUTE / UNSPECIFIED / anything else: don't second-guess the boundary.
     return instant
   } catch {
     return instant
@@ -112,7 +119,7 @@ export const floorToZoneBucket = (instant: Date, granularity: Granularity, timeZ
 
 // Start of the bucket after `instant`'s, at `granularity` in `timeZone`. Day/week/month step the
 // civil calendar so DST days and uneven months stay on the server's toStartOf* boundaries; hour/
-// minute step a fixed span. Null when there's no fixed step (Auto/unknown) — callers leave the axis.
+// minute step a fixed span. Null when there's no fixed step (Auto/unknown); callers leave the axis.
 export const nextZoneBucket = (instant: Date, granularity: Granularity, timeZone: string): Date | null => {
   if (granularity === Granularity.MINUTE) return new Date(instant.getTime() + 60_000)
   if (granularity === Granularity.HOUR) return new Date(instant.getTime() + 60 * 60_000)

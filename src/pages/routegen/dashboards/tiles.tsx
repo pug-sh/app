@@ -5,12 +5,15 @@ import snarkdown from 'snarkdown'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { ShareChartButton } from '@/components/share-chart-button'
 import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { fmtDateRange, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import { accentStripClass } from './accent-palette'
+import { applyDashboardFilters, dashboardFilterOverlap } from './dashboard-filters'
+import { FilterOverlapFlag, filteredEmptyQualifier } from './filter-overlap-flag'
 import { DashboardInsightContent } from './insight-tile-content'
 import { getProtoRange } from './query'
 import { TileHeaderEdit } from './tile-header-edit'
@@ -39,12 +42,37 @@ export const TileShell = ({
   onPatch,
   children,
   bodyRef,
-}: TileContentProps & { children: ReactNode; bodyRef?: RefObject<HTMLDivElement | null> }) => {
+  flag,
+}: TileContentProps & { children: ReactNode; bodyRef?: RefObject<HTMLDivElement | null>; flag?: ReactNode }) => {
   const hideTitle = tile.header?.hideTitle === true
   const accent = tile.header?.accentColor ?? ''
   const icon = tile.header?.icon ?? ''
   const borderless = tile.header?.borderless === true
   const isKpi = tile.viewMode === DashboardTileViewMode.KPI
+
+  let header: ReactNode = null
+  if (editing && onPatch) {
+    // Edit mode keeps the grip so the tile stays draggable. When the title is
+    // hidden in view mode, collapse to just the grip so the editor reflects
+    // that state; renaming stays available from the config panel header.
+    header = <TileHeaderEdit tile={tile} onPatch={onPatch} hideTitle={hideTitle} flag={flag} />
+  } else if (!hideTitle) {
+    header = (
+      <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
+        {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
+        <div className="min-w-0 flex-1">
+          <h3 className={isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base'}>
+            {tile.displayName}
+          </h3>
+          {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
+        </div>
+        {flag}
+      </div>
+    )
+  } else if (flag) {
+    // Clear of the share and tile-menu buttons at right-4.
+    header = <div className="absolute top-4 right-12 z-10">{flag}</div>
+  }
 
   return (
     <div
@@ -56,22 +84,7 @@ export const TileShell = ({
       {accent ? (
         <div className={`absolute top-0 left-0 h-full w-[3px] ${accentStripClass(accent)}`} aria-hidden />
       ) : null}
-      {editing && onPatch ? (
-        // Edit mode keeps the grip so the tile stays draggable. When the title is
-        // hidden in view mode, collapse to just the grip so the editor reflects
-        // that state — renaming stays available from the config panel header.
-        <TileHeaderEdit tile={tile} onPatch={onPatch} hideTitle={hideTitle} />
-      ) : hideTitle ? null : (
-        <div className={`flex min-w-0 shrink-0 items-start gap-2 pr-8 ${isKpi ? 'mb-1' : 'mb-3'}`}>
-          {icon ? <TwemojiIcon emoji={icon} size={16} className="mt-0.5" /> : null}
-          <div className="min-w-0 flex-1">
-            <h3 className={isKpi ? 'truncate text-sm font-normal text-muted-foreground' : 'truncate text-base'}>
-              {tile.displayName}
-            </h3>
-            {tile.description ? <p className="mt-1 text-xs text-muted-foreground">{tile.description}</p> : null}
-          </div>
-        </div>
-      )}
+      {header}
       <div ref={bodyRef} className="min-h-0 flex-1 overflow-hidden pt-0.5">
         {children}
       </div>
@@ -100,17 +113,29 @@ const DashboardInsightTile = ({
   onPatch,
   globalTimeRange,
   globalGranularity,
+  globalFilters,
   bodyRef,
 }: TileContentProps & {
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
+  globalFilters?: readonly ActiveFilter[]
   bodyRef?: RefObject<HTMLDivElement | null>
 }) => {
-  const spec = tile.content.case === 'insight' ? tile.content.value.spec : undefined
+  const filters = globalFilters ?? []
+  const savedSpec = tile.content.case === 'insight' ? tile.content.value.spec : undefined
+  const spec = applyDashboardFilters(savedSpec, filters)
   const query = spec ? create(QueryRequestSchema, { spec }) : undefined
+  const overlap = dashboardFilterOverlap(savedSpec, filters)
+  const flagged = overlap.filters.length > 0 || overlap.splits.length > 0
 
   return (
-    <TileShell tile={tile} editing={editing} onPatch={onPatch} bodyRef={bodyRef}>
+    <TileShell
+      tile={tile}
+      editing={editing}
+      onPatch={onPatch}
+      bodyRef={bodyRef}
+      flag={flagged ? <FilterOverlapFlag overlap={overlap} /> : null}
+    >
       <DashboardInsightContent
         tile={tile}
         query={query}
@@ -118,6 +143,7 @@ const DashboardInsightTile = ({
         timeRangeOverride={globalTimeRange}
         granularityOverride={globalGranularity}
         queryKeyPrefix={tile.id}
+        emptyQualifier={filteredEmptyQualifier(overlap, filters.length > 0)}
         compact
       />
     </TileShell>
@@ -126,12 +152,13 @@ const DashboardInsightTile = ({
 
 // Build the "May 13 – Jun 12" time-range label shown in the shared card's corner,
 // mirroring how the insight content resolves its effective range: the global
-// override wins, else the tile's embedded spec, else defaults.
-const formatTileMeta = (tile: DashboardTile, globalTimeRange?: TimeRange) => {
+// override wins, else the tile's embedded spec, else defaults. Marked Filtered
+// while dashboard filters apply.
+const formatTileMeta = (tile: DashboardTile, globalTimeRange?: TimeRange, filtered = false) => {
   if (tile.content.case !== 'insight') return ''
   const query = create(QueryRequestSchema, { spec: tile.content.value.spec })
   const range = globalTimeRange ?? resolveDashboardTimeRangePreset(undefined, getProtoRange(query.timeRange))
-  return fmtDateRange(range)
+  return filtered ? `${fmtDateRange(range)} · Filtered` : fmtDateRange(range)
 }
 
 export const DashboardTileBody = ({
@@ -141,6 +168,7 @@ export const DashboardTileBody = ({
   onDuplicate,
   globalTimeRange,
   globalGranularity,
+  globalFilters,
 }: {
   tile: DashboardTile
   editing?: boolean
@@ -148,6 +176,7 @@ export const DashboardTileBody = ({
   onDuplicate?: (tile: DashboardTile) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
+  globalFilters?: readonly ActiveFilter[]
 }) => {
   // Points at just the chart region so the share button snapshots the chart as-is,
   // then draws its own card chrome (editable title + time range) around it.
@@ -166,6 +195,7 @@ export const DashboardTileBody = ({
             onPatch={onPatch}
             globalTimeRange={globalTimeRange}
             globalGranularity={globalGranularity}
+            globalFilters={globalFilters}
             bodyRef={chartRef}
           />
         )}
@@ -174,7 +204,7 @@ export const DashboardTileBody = ({
         <ShareChartButton
           targetRef={chartRef}
           defaultTitle={tile.displayName}
-          meta={formatTileMeta(tile, globalTimeRange)}
+          meta={formatTileMeta(tile, globalTimeRange, (globalFilters?.length ?? 0) > 0)}
           fallbackName={`chart-${tile.id}`}
           trigger={
             <Button

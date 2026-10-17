@@ -4,14 +4,21 @@ import { zonedCivil } from '@/lib/timezone'
 // Bucket boundaries are computed server-side in the project's reporting timezone, so
 // axis/tooltip labels must render in that same zone or a day bucket (e.g. IST midnight
 // = 18:30 UTC the prior day) lands under the wrong date. A malformed/unknown zone throws
-// in Intl — fall back to UTC (mirrors the server's resolveEffectiveWindow) rather than
-// crashing a tile.
+// in Intl, so fall back to UTC (mirrors the server's resolveEffectiveWindow) rather than
+// crashing a tile. Cached because toLocaleString builds a new formatter on every call.
+const formatters = new Map<string, Intl.DateTimeFormat>()
 const fmtInZone = (d: Date, timeZone: string | undefined, opts: Intl.DateTimeFormatOptions): string => {
-  try {
-    return d.toLocaleString('en-US', { ...opts, timeZone: timeZone || undefined })
-  } catch {
-    return d.toLocaleString('en-US', { ...opts, timeZone: 'UTC' })
+  const key = `${timeZone ?? ''}|${JSON.stringify(opts)}`
+  let formatter = formatters.get(key)
+  if (!formatter) {
+    try {
+      formatter = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: timeZone || undefined })
+    } catch {
+      formatter = new Intl.DateTimeFormat('en-US', { ...opts, timeZone: 'UTC' })
+    }
+    formatters.set(key, formatter)
   }
+  return formatter.format(d)
 }
 
 const yearIn = (d: Date, timeZone: string | undefined) => fmtInZone(d, timeZone, { year: 'numeric' })
@@ -63,7 +70,7 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
 // Measured off Figtree at text-xs, worst case: an all-digit clock ("00:00") runs 7.0px/char, well
 // above the ~4.9px of a label with spaces. Fitting to the average overprints exactly the labels
 // that are hardest to read, so this tracks the widest, not the mean. Re-measure on a face change.
-// Exported because the Sankey sizes its label gutters off the same figure — CLAUDE.md requires a
+// Exported because the Sankey sizes its label gutters off the same figure: CLAUDE.md requires a
 // re-measure per face, and two private copies is one of them silently keeping the old value.
 export const AXIS_LABEL_PX_PER_CHAR = 7.0
 const AXIS_LABEL_MIN_GAP_PX = 16
@@ -71,7 +78,7 @@ const AXIS_LABEL_MIN_GAP_PX = 16
 export const fitAxisTicks = (innerWidth: number, dateLabels: readonly string[], requested: number): number => {
   if (!(innerWidth > 0)) return requested
 
-  // Bar padding rows blank out and never render but still cost a tick — fit the real labels, re-add them.
+  // Bar padding rows blank out and never render but still cost a tick: fit the real labels, re-add them.
   const visible = dateLabels.filter(label => label !== '')
   if (visible.length === 0) return requested
   const blanks = dateLabels.length - visible.length
@@ -84,7 +91,7 @@ export const fitAxisTicks = (innerWidth: number, dateLabels: readonly string[], 
 }
 
 // The hover pill's ticker splits a label on spaces into a month column and a day column, and drops
-// any third token — "Jul 22, 02:00" renders as "Jul 22,". Joining everything after the month with
+// any third token: "Jul 22, 02:00" renders as "Jul 22,". Joining everything after the month with
 // NBSP keeps it one token; it renders identically.
 const asTickerLabel = (label: string) => {
   const [month, ...rest] = label.split(' ')

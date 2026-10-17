@@ -4,12 +4,14 @@ import { act, render } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import type { ReactNode } from 'react'
 import { expect, it, vi } from 'vitest'
-import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { DashboardTileSchema, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
+  AggregationType,
   DataPointSchema,
   Granularity,
   InsightQuerySpecSchema,
   InsightType,
+  SessionMetric,
   TrendSeriesSchema,
   TrendsResultSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -84,4 +86,63 @@ it('re-colours its series when switching between two dark themes', () => {
   const ember = store.get(compiledThemeAtom).data.events.page_view.line
   expect(ember).not.toBe(pugDark)
   expect(container.innerHTML).toContain(ember)
+})
+
+it("passes the caller's empty-state condition through to an empty result", () => {
+  const { container } = render(
+    <Provider store={createStore()}>
+      <InsightTileView
+        viewMode={DashboardTileViewMode.LINE}
+        spec={create(InsightQuerySpecSchema, { insightType: InsightType.TRENDS })}
+        result={{ case: 'trends', value: create(TrendsResultSchema) }}
+        granularity={Granularity.DAY}
+        emptyQualifier="under the dashboard filters"
+      />
+    </Provider>,
+  )
+  expect(container.textContent).toContain('No events recorded in this period under the dashboard filters')
+})
+
+it.each([
+  ['an event', { events: [{ event: { kind: 'signup' } }] }, 'Loading chart'],
+  ['a session metric', { session: { metric: SessionMetric.SESSIONS } }, 'Loading chart'],
+  ['no event', {}, 'Pick an event to start'],
+])('tells a pending tile with %s what it is waiting for', (_, fields, hint) => {
+  const { container } = render(
+    <Provider store={createStore()}>
+      <InsightTileView
+        viewMode={DashboardTileViewMode.LINE}
+        spec={create(InsightQuerySpecSchema, { insightType: InsightType.TRENDS, ...fields })}
+        result={{ case: undefined, value: undefined }}
+        granularity={Granularity.DAY}
+        compact
+      />
+    </Provider>,
+  )
+  expect(container.textContent).toContain(hint)
+})
+
+const settledEmpty = { case: 'trends' as const, value: create(TrendsResultSchema) }
+const pending = { case: undefined, value: undefined }
+
+it.each([
+  ['a count with data', '19', AggregationType.TOTAL, result],
+  ['a count that came back empty', '0', AggregationType.TOTAL, settledEmpty],
+  ['an average that came back empty', '—', AggregationType.AVG, settledEmpty],
+  ['a count still loading', '—', AggregationType.TOTAL, pending],
+])('shows %s on a KPI as %s', (_, shown, aggregation, kpiResult) => {
+  const { container } = render(
+    <Provider store={createStore()}>
+      <InsightTileView
+        tile={create(DashboardTileSchema, { viewMode: DashboardTileViewMode.KPI })}
+        spec={create(InsightQuerySpecSchema, {
+          insightType: InsightType.TRENDS,
+          events: [{ event: { kind: 'signup' }, aggregation }],
+        })}
+        result={kpiResult}
+        granularity={Granularity.DAY}
+      />
+    </Provider>,
+  )
+  expect(container.querySelector('.tabular-nums')?.textContent).toBe(shown)
 })

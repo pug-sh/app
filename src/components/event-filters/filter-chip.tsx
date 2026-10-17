@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { useState } from 'react'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { type ActiveFilter, createFilter, FILTER_OPERATORS } from './filter-model'
+import { type ActiveFilter, createFilter, FILTER_OPERATORS, filterValueLabel } from './filter-model'
 import { useSuggestions } from './hooks'
 import { mergeUniqueValues } from './utils'
 import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
@@ -61,10 +61,7 @@ export const FilterChip = ({
     }
   }
 
-  let valueLabel: string | null = null
-  if (filter.kind === 'multi') valueLabel = filter.values.join(', ')
-  else if (filter.kind === 'range') valueLabel = `${filter.min} – ${filter.max}`
-  else if (filter.kind === 'single') valueLabel = filter.value
+  const valueLabel = filterValueLabel(filter)
 
   return (
     <span className="inline-flex items-center text-xs border border-border rounded-md overflow-hidden h-7">

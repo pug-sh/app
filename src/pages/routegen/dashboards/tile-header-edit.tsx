@@ -1,4 +1,5 @@
 import { GripVertical } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InlineEditableText } from './editor-shared'
 
@@ -10,10 +11,12 @@ export const TileHeaderEdit = ({
   tile,
   onPatch,
   hideTitle,
+  flag,
 }: {
   tile: DashboardTile
   onPatch: (patch: Partial<DashboardTile>) => void
   hideTitle?: boolean
+  flag?: ReactNode
 }) => (
   <div className="mb-2 flex items-start gap-2 pr-8">
     <span
@@ -40,5 +43,6 @@ export const TileHeaderEdit = ({
         />
       </div>
     )}
+    {flag}
   </div>
 )

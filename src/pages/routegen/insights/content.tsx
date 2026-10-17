@@ -35,13 +35,13 @@ import { EMPTY_ARRAY, type ViewMode } from './constants'
 import { countryCountsFromTopKRows } from './map'
 import { buildSankeyData, sankeyIncompleteReason } from './user-flow'
 
-// Rendered standalone here, or lowercased into a tile shell's footer by a hoisting caller —
+// Rendered standalone here, or lowercased into a tile shell's footer by a hoisting caller:
 // one literal so the two can't drift apart.
 export const COMPARE_CAPTION = 'Dashed line is the previous period'
 
-// Reports from the caption's own slot rather than the top of InsightsContent, so the nine early
-// returns above it unmount this and tell the caller for free — a boolean computed up there has
-// to mirror all nine by hand, and silently captions error and empty states when it drifts.
+// Reports from the caption's own slot rather than the top of InsightsContent, so the early returns
+// above it unmount this and tell the caller for free; a boolean computed up there has to mirror
+// each by hand, and silently captions error and empty states when it drifts.
 const ComparisonCaption = ({ report }: { report?: (draws: boolean) => void }) => {
   useEffect(() => {
     report?.(true)
@@ -91,6 +91,8 @@ export const InsightsContent = memo(function InsightsContent({
   userFlowIncompleteReason = null,
   compact = false,
   lightNumbers = false,
+  emptyQualifier,
+  awaitingEvent = false,
 }: {
   error: string | null
   retry: () => void
@@ -146,6 +148,9 @@ export const InsightsContent = memo(function InsightsContent({
   userFlowIncompleteReason?: string | null
   compact?: boolean
   lightNumbers?: boolean
+  emptyQualifier?: string
+  // A tile with no event never sends a request, so it must not claim to be loading.
+  awaitingEvent?: boolean
 }) {
   // Bucket labels render in the project's reporting zone so they match the
   // server-computed bucket boundaries (the server buckets in this same zone).
@@ -182,10 +187,11 @@ export const InsightsContent = memo(function InsightsContent({
 
   const emptyStateHint = () => {
     // A dashboard tile has no query above it, which is the whole reason userFlowIncompleteReason
-    // exists — so the loading branch must not reintroduce the sentence that fix removed.
+    // exists, so the loading branch must not reintroduce the sentence that fix removed.
     if (showUserFlow) return compact ? 'Loading flow' : 'Adjust the query above to explore transitions'
     if (isTopK) return 'Loading ranking'
-    return 'Pick an event above to start'
+    if (!compact) return 'Pick an event above to start'
+    return awaitingEvent ? 'Pick an event to start' : 'Loading chart'
   }
 
   const renderLoadingEmptyState = () => (
@@ -210,8 +216,10 @@ export const InsightsContent = memo(function InsightsContent({
           : 'flex h-48 items-center justify-center text-muted-foreground'
       }
     >
-      <p className="text-sm">
-        {showUserFlow ? 'No transitions recorded in this period' : 'No events recorded in this period'}
+      <p className="text-center text-sm">
+        {[showUserFlow ? 'No transitions recorded in this period' : 'No events recorded in this period', emptyQualifier]
+          .filter(Boolean)
+          .join(' ')}
       </p>
     </div>
   )
@@ -220,7 +228,7 @@ export const InsightsContent = memo(function InsightsContent({
     if (breakdowns.length === 0 || count < breakdownResponseLimit) return null
     return (
       <p className="text-xs text-muted-foreground mt-2">
-        Showing top {breakdownResponseLimit} — additional breakdown values may be hidden.
+        Showing top {breakdownResponseLimit}. Additional breakdown values may be hidden.
       </p>
     )
   }
@@ -331,7 +339,7 @@ export const InsightsContent = memo(function InsightsContent({
     if (userFlowData.links.length === 0) {
       // "No transitions recorded in this period" is only true when the server sent none. Saying it
       // over transitions we merely failed to read tells the reader their sessions are single-event
-      // bounces — a wrong, actionable conclusion, and the worst thing this chart can claim.
+      // bounces: a wrong, actionable conclusion, and the worst thing this chart can claim.
       if (!degraded) return renderNoEvents()
       return (
         <div
@@ -341,7 +349,7 @@ export const InsightsContent = memo(function InsightsContent({
               : 'flex h-48 items-center justify-center text-muted-foreground'
           }
         >
-          <p className="max-w-xs text-center text-sm">This flow could not be drawn — {degraded}</p>
+          <p className="max-w-xs text-center text-sm">This flow could not be drawn: {degraded}</p>
         </div>
       )
     }
@@ -395,7 +403,8 @@ export const InsightsContent = memo(function InsightsContent({
         loading={resultCase !== 'topK'}
         error={null}
         retry={retry}
-        // The choropleth sizes to its container, and the page has no tile height to inherit — so it
+        emptyQualifier={emptyQualifier}
+        // The choropleth sizes to its container, and the page has no tile height to inherit, so it
         // gets the same width-driven world frame the overview map panel uses.
         className={compact ? 'relative h-full min-h-0 overflow-hidden' : 'relative aspect-[1.2] max-h-[720px] w-full'}
       />
@@ -430,7 +439,7 @@ export const InsightsContent = memo(function InsightsContent({
         </div>
       )
     }
-    if (retentionCohorts.length === 0) return renderLoadingEmptyState()
+    if (retentionCohorts.length === 0) return resultCase === 'retention' ? renderNoEvents() : renderLoadingEmptyState()
     return (
       <RetentionCohort
         cohorts={retentionCohorts}
@@ -462,17 +471,7 @@ export const InsightsContent = memo(function InsightsContent({
     )
   }
 
-  if ((resultCase === 'retention' || resultCase === 'funnel') && resultSeriesCount === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <TrendingUp className="w-10 h-10 mb-4 opacity-15" />
-        <p className="text-sm">No results — try adjusting your query</p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={retry}>
-          Retry
-        </Button>
-      </div>
-    )
-  }
+  if ((resultCase === 'retention' || resultCase === 'funnel') && resultSeriesCount === 0) return renderNoEvents()
 
   if (showUserFlow) return renderUserFlowContent()
   if (isMap) return renderMapContent()
@@ -487,6 +486,7 @@ export const InsightsContent = memo(function InsightsContent({
       </div>
     )
   }
+  if (resultCase === 'trends' && resultSeriesCount === 0) return renderNoEvents()
 
   if (chartData.length > 0) {
     const legendHidden = hideLegend || pieHasNegativeValue

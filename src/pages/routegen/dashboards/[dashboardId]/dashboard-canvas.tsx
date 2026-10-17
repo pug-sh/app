@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { EditBar } from '../edit-bar'
 import { DashboardGrid } from '../grid'
@@ -10,13 +11,11 @@ import { DashboardEmptyState } from '../tiles'
 import { ResumeBanner } from './resume-banner'
 import type { useDashboardEditor } from './use-dashboard-editor'
 
-// Everything below the page header: the edit bar, resume/delete prompts, the tile
-// grid itself, and the edit-mode add-tile picker + config rail. Driven entirely by
-// the editor hook plus the global time controls.
 export const DashboardCanvas = ({
   editor,
   globalTimeRange,
   tileGranularityOverride,
+  globalFilters,
   deleteTarget,
   deleting,
   onCancelDelete,
@@ -25,6 +24,7 @@ export const DashboardCanvas = ({
   editor: ReturnType<typeof useDashboardEditor>
   globalTimeRange: TimeRange | undefined
   tileGranularityOverride: Granularity | undefined
+  globalFilters: readonly ActiveFilter[]
   deleteTarget: DashboardDeleteTarget | null
   deleting: boolean
   onCancelDelete: () => void
@@ -99,6 +99,7 @@ export const DashboardCanvas = ({
                 highlightTileId={highlightTileId}
                 globalTimeRange={globalTimeRange}
                 globalGranularity={tileGranularityOverride}
+                globalFilters={globalFilters}
                 onLayoutsChange={handleLayoutsChange}
                 onSelectTile={mode === 'edit' ? selectTile : undefined}
                 onPatchTile={mode === 'edit' ? handlePatchTile : undefined}

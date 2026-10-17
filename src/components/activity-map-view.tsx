@@ -15,6 +15,7 @@ type ActivityMapViewProps = {
   className?: string
   onCountrySelect?: (alpha2: string) => void
   selected?: readonly string[]
+  emptyQualifier?: string
 }
 
 export const ActivityMapView = ({
@@ -25,6 +26,7 @@ export const ActivityMapView = ({
   className,
   onCountrySelect,
   selected,
+  emptyQualifier,
 }: ActivityMapViewProps) => {
   const stateClass = className ?? 'absolute inset-0'
 
@@ -52,7 +54,9 @@ export const ActivityMapView = ({
     return (
       <div className={`${stateClass} flex flex-col items-center justify-center text-center`}>
         <Globe className="mb-2 size-7 opacity-15" />
-        <p className="text-sm text-muted-foreground">No location data yet</p>
+        <p className="text-sm text-muted-foreground">
+          {['No location data in this period', emptyQualifier].filter(Boolean).join(' ')}
+        </p>
       </div>
     )
   }

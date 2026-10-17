@@ -87,6 +87,8 @@ export const getInitialInsightType = (spec?: InsightQuerySpec) => {
   return InsightType.TRENDS
 }
 
+export const specHasNoSubject = (spec?: InsightQuerySpec) => !spec?.session && (spec?.events.length ?? 0) === 0
+
 // True when a TRENDS spec has an event whose numeric aggregation (Sum/Avg/Min/Max)
 // is missing the property it needs to resolve. Mirrors the Insights page guard so
 // the tile doesn't fire an incomplete query.
@@ -95,7 +97,7 @@ export const specHasIncompleteNumericAggregation = (spec?: InsightQuerySpec) => 
   return (spec.events ?? []).some(entry => isIncompleteNumericAggregation(entry.aggregation, entry.aggregationProperty))
 }
 
-// Top-k and map specs carry no events — the optional scope event maps onto the editor's
+// Top-k and map specs carry no events; the optional scope event maps onto the editor's
 // event entries (capped at 1) so the shared event-filter UI edits it.
 const parseSpecScopeEntries = (spec?: InsightQuerySpec) => {
   const scope = spec?.topK?.scope ?? spec?.map?.scope

@@ -1,5 +1,5 @@
 import { TrendingDown, TrendingUp } from 'lucide-react'
-import { useId, useMemo } from 'react'
+import { type ReactNode, useId, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { cn } from '@/lib/utils'
@@ -7,7 +7,10 @@ import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from 
 import { toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
-export type KpiCompare = { series: TrendSeries[]; label: string } | { error: true; label: string }
+export type KpiCompare =
+  | { series: TrendSeries[]; label: string }
+  | { error: true; label: string }
+  | { pending: true; label: string }
 
 type KpiTileProps = {
   tile: DashboardTile
@@ -19,6 +22,8 @@ type KpiTileProps = {
   formatValue: (value: number) => string
   metadata?: string
   lightMetric?: boolean
+  // Only for a settled count: a pending query, or an average of nothing, has no value, not zero.
+  zeroWhenEmpty?: boolean
 }
 
 // KPI tiles aren't designed for multi-series queries, but if the underlying spec
@@ -27,7 +32,7 @@ type KpiTileProps = {
 // distinguish "no data" from a true zero.
 //
 // Each series is asked what produced it rather than being read off a position, so the comparison
-// window — a separate query, with its own series — summarizes correctly instead of borrowing the
+// window (a separate query, with its own series) summarizes correctly instead of borrowing the
 // current window's order. Only counts sum; SERIES_COLLAPSE decides.
 const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResolver) => {
   if (series.length === 0) return Number.NaN
@@ -42,7 +47,7 @@ const summarize = (series: TrendSeries[], aggregationFor: SeriesAggregationResol
   )
 }
 
-// Exported so the traffic stat tiles show the identical increasing/decreasing badge — one
+// Exported so the traffic stat tiles show the identical increasing/decreasing badge: one
 // source of truth for the delta visual across both overview modes.
 export const formatDelta = (current: number, prior: number): { pct: number; label: string } | null => {
   if (!Number.isFinite(prior) || prior === 0) return null
@@ -89,8 +94,12 @@ export const KpiTile = ({
   formatValue,
   metadata,
   lightMetric,
+  zeroWhenEmpty = false,
 }: KpiTileProps) => {
-  const current = useMemo(() => summarize(currentSeries, aggregationFor), [currentSeries, aggregationFor])
+  const current = useMemo(
+    () => (zeroWhenEmpty && currentSeries.length === 0 ? 0 : summarize(currentSeries, aggregationFor)),
+    [currentSeries, aggregationFor, zeroWhenEmpty],
+  )
   const prior = useMemo(
     () => (compare && 'series' in compare ? summarize(compare.series, aggregationFor) : undefined),
     [compare, aggregationFor],
@@ -110,18 +119,25 @@ export const KpiTile = ({
   const sparkColor =
     prior === undefined || !Number.isFinite(prior) ? 'text-faint' : current >= prior ? 'text-positive' : 'text-negative'
 
-  const contextParts = [compare && 'series' in compare ? compare.label : null, metadata].filter(Boolean)
+  const contextParts = [compare && !('error' in compare) ? compare.label : null, metadata].filter(Boolean)
+
+  const deltaRow = (badge: ReactNode, className?: string) => (
+    <div className={cn('flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1', className)}>
+      {badge}
+      {contextParts.length > 0 ? (
+        <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
+      ) : null}
+    </div>
+  )
 
   const compareRow =
     compare && 'error' in compare ? (
       <div className="text-xs text-muted-foreground">Compare unavailable · {compare.label}</div>
-    ) : delta !== null && compare && 'series' in compare ? (
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <DeltaBadge pct={delta.pct} label={delta.label} />
-        {contextParts.length > 0 ? (
-          <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
-        ) : null}
-      </div>
+    ) : compare && 'pending' in compare ? (
+      // Holds the row's space while the comparison loads, so the tile doesn't grow when it lands.
+      deltaRow(<DeltaBadge pct={0} label="0.0%" />, 'invisible')
+    ) : compare && 'series' in compare ? (
+      deltaRow(delta && <DeltaBadge pct={delta.pct} label={delta.label} />)
     ) : contextParts.length > 0 ? (
       <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
     ) : null
@@ -156,7 +172,7 @@ export const KpiTile = ({
 // width; vectorEffect keeps the stroke crisp despite the non-uniform scale.
 // Exported so the traffic stat cards render the identical sparkline.
 //
-// baseline='min' scales to the data's own range (default — emphasizes shape). baseline='zero'
+// baseline='min' scales to the data's own range (default; emphasizes shape). baseline='zero'
 // anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
 // amplified to full height; the traffic stat cards use this to match the 0-based main chart.
 export const Sparkline = ({

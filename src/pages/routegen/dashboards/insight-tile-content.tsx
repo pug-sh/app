@@ -27,11 +27,11 @@ import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { buildComparisonQuery, formatComparePeriodLabel } from './compare-query'
 import { InsightTileView } from './insight-tile-view'
 import type { KpiCompare } from './kpi-tile'
-import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation } from './query'
+import { getInitialGranularity, getProtoRange, specHasIncompleteNumericAggregation, specHasNoSubject } from './query'
 
 // User-flow, top-k, map and session specs all carry no events: user-flow runs once its flow
 // config is valid, top-k as soon as the ranking config is complete, map as soon as its measure
-// resolves, and session (traffic-analytics) specs as soon as `spec.session` is present — the
+// resolves, and session (traffic-analytics) specs as soon as `spec.session` is present; the
 // event-count gate would never let them run. Everything else needs at least one event and (for
 // trends) a resolved numeric-aggregation property.
 const queryReady = (query: QueryRequest) => {
@@ -45,7 +45,7 @@ const queryReady = (query: QueryRequest) => {
   if (spec?.insightType === InsightType.MAP) {
     return !mapSpecIncompleteReason(spec)
   }
-  return (!!spec?.session || (spec?.events.length ?? 0) > 0) && !specHasIncompleteNumericAggregation(spec)
+  return !specHasNoSubject(spec) && !specHasIncompleteNumericAggregation(spec)
 }
 
 export const DashboardInsightContent = ({
@@ -63,6 +63,7 @@ export const DashboardInsightContent = ({
   hideSummary = false,
   seriesLabel,
   onComparisonCaption,
+  emptyQualifier,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -83,6 +84,7 @@ export const DashboardInsightContent = ({
   hideSummary?: boolean
   seriesLabel?: string
   onComparisonCaption?: (draws: boolean) => void
+  emptyQualifier?: string
 }) => {
   const headers = useAtomValue(projectHeaderAtom)
   const insightsRPC = useAtomValue(insightsRPCAtom)
@@ -168,17 +170,17 @@ export const DashboardInsightContent = ({
     { enabled: !!comparisonQuery && !!headers, debounceMs: 0 },
   )
 
-  const comparisonResult = comparisonData ?? { case: undefined, value: undefined }
-
-  // Gated on the query rather than the view mode, so both readers — the KPI delta and the dashed
-  // chart series — get it, and neither can be handed a window that wasn't queried.
+  // Gated on the query rather than the view mode, so both readers (the KPI delta and the dashed
+  // chart series) get it, and neither can be handed a window that wasn't queried.
   const compare = useMemo<KpiCompare | undefined>(() => {
     if (!comparisonQuery) return undefined
     const compareLabel = formatComparePeriodLabel(compareWindow)
     if (comparisonError) return { error: true, label: compareLabel }
-    if (comparisonResult.case === 'trends') return { series: [...comparisonResult.value.series], label: compareLabel }
+    // Until both windows land: a comparison alone has no delta, and its fallback row is a different height.
+    if (!comparisonData || !(data || error)) return { pending: true, label: compareLabel }
+    if (comparisonData.case === 'trends') return { series: [...comparisonData.value.series], label: compareLabel }
     return undefined
-  }, [comparisonQuery, comparisonError, comparisonResult, compareWindow])
+  }, [comparisonQuery, comparisonError, comparisonData, data, error, compareWindow])
 
   return (
     <InsightTileView
@@ -197,6 +199,7 @@ export const DashboardInsightContent = ({
       hideSummary={hideSummary}
       seriesLabel={seriesLabel}
       onComparisonCaption={onComparisonCaption}
+      emptyQualifier={emptyQualifier}
     />
   )
 }

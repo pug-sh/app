@@ -23,6 +23,7 @@ import {
   breakdownLabel,
   buildChartData,
   disambiguateLabels,
+  emptyReadsAsZero,
   hasBreakdown,
   sortFunnelSteps,
   specAggregationResolver,
@@ -33,6 +34,7 @@ import { topKSpecIncompleteReason } from '../insights/top-k'
 import { userFlowSpecIncompleteReason } from '../insights/user-flow'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 import { type KpiCompare, KpiTile } from './kpi-tile'
+import { specHasNoSubject } from './query'
 import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from './tile-settings'
 
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
@@ -65,7 +67,7 @@ const noop = () => {}
 // Presentational core of an insight tile: given an already-resolved query result
 // (from a live fetch OR a server-pre-rendered RenderedTile) plus the tile's spec,
 // derive the chart series and render either a KPI or the full InsightsContent.
-// Holds no data atoms/RPC/fetching (only subscribes to the theme so colors adapt) —
+// Holds no data atoms/RPC/fetching (only subscribes to the theme so colors adapt):
 // both the authenticated tile (DashboardInsightContent) and the public shared tile
 // (SharedTileBody) render through this.
 export const InsightTileView = ({
@@ -84,6 +86,7 @@ export const InsightTileView = ({
   hideSummary = false,
   seriesLabel,
   onComparisonCaption,
+  emptyQualifier,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -102,14 +105,15 @@ export const InsightTileView = ({
   compact?: boolean
   kpiMetadata?: string
   lightMetrics?: boolean
-  // Suppress the chart's value·avg·peak summary row — folded into the hideLegend gate that renders it.
+  // Suppress the chart's value·avg·peak summary row, folded into the hideLegend gate that renders it.
   hideSummary?: boolean
   // Name a single-series trend after what it measures. The traffic chart scopes every stat to the
-  // navigation event, so the backend labels all six series `page_view` — meaningless in a tooltip
+  // navigation event, so the backend labels all six series `page_view`, meaningless in a tooltip
   // under a "Visitors" / "Bounce rate" title. Colors still key off the event kind, so the hue holds
   // across a stat switch.
   seriesLabel?: string
   onComparisonCaption?: (draws: boolean) => void
+  emptyQualifier?: string
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -202,14 +206,14 @@ export const InsightTileView = ({
   // Single-series only: a dashed twin per split doubles a breakdown's lines with no way to tell
   // which pairs with which, and the two windows' splits need not match.
   const chartComparison = useMemo<ChartComparison | undefined>(() => {
-    if (!(comparePrior && compare) || 'error' in compare) return undefined
+    if (!(comparePrior && compare && 'series' in compare)) return undefined
     if (trendSeries.length !== 1 || chartData.length === 0) return undefined
     const values = alignComparisonValues(compare.series[0]?.points ?? [], chartData.length)
     const color = seriesColors[0]
     if (values.length === 0 || !color) return undefined
     return { label: compare.label, values, color: fadedSeriesColor(color) }
   }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors])
-  // One resolver, two result sets: the series below and — for a KPI — the comparison window, which
+  // One resolver, two result sets: the series below and (for a KPI) the comparison window, which
   // is its own query and must not be read through this one's indices.
   const aggregationFor = useMemo(() => specAggregationResolver(spec), [spec])
   const seriesAggregations = useMemo(() => trendSeries.map(aggregationFor), [trendSeries, aggregationFor])
@@ -220,9 +224,9 @@ export const InsightTileView = ({
   )
 
   // KPI tiles short-circuit the chart pipeline. The compare delta (when present) is
-  // assembled by the caller — the public render has no comparison, so `compare` is
+  // assembled by the caller; the public render has no comparison, so `compare` is
   // undefined and KpiTile degrades to a no-delta sparkline. Top-k results are not
-  // series-shaped, so they always render through the ranked list regardless of view mode — and a
+  // series-shaped, so they always render through the ranked list regardless of view mode, and a
   // map is not series-shaped either.
   if (tile && resolvedViewMode === DashboardTileViewMode.KPI && !isTopK && !isMap) {
     return (
@@ -235,6 +239,7 @@ export const InsightTileView = ({
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
           metadata={kpiMetadata}
           lightMetric={lightMetrics}
+          zeroWhenEmpty={result.case === 'trends' && emptyReadsAsZero(spec)}
         />
       </div>
     )
@@ -287,6 +292,8 @@ export const InsightTileView = ({
         yTickFormatter={yTickFormatter}
         comparison={chartComparison}
         onComparisonCaption={onComparisonCaption}
+        emptyQualifier={emptyQualifier}
+        awaitingEvent={specHasNoSubject(spec)}
         compact={compact}
         lightNumbers={lightMetrics}
       />

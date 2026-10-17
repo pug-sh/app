@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   AggregationType,
   Granularity,
+  RetentionSeriesSchema,
   type UserFlowResult,
   UserFlowResultSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -70,7 +71,7 @@ const base = {
 }
 
 // A window that fell to zero is exactly what a compare line is for, so the empty state has to yield
-// to it — but only when the prior window has something to show.
+// to it, but only when the prior window has something to show.
 describe('InsightsContent compare-vs-prior', () => {
   it('draws the prior window over a live window that is all zeros', () => {
     const { container } = render(<InsightsContent {...base} chartData={ZERO} comparison={comparison([40, 50, 60])} />)
@@ -122,7 +123,7 @@ describe('InsightsContent compare-vs-prior', () => {
     expect(onComparisonCaption).toHaveBeenLastCalledWith(false)
   })
 
-  // Silence, not a `false` — a view that never draws a line has nothing to report and the caller's
+  // Silence, not a `false`: a view that never draws a line has nothing to report and the caller's
   // own initial state stands. What must never happen is claiming one.
   it('says nothing to a hoisting caller when no line is drawn', () => {
     const onComparisonCaption = vi.fn()
@@ -205,7 +206,7 @@ describe('InsightsContent user flow', () => {
     [{ source: 'a0', target: 'b1', value: 40n }],
   )
 
-  // Every link here skips a step, so all of them drop — the shape a backend that switched to
+  // Every link here skips a step, so all of them drop: the shape a backend that switched to
   // 1-based depths would produce.
   const ALL_DROPPED = flow(
     [
@@ -229,6 +230,14 @@ describe('InsightsContent user flow', () => {
     const { container } = render(<InsightsContent {...userFlow} userFlowResult={flow([], [])} />)
 
     expect(shows(container, 'No transitions recorded in this period')).toBe(true)
+  })
+
+  // Matching events with no transitions between them are still events: "no events match" would be false.
+  it('keeps its own wording under dashboard filters', () => {
+    const { container } = render(
+      <InsightsContent {...userFlow} userFlowResult={flow([], [])} emptyQualifier="under the dashboard filters" />,
+    )
+    expect(shows(container, 'No transitions recorded in this period under the dashboard filters')).toBe(true)
   })
 
   // The damaging case. "No transitions recorded in this period" over a response carrying 9,999
@@ -337,5 +346,77 @@ describe('InsightsContent legend placement', () => {
     expect(layout?.children).toHaveLength(2)
     expect(layout?.className).toContain('grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')
     expect(shows(layout as HTMLElement, 'page_view')).toBe(true)
+  })
+})
+
+describe('InsightsContent empty trends', () => {
+  it('shows a returned result with no series as empty, not as the pre-query placeholder', () => {
+    const { container } = render(<InsightsContent {...base} resultSeriesCount={0} chartData={[]} />)
+    expect(shows(container, EMPTY)).toBe(true)
+    expect(shows(container, 'No data yet')).toBe(false)
+  })
+
+  it('keeps the placeholder until a result arrives', () => {
+    const { container } = render(
+      <InsightsContent {...base} resultCase={undefined} resultSeriesCount={0} chartData={[]} />,
+    )
+    expect(shows(container, 'No data yet')).toBe(true)
+  })
+
+  it.each([
+    ['no series', { resultSeriesCount: 0, chartData: [] }],
+    ['all zeros', { chartData: ZERO }],
+  ])('adds the condition the caller queried under (%s)', (_, result) => {
+    const { container } = render(<InsightsContent {...base} {...result} emptyQualifier="under the dashboard filters" />)
+    expect(shows(container, `${EMPTY} under the dashboard filters`)).toBe(true)
+  })
+})
+
+describe('InsightsContent tile placeholder', () => {
+  const pending = { ...base, resultCase: undefined, resultSeriesCount: 0, chartData: [] }
+
+  it('says it is loading on a tile, and keeps the Insights hint on the page', () => {
+    expect(shows(render(<InsightsContent {...pending} compact />).container, 'Loading chart')).toBe(true)
+    expect(shows(render(<InsightsContent {...pending} />).container, 'Pick an event above to start')).toBe(true)
+  })
+
+  it('asks for an event on a tile that has none, since it never sends a request', () => {
+    const { container } = render(<InsightsContent {...pending} compact awaitingEvent />)
+    expect(shows(container, 'Pick an event to start')).toBe(true)
+    expect(shows(container, 'Loading chart')).toBe(false)
+  })
+
+  it('shows a retention result with no cohorts as empty, not as loading', () => {
+    const { container } = render(
+      <InsightsContent
+        {...base}
+        compact
+        isTrends={false}
+        isRetention
+        resultCase="retention"
+        retentionSeriesList={[create(RetentionSeriesSchema)]}
+        chartData={[]}
+      />,
+    )
+    expect(shows(container, EMPTY)).toBe(true)
+    expect(shows(container, 'Loading chart')).toBe(false)
+  })
+})
+
+describe('InsightsContent completed but empty', () => {
+  it.each([
+    ['funnel', { isTrends: false, resultCase: 'funnel' }],
+    ['retention', { isTrends: false, isRetention: true, resultCase: 'retention' }],
+  ])('gives a %s with no series the empty state, without a retry', (_, kind) => {
+    const { container } = render(<InsightsContent {...base} {...kind} resultSeriesCount={0} chartData={[]} />)
+    expect(shows(container, EMPTY)).toBe(true)
+    expect(container.querySelector('button')).toBeNull()
+  })
+
+  it('says the map has no data in this period, and under what condition when the caller has one', () => {
+    const map = { ...base, isTrends: false, isMap: true, resultCase: 'topK', chartData: [] }
+    expect(shows(render(<InsightsContent {...map} />).container, 'No location data in this period')).toBe(true)
+    const { container } = render(<InsightsContent {...map} emptyQualifier="under the dashboard filters" />)
+    expect(shows(container, 'No location data in this period under the dashboard filters')).toBe(true)
   })
 })

@@ -1,8 +1,10 @@
-import { type ReactNode, useEffect, useMemo, useRef } from 'react'
-import { type LayoutItem, Responsive, type ResponsiveLayouts, WidthProvider } from 'react-grid-layout/legacy'
+import { type ComponentProps, type ReactNode, useEffect, useMemo, useRef } from 'react'
+import { useContainerWidth } from 'react-grid-layout'
+import { type LayoutItem, Responsive, type ResponsiveLayouts } from 'react-grid-layout/legacy'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { BREAKPOINTS, TILE_MIN_H } from './constants'
 import { tilePosition } from './draft-state'
@@ -13,7 +15,11 @@ import type { TileType } from './types'
 import 'react-grid-layout/css/styles.css'
 import './grid.css'
 
-const ResponsiveGridLayoutWithWidth = WidthProvider(Responsive)
+// Without measureBeforeMount the grid lays out at a default 1280px, then slides every tile to the real width.
+const ResponsiveGridLayoutWithWidth = (props: Omit<ComponentProps<typeof Responsive>, 'width'>) => {
+  const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true })
+  return <div ref={containerRef}>{mounted ? <Responsive {...props} width={width} /> : null}</div>
+}
 
 // The editor renders a familiar 12-column grid with fixed gutters while the API
 // continues to store positions in its existing 72-unit coordinate system.
@@ -88,6 +94,7 @@ export const DashboardGrid = ({
   onLayoutsChange,
   globalTimeRange,
   globalGranularity,
+  globalFilters,
   renderTile,
 }: {
   tiles: DashboardTile[]
@@ -102,6 +109,7 @@ export const DashboardGrid = ({
   onLayoutsChange?: (layouts: DashboardLayouts) => void
   globalTimeRange?: TimeRange
   globalGranularity?: Granularity
+  globalFilters?: readonly ActiveFilter[]
   // Override how each tile's body renders. Defaults to the editable DashboardTileBody;
   // the public/read-only viewer passes a body that renders pre-computed results.
   renderTile?: (tile: DashboardTile) => ReactNode
@@ -120,7 +128,7 @@ export const DashboardGrid = ({
 
   // Persist only on an explicit drag/resize stop, never on mount/reflow, so loading
   // a dashboard never triggers spurious writes. RGL hands the stop callback the
-  // final layout array directly — we deliberately do NOT read it from onLayoutChange
+  // final layout array directly; we deliberately do NOT read it from onLayoutChange
   // via a ref, because RGL fires the stop callback *before* that final onLayoutChange,
   // so the ref would still hold the pre-edit layout.
   const persistLayout = (layout: readonly LayoutItem[]) => {
@@ -144,7 +152,7 @@ export const DashboardGrid = ({
   }
 
   // The inner tile node, shared by the desktop grid and the mobile stack.
-  // Selection, the highlight ref, and the click handler live here — not on the
+  // Selection, the highlight ref, and the click handler live here, not on the
   // grid-item root: react-grid-layout clones the root (wrapping it in
   // <DraggableCore>/<Resizable>) and overwrites its onMouseDown and ref with its
   // own. Props nested here are never clobbered.
@@ -167,13 +175,14 @@ export const DashboardGrid = ({
           onPatch={editable && onPatchTile ? patch => onPatchTile(tile.id, patch) : undefined}
           globalTimeRange={globalTimeRange}
           globalGranularity={globalGranularity}
+          globalFilters={globalFilters}
           onDuplicate={editable ? onDuplicateTile : undefined}
         />
       )}
     </div>
   )
 
-  // Narrow viewports can't honor the proportional dashboard layout — a half-width
+  // Narrow viewports can't honor the proportional dashboard layout: a half-width
   // tile would be ~180px, a KPI ~60px. Stack every tile full-width in reading
   // order (top-to-bottom, then left-to-right) at its authored height, bypassing
   // react-grid-layout entirely. Keyed off the viewport (not the grid container),

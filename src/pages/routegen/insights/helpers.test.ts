@@ -18,6 +18,7 @@ import {
   buildChartData,
   canShareInsight,
   collapseValues,
+  emptyReadsAsZero,
   SERIES_COLLAPSE,
   specAggregationResolver,
 } from './helpers'
@@ -36,7 +37,7 @@ const eventSpec = (kind: string, aggregation: AggregationType) =>
     events: [create(EventQuerySchema, { event: create(EventFilterSchema, { kind }), aggregation })],
   })
 
-// A session spec carries no event rows — spec.session is set instead — so reading only spec.events
+// A session spec carries no event rows (spec.session is set instead), so reading only spec.events
 // left every series unclaimed: a console.error per render and a TOTAL fallback that summed a rate
 // across buckets. All four traffic-analytics session stats went through here.
 describe('specAggregationResolver on session specs', () => {
@@ -65,7 +66,7 @@ describe('specAggregationResolver on session specs', () => {
   })
 
   // The reason the fallback mattered: a 24-bucket window of a steady 2.4 pages/session is 2.4, and
-  // summing reported 57.6 — the shape the chart summary would have shown.
+  // summing reported 57.6: the shape the chart summary would have shown.
   it('collapses a bucketed average to the average, not the sum', () => {
     const aggregation = specAggregationResolver(sessionSpec(SessionMetric.AVG_EVENTS_PER_SESSION))(series('page_view'))
     expect(collapseValues(Array(24).fill(2.4), SERIES_COLLAPSE[aggregation])).toBeCloseTo(2.4)
@@ -139,7 +140,7 @@ describe('buildChartData', () => {
     expect(data.map(d => d.values[0])).toEqual([1, 0, 0, 4])
   })
 
-  // No fixed step for Auto — leave the axis as given, just instant-keyed and sorted.
+  // No fixed step for Auto: leave the axis as given, just instant-keyed and sorted.
   it('leaves the axis untouched when granularity has no step', () => {
     const pts: [Date, number][] = [
       [hour(3), 2],
@@ -226,5 +227,29 @@ describe('canShareInsight', () => {
 
   it('refuses a failed query', () => {
     expect(canShareInsight({ ...shareable, error: 'boom' })).toBe(false)
+  })
+})
+
+describe('emptyReadsAsZero', () => {
+  it.each([
+    ['TOTAL', true, AggregationType.TOTAL],
+    ['UNSPECIFIED', true, AggregationType.UNSPECIFIED],
+    ['UNIQUE_USERS', true, AggregationType.UNIQUE_USERS],
+    ['SUM', true, AggregationType.SUM],
+    ['PER_USER_AVG', false, AggregationType.PER_USER_AVG],
+    ['AVG', false, AggregationType.AVG],
+    ['MIN', false, AggregationType.MIN],
+    ['MAX', false, AggregationType.MAX],
+  ])('reads an empty %s result as zero: %s', (_, zero, aggregation) => {
+    expect(emptyReadsAsZero(eventSpec('signup', aggregation))).toBe(zero)
+  })
+
+  it('follows the session metric, and needs every row to count', () => {
+    expect(emptyReadsAsZero(sessionSpec(SessionMetric.SESSIONS))).toBe(true)
+    expect(emptyReadsAsZero(sessionSpec(SessionMetric.BOUNCE_RATE))).toBe(false)
+    const mixed = eventSpec('signup', AggregationType.TOTAL)
+    mixed.events.push(create(EventQuerySchema, { aggregation: AggregationType.AVG }))
+    expect(emptyReadsAsZero(mixed)).toBe(false)
+    expect(emptyReadsAsZero(undefined)).toBe(false)
   })
 })
