@@ -8,7 +8,7 @@ import type { ChartPoint } from './types'
 
 const HEIGHT = 400
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: HEIGHT }),
 }))
@@ -51,7 +51,7 @@ const chart = (data: ChartPoint[], granularity: Granularity) => (
 )
 
 // The vendored Line's point-morph tween (`useAnimatedSeriesPath`) lists `yScale` in
-// its effect deps, and a data change also tweens the y-domain — so a domain frame
+// its effect deps, and a data change also tweens the y-domain, so a domain frame
 // tears the effect down, the re-run bails on the unchanged transition signature, and
 // the morph is stranded on its first frame: points already carrying the *new* values
 // but still scaled by the *old* domain. The line parks thousands of pixels off-plot

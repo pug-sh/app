@@ -4,49 +4,52 @@ import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { BarChart } from './bar-chart'
-import { fitAxisTicks } from './helpers'
+import { pickAxisTicks } from './helpers'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
-describe('fitAxisTicks', () => {
-  // "Jul 23 18:00" — the day-carrying hour label from a rolling-24h window.
-  const wide = Array.from({ length: 5 }, () => 'Jul 23 18:00')
+describe('pickAxisTicks', () => {
+  const labels = Array.from({ length: 25 }, () => 'Jul 23 18:00')
+  const at = (width: number) => labels.map((_, i) => (i * width) / 24)
+  const minGap = (xs: number[], picked: number[]) =>
+    Math.min(...picked.slice(1).map((index, k) => xs[index] - xs[picked[k]]))
 
-  it('keeps the requested count when the width has room', () => {
-    expect(fitAxisTicks(820, wide, 5)).toBe(5)
+  it('never lets neighbouring labels overlap', () => {
+    for (const width of [280, 360, 600, 820]) {
+      const xs = at(width)
+      const picked = pickAxisTicks(labels, xs, 5)
+      if (picked.length > 1) expect(minGap(xs, picked)).toBeGreaterThanOrEqual(12 * 7)
+    }
   })
 
-  it('thins the count on a narrow chart', () => {
-    const fitted = fitAxisTicks(280, wide, 5)
-    expect(fitted).toBeLessThan(5)
-    expect(fitted).toBeGreaterThanOrEqual(2)
+  it('spaces ticks at a constant stride', () => {
+    const picked = pickAxisTicks(labels, at(600), 5)
+    const strides = new Set(picked.slice(1).map((index, k) => index - picked[k]))
+    expect(strides.size).toBe(1)
   })
 
-  it('never drops below two ticks', () => {
-    expect(fitAxisTicks(60, wide, 5)).toBe(2)
+  it('caps the count at maxTicks when the width has room', () => {
+    expect(pickAxisTicks(labels, at(4000), 5).length).toBeLessThanOrEqual(5)
   })
 
-  it('leaves terse labels alone at the same width that thins wide ones', () => {
-    const terse = Array.from({ length: 5 }, () => '18:00')
-    expect(fitAxisTicks(280, terse, 5)).toBe(5)
+  it('leaves terse labels denser than wide ones at the same width', () => {
+    const terse = labels.map(() => '18:00')
+    expect(pickAxisTicks(terse, at(360), 25).length).toBeGreaterThan(pickAxisTicks(labels, at(360), 25).length)
   })
 
-  it('holds the requested count before measurement (width 0)', () => {
-    expect(fitAxisTicks(0, wide, 5)).toBe(5)
-  })
-
-  it('budgets the fit on real labels and adds bar padding ticks back', () => {
-    const padded = ['', ...wide, '']
-    // 3 real labels fit -> 3 visible + 2 blank padding ticks the scorer spends on the ends.
-    expect(fitAxisTicks(280, padded, 5)).toBe(fitAxisTicks(280, wide, 5) + 2)
+  it('never puts a tick on a bar padding row', () => {
+    const padded = ['', ...labels, '']
+    const xs = padded.map((_, i) => (i * 600) / 26)
+    const picked = pickAxisTicks(padded, xs, 5)
+    expect(picked.every(index => padded[index] !== '')).toBe(true)
   })
 })
 
-// The vendored charts size off the DOM, which happy-dom reports as 0x0 — without a real size they
+// The vendored charts size off the DOM, which happy-dom reports as 0x0; without a real size they
 // render nothing and every assertion passes vacuously. Mutable so a test can pick the width.
 let mockChartSize = { width: 900, height: 400 }
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children(mockChartSize),
 }))
@@ -92,6 +95,39 @@ describe('x-axis thins day-carrying labels to the width', () => {
       expect(wideCount).toBeGreaterThanOrEqual(5)
       expect(narrowCount).toBeLessThan(wideCount)
       expect(narrowCount).toBeGreaterThanOrEqual(2)
+    })
+  }
+})
+
+// The reported case: hourly bars across two days, where the vendored scorer put neighbours three
+// buckets apart, closer than an "Oct 16 12:00" label is wide.
+describe('rendered x-axis labels never overlap', () => {
+  for (const [name, Chart] of [
+    ['line', LineChart],
+    ['bar', BarChart],
+  ] as const) {
+    it(`${name} chart`, () => {
+      for (const width of [360, 380, 480, 600, 760, 900]) {
+        mockChartSize = { width, height: 300 }
+        const { container, unmount } = render(
+          <Chart
+            data={DAY_CROSSING}
+            seriesNames={['page_view']}
+            seriesColors={COLORS}
+            granularity={Granularity.HOUR}
+            timeZone="UTC"
+          />,
+        )
+        const ticks = Array.from(container.querySelectorAll<HTMLElement>('div.absolute'))
+          .filter(el => /^[A-Z][a-z]{2} \d+ \d{2}:\d{2}$/.test(el.textContent?.trim() ?? ''))
+          .map(el => ({ left: Number.parseFloat(el.style.left), chars: el.textContent?.trim().length ?? 0 }))
+          .sort((a, b) => a.left - b.left)
+        for (let i = 1; i < ticks.length; i++) {
+          const room = ((ticks[i - 1].chars + ticks[i].chars) / 2) * 7
+          expect(ticks[i].left - ticks[i - 1].left, `${width}px`).toBeGreaterThanOrEqual(room)
+        }
+        unmount()
+      }
     })
   }
 })

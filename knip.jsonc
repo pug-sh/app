@@ -15,10 +15,7 @@
   // a gate we can be red on. The Knip section in CLAUDE.md carries the current count.
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
-    // buf.gen.yaml runs it as a `local:` plugin binary, so there's no import site to find.
-    "@bufbuild/protoc-gen-es",
-    // Reached only from vendored charts that nothing reachable imports, so knip never parses the
-    // import and reads it as dead. Ignored files app code *can* reach still count.
-    "@visx/pattern"
+    // buf.gen.yaml runs it as a `local:` plugin binary, so there is no import site to find.
+    "@bufbuild/protoc-gen-es"
   ]
 }

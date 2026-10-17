@@ -3,7 +3,6 @@ import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Area } from '@/components/charts/area'
 import { AreaChart as VendoredAreaChart } from '@/components/charts/area-chart'
 import { Grid } from '@/components/charts/grid'
-import { YAxis } from '@/components/charts/y-axis'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -18,8 +17,9 @@ import {
 import { CompareArea } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
+import { YAxis } from './y-axis'
 
-// Wraps the vendored chart (src/components/charts) — never edit that directory.
+// Wraps the vendored chart (src/components/charts); never edit that directory.
 // Series colors, tooltip rows and date labels are ours to inject; the chart
 // supplies the rest.
 export const AreaChart = memo(function AreaChart({
@@ -54,8 +54,6 @@ export const AreaChart = memo(function AreaChart({
   if (data.length === 0) return null
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
-  // margin.top trims the vendored 40px default — nothing renders in it, and it cost
-  // ~15% of the plot height on top of the y-domain's own headroom.
   return (
     <DateLabelProvider value={dateLabelFormatters}>
       <VendoredAreaChart

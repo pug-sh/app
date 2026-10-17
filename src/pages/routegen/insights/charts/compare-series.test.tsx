@@ -8,9 +8,9 @@ import { COMPARE_KEY } from './common'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
-// The vendored charts size themselves off the DOM, which happy-dom reports as 0x0 — without a real
+// The vendored charts size themselves off the DOM, which happy-dom reports as 0x0; without a real
 // size they render nothing at all and every assertion below would vacuously pass.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))
@@ -25,7 +25,7 @@ const DATA: ChartPoint[] = [
   { date: new Date('2026-07-19T02:00:00Z'), values: [3] },
 ]
 
-// Same buckets, values 1000x larger — enough of a y-domain move to make the tween observable.
+// Same buckets, values 1000x larger: enough of a y-domain move to make the tween observable.
 const TALL: ChartPoint[] = DATA.map(p => ({ ...p, values: [p.values[0] * 1000] }))
 
 const COMPARISON = {
@@ -44,7 +44,7 @@ const yAxisMax = (container: HTMLElement) =>
 
 // A dashed series hands its stroke to the dash-tail overlay and leaves the base path `transparent`
 // (`hasDashTail`), which is how the compare series is identified. The dashes themselves never paint
-// here — the overlay measures with getTotalLength(), which happy-dom reports as 0.
+// here: the overlay measures with getTotalLength(), which happy-dom reports as 0.
 const dashedPaths = (container: HTMLElement) => container.querySelectorAll('path[stroke="transparent"]')
 
 // Without dashFromIndex the series keeps its own stroke, so finding this means it went solid.
@@ -64,7 +64,7 @@ const settle = async (steps = 40) => {
 }
 
 // Two things need pinning and they fail differently. Whether the shell *registered* the extra child
-// shows on the y-axis — it scans children for a dataKey to build the configs that drive the domain,
+// shows on the y-axis: it scans children for a dataKey to build the configs that drive the domain,
 // so a re-add that tightened that scan would leave the dashed line drawn against a domain that never
 // accounted for it. Whether the series *renders* is separate: the scan reads element props, so the
 // axis scales identically whether CompareArea returns an Area or null.
@@ -132,7 +132,7 @@ describe('compare-vs-prior series', () => {
     }, 30_000)
   }
 
-  // Area only — a line has no fill to suppress. fillOpacity 0 is what drops the AreaClosed; a
+  // Area only: a line has no fill to suppress. fillOpacity 0 is what drops the AreaClosed; a
   // filled reference series would paint over the live data underneath it.
   it('area chart draws the compare series without a fill', async () => {
     const { container } = render(

@@ -5,19 +5,20 @@ import type { SeriesColor } from '@/lib/event-colors'
 import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
 import type { ChartPoint } from './types'
 
-// Line defaults to curveNatural, which overshoots — and the y-domain pads the top but pins
+// Line defaults to curveNatural, which overshoots, and the y-domain pads the top but pins
 // the floor at 0, so a series touching 0 gets drawn below the axis. Monotone can't overshoot.
 export const SERIES_CURVE = curveMonotoneX
 
-// The vendored charts default to a 40px margin on every side. Nothing draws in the
-// top one (the loading label is inset-0 centered), so it was pure dead space stacked
-// on top of the y-domain's own ~10% headroom. 8px is the floor, not taste: the topmost
-// tick label sits half above its gridline and nothing clips it. Sides keep the default —
-// they hold the axis labels. Partial: the chart merges it over DEFAULT_MARGIN.
-export const CHART_MARGIN = { top: 8 }
+// The vendored y axis pins its labels 8px off the plot; our YAxis wrapper widens that by this much, so the
+// gap matches the band right of the plot: CHART_MARGIN.right plus a tile's 17px of padding and border.
+export const Y_AXIS_GAP = 22
+
+// Top: 8px is the floor, room for the top tick label's upper half. Left: the y labels' 40px column plus
+// Y_AXIS_GAP. Right: just clears the hover dot's 13px halo; the end date label and the pill are kept inside.
+export const CHART_MARGIN = { top: 8, left: 40 + Y_AXIS_GAP, right: 13 }
 
 // Marks a row added only to pad the x-domain (see the bar wrapper). Padding rows carry
-// a date and nothing else, so they draw no bar — but they are still real rows to the
+// a date and nothing else, so they draw no bar, but they are still real rows to the
 // axis, which would label them, so the date-label override blanks them by this key.
 export const PAD_ROW_KEY = '__pad'
 
@@ -38,7 +39,7 @@ export const useRevealGate = () => {
 }
 
 // Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
-// real Date — the wrappers inject the formatted labels via the context override.
+// real Date: the wrappers inject the formatted labels via the context override.
 export const useVendoredChartPrep = (
   data: ChartPoint[],
   seriesNames: string[],
@@ -70,7 +71,7 @@ export const useVendoredChartPrep = (
     })
   }, [data, seriesNames, comparison])
 
-  // Without this the tooltip prints the raw dataKey ("series0") — the vendored
+  // Without this the tooltip prints the raw dataKey ("series0"): the vendored
   // chart has no equivalent of recharts' chartConfig label map.
   //
   // Comparison row last: the tooltip colors its hover dots from these rows by position, and its own

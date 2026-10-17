@@ -24,7 +24,7 @@ vi.mock('@/api/rpc', async () => {
 })
 
 // happy-dom reports the container as 0x0, and an unsized chart renders nothing at all.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 300 }),
 }))

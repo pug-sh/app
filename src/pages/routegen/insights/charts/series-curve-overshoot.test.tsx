@@ -7,7 +7,7 @@ import { AreaChart } from './area-chart'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))
@@ -27,7 +27,7 @@ const seriesPathD = (container: HTMLElement) =>
     .join(' ')
 
 // Control points included: a cubic can't leave its control polygon. The `,` in the class is
-// what picks up the 2nd and 3rd pair of each cubic — d3 comma-separates them.
+// what picks up the 2nd and 3rd pair of each cubic: d3 comma-separates them.
 const pathYs = (d: string) => Array.from(d.matchAll(/[ML,C]\s*(-?[\d.]+),(-?[\d.]+)/g)).map(m => Number(m[2]))
 
 // y(0), since the range is [innerHeight, 0] over a domain pinned at 0. The grid's fade mask
@@ -65,7 +65,7 @@ describe('series curve', () => {
     expect(Math.max(...ys)).toBeLessThanOrEqual(plotBottom(container))
   }, 30_000)
 
-  // Not a regression — Area already defaults to monotone. Guards a re-add flipping that.
+  // Not a regression: Area already defaults to monotone. Guards a re-add flipping that.
   it('keeps an area series that touches 0 above the zero baseline', async () => {
     const { container } = render(
       <AreaChart

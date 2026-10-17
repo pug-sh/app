@@ -10,11 +10,11 @@ import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
 // The vendored charts size themselves off the DOM, which happy-dom reports as
-// 0x0 — without a real size they render nothing at all and every assertion below
+// 0x0; without a real size they render nothing at all and every assertion below
 // would vacuously pass. Mutable so the pill-scaling tests can shrink the chart.
 let mockChartSize = { width: 800, height: 400 }
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children(mockChartSize),
 }))
@@ -34,7 +34,7 @@ const axisLabels = (container: HTMLElement) =>
 
 // Guards the date-label context override documented in CLAUDE.md. Upstream computes its
 // x labels internally with a browser-local, granularity-blind formatter, so a
-// re-add that drops the patch still type-checks and still renders — it just
+// re-add that drops the patch still type-checks and still renders; it just
 // silently mislabels every bucket. Each chart entry point carries its own copy of
 // the prop plumbing, so each needs its own guard.
 describe('vendored chart date labels', () => {
@@ -58,7 +58,7 @@ describe('vendored chart date labels', () => {
 
       // Asia/Kolkata is UTC+5:30, so midnight UTC is 05:30 local. Comparing against
       // the same data in UTC is what proves the zone is applied rather than the
-      // host's — the assertion can't pass by coincidence on an IST machine.
+      // host's: the assertion can't pass by coincidence on an IST machine.
       expect(labels).toContain('05:30')
       expect(labels).not.toContain('00:00')
     })

@@ -8,7 +8,7 @@ import { QueryResponseSchema } from '@/api/genproto/shared/insights/v1/insights_
 
 const { query, getFilterSchema } = vi.hoisted(() => ({ query: vi.fn(), getFilterSchema: vi.fn() }))
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))

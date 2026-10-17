@@ -12,8 +12,8 @@ import {
 
 const { query } = vi.hoisted(() => ({ query: vi.fn() }))
 
-// The RPC atom builds a real ConnectRPC client at read time. The tile fires two queries — the live
-// window and the prior one — and the caption only appears once the second lands.
+// The RPC atom builds a real ConnectRPC client at read time. The tile fires two queries (the live
+// window and the prior one), and the caption only appears once the second lands.
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return { insightsRPCAtom: atom({ query }) }
@@ -30,7 +30,7 @@ vi.mock('@/data/workspace.atoms', async importOriginal => {
 })
 
 // happy-dom reports the container as 0x0, and an unsized chart renders nothing at all.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 300 }),
 }))

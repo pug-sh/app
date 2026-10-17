@@ -13,7 +13,7 @@ import type { SeriesColor } from '@/lib/event-colors'
 import type { ChartPoint } from './charts/types'
 import { InsightsContent } from './content'
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))

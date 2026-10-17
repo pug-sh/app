@@ -12,9 +12,9 @@ type Size = { width: number; height: number }
 const box = vi.hoisted(() => ({ resize: null as null | ((size: Size) => void) }))
 
 // The height has to move from *inside* ParentSize. Driving it with `rerender` instead hands the
-// shell a new `children` ref, which rebuilds `renderData` — a dep the overlay does re-measure on —
+// shell a new `children` ref, which rebuilds `renderData` (a dep the overlay does re-measure on),
 // so the bug never appears and the test passes against the unfixed code.
-vi.mock('@visx/responsive', async () => {
+vi.mock('@/components/charts/chart-parent-size', async () => {
   const { useState } = await import('react')
   return {
     ParentSize: ({ children }: { children: (size: Size) => ReactNode }) => {

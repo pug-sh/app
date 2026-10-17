@@ -10,7 +10,7 @@ import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
 // happy-dom reports the container as 0x0, and a chart with no size renders no SVG at all.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))

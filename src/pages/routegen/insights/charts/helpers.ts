@@ -65,8 +65,6 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric' })
 }
 
-// The vendored axis spaces a fixed tick count evenly but never checks the labels fit, so wide
-// labels ("Jul 23 18:00") overprint when narrow. Thin `requested` (real labels) to what the width fits.
 // Measured off Figtree at text-xs, worst case: an all-digit clock ("00:00") runs 7.0px/char, well
 // above the ~4.9px of a label with spaces. Fitting to the average overprints exactly the labels
 // that are hardest to read, so this tracks the widest, not the mean. Re-measure on a face change.
@@ -75,19 +73,27 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
 export const AXIS_LABEL_PX_PER_CHAR = 7.0
 const AXIS_LABEL_MIN_GAP_PX = 16
 
-export const fitAxisTicks = (innerWidth: number, dateLabels: readonly string[], requested: number): number => {
-  if (!(innerWidth > 0)) return requested
+// The vendored axis scores tick layouts on how even they look, never on whether the labels fit, and
+// may take one more tick than asked, so neighbours could land closer than a label is wide. This picks
+// the smallest constant stride (at most `maxTicks` ticks) whose labels clear each other at the
+// positions they are drawn at. Blank labels are bar padding rows and never take a tick.
+export const pickAxisTicks = (labels: readonly string[], xs: readonly number[], maxTicks: number) => {
+  const real = labels.flatMap((label, i) => (label === '' ? [] : [i]))
+  if (real.length <= 1) return real
 
-  // Bar padding rows blank out and never render but still cost a tick: fit the real labels, re-add them.
-  const visible = dateLabels.filter(label => label !== '')
-  if (visible.length === 0) return requested
-  const blanks = dateLabels.length - visible.length
+  const clears = (picked: number[]) =>
+    picked.every((index, k) => {
+      if (k === 0) return true
+      const prev = picked[k - 1]
+      const room = ((labels[prev].length + labels[index].length) / 2) * AXIS_LABEL_PX_PER_CHAR + AXIS_LABEL_MIN_GAP_PX
+      return xs[index] - xs[prev] >= room
+    })
 
-  const widestChars = visible.reduce((max, label) => Math.max(max, label.length), 0)
-  const perLabel = widestChars * AXIS_LABEL_PX_PER_CHAR + AXIS_LABEL_MIN_GAP_PX
-  const capacity = Math.floor(innerWidth / perLabel) + 1
-
-  return Math.max(2, Math.min(requested, capacity)) + blanks
+  for (let stride = 1; stride < real.length; stride++) {
+    const picked = real.filter((_, k) => k % stride === 0)
+    if (picked.length <= maxTicks && clears(picked)) return picked
+  }
+  return [real[0]]
 }
 
 // The hover pill's ticker splits a label on spaces into a month column and a day column, and drops

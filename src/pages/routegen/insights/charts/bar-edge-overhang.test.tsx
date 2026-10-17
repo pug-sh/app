@@ -4,15 +4,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { BarChart } from './bar-chart'
+import { CHART_MARGIN } from './common'
 import type { ChartPoint } from './types'
 
-// happy-dom reports the container as 0x0, and an unsized chart renders no bars at all —
-// every assertion below would pass vacuously.
+// happy-dom reports the container as 0x0, and an unsized chart renders no bars at all,
+// so every assertion below would pass vacuously.
 const WIDTH = 720
 const HEIGHT = 300
-const INNER_WIDTH = WIDTH - 40 - 40 // margin.left/right keep the vendored 40px default
+const INNER_WIDTH = WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: WIDTH, height: HEIGHT }),
 }))
@@ -36,7 +37,7 @@ const barRects = (container: HTMLElement) =>
 
 // The x-scale spans the first bucket to the last across the whole plot width, so without
 // padding rows the edge buckets sit on the plot edges and half of each bar hangs outside
-// it — over the y-axis labels on the left, clipped by the SVG on the right. Drop the
+// it: over the y-axis labels on the left, clipped by the SVG on the right. Drop the
 // padding from the wrapper and the 5-bucket case alone puts a bar at x=-70.
 describe('bar chart edge overhang', () => {
   // Fewer buckets meant a wider slot, so the overhang grew as the data thinned; one
@@ -82,7 +83,7 @@ describe('bar chart edge overhang', () => {
     // 5 buckets x 3 stacked series, and nothing for the two padding rows.
     expect(barRects(container)).toHaveLength(15)
 
-    // Leaf elements only — an ancestor's textContent concatenates the whole axis.
+    // Leaf elements only: an ancestor's textContent concatenates the whole axis.
     const labels = Array.from(container.querySelectorAll('*'))
       .filter(el => el.childElementCount === 0)
       .map(el => el.textContent?.trim() ?? '')

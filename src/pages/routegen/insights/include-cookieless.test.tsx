@@ -12,7 +12,7 @@ import {
 
 const { query, getFilterSchema } = vi.hoisted(() => ({ query: vi.fn(), getFilterSchema: vi.fn() }))
 
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))
@@ -65,7 +65,7 @@ beforeEach(() => {
 })
 
 describe('insights cookieless visibility', () => {
-  // The control is the whole point of the flag — Insights was excluding these visitors with nothing
+  // The control is the whole point of the flag: Insights was excluding these visitors with nothing
   // on screen saying so, while Overview counted them.
   it('offers the toggle on a measure that counts people', async () => {
     openWith(AggregationType.UNIQUE_USERS)
@@ -82,7 +82,7 @@ describe('insights cookieless visibility', () => {
   })
 
   // Strict equality: a page that forgets the field sends `undefined`, which the server's
-  // GetIncludeCookieless() reads as false — the right answer by accident.
+  // GetIncludeCookieless() reads as false, the right answer by accident.
   it('asks for them to be excluded on the first load', async () => {
     openWith(AggregationType.UNIQUE_USERS)
     await settled(1)
@@ -114,7 +114,7 @@ describe('insights cookieless visibility', () => {
     await waitFor(() => expect(window.location.search).not.toContain('cookieless'))
   })
 
-  // The page builds its spec in three branches, and top-k and map each take their own — so the
+  // The page builds its spec in three branches, and top-k and map each take their own, so the
   // trends assertions above say nothing about them.
   it('carries the opt-in on a top-K over users', async () => {
     const topK = { dimension: TopKQuery_Dimension.USER, property: '', metric: AggregationType.TOTAL }
@@ -137,7 +137,7 @@ describe('insights cookieless visibility', () => {
     expect(window.location.search).not.toContain('cookieless')
   })
 
-  // Including a rotating id in a person-based insight doesn't double-count, it can only drop off —
+  // Including a rotating id in a person-based insight doesn't double-count, it can only drop off:
   // a different consequence than the user-count copy names.
   it('names the drop-off consequence on a person-based insight', async () => {
     open(`it=${InsightType.RETENTION}&cookieless=1`)
@@ -146,7 +146,7 @@ describe('insights cookieless visibility', () => {
   })
 
   // A shared link is the only way this setting travels between people, so the read direction needs
-  // its own guard — the writer above passes whether or not anything parses the param back.
+  // its own guard: the writer above passes whether or not anything parses the param back.
   it('restores the opt-in from a shared link', async () => {
     openWith(AggregationType.UNIQUE_USERS, '&cookieless=1')
     await settled(1)

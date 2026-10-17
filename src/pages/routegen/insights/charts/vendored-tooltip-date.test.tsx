@@ -14,7 +14,7 @@ import type { ChartPoint } from './types'
 
 // The shells early-return under 10px and happy-dom reports the container as 0x0,
 // so without a size nothing renders and every assertion below passes vacuously.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))
@@ -38,7 +38,7 @@ const tooltipLabels = (container: HTMLElement) => container.querySelector('outpu
 
 // The axis and the tooltip are siblings under the shell and re-provide the chart
 // context independently, so each needs its own formatter. Feeding both the axis one
-// drops the day from every hover — and an hourly range runs up to 14 days, so a bare
+// drops the day from every hover, and an hourly range runs up to 14 days, so a bare
 // "05:30" cannot say which day it lands on.
 describe('vendored chart tooltip dates', () => {
   for (const [name, Chart] of [
@@ -57,7 +57,7 @@ describe('vendored chart tooltip dates', () => {
         />,
       )
 
-      // Asia/Kolkata is UTC+5:30, so midnight UTC is 05:30 local — the reporting zone
+      // Asia/Kolkata is UTC+5:30, so midnight UTC is 05:30 local; the reporting zone
       // has to reach the tooltip too, not just the axis.
       expect(tooltipLabels(container)).toContain('Jul 19, 05:30')
 
@@ -76,7 +76,7 @@ describe('formatTooltipDate stays inside the ticker grammar', () => {
   const THIS_YEAR = new Date().getUTCFullYear()
   const AT = new Date(Date.UTC(THIS_YEAR, 5, 21))
 
-  // Both years, because fmtDay only appends one outside the current year — a same-year fixture
+  // Both years, because fmtDay only appends one outside the current year; a same-year fixture
   // alone let the DAY branch ship three tokens.
   const FIXTURES = [
     ['this year', AT],

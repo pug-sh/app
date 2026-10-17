@@ -10,7 +10,7 @@ import type { ChartPoint } from './types'
 
 // Same reason as vendored-date-labels.test.tsx: happy-dom reports the container as 0x0, and a
 // chart with no size renders no SVG at all, so every assertion here would pass vacuously.
-vi.mock('@visx/responsive', () => ({
+vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: 800, height: 400 }),
 }))
@@ -29,7 +29,7 @@ const clipIds = (container: HTMLElement) =>
     .filter(Boolean)
 
 // Two charts of one type must not share a <clipPath id>: url(#id) resolves to the first, cropping later charts
-// to its rect — invisible at equal sizes, so an eye won't catch it. Scoped upstream since bklit#232.
+// to its rect, invisible at equal sizes, so an eye won't catch it. Scoped upstream since bklit#232.
 describe('vendored chart clip ids', () => {
   for (const [name, Chart] of [
     ['line', LineChart],
