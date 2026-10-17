@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { parseColor } from '../lib/color/parse'
-import { authoringSchema, MAX_THEME_BYTES, parseThemeObject, parseThemeText } from './format'
+import { authoringSchema, MAX_THEME_BYTES, type ParseResult, parseThemeObject, parseThemeText } from './format'
 
 const minimal = { version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } }
 
@@ -180,5 +180,98 @@ describe('authoringSchema', () => {
     expect(schema).toContain('"sidebar-accent-foreground"')
     expect(schema).toContain('"failure"')
     expect(schema).toContain('"additionalProperties":false')
+  })
+
+  it('offers metadata to editors, and no longer the top-level author and description', () => {
+    const schema = z.toJSONSchema(authoringSchema) as {
+      properties: Record<string, { properties?: Record<string, unknown> } | undefined>
+    }
+    expect(Object.keys(schema.properties.metadata?.properties ?? {})).toEqual([
+      'author',
+      'description',
+      'created',
+      'release',
+    ])
+    expect(schema.properties.author).toBeUndefined()
+    expect(schema.properties.description).toBeUndefined()
+  })
+})
+
+describe('metadata', () => {
+  const withMetadata = (metadata: unknown, rest: Record<string, unknown> = {}) =>
+    parseThemeObject({ ...minimal, ...rest, metadata })
+  const familyOf = (result: ParseResult) => {
+    if (!result.ok) throw new Error('refused')
+    return result.family
+  }
+  const messages = (result: ParseResult) => result.issues.map(i => `${i.rule} ${i.path}: ${i.message}`)
+
+  it('reads author, description, created and release', () => {
+    const result = withMetadata({
+      author: 'Pug',
+      description: 'Warm linen paper.',
+      created: '2026-10-13',
+      release: '1.0.0',
+    })
+    expect(result.issues).toEqual([])
+    expect(familyOf(result)).toMatchObject({
+      author: 'Pug',
+      description: 'Warm linen paper.',
+      created: '2026-10-13',
+      release: '1.0.0',
+    })
+  })
+
+  it('still reads a top-level author and description, silently', () => {
+    const result = parseThemeObject({ ...minimal, author: 'Pug', description: 'The old place.' })
+    expect(result.issues).toEqual([])
+    expect(familyOf(result)).toMatchObject({ author: 'Pug', description: 'The old place.' })
+  })
+
+  it('prefers metadata over the top level', () => {
+    const family = familyOf(withMetadata({ author: 'New' }, { author: 'Old', description: 'Kept' }))
+    expect(family).toMatchObject({ author: 'New', description: 'Kept' })
+  })
+
+  // The family is hashed for "already installed", so a file without the new keys must parse as before.
+  it('parses a file without metadata to exactly the family it did before', () => {
+    expect(Object.keys(familyOf(parseThemeObject(minimal)))).toEqual(['name', 'contrast', 'variants'])
+  })
+
+  it('still refuses a top-level author over 64 characters, as it always did', () => {
+    expect(parseThemeObject({ ...minimal, author: 'a'.repeat(65) }).ok).toBe(false)
+  })
+
+  it.each([
+    [{ created: '2026-02-30' }, 'V12 metadata.created: "2026-02-30" isn’t a day written YYYY-MM-DD, so it was ignored'],
+    [{ created: 20261013 }, 'V12 metadata.created: "created" must be text, so it was ignored'],
+    [
+      { release: '01.0.0' },
+      'V12 metadata.release: "01.0.0" isn’t a release written MAJOR.MINOR.PATCH, so it was ignored',
+    ],
+    [{ author: 'a'.repeat(65) }, 'V12 metadata.author: "author" is limited to 64 characters, so it was ignored'],
+    [
+      { description: 'd'.repeat(281) },
+      'V12 metadata.description: "description" is limited to 280 characters, so it was ignored',
+    ],
+    [{ licence: 'CC0' }, 'V12 metadata.licence: Unknown key "licence" was ignored'],
+    ['Pug', 'V12 metadata: "metadata" must be an object, so it was ignored'],
+  ])('warns about %j, drops it, and loads the theme', (metadata, message) => {
+    const result = withMetadata(metadata)
+    expect(messages(result)).toEqual([message])
+    const family = familyOf(result)
+    expect([family.author, family.description, family.created, family.release]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('strips control and direction-override characters inside metadata too', () => {
+    const bell = String.fromCharCode(7)
+    const result = withMetadata({ author: `a${bell}b` })
+    expect(familyOf(result).author).toBe('ab')
+    expect(messages(result)).toEqual(['V12 metadata.author: Control and direction-override characters were removed'])
   })
 })
