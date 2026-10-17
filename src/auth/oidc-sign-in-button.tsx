@@ -1,13 +1,7 @@
 import { KeyRound, Loader2 } from 'lucide-react'
 import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 import { isGoogleProvider, type OIDCSignInOptions, startOIDCSignIn } from './oidc'
-
-// Google's sign-in branding fixes these values, so they're literals rather than theme tokens.
-// Only the radius follows the app — Google's 4px was already overridden for the old GIS button.
-const googleBranding =
-  'border-[#747775] bg-white text-[#1f1f1f] hover:bg-[#f2f2f2] dark:border-[#8e918f] dark:bg-[#131314] dark:text-[#e3e3e3] dark:hover:bg-[#1e1f20]'
 
 export const OIDCSignInButton = ({
   provider,
@@ -43,13 +37,7 @@ export const OIDCSignInButton = ({
   )
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      className={cn('h-10 w-full', isGoogle && googleBranding)}
-      disabled={disabled || loading}
-      onClick={begin}
-    >
+    <Button type="button" variant="outline" className="h-10 w-full" disabled={disabled || loading} onClick={begin}>
       {loading ? <Loader2 className="animate-spin" /> : mark}
       Continue with {provider.displayName}
     </Button>
