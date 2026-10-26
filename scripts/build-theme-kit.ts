@@ -11,12 +11,22 @@ if (!out) {
   process.exit(1)
 }
 const root = path.resolve(import.meta.dirname, '..')
-const git = (...args: string[]) => Bun.spawnSync(['git', ...args], { cwd: root })
-if (git('diff', '--quiet', 'HEAD').exitCode !== 0) {
+// git's answer, trimmed. A command that fails ends the build, since each answer decides what SOURCE claims.
+const git = (...args: string[]) => {
+  const result = Bun.spawnSync(['git', ...args], { cwd: root })
+  if (result.exitCode !== 0) {
+    console.error(`build:theme-kit: git ${args.join(' ')} failed: ${result.stderr.toString().trim()}`)
+    process.exit(1)
+  }
+  return result.stdout.toString().trim()
+}
+// Untracked files count: the bundler reads the working tree, so one could reach the kit without being in
+// the commit SOURCE names.
+if (git('status', '--porcelain') !== '') {
   console.error('build:theme-kit: commit or stash your changes first; the kit names the commit it came from')
   process.exit(1)
 }
-const commit = git('rev-parse', 'HEAD').stdout.toString().trim()
+const commit = git('rev-parse', 'HEAD')
 const built = await Bun.build({ entrypoints: [path.join(root, 'src/theme/kit.ts')], target: 'bun', format: 'esm' })
 if (!built.success) {
   for (const log of built.logs) console.error(log)
