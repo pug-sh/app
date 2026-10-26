@@ -1,6 +1,7 @@
 import type { FeatureCollection, Geometry } from 'geojson'
 import type { ExpressionSpecification, MapLayerMouseEvent, StyleSpecification } from 'maplibre-gl'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { MapUnavailable } from '@/components/map-unavailable'
 import { useMaplibreMap, useMapTheme } from '@/hooks/use-maplibre-map'
 import { COUNTRIES_VIEW_ASPECT, COUNTRIES_VIEW_BOUNDS, resolveThemeColors } from '@/lib/maplibre'
 import { ALPHA2_TO_M49, loadWorldCountries } from '@/lib/world-countries'
@@ -48,7 +49,7 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
 
   // Keep interaction enabled (so layer hover events fire for the tooltip) but disable every
   // navigation handler — the choropleth is a static, non-pannable map like the old SVG.
-  const { containerRef, mapRef, ready } = useMaplibreMap({
+  const { containerRef, mapRef, ready, unavailable } = useMaplibreMap({
     style: EMPTY_STYLE,
     bounds: COUNTRIES_VIEW_BOUNDS,
     renderWorldCopies: false,
@@ -201,6 +202,8 @@ const ActivityHeatmapMap = ({ countries, onCountrySelect, selected }: Props) => 
     observer.observe(el)
     return () => observer.disconnect()
   }, [containerRef, mapRef])
+
+  if (unavailable) return <MapUnavailable />
 
   // In a box wider than the frame's aspect, renderWorldCopies:false makes MapLibre zoom in until the
   // world spans the width, cropping the far south. Cap the canvas to that aspect and centre it.

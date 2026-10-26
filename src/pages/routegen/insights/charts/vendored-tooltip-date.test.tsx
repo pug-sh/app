@@ -1,13 +1,14 @@
 import { render, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { useChartStable } from '@/components/charts/chart-context'
+import { type ChartContextValue, ChartProvider, useChartStable } from '@/components/charts/chart-context'
 import type { SeriesColor } from '@/lib/event-colors'
 import { inZone } from '@/test/timezone'
 import { AreaChart } from './area-chart'
 import { BarChart } from './bar-chart'
-import { useVendoredChartPrep } from './common'
+import { CHART_MARGIN, useVendoredChartPrep } from './common'
+import { ChartTooltip } from './date-labels'
 import { formatTooltipDate } from './helpers'
 import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
@@ -41,6 +42,16 @@ const tooltipLabels = (container: HTMLElement) => container.querySelector('outpu
 // drops the day from every hover, and an hourly range runs up to 14 days, so a bare
 // "05:30" cannot say which day it lands on.
 describe('vendored chart tooltip dates', () => {
+  // A day label gains its year outside the current one, so these hold only while "now" is in 2026.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-07-20T00:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   for (const [name, Chart] of [
     ['line', LineChart],
     ['area', AreaChart],
@@ -68,6 +79,30 @@ describe('vendored chart tooltip dates', () => {
       }
     })
   }
+
+  // The checks above read the labels as strings; this renders them through the real ticker, which drops any third token.
+  it('keeps the clock in the hover pill', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const data = HOURLY.map(p => ({ date: p.date }))
+    const value = {
+      data,
+      dateLabels: HOURLY.map(p => formatTooltipDate(p.date, Granularity.HOUR, 'Asia/Kolkata')),
+      width: 800,
+      height: 400,
+      margin: CHART_MARGIN,
+      containerRef: { current: host },
+      tooltipData: { point: data[1], index: 1, x: 100, yPositions: {} },
+    } as unknown as ChartContextValue
+
+    render(
+      <ChartProvider value={value}>
+        <ChartTooltip />
+      </ChartProvider>,
+    )
+
+    expect(host.textContent).toContain('06:30')
+  })
 })
 
 // Pure counterpart to the render assertions above: the two-token ceiling is a property of every

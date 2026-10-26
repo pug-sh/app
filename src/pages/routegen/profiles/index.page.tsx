@@ -1,7 +1,7 @@
 import { Code, ConnectError } from '@connectrpc/connect'
 import { useAtomValue } from 'jotai'
 import { ContactRound, Loader2, RefreshCw } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
@@ -59,25 +59,13 @@ const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key:
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
 
-// Counts wrap between pairs, never inside one. That's what lets the column shrink.
-const ActivitySummary = ({ activity }: { activity: Profile['activity'] }) => {
-  const parts = [
-    { value: activity?.pageviews ?? 0, label: 'views' },
-    { value: activity?.totalEvents ?? 0, label: 'events' },
-    { value: activity?.sessions ?? 0, label: 'sessions' },
-  ]
-
-  return (
-    <div className="flex flex-wrap items-center min-[1400px]:flex-nowrap">
-      {parts.map((part, idx) => (
-        <span key={part.label} className="whitespace-nowrap">
-          <span className="tabular-nums text-foreground">{compactNumber(part.value)}</span> {part.label}
-          {idx < parts.length - 1 && <span className="mx-1.5 text-muted-foreground/40">·</span>}
-        </span>
-      ))}
-    </div>
-  )
-}
+// grid-cols-1 is minmax(0, 1fr): no min-content width, so truncated text can't widen the table past the clipping
+// wrapper. min-w-32 keeps squeezed columns readable; the inner div keeps tooltip triggers from stretching.
+const ShrinkableCell = ({ children }: { children: ReactNode }) => (
+  <div className="grid min-w-32 grid-cols-1">
+    <div>{children}</div>
+  </div>
+)
 
 // The server sorts: the list is paged on its sort key, so ordering the loaded rows here would only
 // reorder one page. A button, not a clickable <th>, so the sort is reachable from the keyboard.
@@ -397,14 +385,16 @@ const Profiles = () => {
             <span className="text-xs text-muted-foreground">{profiles.length}</span>
           </div>
           {/* Only clip keeps overflow-y visible for the sticky header; below xl, reach beats sticking. */}
-          <div className="overflow-x-auto min-[1400px]:overflow-x-clip">
+          <div className="overflow-x-auto xl:overflow-x-clip">
             <table className="w-full border-collapse">
-              <thead className="static z-9 bg-background min-[1400px]:sticky" style={{ top: filterH }}>
+              <thead className="static z-9 bg-background xl:sticky" style={{ top: filterH }}>
                 <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   <th className="py-2 pr-3 text-left font-medium">User</th>
                   <th className="py-2 pr-3 text-left font-medium">Country</th>
                   <th className="py-2 pr-3 text-left font-medium">Platform</th>
-                  <th className="py-2 pr-3 text-left font-medium">Activity</th>
+                  <th className="py-2 pl-4 text-right font-medium">Views</th>
+                  <th className="py-2 pl-4 text-right font-medium">Events</th>
+                  <th className="py-2 pl-4 text-right font-medium">Sessions</th>
                   <SortHeader
                     label="Last Seen"
                     active={sort === ProfileListSort.LAST_SEEN}
@@ -429,35 +419,37 @@ const Profiles = () => {
                   return (
                     <tr key={profile.id} className="border-b border-border/50 transition-colors hover:bg-muted/40">
                       <td className="py-3 pr-3 text-sm">
-                        <DetailTooltip
-                          detail={<PropertiesTooltip properties={profile.properties} />}
-                          contentClassName={tooltipPanelContent}
-                          className="items-center gap-3"
-                        >
-                          <div className="relative shrink-0">
-                            <ProfileAvatar identity={identity} bot={activity?.bot} className="size-7 rounded-md" />
-                            <span className="absolute -right-0.5 -bottom-0.5">
-                              <StatusDot lastSeen={tsToDate(activity?.lastSeen)} className="size-2" />
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <ProjectLink
-                              href={`/profiles/${encodeURIComponent(profileId)}`}
-                              className={cn(
-                                'block truncate font-medium text-foreground hover:text-link',
-                                identity.isFallback && 'font-mono',
-                              )}
-                            >
-                              {identity.name}
-                            </ProjectLink>
-                            <div className="truncate text-xs text-muted-foreground">
-                              {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
+                        <ShrinkableCell>
+                          <DetailTooltip
+                            detail={<PropertiesTooltip properties={profile.properties} />}
+                            contentClassName={tooltipPanelContent}
+                            className="items-center gap-3"
+                          >
+                            <div className="relative shrink-0">
+                              <ProfileAvatar identity={identity} bot={activity?.bot} className="size-7 rounded-md" />
+                              <span className="absolute -right-0.5 -bottom-0.5">
+                                <StatusDot lastSeen={tsToDate(activity?.lastSeen)} className="size-2" />
+                              </span>
                             </div>
-                          </div>
-                        </DetailTooltip>
+                            <div className="min-w-0">
+                              <ProjectLink
+                                href={`/profiles/${encodeURIComponent(profileId)}`}
+                                className={cn(
+                                  'block truncate font-medium text-foreground hover:text-link',
+                                  identity.isFallback && 'font-mono',
+                                )}
+                              >
+                                {identity.name}
+                              </ProjectLink>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {identity.email ? identity.email : <span className="font-mono">{profileId}</span>}
+                              </div>
+                            </div>
+                          </DetailTooltip>
+                        </ShrinkableCell>
                       </td>
                       <td className="py-3 pr-3 text-sm text-muted-foreground">
-                        <div className="min-w-0">
+                        <ShrinkableCell>
                           {location.city || location.country ? (
                             <LocationLabel
                               city={location.city}
@@ -471,21 +463,29 @@ const Profiles = () => {
                           {location.secondary && (
                             <div className="truncate text-xs text-muted-foreground">{location.secondary}</div>
                           )}
-                        </div>
+                        </ShrinkableCell>
                       </td>
                       <td className="py-3 pr-3 text-sm text-muted-foreground">
-                        <PlatformStackLabel
-                          browser={activity?.browser}
-                          browserVersion={activity?.browserVersion}
-                          os={activity?.os}
-                          osVersion={activity?.osVersion}
-                          device={activity?.device}
-                          bot={activity?.bot}
-                          iconSize={16}
-                        />
+                        <ShrinkableCell>
+                          <PlatformStackLabel
+                            browser={activity?.browser}
+                            browserVersion={activity?.browserVersion}
+                            os={activity?.os}
+                            osVersion={activity?.osVersion}
+                            device={activity?.device}
+                            bot={activity?.bot}
+                            iconSize={16}
+                          />
+                        </ShrinkableCell>
                       </td>
-                      <td className="py-3 pr-3 text-sm text-muted-foreground">
-                        <ActivitySummary activity={activity} />
+                      <td className="py-3 pl-4 text-right text-sm tabular-nums">
+                        {compactNumber(activity?.pageviews ?? 0)}
+                      </td>
+                      <td className="py-3 pl-4 text-right text-sm tabular-nums">
+                        {compactNumber(activity?.totalEvents ?? 0)}
+                      </td>
+                      <td className="py-3 pl-4 text-right text-sm tabular-nums">
+                        {compactNumber(activity?.sessions ?? 0)}
                       </td>
                       <td className="py-3 pl-6 pr-3 text-sm text-muted-foreground whitespace-nowrap">
                         {formatSeen(activity, 'lastSeen')}

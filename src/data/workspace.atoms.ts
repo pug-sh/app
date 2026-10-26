@@ -54,15 +54,19 @@ export const openJoinedOrgsAtom = atom(null, (_get, set, orgIds: string[]) => {
 
 // Null when the list could not be loaded, so an account with no orgs isn't mistaken for a failure.
 export const fetchOrgsAtom = atom(null, async (get, set) => {
+  const customerId = get(customerIdAtom)
   const orgsRPC = get(orgsRPCAtom)
+  const stale = () => get(customerIdAtom) !== customerId
   try {
     const resp = await orgsRPC.list({})
+    if (stale()) return null
     set(orgsAtom, resp.orgs)
     set(canCreateOrgAtom, canCreateOrg(resp))
     set(workspaceErrorAtom, null)
     return resp.orgs
   } catch (err) {
     console.error('fetchOrgs failed:', err)
+    if (stale()) return null
     set(orgsAtom, [])
     set(activeOrgAtom, null)
     set(projectsAtom, [])

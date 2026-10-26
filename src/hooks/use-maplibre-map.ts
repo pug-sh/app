@@ -1,5 +1,5 @@
 import { useAtomValue } from 'jotai'
-import { Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
+import { GPUInitializationError, Map as MapLibreMap, type MapOptions, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { compiledThemeAtom } from '@/data/theme.atoms'
@@ -32,19 +32,33 @@ export const useMapTheme = () => {
 type Options = Omit<MapOptions, 'container'>
 
 // Creates a MapLibre map into a ref'd container on mount and tears it down on unmount.
-// `ready` flips true once the map's first `load` event fires. The options are captured once
-// (on mount); change the style/paint imperatively via mapRef afterwards.
+// `ready` flips true once the map's first `load` event fires. `unavailable` flips true instead when
+// no map could be made, and mapRef stays null; the caller draws MapUnavailable in its place. The
+// options are captured once (on mount); change the style/paint imperatively via mapRef afterwards.
 export const useMaplibreMap = (options: Options) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MapLibreMap | null>(null)
   const optionsRef = useRef(options)
   const [ready, setReady] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
 
-    const map = new MapLibreMap({ container, ...optionsRef.current })
+    // The constructor throws GPUInitializationError when the browser hands out no WebGL2 context
+    // (WebGL turned off, or a blocklisted GPU). Thrown from this effect, it reached RouteErrorBoundary
+    // and took the whole page down with the map. Only that one is caught: any other failure is a bug,
+    // and the boundary and Sentry should still hear about it. MapLibre empties the container first.
+    let map: MapLibreMap
+    try {
+      map = new MapLibreMap({ container, ...optionsRef.current })
+    } catch (error) {
+      if (!(error instanceof GPUInitializationError)) throw error
+      console.warn('[map] No WebGL2 context, drawing MapUnavailable instead:', error)
+      setUnavailable(true)
+      return
+    }
     mapRef.current = map
     const onLoad = () => setReady(true)
     map.on('load', onLoad)
@@ -57,5 +71,5 @@ export const useMaplibreMap = (options: Options) => {
     }
   }, [])
 
-  return { containerRef, mapRef, ready }
+  return { containerRef, mapRef, ready, unavailable }
 }

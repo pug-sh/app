@@ -1,8 +1,9 @@
 import { curveMonotoneX } from '@visx/curve'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { ChartStableContextValue, TooltipData } from '@/components/charts/chart-context'
 import type { SeriesColor } from '@/lib/event-colors'
-import { formatAxisDate, formatTooltipDate, spansMultipleDays } from './helpers'
+import { formatAxisDate, formatTooltipDate, formatTooltipTitle, spansMultipleDays } from './helpers'
 import type { ChartPoint } from './types'
 
 // Line defaults to curveNatural, which overshoots, and the y-domain pads the top but pins
@@ -22,6 +23,23 @@ export const CHART_MARGIN = { top: 8, left: 40 + Y_AXIS_GAP, right: 13 }
 // axis, which would label them, so the date-label override blanks them by this key.
 export const PAD_ROW_KEY = '__pad'
 
+// Hover snaps to the nearest row, so the strip beyond each edge bar hovers a padding row, a bucket of zeros
+// that isn't in the data. This hands it to the edge bucket the strip belongs to.
+export const edgeBucketHover = (
+  tooltipData: TooltipData | null,
+  { data, lines, xAccessor, xScale, yScale }: ChartStableContextValue,
+) => {
+  if (!tooltipData?.point[PAD_ROW_KEY]) return tooltipData
+  const index = tooltipData.index === 0 ? 1 : data.length - 2
+  const point = data[index]
+  const yPositions: Record<string, number> = {}
+  for (const { dataKey } of lines) {
+    const value = point[dataKey]
+    if (typeof value === 'number') yPositions[dataKey] = yScale(value)
+  }
+  return { point, index, x: xScale(xAccessor(point)), yPositions }
+}
+
 // Prefixed like PAD_ROW_KEY so it can't collide with a `series${i}` index.
 export const COMPARE_KEY = '__compare'
 const PENDING_KEY = '__pending'
@@ -29,14 +47,6 @@ const PENDING_KEY = '__pending'
 // The compare-vs-prior window. `values` is already laid over this window's buckets by the caller
 // (alignComparisonValues), one per row of `data`.
 export type ChartComparison = { label: string; values: number[]; color: SeriesColor }
-
-// The vendored shell paints its first frame finished and starts the reveal from an effect. Its first phase
-// report lands in that same flush, so any report opens the gate, and a shell that skips the reveal still shows.
-export const useRevealGate = () => {
-  const [revealed, setRevealed] = useState(false)
-  const onPhaseChange = useCallback(() => setRevealed(true), [])
-  return { revealed, onPhaseChange }
-}
 
 // Prep shared by the vendored-chart wrappers (area, line, bar). `date` stays a
 // real Date: the wrappers inject the formatted labels via the context override.
@@ -110,6 +120,7 @@ export const useVendoredChartPrep = (
     () => ({
       axis: (date: Date) => formatAxisDate(date, granularity, timeZone, axisNeedsDay),
       tooltip: (date: Date) => formatTooltipDate(date, granularity, timeZone),
+      title: (date: Date) => formatTooltipTitle(date, timeZone),
     }),
     [granularity, timeZone, axisNeedsDay],
   )

@@ -1,6 +1,8 @@
 import { Globe, Loader2 } from 'lucide-react'
-import ActivityHeatmapMap from '@/components/activity-heatmap-map'
+import { lazy, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
+
+const ActivityHeatmapMap = lazy(() => import('@/components/activity-heatmap-map'))
 
 export type CountryActivity = {
   iso: string
@@ -18,6 +20,12 @@ type ActivityMapViewProps = {
   emptyQualifier?: string
 }
 
+const Spinner = ({ className }: { className: string }) => (
+  <div className={`${className} flex items-center justify-center`}>
+    <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
+  </div>
+)
+
 export const ActivityMapView = ({
   countries,
   loading,
@@ -30,13 +38,7 @@ export const ActivityMapView = ({
 }: ActivityMapViewProps) => {
   const stateClass = className ?? 'absolute inset-0'
 
-  if (loading && countries.length === 0) {
-    return (
-      <div className={`${stateClass} flex items-center justify-center`}>
-        <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
-      </div>
-    )
-  }
+  if (loading && countries.length === 0) return <Spinner className={stateClass} />
 
   if (error) {
     return (
@@ -63,7 +65,9 @@ export const ActivityMapView = ({
 
   return (
     <div className={stateClass}>
-      <ActivityHeatmapMap countries={countries} onCountrySelect={onCountrySelect} selected={selected} />
+      <Suspense fallback={<Spinner className="absolute inset-0" />}>
+        <ActivityHeatmapMap countries={countries} onCountrySelect={onCountrySelect} selected={selected} />
+      </Suspense>
     </div>
   )
 }

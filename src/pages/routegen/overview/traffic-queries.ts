@@ -17,12 +17,8 @@ import {
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { resolveKind } from '@/lib/event-aliases'
 import { compactNumber } from '@/lib/format'
-import { COUNTRY_PROPERTY } from '../dashboards/activity-map'
 import { INCLUDE_COOKIELESS } from './cookieless'
 import { filterGroupFields } from './traffic-filters'
-
-// Shared with the dashboards activity map so the query and useActivityMapData can't disagree.
-export { COUNTRY_PROPERTY }
 
 // Every session metric scopes to the navigation event (per docs/architecture/web-analytics.md,
 // bounce = single-*navigation* session). Web SDKs emit page_view, the mobile ones screen_view.
@@ -112,7 +108,7 @@ export const TRAFFIC_STATS: readonly TrafficStat[] = (Object.keys(TRAFFIC_STAT_B
 }))
 
 // Annotated because the inferred type is a union of the six literal entries, and only one declares
-// `lowerIsBetter` — reading it off the union is a type error at the call site.
+// `lowerIsBetter`, so reading it off the union is a type error at the call site.
 export const getTrafficStat = (id: TrafficStatId): Omit<TrafficStat, 'id'> => TRAFFIC_STAT_BY_ID[id]
 
 // hasOwn, not `in`: `in` walks the prototype, so `?stat=toString` would pass and then index to a

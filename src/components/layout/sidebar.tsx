@@ -22,7 +22,7 @@ import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
 import { signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
-import { isDemoSessionAtom } from '@/auth/demo'
+import { isDemoHost, isDemoSessionAtom } from '@/auth/demo'
 import UsageMeter from '@/components/billing/usage-meter'
 import { NameChip } from '@/components/name-chip'
 import { Input } from '@/components/ui/input'
@@ -352,17 +352,20 @@ const AppSidebar = () => {
               {pin ? <span>Always {pin}</span> : <span className="capitalize">{theme}</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              // Dropping the /p/:projectId URL is App's job, not this button's: it has to happen
-              // for a session that expires too, which has no button to hang off. See App.tsx.
-              onClick={() => signOut()}
-              tooltip="Sign out"
-            >
-              <LogOut />
-              <span>Sign out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {/* Signing the demo viewer out on its own origin would only start the demo again. */}
+          {!(isDemoHost() && isDemo) && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                // Dropping the /p/:projectId URL is App's job, not this button's: it has to happen
+                // for a session that expires too, which has no button to hang off. See App.tsx.
+                onClick={() => signOut()}
+                tooltip="Sign out"
+              >
+                <LogOut />
+                <span>Sign out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarFooter>
 

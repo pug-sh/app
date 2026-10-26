@@ -1,7 +1,9 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { MotionGlobalConfig } from 'motion/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { StaticChartPreviewProvider } from '@/components/charts/static-chart-preview-context'
 import type { SeriesColor } from '@/lib/event-colors'
 import { AreaChart } from './area-chart'
 import { BarChart } from './bar-chart'
@@ -19,6 +21,11 @@ vi.mock('@/components/charts/chart-parent-size', () => ({
     children(mockChartSize),
 }))
 
+// visx's localPoint needs SVG geometry happy-dom lacks; with no screen CTM it falls back to the bounding rect.
+Object.defineProperty(window.SVGSVGElement.prototype, 'getScreenCTM', { value: () => null, configurable: true })
+// The tooltip box cancels a Web Animation on hover, and happy-dom rejects a cancelled one's promise unhandled.
+MotionGlobalConfig.skipAnimations = true
+
 const COLORS: SeriesColor[] = [{ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }]
 
 const HOURLY: ChartPoint[] = [
@@ -33,8 +40,8 @@ const axisLabels = (container: HTMLElement) =>
     .filter(text => /^\d{2}:\d{2}$/.test(text) || /^[A-Z][a-z]{2} \d/.test(text))
 
 // Guards the date-label context override documented in CLAUDE.md. Upstream computes its
-// x labels internally with a browser-local, granularity-blind formatter, so a
-// re-add that drops the patch still type-checks and still renders; it just
+// x labels internally with a browser-local, granularity-blind formatter, so an
+// add that stops the axis reading the context still type-checks and renders; it just
 // silently mislabels every bucket. Each chart entry point carries its own copy of
 // the prop plumbing, so each needs its own guard.
 describe('vendored chart date labels', () => {
@@ -75,9 +82,28 @@ describe('vendored chart date labels', () => {
       )
 
       // Upstream's fallback formats every bucket as "Jul 19" regardless of
-      // granularity, which is the visible symptom of a reverted patch.
+      // granularity, which is the visible symptom of a dropped override.
       expect(axisLabels(hourly.container)).toContain('00:00')
       expect(axisLabels(hourly.container).some(l => l.startsWith('Jul'))).toBe(false)
+    })
+
+    // Kiritimati is UTC+14: its midnight is the previous day in every other zone, so a browser-local title can't pass.
+    it(`${name} chart titles the hover tooltip in the project reporting zone`, async () => {
+      const { container } = render(
+        <StaticChartPreviewProvider>
+          <Chart
+            data={[{ date: new Date('2026-07-21T10:00:00Z'), values: [1] }]}
+            seriesNames={['page_view']}
+            seriesColors={COLORS}
+            granularity={Granularity.DAY}
+            timeZone="Pacific/Kiritimati"
+          />
+        </StaticChartPreviewProvider>,
+      )
+
+      fireEvent.mouseMove(container.querySelector('svg > g[transform^="translate("]') as SVGGElement, { clientX: 400 })
+
+      expect(await screen.findByText('Wed, Jul 22')).toBeTruthy()
     })
   }
 })

@@ -16,6 +16,7 @@ import type { ClusterMapMarker, VisitorMapMarker } from '@/components/live-map/m
 import { BrowserLabel, DeviceLabel, OsLabel } from '@/components/platform-label'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { formatDeviceLabel, formatOsLabel } from '@/lib/brand-icons'
+import { isCookielessId } from '@/lib/cookieless'
 import { getSeriesColor } from '@/lib/event-colors'
 import { formatLocality } from '@/lib/location'
 import { formatClock, tsToDate } from '@/lib/timestamp'
@@ -47,7 +48,7 @@ const Section = ({ title, meta, children }: { title: string; meta?: string; chil
   </div>
 )
 
-// Opaque so the arrow meets the body seamlessly; `relative` is load-bearing — it lifts the body over
+// Opaque so the arrow meets the body seamlessly; `relative` is load-bearing: it lifts the body over
 // the arrow's inner half, which is otherwise painted on top. Radius is coupled to ARROW_INSET.
 export const POPOVER_SURFACE =
   'relative w-[19rem] rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-border/40'
@@ -63,8 +64,8 @@ const DeviceCell = ({ device, os, osVersion }: { device: string; os?: string; os
 type VisitorProps = {
   marker: VisitorMapMarker
   journey: ActivityEvent[]
-  profileHref?: (distinctId: string) => string | undefined
-  // The pinned visitor aged out of the live window — their marker is gone, so the popover holds the
+  profileHref?: (distinctId: string) => string
+  // The pinned visitor aged out of the live window: their marker is gone, so the popover holds the
   // last thing they did rather than vanishing mid-read.
   left?: boolean
 }
@@ -96,7 +97,7 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
               className="size-1.5 shrink-0 rounded-full"
               style={{ backgroundColor: getSeriesColor(marker.kind).dot }}
             />
-            {/* Kind and detail get a line each — sharing one truncated both to half a box. */}
+            {/* Kind and detail get a line each; sharing one truncated both to half a box. */}
             <span className="truncate text-sm font-medium text-foreground">{marker.kind}</span>
           </div>
           {marker.detail && <div className="truncate text-muted-foreground">{marker.detail}</div>}
@@ -181,19 +182,14 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
         </Section>
       )}
 
-      {profileHref &&
-        (href ? (
-          <Link
-            href={href}
-            className="flex items-center justify-center gap-1 rounded-b-xl border-t border-border/40 px-3 py-2 font-medium text-link underline-offset-4 hover:bg-accent/60 hover:underline"
-          >
-            View profile →
-          </Link>
-        ) : (
-          <div className="rounded-b-xl border-t border-border/40 px-3 py-2 text-center text-muted-foreground">
-            Cookieless visitor — no profile
-          </div>
-        ))}
+      {href && (
+        <Link
+          href={href}
+          className="flex items-center justify-center gap-1 rounded-b-xl border-t border-border/40 px-3 py-2 font-medium text-link underline-offset-4 hover:bg-accent/60 hover:underline"
+        >
+          {isCookielessId(marker.distinctId) ? 'View visitor →' : 'View profile →'}
+        </Link>
+      )}
     </div>
   )
 }

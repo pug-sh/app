@@ -29,9 +29,10 @@ vi.mock('@/components/charts/tooltip', () => ({
 
 const COLORS: SeriesColor[] = [{ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }]
 
-// Spans two days, so every hour label carries the day and is the widest the axis draws.
-const HOURLY: ChartPoint[] = Array.from({ length: 25 }, (_, i) => ({
-  date: new Date(Date.UTC(2026, 6, 19, 12 + i)),
+// Spans two days, so every hour label carries the day and is the widest the axis draws. Five buckets all
+// get a label, so the end ones sit on the plot edges.
+const HOURLY: ChartPoint[] = Array.from({ length: 5 }, (_, i) => ({
+  date: new Date(Date.UTC(2026, 6, 19, 22 + i)),
   values: [i],
 }))
 
@@ -58,7 +59,7 @@ const xAxisLabels = (container: HTMLElement) =>
     .filter(label => label.text !== '')
 
 // The right margin used to be 40px only so the last label, centred on the last bucket, had room to hang
-// past the plot. It is 16px now, so the labels have to be kept inside the chart instead.
+// past the plot. It only clears the hover halo now, so the labels have to be kept inside the chart instead.
 describe('chart edges', () => {
   // Not bars: their padding rows already hold the last real bucket off the edge.
   for (const [name, Chart] of CHARTS.slice(0, 2)) {
@@ -86,6 +87,7 @@ describe('chart edges', () => {
     const host = document.createElement('div')
     document.body.append(host)
     const data = HOURLY.map(p => ({ date: p.date }))
+    const last = data.length - 1
     const innerWidth = WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
     const value = {
       data,
@@ -96,7 +98,7 @@ describe('chart edges', () => {
       innerWidth,
       margin: { bottom: 40, ...CHART_MARGIN },
       containerRef: { current: host },
-      tooltipData: { point: data[24], index: 24, x: innerWidth, yPositions: {} },
+      tooltipData: { point: data[last], index: last, x: innerWidth, yPositions: {} },
     } as unknown as ChartContextValue
 
     render(

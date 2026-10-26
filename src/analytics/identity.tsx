@@ -13,12 +13,12 @@ import { analyticsEnabled, type CustomerTraits, identifyCustomer, resetIdentity 
 // awaitWorkspace says whether WorkspaceBootstrap is mounted and therefore whether org/project are
 // still on their way. It has to be told: a workspace that hasn't started and one that will never
 // start look identical from the atoms (both 'idle'), and the difference is a routing fact App
-// already knows. False is the shared-dashboard route — nothing is coming, so identify immediately
+// already knows. False is the shared-dashboard route: nothing is coming, so identify immediately
 // with whatever traits exist (none).
 //
 // A prop rather than an atom WorkspaceBootstrap sets on mount, and that's not a shortcut: this
 // component renders first (App.tsx), so its effect would run before any such atom was written, read
-// "no bootstrap coming", and identify on the spot — the very thing the gate below exists to stop. A
+// "no bootstrap coming", and identify on the spot, the very thing the gate below exists to stop. A
 // prop is known at render time; an effect-written atom isn't.
 const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const customerId = useAtomValue(customerIdAtom)
@@ -41,7 +41,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const emailExpected = Boolean(customerId) && awaitWorkspace && !isDemo && analyticsEnabled
 
   // Triggered off 'idle', not a ref of who we last fetched for: a teardown back to the same account
-  // (demo round-trip, re-auth) resets the status, and a ref would skip it for the life of the page.
+  // (another account and back, re-auth) resets the status, and a ref would skip it for the life of the page.
   useEffect(() => {
     if (!emailExpected || meStatus !== 'idle') return
     fetchMe()
@@ -50,7 +50,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   useEffect(() => {
     if (!customerId) {
       // Only a real sign-out resets. Without the guard, a signed-out boot would clear the
-      // anonymous ID of a visitor who just arrived from pug.sh — that ID is the cross-subdomain
+      // anonymous ID of a visitor who just arrived from pug.sh. That ID is the cross-subdomain
       // link between the marketing site and this app, so dropping it would break the funnel for
       // exactly the people it exists to measure.
       if (sentCustomerId.current === null) return
@@ -62,13 +62,13 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
 
     // The demo signs everyone in as the same shared viewer account (snoop@pug.sh). Identifying it
     // would fuse every demo visitor into one profile AND merge each of their anonymous histories
-    // into it — identify() sends the anonymous ID on its first call precisely so it can be
+    // into it: identify() sends the anonymous ID on its first call precisely so it can be
     // absorbed. Demo traffic stays anonymous instead, which is also the honest shape: these are
     // prospects, not one very busy user. Someone already identified keeps their identity through
     // the demo, so "a real customer went and poked at the demo" still shows up.
     if (isDemo) return
 
-    // An account switch with no sign-out in between — applySessionAtom explicitly supports this
+    // An account switch with no sign-out in between: applySessionAtom explicitly supports this
     // (a magic link for another account while signed in). The SDK holds identity until told
     // otherwise, so without this the new user inherits the previous user's session. Ahead of the
     // settle gate below on purpose: track() stamps the distinct ID at call time, so waiting for the
@@ -80,7 +80,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     }
 
     // Bootstrap resolves the org, then the project, a render apart. Each of those states is a real
-    // change, so the dedup below — which only catches *repeats* — would let every one of them send.
+    // change, so the dedup below (which only catches *repeats*) would let every one of them send.
     // Wait for the traits to stop moving and state them once.
     //
     // Nothing is lost by waiting. A device that has identified before resolves its distinct ID from
@@ -90,7 +90,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     if (awaitWorkspace && !workspaceSettled) return
 
     // 'error' has to open this, or one failed GetMe leaves the session anonymous until something
-    // else happens to call fetchMe — and the only thing that does is the Account tab's mount.
+    // else happens to call fetchMe, and the only thing that does is the Account tab's mount.
     if (emailExpected && meStatus !== 'ready' && meStatus !== 'error') return
 
     const traits: CustomerTraits = {

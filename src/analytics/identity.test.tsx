@@ -71,7 +71,7 @@ const deferredMe = () => {
 }
 
 // The real bootstrap, because "when is the workspace settled" is half of what is under test, in
-// App.tsx's child order — identity's effects flush before the workspace resets.
+// App.tsx's child order: identity's effects flush before the workspace resets.
 // jwt null is the demo case, which signs itself in rather than booting with a session.
 const mount = (jwt: string | null = jwtFor('cust-1')) => {
   const store = createStore()
@@ -195,7 +195,7 @@ describe('analytics identity', () => {
 
     // A cross-tab sign-in. awaitWorkspace false leaves emailExpected false, so the meStatus gate is
     // skipped entirely and the keyed read on meAtom is the only thing between cust-1's address and
-    // cust-2's profile — no fetch runs here to clear it, the way one does everywhere else.
+    // cust-2's profile: no fetch runs here to clear it, the way one does everywhere else.
     act(() => {
       store.set(jwtAtom, jwtFor('cust-2'))
     })
@@ -220,7 +220,7 @@ describe('analytics identity', () => {
     })
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(2))
 
-    // An unkeyed status let cust-1's failure open the gate for cust-2 — and state it with cust-1's
+    // An unkeyed status let cust-1's failure open the gate for cust-2, and state it with cust-1's
     // org traits, since the workspace hasn't reset this render either.
     expect(identifyCustomer).not.toHaveBeenCalledWith('cust-2', expect.anything())
 
@@ -247,7 +247,7 @@ describe('analytics identity', () => {
     })
 
     // Back in as the same customer, so the key matches whatever the abandoned call left behind.
-    // Left claimed, that debris reads as 'loading' — past the refetch trigger, short of the gate —
+    // Left claimed, that debris reads as 'loading' (past the refetch trigger, short of the gate),
     // and this tab reports every later event as an anonymous stranger for the rest of its life.
     const second = deferredMe()
     act(() => {
@@ -265,7 +265,7 @@ describe('analytics identity', () => {
     )
   })
 
-  it('refetches the email after a demo round-trip back to the same account', async () => {
+  it('refetches the email after a round-trip through another account', async () => {
     const first = deferredMe()
     const store = mount()
 
@@ -275,8 +275,8 @@ describe('analytics identity', () => {
     })
     await waitFor(() => expect(identifyCustomer).toHaveBeenCalledTimes(1))
 
-    // Into the demo and back out on a magic link, no sign-out in between — it lands back on a
-    // customer this component has already fetched for.
+    // Out to another account (the demo, which fetches no email) and back on a magic link, with no
+    // sign-out between: it lands back on a customer this component has already fetched for.
     demoSignIn.mockResolvedValue({ token: jwtFor('snoop'), refreshToken: 'refresh-token' })
     completeMagicLink.mockResolvedValue({ token: jwtFor('cust-1'), refreshToken: 'refresh-token', joinedOrgIds: [] })
     await act(async () => {
@@ -287,7 +287,7 @@ describe('analytics identity', () => {
       await store.set(completeMagicLinkAtom, { token: 'magic' })
     })
 
-    // A ref would still read 'cust-1' and skip this, leaving the gate shut on 'idle' — no email,
+    // A ref would still read 'cust-1' and skip this, leaving the gate shut on 'idle': no email,
     // and no later trait change either.
     await waitFor(() => expect(getMe).toHaveBeenCalledTimes(2))
     await act(async () => {

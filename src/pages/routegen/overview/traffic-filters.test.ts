@@ -6,7 +6,6 @@ import {
   filterChips,
   filterGroupFields,
   filtersExcept,
-  filterValueLabel,
   filterValues,
   hasFilter,
   readTrafficFilters,
@@ -21,12 +20,12 @@ const multi = (property: string, values: string[]) => createFilter(property, AUT
 
 // `pf` is shared with Insights, which can author the full filter grammar. These helpers read a
 // filter's arity and never its operator, so anything outside an event-property source with
-// EQUALS/IN degrades silently — see isTrafficFilter. Restoring has to drop those and say it did.
+// EQUALS/IN degrades silently (see isTrafficFilter). Restoring has to drop those and say it did.
 describe('readTrafficFilters', () => {
   const pf = (...filters: unknown[]) => `?pf=${encodeURIComponent(JSON.stringify(filters))}`
 
   // The mobile screens panel filters on `screenName`, a custom event property, so a CUSTOM-source
-  // filter has to survive the round trip — restored as AUTO-only it would drop off every reload.
+  // filter has to survive the round trip: restored as AUTO-only it would drop off every reload.
   it('restores a custom-property filter, not just auto-properties', () => {
     const screen = createFilter('screenName', PropertySource.CUSTOM, FilterOperator.EQUALS, '/home')
     const restored = readTrafficFilters(pf(screen))
@@ -194,17 +193,5 @@ describe('filterGroupFields', () => {
       { property: '$country', source: AUTO, operator: FilterOperator.IN, value: '', values: ['IN', 'US'] },
       { property: '$browser', source: AUTO, operator: FilterOperator.EQUALS, value: 'Chrome', values: [] },
     ])
-  })
-})
-
-describe('filterValueLabel', () => {
-  it('renders a $country ISO code as its country name', () => {
-    expect(filterValueLabel('$country', 'US')).toBe('United States')
-    expect(filterValueLabel('$country', 'IN')).toBe('India')
-  })
-
-  it('leaves other properties untouched', () => {
-    expect(filterValueLabel('$browser', 'Chrome')).toBe('Chrome')
-    expect(filterValueLabel('$utmSource', 'google')).toBe('google')
   })
 })

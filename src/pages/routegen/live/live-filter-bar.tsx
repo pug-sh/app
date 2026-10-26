@@ -87,7 +87,9 @@ const KindFilter = ({
                     <Check className={cn('size-3 shrink-0', isSelected ? 'opacity-100' : 'opacity-0')} />
                     <span className="size-1 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                     <span className="flex-1 truncate">{k.name}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-faint">{compactNumber(k.count)}</span>
+                    <span data-slot="command-shortcut" className="shrink-0 text-xs tabular-nums text-faint">
+                      {compactNumber(k.count)}
+                    </span>
                   </CommandItem>
                 )
               })}
@@ -147,7 +149,9 @@ const CountryFilter = ({
                 >
                   <Check className={cn('size-3 shrink-0', selected === c.country ? 'opacity-100' : 'opacity-0')} />
                   <span className="flex-1 truncate">{formatCountryName(c.country)}</span>
-                  <span className="shrink-0 text-xs tabular-nums text-faint">{c.count}</span>
+                  <span data-slot="command-shortcut" className="shrink-0 text-xs tabular-nums text-faint">
+                    {c.count}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

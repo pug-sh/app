@@ -50,12 +50,8 @@ const chart = (data: ChartPoint[], granularity: Granularity) => (
   <LineChart data={data} seriesNames={['page_view']} seriesColors={COLORS} granularity={granularity} timeZone="UTC" />
 )
 
-// The vendored Line's point-morph tween (`useAnimatedSeriesPath`) lists `yScale` in
-// its effect deps, and a data change also tweens the y-domain, so a domain frame
-// tears the effect down, the re-run bails on the unchanged transition signature, and
-// the morph is stranded on its first frame: points already carrying the *new* values
-// but still scaled by the *old* domain. The line parks thousands of pixels off-plot
-// and never recovers. The wrapper opts out with `animate={false}`.
+// A data change tweens the line's points and its y-domain at once. Until the 2026-10-24 pull the vendored
+// morph kept the old domain when the two overlapped, parking the line thousands of pixels off-plot for good.
 describe('line chart data change', () => {
   it('keeps the series inside the plot after the data changes', async () => {
     const { container, rerender } = render(chart(HOURLY, Granularity.HOUR))

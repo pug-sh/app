@@ -313,6 +313,38 @@ const Billing = () => {
   // anyway, since hiding a billed count is the worse mistake.
   const showBilledUsage = status.status === BillingStatus.ACTIVE || status.tierUsage.length > 0
 
+  // Someone who can buy is here to pick a plan, so the list leads instead of trailing the usage.
+  const upgradeFirst = canBuy && !liveSubscription
+  const plansSection = canBrowsePlans && (
+    <section>
+      <SectionHeader title="Plans" description={plansNote(liveSubscription, canBuy)} />
+      {plans === null ? (
+        <LoadingSpinner />
+      ) : plans.error ? (
+        <ListError
+          message={plans.error}
+          onRetry={() => {
+            setPlans(null)
+            setPlanAttempt(n => n + 1)
+          }}
+        />
+      ) : (
+        <>
+          <PlanList
+            plans={plans.items}
+            currentSlug={status.plan?.slug}
+            busySlug={checkingOut}
+            readOnly={liveSubscription || !canBuy}
+            onSelect={handleSelectPlan}
+          />
+          {liveSubscription && status.manageable && (
+            <PortalButton label="Change plan in the billing portal" busy={openingPortal} onClick={handleOpenPortal} />
+          )}
+        </>
+      )}
+    </section>
+  )
+
   return (
     <div className="max-w-2xl space-y-8">
       <section>
@@ -337,6 +369,8 @@ const Billing = () => {
           <PortalButton label="Manage payment method and invoices" busy={openingPortal} onClick={handleOpenPortal} />
         )}
       </section>
+
+      {upgradeFirst && plansSection}
 
       <section>
         <SectionHeader title="Events this period" description={usagePeriodNote(status)} />
@@ -373,39 +407,7 @@ const Billing = () => {
 
       {showBilledUsage && <BilledUsage status={status} />}
 
-      {canBrowsePlans && (
-        <section>
-          <SectionHeader title="Plans" description={plansNote(liveSubscription, canBuy)} />
-          {plans === null ? (
-            <LoadingSpinner />
-          ) : plans.error ? (
-            <ListError
-              message={plans.error}
-              onRetry={() => {
-                setPlans(null)
-                setPlanAttempt(n => n + 1)
-              }}
-            />
-          ) : (
-            <>
-              <PlanList
-                plans={plans.items}
-                currentSlug={status.plan?.slug}
-                busySlug={checkingOut}
-                readOnly={liveSubscription || !canBuy}
-                onSelect={handleSelectPlan}
-              />
-              {liveSubscription && status.manageable && (
-                <PortalButton
-                  label="Change plan in the billing portal"
-                  busy={openingPortal}
-                  onClick={handleOpenPortal}
-                />
-              )}
-            </>
-          )}
-        </section>
-      )}
+      {!upgradeFirst && plansSection}
     </div>
   )
 }

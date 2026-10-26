@@ -8,6 +8,7 @@ import { file_common_v1_filters } from '@/api/genproto/common/v1/filters_pb'
 import { AuthService } from '@/api/genproto/public/auth/v1/auth_pb'
 import { file_public_dashboards_v1_dashboards } from '@/api/genproto/public/dashboards/v1/dashboards_pb'
 import { file_shared_insights_v1_insights } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { isDemoHost } from '@/auth/demo'
 import {
   clearSession,
   JWT_KEY,
@@ -77,7 +78,7 @@ const accessTokenExpired = (token: string): boolean => {
   }
 }
 
-// Dedicated client for RefreshSession — deliberately WITHOUT authBearer so a
+// Dedicated client for RefreshSession, deliberately WITHOUT authBearer so a
 // refresh call can't recurse into the refresh logic.
 const refreshClient = createClient(
   AuthService,
@@ -87,7 +88,7 @@ const refreshClient = createClient(
 )
 
 // Single-flight: concurrent requests that all see an expired token share ONE
-// refresh call. Critical for reuse-detection — firing two RefreshSession calls
+// refresh call. Critical for reuse-detection: firing two RefreshSession calls
 // with the same refresh token would trip the server's family revocation and log
 // the user out. The promise is cleared once settled so the next window refreshes.
 let refreshInFlight: Promise<string | null> | null = null
@@ -102,12 +103,12 @@ const refreshAccessToken = (): Promise<string | null> => {
 }
 
 // doRefresh is the SOLE authority on session death. It clears the session ONLY
-// when RefreshSession returns Unauthenticated — i.e. the server authoritatively
+// when RefreshSession returns Unauthenticated, i.e. the server authoritatively
 // rejected the refresh token (expired / revoked / reused). Every other failure
 // (offline, 5xx during a deploy, timeout) is transient: the refresh token is
 // almost certainly still valid, so we keep the session and return null, letting
 // the caller's request fail normally and retry later. Conflating the two would
-// log active users out on infrastructure noise — the exact failure this whole
+// log active users out on infrastructure noise, the exact failure this whole
 // feature exists to avoid.
 const doRefresh = async (): Promise<string | null> => {
   const refreshToken = getRefreshToken()
@@ -120,12 +121,13 @@ const doRefresh = async (): Promise<string | null> => {
     if (err instanceof ConnectError && err.code === Code.Unauthenticated) {
       clearSession()
       // The domain now requires SSO: sign-in shows its providers instead of a generic expiry.
+      // The demo's own origin has no sign-in to send anyone to; it signs straight back in.
       const detail = ssoRequiredOf(err)
       if (detail) store.set(ssoBlockAtom, { detail, sessionEnded: true })
-      else toast.error('Session expired — please sign in again')
+      else if (!isDemoHost()) toast.error('Session expired. Please sign in again.')
       return null
     }
-    // Transient — keep the session intact.
+    // Transient: keep the session intact.
     console.error('token refresh failed (transient); keeping session', err)
     return null
   }
@@ -153,12 +155,12 @@ const authBearer: Interceptor = next => async req => {
     if (!(err instanceof ConnectError) || err.code !== Code.Unauthenticated || req.stream) {
       throw err
     }
-    // A 401 here could mean the access token was revoked before its own expiry —
+    // A 401 here could mean the access token was revoked before its own expiry:
     // try ONE refresh+retry. It could equally be an AUTHORIZATION failure (e.g. a
     // forbidden x-project-id), which the backend also returns as Unauthenticated.
     // So we never clear the session based on this business-endpoint 401: session
     // death is decided only inside doRefresh. If the retry still 401s, that's
-    // authorization, not an expired session — let it propagate untouched.
+    // authorization, not an expired session; let it propagate untouched.
     if (!getRefreshToken()) throw err
     const fresh = await refreshAccessToken()
     if (!fresh) throw err
@@ -180,7 +182,7 @@ export const transportAtom = atom(() => {
 
 // Transport for unauthenticated public endpoints (shared dashboards). Deliberately
 // WITHOUT authBearer so the public read path never attaches a logged-in viewer's
-// JWT or triggers a token refresh — it must behave identically for an anonymous
+// JWT or triggers a token refresh: it must behave identically for an anonymous
 // visitor, which also keeps the backend's token-independent authz path exercised.
 export const publicTransportAtom = atom(() => {
   return createConnectTransport({

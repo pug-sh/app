@@ -2,7 +2,7 @@ import { create, isFieldSet } from '@bufbuild/protobuf'
 import { ConnectError } from '@connectrpc/connect'
 import { createStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
+import { type ListResponse, ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema, UpdateMetaRequestSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { rpcErrorMessage } from '@/lib/rpc-error'
 import { jwtFor } from '@/test/jwt'
@@ -59,6 +59,7 @@ const {
   workspaceSettledAtom,
 } = await import('./workspace.atoms')
 const { trackEvent } = await import('@/analytics/pug')
+const { jwtAtom } = await import('@/auth/jwt.atoms')
 
 const org = (id: string) => create(OrgSchema, { id, displayName: id })
 const project = (id: string) => create(ProjectSchema, { id, displayName: id })
@@ -252,6 +253,55 @@ describe('createProjectAtom', () => {
 
     expect(store.get(projectsAtom)).toEqual(projectsOfB)
     expect(store.get(activeProjectAtom)).toBe(projectsOfB[0])
+  })
+})
+
+describe('fetchOrgsAtom', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  // WorkspaceBootstrap runs on /magic-link, so the previous account can still be listing its orgs
+  // when the sign-in there switches account and resets the workspace.
+  it('drops a list that lands after the account changed', async () => {
+    const store = createStore()
+    store.set(jwtAtom, jwtFor('cust-1'))
+    let settle!: (resp: ListResponse) => void
+    orgsList.mockReturnValueOnce(
+      new Promise(resolve => {
+        settle = resolve
+      }),
+    )
+    const pending = store.set(fetchOrgsAtom)
+
+    store.set(jwtAtom, jwtFor('cust-2'))
+    store.set(resetWorkspaceAtom)
+    settle(create(ListResponseSchema, { orgs: [orgA], canCreateOrg: true }))
+    await pending
+
+    expect(store.get(orgsAtom)).toEqual([])
+    expect(store.get(canCreateOrgAtom)).toBe(false)
+  })
+
+  it('drops a failure that lands after the account changed, leaving the new workspace standing', async () => {
+    const store = createStore()
+    store.set(jwtAtom, jwtFor('cust-1'))
+    let fail!: (err: Error) => void
+    orgsList.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        fail = reject
+      }),
+    )
+    const pending = store.set(fetchOrgsAtom)
+
+    store.set(jwtAtom, jwtFor('cust-2'))
+    store.set(resetWorkspaceAtom)
+    store.set(activeOrgAtom, orgB)
+    fail(new Error('down'))
+    await pending
+
+    expect(store.get(activeOrgAtom)).toBe(orgB)
+    expect(store.get(workspaceErrorAtom)).toBeNull()
   })
 })
 

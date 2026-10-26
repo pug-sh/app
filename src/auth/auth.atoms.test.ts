@@ -10,6 +10,7 @@ import {
   type SSORequired,
   SSORequiredSchema,
 } from '@/api/genproto/public/auth/v1/auth_pb'
+import { jwtFor } from '@/test/jwt'
 
 const { completeOIDCSignIn, completeMagicLink, signInWithEmail, requestMagicLink, discoverSignIn } = vi.hoisted(() => ({
   completeOIDCSignIn: vi.fn(),
@@ -80,7 +81,7 @@ describe('completeOIDCAtom', () => {
 
     expect(store.get(jwtAtom)).toBe('access-token')
     expect(store.get(refreshTokenAtom)).toBe('refresh-token')
-    // Derived from the sign-in method — a real login must not raise the demo banner.
+    // Derived from the sign-in method: a real login must not raise the demo banner.
     expect(store.get(isDemoSessionAtom)).toBe(false)
   })
 
@@ -213,14 +214,30 @@ describe('completeMagicLinkAtom', () => {
     expect(store.get(bootstrapStatusAtom)).toBe('loading-org')
   })
 
-  it('leaves the workspace alone when the link joined nothing', async () => {
-    completeMagicLink.mockResolvedValue({ token: 'access-token', refreshToken: 'refresh-token', joinedOrgIds: [] })
+  it("leaves the workspace alone when the same account's link joined nothing", async () => {
+    completeMagicLink.mockResolvedValue({
+      token: jwtFor('cust-1', 9e9 + 1),
+      refreshToken: 'refresh-token',
+      joinedOrgIds: [],
+    })
     const store = createStore()
+    store.set(jwtAtom, jwtFor('cust-1'))
     store.set(bootstrapStatusAtom, 'ready')
 
     await store.set(completeMagicLinkAtom, { token: 'magic' })
 
     expect(store.get(bootstrapStatusAtom)).toBe('ready')
+  })
+
+  it('restarts the workspace when the link signs in another account', async () => {
+    completeMagicLink.mockResolvedValue({ token: jwtFor('cust-2'), refreshToken: 'refresh-token', joinedOrgIds: [] })
+    const store = createStore()
+    store.set(jwtAtom, jwtFor('cust-1'))
+    store.set(bootstrapStatusAtom, 'ready')
+
+    await store.set(completeMagicLinkAtom, { token: 'magic' })
+
+    expect(store.get(bootstrapStatusAtom)).toBe('idle')
   })
 
   // The server leaves the link unused, so the page can pass an invite's token on to SSO.

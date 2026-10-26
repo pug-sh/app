@@ -1,5 +1,5 @@
 import { ConnectError } from '@connectrpc/connect'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Build a stable string key from an arbitrary query-input object. Proto fields are
 // often bigint, which JSON.stringify rejects, so coerce those to strings.
@@ -8,13 +8,13 @@ export const stringifyQueryKey = (value: unknown) =>
 
 export const useDebouncedQuery = <T>(
   queryKey: string,
-  queryFn: () => Promise<T>,
+  queryFn: (signal: AbortSignal) => Promise<T>,
   opts: { enabled?: boolean; debounceMs?: number } = {},
 ) => {
   const { enabled = true, debounceMs = 300 } = opts
   const [data, setData] = useState<T | undefined>(undefined)
   // The key `data` was fetched for. `data` deliberately survives a queryKey change so the previous
-  // result stays on screen, and `loading` only flips in the effect below — so the render that
+  // result stays on screen, and `loading` only flips in the effect below, so the render that
   // changes the query still reads stale data with loading false. Compare against the current key.
   const [dataKey, setDataKey] = useState<string | undefined>(undefined)
   const [loading, setLoading] = useState(false)
@@ -34,19 +34,20 @@ export const useDebouncedQuery = <T>(
     }
 
     let cancelled = false
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       try {
-        const resp = await queryFnRef.current()
+        const resp = await queryFnRef.current(controller.signal)
         if (!cancelled) {
           setData(resp)
           setDataKey(queryKey)
         }
       } catch (err) {
-        console.error(`Query failed [${queryKey.slice(0, 80)}]:`, err)
         if (!cancelled) {
+          console.error(`Query failed [${queryKey.slice(0, 80)}]:`, err)
           setData(undefined)
           setDataKey(undefined)
           const message =
@@ -64,8 +65,11 @@ export const useDebouncedQuery = <T>(
     return () => {
       cancelled = true
       clearTimeout(debounceRef.current)
+      controller.abort()
     }
   }, [queryKey, enabled, retryCount, debounceMs])
 
-  return { data, dataKey, loading, error, retry: () => setRetryCount(c => c + 1) }
+  const retry = useCallback(() => setRetryCount(c => c + 1), [])
+
+  return { data, dataKey, loading, error, retry }
 }

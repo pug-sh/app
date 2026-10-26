@@ -72,7 +72,9 @@ export const TimezonePicker = ({
                 >
                   <Check className={cn('w-3 h-3 shrink-0', value === detected ? 'opacity-100' : 'opacity-0')} />
                   <span className="font-mono">{detected}</span>
-                  <span className="ml-auto text-xs text-faint shrink-0">detected</span>
+                  <span data-slot="command-shortcut" className="ml-auto text-xs text-faint shrink-0">
+                    detected
+                  </span>
                 </CommandItem>
               )}
             </CommandGroup>

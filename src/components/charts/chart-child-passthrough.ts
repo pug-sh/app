@@ -63,13 +63,22 @@ export function resolveLazyChartChild(child: ReactElement): ReactElement {
   ) {
     return child;
   }
+  // Only forward a real key: `createElement` stringifies any non-undefined
+  // key, so `key: null` would become the literal key "null" on every
+  // unkeyed child (duplicate-key warnings, and it defeats the index fallback
+  // in `renderKeyedChartLayers`).
   return createElement(resolved as Parameters<typeof createElement>[0], {
     ...(child.props as object),
-    key: child.key,
+    ...(child.key == null ? {} : { key: child.key }),
   });
 }
 
-/** Unwrap visibility wrappers so `Grid` / axes stay outside the series clip. */
+/**
+ * Unwrap visibility wrappers so `Grid` / axes stay outside the series clip.
+ *
+ * Use the result to classify a child only — render {@link renderableChartChild}
+ * instead, or a wrapper that hides its child (Studio layer toggles) is bypassed.
+ */
 export function resolveChartChildElement(child: ReactElement): ReactElement {
   const element = resolveLazyChartChild(child);
   if (isChartClipPassthrough(element.type)) {
@@ -79,6 +88,14 @@ export function resolveChartChildElement(child: ReactElement): ReactElement {
     }
   }
   return element;
+}
+
+/**
+ * Element to render for a classified chart child: lazy references resolved,
+ * passthrough wrappers kept so they can still render `null` when hidden.
+ */
+export function renderableChartChild(child: ReactElement): ReactElement {
+  return resolveLazyChartChild(child);
 }
 
 /** Walk chart children, flattening React fragments (studio often groups layers in `<>...</>`). */
@@ -114,7 +131,12 @@ const CLIP_EXCLUDED_COMPONENT_NAMES = new Set([
   "LiveYAxis",
 ]);
 
-const UNDERLAY_COMPONENT_NAMES = new Set(["ReferenceArea", "BarColumnTrack"]);
+const UNDERLAY_COMPONENT_NAMES = new Set([
+  "ReferenceArea",
+  "BarColumnTrack",
+  "Weekends",
+  "Deadline",
+]);
 
 /** Markers render after the interaction overlay so they stay clickable. */
 export function isPostOverlayComponent(child: ReactElement): boolean {

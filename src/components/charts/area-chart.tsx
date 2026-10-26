@@ -13,6 +13,7 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { Area, type AreaProps } from "./area";
+import { AreaValueLabels } from "./area-value-labels";
 import type { LineConfig, Margin } from "./chart-context";
 import { ChartLoadingLabel } from "./chart-loading-label";
 import { ParentSize } from "./chart-parent-size";
@@ -69,8 +70,8 @@ export interface AreaChartProps {
 
 const DEFAULT_MARGIN: Margin = { top: 40, right: 40, bottom: 40, left: 40 };
 
-function extractAreaConfigs(children: ReactNode): LineConfig[] {
-  const configs: LineConfig[] = [];
+function extractAreaConfigs(children: ReactNode): (LineConfig & AreaProps)[] {
+  const configs: (LineConfig & AreaProps)[] = [];
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) {
@@ -89,16 +90,22 @@ function extractAreaConfigs(children: ReactNode): LineConfig[] {
     const props = child.props as AreaProps | undefined;
     const isPatternArea =
       componentName === "PatternArea" || child.type === PatternArea;
+    // Overlays that carry a dataKey but are not series of their own.
+    const isSeriesOverlay =
+      componentName === "TrendLine" ||
+      componentName === "LineSeriesTerminalMarker";
     const isAreaComponent =
       componentName === "Area" ||
       child.type === Area ||
       (props &&
         typeof props.dataKey === "string" &&
         props.dataKey.length > 0 &&
-        !isPatternArea);
+        !isPatternArea &&
+        !isSeriesOverlay);
 
     if (isAreaComponent && props?.dataKey) {
       configs.push({
+        ...props,
         dataKey: props.dataKey,
         stroke: props.stroke || props.fill || "var(--chart-line-primary)",
         strokeWidth: props.strokeWidth || 2,
@@ -179,6 +186,8 @@ function ChartInner({
       yDomainTweenDuration={yDomainTweenDuration}
     >
       {children}
+      {/* Resolve labels together, above all fills and outside their edge masks. */}
+      <AreaValueLabels series={lines} />
     </TimeSeriesChartInner>
   );
 }

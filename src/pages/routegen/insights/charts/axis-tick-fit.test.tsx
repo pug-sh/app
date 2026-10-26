@@ -119,9 +119,10 @@ describe('rendered x-axis labels never overlap', () => {
           />,
         )
         const ticks = Array.from(container.querySelectorAll<HTMLElement>('div.absolute'))
-          .filter(el => /^[A-Z][a-z]{2} \d+ \d{2}:\d{2}$/.test(el.textContent?.trim() ?? ''))
+          .filter(el => /^[A-Z][a-z]{2} \d+(?:, \d{4})? \d{2}:\d{2}$/.test(el.textContent?.trim() ?? ''))
           .map(el => ({ left: Number.parseFloat(el.style.left), chars: el.textContent?.trim().length ?? 0 }))
           .sort((a, b) => a.left - b.left)
+        expect(ticks.length, `${width}px`).toBeGreaterThan(1)
         for (let i = 1; i < ticks.length; i++) {
           const room = ((ticks[i - 1].chars + ticks[i].chars) / 2) * 7
           expect(ticks[i].left - ticks[i - 1].left, `${width}px`).toBeGreaterThanOrEqual(room)

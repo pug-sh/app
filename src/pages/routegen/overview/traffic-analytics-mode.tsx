@@ -8,6 +8,7 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { insightsEventFiltersSearch, writePropFiltersParam } from '@/hooks/use-filter-query-params'
 import { autoGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
+import { COUNTRY_PROPERTY } from '@/lib/property-values'
 import type { GlobalOverrides } from './global-overrides'
 import OverviewSectionHeader from './overview-section-header'
 import { TrafficBreakdownPanel } from './traffic-breakdown-panel'
@@ -23,7 +24,6 @@ import { TrafficMapPanel } from './traffic-map-panel'
 import { trafficPanels } from './traffic-panels'
 import {
   buildTrafficStatQuery,
-  COUNTRY_PROPERTY,
   getTrafficStat,
   type NavEvent,
   resolveNavEvent,

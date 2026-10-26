@@ -15,6 +15,7 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import {
   alignComparisonValues,
+  breakdownLabel,
   buildChartData,
   canShareInsight,
   collapseValues,
@@ -251,5 +252,15 @@ describe('emptyReadsAsZero', () => {
     mixed.events.push(create(EventQuerySchema, { aggregation: AggregationType.AVG }))
     expect(emptyReadsAsZero(mixed)).toBe(false)
     expect(emptyReadsAsZero(undefined)).toBe(false)
+  })
+})
+
+describe('breakdownLabel', () => {
+  it('names coded values, keyed by the property each came from', () => {
+    expect(breakdownLabel({ $country: 'IN', $os: 'Linux' }, 'Series 1')).toBe('India / Linux')
+    expect(breakdownLabel({ $continent: 'NA', $country: 'NA' }, 'Series 1')).toBe('North America / Namibia')
+    expect(breakdownLabel({ $utmSource: 'IN' }, 'Series 1')).toBe('IN')
+    expect(breakdownLabel({ $country: '' }, 'Series 1')).toBe('(none)')
+    expect(breakdownLabel({}, 'Series 1')).toBe('Series 1')
   })
 })

@@ -1,6 +1,8 @@
+import { timestampDate } from '@bufbuild/protobuf/wkt'
 import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import { type Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { useSparklineHover } from '@/components/charts/sparkline'
 import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
@@ -9,6 +11,7 @@ import { alignRangeStart } from '@/lib/granularity'
 import { cn } from '@/lib/utils'
 import { priorPeriodRange } from '../dashboards/compare-query'
 import { DeltaBadge, formatDelta, Sparkline } from '../dashboards/kpi-tile'
+import { formatTooltipDate } from '../insights/charts/helpers'
 import {
   buildTrafficStatQuery,
   formatTrafficStatValue,
@@ -79,10 +82,11 @@ export const TrafficStatTile = ({
     granularity,
     `overview-traffic-spark-${statId}`,
   )
+  const hover = useSparklineHover()
 
   // The scalar query drives the headline number; when it fails the tile has nothing to show, so
   // surface the error with a retry (like the breakdown panels) rather than a bare '—' that reads as
-  // an empty window. One tap re-runs all three tile queries — they fail together on a transient
+  // an empty window. One tap re-runs all three tile queries: they fail together on a transient
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
     return (
@@ -112,6 +116,8 @@ export const TrafficStatTile = ({
   const priorValue = priorResult.case === 'segmentation' ? priorResult.value.total : undefined
   const delta = value !== undefined && priorValue !== undefined ? formatDelta(value, priorValue) : null
   const sparkPoints = trendResult.case === 'trends' ? (trendResult.value.series[0]?.points ?? []) : []
+  const hovered = hover.index !== null ? sparkPoints[hover.index] : undefined
+  const shown = hovered?.value ?? value
 
   return (
     <button
@@ -125,11 +131,16 @@ export const TrafficStatTile = ({
           : 'border-border/60 bg-card hover:border-border hover:bg-accent/40',
       )}
     >
-      {/* Label with the delta badge pinned to the top-right; big number below. min-h reserves the badge
-          row so numbers stay aligned across tiles whether or not a delta is present. */}
+      {/* min-h reserves the badge row so numbers stay aligned across tiles whether or not a delta is present. */}
       <div className="flex min-h-[1.375rem] items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{label}</span>
-        {delta ? <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} /> : null}
+        {hovered?.time ? (
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {formatTooltipDate(timestampDate(hovered.time), granularity, timeZone)}
+          </span>
+        ) : (
+          delta && <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} />
+        )}
       </div>
       <span
         className={cn(
@@ -137,13 +148,15 @@ export const TrafficStatTile = ({
           loading && value === undefined && 'animate-pulse opacity-40',
         )}
       >
-        {value !== undefined ? formatTrafficStatValue(statId, value) : '—'}
+        {shown !== undefined ? formatTrafficStatValue(statId, shown) : '—'}
       </span>
 
-      {/* Fixed shallow band pinned to the bottom edge — given the full leftover height the vertical stretch
+      {/* Fixed shallow band pinned to the bottom edge: given the full leftover height the vertical stretch
           exaggerated every wiggle and the trend out-shouted the number. Accent when this stat drives the chart. */}
-      <div className={cn('-mx-4 -mb-3 mt-auto h-10', selected ? 'text-link' : 'text-muted-foreground/35')}>
-        {sparkPoints.length >= 2 ? <Sparkline points={sparkPoints} baseline="zero" strokeWidth={1.5} /> : null}
+      <div aria-hidden className={cn('-mx-4 -mb-3 mt-auto h-10', selected ? 'text-link' : 'text-muted-foreground/35')}>
+        {sparkPoints.length >= 2 ? (
+          <Sparkline points={sparkPoints} baseline="zero" strokeWidth={1.5} {...hover.sparklineProps} />
+        ) : null}
       </div>
     </button>
   )

@@ -74,6 +74,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts,
   funnelSeriesData,
   userFlowResult,
+  userFlowProperty,
   hideLegend,
   legendPosition,
   showPieLabels = true,
@@ -85,6 +86,7 @@ export const InsightsContent = memo(function InsightsContent({
   isTopK = false,
   topKRows = EMPTY_ARRAY,
   topKDimension = TopKQuery_Dimension.EVENT_KIND,
+  topKProperty,
   topKMetric = AggregationType.TOTAL,
   topKOmitOthers = false,
   topKIncompleteReason = null,
@@ -116,6 +118,7 @@ export const InsightsContent = memo(function InsightsContent({
   retentionCohorts: RetentionSeries['cohorts']
   funnelSeriesData: FunnelSeriesData[]
   userFlowResult?: UserFlowResult
+  userFlowProperty?: string
   // Hides the shared series-summary legend. The traffic-analytics
   // main chart opts in via InsightTileView's hideSummary (summing per-bucket session averages is
   // meaningless there, and the stat cards already carry the accurate scalar).
@@ -141,6 +144,7 @@ export const InsightsContent = memo(function InsightsContent({
   isTopK?: boolean
   topKRows?: TopKRow[]
   topKDimension?: TopKQuery_Dimension
+  topKProperty?: string
   topKMetric?: AggregationType
   topKOmitOthers?: boolean
   topKIncompleteReason?: string | null
@@ -183,7 +187,10 @@ export const InsightsContent = memo(function InsightsContent({
   const showUserFlow = isUserFlow || resultCase === 'userFlow'
   // Built once here so the empty-state decision below and the chart itself agree on which links
   // are drawable.
-  const userFlowData = useMemo(() => (userFlowResult ? buildSankeyData(userFlowResult) : undefined), [userFlowResult])
+  const userFlowData = useMemo(
+    () => (userFlowResult ? buildSankeyData(userFlowResult, userFlowProperty) : undefined),
+    [userFlowResult, userFlowProperty],
+  )
 
   const emptyStateHint = () => {
     // A dashboard tile has no query above it, which is the whole reason userFlowIncompleteReason
@@ -378,6 +385,7 @@ export const InsightsContent = memo(function InsightsContent({
         <TopKList
           rows={topKRows}
           dimension={topKDimension}
+          property={topKProperty}
           metric={topKMetric}
           omitOthers={topKOmitOthers}
           compact={compact}

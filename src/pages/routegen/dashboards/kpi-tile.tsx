@@ -1,7 +1,10 @@
+import { timestampDate } from '@bufbuild/protobuf/wkt'
 import { TrendingDown, TrendingUp } from 'lucide-react'
-import { type ReactNode, useId, useMemo } from 'react'
+import { type ReactNode, useEffect, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { ParentSize } from '@/components/charts/chart-parent-size'
+import { AreaSparkline, useSparklineHover } from '@/components/charts/sparkline'
 import { cn } from '@/lib/utils'
 import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from '../insights/helpers'
 import { toneTextClass } from './accent-palette'
@@ -20,6 +23,7 @@ type KpiTileProps = {
   aggregationFor: SeriesAggregationResolver
   compare?: KpiCompare
   formatValue: (value: number) => string
+  formatDate: (date: Date) => string
   metadata?: string
   lightMetric?: boolean
   // Only for a settled count: a pending query, or an average of nothing, has no value, not zero.
@@ -92,6 +96,7 @@ export const KpiTile = ({
   aggregationFor,
   compare,
   formatValue,
+  formatDate,
   metadata,
   lightMetric,
   zeroWhenEmpty = false,
@@ -113,6 +118,10 @@ export const KpiTile = ({
 
   const sparkPoints = useMemo(() => currentSeries[0]?.points ?? [], [currentSeries])
   const showSparkline = tile.visualization?.hideSparkline !== true && sparkPoints.length >= 2
+  // The sparkline draws only the first series, while the headline totals them all.
+  const readout = showSparkline && currentSeries.length === 1
+  const hover = useSparklineHover()
+  const hovered = readout && hover.index !== null ? sparkPoints[hover.index] : undefined
 
   // Sparkline hue tracks the trend vs the comparison period; neutral when there
   // is nothing to compare against.
@@ -142,17 +151,26 @@ export const KpiTile = ({
       <span className="text-xs text-muted-foreground">{contextParts.join(' · ')}</span>
     ) : null
 
+  // A bucket's value isn't the window's, so the window's tone and compare row step aside. The row keeps its space so
+  // the sparkline doesn't resize under the pointer.
   const summary = (
     <div className="space-y-2">
-      <div className={cn('tracking-tight tabular-nums', lightMetric ? 'text-4xl' : 'text-3xl', numberColor)}>
-        {formatValue(current)}
+      <div className="flex items-baseline justify-between gap-3">
+        <div
+          className={cn('tracking-tight tabular-nums', lightMetric ? 'text-4xl' : 'text-3xl', !hovered && numberColor)}
+        >
+          {formatValue(hovered?.value ?? current)}
+        </div>
+        {hovered?.time ? (
+          <span className="truncate text-xs tabular-nums text-muted-foreground">
+            {formatDate(timestampDate(hovered.time))}
+          </span>
+        ) : null}
       </div>
-      {compareRow}
+      {compareRow ? <div className={hovered ? 'invisible' : undefined}>{compareRow}</div> : null}
     </div>
   )
 
-  // No sparkline → stack value + delta from the top. With a sparkline → value +
-  // delta on top and the area chart anchored to the bottom, filling the tile.
   if (!showSparkline) {
     return <div className="flex h-full min-h-0 flex-col justify-center">{summary}</div>
   }
@@ -160,64 +178,55 @@ export const KpiTile = ({
   return (
     <div className="flex h-full min-h-0 flex-col">
       {summary}
-      <div className={`mt-3 min-h-0 flex-1 ${sparkColor}`}>
-        <Sparkline points={sparkPoints} />
+      <div aria-hidden className={`mt-3 min-h-0 flex-1 ${sparkColor}`}>
+        <Sparkline points={sparkPoints} {...(readout ? hover.sparklineProps : undefined)} />
       </div>
     </div>
   )
 }
 
-// Area sparkline: a soft gradient fill (trend color → transparent) under a
-// constant-width line. preserveAspectRatio="none" lets it stretch to the tile
-// width; vectorEffect keeps the stroke crisp despite the non-uniform scale.
-// Exported so the traffic stat cards render the identical sparkline.
-//
-// baseline='min' scales to the data's own range (default; emphasizes shape). baseline='zero'
-// anchors the floor at 0 so a near-constant metric reads as flat rather than having its noise
-// amplified to full height; the traffic stat cards use this to match the 0-based main chart.
+// baseline='min' scales to the data's own range, emphasizing shape. baseline='zero' floors it at 0 so a near-constant
+// metric reads flat instead of amplifying its noise; the traffic cards use it to match their 0-based main chart.
 export const Sparkline = ({
   points,
   baseline = 'min',
   strokeWidth = 1.75,
+  hoverIndex,
+  onHoverChange,
 }: {
   points: { value: number }[]
   baseline?: 'min' | 'zero'
   strokeWidth?: number
+  hoverIndex?: number | null
+  onHoverChange?: (index: number | null, datum: unknown) => void
 }) => {
-  const gradientId = `spark-${useId().replace(/:/g, '')}`
-  const values = points.map(p => p.value)
-  const max = Math.max(...values)
-  const min = baseline === 'zero' ? Math.min(0, ...values) : Math.min(...values)
-  const range = max - min || 1
-  const w = 100
-  const h = 32
-  const coords = values.map((value, i) => {
-    const x = (i / Math.max(1, values.length - 1)) * w
-    const y = h - ((value - min) / range) * h
-    return `${x.toFixed(2)},${y.toFixed(2)}`
-  })
-  const linePath = coords.map((point, i) => `${i === 0 ? 'M' : 'L'}${point}`).join(' ')
-  const areaPath = `${linePath} L${w},${h} L0,${h} Z`
+  // An svg unmounted under the pointer never gets its pointerleave, so the caller's hover would outlive it.
+  useEffect(() => () => onHoverChange?.(null, null), [onHoverChange])
+  const floor = baseline === 'zero' ? 0 : undefined
+  // The vendored domain centers a flat series, which would float an all-zero window off the floor.
+  const ceiling = points.every(p => p.value === 0) ? 1 : undefined
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full" aria-hidden>
-      <title>Recent trend</title>
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="currentColor" stopOpacity={0.22} />
-          <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={areaPath} fill={`url(#${gradientId})`} />
-      <path
-        d={linePath}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+    <ParentSize>
+      {({ width, height }) => (
+        <AreaSparkline
+          data={points}
+          dataKey="value"
+          width={width}
+          height={height}
+          color="currentColor"
+          strokeWidth={strokeWidth}
+          fillOpacity={0.22}
+          padding={0}
+          yDomain={[floor, ceiling]}
+          crosshair="gradient"
+          // Edge to edge, so a dot on the first, last or lowest bucket would be cut in half by the tile.
+          dot={false}
+          interactive={onHoverChange !== undefined}
+          hoverIndex={hoverIndex}
+          onHoverChange={onHoverChange}
+        />
+      )}
+    </ParentSize>
   )
 }

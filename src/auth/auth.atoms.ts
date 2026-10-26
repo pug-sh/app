@@ -62,7 +62,7 @@ export const authProvidersAtom = atom(async get => (await get(authConfigAtom))?.
 // A write atom, so a reload doesn't suspend the page.
 export const reloadAuthConfigAtom = atom(null, loadAuthConfig)
 
-// Build-time gate for the sign-in page's "Explore the live demo" link — not the in-app banner,
+// Build-time gate for the sign-in page's "Explore the live demo" link, not the in-app banner,
 // which follows the active demo session (see isDemoSessionAtom).
 export const demoEnabledAtom = atom(() => isDemoEnabled())
 
@@ -92,7 +92,7 @@ export type Me = Pick<GetMeResponse, 'customerId' | 'email' | 'emailVerified'>
 type MeStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 // Current signed-in customer. email is NOT in the JWT, so it must come from GetMe. Keyed by customer
-// (the projectsOrgIdAtom pattern) so a switch invalidates both without anyone remembering to — a
+// (the projectsOrgIdAtom pattern) so a switch invalidates both without anyone remembering to; a
 // teardown back to the *same* customer still needs the explicit clear.
 const meResultAtom = atom<Me | null>(null)
 const meStatusRawAtom = atom<MeStatus>('idle')
@@ -110,28 +110,27 @@ const clearMe = (set: Setter) => {
 }
 
 // How the session was obtained. Threaded in rather than inferred so every path that mints a
-// session has to say which it is — a new one is a type error until it answers.
+// session has to say which it is: a new one is a type error until it answers.
 export type SignInMethod = 'password' | 'magic_link' | 'oidc' | 'demo'
 
-// Applies a freshly issued session token pair — password sign-in, magic link, OIDC, and the demo
+// Applies a freshly issued session token pair: password sign-in, magic link, OIDC, and the demo
 // all funnel here. The token alone decides identity (the server ignores any caller session). Always
-// clear the me state — email isn't in the JWT and must be refetched for the new identity.
+// clear the me state: email isn't in the JWT and must be refetched for the new identity.
 //
-// Does NOT reset the workspace when the new token names a different account: WorkspaceBootstrap
-// watches customerIdAtom and does it for every switch, in-tab and cross-tab alike (see App.tsx).
-// Doing it here too only moved the same reset one render earlier, and nothing is mounted in that
-// render to care — every path that can reach here with a live session is on /magic-link or /demo,
-// which render standalone, and AnalyticsIdentity already resets its own identity on the switch.
+// An account switch resets the workspace in this same pass: sign-in pages navigate into the app in the
+// same tick, and a workspace left standing sends the new account to the old one's project.
 const applySessionAtom = atom(
   null,
-  (_get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
+  (get, set, { token, refreshToken, method }: { token: string; refreshToken: string; method: SignInMethod }) => {
+    const prior = get(customerIdAtom)
     set(jwtAtom, token)
     set(refreshTokenAtom, refreshToken)
+    if (prior && prior !== get(customerIdAtom)) set(resetWorkspaceAtom)
     clearMe(set)
     // The demo marker is derived from the method and written in the same pass as the token, so a
     // real login clears a prior demo's banner and a demo login sets it. Deriving it (rather than
     // clearing here and letting demoSignInAtom set it true afterwards) removes the window where a
-    // demo JWT is live while this still reads false — analytics identity keys off this flag, and
+    // demo JWT is live while this still reads false: analytics identity keys off this flag, and
     // identifying the shared demo account would fuse every demo visitor into one profile.
     set(isDemoSessionAtom, method === 'demo')
     trackEvent('signin', { method })
@@ -154,7 +153,7 @@ export const fetchMeAtom = atom(null, async (get, set) => {
   const stale = () => get(customerIdAtom) !== customerId
 
   // Abandoning has to release the key, not just decline to write. 'loading' left standing under a
-  // customer nobody is fetching for is invisible — the reads below mask it — right up until the
+  // customer nobody is fetching for is invisible (the reads below mask it) right up until the
   // session returns to that customer, and then it unmasks as a state no one owns: too far along to
   // trigger a refetch, never far enough to open the identify gate. Only release what we still hold;
   // a newer call for another customer has its own 'loading' in there.
@@ -208,9 +207,7 @@ export const discoverSignInAtom = atom(null, async (get, _set, { email }: { emai
   }
 })
 
-// Magic-link sign-in or sign-up; session handling (token pair, me state reset, demo marker) is
-// delegated to applySessionAtom. The workspace reset is not its job — WorkspaceBootstrap watches
-// customerIdAtom and rebuilds on a switch (see App.tsx).
+// Magic-link sign-in or sign-up; applySessionAtom handles the session.
 export const completeMagicLinkAtom = atom(null, async (get, set, { token }: { token: string }): Promise<AuthResult> => {
   const authRPC = get(authRPCAtom)
   try {
@@ -302,29 +299,27 @@ export const completeOIDCAtom = atom(
 )
 
 // Credential-less sign-in for the public read-only demo viewer (snoop@pug.sh). The minted token is
-// an ordinary viewer JWT — the role is never in the JWT (by design); viewer mode follows from the
+// an ordinary viewer JWT (the role is never in the JWT, by design); viewer mode follows from the
 // account's ORG_ROLE_VIEWER membership, which WorkspaceBootstrap loads into activeOrgAtom and
 // currentRoleAtom reads, flipping useCan() read-only. We deliberately ignore the response's
 // projectId rather than pinning it as x-project-id: correctness instead relies on the demo account
 // being seeded with exactly one project, so WorkspaceBootstrap's default pick (projects[0]) is it.
-// The frontend does no ordering of its own — revisit (pin projectId) if the demo account ever gains
+// The frontend does no ordering of its own: revisit (pin projectId) if the demo account ever gains
 // a second project, or it could scope the demo to the wrong data.
 export const demoSignInAtom = atom(null, async (get, set): Promise<AuthResult> => {
   const authRPC = get(authRPCAtom)
   try {
     const resp = await authRPC.demoSignIn({})
-    // method: 'demo' is what sets isDemoSessionAtom — see applySessionAtom.
+    // method: 'demo' is what sets isDemoSessionAtom (see applySessionAtom).
     set(applySessionAtom, { token: resp.token, refreshToken: resp.refreshToken, method: 'demo' })
     return { ok: true }
   } catch (error) {
-    // Unavailable = PUG_DEMO_ENABLED off or the demo account isn't seeded — expected, not a bug, so
-    // don't log it. Anything else (Internal, PermissionDenied, ResourceExhausted, or a non-Connect
-    // JS error) is unexpected; log it before the generic copy, or a "demo is down" incident leaves
-    // no frontend trace at all.
+    // Unavailable is the server's demo switch (PUG_DEMO_ENABLED off, or no demo account), but a proxy's 502/503
+    // arrives as that code too, so every failure is logged.
+    console.error('demoSignIn failed', connectDetail(error))
     if (error instanceof ConnectError && error.code === Code.Unavailable) {
       return { ok: false, error: "The live demo isn't available right now." }
     }
-    console.error('demoSignIn failed', connectDetail(error))
     return { ok: false, error: 'Could not start the demo. Please try again.' }
   }
 })
@@ -349,7 +344,7 @@ export const signOutAtom = atom(null, async (get, set) => {
       await get(authRPCAtom).signOut({ refreshToken })
     } catch (err) {
       // Local sign-out still proceeds below, but a failed server revoke means the
-      // refresh-token family may stay live — make that observable rather than
+      // refresh-token family may stay live; make that observable rather than
       // silently dropping it (matters most on a shared machine).
       console.error('signOut server revocation failed', err)
       if (err instanceof ConnectError && err.code !== Code.Unauthenticated) {
@@ -363,7 +358,7 @@ export const signOutAtom = atom(null, async (get, set) => {
   set(isDemoSessionAtom, false)
   set(ssoBlockAtom, null)
   set(resetWorkspaceAtom)
-  // Only matters when the next account lands on the SAME org — a shared workspace, which is exactly
+  // Only matters when the next account lands on the SAME org: a shared workspace, which is exactly
   // when leaving the previous person's numbers on screen would be worst.
   set(resetBillingAtom)
 })

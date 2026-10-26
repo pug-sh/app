@@ -15,22 +15,23 @@ const renderRow = (distinctId: string) =>
     </table>,
   )
 
+const hrefOf = (text: string) => screen.getByText(text).closest('a')?.getAttribute('href')
+
 describe('cookieless ids in the events table', () => {
   it('links both ids for a visitor that resolves to a profile', () => {
     renderRow('user_42')
-    expect(screen.getByText('user_42').tagName).toBe('A')
-    expect(screen.getByText('0af31c9e').tagName).toBe('A')
+    expect(hrefOf('user_42')).toBe('/profiles/user_42/events')
+    expect(hrefOf('0af31c9e')).toBe(`/profiles/user_42/sessions/${SESSION_ID}`)
   })
 
-  it('drops the profile link for a cookieless visitor', () => {
+  it('links a cookieless visitor to its visitor page', () => {
     renderRow('cookieless-9f21c0de')
-    expect(screen.getByText('cookieless-9f21c0de').tagName).not.toBe('A')
+    expect(hrefOf('cookieless-9f21c0de')).toBe('/profiles/cookieless-9f21c0de/events')
+    expect(screen.getByText('cookieless-9f21c0de').getAttribute('title')).toContain('Cookieless visitor')
   })
 
-  // The non-obvious half: the session route renders inside ProfileShell, so it dead-ends on the
-  // same missing profile the distinct-id link does.
-  it('drops the session link too', () => {
+  it("links a cookieless visitor's session", () => {
     renderRow('cookieless-9f21c0de')
-    expect(screen.getByText('0af31c9e').tagName).not.toBe('A')
+    expect(hrefOf('0af31c9e')).toBe(`/profiles/cookieless-9f21c0de/sessions/${SESSION_ID}`)
   })
 })

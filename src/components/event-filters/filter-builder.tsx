@@ -115,7 +115,7 @@ export const FilterBuilder = ({
     setVals(prev => (prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]))
   }
 
-  const addMultiValues = (input: string) => setVals(prev => mergeUniqueValues(prev, input))
+  const addMultiValues = (values: string[]) => setVals(prev => mergeUniqueValues(prev, values))
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
@@ -203,6 +203,7 @@ export const FilterBuilder = ({
 
         {step === 'value' && valueMode === 'userId' && (
           <SingleValueEditor
+            property=""
             value={val}
             onChange={setVal}
             onCommit={commitFilter}
@@ -226,6 +227,7 @@ export const FilterBuilder = ({
 
         {step === 'value' && valueMode === 'property' && opMeta?.arity === 'list' && (
           <MultiValueEditor
+            property={prop}
             values={vals}
             onAdd={addMultiValues}
             onRemove={v => setVals(prev => prev.filter(x => x !== v))}
@@ -239,6 +241,7 @@ export const FilterBuilder = ({
 
         {step === 'value' && valueMode === 'property' && opMeta?.arity === undefined && (
           <SingleValueEditor
+            property={prop}
             value={val}
             onChange={setVal}
             onCommit={commitFilter}

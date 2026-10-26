@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { formatRelative } from '@/hooks/use-relative-time'
 import { deviceModelOf } from '@/lib/auto-properties'
-import { isCookielessId } from '@/lib/cookieless'
 import { getSeriesColor } from '@/lib/event-colors'
 import { structGet } from '@/lib/struct'
 import { formatDateTime } from '@/lib/timestamp'
@@ -132,7 +131,7 @@ const LiveVisitorsPage = () => {
     })
   }, [syncScrollCue])
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), [])
-  // The deps catch content changes; the observer catches the box itself — the cap swapping at md,
+  // The deps catch content changes; the observer catches the box itself: the cap swapping at md,
   // and on a short viewport the browser's chrome moving 100dvh.
   useEffect(() => {
     syncScrollCue()
@@ -170,7 +169,7 @@ const LiveVisitorsPage = () => {
   }, [selectedVisitor])
   const selectedLeft = selectedDistinctId !== null && !selectedVisitor
 
-  // Minimized, the panel peeks at the top of the feed — whoever is pinned, then the most recent
+  // Minimized, the panel peeks at the top of the feed: whoever is pinned, then the most recent
   // activity. Not the hovered marker: that already opens the popover, and following it would strobe.
   // The pin leads even when the filters exclude it, the same way the focus bar outlives the window.
   const minimizedVisitors = useMemo(() => {
@@ -184,11 +183,7 @@ const LiveVisitorsPage = () => {
   if (!project) return <NoProject title="Live" icon={Radio} />
 
   const focus = selectedVisitor ? describeEvent(selectedVisitor) : selectedSnapshot.current
-  // Project-scoped profile route for the map popover's "View profile" link. Built here in the
-  // React tree because each marker renders in a detached root with no router/project context.
-  // Undefined swaps the popover's "View profile" footer for a no-profile note (map-popover.tsx).
-  const profileHref = (distinctId: string) =>
-    isCookielessId(distinctId) ? undefined : `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
+  const profileHref = (distinctId: string) => `/p/${project.id}/profiles/${encodeURIComponent(distinctId)}`
 
   // The map is already up by now, so the pre-first-response state is an overlay on it.
   const renderFirstLoad = () => {
@@ -209,7 +204,7 @@ const LiveVisitorsPage = () => {
     )
   }
 
-  // Nothing to list — either the window is genuinely quiet, or the filters ate it.
+  // Nothing to list: either the window is genuinely quiet, or the filters ate it.
   const renderEmptyList = () => {
     if (allVisitors.length === 0) {
       return (
@@ -259,7 +254,7 @@ const LiveVisitorsPage = () => {
             ref={panelRef}
             className="absolute bottom-4 left-4 z-10 flex max-h-[min(22rem,calc(100dvh-9rem))] w-[26rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl bg-background/80 shadow-lg ring-1 ring-border/40 backdrop-blur-md md:max-h-[min(34rem,calc(100dvh-9rem))]"
           >
-            {/* Live count + freshness — the single source of "is this still ticking" */}
+            {/* Live count + freshness: the single source of "is this still ticking" */}
             <div className="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
               <div className="flex min-w-0 items-center gap-2">
                 <LiveDot />
@@ -268,7 +263,7 @@ const LiveVisitorsPage = () => {
                   {hasActiveFilters && allVisitors.length !== filtered.length && (
                     <span className="text-xs tabular-nums text-faint">of {allVisitors.length}</span>
                   )}
-                  {/* Minimized, the chips below take over this label's job — and say it better, since
+                  {/* Minimized, the chips below take over this label's job, and say it better, since
                         "live now" and a 15m window disagree about what "now" means. */}
                   {!collapsed && <span className="text-sm text-muted-foreground">live now</span>}
                 </span>
@@ -303,7 +298,7 @@ const LiveVisitorsPage = () => {
 
             {/* Journey withheld on purpose: a minimized panel that unfolds when one of its rows
                   happens to be the pinned one isn't minimized. Dropped entirely below md, where the
-                  peek covers the map it annotates — collapsed there is the header alone. */}
+                  peek covers the map it annotates; collapsed there is the header alone. */}
             {collapsed && minimizedVisitors.length > 0 && (
               <ul className="hidden space-y-0.5 px-2 pb-2 md:block">
                 {minimizedVisitors.map(visitor => (
@@ -371,7 +366,7 @@ const LiveVisitorsPage = () => {
 
                 {filtered.length > 0 && (
                   <>
-                    {/* The ul has to stay the flex child — a wrapper broke the min-h-0/flex-1 chain
+                    {/* The ul has to stay the flex child: a wrapper broke the min-h-0/flex-1 chain
                         and collapsed it. */}
                     <ul
                       ref={listRef}

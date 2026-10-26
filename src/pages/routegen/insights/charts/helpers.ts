@@ -54,8 +54,8 @@ export const spansMultipleDays = (dates: readonly Date[], timeZone?: string): bo
   return dates.some(d => fmtDay(d, timeZone) !== day)
 }
 
-// withDay is required once the window crosses a day: the vendored axis treats a tick's label as its
-// identity and drops repeats, so a bare "16:00" at both ends collapses the layout onto the first buckets.
+// withDay is required once the window crosses a day: the vendored axis drops a tick whose label it has
+// already drawn, so a bare "16:00" at both ends loses the last one.
 export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: string, withDay = false): string => {
   if (granularity === Granularity.HOUR) {
     const clock = fmtInZone(d, timeZone, { hour: '2-digit', minute: '2-digit', hour12: false })
@@ -126,3 +126,6 @@ export const formatTooltipDate = (d: Date, granularity: Granularity, timeZone?: 
   // Wrapped too: fmtDay appends the year outside the current one, and "Dec 15, 2025" is three tokens.
   return asTickerLabel(fmtDay(d, timeZone))
 }
+
+export const formatTooltipTitle = (d: Date, timeZone?: string) =>
+  fmtInZone(d, timeZone, { weekday: 'short', month: 'short', day: 'numeric' })

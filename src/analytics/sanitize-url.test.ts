@@ -20,6 +20,24 @@ describe('maskEventUrls', () => {
     expect(masked.autoProperties.$referrer).toBe('https://app.pug.sh/shared/:shareId')
   })
 
+  it('masks path IDs under a /p/:projectId prefix', () => {
+    const masked = maskEventUrls(
+      event({
+        $url: 'https://app.pug.sh/p/42/profiles/jane@example.com/sessions/01J2',
+        $referrer: 'https://app.pug.sh/p/42/dashboards/d1',
+      }),
+    )
+
+    expect(masked.autoProperties.$url).toBe('https://app.pug.sh/p/42/profiles/:profileId/sessions/:sessionId')
+    expect(masked.autoProperties.$referrer).toBe('https://app.pug.sh/p/42/dashboards/:dashboardId')
+  })
+
+  it('keeps /dashboards/new under a /p/:projectId prefix', () => {
+    const masked = maskEventUrls(event({ $url: 'https://app.pug.sh/p/42/dashboards/new', $referrer: '' }))
+
+    expect(masked.autoProperties.$url).toBe('https://app.pug.sh/p/42/dashboards/new')
+  })
+
   it('masks the SSO connection an OAuth callback returns to, and drops the code it carries', () => {
     const masked = maskEventUrls(
       event({ $url: 'https://app.pug.sh/oauth/callback/d3uqa6s1m7j9b2c4e5f0?code=live&state=s', $referrer: '' }),
@@ -28,7 +46,7 @@ describe('maskEventUrls', () => {
     expect(masked.autoProperties.$url).toBe('https://app.pug.sh/oauth/callback/:connectionId')
   })
 
-  // A direct visit reports '' — resolving that against the origin would report the landing page as
+  // A direct visit reports ''; resolving that against the origin would report the landing page as
   // its own referrer, i.e. invent a navigation that never happened.
   it('leaves a referrer-less page view empty', () => {
     expect(maskEventUrls(event({ $url: 'https://app.pug.sh/overview', $referrer: '' })).autoProperties.$referrer).toBe(
@@ -52,7 +70,7 @@ describe('maskEventUrls', () => {
   })
 
   // `form.action` reflects raw attribute text when the browser can't parse it, so this is reachable
-  // — and a throw here costs the whole event, not just the one URL.
+  // and a throw here costs the whole event, not just the one URL.
   it('blanks a URL too malformed to parse', () => {
     const masked = maskEventUrls(
       event({ $url: 'http://[', $referrer: 'https://%' }, { action: 'http://a b' }, 'form_submit'),

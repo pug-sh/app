@@ -12,12 +12,17 @@ const PLATE_QUERY = `<style>
 </style>
 `
 
+// Imported only by lazy routes, so they load with those routes rather than in vendor-misc on first paint.
+const ROUTE_ONLY_PACKAGES =
+  /\/node_modules\/(react-grid-layout|react-draggable|react-resizable|react-hook-form|@hookform\/resolvers|oidc-client-ts|sugar-high)\//
+
 const faviconFromLogo = (): Plugin => {
   const render = () => {
-    const logo = readFileSync(path.resolve(__dirname, 'public/logo.svg'), 'utf8')
+    const logo = readFileSync(path.resolve(import.meta.dirname, 'public/logo.svg'), 'utf8')
     const faviconSvg = logo.replace(/<rect\b[^>]*\bid="badge-plate"/, match => `${PLATE_QUERY}${match}`)
     // Fail loudly: a renamed id would otherwise ship a favicon that keeps the plate on light.
-    if (faviconSvg === logo) throw new Error('logo.svg has no #badge-plate rect — favicon plate query would not apply')
+    if (faviconSvg === logo)
+      throw new Error('logo.svg has no #badge-plate rect, so the favicon plate query would not apply')
     return faviconSvg
   }
 
@@ -44,7 +49,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   build: {
@@ -67,14 +72,14 @@ export default defineConfig({
           // Dynamically imported by checkout.ts alone; in vendor-misc every visitor pays for it
           // on first paint.
           if (id.includes('/dodopayments-checkout/')) return 'vendor-checkout'
-          // Own chunk so ~120KB of artwork caches separately. The eagerly-imported ProfileShell
-          // still pulls it onto every authenticated route; sign-in and the share page escape it.
+          // Own chunk so ~120KB of artwork caches separately.
           if (id.includes('/@dicebear/')) return 'vendor-avatars'
           if (id.includes('/lucide-react/')) return 'vendor-icons'
           if (id.includes('/@base-ui/')) return 'vendor-base-ui'
           if (id.includes('/tailwind-merge/') || id.includes('/class-variance-authority/') || id.includes('/clsx/')) {
             return 'vendor-style-utils'
           }
+          if (ROUTE_ONLY_PACKAGES.test(id)) return
 
           return 'vendor-misc'
         },

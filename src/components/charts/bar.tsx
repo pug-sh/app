@@ -6,11 +6,17 @@ import { motion } from "motion/react";
 import { memo, useId, useMemo } from "react";
 import { barDepthAndRise, barDepthMaxDepth } from "./bar-depth-geometry";
 import {
+  type BarValueLabelOrientation,
+  type BarValueLabelPosition,
+  getBarValueLabelLayout,
+} from "./bar-value-label-layout";
+import {
   chartCssVars,
   useChart,
   useChartStable,
   useYScale,
 } from "./chart-context";
+import { valueLabelFmt } from "./chart-formatters";
 import { useChartLegendHover } from "./chart-legend-hover";
 import { transitionWithDelay } from "./motion-utils";
 
@@ -83,6 +89,19 @@ export interface BarProps {
    * zero-value bars so they stay visible. Pair with the same value on
    * `<BarDepthProvider minBarHeight>` when using the 3D surfaces. Default: 0 */
   minBarHeight?: number;
+  /** Show the formatted value inside each bar when it fits. Default: false. */
+  showValue?: boolean;
+  /** Format values displayed inside bars. Defaults to English integers. */
+  valueLabelFormatter?: (value: number) => string;
+  /** Text color for values displayed inside bars. Default: white. */
+  valueLabelColor?: string;
+  /** Label text direction. `auto` uses horizontal text, then rotates if needed. */
+  valueLabelOrientation?: BarValueLabelOrientation;
+  /** Position of the label inside the bar. On horizontal bars `"top"` is the
+   * value end (right) and `"bottom"` the base (left). Default: center. */
+  valueLabelPosition?: BarValueLabelPosition;
+  /** Optional class for value labels. */
+  valueLabelClassName?: string;
 }
 
 interface BarInnerProps extends BarProps {
@@ -102,12 +121,20 @@ interface AnimatedBarProps {
   index: number;
   isFaded: boolean;
   animationType: BarAnimationType;
-  innerHeight: number;
   fadedOpacity: number;
   staggerDelay: number;
   enterTransition?: Transition;
   revealEpoch: number;
   isHorizontal: boolean;
+  /** Value-axis position the grow animation starts from (the zero line for
+   * non-stacked bars, the segment start for horizontal stacked bars). */
+  growOrigin: number;
+  valueLabel?: string;
+  valueLabelColor: string;
+  labelX: number;
+  labelY: number;
+  labelTransform?: string;
+  valueLabelClassName?: string;
 }
 
 function AnimatedBar({
@@ -121,41 +148,68 @@ function AnimatedBar({
   index,
   isFaded,
   animationType,
-  innerHeight,
   fadedOpacity,
   staggerDelay,
   enterTransition,
   revealEpoch,
   isHorizontal,
+  growOrigin,
+  valueLabel,
+  valueLabelColor,
+  labelX,
+  labelY,
+  labelTransform,
+  valueLabelClassName,
 }: AnimatedBarProps) {
   const enterAnim = transitionWithDelay(enterTransition, index * staggerDelay);
+  const label = valueLabel ? (
+    <motion.text
+      animate={{ opacity: isFaded ? fadedOpacity : 1 }}
+      className={valueLabelClassName}
+      dominantBaseline="middle"
+      fill={valueLabelColor}
+      fontSize={12}
+      fontWeight={600}
+      initial={{ opacity: 0 }}
+      textAnchor="middle"
+      transform={labelTransform}
+      transition={enterAnim}
+      x={labelX}
+      y={labelY}
+    >
+      {valueLabel}
+    </motion.text>
+  ) : null;
 
   if (animationType === "fade") {
     return (
-      <motion.rect
-        animate={{
-          opacity: isFaded ? fadedOpacity : 1,
-          filter: "blur(0px)",
-        }}
-        fill={fill}
-        height={height}
-        initial={{ opacity: 0, filter: "blur(2px)" }}
-        key={`fade-${index}-${revealEpoch}`}
-        rx={rx}
-        ry={ry}
-        transition={enterAnim}
-        width={width}
-        x={x}
-        y={y}
-      />
+      <g>
+        <motion.rect
+          animate={{
+            opacity: isFaded ? fadedOpacity : 1,
+            filter: "blur(0px)",
+          }}
+          fill={fill}
+          height={height}
+          initial={{ opacity: 0, filter: "blur(2px)" }}
+          key={`fade-${index}-${revealEpoch}`}
+          rx={rx}
+          ry={ry}
+          transition={enterAnim}
+          width={width}
+          x={x}
+          y={y}
+        />
+        {label}
+      </g>
     );
   }
 
   const initial = isHorizontal
-    ? { width: 0, height, x: 0, y }
-    : { width, height: 0, x, y: innerHeight };
+    ? { width: 0, height, x: growOrigin, y }
+    : { width, height: 0, x, y: growOrigin };
   const target = isHorizontal
-    ? { width, height, x: 0, y }
+    ? { width, height, x, y }
     : { width, height, x, y };
 
   return (
@@ -172,6 +226,7 @@ function AnimatedBar({
         ry={ry}
         transition={enterAnim}
       />
+      {label}
     </g>
   );
 }
@@ -189,6 +244,12 @@ const BarInner = memo(function BarInner({
   groupGap = 4,
   perspective = false,
   minBarHeight = 0,
+  showValue = false,
+  valueLabelFormatter = valueLabelFmt,
+  valueLabelColor = "white",
+  valueLabelOrientation = "auto",
+  valueLabelPosition = "center",
+  valueLabelClassName,
   barScale,
   bandWidth,
   barXAccessor,
@@ -283,6 +344,8 @@ const BarInner = memo(function BarInner({
         let barW: number;
 
         const scale = isHorizontal ? chartYScale : valueScale;
+        const zeroX = isHorizontal ? (scale(0) ?? 0) : 0;
+        const zeroY = isHorizontal ? 0 : (scale(0) ?? innerHeight);
 
         if (isHorizontal) {
           // Horizontal bars: category on y-axis, value on x-axis
@@ -293,7 +356,9 @@ const BarInner = memo(function BarInner({
           if (stacked && stackOffsets) {
             const offset = stackOffsets.get(i)?.get(dataKey) ?? 0;
             x = scale(offset) ?? 0;
-            barW = valuePos - x;
+            // Segment spans [offset, offset + value]; `valuePos` is the
+            // position of `value` alone, so it is not this segment's end.
+            barW = (scale(offset + value) ?? 0) - x;
             // Apply stack gap for horizontal: shift right and reduce width
             const gapOffset = seriesIndex * stackGap;
             x += gapOffset;
@@ -301,7 +366,10 @@ const BarInner = memo(function BarInner({
               barW = Math.max(0, barW - stackGap);
             }
           } else {
-            x = 0;
+            // Grow from the zero line in either direction (zeroX is 0 for
+            // non-negative data).
+            x = Math.min(valuePos, zeroX);
+            barW = Math.abs(valuePos - zeroX);
             // For grouped bars, offset y position
             const effectiveGroupGap = seriesCount > 1 ? groupGap : 0;
             y = bandPos + seriesIndex * (barWidth + effectiveGroupGap);
@@ -312,8 +380,10 @@ const BarInner = memo(function BarInner({
               seriesIndex * (barWidth + (seriesCount > 1 ? groupGap : 0));
         } else {
           // Vertical bars: category on x-axis, value on y-axis
+          // Measure from the zero line (not the plot floor) so negative
+          // values grow downward. For non-negative data zeroY === innerHeight.
           const valuePos = scale(value) ?? 0;
-          barHeight = innerHeight - valuePos;
+          barHeight = Math.abs(zeroY - valuePos);
           barW = barWidth;
 
           if (stacked && stackOffsets) {
@@ -327,7 +397,7 @@ const BarInner = memo(function BarInner({
               barHeight = Math.max(0, barHeight - stackGap);
             }
           } else {
-            y = valuePos;
+            y = Math.min(valuePos, zeroY);
             // For grouped bars, offset x position
             const effectiveGroupGap = seriesCount > 1 ? groupGap : 0;
             x = bandPos + seriesIndex * (barWidth + effectiveGroupGap);
@@ -339,9 +409,10 @@ const BarInner = memo(function BarInner({
 
           // Minimum visible height — floor short/zero non-stacked bars so a
           // zero-value data point still reads as a tiny bar instead of
-          // vanishing. Grows up from the baseline. Floored bars skip the
-          // perspective trim (sub-pixel on a 3px bar; keeps the front aligned
-          // with bar-depth, which also skips trim for floored bars).
+          // vanishing. Grows up from the zero line. Non-negative only, to
+          // match bar-depth's floor. Floored bars skip the perspective trim
+          // (sub-pixel on a 3px bar; keeps the front aligned with bar-depth,
+          // which also skips trim for floored bars).
           let isFloored = false;
           if (
             !stacked &&
@@ -349,9 +420,8 @@ const BarInner = memo(function BarInner({
             value >= 0 &&
             barHeight < minBarHeight
           ) {
-            const baselineY = scale(0) ?? innerHeight;
             barHeight = minBarHeight;
-            y = baselineY - minBarHeight;
+            y = zeroY - minBarHeight;
             isFloored = true;
           }
 
@@ -366,7 +436,6 @@ const BarInner = memo(function BarInner({
             !isFloored &&
             (!stacked || isLastSeries)
           ) {
-            const baselineY = scale(0) ?? innerHeight;
             const rise = barDepthPerspectiveRise(
               barScale,
               bandWidth,
@@ -374,7 +443,7 @@ const BarInner = memo(function BarInner({
               innerWidth,
               d,
               y,
-              baselineY
+              zeroY
             );
             const trim = Math.min(rise, Math.max(0, barHeight - 1));
             y += trim;
@@ -395,6 +464,27 @@ const BarInner = memo(function BarInner({
         const applyRounding = !stacked || stackGap > 0 || isLastSeries;
         const effectiveRx = applyRounding ? cornerRadius : 0;
         const effectiveRy = applyRounding ? cornerRadius : 0;
+        const valueLabel = showValue ? valueLabelFormatter(value) : "";
+        const labelWidth = valueLabel.length * 7.2;
+        const labelLayout = getBarValueLabelLayout({
+          x,
+          y,
+          width: barW,
+          height: barHeight,
+          labelWidth,
+          isHorizontal,
+          orientation: valueLabelOrientation,
+          position: valueLabelPosition,
+        });
+        const labelFits = showValue && labelLayout.fits;
+        const labelTransform = labelLayout.rotated
+          ? `rotate(-90 ${labelLayout.x} ${labelLayout.y})`
+          : undefined;
+
+        let growOrigin = zeroY;
+        if (isHorizontal) {
+          growOrigin = stacked ? x : zeroX;
+        }
 
         if (animate && !isLoaded) {
           return (
@@ -403,16 +493,22 @@ const BarInner = memo(function BarInner({
               enterTransition={enterTransition}
               fadedOpacity={fadedOpacity}
               fill={fill}
+              growOrigin={growOrigin}
               height={barHeight}
               index={i}
-              innerHeight={innerHeight}
               isFaded={isFaded}
               isHorizontal={isHorizontal}
               key={barKey}
+              labelTransform={labelTransform}
+              labelX={labelLayout.x}
+              labelY={labelLayout.y}
               revealEpoch={revealEpoch}
               rx={effectiveRx}
               ry={effectiveRy}
               staggerDelay={calculatedStaggerDelay}
+              valueLabel={labelFits ? valueLabel : undefined}
+              valueLabelClassName={valueLabelClassName}
+              valueLabelColor={valueLabelColor}
               width={barW}
               x={x}
               y={y}
@@ -422,21 +518,39 @@ const BarInner = memo(function BarInner({
 
         // Static bar after animation completes
         return (
-          <rect
-            fill={fill}
-            height={barHeight}
-            key={barKey}
-            opacity={isFaded ? fadedOpacity : 1}
-            rx={effectiveRx}
-            ry={effectiveRy}
-            style={{
-              cursor: "default",
-              transition: "opacity 0.15s ease-in-out",
-            }}
-            width={barW}
-            x={x}
-            y={y}
-          />
+          <g key={barKey}>
+            <rect
+              fill={fill}
+              height={barHeight}
+              opacity={isFaded ? fadedOpacity : 1}
+              rx={effectiveRx}
+              ry={effectiveRy}
+              style={{
+                cursor: "default",
+                transition: "opacity 0.15s ease-in-out",
+              }}
+              width={barW}
+              x={x}
+              y={y}
+            />
+            {labelFits ? (
+              <text
+                className={valueLabelClassName}
+                dominantBaseline="middle"
+                fill={valueLabelColor}
+                fontSize={12}
+                fontWeight={600}
+                opacity={isFaded ? fadedOpacity : 1}
+                style={{ transition: "opacity 0.15s ease-in-out" }}
+                textAnchor="middle"
+                transform={labelTransform}
+                x={labelLayout.x}
+                y={labelLayout.y}
+              >
+                {valueLabel}
+              </text>
+            ) : null}
+          </g>
         );
       })}
     </g>

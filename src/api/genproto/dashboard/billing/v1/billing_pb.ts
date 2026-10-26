@@ -194,8 +194,10 @@ export type GetBillingStatusResponse = Message<"dashboard.billing.v1.GetBillingS
   purchasable: boolean;
 
   /**
-   * Days of event history the plan promises. ABSENT means NO BOUND and is never
-   * zero. Nothing in pug deletes on this number today.
+   * Days of event history this org keeps: its own override, else its plan's or
+   * free's with billing on, or the deployment's default with it off. ABSENT means
+   * NO BOUND and is never zero. A length, not what has been deleted: deletes on it
+   * are off by default and lag it when on.
    *
    * @generated from field: google.protobuf.Int64Value retention_days = 13;
    */

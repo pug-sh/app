@@ -16,7 +16,7 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
-import { COUNTRY_PROPERTY } from './activity-map'
+import { COUNTRY_PROPERTY } from '@/lib/property-values'
 
 const validator = createValidator({ registry: createRegistry(file_common_v1_filters) })
 

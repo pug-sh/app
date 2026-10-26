@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useChartConfig } from '@/components/charts/chart-config-context'
 import ChartStableContext, {
+  ChartProvider,
   type ChartStableContextValue,
   useChartHover,
   useChartStable,
@@ -10,21 +11,18 @@ import ChartStableContext, {
 import { ChartTooltip as VendoredTooltip } from '@/components/charts/tooltip'
 import type { ChartTooltipProps } from '@/components/charts/tooltip/chart-tooltip'
 import { DateTicker } from '@/components/charts/tooltip/date-ticker'
+import { TooltipContent } from '@/components/charts/tooltip/tooltip-content'
 import { XAxis as VendoredXAxis, type XAxisProps } from '@/components/charts/x-axis'
-import { PAD_ROW_KEY } from './common'
+import { edgeBucketHover, PAD_ROW_KEY } from './common'
 import { AXIS_LABEL_PX_PER_CHAR, pickAxisTicks } from './helpers'
 
-// The vendored charts format x labels internally with a browser-local,
-// granularity-blind formatter and expose no prop for it. Bucket labels have to
-// render in the project's reporting zone to match the server's bucket
-// boundaries, and vary by granularity or every hour bucket reads "Jul 19".
-//
-// The labels reach the axis and the tooltip through `dateLabels` on the chart
-// context, so re-providing that context is a supported seam: no vendored file
-// is touched, and a re-add can't revert it. Both consumers are wrapped below;
-// each re-provides independently because they are siblings under the shell, which
-// is also what lets them carry different detail for the same bucket.
-export type DateLabelFormatters = { axis: (date: Date) => string; tooltip: (date: Date) => string }
+// Re-provides the context's dateLabels so buckets read in the reporting zone and by granularity. Not upstream's
+// label props: the axis needs the context anyway, for its clamped xScale and tick rows.
+export type DateLabelFormatters = {
+  axis: (date: Date) => string
+  tooltip: (date: Date) => string
+  title: (date: Date) => string
+}
 
 const FormatDateLabelContext = createContext<DateLabelFormatters | null>(null)
 
@@ -63,7 +61,7 @@ const keepLabelsInside = ({ xScale, dateLabels, innerWidth, margin }: ChartStabl
 // The axis is handed only the rows that get a tick, and asked for all of them, so its own layout
 // scorer never runs. The rest are holes rather than a shorter array: the axis skips a missing row,
 // and indices stay aligned with the hover state it reads them against.
-export function XAxis({ numTicks = 5, ...props }: XAxisProps) {
+export function XAxis({ numTicks = 5, ...props }: Omit<XAxisProps, 'labels' | 'numTicks'> & { numTicks?: number }) {
   const labelled = useDateLabelledContext('axis')
   const value = useMemo(() => {
     const xScale = keepLabelsInside(labelled)
@@ -85,9 +83,7 @@ export function XAxis({ numTicks = 5, ...props }: XAxisProps) {
   )
 }
 
-// The shell sorts children into layers by component name and "XAxis" is in its
-// clip-excluded set. Set explicitly because minification mangles the name, and
-// an unrecognised one puts the labels inside the series reveal clip.
+// The shell files "XAxis" with its own axes by name, and minification mangles the function's.
 XAxis.displayName = 'XAxis'
 
 // The hover date pill hardcodes its type and padding and exposes no size prop. Its 24px rows
@@ -116,9 +112,14 @@ export const pillScale = (width: number, height: number) => {
 export const PILL_SCALING =
   '[&_.overflow-hidden.rounded-full]:px-[calc(var(--pill-scale,1)*1rem)] [&_.overflow-hidden.rounded-full]:py-[calc((var(--pill-scale,1)_-_0.75)*1rem)] [&_.overflow-hidden.rounded-full_span]:text-[length:max(0.75rem,calc(var(--pill-scale,1)*0.875rem))]'
 
-export function ChartTooltip(props: ChartTooltipProps) {
+// Draws the box's content itself because upstream titles it browser-local, a day off the bucket's in some zones.
+export function ChartTooltip({ rows, children, ...props }: Omit<ChartTooltipProps, 'content' | 'dateLabels'>) {
+  const formatters = useContext(FormatDateLabelContext)
   const value = useDateLabelledContext('tooltip')
-  const { containerRef, width, height } = useChartStable()
+  const hover = useChartHover()
+  // Mapped here too: the bar chart's snap lands a commit late, after these springs would have started at the padding.
+  const tooltipData = edgeBucketHover(hover.tooltipData, value)
+  const { containerRef, width, height } = value
 
   // Reuses the chart's own measurement instead of observing the container again.
   useEffect(() => {
@@ -126,17 +127,24 @@ export function ChartTooltip(props: ChartTooltipProps) {
   }, [containerRef, width, height])
 
   return (
-    <ChartStableContext.Provider value={value}>
-      <VendoredTooltip {...props} showDatePill={false} />
+    <ChartProvider value={{ ...value, ...hover, tooltipData }}>
+      <VendoredTooltip
+        {...props}
+        content={({ point }) => (
+          <TooltipContent rows={rows?.(point) ?? []} title={formatters?.title(value.xAccessor(point))}>
+            {children}
+          </TooltipContent>
+        )}
+        rows={rows}
+        showDatePill={false}
+      />
       <DatePill />
-    </ChartStableContext.Provider>
+    </ChartProvider>
   )
 }
 
-ChartTooltip.displayName = 'ChartTooltip'
-
 // Upstream's pill centres on the hovered bucket and never clamps, so at either end of the chart the tile
-// clipped part of it. This is its tracker with the clamp added.
+// clipped part of it. This forks its tracker to add the clamp.
 function DatePill() {
   const { tooltipData } = useChartHover()
   const { dateLabels } = useChartStable()

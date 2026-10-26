@@ -19,6 +19,7 @@ export const CountryFlag = ({ code, className, size = 16 }: CountryFlagProps) =>
       src={twemojiFlagSrc(code)}
       alt=""
       aria-hidden
+      loading="lazy"
       draggable={false}
       onError={() => setFailed(true)}
       className={cn('inline-block shrink-0 saturate-[0.65] opacity-[0.85]', className)}
@@ -27,7 +28,7 @@ export const CountryFlag = ({ code, className, size = 16 }: CountryFlagProps) =>
   )
 }
 
-// Bespoke location tooltip: an inline spec line — city, region, then the country
+// Bespoke location tooltip: an inline spec line of city, region, then the country
 // carrying its flag (the flag sits with the country it represents, not the city).
 const LocationTooltip = ({ city, region, country }: { city?: string; region?: string; country?: string }) => {
   const countryName = country ? formatCountryName(country) : undefined

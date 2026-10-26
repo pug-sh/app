@@ -73,7 +73,7 @@ import { buildMapQuery, DEFAULT_MAP, mapIncompleteReason } from './map'
 import { MapControls } from './map-controls'
 import { buildTopKQuery, DEFAULT_TOP_K, topKIncompleteReason } from './top-k'
 import { TopKControls } from './top-k-controls'
-import { buildUserFlowQuery, isUserFlowConfigValid, userFlowIncompleteReason } from './user-flow'
+import { buildUserFlowQuery, isUserFlowConfigValid, userFlowIncompleteReason, userFlowNodeProperty } from './user-flow'
 import { UserFlowControls } from './user-flow-controls'
 
 const getInitialInsightType = (initialInsightType: InsightType | undefined) => {
@@ -161,7 +161,7 @@ const Insights = () => {
 
   // Keep range and granularity backend-valid: cap a range too wide for any granularity to the
   // supported max, then bump a too-fine granularity (e.g. Hour over 30 days) to the finest that
-  // still fits — both combinations would otherwise be rejected by the backend.
+  // still fits. Both combinations would otherwise be rejected by the backend.
   const handleTimeRangeChange = useCallback((range: TimeRange | undefined) => {
     const clamped = clampRange(range)
     setTimeRange(clamped)
@@ -277,7 +277,7 @@ const Insights = () => {
     retry,
   } = useDebouncedQuery(
     queryKey,
-    async () => {
+    async signal => {
       const globalFilters = toProtoFilters(propFilters)
       const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
       // Top-k and map specs carry no events/breakdowns (the backend rejects them); the scope
@@ -337,10 +337,10 @@ const Insights = () => {
           ),
           spec,
         },
-        { headers },
+        { headers, signal },
       )
       // One event per settled query: useDebouncedQuery re-runs this fn only when queryKey changes,
-      // and the 300ms debounce collapses keystrokes — so no dedup is needed here. Shape only, never
+      // and the 300ms debounce collapses keystrokes, so no dedup is needed here. Shape only, never
       // filter values: insightType/counts answer "what kinds of insights get run, how complex"
       // without carrying a customer's property values (which is why $url drops the query string).
       // Counts describe what was *sent*, not what the editor happens to be holding. User flow sends
@@ -397,7 +397,7 @@ const Insights = () => {
     (result.case === 'retention' || result.case === 'funnel') && result.value.series.length === 0
 
   useEffect(() => {
-    if (emptySeriesResult) console.warn('Empty series in result — expected at least one')
+    if (emptySeriesResult) console.warn('Empty series in result: expected at least one')
   }, [emptySeriesResult])
 
   // Chart and table data shaping.
@@ -446,7 +446,7 @@ const Insights = () => {
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
     // so color them by index for guaranteed distinctness. Coloring by the
     // "event · value" label instead made every split inherit the event's family
-    // hue — e.g. all page_view-by-$os bars came out blue. Without a breakdown,
+    // hue (e.g. all page_view-by-$os bars came out blue). Without a breakdown,
     // keep the event kind's semantic color.
     if (result.case === 'trends') {
       return trendSeries.map((s, i) =>
@@ -603,7 +603,7 @@ const Insights = () => {
                       Without a scope, all events participate.
                     </TooltipContent>
                   </Tooltip>
-                  <span>Event scope is optional — leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
+                  <span>Event scope is optional. Leave empty to {isMap ? 'map' : 'rank across'} all events.</span>
                 </div>
               )}
             </>
@@ -650,7 +650,7 @@ const Insights = () => {
         </div>
       </div>
 
-      {/* Same tile shell as the overview and dashboard tiles — the chart is the page's one
+      {/* Same tile shell as the overview and dashboard tiles: the chart is the page's one
           object, so it sits on the elevated surface rather than flush on the canvas. */}
       <div className="rounded-lg border border-border/60 bg-card p-4">
         <div ref={chartRef}>
@@ -677,11 +677,13 @@ const Insights = () => {
             retentionCohorts={retentionCohorts}
             funnelSeriesData={funnelSeriesData}
             userFlowResult={userFlowResult}
+            userFlowProperty={userFlowNodeProperty(userFlowConfig)}
             isMap={isMap}
             mapIncompleteReason={mapIncomplete}
             isTopK={isTopK}
             topKRows={topKRows}
             topKDimension={topK.dimension}
+            topKProperty={topK.property}
             topKMetric={topK.metric}
             topKOmitOthers={topK.omitOthers}
             topKIncompleteReason={topKIncomplete}

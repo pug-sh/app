@@ -19,7 +19,7 @@ import { SharedTileBody } from './routegen/dashboards/shared-tile-body'
 import { DashboardEmptyState } from './routegen/dashboards/tiles'
 
 // This route renders standalone, outside the <main> that carries the marker in App.tsx, and it is
-// entirely a customer's data — their dashboard, tile titles, and event names, shown to the public.
+// entirely a customer's data: their dashboard, tile titles, and event names, shown to the public.
 // It needs its own boundary or click capture would read all of it back out.
 const Shell = ({ children }: { children: ReactNode }) => (
   <div className="min-h-screen overflow-auto" data-pug-no-capture>
@@ -42,7 +42,7 @@ const SharedDashboard = () => {
 
   // Keep granularity and range within the backend's per-granularity caps so an
   // over-cap pair never reaches SharedDashboardsService.Query (mirrors the authed
-  // dashboard header — see src/lib/granularity.ts).
+  // dashboard header; see src/lib/granularity.ts).
   const handleTimeRangeChange = (range: TimeRange | undefined) => {
     const clamped = clampRange(range)
     setTimeRange(clamped)
@@ -62,8 +62,8 @@ const SharedDashboard = () => {
   const queryKey = stringifyQueryKey({ shareId, granularity, timeRange })
   const { data, error, loading } = useDebouncedQuery(
     queryKey,
-    async () => {
-      const resp = await sharedRPC.query(request)
+    async signal => {
+      const resp = await sharedRPC.query(request, { signal })
       return resp.dashboard ?? null
     },
     { enabled: !!shareId, debounceMs: 0 },

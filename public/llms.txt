@@ -1,0 +1,47 @@
+# Pug dashboard
+
+> The web app for Pug, open-source product analytics: insights, dashboards, user profiles and the raw event stream of a project. Every page is drawn in the browser after sign-in: fetched as plain HTML, any URL here returns the same empty shell.
+
+The same open-source app serves Pug Cloud at app.pug.sh, the live demo at demo.pug.sh, and self-hosted deployments on their own domains. The demo needs no account: every visitor is signed in as one shared read-only viewer, and Settings is hidden.
+
+To answer a question about a project's data, use the MCP server or the HTTP API with a private API key (`prv_`) instead of this app. On Pug Cloud the API is `https://api.pugs.dev` and the MCP server is `https://api.pugs.dev/mcp`; a self-hosted deployment serves both from its own API host. For what Pug is and what it costs, read https://pug.sh/llms.txt.
+
+Where things are, for pointing someone at a page:
+
+- `/p/<projectId>/overview`: a starter view auto-built from the project's events
+- `/p/<projectId>/live`: who is active right now, and what they just did
+- `/p/<projectId>/insights`: trends, funnels, retention, user flow, top K and map
+- `/p/<projectId>/dashboards`: saved dashboards of insight tiles and notes, each at `/p/<projectId>/dashboards/<dashboardId>`
+- `/p/<projectId>/profiles`: one profile per user, each at `/p/<projectId>/profiles/<profileId>` with its events, properties and sessions
+- `/p/<projectId>/events`: raw events across all users
+- `/p/<projectId>/members`: the organization's members and invitations
+- `/p/<projectId>/settings/general`: the project's name, timezone and default theme
+- `/p/<projectId>/settings/api-keys`: the project ID and its API keys
+- `/p/<projectId>/settings/sso`: verified domains and SSO
+- `/p/<projectId>/settings/usage`: event usage across the organization
+- `/p/<projectId>/settings/billing`: the plan and billed usage, on Pug Cloud
+- `/p/<projectId>/settings/organization`, `/p/<projectId>/settings/account` and `/p/<projectId>/settings/appearance`: your organizations, your email and password, and this browser's theme
+
+A page that takes no ID also opens without the prefix, in the member's current project, so `/settings/api-keys` is the link to give someone who does not know their project ID.
+
+When helping someone with this dashboard:
+
+1. Viewers can look but change nothing, members also create and edit insights and dashboards, and admins also manage members, projects, API keys, SSO and billing.
+2. A private key is shown once, when an admin creates it, and can never be shown again: if it is lost, create a new one and revoke the old. A public key (`pub_`) goes in client code; a private key never does, and never goes into chat.
+3. A `/magic-link?token=...` URL signs in whoever opens it. Never ask for one or repeat it.
+4. A `/shared/<shareId>` link shows a dashboard to anyone holding it, with no sign-in. Treat it like a password.
+
+## Docs
+
+- [Pug](https://pug.sh/llms.txt): What Pug is, what it costs, its SDKs, and how agents should work with it
+- [Documentation](https://docs.pug.sh/llms.txt): Every docs page, each also served as Markdown
+- [Core concepts](https://docs.pug.sh/get-started/concepts/index.md): Orgs, projects, events, profiles, sessions and insights
+- [Authentication](https://docs.pug.sh/get-started/authentication/index.md): Public keys, private keys and dashboard sign-in, and which credential reaches which service
+- [MCP server](https://docs.pug.sh/mcp/index.md): Twelve read-only analytics tools behind a private API key
+- [Insights API](https://docs.pug.sh/api/insights/index.md): The queries behind the Insights page, over HTTP with a private key
+- [Self-hosting the dashboard](https://docs.pug.sh/self-hosting/dashboard/index.md): Building this app and serving it against your own API
+
+## Optional
+
+- [Source](https://github.com/pug-sh/app): This app's code, AGPL-3.0
+- [Live demo](https://demo.pug.sh): The dashboard on real data, no signup

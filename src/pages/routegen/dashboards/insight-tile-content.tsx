@@ -14,6 +14,7 @@ import {
   type QueryRequest,
   QueryRequestSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { queryInsights } from '@/api/insights-query'
 import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -142,9 +143,9 @@ export const DashboardInsightContent = ({
   })
   const { data, error, retry } = useDebouncedQuery(
     queryKey,
-    async () => {
+    async signal => {
       if (!effectiveQuery) throw new Error('Missing tile query')
-      const resp = await insightsRPC.query(effectiveQuery, { headers })
+      const resp = await queryInsights(insightsRPC, effectiveQuery, headers, signal)
       return resp.result
     },
     { enabled: !!effectiveQuery && !!headers && queryReady(effectiveQuery), debounceMs: 0 },
@@ -162,9 +163,9 @@ export const DashboardInsightContent = ({
   })
   const { data: comparisonData, error: comparisonError } = useDebouncedQuery(
     comparisonQueryKey,
-    async () => {
+    async signal => {
       if (!comparisonQuery) throw new Error('Missing comparison query')
-      const resp = await insightsRPC.query(comparisonQuery, { headers })
+      const resp = await queryInsights(insightsRPC, comparisonQuery, headers, signal)
       return resp.result
     },
     { enabled: !!comparisonQuery && !!headers, debounceMs: 0 },

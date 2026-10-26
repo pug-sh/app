@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { Copy, MoreHorizontal, Share, TrendingUp } from 'lucide-react'
-import { type ReactNode, type RefObject, useRef } from 'react'
+import { type ReactNode, type RefObject, useMemo, useRef } from 'react'
 import snarkdown from 'snarkdown'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -29,6 +29,8 @@ const sanitizeMarkdownHTML = (markup: string) =>
   markup.replace(/(\b(?:href|src)=)(["'])(.*?)\2/gi, (match, attr, quote, url) =>
     DANGEROUS_URL_SCHEME.test(url) ? `${attr}${quote}#${quote}` : match,
   )
+
+const NO_FILTERS: readonly ActiveFilter[] = []
 
 type TileContentProps = {
   tile: DashboardTile
@@ -121,10 +123,12 @@ const DashboardInsightTile = ({
   globalFilters?: readonly ActiveFilter[]
   bodyRef?: RefObject<HTMLDivElement | null>
 }) => {
-  const filters = globalFilters ?? []
+  const filters = globalFilters ?? NO_FILTERS
   const savedSpec = tile.content.case === 'insight' ? tile.content.value.spec : undefined
-  const spec = applyDashboardFilters(savedSpec, filters)
-  const query = spec ? create(QueryRequestSchema, { spec }) : undefined
+  const query = useMemo(() => {
+    const spec = applyDashboardFilters(savedSpec, filters)
+    return spec ? create(QueryRequestSchema, { spec }) : undefined
+  }, [savedSpec, filters])
   const overlap = dashboardFilterOverlap(savedSpec, filters)
   const flagged = overlap.filters.length > 0 || overlap.splits.length > 0
 

@@ -2,7 +2,9 @@ import { X } from 'lucide-react'
 import { useState } from 'react'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { type ActiveFilter, createFilter, FILTER_OPERATORS, filterValueLabel } from './filter-model'
+import { resolvePropertyValue } from '@/lib/property-values'
+import { cn } from '@/lib/utils'
+import { type ActiveFilter, createFilter, FILTER_OPERATORS, filterValueLabel, filterValueNamed } from './filter-model'
 import { useSuggestions } from './hooks'
 import { mergeUniqueValues } from './utils'
 import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
@@ -32,16 +34,16 @@ export const FilterChip = ({
       if (!min || !max) return
       onUpdate(createFilter(filter.property, filter.source, filter.operator, [min, max]))
     } else {
-      const next = editInput.trim()
+      const next = resolvePropertyValue(filter.property, editInput.trim())
       if (!next) return
       onUpdate(createFilter(filter.property, filter.source, filter.operator, next))
     }
     setEditOpen(false)
   }
 
-  const addMultiValues = (input: string) => {
+  const addMultiValues = (values: string[]) => {
     if (filter.kind !== 'multi') return
-    const next = mergeUniqueValues(filter.values, input)
+    const next = mergeUniqueValues(filter.values, values)
     if (next.length !== filter.values.length) {
       onUpdate(createFilter(filter.property, filter.source, filter.operator, next))
     }
@@ -76,7 +78,12 @@ export const FilterChip = ({
       <span className="px-1.5 text-faint h-full flex items-center text-xs">{op?.symbol}</span>
       {valueLabel !== null && (
         <Popover open={editOpen} onOpenChange={handleEditOpenChange}>
-          <PopoverTrigger className="px-2 h-full flex items-center font-mono hover:bg-muted/40 transition-colors">
+          <PopoverTrigger
+            className={cn(
+              'px-2 h-full flex items-center hover:bg-muted/40 transition-colors',
+              !filterValueNamed(filter) && 'font-mono',
+            )}
+          >
             <span className="max-w-56 truncate" title={valueLabel || '...'}>
               {valueLabel || '...'}
             </span>
@@ -93,6 +100,7 @@ export const FilterChip = ({
               />
             ) : filter.kind === 'multi' ? (
               <MultiValueEditor
+                property={filter.property}
                 values={filter.values}
                 onAdd={addMultiValues}
                 onRemove={v =>
@@ -116,6 +124,7 @@ export const FilterChip = ({
               />
             ) : (
               <SingleValueEditor
+                property={filter.property}
                 value={editInput}
                 onChange={setEditInput}
                 onCommit={commitEdit}

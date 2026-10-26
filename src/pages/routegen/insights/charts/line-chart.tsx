@@ -6,14 +6,7 @@ import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import {
-  CHART_MARGIN,
-  type ChartComparison,
-  COMPARE_KEY,
-  SERIES_CURVE,
-  useRevealGate,
-  useVendoredChartPrep,
-} from './common'
+import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
 import { CompareLine } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -49,7 +42,6 @@ export const LineChart = memo(function LineChart({
     timeZone,
     comparison,
   )
-  const { revealed, onPhaseChange } = useRevealGate()
 
   if (data.length === 0) return null
 
@@ -58,22 +50,18 @@ export const LineChart = memo(function LineChart({
     <DateLabelProvider value={dateLabelFormatters}>
       <VendoredLineChart
         aspectRatio="auto"
-        className={cn(PILL_SCALING, className, !revealed && 'invisible')}
+        className={cn(PILL_SCALING, className)}
         data={chartData}
         margin={CHART_MARGIN}
-        onPhaseChange={onPhaseChange}
       >
         <Grid horizontal />
         <XAxis />
         <YAxis formatValue={yTickFormatter ?? compactNumber} />
         {/* Line defaults fadeEdges on (Area defaults it off): a faded first/last
-            bucket reads as uncertain data when those are real values.
-            animate={false} opts out of the vendored point-morph tween, which strands
-            the line off-plot on any data change (see line-data-change.test.tsx). */}
+            bucket reads as uncertain data when those are real values. */}
         {seriesNames.map((_, si) => (
           <Line
             key={si}
-            animate={false}
             curve={SERIES_CURVE}
             dataKey={`series${si}`}
             fadeEdges={false}

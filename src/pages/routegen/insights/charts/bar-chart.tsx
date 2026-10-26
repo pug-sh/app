@@ -1,17 +1,31 @@
-import { memo, useMemo } from 'react'
+import { memo, useLayoutEffect, useMemo } from 'react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { useChartHover, useChartStable } from '@/components/charts/chart-context'
 import { ComposedChart } from '@/components/charts/composed-chart'
 import { Grid } from '@/components/charts/grid'
 import { SeriesBar } from '@/components/charts/series-bar'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, PAD_ROW_KEY, useRevealGate, useVendoredChartPrep } from './common'
+import { CHART_MARGIN, edgeBucketHover, PAD_ROW_KEY, useVendoredChartPrep } from './common'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 import { YAxis } from './y-axis'
 
 const HOUR_MS = 60 * 60 * 1000
+
+// The bars and the axis read the shell's hover, so it has to hold the edge bucket too, before it paints.
+function SnapPaddingHover() {
+  const { tooltipData, setTooltipData } = useChartHover()
+  const stable = useChartStable()
+
+  useLayoutEffect(() => {
+    const snapped = edgeBucketHover(tooltipData, stable)
+    if (snapped !== tooltipData) setTooltipData(snapped)
+  }, [tooltipData, setTooltipData, stable])
+
+  return null
+}
 
 // Wraps the vendored chart (src/components/charts); never edit that directory.
 // Series colors, tooltip rows and date labels are ours to inject; the chart
@@ -42,7 +56,6 @@ export const BarChart = memo(function BarChart({
     granularity,
     timeZone,
   )
-  const { revealed, onPhaseChange } = useRevealGate()
 
   // The chart is a time-series one: its x-scale runs from the first bucket to the last
   // across the full plot width, so those two land on the plot edges, and SeriesBar
@@ -50,8 +63,8 @@ export const BarChart = memo(function BarChart({
   // over the y-axis labels, on the right it is clipped by the SVG, and it is worst at
   // low bucket counts (~70px of a 640px plot at 5 buckets). A bucket-less row half a
   // bucket beyond each end moves bucket i to (i + 0.5)/n of the width (band-scale
-  // placement), which clears both edges for every n: a bar group is at most
-  // 0.46 * innerWidth/(n + 1) wide, and 0.5/n > 0.46/(n + 1) always.
+  // placement), which clears both edges for every n: half a bar group is at most
+  // 0.46 * innerWidth/(n + 1), and 0.5/n > 0.46/(n + 1) always.
   const paddedData = useMemo(() => {
     const first = chartData.at(0)?.date as Date | undefined
     const last = chartData.at(-1)?.date as Date | undefined
@@ -76,10 +89,9 @@ export const BarChart = memo(function BarChart({
       <ComposedChart
         aspectRatio="auto"
         barGap={stacked ? 0 : 6}
-        className={cn(PILL_SCALING, className, !revealed && 'invisible')}
+        className={cn(PILL_SCALING, className)}
         data={paddedData}
         margin={CHART_MARGIN}
-        onPhaseChange={onPhaseChange}
         stacked={stacked}
       >
         <Grid horizontal />
@@ -88,7 +100,8 @@ export const BarChart = memo(function BarChart({
         {seriesNames.map((_, si) => (
           <SeriesBar key={si} dataKey={`series${si}`} fill={seriesColors[si]?.line} radius={stacked ? 0 : 3} />
         ))}
-        <ChartTooltip rows={tooltipRows} />
+        <SnapPaddingHover />
+        <ChartTooltip rows={tooltipRows} showCrosshair={false} />
       </ComposedChart>
     </DateLabelProvider>
   )

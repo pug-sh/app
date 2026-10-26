@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
 import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
+import { propertyValueLabel } from '@/lib/property-values'
 
 // Validates a filter arriving from outside the app (a shared URL, a stored tile spec). The payload
 // has to be checked per arm, not just the discriminant: `toProtoFilters` switches on `kind` and
@@ -82,8 +83,17 @@ export const createFilter = (
 }
 
 export const filterValueLabel = (filter: ActiveFilter) => {
-  if (filter.kind === 'multi') return filter.values.join(', ')
+  if (filter.kind === 'multi') return filter.values.map(value => propertyValueLabel(filter.property, value)).join(', ')
   if (filter.kind === 'range') return `${filter.min} – ${filter.max}`
-  if (filter.kind === 'single') return filter.value
+  if (filter.kind === 'single') return propertyValueLabel(filter.property, filter.value)
   return null
+}
+
+export const filterValueNamed = (filter: ActiveFilter) => {
+  if (filter.kind === 'multi')
+    return (
+      filter.values.length > 0 && filter.values.every(value => propertyValueLabel(filter.property, value) !== value)
+    )
+  if (filter.kind === 'single') return propertyValueLabel(filter.property, filter.value) !== filter.value
+  return false
 }

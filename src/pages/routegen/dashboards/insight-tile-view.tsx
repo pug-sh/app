@@ -16,6 +16,7 @@ import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { fadedSeriesColor, getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import type { ChartComparison } from '../insights/charts'
+import { formatTooltipDate } from '../insights/charts/helpers'
 import { isIncompleteNumericAggregation } from '../insights/constants'
 import { InsightsContent } from '../insights/content'
 import {
@@ -152,6 +153,7 @@ export const InsightTileView = ({
     [trendSeries, granularity, timeZone],
   )
   const kindOrder = useMemo(() => (spec?.events ?? []).map(entry => entry.event?.kind ?? ''), [spec?.events])
+  const breakdowns = useMemo(() => (spec?.breakdowns ?? []).map(item => item.property), [spec?.breakdowns])
   const funnelSeriesData = useMemo(() => {
     const labels = disambiguateLabels(
       funnelSeriesList.map((series, index) => breakdownLabel(series.breakdown, `Series ${index + 1}`)),
@@ -237,6 +239,7 @@ export const InsightTileView = ({
           aggregationFor={aggregationFor}
           compare={compare}
           formatValue={formatYAxisValue(tile.visualization?.yAxisFormat)}
+          formatDate={date => formatTooltipDate(date, granularity, timeZone)}
           metadata={kpiMetadata}
           lightMetric={lightMetrics}
           zeroWhenEmpty={result.case === 'trends' && emptyReadsAsZero(spec)}
@@ -269,18 +272,20 @@ export const InsightTileView = ({
         seriesAggregations={seriesAggregations}
         viewMode={effectiveViewMode}
         granularity={granularity}
-        breakdowns={(spec?.breakdowns ?? []).map(item => item.property)}
+        breakdowns={breakdowns}
         breakdownResponseLimit={spec?.breakdownLimit ?? BREAKDOWN_RESPONSE_LIMIT}
         retentionSeriesList={retentionSeriesList}
         retentionLabels={retentionLabels}
         retentionCohorts={retentionCohorts}
         funnelSeriesData={funnelSeriesData}
         userFlowResult={userFlowResult}
+        userFlowProperty={spec?.userFlow?.nodeProperty}
         isMap={isMap}
         mapIncompleteReason={mapIncompleteReason}
         isTopK={isTopK}
         topKRows={topKRows}
         topKDimension={spec?.topK?.dimension}
+        topKProperty={spec?.topK?.property}
         topKMetric={spec?.topK?.metric}
         topKOmitOthers={spec?.topK?.omitOthers}
         topKIncompleteReason={topKIncompleteReason}

@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
-import { ShimmeringText } from "../components/shimmering-text";
+import { ShimmeringText } from "../shimmering-text";
 import {
   LINE_LOADING_PULSE_EASE,
   LOADING_LABEL_EXIT_S,
@@ -46,7 +46,7 @@ export function ChartLoadingLabel({
       }}
     >
       <ShimmeringText
-        className="font-medium text-sm tracking-wide [--color:var(--muted-foreground)] [--shimmering-color:var(--foreground)]"
+        className="whitespace-nowrap font-medium text-sm tracking-normal [--color:var(--muted-foreground)] [--shimmering-color:var(--foreground)]"
         text={text}
       />
     </motion.div>

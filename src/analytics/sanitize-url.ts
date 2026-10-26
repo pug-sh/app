@@ -1,7 +1,7 @@
 // URL redaction for the SDK's `$url` / `$referrer` / form-action capture, wired through `beforeSend`.
 //
 // This dashboard is not a normal integration: almost everything it renders belongs to someone
-// else. A profileId is a *customer's* end-user distinct ID — frequently their email — so an
+// else. A profileId is a *customer's* end-user distinct ID, frequently their email, so an
 // unredacted URL would pull third parties' PII into our own project and make us a controller of
 // data we only process. A shareId is worse: it is the bearer credential for a public dashboard,
 // and /magic-link's `token` is a live sign-in credential. None of it may leave the device.
@@ -12,28 +12,29 @@
 
 import type { BeforeSendEvent } from '@pug-sh/browser'
 
-// Static children of /dashboards that are routes, not IDs. Without this, /dashboards/new — a real
-// page whose usage we want to see — would be masked into the :dashboardId bucket and vanish.
+// Static children of /dashboards that are routes, not IDs. Without this, /dashboards/new (a real
+// page whose usage we want to see) would be masked into the :dashboardId bucket and vanish.
 const DASHBOARD_STATIC_SEGMENTS = new Set(['new'])
 
 const maskPath = (pathname: string) => {
   const segments = pathname.split('/')
 
-  // segments[0] is always '' for an absolute path, so the route root sits at [1].
-  switch (segments[1]) {
+  // segments[0] is always '' for an absolute path, so the route root sits at [1], or at [3] under /p/:projectId.
+  const r = segments[1] === 'p' ? 3 : 1
+  switch (segments[r]) {
     case 'profiles':
-      if (segments[2]) segments[2] = ':profileId'
-      // /profiles/:profileId/sessions/:sessionId — the tab segment at [3] is static and kept.
-      if (segments[3] === 'sessions' && segments[4]) segments[4] = ':sessionId'
+      if (segments[r + 1]) segments[r + 1] = ':profileId'
+      // /profiles/:profileId/sessions/:sessionId: the tab segment after the ID is static and kept.
+      if (segments[r + 2] === 'sessions' && segments[r + 3]) segments[r + 3] = ':sessionId'
       break
     case 'dashboards':
-      if (segments[2] && !DASHBOARD_STATIC_SEGMENTS.has(segments[2])) segments[2] = ':dashboardId'
+      if (segments[r + 1] && !DASHBOARD_STATIC_SEGMENTS.has(segments[r + 1])) segments[r + 1] = ':dashboardId'
       break
     case 'shared':
-      if (segments[2]) segments[2] = ':shareId'
+      if (segments[r + 1]) segments[r + 1] = ':shareId'
       break
     case 'oauth':
-      if (segments[2] === 'callback' && segments[3]) segments[3] = ':connectionId'
+      if (segments[r + 1] === 'callback' && segments[r + 2]) segments[r + 2] = ':connectionId'
       break
   }
 
@@ -43,7 +44,7 @@ const maskPath = (pathname: string) => {
 // Drops every query param rather than denylisting the known-sensitive ones. The app encodes
 // Insights state into the query as JSON (`ef`/`pf` carry property-filter *values*, i.e. customer
 // PII; `bd`/`tk`/`it`/`gr`/`tf`/`tt` carry UI state) and /magic-link carries `token`. An allowlist
-// would need updating every time a param is added — and the failure mode of forgetting is silent,
+// would need updating every time a param is added, and the failure mode of forgetting is silent,
 // permanent PII in our own analytics. Nothing in this app's query string is worth that risk:
 // what we actually want from the query is answered by explicit track() calls instead.
 //
@@ -51,7 +52,7 @@ const maskPath = (pathname: string) => {
 // window.location.search directly and never routes them through this function (see track.ts),
 // so the acquisition funnel from pug.sh survives intact.
 export const sanitizeUrl = (raw: string) => {
-  // '' is a referrer-less page view — resolving it against the origin would fabricate a self-referral.
+  // '' is a referrer-less page view; resolving it against the origin would fabricate a self-referral.
   if (!raw) return raw
 
   try {
@@ -67,7 +68,7 @@ export const sanitizeUrl = (raw: string) => {
 }
 
 // Every URL the SDK sends. The first two are auto-properties present on every event; a form's
-// action is a custom property on form_submit, whose values are typed as the caller's own — hence
+// action is a custom property on form_submit, whose values are typed as the caller's own, hence
 // the typeof narrowing. The SDK's own `redactUrlParams` pass has already run, but it only blanks
 // known-sensitive param *values*; the structural masking above is ours alone.
 export const maskEventUrls = (event: BeforeSendEvent) => {

@@ -84,9 +84,36 @@ export const useLiveEvents = () => {
     setLoading(true)
     seenRef.current = null
     setArrivals(0)
-    load()
-    const id = window.setInterval(load, LIVE_POLL_MS)
-    return () => window.clearInterval(id)
+
+    let id: number | undefined
+    const start = () => {
+      load()
+      id = window.setInterval(load, LIVE_POLL_MS)
+    }
+    const stop = () => {
+      window.clearInterval(id)
+      id = undefined
+    }
+    // A background tab's timers are throttled, never stopped, so the interval itself has to go while
+    // nobody is looking. Coming back polls at once rather than leaving the map stale for a tick, and
+    // forgets the last poll like any other new question: everyone who turned up meanwhile would
+    // otherwise register as a "+N" arrival.
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stop()
+      } else if (id === undefined) {
+        seenRef.current = null
+        setArrivals(0)
+        start()
+      }
+    }
+
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      stop()
+    }
   }, [load, project, windowMs])
 
   return {

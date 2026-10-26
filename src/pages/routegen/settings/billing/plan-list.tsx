@@ -55,7 +55,7 @@ const PlanList = ({
                 // The spinner replaces the only text and is aria-hidden, so the name goes with it.
                 <Button
                   size="sm"
-                  variant="outline"
+                  className="min-w-20"
                   aria-label={`Subscribe to ${plan.displayName}`}
                   aria-busy={busySlug === plan.slug}
                   disabled={!!busySlug}

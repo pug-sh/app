@@ -47,35 +47,22 @@ const IdCell = ({
   title,
   className,
 }: {
-  href?: string
+  href: string
   label: string
   title: string
   className?: string
-}) => {
-  if (!href) {
-    return (
-      <span
-        className={cn('text-xs font-mono text-muted-foreground', className)}
-        title={title}
-        onClick={e => e.stopPropagation()}
-      >
-        {label}
-      </span>
-    )
-  }
-  return (
-    <ProjectLink
-      href={href}
-      onClick={e => e.stopPropagation()}
-      // underline-offset-2, not the usual 4: the truncating caller clips at the content box, and
-      // on a text-xs line box an offset-4 underline lands past the bottom edge and never renders.
-      className={cn('text-xs font-mono text-link hover:underline underline-offset-2', className)}
-      title={title}
-    >
-      {label}
-    </ProjectLink>
-  )
-}
+}) => (
+  <ProjectLink
+    href={href}
+    onClick={e => e.stopPropagation()}
+    // underline-offset-2, not the usual 4: the truncating caller clips at the content box, and
+    // on a text-xs line box an offset-4 underline lands past the bottom edge and never renders.
+    className={cn('text-xs font-mono text-link hover:underline underline-offset-2', className)}
+    title={title}
+  >
+    {label}
+  </ProjectLink>
+)
 
 export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const [expanded, setExpanded] = useState(false)
@@ -95,8 +82,7 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
   const city = structGet(event.autoProperties, '$city')
   const country = structGet(event.autoProperties, '$country')
   const region = structGet(event.autoProperties, '$region')
-  const cookieless = isCookielessId(event.distinctId)
-  const noProfile = cookieless ? ' — cookieless, no profile' : ''
+  const profileBase = `/profiles/${encodeURIComponent(event.distinctId)}`
 
   return (
     <>
@@ -144,23 +130,18 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
         <td className="py-2.5 pr-2 align-middle overflow-hidden">
           <div className="flex items-center justify-end">
             <IdCell
-              href={cookieless ? undefined : `/profiles/${encodeURIComponent(event.distinctId)}/events`}
+              href={`${profileBase}/events`}
               label={event.distinctId}
-              title={event.distinctId + noProfile}
+              title={isCookielessId(event.distinctId) ? `${event.distinctId} · Cookieless visitor` : event.distinctId}
               className="truncate min-w-0"
             />
             {event.sessionId && (
               <>
                 <span className="shrink-0 text-muted-foreground/40"> / </span>
-                {/* Suppressed too: the session route renders inside ProfileShell, same dead end. */}
                 <IdCell
-                  href={
-                    cookieless
-                      ? undefined
-                      : `/profiles/${encodeURIComponent(event.distinctId)}/sessions/${encodeURIComponent(event.sessionId)}`
-                  }
+                  href={`${profileBase}/sessions/${encodeURIComponent(event.sessionId)}`}
                   label={event.sessionId.slice(0, 8)}
-                  title={event.sessionId + noProfile}
+                  title={event.sessionId}
                   className="shrink-0"
                 />
               </>
@@ -297,7 +278,7 @@ const EventExplorer = () => {
     if (project) fetchEvents()
   }, [project, fetchEvents])
 
-  // Refetches page one, dropping any pages loaded via "Load more" — same reset the Retry buttons do.
+  // Refetches page one and drops any pages loaded via "Load more": the same reset the Retry buttons do.
   // trackFeature sits here rather than in fetchEvents() because that also runs on mount and on every
   // filter change; only this handler is a deliberate click. Named explicitly since an icon-only
   // button autocaptures as tag `svg` with no text.
@@ -320,7 +301,7 @@ const EventExplorer = () => {
           {/* Sits in the sticky bar, not the page header, so it stays reachable once you scroll. The
               ml-4 keeps the icon off the picker chip: butted straight against it, it reads as one of
               the chip's own controls rather than an action on the table. The timestamp is the only
-              confirmation a refresh returning no new rows can give — it resets to "just now" when
+              confirmation a refresh returning no new rows can give: it resets to "just now" when
               nothing else on screen changes. Mirrors the freshness/reload pair on /live. */}
           <div className="ml-4 flex items-center gap-2 text-xs text-muted-foreground">
             <Button

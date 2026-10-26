@@ -3,10 +3,9 @@ import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filter
 import { type ActiveFilter, createFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import { readPropFiltersParam } from '@/hooks/use-filter-query-params'
-import { formatCountryName } from '@/lib/location'
 
 // Traffic cross-filters reuse the Insights property-filter model wholesale, down to the shared `pf`
-// URL param. Same-property values are kept as one filter — EQUALS for one, IN for several.
+// URL param. Same-property values are kept as one filter: EQUALS for one, IN for several.
 
 // A plain event property, not an auto-property: the Flutter and React Native SDKs both send it as
 // `screenName`. The one non-`$` key this view ranks and filters on.
@@ -70,7 +69,7 @@ export const toggleFilter = (filters: readonly ActiveFilter[], property: string,
 
 // Single-select variant: sets `property` to exactly `value` (replacing any other values it held), or
 // clears it when `value` is already its sole selection. For dimensions where only one value makes
-// sense at a time — country, since the map is a one-country drilldown.
+// sense at a time: country, since the map is a one-country drilldown.
 export const toggleSingleFilter = (filters: readonly ActiveFilter[], property: string, value: string) => {
   const existing = filters.find(filter => filter.property === property)
   if (!existing) return [...filters, makeFilter(property, [value])]
@@ -132,7 +131,3 @@ const PROPERTY_LABELS: Record<string, string> = {
 }
 
 export const filterPropertyLabel = (property: string) => PROPERTY_LABELS[property] ?? property.replace(/^\$/, '')
-
-// $country is stored as an ISO alpha-2 code, shown as its name — matching the Countries breakdown.
-export const filterValueLabel = (property: string, value: string) =>
-  property === '$country' ? formatCountryName(value) : value

@@ -1,9 +1,9 @@
 import type { JsonObject } from '@bufbuild/protobuf'
 import { structFirst } from '@/lib/struct'
 
-// No backend contract defines these — a customer picks whichever key they send on identify() or on
+// No backend contract defines these: a customer picks whichever key they send on identify() or on
 // an event. Shared so a profile header and the live feed name the same person the same way.
-const NAME_KEYS = ['name', '$name', 'full_name', 'display_name']
+const NAME_KEYS = ['name', '$name', 'full_name', 'fullName', 'display_name', 'displayName']
 const EMAIL_KEYS = ['email', '$email']
 const FIRST_NAME_KEYS = ['first_name', '$first_name', 'firstName']
 const LAST_NAME_KEYS = ['last_name', '$last_name', 'lastName']

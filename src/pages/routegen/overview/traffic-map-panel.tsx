@@ -3,10 +3,11 @@ import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ActivityMapView } from '@/components/activity-map-view'
 import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
+import { COUNTRY_PROPERTY } from '@/lib/property-values'
 import { useActivityMapData } from '../dashboards/activity-map-content'
 import { OverviewTileShell } from './overview-tile-shell'
 import { filtersExcept, filterValues } from './traffic-filters'
-import { buildCountryMapQuery, COUNTRY_PROPERTY, type NavEvent } from './traffic-queries'
+import { buildCountryMapQuery, type NavEvent } from './traffic-queries'
 
 // Clicking a country cross-filters the page; its own $country filter is excluded from the map query
 // so every country stays visible and clickable.

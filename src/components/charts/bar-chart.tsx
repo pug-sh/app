@@ -19,7 +19,6 @@ import type { BarProps } from "./bar";
 import { topSquareCenterY } from "./bar-squares-layout";
 import {
   forEachChartChild,
-  isChartClipPassthrough,
   isClipExcludedComponent,
   isPostOverlayComponent,
   isUnderlayComponent,
@@ -50,6 +49,10 @@ import {
   normalizeYAxisId,
   wrapSingleYScale,
 } from "./y-axis-scales";
+import {
+  collectBarValueExtents,
+  resolveBarValueDomain,
+} from "./y-domain-utils";
 
 /** Skeleton bars to show when `status="loading"` and `data` is empty. */
 const FALLBACK_LOADING_BARS = 12;
@@ -95,9 +98,21 @@ export interface BarChartProps {
   /** Fetch / display status. When `"loading"`, a shimmer skeleton replaces the
    * bars (no chart data required). Default: `"ready"`. */
   status?: ChartStatus;
+  /** Fill color for the loading skeleton. Defaults to the first `<Bar>`'s
+   * `stroke`, falling back to `var(--foreground)`. */
+  loadingFill?: string;
 }
 
 const DEFAULT_MARGIN: Margin = { top: 40, right: 40, bottom: 40, left: 40 };
+
+function isSeriesOverlayComponent(child: ReactElement): boolean {
+  const childType = child.type as { displayName?: string; name?: string };
+  const componentName =
+    typeof child.type === "function"
+      ? childType.displayName || childType.name || ""
+      : "";
+  return componentName === "TrendLine";
+}
 
 // Extract bar configs from children synchronously
 function extractBarConfigs(children: ReactNode): LineConfig[] {
@@ -119,6 +134,10 @@ function extractBarConfigs(children: ReactNode): LineConfig[] {
       typeof child.type === "function"
         ? childType.displayName || childType.name || ""
         : "";
+    // Trend overlays fit an existing series — not a bar series themselves.
+    if (componentName === "TrendLine") {
+      return;
+    }
 
     const props = child.props as BarProps | undefined;
     const isBarComponent =
@@ -163,6 +182,7 @@ interface ChartInnerProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   onPhaseChange?: (phase: ChartPhase) => void;
   status: ChartStatus;
+  loadingFill?: string;
 }
 
 function ChartInner(props: ChartInnerProps) {
@@ -193,17 +213,20 @@ const ChartCore = memo(function ChartCore({
   containerRef,
   onPhaseChange,
   status,
+  loadingFill,
 }: ChartInnerProps) {
   const { tooltipData, setTooltipData, scheduleTooltip, clearTooltip } =
     useScheduledTooltip<TooltipData>();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [revealEpoch, setRevealEpoch] = useState(0);
+  const [revealEpoch, setRevealEpoch] = useState(1);
   const hoveredBarIndex = tooltipData?.index ?? null;
 
   const isHorizontal = orientation === "horizontal";
 
   // Extract bar configs synchronously from children
   const lines = useMemo(() => extractBarConfigs(children), [children]);
+  const effectiveLoadingFill =
+    loadingFill ?? lines[0]?.stroke ?? "var(--foreground)";
 
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
@@ -248,47 +271,26 @@ const ChartCore = memo(function ChartCore({
   // Band width for bars - use prop if provided, otherwise use scale's bandwidth
   const bandWidth = barWidthProp ?? categoryScale.bandwidth();
 
-  // Compute max value considering stacking
-  const maxValue = useMemo(() => {
-    if (stacked) {
-      // For stacked bars, sum all values at each data point
-      let max = 0;
-      for (const d of data) {
-        let sum = 0;
-        for (const line of lines) {
-          const value = d[line.dataKey];
-          if (typeof value === "number") {
-            sum += value;
-          }
-        }
-        if (sum > max) {
-          max = sum;
-        }
-      }
-      return max || 100;
-    }
-    // For grouped bars, find max single value
-    let max = 0;
-    for (const line of lines) {
-      for (const d of data) {
-        const value = d[line.dataKey];
-        if (typeof value === "number" && value > max) {
-          max = value;
-        }
-      }
-    }
-    return max || 100;
-  }, [data, lines, stacked]);
+  const valueExtents = useMemo(
+    () =>
+      collectBarValueExtents(
+        data,
+        lines.map((line) => line.dataKey),
+        stacked
+      ),
+    [data, lines, stacked]
+  );
 
-  // Value scale (linear) - for the value axis
+  // Value scale (linear) - for the value axis. Always includes zero so bars
+  // grow from the zero line in either direction.
   const valueScale = useMemo(() => {
     const range = isHorizontal ? [0, innerWidth] : [innerHeight, 0];
     return scaleLinear({
       range,
-      domain: [0, maxValue * 1.1],
+      domain: resolveBarValueDomain(valueExtents),
       nice: true,
     });
-  }, [innerWidth, innerHeight, maxValue, isHorizontal]);
+  }, [innerWidth, innerHeight, valueExtents, isHorizontal]);
 
   const yScales = useMemo(() => {
     if (isHorizontal) {
@@ -298,20 +300,10 @@ const ChartCore = memo(function ChartCore({
       lines,
       data,
       innerHeight,
-      resolveDomain: (dataKeys) => {
-        let max = 0;
-        for (const d of data) {
-          for (const key of dataKeys) {
-            const value = d[key];
-            if (typeof value === "number" && value > max) {
-              max = value;
-            }
-          }
-        }
-        return [0, (max || 100) * 1.1];
-      },
+      resolveDomain: (dataKeys) =>
+        resolveBarValueDomain(collectBarValueExtents(data, dataKeys, stacked)),
     });
-  }, [data, innerHeight, isHorizontal, lines, valueScale]);
+  }, [data, innerHeight, isHorizontal, lines, stacked, valueScale]);
 
   const primaryYScale = getPrimaryYScale(yScales, valueScale);
 
@@ -368,11 +360,26 @@ const ChartCore = memo(function ChartCore({
     return scale;
   }, [categoryScale, innerWidth, data.length]);
 
-  // Animation timing — replay when motion settings change
-  // biome-ignore lint/correctness/useExhaustiveDependencies: revealSignature
-  useEffect(() => {
+  // Animation timing — replay when motion settings / status change. The
+  // reset is adjusted during render ("store previous props in state") instead
+  // of setState in an effect, so a replay costs a single render.
+  const [revealKey, setRevealKey] = useState({
+    animationDuration,
+    revealSignature,
+    status,
+  });
+  if (
+    revealKey.animationDuration !== animationDuration ||
+    revealKey.revealSignature !== revealSignature ||
+    revealKey.status !== status
+  ) {
+    setRevealKey({ animationDuration, revealSignature, status });
     setRevealEpoch((n) => n + 1);
     setIsLoaded(false);
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: revealSignature
+  useEffect(() => {
     // While loading, hold the skeleton (no reveal, no interaction). When
     // status flips to "ready" this effect re-runs and plays the grow reveal.
     if (status === "loading") {
@@ -506,8 +513,9 @@ const ChartCore = memo(function ChartCore({
       // Tooltip position: for horizontal, position at max bar end; for vertical, center of band
       let tooltipX: number;
       if (isHorizontal) {
-        // Position tooltip at the end of the longest bar
-        const maxX = Math.max(...Object.values(xPositions), 0);
+        // Position tooltip at the right-most bar edge — the value end for
+        // positive bars, the zero line for negative ones.
+        const maxX = Math.max(...Object.values(xPositions), valueScale(0) ?? 0);
         tooltipX = maxX;
       } else {
         tooltipX = barPos + bandWidth / 2;
@@ -553,6 +561,8 @@ const ChartCore = memo(function ChartCore({
   const clipExcludedChildren: ReactElement[] = [];
   const underlayChildren: ReactElement[] = [];
   const preOverlayChildren: ReactElement[] = [];
+  // Trend lines draw above every bar regardless of child order.
+  const seriesOverlayChildren: ReactElement[] = [];
   const postOverlayChildren: ReactElement[] = [];
 
   forEachChartChild(children, (child) => {
@@ -563,13 +573,13 @@ const ChartCore = memo(function ChartCore({
     } else if (isPatternDefComponent(child)) {
       preOverlayChildren.push(child);
     } else if (isPostOverlayComponent(resolvedChild)) {
-      postOverlayChildren.push(resolvedChild);
+      postOverlayChildren.push(child);
     } else if (isClipExcludedComponent(resolvedChild)) {
-      clipExcludedChildren.push(
-        isChartClipPassthrough(child.type) ? resolvedChild : child
-      );
+      clipExcludedChildren.push(child);
     } else if (isUnderlayComponent(resolvedChild)) {
-      underlayChildren.push(resolvedChild);
+      underlayChildren.push(child);
+    } else if (isSeriesOverlayComponent(resolvedChild)) {
+      seriesOverlayChildren.push(child);
     } else {
       preOverlayChildren.push(child);
     }
@@ -654,11 +664,15 @@ const ChartCore = memo(function ChartCore({
           {status === "loading" ? (
             <BarLoadingSkeleton
               barCount={data.length || FALLBACK_LOADING_BARS}
+              fill={effectiveLoadingFill}
               innerHeight={innerHeight}
               innerWidth={innerWidth}
             />
           ) : (
-            renderKeyedChartLayers(preOverlayChildren)
+            <>
+              {renderKeyedChartLayers(preOverlayChildren)}
+              {renderKeyedChartLayers(seriesOverlayChildren)}
+            </>
           )}
 
           {/* Markers rendered last so they're on top for interaction */}
@@ -688,6 +702,7 @@ export function BarChart({
   children,
   onPhaseChange,
   status = "ready",
+  loadingFill,
 }: BarChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const margin = { ...DEFAULT_MARGIN, ...marginProp };
@@ -709,6 +724,7 @@ export function BarChart({
             data={data}
             enterTransition={enterTransition}
             height={height}
+            loadingFill={loadingFill}
             margin={margin}
             onPhaseChange={onPhaseChange}
             orientation={orientation}

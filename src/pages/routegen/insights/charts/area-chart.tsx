@@ -6,14 +6,7 @@ import { Grid } from '@/components/charts/grid'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import {
-  CHART_MARGIN,
-  type ChartComparison,
-  COMPARE_KEY,
-  SERIES_CURVE,
-  useRevealGate,
-  useVendoredChartPrep,
-} from './common'
+import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
 import { CompareArea } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -49,7 +42,6 @@ export const AreaChart = memo(function AreaChart({
     timeZone,
     comparison,
   )
-  const { revealed, onPhaseChange } = useRevealGate()
 
   if (data.length === 0) return null
 
@@ -58,10 +50,9 @@ export const AreaChart = memo(function AreaChart({
     <DateLabelProvider value={dateLabelFormatters}>
       <VendoredAreaChart
         aspectRatio="auto"
-        className={cn(PILL_SCALING, className, !revealed && 'invisible')}
+        className={cn(PILL_SCALING, className)}
         data={chartData}
         margin={CHART_MARGIN}
-        onPhaseChange={onPhaseChange}
       >
         <Grid horizontal />
         <XAxis />

@@ -3,9 +3,7 @@
 import { curveMonotoneX } from "@visx/curve";
 import { AreaClosed, LinePath } from "@visx/shape";
 
-// CurveFactory type - simplified version compatible with visx
-// biome-ignore lint/suspicious/noExplicitAny: d3 curve factory type
-type CurveFactory = any;
+import type { CurveFactory } from "d3-shape";
 
 import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { AreaGradientDefs } from "./area-gradient-defs";
@@ -69,6 +67,18 @@ export interface AreaProps {
   showMarkers?: boolean;
   /** Marker styling (same options as Scatter). */
   markers?: SeriesPointMarkerStyle;
+  /** Show smart formatted values above data points. Default: false. */
+  showValue?: boolean;
+  /** Preferred minimum labels per series, subject to available space. Default: 2. */
+  valueLabelMinCount?: number;
+  /** Maximum labels per series. Zero hides labels; omitted uses available width. */
+  valueLabelMaxCount?: number;
+  /** Format values displayed above data points. */
+  valueLabelFormatter?: (value: number) => string;
+  /** Text color for values displayed above data points. Default: same as stroke. */
+  valueLabelColor?: string;
+  /** Fade value labels with the chart edges. Default: false. */
+  fadeValueLabels?: boolean;
   /**
    * Data index from which the line stroke becomes dashed (inclusive).
    * Useful for projecting incomplete periods, e.g. dashed from yesterday through today.

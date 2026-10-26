@@ -9,7 +9,7 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BRAND_ICON_RESOLVERS, type BrandValueKind } from '@/lib/brand-icons'
-import { formatCountryName } from '@/lib/location'
+import { COUNTRY_PROPERTY, propertyValueLabel } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
 import { OverviewTileShell } from './overview-tile-shell'
 import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
@@ -188,7 +188,7 @@ export const TrafficBreakdownPanel = ({
   const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
 
   // useDebouncedQuery keeps the previous `data` across a key change, so `result` alone can't say what
-  // produced it. Pin it to what the column *means* — panel, tab and metric, but not the filters, so a
+  // produced it. Pin it to what the column *means* (panel, tab and metric, but not the filters), so a
   // same-shape refetch keeps its rows and filtering doesn't flicker. Not `loading`: that's set in an
   // effect, so it still reads false on the render the switch happens on.
   const shape = `${nav.name}:${config.title}:${tab.id}:${propertyMetric ?? ''}`
@@ -229,7 +229,7 @@ export const TrafficBreakdownPanel = ({
     renderLeading = row => (
       <GlyphSlot className="w-5">{row.muted ? null : <CountryFlag code={row.label} size={20} />}</GlyphSlot>
     )
-    formatLabel = row => (row.muted ? row.label : formatCountryName(row.label))
+    formatLabel = row => (row.muted ? row.label : propertyValueLabel(COUNTRY_PROPERTY, row.label))
   } else if (valueKind === 'browser' || valueKind === 'os' || valueKind === 'device') {
     const resolve = BRAND_ICON_RESOLVERS[valueKind]
     const unknownGlyph = valueKind === 'browser' ? <UnknownBrowserIcon size={16} /> : null

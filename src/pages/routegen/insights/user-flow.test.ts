@@ -48,6 +48,14 @@ describe('buildSankeyData', () => {
     expect(graph.collapsedNodes).toBe(0)
   })
 
+  it('names the nodes of a flow grouped by a coded property', () => {
+    const graph = buildSankeyData(
+      result([node('in0', 0, 'IN'), node('us1', 1, 'US')], [link('in0', 'us1', 5n)]),
+      '$country',
+    )
+    expect(graph.nodes.map(n => n.name)).toEqual(['India', 'United States'])
+  })
+
   // Each of the three drop paths below removes a real transition from the flow. The node
   // summaries derive "continued" and "ended" by subtracting outbound from inbound over exactly
   // the survivors, so a silent drop overstates the drop-off at the link's source while the chart
@@ -224,7 +232,7 @@ describe('user-flow config round trip', () => {
   })
 
   // A multi filter whose payload is missing would otherwise reach toProtoFilters and produce a
-  // filter message with an undefined field — a query that is wrong rather than rejected.
+  // filter message with an undefined field: a query that is wrong rather than rejected.
   it('refuses a filter whose payload does not match its kind', () => {
     const bad = serializeUserFlowConfig(configured) as { scope: { filters: unknown[] } }
     bad.scope.filters = [{ property: '$os', source: PropertySource.AUTO, operator: FilterOperator.IN, kind: 'multi' }]
@@ -255,7 +263,7 @@ describe('buildUserFlowQuery', () => {
   })
 
   // The gate trims before testing the pattern, so a padded name is judged runnable. Sending it
-  // verbatim then fails the CEL rule the pattern mirrors — the local check exists precisely to
+  // verbatim then fails the CEL rule the pattern mirrors; the local check exists precisely to
   // stop that reaching the wire. scope.kind is already trimmed on the way out; this matches it.
   // Not reachable from the property picker, but a shared URL carries whatever it was given.
   it('trims a padded property name so the gate and the wire agree', () => {

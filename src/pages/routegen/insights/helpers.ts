@@ -9,6 +9,7 @@ import {
   TopKQuery_Dimension,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { propertyValueLabel } from '@/lib/property-values'
 import { tsToDate } from '@/lib/timestamp'
 import { nextZoneBucket } from '@/lib/timezone'
 import { INSIGHT_TYPES } from './constants'
@@ -174,8 +175,8 @@ export const hasBreakdown = (breakdown: Record<string, string>) => Object.keys(b
 
 export const breakdownLabel = (breakdown: Record<string, string>, fallback: string) => {
   if (!hasBreakdown(breakdown)) return fallback
-  return Object.values(breakdown)
-    .map(value => value || EMPTY_VALUE_LABEL)
+  return Object.entries(breakdown)
+    .map(([property, value]) => (value ? propertyValueLabel(property, value) : EMPTY_VALUE_LABEL))
     .join(' / ')
 }
 

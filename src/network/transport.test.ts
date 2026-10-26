@@ -2,7 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
 import { getDefaultStore } from 'jotai'
 import { toast } from 'sonner'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthService, SSORequiredSchema } from '@/api/genproto/public/auth/v1/auth_pb'
 
 const refreshSession = vi.hoisted(() => vi.fn())
@@ -31,6 +31,10 @@ describe('a refused session refresh', () => {
     refreshSession.mockReset()
   })
 
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('shows the providers when the domain now requires SSO', async () => {
     const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
     refreshSession.mockRejectedValue(
@@ -53,6 +57,18 @@ describe('a refused session refresh', () => {
     await expect(request()).rejects.toMatchObject({ code: Code.Unauthenticated })
 
     expect(store.get(ssoBlockAtom)).toBeNull()
-    expect(error).toHaveBeenCalledWith('Session expired — please sign in again')
+    expect(error).toHaveBeenCalledWith('Session expired. Please sign in again.')
+  })
+
+  it("says nothing on the demo's own origin, which signs straight back in", async () => {
+    vi.stubEnv('VITE_DEMO_ORIGIN', window.location.origin)
+    vi.stubEnv('VITE_APP_ORIGIN', 'https://app.example')
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    refreshSession.mockRejectedValue(new ConnectError('session expired', Code.Unauthenticated))
+
+    await expect(request()).rejects.toMatchObject({ code: Code.Unauthenticated })
+
+    expect(store.get(refreshTokenAtom)).toBe('')
+    expect(error).not.toHaveBeenCalled()
   })
 })

@@ -3,6 +3,7 @@ import { useAtomValue } from 'jotai'
 import { useMemo } from 'react'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { type Granularity, type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { queryInsights } from '@/api/insights-query'
 import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -16,7 +17,7 @@ const EMPTY_RESULT = { case: undefined, value: undefined }
 
 // Run a traffic-analytics query against a concrete window. Mirrors DashboardInsightContent's fetch path
 // (project header, zone-bucket flooring, content-keyed debounce) but returns the raw result oneof so
-// callers can read the segmentation total / top-k rows / trends series directly — InsightTileView
+// callers can read the segmentation total / top-k rows / trends series directly. InsightTileView
 // renders neither segmentation scalars nor ranked lists, which is why the traffic view fetches its own.
 //
 // `baseQuery` must be memoized by the caller (build it from stable primitives): this hook folds the
@@ -65,8 +66,8 @@ export const useTrafficQuery = (
 
   const { data, error, retry, loading } = useDebouncedQuery(
     queryKey,
-    async () => {
-      const resp = await insightsRPC.query(query, { headers })
+    async signal => {
+      const resp = await queryInsights(insightsRPC, query, headers, signal)
       return resp.result
     },
     { enabled: !!headers, debounceMs: 0 },

@@ -1,7 +1,9 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MotionGlobalConfig } from 'motion/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { StaticChartPreviewProvider } from '@/components/charts/static-chart-preview-context'
 import type { SeriesColor } from '@/lib/event-colors'
 import { BarChart } from './bar-chart'
 import { CHART_MARGIN } from './common'
@@ -17,6 +19,11 @@ vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
     children({ width: WIDTH, height: HEIGHT }),
 }))
+
+// visx's localPoint needs SVG geometry happy-dom lacks; with no screen CTM it falls back to the bounding rect.
+Object.defineProperty(window.SVGSVGElement.prototype, 'getScreenCTM', { value: () => null, configurable: true })
+// The tooltip box cancels a Web Animation on hover, and happy-dom rejects a cancelled one's promise unhandled.
+MotionGlobalConfig.skipAnimations = true
 
 const NAMES = ['macOS', 'Windows', 'Linux']
 const COLORS: SeriesColor[] = NAMES.map(() => ({ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }))
@@ -40,9 +47,9 @@ const barRects = (container: HTMLElement) =>
 // it: over the y-axis labels on the left, clipped by the SVG on the right. Drop the
 // padding from the wrapper and the 5-bucket case alone puts a bar at x=-70.
 describe('bar chart edge overhang', () => {
-  // Fewer buckets meant a wider slot, so the overhang grew as the data thinned; one
-  // bucket was the extreme, drawing a single bar 0.88 * innerWidth wide centred at x=0.
-  for (const count of [1, 2, 5, 30]) {
+  // Fewer buckets mean a wider slot, so the overhang grows as the data thins. Not one bucket:
+  // a lone bucket lands centred, padded or not.
+  for (const count of [2, 5, 30]) {
     it(`keeps every bar inside the plot at ${count} bucket(s)`, () => {
       const { container } = render(
         <BarChart
@@ -89,5 +96,31 @@ describe('bar chart edge overhang', () => {
       .map(el => el.textContent?.trim() ?? '')
       .filter(text => /^[A-Z][a-z]{2} \d/.test(text))
     expect(labels).toEqual(['Jul 16', 'Jul 17', 'Jul 18', 'Jul 19', 'Jul 20'])
+  })
+
+  // The hover snaps to the nearest row, and a padding row is nearest across the strip beyond each edge bar.
+  // happy-dom resolves every pointer to the last row, which here is the right-hand padding row.
+  it('hovers the edge bucket, not a padding row, beyond the edge bar', async () => {
+    const { container } = render(
+      <StaticChartPreviewProvider>
+        <BarChart
+          data={daily(5)}
+          seriesNames={NAMES}
+          seriesColors={COLORS}
+          granularity={Granularity.DAY}
+          timeZone="UTC"
+          stacked
+        />
+      </StaticChartPreviewProvider>,
+    )
+
+    fireEvent.mouseMove(container.querySelector('svg > g[transform^="translate("]') as SVGGElement, { clientX: 700 })
+
+    // The last bucket's macOS count; a padding row reads 0 for every series.
+    expect(await screen.findByText('14')).toBeTruthy()
+    // The bars follow the shell's hover, not the tooltip's: the last bucket's three stay lit, the rest dim.
+    const opacities = () => Array.from(container.querySelectorAll('rect')).map(r => r.style.opacity)
+    await waitFor(() => expect(opacities().filter(o => o === '0.3')).toHaveLength(12))
+    expect(opacities().filter(o => o === '1')).toHaveLength(NAMES.length)
   })
 })

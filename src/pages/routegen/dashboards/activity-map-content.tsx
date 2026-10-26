@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import type { TimeRangePreset } from '@/api/genproto/common/v1/time_pb'
 import { TimeRangeSchema } from '@/api/genproto/common/v1/time_pb'
 import { type Granularity, type QueryRequest, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { queryInsights } from '@/api/insights-query'
 import { insightsRPCAtom } from '@/api/rpc'
 import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
@@ -81,9 +82,9 @@ export const useActivityMapData = ({
 
   const { data, loading, error, retry } = useDebouncedQuery(
     queryKey,
-    async () => {
+    async signal => {
       if (!effectiveQuery) throw new Error('Missing activity map query')
-      const resp = await insightsRPC.query(effectiveQuery, { headers })
+      const resp = await queryInsights(insightsRPC, effectiveQuery, headers, signal)
       return resp.result
     },
     { enabled: !!effectiveQuery && !!headers, debounceMs: 0 },

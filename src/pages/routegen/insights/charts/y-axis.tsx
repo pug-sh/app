@@ -19,5 +19,5 @@ export function YAxis(props: YAxisProps) {
   )
 }
 
-// The shell keeps "YAxis" out of the series reveal clip by name, and minification mangles the function's.
+// The shell files "YAxis" with its own axes by name, and minification mangles the function's.
 YAxis.displayName = 'YAxis'

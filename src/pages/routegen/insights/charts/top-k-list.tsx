@@ -1,11 +1,13 @@
 import { MotionConfig, motion } from 'motion/react'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
+import { Link } from 'wouter'
 import { AggregationType, TopKQuery_Dimension, type TopKRow } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { DEFAULT_CHART_ENTER_TRANSITION } from '@/components/charts/animation'
 import { transitionWithDelay } from '@/components/charts/motion-utils'
-import ProjectLink from '@/components/project-link'
 import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
+import { useProjectPrefix } from '@/lib/project-path'
+import { propertyValueLabel } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
 import { EMPTY_VALUE_LABEL } from '../helpers'
@@ -22,7 +24,21 @@ const formatValue = (value: number) => {
 // Full-precision value for the hover title; compactNumber drops digits ("1.2K").
 const exactValue = (value: number) => value.toLocaleString('en-US', { maximumFractionDigits: 6 })
 
-const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimension }) => {
+// A shared dashboard has no project to link into.
+const ProfileLink = ({ id, className, children }: { id: string; className?: string; children: ReactNode }) => {
+  const prefix = useProjectPrefix()
+  if (!prefix) return <span className={cn('block truncate', className)}>{children}</span>
+  return (
+    <Link
+      href={`${prefix}/profiles/${encodeURIComponent(id)}`}
+      className={cn('block truncate text-link hover:underline underline-offset-4', className)}
+    >
+      {children}
+    </Link>
+  )
+}
+
+const RowLabel = ({ row, dimension, property }: { row: TopKRow; dimension: TopKQuery_Dimension; property: string }) => {
   if (row.isOthers) {
     return (
       <span className="truncate font-mono text-muted-foreground" title={OTHERS_HINT}>
@@ -32,23 +48,21 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
   }
 
   if (dimension === TopKQuery_Dimension.USER) {
-    // Profile enrichment is absent for unidentified distinct_ids; show the raw key.
+    // Only identified profiles are attached; the rest link by raw id.
     if (!row.profile) {
-      return <span className="block truncate font-mono text-muted-foreground">{row.dimensionValue}</span>
+      return (
+        <ProfileLink id={row.dimensionValue} className="font-mono">
+          {row.dimensionValue}
+        </ProfileLink>
+      )
     }
     const identity = resolveIdentity(row.profile)
     const secondary = identity.email || row.profile.externalId || row.profile.id
     return (
       <div className="min-w-0">
-        <ProjectLink
-          href={`/profiles/${encodeURIComponent(row.profile.id)}`}
-          className={cn(
-            'block truncate text-link hover:underline underline-offset-4',
-            identity.isFallback && 'font-mono',
-          )}
-        >
+        <ProfileLink id={row.profile.id} className={identity.isFallback ? 'font-mono' : undefined}>
           {identity.name}
-        </ProjectLink>
+        </ProfileLink>
         {secondary && secondary !== identity.name && (
           <span className={cn('block truncate text-xs text-muted-foreground', !identity.email && 'font-mono')}>
             {secondary}
@@ -74,7 +88,7 @@ const RowLabel = ({ row, dimension }: { row: TopKRow; dimension: TopKQuery_Dimen
   // terms, plan names, …), so render them in the regular font, not mono.
   return (
     <span className="block truncate" title={row.dimensionValue}>
-      {row.dimensionValue}
+      {propertyValueLabel(property, row.dimensionValue)}
     </span>
   )
 }
@@ -105,12 +119,14 @@ const CoverageSummary = ({
 export const TopKList = ({
   rows,
   dimension,
+  property = '',
   metric,
   omitOthers = false,
   compact = false,
 }: {
   rows: TopKRow[]
   dimension: TopKQuery_Dimension
+  property?: string
   metric: AggregationType
   omitOthers?: boolean
   compact?: boolean
@@ -119,6 +135,8 @@ export const TopKList = ({
   const maxValue = Math.max(...rows.map(row => row.value), 0)
   const { total, rankedCount, showShare, othersShare } = topKShareInfo(rows, metric, omitOthers)
   const revealKey = rows.map(row => `${row.dimensionValue}:${row.value}`).join('|')
+  // The rank control keeps its property across a dimension switch, so only property rows are named by it.
+  const labelProperty = dimension === TopKQuery_Dimension.PROPERTY ? property : ''
 
   return (
     <MotionConfig reducedMotion="user">
@@ -155,7 +173,7 @@ export const TopKList = ({
                   {row.isOthers ? '·' : i + 1}
                 </span>
                 <div className="relative min-w-0 flex-1 text-xs">
-                  <RowLabel row={row} dimension={dimension} />
+                  <RowLabel row={row} dimension={dimension} property={labelProperty} />
                 </div>
                 <span
                   className="relative w-16 shrink-0 text-right text-xs font-medium tabular-nums"

@@ -29,7 +29,10 @@ export const PropertyPickerList = ({
   placeholder: string
   mode: PropertyPickerMode
   onSelect: (name: string, source: PropertySource) => void
-  extraGroup?: { heading: string; items: ReadonlyArray<{ label: string; onSelect: () => void }> }
+  extraGroup?: {
+    heading: string
+    items: ReadonlyArray<{ label: string; onSelect: () => void }>
+  }
 }) => {
   const selected = mode.kind === 'multi-select' ? mode.selected : null
   const hasSystem = schema && schema.autoPropertyKeys.length > 0
@@ -63,7 +66,9 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="font-mono text-muted-foreground truncate">{pk.name}</span>
-                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
+                <span data-slot="command-shortcut" className="ml-auto text-xs text-faint tabular-nums shrink-0">
+                  {compactNumber(pk.count)}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -81,7 +86,9 @@ export const PropertyPickerList = ({
                   <Check className={cn('w-3 h-3 shrink-0', selected.has(pk.name) ? 'opacity-100' : 'opacity-0')} />
                 )}
                 <span className="truncate">{pk.name}</span>
-                <span className="ml-auto text-xs text-faint tabular-nums shrink-0">{compactNumber(pk.count)}</span>
+                <span data-slot="command-shortcut" className="ml-auto text-xs text-faint tabular-nums shrink-0">
+                  {compactNumber(pk.count)}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -152,7 +159,9 @@ const EventPopoverList = ({
                   style={{ backgroundColor: customColor ?? colors.dot }}
                 />
                 <span className="flex-1 truncate">{ev.name}</span>
-                <span className="text-xs text-faint tabular-nums shrink-0">{compactNumber(ev.count)}</span>
+                <span data-slot="command-shortcut" className="text-xs text-faint tabular-nums shrink-0">
+                  {compactNumber(ev.count)}
+                </span>
               </CommandItem>
             )
           })}
