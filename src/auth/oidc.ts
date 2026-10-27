@@ -7,7 +7,7 @@ const pendingProviderKey = 'pug.oidc.pending-provider'
 const pendingConnectionKey = 'pug.oidc.pending-connection'
 const pendingInviteKey = 'pug.oidc.pending-invite'
 
-// Keyed on the issuer, not the id — the id is operator-chosen and can be anything.
+// Keyed on the issuer, not the id: the id is operator-chosen and can be anything.
 export const isGoogleProvider = (provider: AuthProviderConfig) =>
   provider.issuerUrl.startsWith('https://accounts.google.com')
 
@@ -44,6 +44,23 @@ const settingsFor = (provider: AuthProviderConfig): UserManagerSettings => ({
 const managerFor = (provider: AuthProviderConfig) => new UserManager(settingsFor(provider))
 const clientFor = (provider: AuthProviderConfig) => new OidcClient(settingsFor(provider))
 
+// The authorization_endpoint comes from the issuer's live discovery document, refetched per sign-in
+// and mutable by its host, so a non-https scheme would run on this origin. Validate it on the
+// manager's own metadata service so signinRedirect reuses this cached value, not a second fetch.
+const assertSafeAuthorizationEndpoint = async (manager: UserManager) => {
+  const endpoint = await manager.metadataService.getAuthorizationEndpoint()
+  let url: URL
+  try {
+    url = new URL(endpoint)
+  } catch {
+    throw new Error('The identity provider advertised an unreadable authorization endpoint')
+  }
+  const localhost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]'
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && localhost)) {
+    throw new Error('The identity provider advertised a non-https authorization endpoint')
+  }
+}
+
 export const startOIDCSignIn = async (
   provider: AuthProviderConfig,
   { loginHint, domain, inviteToken }: OIDCSignInOptions = {},
@@ -61,6 +78,7 @@ export const startOIDCSignIn = async (
   try {
     const manager = managerFor(provider)
     await manager.clearStaleState()
+    await assertSafeAuthorizationEndpoint(manager)
     await manager.signinRedirect({
       nonce: crypto.randomUUID(),
       login_hint: loginHint,
