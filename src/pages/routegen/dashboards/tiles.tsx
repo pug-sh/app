@@ -18,20 +18,31 @@ import { DashboardInsightContent } from './insight-tile-content'
 import { getProtoRange } from './query'
 import { TileHeaderEdit } from './tile-header-edit'
 
+// `$` too: snarkdown inserts link URLs with String.replace, where it starts a replacement pattern.
 const escapeMarkdownHTML = (value: string) =>
-  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('$', '&#36;')
 
-const SAFE_URL_SCHEME = /^(?:https?|mailto):/i
-const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:'])
 
-// snarkdown doesn't sanitize link/image URLs. A browser strips ASCII control characters from a URL
-// before resolving its scheme, so strip them before the allowlist test; match the value with [\s\S]
-// (not .) so a newline inside it can't end the match early and pass the attribute through unchecked.
-const sanitizeMarkdownHTML = (markup: string) =>
-  markup.replace(/(\b(?:href|src)=)(["'])([\s\S]*?)\2/gi, (match, attr, quote, url) => {
-    const scheme = url.replace(/[\u0000-\u001f]/g, '').trimStart()
-    return HAS_SCHEME.test(scheme) && !SAFE_URL_SCHEME.test(scheme) ? `${attr}${quote}#${quote}` : match
-  })
+const isSafeURL = (url: string) => {
+  try {
+    return SAFE_PROTOCOLS.has(new URL(url, document.baseURI).protocol)
+  } catch {
+    return false
+  }
+}
+
+// snarkdown doesn't sanitize URLs. Checked on the parsed DOM, so text that imitates an attribute can't hide one.
+const sanitizeMarkdownHTML = (markup: string) => {
+  const doc = new DOMParser().parseFromString(markup, 'text/html')
+  for (const el of doc.querySelectorAll('[href], [src]')) {
+    for (const name of ['href', 'src']) {
+      const url = el.getAttribute(name)
+      if (url !== null && !isSafeURL(url)) el.removeAttribute(name)
+    }
+  }
+  return doc.body.innerHTML
+}
 
 export const renderMarkdownTileHTML = (body: string) => sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(body)))
 

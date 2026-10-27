@@ -161,7 +161,7 @@ export const sign = async (s: Signer) => {
     await record(s)
   } catch (err) {
     if (!(err instanceof Declined)) {
-      await reply(s, `@${s.cfg.commenter.login}: \`/sign\` could not be recorded: ${message(err)}`)
+      await reply(s, `@${s.cfg.commenter.login}, \`/sign\` could not be recorded: ${message(err)}`)
     }
     throw err
   }
@@ -216,7 +216,7 @@ const record = async (s: Signer) => {
   const { found, unlinked } = principals(commits, pr.user)
   const { found: coauthors, unknown } = await resolveCoauthors(s.gh, commits)
   const people = [...found, ...coauthors]
-  const unidentified = [...unlinked, ...unknown]
+  const unidentified = [...unlinked, ...unknown.map(mdCode)]
 
   let head: SignatureFile
   try {
@@ -241,7 +241,7 @@ const record = async (s: Signer) => {
           s,
           new Refusal(
             refusal.reason,
-            `${refusal.message}; the check could not identify who these belong to, so if one of them is yours, fix that first: ${unidentified.map(mdCode).join(', ')}`,
+            `${refusal.message}; the check could not identify who these belong to, so if one of them is yours, fix that first: ${unidentified.join(', ')}`,
           ),
         )
       }
@@ -322,7 +322,7 @@ const confirm = async (s: Signer, pr: PullRequest, version: string) => {
 // other reason fails the job, which is the only place an operator can see that a /sign was refused.
 const decline = async (s: Signer, reason: Error) => {
   const settled = reason instanceof Refusal && reason.reason === 'already-signed'
-  let body = `@${s.cfg.commenter.login}: ${reason.message}.`
+  let body = `@${s.cfg.commenter.login}, ${reason.message}.`
   if (settled) body += stillRed
   else body += `\n\nSee [CLA.md](${s.cfg.serverURL}/${s.cfg.repo}/blob/HEAD/CLA.md) for how signing works.`
   await reply(s, body)

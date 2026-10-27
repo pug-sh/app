@@ -1,42 +1,49 @@
 import { describe, expect, it } from 'vitest'
 import { renderMarkdownTileHTML } from './tiles'
 
-// The sink feeds dangerouslySetInnerHTML and also renders on the public /shared route, so a tile
-// body is attacker-controlled markup. Only http(s)/mailto links may survive.
+const parse = (body: string) => new DOMParser().parseFromString(renderMarkdownTileHTML(body), 'text/html')
+
+// null when no link rendered at all, so a body snarkdown didn't parse can't pass as a dropped URL.
+const urls = (body: string) => {
+  const el = parse(body).querySelector('a, img')
+  return el && [el.getAttribute('href'), el.getAttribute('src')].filter(url => url !== null)
+}
+
+// Also rendered on the public /shared route, so a tile body is untrusted markup.
 describe('renderMarkdownTileHTML', () => {
-  it('keeps ordinary http(s) and mailto links intact', () => {
-    expect(renderMarkdownTileHTML('[docs](https://pug.sh/docs)')).toContain('href="https://pug.sh/docs"')
-    expect(renderMarkdownTileHTML('[x](http://example.com)')).toContain('href="http://example.com"')
-    expect(renderMarkdownTileHTML('[mail](mailto:team@pug.sh)')).toContain('href="mailto:team@pug.sh"')
+  it.each([
+    'https://pug.sh/docs',
+    'http://example.com',
+    'HTTPS://PUG.SH',
+    'mailto:team@pug.sh',
+    'tel:+15550100',
+    'sms:+15550100',
+    '/overview',
+    '#section',
+  ])('keeps %s', url => {
+    expect(urls(`[x](${url})`)).toEqual([url])
   })
 
-  it('leaves relative and anchor links alone', () => {
-    expect(renderMarkdownTileHTML('[rel](/overview)')).toContain('href="/overview"')
-    expect(renderMarkdownTileHTML('[a](#section)')).toContain('href="#section"')
+  it.each([
+    ['a javascript: link', '[x](javascript:x)'],
+    ['a scheme split by a tab', '[x](java\tscript:x)'],
+    ['a scheme split by a newline', '[x](java\nscript:x)'],
+    ['a scheme behind a control character', '[x](\u0001javascript:x)'],
+    ['a scheme behind a space', '[x]( javascript:x)'],
+    ['an app deep link', '[x](x-app:open)'],
+    ['a data: image', '![x](data:text/html,x)'],
+    ['a vbscript: image', '![x](vbscript:x)'],
+  ])('drops %s', (_kind, body) => {
+    expect(urls(body)).toEqual([])
   })
 
-  it('neutralizes a plain javascript: scheme', () => {
-    expect(renderMarkdownTileHTML('[x](javascript:alert(1))')).not.toContain('javascript:')
+  it('checks the real attribute when body text imitates one', () => {
+    expect(urls("src=' [x](x-app:open) it's")).toEqual([])
   })
 
-  it('neutralizes a scheme split by a tab that the browser would strip before dispatch', () => {
-    const out = renderMarkdownTileHTML('[x](java\tscript:alert(1))')
-    expect(out.replace(/[\u0000-\u001f]/g, '')).not.toContain('javascript:')
-    expect(out).toContain('href="#"')
-  })
-
-  it('neutralizes a scheme split by a newline that also breaks a line-bound attribute match', () => {
-    const out = renderMarkdownTileHTML('[x](java\nscript:alert(1))')
-    expect(out.replace(/[\u0000-\u001f]/g, '')).not.toContain('javascript:')
-  })
-
-  it('neutralizes a scheme hidden behind a leading control character', () => {
-    const out = renderMarkdownTileHTML('[x](\u0001javascript:alert(1))')
-    expect(out.replace(/[\u0000-\u001f]/g, '')).not.toContain('javascript:')
-  })
-
-  it('neutralizes data: and vbscript: in an image src', () => {
-    expect(renderMarkdownTileHTML('![x](data:text/html,<script>)')).not.toContain('data:text/html')
-    expect(renderMarkdownTileHTML('![x](vbscript:msgbox)')).not.toContain('vbscript:')
+  it('keeps a $ in a link URL from copying earlier text into the tag', () => {
+    const link = parse('x" title="y [a](z$`)').querySelector('a')
+    expect(link?.getAttributeNames()).toEqual(['href'])
+    expect(link?.getAttribute('href')).toBe('z$`')
   })
 })

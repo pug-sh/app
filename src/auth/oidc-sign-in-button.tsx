@@ -1,7 +1,7 @@
 import { KeyRound, Loader2 } from 'lucide-react'
 import type { AuthProviderConfig } from '@/api/genproto/public/auth/v1/auth_pb'
 import { Button } from '@/components/ui/button'
-import { isGoogleProvider, type OIDCSignInOptions, startOIDCSignIn } from './oidc'
+import { isGoogleProvider, type OIDCSignInOptions, startOIDCSignIn, UnsafeProviderError } from './oidc'
 
 export const OIDCSignInButton = ({
   provider,
@@ -26,7 +26,11 @@ export const OIDCSignInButton = ({
       await startOIDCSignIn(provider, options)
     } catch (error) {
       console.error('OIDC sign-in redirect failed', error)
-      onError(`${provider.displayName} sign-in could not be started. Try again.`)
+      if (error instanceof UnsafeProviderError) {
+        onError(`${provider.displayName} isn't set up correctly, so sign-in can't start. Ask your administrator.`)
+      } else {
+        onError(`${provider.displayName} sign-in could not be started. Try again.`)
+      }
     }
   }
 

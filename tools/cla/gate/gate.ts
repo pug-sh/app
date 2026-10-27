@@ -1,8 +1,8 @@
 // The checker: holds a pull request until everyone with work in it has signed the Contributor
 // License Agreement.
 //
-// Everyone whose copyright can reach the repository through the pull request — commit author,
-// committer, co-author, and the person who opened it — must appear in tools/cla/signatures.json.
+// Everyone whose copyright can reach the repository through the pull request (commit author,
+// committer, co-author, and the person who opened it) must appear in tools/cla/signatures.json.
 // The file is read both at the pull request's head, where a hand-written signature lands, and at the
 // base branch tip, where a /sign comment lands one. A hand-written edit must be append-only and may
 // only add the person who opened it, so a co-author signs by commenting /sign instead.
@@ -95,7 +95,7 @@ export const loadConfig = (): Config => {
   return cfg
 }
 
-// Everything the gate talks to. run assembles it once so check itself reaches for no ambient state —
+// Everything the gate talks to. run assembles it once so check itself reaches for no ambient state:
 // not the API, not stdout, not the clock.
 export type Checker = {
   cfg: Config
@@ -120,7 +120,7 @@ export const run = async () => {
   await check(c)
 }
 
-// A gate that fell over must not leave "signed — thanks!" standing on a red check, nor advice the
+// A gate that fell over must not leave the signed confirmation standing on a red check, nor advice the
 // contributor has just followed and failed on.
 export const check = async (c: Checker) => {
   try {
@@ -169,8 +169,8 @@ const verdict = async (c: Checker) => {
     )
   }
 
-  // An unidentified co-author blocks the gate like an unsigned one — a trailer names a copyright
-  // holder either way — but is reported rather than raised: it is the contributor's to fix, and a
+  // An unidentified co-author blocks the gate like an unsigned one (a trailer names a copyright
+  // holder either way), but is reported rather than raised: it is the contributor's to fix, and a
   // checker error would bury the report.
   const { found: coauthors, unknown } = await resolveCoauthors(c.gh, commits)
   const people = [...found, ...coauthors]
@@ -207,7 +207,7 @@ const verdict = async (c: Checker) => {
     await syncLabels(c, labelUnsigned, labelSigned)
     throw new Unsigned('cla not signed')
   }
-  // A pull request authored entirely by bots — dependabot and friends — has no human copyright to
+  // A pull request authored entirely by bots (dependabot and friends) has no human copyright to
   // license, so there is nothing to sign for.
   if (checked.length === 0) {
     c.out(`CLA ${head.claVersion}: no human authors across ${commits.length} commit(s); nothing to sign\n`)
@@ -259,7 +259,7 @@ const baseFile = async (c: Checker) => {
 
 // Turns Co-authored-by trailers into principals. It takes the API rather than hanging off the
 // checker: the signer needs exactly this list to decide who may sign, and two implementations of
-// "who is a principal" — one deciding who must sign and one deciding who may — is the single
+// "who is a principal" (one deciding who must sign and one deciding who may) is the single
 // disagreement this system cannot survive. A trailer is commit-message text, so nothing in it is
 // taken on trust: the address only chooses which login is looked up, and the id always comes back
 // from the API.
@@ -343,7 +343,7 @@ const upsertComment = async (c: Checker, body: string, create: boolean) => {
     return
   }
   // The marker is not identity: anyone can open a comment with it, and taking the earliest match
-  // would let them capture every later report — the gate would edit their comment forever and never
+  // would let them capture every later report: the gate would edit their comment forever and never
   // post its own. The author has to be a bot as well, which the token's own comments always are.
   // Prefix, not contains: quote-reply copies the marker into the quoting user's comment.
   const mine = existing.find(cm => cm.authorType === 'Bot' && cm.body.startsWith(commentMarker))

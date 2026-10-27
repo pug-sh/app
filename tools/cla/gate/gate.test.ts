@@ -69,7 +69,7 @@ test('the job summary is written', async () => {
 })
 
 // A rate limit is not evidence that carol has no account, so it must not reach her as
-// "unidentified" — that sends the contributor off to fix an address that was fine. It is the
+// "unidentified", which sends the contributor off to fix an address that was fine. It is the
 // checker's fault and is raised as one.
 test('a co-author lookup failure is raised, not reported', async () => {
   const commits = [
@@ -91,7 +91,7 @@ test('a plaintext co-author address is reported', async () => {
   expect(unknown).toEqual(['carol@example.com'])
 })
 
-// An assistant holds no copyright, so its trailer is skipped rather than blocking — otherwise every
+// An assistant holds no copyright, so its trailer is skipped rather than blocking; otherwise every
 // contributor using one rewrites their branch. The pairing matters: an address that might belong to a
 // person must still stop the gate, or the exemption is a hole rather than a rule.
 test("an assistant trailer is skipped but a person's at the same domain is not", async () => {
@@ -108,7 +108,7 @@ test("an assistant trailer is skipped but a person's at the same domain is not",
   expect(colleague.unknown).toHaveLength(1)
 })
 
-// The gate still blocks — a trailer names a copyright holder either way — but the contributor must
+// The gate still blocks (a trailer names a copyright holder either way), but the contributor must
 // meet the ordinary report, not an error that hides it.
 test('an unidentified co-author blocks through the report', async () => {
   const out = sink()
@@ -177,7 +177,7 @@ test('loadConfig rejects the inputs it cannot check without', () => {
     ['no opener', { PR_USER_ID: '' }, 'PR_USER_ID'],
     ['no repo', { GITHUB_REPOSITORY: '' }, 'GITHUB_REPOSITORY is empty'],
     ['no head', { PR_HEAD_SHA: '' }, 'PR_HEAD_SHA is empty'],
-    // "0" parses, so only the explicit guard catches it — and an id of zero is dropped by unsigned(),
+    // "0" parses, so only the explicit guard catches it, and an id of zero is dropped by unsigned(),
     // which would empty the check rather than fail it.
     ['zero opener', { PR_USER_ID: '0' }, 'PR_USER_ID is zero'],
     // appendOnly matches the entry's login against the opener's, so an empty one refuses every
@@ -314,7 +314,7 @@ test('an all-bot pull request passes and resolves any standing demand', async ()
   expect(gh.posted[0]!.body).not.toContain('Signature required')
   // ...and nothing to claim was signed, either: no human authored this, so no agreement was given.
   expect(gh.posted[0]!.body).toContain('nothing to sign')
-  expect(gh.posted[0]!.body).not.toContain('signed — thanks')
+  expect(gh.posted[0]!.body).not.toContain('signed')
 })
 
 // The base file is read at the merge base, not at the base branch tip. The tip moves as others sign,
@@ -338,7 +338,7 @@ test('a stale branch is not accused of deleting a signature', async () => {
 })
 
 // A /sign comment commits to the base branch after the event fired, and a re-run replays the original
-// payload — so the version in force is read from that branch by name, not from the merge base.
+// payload, so the version in force is read from that branch by name, not from the merge base.
 test('a signature that landed on the base branch after the event passes the re-run', async () => {
   const gh = newFake({
     base: 'mergebase',
@@ -366,7 +366,7 @@ test('annotation escaping keeps an error to one command', () => {
   const problem = invalidReason(file({ login: 'a\n::error::injected', id: 1, date: 'bad', cla: 'v1' }))
   expect(problem).not.toBeNull()
 
-  // GitHub reads one command per line, so a single line is a single command — the injected
+  // GitHub reads one command per line, so a single line is a single command: the injected
   // "::error::" survives only as inert text after its newline goes.
   const line = `::error::${escapeAnnotation(problem!)}`
   expect(line).not.toContain('\n')

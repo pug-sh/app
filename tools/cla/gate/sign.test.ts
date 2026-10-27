@@ -230,18 +230,23 @@ test('an unlinked commit email is explained', async () => {
   expect(gh.posted[0]!.body).toContain('c2')
 })
 
-// A Co-authored-by address is attacker-chosen text, so it must reach the bot's comment inside a
-// code span, or a link/@mention posted under the bot's token renders live.
+// A Co-authored-by address is pull-request text, so a link or @mention in one must not render live.
 test('an unidentified co-author address is posted inside a code span, not as live markdown', async () => {
   const gh = signable()
-  const trailer = '[sign here](https://evil.example) @victim'
-  gh.commits = [commit('c1', alice, alice, `feat\n\nCo-authored-by: x <${trailer}>\n`)]
+  gh.pr.commits = 2
+  const trailers = 'Co-authored-by: x <[sign here](https://evil.example) @victim>\nCo-authored-by: y <a` @victim `b>'
+  gh.commits = [
+    { sha: 'c0', author: null, committer: null, message: '' },
+    commit('c1', alice, alice, `feat\n\n${trailers}\n`),
+  ]
 
   const err = await caught(sign(newSigner(gh, user('mallory', 77))))
   expect(refusalOf(err)).toBe('not-a-principal')
   const body = gh.posted[0]!.body
-  expect(body).toContain(`\`${trailer}\``)
-  expect(body).not.toMatch(/fix that first: \[/)
+  expect(body).toContain('fix that first: c0, `')
+  const live = body.replace(/`[^`]*`/g, '')
+  expect(live).not.toContain('evil.example')
+  expect(live).not.toContain('@victim')
 })
 
 // The signer must never be the thing that makes the file unparseable for everyone else, so it

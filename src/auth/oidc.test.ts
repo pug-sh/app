@@ -32,6 +32,7 @@ import {
   pendingOIDCInviteToken,
   pendingOIDCProviderID,
   startOIDCSignIn,
+  UnsafeProviderError,
 } from './oidc'
 
 const providerInit = {
@@ -106,29 +107,36 @@ describe('OIDC redirect lifecycle', () => {
     expect(oidc.signinRedirect.mock.calls[0][0].nonce.length).toBeGreaterThanOrEqual(16)
   })
 
-  // The discovery document is mutable by its host, so a non-https endpoint would run on this origin.
-  it('refuses to redirect when the discovery document names a non-https authorization endpoint', async () => {
-    oidc.getAuthorizationEndpoint.mockResolvedValue('javascript:fetch("//evil")//')
+  it.each([
+    ['a non-https scheme', 'javascript:x'],
+    ['http off localhost', 'http://idp.example.com/authorize'],
+    ['http on a host that only starts with localhost', 'http://localhost.example.com/authorize'],
+    ['an unparseable value', 'not a url'],
+  ])('refuses an authorization endpoint with %s', async (_kind, endpoint) => {
+    oidc.getAuthorizationEndpoint.mockResolvedValue(endpoint)
 
-    await expect(startOIDCSignIn(provider)).rejects.toThrow(/authorization endpoint/i)
+    await expect(startOIDCSignIn(provider)).rejects.toThrow(UnsafeProviderError)
     expect(oidc.signinRedirect).not.toHaveBeenCalled()
     expect(pendingOIDCProviderID()).toBe('')
   })
 
-  it('refuses an http authorization endpoint on a non-localhost host', async () => {
-    oidc.getAuthorizationEndpoint.mockResolvedValue('http://idp.example.com/authorize')
+  it.each(['http://localhost:8080/authorize', 'http://127.0.0.1:8080/authorize', 'http://[::1]:8080/authorize'])(
+    'allows %s for local development',
+    async endpoint => {
+      oidc.getAuthorizationEndpoint.mockResolvedValue(endpoint)
+      oidc.signinRedirect.mockResolvedValue(undefined)
 
-    await expect(startOIDCSignIn(provider)).rejects.toThrow(/authorization endpoint/i)
+      await startOIDCSignIn(provider)
+
+      expect(oidc.signinRedirect).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('does not redirect when the discovery document cannot be fetched', async () => {
+    oidc.getAuthorizationEndpoint.mockRejectedValue(new Error('discovery failed'))
+
+    await expect(startOIDCSignIn(provider)).rejects.toThrow('discovery failed')
     expect(oidc.signinRedirect).not.toHaveBeenCalled()
-  })
-
-  it('allows an http authorization endpoint on localhost for local development', async () => {
-    oidc.getAuthorizationEndpoint.mockResolvedValue('http://localhost:8080/authorize')
-    oidc.signinRedirect.mockResolvedValue(undefined)
-
-    await startOIDCSignIn(provider)
-
-    expect(oidc.signinRedirect).toHaveBeenCalledOnce()
   })
 
   it('returns the code and original PKCE values without exchanging tokens in the browser', async () => {
