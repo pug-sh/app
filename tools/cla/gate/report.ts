@@ -18,8 +18,8 @@ export type ReportContext = {
   opener: Principal
 }
 
-// GitHub's workflow-command encoding. An error can carry a value the pull request chose — a login
-// out of the signature file — and a raw newline in one would start a second command on the line below.
+// GitHub's workflow-command encoding. An error can carry a value the pull request chose (a login
+// out of the signature file), and a raw newline in one would start a second command on the line below.
 export const escapeAnnotation = (s: string) => s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
 
 // Identifies the gate's own comment so a re-run edits it instead of posting another. Invisible in
@@ -58,7 +58,7 @@ export const joinNames = (names: string[]) => {
 // span, which renders it literally. The backtick that would end the span early is dropped rather
 // than escaped: an address has no use for one, and a half-escaped span is worse than a missing
 // character.
-const mdCode = (s: string) => `\`${s.replaceAll('`', '')}\``
+export const mdCode = (s: string) => `\`${s.replaceAll('`', '')}\``
 
 const verbatim = (s: string) => s
 
@@ -106,7 +106,7 @@ const signMarkdown = (
   md += `Thanks for contributing! Everyone with work in this pull request has to sign the [Contributor License Agreement](${claURL}) before it can merge.${tail}\n`
   if (mine !== undefined) {
     const name = mention ? `@${mine.login}` : mine.login
-    md += `\n**${name}** — comment \`/sign\`, on its own, on this pull request and that is done. To sign by hand instead, add this to the \`signatures\` array in \`${signaturesPath}\`, then commit and push:\n\n`
+    md += `\n**${name}**: comment \`/sign\`, on its own, on this pull request and that is done. To sign by hand instead, add this to the \`signatures\` array in \`${signaturesPath}\`, then commit and push:\n\n`
     md += `\`\`\`json\n${entryJson(mine, head.claVersion, '', now)}\n\`\`\`\n`
   }
   for (const b of blocks) md += `\n${b}\n`
@@ -150,7 +150,7 @@ export const unsignedReport = (
 
 // Replaces a request comment once the signature lands, so a merged pull request is not left showing
 // a demand that has already been met.
-export const signedComment = (version: string) => `${commentMarker}\nCLA ${version} signed — thanks!\n`
+export const signedComment = (version: string) => `${commentMarker}\nCLA ${version} signed. Thanks!\n`
 
 // A pull request with no human author has nothing to sign, so saying it is signed would name an
 // agreement nobody gave.

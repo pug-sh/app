@@ -18,9 +18,9 @@ import {
 import { env, message, number, resolveCoauthors, runTimeout } from './gate.ts'
 import { Conflict, type GitHubAPI, NoRuns, newClient, type PullRequest, signaturesPath } from './github.ts'
 import { logError, logInfo } from './log.ts'
-import { escapeAnnotation } from './report.ts'
+import { escapeAnnotation, mdCode } from './report.ts'
 
-// The checker's workflow — not this one — re-run once a signature lands so the pull request's own
+// The checker's workflow, not this one, re-run once a signature lands so the pull request's own
 // required check turns green rather than a second check merely agreeing with it.
 const checkerWorkflowFile = 'cla.yaml'
 
@@ -100,8 +100,8 @@ export const refusalOf = (err: unknown): RefusalReason | undefined => {
 // author and committer, and every resolved Co-authored-by trailer. head is the pull request's own
 // signature file and onBase the base branch's. version is the one in force.
 //
-// More than one reason can be true at once — a bot that is not a principal and has somehow signed
-// hits three — so the order of the checks is the order of the contributor's experience: whichever
+// More than one reason can be true at once (a bot that is not a principal and has somehow signed
+// hits three), so the order of the checks is the order of the contributor's experience: whichever
 // fires first is the only message they read. Returns undefined to accept.
 export const maySign = (
   commenter: Principal,
@@ -114,12 +114,12 @@ export const maySign = (
   // A bot first. It is the one refusal that holds whatever the pull request says.
   if (isBot(commenter)) return new Refusal('bot', 'a bot holds no copyright, so it has nothing to license')
   // Before principal-hood, deliberately. Someone who signed on an earlier pull request and comments
-  // /sign on a colleague's would otherwise be told they have no work here — true, and it sends them
+  // /sign on a colleague's would otherwise be told they have no work here: true, and it sends them
   // hunting for a problem they do not have. Both files are searched at the version in force, never
   // at their own: onBase can declare a different one mid-bump.
   //
   // head is the pull request's own file, so it is credited only to the opener. appendOnly takes a
-  // hand-written signature from nobody else, which makes an entry there naming anyone else forged —
+  // hand-written signature from nobody else, which makes an entry there naming anyone else forged,
   // and crediting it would let a pull request refuse a co-author's /sign as already signed, on a
   // green job, having recorded nothing.
   const inHead = commenter.id === opener.id && signedAt(head, commenter.id, version)
@@ -142,7 +142,7 @@ const putRetries = 1
 // Advice, not an apology: the signature is committed either way, so what the contributor needs is
 // the one action that gets their check re-run.
 const rerunFailed =
-  '\n\nThe CLA check could not be re-run automatically — push any commit, or ask a maintainer to re-run it.'
+  '\n\nThe CLA check could not be re-run automatically. Push any commit, or ask a maintainer to re-run it.'
 
 // The same advice for someone whose signature was already on file: a repeat /sign is usually an
 // attempt to clear a check that never got re-run.
@@ -161,7 +161,7 @@ export const sign = async (s: Signer) => {
     await record(s)
   } catch (err) {
     if (!(err instanceof Declined)) {
-      await reply(s, `@${s.cfg.commenter.login} — \`/sign\` could not be recorded: ${message(err)}`)
+      await reply(s, `@${s.cfg.commenter.login}: \`/sign\` could not be recorded: ${message(err)}`)
     }
     throw err
   }
@@ -241,7 +241,7 @@ const record = async (s: Signer) => {
           s,
           new Refusal(
             refusal.reason,
-            `${refusal.message}; the check could not identify who these belong to, so if one of them is yours, fix that first: ${unidentified.join(', ')}`,
+            `${refusal.message}; the check could not identify who these belong to, so if one of them is yours, fix that first: ${unidentified.map(mdCode).join(', ')}`,
           ),
         )
       }
@@ -294,7 +294,7 @@ const reply = async (s: Signer, body: string) => {
 // the signature is committed either way, and failing here would report a signing that happened as
 // one that did not.
 const confirm = async (s: Signer, pr: PullRequest, version: string) => {
-  let body = `Signed CLA **${version}** for @${s.cfg.commenter.login} — recorded in \`${signaturesPath}\` on \`${pr.baseRef}\`. Thanks!`
+  let body = `Signed CLA **${version}** for @${s.cfg.commenter.login}, recorded in \`${signaturesPath}\` on \`${pr.baseRef}\`. Thanks!`
 
   try {
     const run = await s.gh.latestWorkflowRun(checkerWorkflowFile, pr.headSha)
@@ -322,7 +322,7 @@ const confirm = async (s: Signer, pr: PullRequest, version: string) => {
 // other reason fails the job, which is the only place an operator can see that a /sign was refused.
 const decline = async (s: Signer, reason: Error) => {
   const settled = reason instanceof Refusal && reason.reason === 'already-signed'
-  let body = `@${s.cfg.commenter.login} — ${reason.message}.`
+  let body = `@${s.cfg.commenter.login}: ${reason.message}.`
   if (settled) body += stillRed
   else body += `\n\nSee [CLA.md](${s.cfg.serverURL}/${s.cfg.repo}/blob/HEAD/CLA.md) for how signing works.`
   await reply(s, body)
@@ -333,11 +333,11 @@ const decline = async (s: Signer, reason: Error) => {
   throw new Declined(reason, `refused to sign for ${s.cfg.commenter.login}: declined: ${reason.message}`)
 }
 
-// What a comment body asks for. "unrelated" stays silent — the contributor meant something else, and
+// What a comment body asks for. "unrelated" stays silent: the contributor meant something else, and
 // a refusal under every "I'll /sign later" would be worse than saying nothing. "near-miss" is a body
 // that opens with the command and carries anything else ("/sign please"); the workflow prefilters on
 // that same prefix, so those do reach the job, and exiting quietly on one is the worst shape
-// available — a green run, no comment, no annotation, and a check still red.
+// available: a green run, no comment, no annotation, and a check still red.
 export const commandOf = (body: string) => {
   const trimmed = body.trim()
   if (!trimmed.startsWith(signCommand)) return 'unrelated'
@@ -347,7 +347,7 @@ export const commandOf = (body: string) => {
 export const nearMiss = (s: Signer) =>
   reply(
     s,
-    `@${s.cfg.commenter.login} — to sign, comment \`${signCommand}\` on its own, with nothing else in the comment.`,
+    `@${s.cfg.commenter.login}, to sign, comment \`${signCommand}\` on its own, with nothing else in the comment.`,
   )
 
 export const runSign = async () => {
