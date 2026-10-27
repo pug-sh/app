@@ -21,14 +21,19 @@ import { TileHeaderEdit } from './tile-header-edit'
 const escapeMarkdownHTML = (value: string) =>
   value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 
-const DANGEROUS_URL_SCHEME = /^\s*(?:javascript|data|vbscript):/i
+const SAFE_URL_SCHEME = /^(?:https?|mailto):/i
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i
 
-// snarkdown does not sanitize link/image URLs, so neutralize dangerous schemes in the
-// generated markup before it is rendered.
+// snarkdown doesn't sanitize link/image URLs. A browser strips ASCII control characters from a URL
+// before resolving its scheme, so strip them before the allowlist test; match the value with [\s\S]
+// (not .) so a newline inside it can't end the match early and pass the attribute through unchecked.
 const sanitizeMarkdownHTML = (markup: string) =>
-  markup.replace(/(\b(?:href|src)=)(["'])(.*?)\2/gi, (match, attr, quote, url) =>
-    DANGEROUS_URL_SCHEME.test(url) ? `${attr}${quote}#${quote}` : match,
-  )
+  markup.replace(/(\b(?:href|src)=)(["'])([\s\S]*?)\2/gi, (match, attr, quote, url) => {
+    const scheme = url.replace(/[\u0000-\u001f]/g, '').trimStart()
+    return HAS_SCHEME.test(scheme) && !SAFE_URL_SCHEME.test(scheme) ? `${attr}${quote}#${quote}` : match
+  })
+
+export const renderMarkdownTileHTML = (body: string) => sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(body)))
 
 const NO_FILTERS: readonly ActiveFilter[] = []
 
@@ -97,7 +102,7 @@ export const TileShell = ({
 export const DashboardMarkdownTile = ({ tile, editing, onPatch }: TileContentProps) => {
   if (tile.content.case !== 'markdown') return null
 
-  const html = sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(tile.content.value.body)))
+  const html = renderMarkdownTileHTML(tile.content.value.body)
 
   return (
     <TileShell tile={tile} editing={editing} onPatch={onPatch}>
