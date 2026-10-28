@@ -43,6 +43,247 @@ beforeEach(() => {
   getPropertyValues.mockResolvedValue({ values: ['IN'] })
 })
 
+describe('between and not between on a number property', () => {
+  const schema = create(GetFilterSchemaResponseSchema, {
+    customPropertyKeys: [{ name: 'amount', valueType: PropertyValueType.INTEGER }],
+  })
+
+  const openRange = async (operator: string) => {
+    const onAdd = vi.fn()
+    render(
+      <Provider>
+        <FilterBuilder schema={schema} schemaError={null} onAdd={onAdd} />
+      </Provider>,
+    )
+    fireEvent.click(screen.getByText('Filter'))
+    fireEvent.click(await screen.findByText('amount'))
+    fireEvent.click(screen.getByText(operator))
+    return onAdd
+  }
+
+  const type = (min: string, max: string) => {
+    fireEvent.change(screen.getByPlaceholderText('Min'), { target: { value: min } })
+    fireEvent.change(screen.getByPlaceholderText('Max'), { target: { value: max } })
+  }
+
+  const apply = () => screen.getByText('Apply').closest('button') as HTMLButtonElement
+
+  const marked = () => ({
+    min: screen.getByPlaceholderText('Min').getAttribute('aria-invalid'),
+    max: screen.getByPlaceholderText('Max').getAttribute('aria-invalid'),
+  })
+
+  it.each(['between', 'not between'])('holds back a backwards %s range until it is fixed', async operator => {
+    const onAdd = await openRange(operator)
+    type('10', '5')
+    expect(screen.getByText("Min can't be above max")).toBeTruthy()
+    expect(marked()).toEqual({ min: 'true', max: 'true' })
+    const hint = screen.getByText("Min can't be above max")
+    expect(hint.id).not.toBe('')
+    expect(screen.getByPlaceholderText('Min').getAttribute('aria-describedby')).toBe(hint.id)
+    expect(screen.getByPlaceholderText('Max').getAttribute('aria-describedby')).toBe(hint.id)
+    expect(apply().disabled).toBe(true)
+
+    fireEvent.keyDown(screen.getByPlaceholderText('Max'), { key: 'Enter' })
+    fireEvent.click(apply())
+    expect(onAdd).not.toHaveBeenCalled()
+
+    type('5', '10')
+    expect(screen.queryByText("Min can't be above max")).toBeNull()
+    expect(marked()).toEqual({ min: null, max: null })
+    expect(screen.getByPlaceholderText('Min').getAttribute('aria-describedby')).toBeNull()
+    expect(screen.getByPlaceholderText('Max').getAttribute('aria-describedby')).toBeNull()
+    expect(apply().disabled).toBe(false)
+    fireEvent.click(apply())
+    expect(onAdd).toHaveBeenCalledTimes(1)
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ kind: 'range', min: '5', max: '10' }))
+  })
+
+  it.each(['between', 'not between'])('holds back a non-numeric %s range', async operator => {
+    const onAdd = await openRange(operator)
+    type('abc', '5')
+    expect(screen.getByText('Enter valid numbers')).toBeTruthy()
+    expect(marked()).toEqual({ min: 'true', max: 'false' })
+    expect(apply().disabled).toBe(true)
+    fireEvent.keyDown(screen.getByPlaceholderText('Max'), { key: 'Enter' })
+    expect(onAdd).not.toHaveBeenCalled()
+  })
+
+  it('accepts a range whose ends are equal', async () => {
+    const onAdd = await openRange('between')
+    type('5', '5')
+    expect(screen.queryByRole('status')).toBeNull()
+    fireEvent.click(apply())
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ kind: 'range', min: '5', max: '5' }))
+  })
+
+  it('shows no hint while a bound is still empty', async () => {
+    await openRange('between')
+    type('5', '')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(apply().disabled).toBe(true)
+  })
+})
+
+describe('FilterChip editing a range', () => {
+  const amount = (operator: FilterOperator) => createFilter('amount', PropertySource.CUSTOM, operator, ['1', '5'])
+
+  const edit = (min: string, max: string) => {
+    fireEvent.click(trigger('1 – 5'))
+    fireEvent.change(screen.getByPlaceholderText('Min'), { target: { value: min } })
+    fireEvent.change(screen.getByPlaceholderText('Max'), { target: { value: max } })
+  }
+
+  const apply = () => screen.getByText('Apply').closest('button') as HTMLButtonElement
+
+  it.each([
+    ['between', FilterOperator.BETWEEN],
+    ['not between', FilterOperator.NOT_BETWEEN],
+  ])('refuses to save a backwards range on %s', (_label, operator) => {
+    const onUpdate = chip(amount(operator))
+    edit('9', '2')
+    expect(screen.getByText("Min can't be above max")).toBeTruthy()
+    expect(apply().disabled).toBe(true)
+    fireEvent.keyDown(screen.getByPlaceholderText('Max'), { key: 'Enter' })
+    fireEvent.click(apply())
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it('refuses to save a non-numeric range', () => {
+    const onUpdate = chip(amount(FilterOperator.BETWEEN))
+    edit('1', 'abc')
+    expect(screen.getByText('Enter valid numbers')).toBeTruthy()
+    expect(screen.getByPlaceholderText('Min').getAttribute('aria-invalid')).toBe('false')
+    expect(screen.getByPlaceholderText('Max').getAttribute('aria-invalid')).toBe('true')
+    fireEvent.keyDown(screen.getByPlaceholderText('Max'), { key: 'Enter' })
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it('saves a corrected range', () => {
+    const onUpdate = chip(amount(FilterOperator.BETWEEN))
+    edit('9', '2')
+    fireEvent.change(screen.getByPlaceholderText('Max'), { target: { value: '12' } })
+    expect(screen.queryByRole('status')).toBeNull()
+    fireEvent.click(apply())
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'range', min: '9', max: '12' }))
+  })
+})
+
+const NUMBER_OPERATORS = [
+  ['greater than', FilterOperator.GT],
+  ['greater or equal', FilterOperator.GTE],
+  ['less than', FilterOperator.LT],
+  ['less or equal', FilterOperator.LTE],
+] as const
+
+describe('greater/less operators on a number property', () => {
+  const schema = create(GetFilterSchemaResponseSchema, {
+    customPropertyKeys: [{ name: 'amount', valueType: PropertyValueType.INTEGER }],
+  })
+
+  const openValue = async (operator: string) => {
+    const onAdd = vi.fn()
+    render(
+      <Provider>
+        <FilterBuilder schema={schema} schemaError={null} onAdd={onAdd} />
+      </Provider>,
+    )
+    fireEvent.click(screen.getByText('Filter'))
+    fireEvent.click(await screen.findByText('amount'))
+    fireEvent.click(screen.getByText(operator))
+    return onAdd
+  }
+
+  const input = () => screen.getByPlaceholderText<HTMLInputElement>('Type a value...')
+  const apply = () => screen.getByText('Apply').closest('button') as HTMLButtonElement
+
+  it.each(NUMBER_OPERATORS)('holds back a non-numeric value on %s until it is fixed', async (label, operator) => {
+    const onAdd = await openValue(label)
+    fireEvent.change(input(), { target: { value: 'abc' } })
+    expect(screen.getByText('Enter a valid number')).toBeTruthy()
+    expect(input().getAttribute('aria-invalid')).toBe('true')
+    const hint = screen.getByText('Enter a valid number')
+    expect(hint.id).not.toBe('')
+    expect(input().getAttribute('aria-describedby')).toBe(hint.id)
+    expect(apply().disabled).toBe(true)
+
+    fireEvent.keyDown(input(), { key: 'Enter' })
+    fireEvent.click(apply())
+    expect(onAdd).not.toHaveBeenCalled()
+
+    fireEvent.change(input(), { target: { value: ' 12.5 ' } })
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(input().getAttribute('aria-describedby')).toBeNull()
+    expect(apply().disabled).toBe(false)
+    fireEvent.click(apply())
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ kind: 'single', operator, value: '12.5' }))
+  })
+
+  it('shows no hint while the value is still empty', async () => {
+    await openValue('greater than')
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(apply().disabled).toBe(true)
+  })
+
+  // The popover repositions when it grows, so the list gives up the hint's height while the hint shows.
+  const list = () => document.querySelector('[data-slot="command-list"]') as HTMLElement
+
+  it('shortens the list by the hint height only while the hint shows, so the popover keeps its height', async () => {
+    await openValue('greater than')
+    expect(list().className).toContain('max-h-72')
+
+    fireEvent.change(input(), { target: { value: 'abc' } })
+    expect(list().className).toContain('max-h-[calc(18rem-1.375rem)]')
+    expect(list().className).not.toContain('max-h-72')
+
+    fireEvent.change(input(), { target: { value: '5' } })
+    expect(list().className).toContain('max-h-72')
+    expect(list().className).not.toContain('max-h-[calc(18rem-1.375rem)]')
+  })
+
+  it('still takes any text on a text operator', async () => {
+    const onAdd = await openValue('equals')
+    fireEvent.change(input(), { target: { value: 'abc' } })
+    expect(screen.queryByRole('status')).toBeNull()
+    fireEvent.click(apply())
+    expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ kind: 'single', value: 'abc' }))
+  })
+})
+
+describe('FilterChip editing a greater/less value', () => {
+  const amount = (operator: FilterOperator) => createFilter('amount', PropertySource.CUSTOM, operator, '5')
+
+  const edit = (value: string) => {
+    fireEvent.click(trigger('5'))
+    fireEvent.change(screen.getByPlaceholderText('Type a value...'), { target: { value } })
+  }
+
+  const apply = () => screen.getByText('Apply').closest('button') as HTMLButtonElement
+
+  it.each(NUMBER_OPERATORS)('refuses to save a non-numeric value on %s', (_label, operator) => {
+    const onUpdate = chip(amount(operator))
+    edit('abc')
+    expect(screen.getByText('Enter a valid number')).toBeTruthy()
+    expect(screen.getByPlaceholderText('Type a value...').getAttribute('aria-invalid')).toBe('true')
+    const hint = screen.getByText('Enter a valid number')
+    expect(hint.id).not.toBe('')
+    expect(screen.getByPlaceholderText('Type a value...').getAttribute('aria-describedby')).toBe(hint.id)
+    expect(apply().disabled).toBe(true)
+    fireEvent.keyDown(screen.getByPlaceholderText('Type a value...'), { key: 'Enter' })
+    fireEvent.click(apply())
+    expect(onUpdate).not.toHaveBeenCalled()
+  })
+
+  it('saves a corrected value', () => {
+    const onUpdate = chip(amount(FilterOperator.GT))
+    edit('abc')
+    fireEvent.change(screen.getByPlaceholderText('Type a value...'), { target: { value: '9' } })
+    expect(screen.queryByRole('status')).toBeNull()
+    fireEvent.click(apply())
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({ kind: 'single', value: '9' }))
+  })
+})
+
 describe('FilterBuilder on $country', () => {
   const schema = create(GetFilterSchemaResponseSchema, {
     autoPropertyKeys: [{ name: '$country', valueType: PropertyValueType.STRING }],

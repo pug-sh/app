@@ -134,16 +134,19 @@ describe('dashboard page filters', () => {
     await waitFor(() => expect(filteredOn(queriesFor('signup').at(-1) as QueryRequest)).toEqual([]))
   })
 
-  it('refuses a chip edit that cannot run and keeps the filter it replaced', async () => {
+  // The chip editor stops a value that cannot run before it reaches the page, so the page's own refusal
+  // (handleGlobalFiltersChange) is only a backstop here.
+  it('blocks a chip edit that cannot run and keeps the filter it replaced', async () => {
     const error = vi.spyOn(toast, 'error')
     const amount = createFilter('amount', PropertySource.CUSTOM, FilterOperator.GT, '5')
     open(`/dashboards/d1?${pf([amount])}`)
     fireEvent.click(await screen.findByText('5'))
-    fireEvent.change(await screen.findByPlaceholderText('Type a value...'), { target: { value: 'abc' } })
+    const input = await screen.findByPlaceholderText('Type a value...')
+    fireEvent.change(input, { target: { value: 'abc' } })
+    expect(screen.getByText('Enter a valid number')).toBeTruthy()
+    fireEvent.keyDown(input, { key: 'Enter' })
     fireEvent.click(screen.getByText('Apply'))
-    expect(error).toHaveBeenCalledWith('Could not apply the amount filter', {
-      description: expect.stringContaining('valid numbers'),
-    })
+    expect(error).not.toHaveBeenCalled()
     expect(screen.getByText('5')).toBeTruthy()
     expect(window.location.search).toContain('amount')
     for (const request of queriesFor('signup')) expect(filteredOn(request)).toEqual(['amount'])

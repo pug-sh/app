@@ -19,7 +19,6 @@ import {
   commonDashboardSchema,
   dashboardEventKinds,
   dashboardFilterOverlap,
-  filterViolation,
 } from './dashboard-filters'
 
 const tenant = createFilter('tenant', PropertySource.PROFILE, FilterOperator.IN, ['acme', 'other'])
@@ -83,18 +82,6 @@ describe('dashboard filter composition', () => {
       source: PropertySource.PROFILE,
       values: ['acme', 'other'],
     })
-  })
-
-  it('reports why the request validator would refuse a filter', () => {
-    const amount = (operator: FilterOperator, payload: string | string[]) =>
-      filterViolation(createFilter('amount', PropertySource.CUSTOM, operator, payload))
-    expect(filterViolation(tenant)).toBeUndefined()
-    expect(amount(FilterOperator.BETWEEN, ['5', '10'])).toBeUndefined()
-    expect(filterViolation(createFilter('tenant', PropertySource.PROFILE, FilterOperator.IN, []))).toMatch(
-      /not be empty/,
-    )
-    expect(amount(FilterOperator.GT, 'abc')).toMatch(/valid numbers/)
-    expect(amount(FilterOperator.BETWEEN, ['10', '5'])).toMatch(/values\[0\] <= values\[1\]/)
   })
 })
 

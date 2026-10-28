@@ -1,11 +1,10 @@
-import { create, createRegistry } from '@bufbuild/protobuf'
-import { createValidator } from '@bufbuild/protovalidate'
+import { create } from '@bufbuild/protobuf'
 import {
   type GetFilterSchemaResponse,
   type PropertyKeyMeta,
   PropertySource,
 } from '@/api/genproto/common/v1/filter_schema_pb'
-import { file_common_v1_filters, LogicalOperator, PropertyFilterSchema } from '@/api/genproto/common/v1/filters_pb'
+import { LogicalOperator } from '@/api/genproto/common/v1/filters_pb'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
   FilterGroupSchema,
@@ -17,15 +16,6 @@ import {
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import { COUNTRY_PROPERTY } from '@/lib/property-values'
-
-const validator = createValidator({ registry: createRegistry(file_common_v1_filters) })
-
-// The transport refuses a whole request over one invalid filter, so a bad dashboard filter would fail every tile.
-export const filterViolation = (filter: ActiveFilter) => {
-  const result = validator.validate(PropertyFilterSchema, create(PropertyFilterSchema, toProtoFilters([filter])[0]))
-  if (result.kind === 'invalid') return result.violations[0].message
-  return result.error?.message
-}
 
 const scopedQuery = (spec: InsightQuerySpec) => spec.session ?? spec.userFlow ?? spec.topK ?? spec.map
 

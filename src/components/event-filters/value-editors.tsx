@@ -1,5 +1,5 @@
 import { Check, X } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { CountryFlag } from '@/components/country-flag'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 import { splitValues } from './utils'
 
 const filterInputCls =
-  'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring font-mono'
+  'h-7 px-2 text-xs rounded-md border border-input bg-background outline-none focus:ring-1 focus:ring-ring aria-invalid:border-destructive aria-invalid:focus:ring-destructive/40 font-mono'
 
 const getValuesEmptyMessage = (loaded: boolean, error: boolean): string => {
   if (!loaded) return 'Loading...'
@@ -76,6 +76,7 @@ const ValueOptionList = ({
   error,
   selected,
   onSelect,
+  className,
 }: {
   property: string
   suggestions: string[]
@@ -83,6 +84,7 @@ const ValueOptionList = ({
   error: boolean
   selected?: string[]
   onSelect: (option: ValueOption) => void
+  className?: string
 }) => {
   // Held back until suggestions land, so the seen values don't move the list under the pointer.
   const { seen, other } = useMemo(
@@ -109,7 +111,7 @@ const ValueOptionList = ({
   return (
     <Command>
       <CommandInput placeholder="Search values..." className="text-xs" />
-      <CommandList>
+      <CommandList className={className}>
         <CommandEmpty className="py-3 text-xs">
           {getValuesEmptyMessage(loaded, error && other.length === 0)}
         </CommandEmpty>
@@ -215,6 +217,19 @@ export const MultiValueEditor = ({
   )
 }
 
+// Live while typing, so polite: an alert would interrupt on every keystroke that flips it. The id is what
+// the input's aria-describedby points at, so the message is read with the field and not only announced.
+const FieldHint = ({ id, children }: { id: string; children: string }) => (
+  <p id={id} role="status" className="mt-1.5 text-xs text-negative">
+    {children}
+  </p>
+)
+
+// A popover with a long list sits close to the bottom of the screen, and one that grows repositions
+// itself, so a hint appearing would make it jump. While one shows, the list gives up its height:
+// 18rem is the list's usual cap, 1.375rem the hint's margin (mt-1.5) plus its one line (text-xs).
+const HINT_ROOM_LIST = 'max-h-[calc(18rem-1.375rem)]'
+
 export const SingleValueEditor = ({
   property,
   value,
@@ -223,6 +238,7 @@ export const SingleValueEditor = ({
   suggestions,
   loaded,
   error,
+  hint,
   footer,
 }: {
   property: string
@@ -232,9 +248,11 @@ export const SingleValueEditor = ({
   suggestions: string[]
   loaded: boolean
   error: boolean
+  hint?: string
   footer?: React.ReactNode
 }) => {
   const [typed, setTyped] = useState('')
+  const hintId = useId()
   // `value` is the stored code; the input keeps what was typed while it still means that code, and
   // otherwise names the code only if the name resolves back to it (a $locale name never does).
   const label = propertyValueLabel(property, value)
@@ -254,15 +272,19 @@ export const SingleValueEditor = ({
           onKeyDown={e => {
             if (e.key === 'Enter') onCommit()
           }}
+          aria-invalid={hint !== undefined}
+          aria-describedby={hint ? hintId : undefined}
           className={cn(filterInputCls, 'w-full', labelsPropertyValues(property) && 'font-sans')}
           autoFocus
         />
+        {hint && <FieldHint id={hintId}>{hint}</FieldHint>}
       </div>
       <ValueOptionList
         property={property}
         suggestions={suggestions}
         loaded={loaded}
         error={error}
+        className={hint ? HINT_ROOM_LIST : undefined}
         onSelect={option => {
           setTyped('')
           onChange(option.value)
@@ -279,6 +301,8 @@ export const BetweenValueEditor = ({
   onMinChange,
   onMaxChange,
   onCommit,
+  hint,
+  invalid,
   footer,
 }: {
   min: string
@@ -286,33 +310,43 @@ export const BetweenValueEditor = ({
   onMinChange: (v: string) => void
   onMaxChange: (v: string) => void
   onCommit: () => void
+  hint?: string
+  invalid?: { min: boolean; max: boolean }
   footer?: React.ReactNode
 }) => {
   const maxRef = useRef<HTMLInputElement>(null)
+  const hintId = useId()
   return (
     <div>
-      <div className="p-2 border-b border-border/60 flex items-center gap-2">
-        <input
-          placeholder="Min"
-          value={min}
-          onChange={e => onMinChange(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') maxRef.current?.focus()
-          }}
-          className={cn(filterInputCls, 'flex-1 min-w-0')}
-          autoFocus
-        />
-        <span className="text-xs text-muted-foreground shrink-0">–</span>
-        <input
-          ref={maxRef}
-          placeholder="Max"
-          value={max}
-          onChange={e => onMaxChange(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') onCommit()
-          }}
-          className={cn(filterInputCls, 'flex-1 min-w-0')}
-        />
+      <div className="p-2 border-b border-border/60">
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Min"
+            value={min}
+            onChange={e => onMinChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') maxRef.current?.focus()
+            }}
+            aria-invalid={invalid?.min}
+            aria-describedby={hint ? hintId : undefined}
+            className={cn(filterInputCls, 'flex-1 min-w-0')}
+            autoFocus
+          />
+          <span className="text-xs text-muted-foreground shrink-0">–</span>
+          <input
+            ref={maxRef}
+            placeholder="Max"
+            value={max}
+            onChange={e => onMaxChange(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') onCommit()
+            }}
+            aria-invalid={invalid?.max}
+            aria-describedby={hint ? hintId : undefined}
+            className={cn(filterInputCls, 'flex-1 min-w-0')}
+          />
+        </div>
+        {hint && <FieldHint id={hintId}>{hint}</FieldHint>}
       </div>
       {footer}
     </div>

@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { resolvePropertyValue } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
 import { type ActiveFilter, createFilter, FILTER_OPERATORS, filterValueLabel, filterValueNamed } from './filter-model'
+import { numberHint, rangeHint, rangeInvalidBounds } from './filter-validation'
 import { useSuggestions } from './hooks'
 import { mergeUniqueValues } from './utils'
 import { ApplyFooter, BetweenValueEditor, MultiValueEditor, SingleValueEditor } from './value-editors'
@@ -27,15 +28,19 @@ export const FilterChip = ({
 
   const { suggestions, loaded, error } = useSuggestions(editOpen ? filter.property : '', filter.source, kindFilter)
 
+  const rangeError = op?.arity === 'range' ? rangeHint(filter.operator, editInput, editInput2) : undefined
+  const rangeInvalid = rangeError ? rangeInvalidBounds(filter.operator, editInput, editInput2) : undefined
+  const valueError = filter.kind === 'single' ? numberHint(filter.operator, editInput) : undefined
+
   const commitEdit = () => {
     if (op?.arity === 'range') {
       const min = editInput.trim()
       const max = editInput2.trim()
-      if (!min || !max) return
+      if (!min || !max || rangeError) return
       onUpdate(createFilter(filter.property, filter.source, filter.operator, [min, max]))
     } else {
       const next = resolvePropertyValue(filter.property, editInput.trim())
-      if (!next) return
+      if (!next || valueError) return
       onUpdate(createFilter(filter.property, filter.source, filter.operator, next))
     }
     setEditOpen(false)
@@ -96,7 +101,14 @@ export const FilterChip = ({
                 onMinChange={setEditInput}
                 onMaxChange={setEditInput2}
                 onCommit={commitEdit}
-                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim() || !editInput2.trim()} />}
+                hint={rangeError}
+                invalid={rangeInvalid}
+                footer={
+                  <ApplyFooter
+                    onClick={commitEdit}
+                    disabled={!editInput.trim() || !editInput2.trim() || rangeError !== undefined}
+                  />
+                }
               />
             ) : filter.kind === 'multi' ? (
               <MultiValueEditor
@@ -131,7 +143,8 @@ export const FilterChip = ({
                 suggestions={suggestions}
                 loaded={loaded}
                 error={error}
-                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim()} />}
+                hint={valueError}
+                footer={<ApplyFooter onClick={commitEdit} disabled={!editInput.trim() || valueError !== undefined} />}
               />
             )}
           </PopoverContent>

@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import { type ActiveFilter, createFilter, FILTER_OPERATORS } from './filter-model'
 import { getAllowedOperators, getPropertyMeta } from './filter-operators'
+import { numberHint, rangeHint, rangeInvalidBounds } from './filter-validation'
 import { useSuggestions } from './hooks'
 import { PropertyPickerList } from './pickers'
 import { mergeUniqueValues } from './utils'
@@ -39,6 +40,9 @@ export const FilterBuilder = ({
   const [vals, setVals] = useState<string[]>([])
 
   const opMeta = FILTER_OPERATORS.find(o => o.value === op)
+  const rangeError = opMeta?.arity === 'range' ? rangeHint(op, vals[0] ?? '', vals[1] ?? '') : undefined
+  const rangeInvalid = rangeError ? rangeInvalidBounds(op, vals[0] ?? '', vals[1] ?? '') : undefined
+  const valueError = valueMode === 'property' && opMeta?.arity === undefined ? numberHint(op, val) : undefined
   const propertyMeta = useMemo(() => getPropertyMeta(schema, prop, propSource), [schema, prop, propSource])
   const allowedOperators = useMemo(() => getAllowedOperators(propertyMeta?.valueType), [propertyMeta?.valueType])
   const operatorOptions = useMemo(
@@ -98,13 +102,13 @@ export const FilterBuilder = ({
     }
     if (opMeta?.arity === 'range') {
       const [min, max] = vals
-      if (!min?.trim() || !max?.trim()) return
+      if (!min?.trim() || !max?.trim() || rangeError) return
       onAdd(createFilter(prop, propSource, op, [min.trim(), max.trim()]))
     } else if (opMeta?.arity === 'list') {
       if (vals.length === 0) return
       onAdd(createFilter(prop, propSource, op, vals))
     } else {
-      if (!val.trim()) return
+      if (!val.trim() || valueError) return
       onAdd(createFilter(prop, propSource, op, val.trim()))
     }
     setOpen(false)
@@ -221,7 +225,14 @@ export const FilterBuilder = ({
             onMinChange={v => setVals(prev => [v, prev[1] ?? ''])}
             onMaxChange={v => setVals(prev => [prev[0] ?? '', v])}
             onCommit={commitFilter}
-            footer={<ApplyFooter onClick={commitFilter} disabled={!vals[0]?.trim() || !vals[1]?.trim()} />}
+            hint={rangeError}
+            invalid={rangeInvalid}
+            footer={
+              <ApplyFooter
+                onClick={commitFilter}
+                disabled={!vals[0]?.trim() || !vals[1]?.trim() || rangeError !== undefined}
+              />
+            }
           />
         )}
 
@@ -248,7 +259,8 @@ export const FilterBuilder = ({
             suggestions={suggestions}
             loaded={loaded}
             error={error}
-            footer={<ApplyFooter onClick={commitFilter} disabled={!val.trim()} />}
+            hint={valueError}
+            footer={<ApplyFooter onClick={commitFilter} disabled={!val.trim() || valueError !== undefined} />}
           />
         )}
       </PopoverContent>
