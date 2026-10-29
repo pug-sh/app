@@ -1,9 +1,13 @@
 import { curveMonotoneX } from '@visx/curve'
-import { useCallback, useMemo } from 'react'
+import { scaleLinear } from '@visx/scale'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ChartStableContextValue, TooltipData } from '@/components/charts/chart-context'
+import { DEFAULT_Y_DOMAIN_TWEEN_MS } from '@/components/charts/chart-phase'
+import { Y_AXIS_DEFAULT_TICK_COUNT } from '@/components/charts/y-axis-ticks'
+import { niceYDomain, resolveTimeSeriesYDomain } from '@/components/charts/y-domain-utils'
 import type { SeriesColor } from '@/lib/event-colors'
-import { formatAxisDate, formatTooltipDate, formatTooltipTitle, spansMultipleDays } from './helpers'
+import { formatAxisDate, formatTooltipDate, formatTooltipTitle, spansMultipleDays, yAxisLabelWidth } from './helpers'
 import type { ChartPoint } from './types'
 
 // Line defaults to curveNatural, which overshoots, and the y-domain pads the top but pins
@@ -13,10 +17,50 @@ export const SERIES_CURVE = curveMonotoneX
 // The vendored y axis pins its labels 8px off the plot; our YAxis wrapper widens that by this much, so the
 // gap matches the band right of the plot: CHART_MARGIN.right plus a tile's 17px of padding and border.
 export const Y_AXIS_GAP = 22
+const Y_LABEL_PAD = 8
 
-// Top: 8px is the floor, room for the top tick label's upper half. Left: the y labels' 40px column plus
-// Y_AXIS_GAP. Right: just clears the hover dot's 13px halo; the end date label and the pill are kept inside.
-export const CHART_MARGIN = { top: 8, left: 40 + Y_AXIS_GAP, right: 13 }
+// Top: 8px is the floor, room for the top tick label's upper half. Right: just clears the hover dot's 13px halo;
+// the end date label and the pill are kept inside. Left is sized to the y labels by useChartMargin.
+export const CHART_MARGIN = { top: 8, right: 13 }
+
+// A fixed y label column indents a short axis ("8") and clips a long one ("100,000"), so this reruns the shell's
+// target domain and the axis's ticks to fit the widest label.
+export const useChartMargin = (
+  rows: Record<string, unknown>[],
+  seriesCount: number,
+  formatValue: (value: number) => string,
+  { compare = false, stacked = false } = {},
+) => {
+  const left = useMemo(() => {
+    const keys = Array.from({ length: seriesCount }, (_, si) => `series${si}`)
+    if (compare) keys.push(COMPARE_KEY)
+    const rowSum = (row: Record<string, unknown>) =>
+      keys.reduce((sum, key) => {
+        const value = row[key]
+        return sum + (typeof value === 'number' ? value : 0)
+      }, 0)
+    const stackedMax = stacked ? Math.max(...rows.map(rowSum)) : undefined
+    const domain = niceYDomain(resolveTimeSeriesYDomain(rows, keys, stackedMax))
+    const ticks = scaleLinear({ domain }).ticks(Y_AXIS_DEFAULT_TICK_COUNT)
+    const widest = Math.max(0, ...ticks.map(tick => yAxisLabelWidth(formatValue(tick))))
+    // The table is for 12px, but text-xs is rem, so the browser's font size setting scales the labels.
+    const rootScale = (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16
+    return Math.ceil(widest * rootScale) + Y_LABEL_PAD + Y_AXIS_GAP
+  }, [rows, seriesCount, formatValue, compare, stacked])
+
+  // The axis tweens its labels to a new domain, so a column that narrows waits for it or the old labels overflow.
+  const [held, setHeld] = useState(left)
+  useEffect(() => {
+    if (left >= held) {
+      setHeld(left)
+      return
+    }
+    const id = setTimeout(() => setHeld(left), DEFAULT_Y_DOMAIN_TWEEN_MS)
+    return () => clearTimeout(id)
+  }, [left, held])
+
+  return { ...CHART_MARGIN, left: Math.max(left, held) }
+}
 
 // Marks a row added only to pad the x-domain (see the bar wrapper). Padding rows carry
 // a date and nothing else, so they draw no bar, but they are still real rows to the

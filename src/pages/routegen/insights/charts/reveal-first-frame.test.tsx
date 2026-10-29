@@ -10,7 +10,6 @@ import { LineChart } from './line-chart'
 import type { ChartPoint } from './types'
 
 const WIDTH = 800
-const INNER_WIDTH = WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
 
 // happy-dom reports the container as 0x0, and a chart with no size renders no SVG at all.
 vi.mock('@/components/charts/chart-parent-size', () => ({
@@ -30,6 +29,12 @@ const revealWidth = () =>
   Number.parseFloat(
     document.querySelector('svg > defs > clipPath[id*="grow-clip"] > rect')?.getAttribute('width') ?? '',
   )
+
+// The left margin is sized to the y labels, so the plot's width is read off the rendered plot group.
+const innerWidth = () => {
+  const transform = document.querySelector('svg > g[transform^="translate("]')?.getAttribute('transform')
+  return WIDTH - Number(transform?.match(/translate\(([\d.]+)/)?.[1]) - CHART_MARGIN.right
+}
 
 // A later sibling's layout effect reads the chart's first commit, which the browser can paint before any useEffect runs.
 const FirstCommit = ({ seen }: { seen: { width?: number } }) => {
@@ -55,7 +60,7 @@ describe('vendored chart reveal', () => {
       )
 
       expect(seen.width).toBe(0)
-      await waitFor(() => expect(revealWidth()).toBeGreaterThanOrEqual(INNER_WIDTH), { timeout: 3000 })
+      await waitFor(() => expect(revealWidth()).toBeGreaterThanOrEqual(innerWidth()), { timeout: 3000 })
     })
   }
 })
