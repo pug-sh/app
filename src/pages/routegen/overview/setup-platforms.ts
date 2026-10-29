@@ -1,25 +1,26 @@
 // Per-platform onboarding shown on the Overview setup screen while a project has no events yet.
 //
 // Snippets are verified against the published SDKs: @pug-sh/browser (init(projectId, { apiKey })),
-// pug_flutter (Pug.init(projectId, PugOptions(apiKey))), @pug-sh/node (new Pug({ apiKey })), and
-// the pug-sh gem (Pug::Client.new(api_key:)). Client SDKs (web, script, Flutter) take the project
-// ID at init — it namespaces the stored identity/session/consent and stamps every event, so it's
+// pug_flutter (Pug.init(projectId, PugOptions(apiKey))), sh.pug:android (Pug.init(context,
+// projectId, Options(apiKey))), @pug-sh/node (new Pug({ apiKey })), and the pug-sh gem
+// (Pug::Client.new(api_key:)). Client SDKs (web, script, Flutter, Android) take the project ID at
+// init: it namespaces the stored identity/session/consent and stamps every event, so it's
 // required, not cosmetic. The server SDKs (Node, Ruby) omit it: the secret private key is
 // project-scoped, and track() takes the distinctId first since a server has no ambient user.
 //
-// Only the web snippet seeds `trackingConsent: 'granted'`, because it's the only one that calls
-// identify(), which silently no-ops under the SDK's 'cookieless' default.
+// Only the web snippet seeds `trackingConsent: 'granted'`: the browser SDK alone defaults to
+// 'cookieless', under which identify() silently no-ops. Flutter and Android default to granted.
 //
 // The `script` platform is the same @pug-sh/browser SDK loaded from the CDN with no bundler: the
 // loader snippet (stubs the API, queues early calls, then pug.init) and the one-tag install
 // (declarative data-* attributes, for pages under a strict CSP that forbids inline script). Both
-// derive from the README's "Script tag (CDN)" section. The loader snippet is verbatim — only the
+// derive from the README's "Script tag (CDN)" section. The loader snippet is verbatim: only the
 // project ID and public key are interpolated. Re-sync the method list on any SDK release that
 // adds a public method: one missing from the stub isn't queued, it's a TypeError on a page that
 // calls it before the bundle lands. The one-tag install is that snippet minus its data-options
 // attribute: the README seeds trackingConsent to demo a consent-first setup, but this quickstart
-// omits it so consent stays at the SDK default ('cookieless'), under which events still flow —
-// the setup screen polls until they do, so keep data-options dropped when syncing from the
+// omits it so consent stays at the SDK default ('cookieless'), under which events still flow
+// (the setup screen polls until they do), so keep data-options dropped when syncing from the
 // README. Docs links go to each SDK's own page (docs.pug.sh/sdks/<id>/); the CDN install is
 // documented on the web one.
 
@@ -28,7 +29,7 @@ import type { LanguageName } from 'sugar-high'
 const DOCS_BASE = 'https://docs.pug.sh/sdks'
 
 // The CDN serves one immutable, self-contained bundle per SDK release at a version-in-path, @-free
-// URL (a `pkg@version` substring trips Cloudflare Email Address Obfuscation and breaks the load —
+// URL (a `pkg@version` substring trips Cloudflare Email Address Obfuscation and breaks the load;
 // see sdk-web/RELEASING.md). Bump on every @pug-sh/browser release so the Script tab serves the
 // current SDK: a stale pin still resolves (paths are immutable) but serves an old bundle, and the
 // Web tab's unpinned `npm install` drifts ahead of it. Unlike sdk-web, nothing here gates this
@@ -37,16 +38,21 @@ const DOCS_BASE = 'https://docs.pug.sh/sdks'
 const PUG_CDN_VERSION = 'v0.1.5'
 const PUG_CDN_URL = `https://cdn.pugs.dev/${PUG_CDN_VERSION}/pug.min.js`
 
+// Gradle can't add a dependency without naming a version, unlike npm/pub/bundle, so bump this on
+// every sh.pug:android release.
+const PUG_ANDROID_VERSION = '0.1.0'
+
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
 // Adding a platform = one entry here + one in PLATFORMS (the total Record makes the latter a
 // compile error if forgotten).
-export const PLATFORM_ORDER = ['web', 'script', 'node', 'ruby', 'flutter'] as const
+export const PLATFORM_ORDER = ['web', 'script', 'node', 'ruby', 'flutter', 'android'] as const
 
 export type PlatformId = (typeof PLATFORM_ORDER)[number]
 
 // One labeled code block in a platform's setup flow, rendered top-to-bottom. `code` receives the
-// project's identifiers so client snippets can interpolate them; sections that don't need them —
-// install commands, and the server snippets (secret key from the environment) — ignore both args.
+// project's identifiers so client snippets can interpolate them; sections that don't need them
+// (install commands, and the server snippets, which read the secret key from the environment)
+// ignore both args.
 //
 // `credential` states which of them the snippet actually bakes in, so the setup screen knows whether
 // the block is waiting on a fetched key. Required, not optional: a new section is a compile error
@@ -65,7 +71,7 @@ export type Platform = {
   docsUrl: string
   sections: CodeSection[]
   // Set when the platform authenticates with a private key. Its snippet reads that key from the
-  // environment rather than interpolating it, and a project does not come with one — so the setup
+  // environment rather than interpolating it, and a project does not come with one, so the setup
   // screen points at the settings page, the only place to mint one and see it (once).
   needsPrivateKey?: boolean
 }
@@ -145,7 +151,7 @@ track('signed_up', { plan: 'pro' })`,
         credential: 'none',
         code: () => `import { Pug } from '@pug-sh/node'
 
-// Server-side: use your private key, read from the environment — never hardcode it
+// Server-side: use your private key, read from the environment (never hardcode it)
 const pug = new Pug({ apiKey: process.env.PUG_API_KEY })
 
 await pug.identify('user_123', { email: 'ada@example.com', plan: 'pro' })
@@ -167,7 +173,7 @@ pug.track('user_123', 'order_completed', { revenue: 49 })`,
         lang: 'ruby',
         code: () => `require "pug"
 
-# Server-side: use your private key, read from the environment — never hardcode it
+# Server-side: use your private key, read from the environment (never hardcode it)
 pug = Pug::Client.new(api_key: ENV.fetch("PUG_API_KEY"))
 
 pug.identify("user_123", email: "ada@example.com", plan: "pro")
@@ -197,6 +203,44 @@ await Pug.identify('user_123', traits: {'email': 'ada@example.com', 'plan': 'pro
 
 // Track what they do
 Pug.track('signed_up', props: {'plan': 'pro'});`,
+      },
+    ],
+  },
+  android: {
+    label: 'Android',
+    icon: '/sdk/android.svg',
+    docsUrl: `${DOCS_BASE}/android/`,
+    sections: [
+      {
+        label: 'Install',
+        credential: 'none',
+        lang: 'kotlin',
+        code: () => `// app/build.gradle.kts
+dependencies {
+    implementation("sh.pug:android:${PUG_ANDROID_VERSION}")
+}`,
+      },
+      {
+        label: 'Initialize & track',
+        credential: 'public',
+        lang: 'kotlin',
+        code: (projectId, publicKey) => `import android.app.Application
+import sh.pug.android.Options
+import sh.pug.android.Pug
+
+// Register it in AndroidManifest.xml: <application android:name=".App">
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Pug.init(this, "${projectId}", Options("${publicKey}"))
+    }
+}
+
+// Tie events to a user once they sign in
+Pug.identify("user_123", mapOf("email" to "ada@example.com", "plan" to "pro"))
+
+// Track what they do
+Pug.track("signed_up", mapOf("plan" to "pro"))`,
       },
     ],
   },
