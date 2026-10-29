@@ -13,7 +13,6 @@ import type { ChartPoint } from './types'
 // so every assertion below would pass vacuously.
 const WIDTH = 720
 const HEIGHT = 300
-const INNER_WIDTH = WIDTH - CHART_MARGIN.left - CHART_MARGIN.right
 
 vi.mock('@/components/charts/chart-parent-size', () => ({
   ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
@@ -34,13 +33,19 @@ const daily = (count: number): ChartPoint[] =>
     values: [10 + i, 6, 3],
   }))
 
+// The left margin is sized to the y labels, so the plot's width is read off the rendered plot group.
+const innerWidth = (container: HTMLElement) => {
+  const transform = container.querySelector('svg > g[transform^="translate("]')?.getAttribute('transform')
+  return WIDTH - Number(transform?.match(/translate\(([\d.]+)/)?.[1]) - CHART_MARGIN.right
+}
+
 // Bars carry an x/width pair and a real width. Excluded by that: the chart's backdrops
 // and grid, which span the full plot, and the series reveal clip, which is a zero-width
 // rect deliberately inset to a negative x by half a bar so bars are not clipped in half.
 const barRects = (container: HTMLElement) =>
   Array.from(container.querySelectorAll('rect'))
     .map(r => ({ x: Number(r.getAttribute('x')), width: Number.parseFloat(r.getAttribute('width') ?? '') }))
-    .filter(r => Number.isFinite(r.x) && r.width > 0 && r.width < INNER_WIDTH)
+    .filter(r => Number.isFinite(r.x) && r.width > 0 && r.width < innerWidth(container))
 
 // The x-scale spans the first bucket to the last across the whole plot width, so without
 // padding rows the edge buckets sit on the plot edges and half of each bar hangs outside
@@ -67,7 +72,7 @@ describe('bar chart edge overhang', () => {
 
       for (const bar of bars) {
         expect(bar.x).toBeGreaterThanOrEqual(0)
-        expect(bar.x + bar.width).toBeLessThanOrEqual(INNER_WIDTH)
+        expect(bar.x + bar.width).toBeLessThanOrEqual(innerWidth(container))
       }
     })
   }

@@ -90,7 +90,7 @@ describe('vendored chart tooltip dates', () => {
       dateLabels: HOURLY.map(p => formatTooltipDate(p.date, Granularity.HOUR, 'Asia/Kolkata')),
       width: 800,
       height: 400,
-      margin: CHART_MARGIN,
+      margin: { ...CHART_MARGIN, left: 40, bottom: 40 },
       containerRef: { current: host },
       tooltipData: { point: data[1], index: 1, x: 100, yPositions: {} },
     } as unknown as ChartContextValue

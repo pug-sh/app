@@ -6,7 +6,7 @@ import { Grid } from '@/components/charts/grid'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
+import { type ChartComparison, COMPARE_KEY, SERIES_CURVE, useChartMargin, useVendoredChartPrep } from './common'
 import { CompareArea } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -42,21 +42,18 @@ export const AreaChart = memo(function AreaChart({
     timeZone,
     comparison,
   )
+  const formatValue = yTickFormatter ?? compactNumber
+  const margin = useChartMargin(chartData, seriesNames.length, formatValue, { compare: !!comparison })
 
   if (data.length === 0) return null
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
   return (
     <DateLabelProvider value={dateLabelFormatters}>
-      <VendoredAreaChart
-        aspectRatio="auto"
-        className={cn(PILL_SCALING, className)}
-        data={chartData}
-        margin={CHART_MARGIN}
-      >
+      <VendoredAreaChart aspectRatio="auto" className={cn(PILL_SCALING, className)} data={chartData} margin={margin}>
         <Grid horizontal />
         <XAxis />
-        <YAxis formatValue={yTickFormatter ?? compactNumber} />
+        <YAxis formatValue={formatValue} />
         {seriesNames.map((_, si) => (
           <Area
             key={si}

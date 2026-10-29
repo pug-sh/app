@@ -73,6 +73,12 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
 export const AXIS_LABEL_PX_PER_CHAR = 7.0
 const AXIS_LABEL_MIN_GAP_PX = 16
 
+// Figtree's advances at 12px, the larger of hinted and unhinted; unlisted glyphs get the widest digit's. An upper
+// bound: the y label column is sized off it, and a label wider than its column is clipped. Re-measure on a face change.
+const Y_LABEL_GLYPH_PX: Record<string, number> = { '1': 5, '.': 3, ',': 3, '%': 9.5, M: 10.5, m: 10.5 }
+export const yAxisLabelWidth = (label: string) =>
+  [...label].reduce((width, glyph) => width + (Y_LABEL_GLYPH_PX[glyph] ?? 8), 0)
+
 // The vendored axis scores tick layouts on how even they look, never on whether the labels fit, and
 // may take one more tick than asked, so neighbours could land closer than a label is wide. This picks
 // the smallest constant stride (at most `maxTicks` ticks) whose labels clear each other at the

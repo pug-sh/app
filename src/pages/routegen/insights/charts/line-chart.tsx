@@ -6,7 +6,7 @@ import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { CHART_MARGIN, type ChartComparison, COMPARE_KEY, SERIES_CURVE, useVendoredChartPrep } from './common'
+import { type ChartComparison, COMPARE_KEY, SERIES_CURVE, useChartMargin, useVendoredChartPrep } from './common'
 import { CompareLine } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -42,21 +42,18 @@ export const LineChart = memo(function LineChart({
     timeZone,
     comparison,
   )
+  const formatValue = yTickFormatter ?? compactNumber
+  const margin = useChartMargin(chartData, seriesNames.length, formatValue, { compare: !!comparison })
 
   if (data.length === 0) return null
 
   // aspectRatio="auto" so height comes from className, matching the other charts.
   return (
     <DateLabelProvider value={dateLabelFormatters}>
-      <VendoredLineChart
-        aspectRatio="auto"
-        className={cn(PILL_SCALING, className)}
-        data={chartData}
-        margin={CHART_MARGIN}
-      >
+      <VendoredLineChart aspectRatio="auto" className={cn(PILL_SCALING, className)} data={chartData} margin={margin}>
         <Grid horizontal />
         <XAxis />
-        <YAxis formatValue={yTickFormatter ?? compactNumber} />
+        <YAxis formatValue={formatValue} />
         {/* Line defaults fadeEdges on (Area defaults it off): a faded first/last
             bucket reads as uncertain data when those are real values. */}
         {seriesNames.map((_, si) => (
