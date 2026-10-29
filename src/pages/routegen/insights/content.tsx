@@ -509,7 +509,7 @@ export const InsightsContent = memo(function InsightsContent({
         lightNumbers={lightNumbers}
       />
     )
-    const chart = <div className={compact ? 'h-full min-h-0 min-w-0 flex-1 pt-1' : 'min-w-0'}>{renderChart()}</div>
+    const chart = <div className={compact ? 'h-full min-h-0 min-w-0 flex-1' : 'min-w-0'}>{renderChart()}</div>
 
     return (
       <div className={compact ? 'flex h-full min-h-0 flex-col gap-3' : undefined}>
