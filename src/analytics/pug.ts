@@ -49,6 +49,8 @@ export const initAnalytics = () => {
     // session anonymous. Stated explicitly because this is our own product behind a login, not a
     // marketing page — the funnel is the reason both surfaces are instrumented at all.
     trackingConsent: 'granted',
+    // Keeps our own Playwright runs and headless crawlers out of the funnel; the SDK default is off.
+    excludeAutomatedBrowsers: true,
     beforeSend: maskEventUrls,
     // An allowlist, not a denylist: every key omitted here is off, so this is the SDK's default set
     // minus `scroll`. `{ scroll: false }` would not do it — it is a compile error, and under an
