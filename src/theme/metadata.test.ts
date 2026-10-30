@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { isCalendarDay } from './metadata'
+import { formatCreated, isCalendarDay } from './metadata'
+
+describe('formatCreated', () => {
+  it('shows month and year, read from the numbers', () => {
+    expect(formatCreated('2026-10-13')).toBe('Oct 2026')
+    expect(formatCreated('2026-01-01')).toBe('Jan 2026')
+  })
+})
 
 describe('isCalendarDay', () => {
   it.each(['2026-10-13', '2024-02-29', '2000-02-29', '0001-01-01'])('takes %s', day =>
