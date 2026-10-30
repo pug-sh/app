@@ -5,9 +5,12 @@ import { trackEvent } from '@/analytics/pug'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { fakeResponse } from '@/test/fake-response'
+import { serveByUrl } from '@/test/serve'
+import { clayFile } from '@/test/theme-repository'
 import type { InstalledTheme } from '@/theme/library'
 import { FETCH_TIMEOUT_MS } from '@/theme/remote'
 import {
+  activeThemeUrlsAtom,
   autoContrastAtom,
   compiledThemeAtom,
   fetchedThemesAtom,
@@ -517,5 +520,50 @@ describe('project themes', () => {
     store.set(setProjectOverrideAtom, { projectId: 'p1', reference: `${grape.id}#dark` })
     store.set(removeThemeAtom, grape.id)
     expect(store.get(projectOverridesAtom)).toEqual({})
+  })
+})
+
+describe('the member’s own theme by URL', () => {
+  const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
+
+  beforeEach(() => vi.mocked(trackEvent).mockClear())
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('is kept fresh, and paints once fetched', async () => {
+    serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    const store = createStore()
+    store.set(themeModeAtom, 'light')
+    store.set(selectThemeAtom, { polarity: 'light', id: CLAY_1 })
+    expect(store.get(activeThemeUrlsAtom)).toEqual([CLAY_1])
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug' })
+    await store.set(refreshFetchedThemeAtom, CLAY_1)
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: CLAY_1, builtin: false, polarity: 'light' })
+  })
+
+  it('reports an official theme by slug and track, and any other URL as custom', () => {
+    const store = createStore()
+    store.set(selectThemeAtom, { polarity: 'dark', id: CLAY_1 })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
+      theme: 'clay',
+      track: 'major',
+      mode: 'dark',
+      scope: 'personal',
+    })
+    store.set(selectThemeAtom, { polarity: 'dark', id: 'https://example.com/paper.json' })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', { theme: 'custom', mode: 'dark', scope: 'personal' })
+  })
+
+  it('reports an official project override by slug and track', () => {
+    const store = createStore()
+    store.set(setProjectOverrideAtom, {
+      projectId: 'p1',
+      reference: 'https://themes.pug.sh/clay/1.0.0/theme.json#dark',
+    })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
+      theme: 'clay',
+      track: 'exact',
+      mode: 'dark',
+      scope: 'project',
+    })
   })
 })
