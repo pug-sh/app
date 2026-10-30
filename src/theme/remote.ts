@@ -17,9 +17,9 @@ type Fetcher = (url: string, init: RequestInit) => Promise<Response>
 // The global fetch, looked up at request time so a test can stub it.
 const browserFetch: Fetcher = (url, init) => fetch(url, init)
 
-// The body, up to MAX_THEME_BYTES. Anything longer is abandoned mid-stream, so a host answering with
-// something huge costs a member at most the limit. Null when it was longer.
-const readCapped = async (response: Response) => {
+// The body, up to maxBytes. Anything longer is abandoned mid-stream, so a host answering with something
+// huge costs a member at most the limit. Null when it was longer.
+const readCapped = async (response: Response, maxBytes: number) => {
   const reader = response.body?.getReader()
   if (!reader) return ''
   const chunks: Uint8Array[] = []
@@ -28,7 +28,7 @@ const readCapped = async (response: Response) => {
     const { done, value } = await reader.read()
     if (done) break
     size += value.byteLength
-    if (size > MAX_THEME_BYTES) {
+    if (size > maxBytes) {
       await reader.cancel()
       return null
     }
@@ -44,27 +44,33 @@ const readCapped = async (response: Response) => {
 }
 
 // The request and its body. What the network does wrong is thrown; what the host answers is returned.
-const fetchWithin = async (url: string, fetcher: Fetcher, signal: AbortSignal): Promise<FetchResult> => {
+const fetchWithin = async (
+  url: string,
+  fetcher: Fetcher,
+  signal: AbortSignal,
+  maxBytes: number,
+): Promise<FetchResult> => {
   const response = await fetcher(url, { credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-cache', signal })
   if (response.url !== '' && !response.url.startsWith('https://')) return { ok: false, reason: 'insecure' }
   if (!response.ok) return { ok: false, reason: 'status', status: response.status }
-  if (Number(response.headers.get('content-length')) > MAX_THEME_BYTES) return { ok: false, reason: 'too-large' }
-  const text = await readCapped(response)
+  if (Number(response.headers.get('content-length')) > maxBytes) return { ok: false, reason: 'too-large' }
+  const text = await readCapped(response, maxBytes)
   if (text === null) return { ok: false, reason: 'too-large' }
   return { ok: true, text }
 }
 
 /**
- * GETs a theme file with no cookies and no referrer, revalidating through the HTTP cache. The content type
- * is ignored: raw GitHub serves text/plain. A stall is given up on after FETCH_TIMEOUT_MS.
+ * GETs a file as theme files are fetched: no cookies, no referrer, revalidated through the HTTP cache,
+ * abandoned past maxBytes, and given up on after FETCH_TIMEOUT_MS. The content type is ignored: raw
+ * GitHub serves text/plain.
  */
-export const fetchThemeText = async (url: string, fetcher = browserFetch): Promise<FetchResult> => {
+export const fetchCapped = async (url: string, maxBytes: number, fetcher = browserFetch): Promise<FetchResult> => {
   if (!url.startsWith('https://')) return { ok: false, reason: 'insecure' }
   // An abort fails the request, or the body mid-read, the way a dropped connection would.
   const deadline = new AbortController()
   const timer = setTimeout(() => deadline.abort(), FETCH_TIMEOUT_MS)
   try {
-    return await fetchWithin(url, fetcher, deadline.signal)
+    return await fetchWithin(url, fetcher, deadline.signal, maxBytes)
   } catch {
     // A CORS refusal looks exactly like a network failure from inside the page: the browser hides the response.
     return { ok: false, reason: deadline.signal.aborted ? 'timeout' : 'network' }
@@ -72,6 +78,9 @@ export const fetchThemeText = async (url: string, fetcher = browserFetch): Promi
     clearTimeout(timer)
   }
 }
+
+/** A theme file, capped at the install limit. */
+export const fetchThemeText = (url: string, fetcher = browserFetch) => fetchCapped(url, MAX_THEME_BYTES, fetcher)
 
 export type PastedTheme =
   | { ok: true; url: RemoteId; pin?: Polarity; check: TextCheck }
