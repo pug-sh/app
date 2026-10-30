@@ -2,15 +2,21 @@ import { useAtomValue } from 'jotai'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { resolvedThemeAtom, themeLibraryAtom } from '@/data/theme.atoms'
+import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { cn } from '@/lib/utils'
 import ThemeSwatch from '@/pages/routegen/settings/appearance/theme-swatch'
-import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
+import OfficialThemeDetails from '@/pages/routegen/settings/official-theme-details'
+import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
+import ThemeUrlField, { type CheckedFile } from '@/pages/routegen/settings/theme-url-field'
+import type { CatalogTheme } from '@/theme/catalog'
 import type { ThemeFamily } from '@/theme/format'
 import type { UsableEntry } from '@/theme/library'
 import { formatReference } from '@/theme/reference'
+import { OFFICIAL_REPOSITORY, parseThemeFileUrl, startingTrack, type Track, themeFileUrl } from '@/theme/repository'
 import { POLARITIES, type Polarity } from '@/theme/tokens'
 
-type Target = { id: string; family: ThemeFamily }
+type Official = { slug: string; releases: string[]; track: Track }
+type Target = { id: string; family: ThemeFamily; official?: Official }
 type ModeChoice = 'follow' | Polarity
 
 // The one variant a single-variant family has. Picking such a family pins it, or its other mode would
@@ -39,10 +45,33 @@ const ThemePicker = ({
   const mode = useAtomValue(resolvedThemeAtom)
   const [target, setTarget] = useState<Target | null>(null)
   const [choice, setChoice] = useState<ModeChoice>('follow')
+  const catalog = useAtomValue(themeCatalogAtom)
 
   const pick = (next: Target, pin?: Polarity) => {
     setTarget(next)
     setChoice(pin && next.family.variants[pin] ? pin : (onlyVariant(next.family) ?? 'follow'))
+  }
+  const officialTarget = (theme: CatalogTheme, track: Track): Target => ({
+    id: themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, track),
+    family: theme.family,
+    official: { slug: theme.slug, releases: theme.releases, track },
+  })
+  const follow = (track: Track) => {
+    if (!target?.official) return
+    setTarget({
+      ...target,
+      id: themeFileUrl(OFFICIAL_REPOSITORY, target.official.slug, track),
+      official: { ...target.official, track },
+    })
+  }
+  // A pasted file on the official repository is an official theme on the pasted track, once the catalog
+  // lists it; anything else is a plain URL.
+  const takeFile = (file: CheckedFile) => {
+    const pasted = parseThemeFileUrl(OFFICIAL_REPOSITORY, file.url)
+    const listed = pasted && catalog.themes.find(theme => theme.slug === pasted.slug)
+    const next: Target = { id: file.url, family: file.family }
+    if (pasted && listed) next.official = { slug: pasted.slug, releases: listed.releases, track: pasted.track }
+    pick(next, file.pin)
   }
   const previewMode = (family: ThemeFamily) => (family.variants[mode] ? mode : (onlyVariant(family) ?? mode))
   const entries = library.filter((entry): entry is UsableEntry => entry.family !== null && (entry.builtin || !shared))
@@ -69,11 +98,31 @@ const ThemePicker = ({
             onSelect={() => pick(entry)}
           />
         ))}
+        {catalog.themes.map(theme => (
+          <ThemeSwatch
+            key={theme.slug}
+            entry={{
+              id: themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, { kind: 'latest' }),
+              builtin: false,
+              name: theme.family.name,
+              family: theme.family,
+              issues: [],
+            }}
+            polarity={previewMode(theme.family)}
+            selected={target?.official?.slug === theme.slug}
+            onSelect={() => pick(officialTarget(theme, startingTrack(theme.releases)))}
+          />
+        ))}
       </div>
-      <ThemeUrlField disclosure={shared} onUse={file => pick({ id: file.url, family: file.family }, file.pin)} />
+      {catalog.status === 'failed' && <p className="text-xs text-muted-foreground">Couldn’t reach themes.pug.sh.</p>}
+      <ThemeUrlField disclosure={shared} onUse={takeFile} />
       {target && (
         <div className="space-y-3">
-          <p className="text-sm">{target.family.name}</p>
+          {target.official ? (
+            <OfficialThemeDetails family={target.family} />
+          ) : (
+            <p className="text-sm">{target.family.name}</p>
+          )}
           {single && (
             <p className="text-xs text-muted-foreground">
               {target.family.name} has only a {single} variant.
@@ -100,6 +149,9 @@ const ThemePicker = ({
               </button>
             ))}
           </div>
+          {target.official && (
+            <ThemeUpdates releases={target.official.releases} track={target.official.track} onChange={follow} />
+          )}
           <div>
             <Button size="sm" disabled={saving} onClick={save}>
               {saveLabel}

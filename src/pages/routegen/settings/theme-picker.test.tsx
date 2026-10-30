@@ -3,6 +3,8 @@ import { createStore, Provider } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installedThemesAtom } from '@/data/theme.atoms'
 import { fakeResponse } from '@/test/fake-response'
+import { serveByUrl } from '@/test/serve'
+import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
 import type { InstalledTheme } from '@/theme/library'
 import ThemePicker from './theme-picker'
 
@@ -126,5 +128,59 @@ describe('ThemePicker', () => {
     expect(await screen.findByText('This file can’t be used.')).toBeTruthy()
     expect(screen.getByText('A theme needs a light or a dark variant')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Use this theme' })).toBeNull()
+  })
+})
+
+describe('official themes', () => {
+  const themes = () => screen.getByRole('group', { name: 'Themes' })
+  const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
+
+  it('lists them after the built-ins, with who made them and when', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    mount()
+    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    expect(screen.getByText('· by Pug · created Oct 2026 · themes.pug.sh')).toBeTruthy()
+    expect(screen.getByText('Warm linen paper.')).toBeTruthy()
+  })
+
+  it('starts on the newest major line, and saves that line’s URL', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const onSave = mount()
+    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/2/theme.json')
+  })
+
+  it('follows the latest, or pins one release, and keeps a mode pin', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const onSave = mount()
+    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/theme.json#dark')
+    fireEvent.click(screen.getByRole('button', { name: 'Only one release' }))
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: '1.0.0' }))
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/1.0.0/theme.json#dark')
+  })
+
+  it('treats a pasted official URL as official, on the pasted track', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST, 'https://themes.pug.sh/clay/1/theme.json': JSON.stringify(clayFile('1.1.0')) })
+    const onSave = mount()
+    await within(themes()).findByRole('button', { name: 'Clay' })
+    check('themes.pug.sh/clay/1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
+    expect(screen.getByRole('button', { name: 'Follow 1.x' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/1/theme.json')
+  })
+
+  it('says when the catalog can’t be reached, and keeps the built-ins', async () => {
+    mount()
+    expect(await screen.findByText('Couldn’t reach themes.pug.sh.')).toBeTruthy()
+    expect(within(themes()).getByRole('button', { name: 'Pug' })).toBeTruthy()
   })
 })
