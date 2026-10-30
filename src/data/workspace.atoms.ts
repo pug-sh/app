@@ -9,7 +9,8 @@ import { type Project, UpdateMetaRequestSchema } from '@/api/genproto/dashboard/
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
-import { isUrlTarget } from '@/theme/reference'
+import { isUrlTarget, parseReference } from '@/theme/reference'
+import { OFFICIAL_REPOSITORY, parseThemeFileUrl } from '@/theme/repository'
 
 // Synchronous initial read avoids a first-render flash.
 export const LAST_ORG_ID_KEY = 'pug:lastOrgId'
@@ -415,10 +416,16 @@ export const saveProjectThemeAtom = atom(null, async (get, set, reference: strin
     projectsAtom,
     get(projectsAtom).map(p => (p.id === saved.id ? saved : p)),
   )
+  const pinned = reference.includes('#')
+  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, parseReference(reference)?.target ?? '')
+  if (official) {
+    trackEvent('project_theme_set', { kind: 'official', pinned, theme: official.slug, track: official.track.kind })
+    return
+  }
   let kind = 'builtin'
   if (reference === '') kind = 'cleared'
   else if (isUrlTarget(reference)) kind = 'url'
-  trackEvent('project_theme_set', { kind, pinned: reference.includes('#') })
+  trackEvent('project_theme_set', { kind, pinned })
 })
 
 // The project's reporting timezone, used to render bucketed insight/dashboard

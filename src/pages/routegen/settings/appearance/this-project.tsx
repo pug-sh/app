@@ -32,7 +32,8 @@ const ThisProject = () => {
 
   let summary = 'No project default, using your theme'
   if (choice.source === 'override') {
-    summary = `Using ${library.find(entry => entry.id === choice.selection.light)?.name} in this project.`
+    const using = override === undefined ? null : describeReference(override, library)
+    summary = `Using ${using?.name ?? library.find(entry => entry.id === choice.selection.light)?.name} in this project.`
   } else if (choice.source === 'project' && projectDefault) {
     summary = `Project default: ${projectDefault.name}, ${MODE[choice.pin ?? 'follow']}`
   } else if (projectDefault?.host && defaultStatus?.state !== 'failed') {

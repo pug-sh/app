@@ -515,13 +515,25 @@ describe('saveProjectThemeAtom', () => {
   it('reports a URL or a clear by kind, never the value', async () => {
     projectsUpdateMeta.mockResolvedValue({})
     const store = inOne()
-    await store.set(saveProjectThemeAtom, 'https://themes.pug.sh/linen/theme.json')
+    await store.set(saveProjectThemeAtom, 'https://cdn.example.com/linen/theme.json')
     expect(trackEvent).toHaveBeenLastCalledWith('project_theme_set', { kind: 'url', pinned: false })
     await store.set(saveProjectThemeAtom, '')
     expect(trackEvent).toHaveBeenLastCalledWith('project_theme_set', { kind: 'cleared', pinned: false })
     // '' clears only as a set field: omitted, the server leaves the default as it was.
     const sent = create(UpdateMetaRequestSchema, projectsUpdateMeta.mock.calls[1][0])
     expect(isFieldSet(sent, UpdateMetaRequestSchema.field.defaultTheme)).toBe(true)
+  })
+
+  it('reports an official default by slug and track, never the URL', async () => {
+    projectsUpdateMeta.mockResolvedValue({})
+    const store = inOne()
+    await store.set(saveProjectThemeAtom, 'https://themes.pug.sh/clay/1/theme.json#dark')
+    expect(trackEvent).toHaveBeenLastCalledWith('project_theme_set', {
+      kind: 'official',
+      pinned: true,
+      theme: 'clay',
+      track: 'major',
+    })
   })
 
   // A server without default_theme drops it and answers with the project unchanged.

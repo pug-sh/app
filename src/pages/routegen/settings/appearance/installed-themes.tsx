@@ -28,7 +28,7 @@ type Pending = { text: string; check: InstallCheck }
 const HEADER = 'py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider'
 
 const modesOf = (entry: LibraryEntry) =>
-  entry.family ? POLARITIES.filter(p => entry.family?.variants[p]).join(' · ') : '—'
+  entry.family ? POLARITIES.filter(p => entry.family?.variants[p]).join(' · ') : 'None'
 
 // What a theme's checks come to, for its row: null when it passed cleanly.
 const checksLabel = (entry: LibraryEntry) => {
@@ -150,6 +150,7 @@ const InstalledThemes = () => {
                   <tr className="group border-b border-border/50 transition-colors hover:bg-muted/40">
                     <td className="py-2 text-sm">
                       {entry.name}
+                      {entry.release && <span className="text-muted-foreground"> {entry.release}</span>}
                       {entry.author && <span className="text-muted-foreground"> · {entry.author}</span>}
                     </td>
                     <td className="py-2 text-xs text-muted-foreground">{modesOf(entry)}</td>

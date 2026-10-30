@@ -315,7 +315,7 @@ describe('This project', () => {
       'fetch',
       vi.fn(async () => fakeResponse(linen)),
     )
-    const url = 'https://themes.pug.sh/linen/theme.json'
+    const url = 'https://cdn.example.com/linen/theme.json'
     const store = inProject(`${url}#dark`)
     await act(() => store.set(refreshFetchedThemeAtom, url))
     expect(screen.getByText('Project default: Linen, follows each member’s mode')).toBeTruthy()
@@ -334,6 +334,38 @@ describe('official themes in your own rows', () => {
   const urlForm = (label: string) => screen.getByLabelText(label).closest('form') as HTMLFormElement
 
   afterEach(() => vi.unstubAllGlobals())
+
+  it('reads an official override in words', async () => {
+    serveByUrl({ 'https://themes.pug.sh/clay/theme.json': JSON.stringify(clayFile('2.0.0')) })
+    const store = createStore()
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'P' }))
+    store.set(projectOverridesAtom, { p1: 'https://themes.pug.sh/clay/theme.json' })
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    await act(() => store.set(refreshFetchedThemeAtom, 'https://themes.pug.sh/clay/theme.json'))
+    expect(screen.getByText('Using Clay, latest (now 2.0.0) in this project.')).toBeTruthy()
+  })
+
+  it('shows an installed theme’s release beside its author', () => {
+    const clay = JSON.stringify({
+      version: 1,
+      name: 'Clay',
+      metadata: { author: 'Pug', release: '1.0.0' },
+      variants: { light: { colors: { background: '#f3eee4' } } },
+    })
+    const store = createStore()
+    store.set(installedThemesAtom, [{ id: 'installed-clay', text: clay, hash: 'clay', installedAt: 0, source: 'file' }])
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    const cell = screen.getByRole('cell', { name: /Clay/ })
+    expect(cell.textContent).toBe('Clay 1.0.0 · Pug')
+  })
 
   it('lists them in the rows that have their mode', async () => {
     const paper = { version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }

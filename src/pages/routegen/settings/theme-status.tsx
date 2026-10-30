@@ -2,18 +2,26 @@ import type { FetchStatus } from '@/data/theme.atoms'
 import { IssueList } from '@/pages/routegen/settings/theme-issues'
 import type { LibraryEntry } from '@/theme/library'
 import { isUrlTarget, parseReference } from '@/theme/reference'
+import { OFFICIAL_REPOSITORY, parseThemeFileUrl, readOfficial } from '@/theme/repository'
 
 export const MODE = { follow: 'follows each member’s mode', light: 'always light', dark: 'always dark' } as const
 
-// A reference in words: its theme's name (a file's host until it loads), the host, and its mode. Null for
-// none, a reference this build can't read, or an id it doesn't have.
+// A reference in words: its theme's name (an official one by how it follows and what it is now; a file's
+// host until it loads), the host, and its mode. Null for none, a reference this build can't read, or an id
+// it doesn't have.
 export const describeReference = (value: string, library: LibraryEntry[]) => {
   const reference = parseReference(value)
   if (!reference) return null
+  const mode = MODE[reference.pin ?? 'follow']
+  const entry = library.find(e => e.id === reference.target)
+  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, reference.target)
+  if (official && entry?.family) {
+    return { name: readOfficial(entry.family.name, official.track, entry.family.release), host: undefined, mode }
+  }
   const host = isUrlTarget(reference.target) ? new URL(reference.target).host : undefined
-  const name = library.find(e => e.id === reference.target)?.name ?? host
+  const name = entry?.name ?? host
   if (!name) return null
-  return { name, host, mode: MODE[reference.pin ?? 'follow'] }
+  return { name, host, mode }
 }
 
 // How the last fetch of a reference's file went this session, when it names a file.
