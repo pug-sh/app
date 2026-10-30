@@ -4,6 +4,8 @@ import { createStore, Provider } from 'jotai'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
+import { serveByUrl } from '@/test/serve'
+import { CLAY_LIST, clayFile, LIST_URL, listOf } from '@/test/theme-repository'
 
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
@@ -323,5 +325,81 @@ describe('This project', () => {
     inProject('')
     expect(screen.getByText('Used in projects without a default')).toBeTruthy()
     expect(screen.getByRole('group', { name: 'Light theme' })).toBeTruthy()
+  })
+})
+
+describe('official themes in your own rows', () => {
+  const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
+  const row = (name: 'Light theme' | 'Dark theme') => screen.getByRole('group', { name })
+  const urlForm = (label: string) => screen.getByLabelText(label).closest('form') as HTMLFormElement
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('lists them in the rows that have their mode', async () => {
+    const paper = { version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }
+    serveByUrl({
+      [LIST_URL]: listOf(
+        { slug: 'clay', releases: ['1.0.0'], latest: clayFile('1.0.0') },
+        { slug: 'paper', releases: ['1.0.0'], latest: paper },
+      ),
+    })
+    mount()
+    expect(await within(row('Light theme')).findByRole('button', { name: 'Paper' })).toBeTruthy()
+    expect(within(row('Dark theme')).getByRole('button', { name: 'Clay' })).toBeTruthy()
+    expect(within(row('Dark theme')).queryByRole('button', { name: 'Paper' })).toBeNull()
+  })
+
+  it('follows the newest major line when picked, and says so', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const store = mount()
+    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    expect(store.get(themeSelectionAtom).light).toBe('https://themes.pug.sh/clay/2/theme.json')
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
+      theme: 'clay',
+      track: 'major',
+      mode: 'light',
+      scope: 'personal',
+    })
+    expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('changes how the row follows Clay, saving at once', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: CLAY_1, dark: 'pug' })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
+    expect(await screen.findByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    expect(store.get(themeSelectionAtom).light).toBe('https://themes.pug.sh/clay/theme.json')
+  })
+
+  it('says why the row shows Pug while its file loads or fails', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: CLAY_1, dark: 'pug' })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
+    expect(screen.getByText('Last check failed: the host answered 404.')).toBeTruthy()
+  })
+
+  it('uses a theme from a URL for one mode, and refuses one without that mode', async () => {
+    const paper = JSON.stringify({
+      version: 1,
+      name: 'Paper',
+      variants: { light: { colors: { background: '#ffffff' } } },
+    })
+    serveByUrl({ 'https://example.com/paper.json': paper })
+    const store = mount()
+    fireEvent.change(screen.getByLabelText('Dark theme URL'), { target: { value: 'example.com/paper.json' } })
+    fireEvent.click(within(urlForm('Dark theme URL')).getByRole('button', { name: 'Check' }))
+    expect(await screen.findByText('Paper has no dark variant.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Use this theme' })).toBeNull()
+    fireEvent.change(screen.getByLabelText('Light theme URL'), { target: { value: 'example.com/paper.json' } })
+    fireEvent.click(within(urlForm('Light theme URL')).getByRole('button', { name: 'Check' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
+    expect(store.get(themeSelectionAtom).light).toBe('https://example.com/paper.json')
   })
 })

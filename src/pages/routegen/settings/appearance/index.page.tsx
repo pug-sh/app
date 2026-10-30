@@ -1,24 +1,15 @@
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
+import { useAtom, useAtomValue } from 'jotai'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { toast } from 'sonner'
 import SectionHeader from '@/components/section-header'
 import { Switch } from '@/components/ui/switch'
-import {
-  autoContrastAtom,
-  STORAGE_REFUSED,
-  selectThemeAtom,
-  type ThemeMode,
-  themeChoiceAtom,
-  themeLibraryAtom,
-  themeModeAtom,
-  themeSelectionAtom,
-} from '@/data/theme.atoms'
+import { autoContrastAtom, STORAGE_REFUSED, type ThemeMode, themeChoiceAtom, themeModeAtom } from '@/data/theme.atoms'
+import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { cn } from '@/lib/utils'
-import type { UsableEntry } from '@/theme/library'
 import { POLARITIES } from '@/theme/tokens'
 import InstalledThemes from './installed-themes'
-import ThemeSwatch from './theme-swatch'
 import ThisProject from './this-project'
+import YourThemeRow from './your-theme-row'
 
 const MODES: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -26,15 +17,11 @@ const MODES: { value: ThemeMode; label: string; icon: typeof Sun }[] = [
   { value: 'system', label: 'System', icon: Monitor },
 ]
 
-const ROW_TITLE = { light: 'Light theme', dark: 'Dark theme' } as const
-
 const Appearance = () => {
   const [mode, setMode] = useAtom(themeModeAtom)
   const [autoContrast, setAutoContrast] = useAtom(autoContrastAtom)
-  const selection = useAtomValue(themeSelectionAtom)
-  const library = useAtomValue(themeLibraryAtom)
   const pin = useAtomValue(themeChoiceAtom).pin
-  const selectTheme = useSetAtom(selectThemeAtom)
+  const catalogFailed = useAtomValue(themeCatalogAtom).status === 'failed'
   // A write the browser refused changed nothing: say so, or the click looks like it did nothing.
   const saved = (ok: boolean) => {
     if (!ok) toast.error(STORAGE_REFUSED)
@@ -69,36 +56,11 @@ const Appearance = () => {
       <section>
         <SectionHeader title="Your theme" description="Used in projects without a default" />
         <div className="space-y-5">
-          {POLARITIES.map(polarity => {
-            // The theme selected for this mode, when it can't be used. Pug is showing in its place.
-            const unusable = library.find(entry => entry.id === selection[polarity] && !entry.family)
-            const reason = unusable?.issues.find(issue => issue.severity === 'error')?.message
-            return (
-              <div key={polarity}>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">{ROW_TITLE[polarity]}</p>
-                {/* A labelled group, so a screen reader says which mode a swatch sets: both rows hold a "Pug". */}
-                <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
-                  {library
-                    .filter((entry): entry is UsableEntry => Boolean(entry.family?.variants[polarity]))
-                    .map(entry => (
-                      <ThemeSwatch
-                        key={entry.id}
-                        entry={entry}
-                        polarity={polarity}
-                        selected={selection[polarity] === entry.id}
-                        onSelect={() => saved(selectTheme({ polarity, id: entry.id }))}
-                      />
-                    ))}
-                </div>
-                {unusable && (
-                  <p className="mt-2 text-xs text-negative">
-                    {unusable.name} can’t be used, so Pug is showing instead{reason ? `: ${reason}` : '.'}
-                  </p>
-                )}
-              </div>
-            )
-          })}
+          {POLARITIES.map(polarity => (
+            <YourThemeRow key={polarity} polarity={polarity} />
+          ))}
         </div>
+        {catalogFailed && <p className="mt-2 text-xs text-muted-foreground">Couldn’t reach themes.pug.sh.</p>}
       </section>
 
       <section>

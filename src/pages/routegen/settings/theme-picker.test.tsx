@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { installedThemesAtom } from '@/data/theme.atoms'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
-import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
+import { CLAY_LIST, clayFile, LIST_URL, listOf } from '@/test/theme-repository'
 import type { InstalledTheme } from '@/theme/library'
 import ThemePicker from './theme-picker'
 
@@ -134,6 +134,22 @@ describe('ThemePicker', () => {
 describe('official themes', () => {
   const themes = () => screen.getByRole('group', { name: 'Themes' })
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
+
+  it('shows every theme list.json names and no other, so a new theme needs no change here', async () => {
+    const named = (name: string) => ({ version: 1, name, variants: { light: { colors: { background: '#fafafa' } } } })
+    serveByUrl({
+      [LIST_URL]: listOf(
+        { slug: 'moss', releases: ['1.0.0'], latest: named('Moss') },
+        { slug: 'slate', releases: ['1.0.0'], latest: named('Slate') },
+        { slug: 'ember', releases: ['1.0.0'], latest: named('Ember') },
+      ),
+    })
+    mount()
+    expect(await within(themes()).findByRole('button', { name: 'Moss' })).toBeTruthy()
+    expect(within(themes()).getByRole('button', { name: 'Slate' })).toBeTruthy()
+    expect(within(themes()).getByRole('button', { name: 'Ember' })).toBeTruthy()
+    expect(within(themes()).queryByRole('button', { name: 'Clay' })).toBeNull()
+  })
 
   it('lists them after the built-ins, with who made them and when', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
