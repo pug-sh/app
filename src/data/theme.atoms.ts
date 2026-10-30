@@ -329,7 +329,7 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
 
 // What analytics may say about a theme: a built-in's id, an official theme's slug and how it's followed,
 // or 'custom'. Never a URL.
-const analyticsTheme = (target: string, library: LibraryEntry[]) => {
+const analyticsTheme = (target: string, library: LibraryEntry[]): Record<string, string> => {
   const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, target)
   if (official) return { theme: official.slug, track: official.track.kind }
   return { theme: library.some(entry => entry.id === target && entry.builtin) ? target : 'custom' }
