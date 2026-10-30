@@ -36,6 +36,8 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
   // The theme selected for this mode, when it can't be used. Pug is showing in its place.
   const unusable = library.find(entry => entry.id === selected && !entry.family)
   const reason = unusable?.issues.find(issue => issue.severity === 'error')?.message
+  // A file with no variant for this mode, a followed release or a version that dropped it. Pug shows here too.
+  const lacking = library.find(entry => entry.id === selected && entry.family && !entry.family.variants[polarity])
   const status = statusOf(selected, statuses)
   const followed = parseThemeFileUrl(OFFICIAL_REPOSITORY, selected)
   const following = followed && themes.find(theme => theme.selected && theme.official?.slug === followed.slug)
@@ -64,6 +66,12 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
       {unusable && (
         <p className="mt-2 text-xs text-negative">
           {unusable.name} can’t be used, so Pug is showing instead{reason ? `: ${reason}` : '.'}
+        </p>
+      )}
+      {lacking && (
+        <p className="mt-2 text-xs text-negative">
+          {lacking.name}
+          {lacking.release && ` ${lacking.release}`} has no {polarity} variant, so Pug is showing instead.
         </p>
       )}
       {followed && following?.official && (

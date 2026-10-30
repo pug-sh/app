@@ -417,6 +417,32 @@ describe('official themes in your own rows', () => {
     expect(screen.getByText('Last check failed: the host answered 404.')).toBeTruthy()
   })
 
+  it('says why a followed release without this mode shows Pug, and lets the row move on', async () => {
+    const url = 'https://themes.pug.sh/clay/1.0.0/theme.json'
+    const { light } = clayFile('1.0.0').variants
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify({ ...clayFile('1.0.0'), variants: { light } }) })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: 'pug', dark: url })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, url))
+    expect(await screen.findByText('Clay 1.0.0 has no dark variant, so Pug is showing instead.')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    expect(store.get(themeSelectionAtom).dark).toBe('https://themes.pug.sh/clay/theme.json')
+  })
+
+  it('says why a file that lost this mode shows Pug', async () => {
+    const url = 'https://example.com/paper.json'
+    const paper = { version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify(paper) })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: 'pug', dark: url })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, url))
+    expect(screen.getByText('Paper has no dark variant, so Pug is showing instead.')).toBeTruthy()
+  })
+
   it('uses a theme from a URL for one mode, and refuses one without that mode', async () => {
     const paper = JSON.stringify({
       version: 1,

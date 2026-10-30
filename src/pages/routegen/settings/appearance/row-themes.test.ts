@@ -46,6 +46,24 @@ describe('rowThemes', () => {
     expect(clay?.entry.family.release).toBe('2.0.0')
   })
 
+  // Before list.json answers, when it can't be reached, or once it no longer lists the theme. The file
+  // still paints, so the row has to go on showing it.
+  it('keeps a followed theme selected while the catalog doesn’t list it', () => {
+    const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
+    const row = rowThemes({ polarity: 'light', selected: CLAY_1, library, catalog: [] })
+    expect(row.at(-1)).toMatchObject({ selected: true, entry: { id: CLAY_1, name: 'Clay' } })
+  })
+
+  it('keeps a followed release without this mode listed, drawn from the catalog', () => {
+    const url = 'https://themes.pug.sh/clay/1.0.0/theme.json' as RemoteId
+    const { light } = clayFile('1.0.0').variants
+    const lightOnly = JSON.stringify({ ...clayFile('1.0.0'), variants: { light } })
+    const library = [...buildLibrary([]), ...remoteEntries([{ url, text: lightOnly }])]
+    const clay = rowThemes({ polarity: 'dark', selected: url, library, catalog }).find(t => t.official?.slug === 'clay')
+    expect(clay?.selected).toBe(true)
+    expect(clay?.entry.family.release).toBe('2.0.0')
+  })
+
   it('shows a theme from any other URL once it’s fetched', () => {
     const url = 'https://example.com/paper.json' as RemoteId
     const text = JSON.stringify({

@@ -28,14 +28,17 @@ export const rowThemes = ({
   const fetched = library.find((entry): entry is UsableEntry => entry.id === selected && entry.family !== null)
   const official = catalog.flatMap(theme => {
     const following = followed?.slug === theme.slug
-    const family = following && fetched ? fetched.family : theme.family
+    // A followed release can lack this mode. It stays listed from the catalog, so the row can say why
+    // it isn't showing, and can move to another release.
+    const family = following && fetched?.family.variants[polarity] ? fetched.family : theme.family
     if (!family.variants[polarity]) return []
     // Following means the row's selection parsed as this theme's file URL.
     const id = following ? (selected as RemoteId) : themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, { kind: 'latest' })
     const entry: UsableEntry = { id, builtin: false, name: family.name, family, issues: [] }
     return [{ entry, selected: following, official: { slug: theme.slug, releases: theme.releases } }]
   })
-  const elsewhere =
-    !followed && fetched && isRemoteId(selected) && hasMode(fetched) ? [{ entry: fetched, selected: true }] : []
-  return [...own, ...official, ...elsewhere]
+  // A file the catalog doesn't claim still paints: from any other URL, or a followed theme while list.json
+  // hasn't answered, can't be reached, or no longer lists it.
+  const unclaimed = fetched && isRemoteId(selected) && hasMode(fetched) && !official.some(theme => theme.selected)
+  return [...own, ...official, ...(unclaimed ? [{ entry: fetched, selected: true }] : [])]
 }
