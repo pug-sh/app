@@ -59,7 +59,7 @@ const refreshButton = () => screen.getByLabelText('Refresh events') as HTMLButto
 const settle = () => waitFor(() => expect(refreshButton().disabled).toBe(false))
 
 beforeEach(() => {
-  // Only Date — waitFor still needs real timers to poll on.
+  // Only Date: waitFor still needs real timers to poll on.
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(AT_LOAD)
   getEventExplorer.mockReset().mockResolvedValue(respond())
@@ -69,9 +69,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe('events refresh', () => {
-  // The page landed on 'This month', whose `to` is the instant the range resolved. Sent as stored,
-  // every refresh re-queries the window that ended at page load, so nothing that arrived since can
-  // come back — while the "Updated just now" stamp says otherwise.
+  // Sent as stored, the default's `to` is page load, so a refresh would never fetch newer events.
   it('queries up to now, not up to when the page loaded', async () => {
     render(<EventExplorer />)
     await settle()
@@ -82,11 +80,10 @@ describe('events refresh', () => {
     await waitFor(() => expect(getEventExplorer).toHaveBeenCalledTimes(2))
 
     expect(windowOf(1).to).toEqual(FOUR_HOURS_LATER)
-    expect(windowOf(1).from).toEqual(new Date(2026, 7, 1))
+    expect(windowOf(1).from).toEqual(new Date(2026, 6, 20))
   })
 
-  // The page-two cursor was issued against the window page one used, so re-resolving here would page
-  // a different window than the cursor came from.
+  // The page-two cursor belongs to page one's window, so paging must not re-resolve it.
   it('holds the window still across "Load more"', async () => {
     getEventExplorer.mockResolvedValueOnce(respond([create(ActivityEventSchema, { eventId: 'e1' })], 'tok2'))
     render(<EventExplorer />)
@@ -99,8 +96,7 @@ describe('events refresh', () => {
     expect(windowOf(1)).toEqual(windowOf(0))
   })
 
-  // Deleting `queryRangeRef.current = range` leaves every other test green: they never refresh
-  // before paging, so the ref's mount value already matches what the assignment would store.
+  // The only test that catches a missing `queryRangeRef.current = range`.
   it('pages against the refreshed window, not the one it mounted with', async () => {
     getEventExplorer.mockResolvedValue(respond([create(ActivityEventSchema, { eventId: 'e1' })], 'tok2'))
     render(<EventExplorer />)
@@ -125,7 +121,7 @@ describe('events refresh', () => {
 
     getEventExplorer.mockRejectedValueOnce(new ConnectError('refresh blew up', Code.Unavailable))
     fireEvent.click(refreshButton())
-    // Not '[unavailable] refresh blew up' — the raw ConnectError message is not user-facing.
+    // Not '[unavailable] refresh blew up': the raw ConnectError message is not user-facing.
     await waitFor(() => expect(screen.getByText('refresh blew up')).toBeTruthy())
 
     fireEvent.click(screen.getByText('Retry'))
@@ -133,8 +129,7 @@ describe('events refresh', () => {
     expect(request(2).pageToken).toBe('')
   })
 
-  // The mirror of the test above: retrying a failed page two must not reset to page one and throw
-  // away every page already loaded.
+  // Mirror of the above: retrying a failed page two must not reset to page one.
   it('retries the page that failed rather than resetting to page one', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     getEventExplorer.mockResolvedValueOnce(respond([create(ActivityEventSchema, { eventId: 'e1' })], 'tok2'))

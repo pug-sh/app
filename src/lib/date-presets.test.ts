@@ -4,8 +4,7 @@ import { inZone } from '@/test/timezone'
 import { defaultRange, refreshTimeRange, TIME_RANGE_PRESETS } from './date-presets'
 import { GRANULARITY_MAX_RANGE_MS } from './granularity'
 
-// lastNMonths is module-private, so these go through the preset list that exposes it. Dates are
-// built with local-time constructors, matching what date-presets.ts does, so the zone cancels out.
+// lastNMonths is module-private, so these go through the preset list.
 const resolvePreset = (label: string) => {
   const preset = TIME_RANGE_PRESETS.find(item => item.label === label)
   if (!preset) throw new Error(`no preset labelled '${label}'`)
@@ -22,9 +21,7 @@ const at = (year: number, month: number, day: number, h = 0, m = 0, s = 0, ms = 
 }
 
 describe('lastNMonths', () => {
-  // setMonth on a 31st overflows into the following month when the target is shorter
-  // (May 31 → Feb 31 → Mar 2 in a leap year). Without the setDate(0) correction `from` lands in
-  // March, so "Last 3 months" silently loses a month.
+  // setMonth on a 31st overflows into the next month; without setDate(0) "Last 3 months" loses one.
   it('corrects the month-end overflow back into the shorter month', () => {
     at(2024, 4, 31, 12, 0, 0)
     expect(resolvePreset('Last 3 months').from).toEqual(new Date(2024, 2, 1))
@@ -48,8 +45,7 @@ describe('lastNMonths', () => {
     expect(resolvePreset('Last 3 months').from).toEqual(new Date(2026, 3, 21))
   })
 
-  // The reason the +1 exists: without it "Last 12 months" is 365 days plus today's elapsed hours,
-  // which the backend rejects for Day granularity.
+  // Without the +1, "Last 12 months" exceeds the backend's 365-day cap for Day granularity.
   it('keeps "Last 12 months" inside the backend cap for Day granularity', () => {
     at(2026, 6, 20, 15, 30, 0)
     const range = resolvePreset('Last 12 months')
@@ -118,13 +114,20 @@ describe('refreshTimeRange', () => {
     expect(refreshTimeRange(renamed)).toBe(renamed)
   })
 
-  // The label is the only handle refreshTimeRange has. Drop it from the default and the events page
-  // silently goes back to re-querying the window it loaded in.
+  // The label is refreshTimeRange's only handle; without it the events page re-queries its load window.
   it('re-resolves the events page default', () => {
     at(2026, 7, 19, 10)
     const initial = defaultRange()
 
     at(2026, 7, 19, 14)
     expect(refreshTimeRange(initial)?.to).toEqual(new Date(2026, 7, 19, 14))
+  })
+})
+
+describe('defaultRange', () => {
+  // 'This month' resolved to a few hours on the 1st, so the events page had nothing to load more of.
+  it('does not shrink on the 1st of the month', () => {
+    at(2026, 10, 1, 0, 42)
+    expect(defaultRange().from).toEqual(new Date(2026, 9, 2))
   })
 })
