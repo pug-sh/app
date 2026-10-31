@@ -14,11 +14,13 @@ import {
   type InstalledTheme,
   isInstalledId,
   isRemoteId,
+  type LibraryEntry,
   type RemoteId,
   remoteEntries,
 } from '@/theme/library'
 import { parseReference } from '@/theme/reference'
 import { type FetchFailure, fetchThemeText } from '@/theme/remote'
+import { OFFICIAL_REPOSITORY, parseThemeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -242,9 +244,13 @@ export const activeOverrideAtom = atom(get => {
   return overrides[project.id]
 })
 
-/** The theme files the active project names, its default and this browser's override, to keep fresh. */
+/**
+ * The theme files to keep fresh: the active project's default and this browser's override for it, and the
+ * member's own light and dark choices.
+ */
 export const activeThemeUrlsAtom = atom(get => {
-  const targets = [get(activeProjectAtom)?.defaultTheme, get(activeOverrideAtom)].map(
+  const selection = get(themeSelectionAtom)
+  const targets = [get(activeProjectAtom)?.defaultTheme, get(activeOverrideAtom), selection.light, selection.dark].map(
     value => value && parseReference(value)?.target,
   )
   return [...new Set(targets.filter(isRemoteId))]
@@ -321,14 +327,18 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
   return persist(get, set, writes)
 })
 
-/**
- * Chooses the theme for one mode and reports which: a built-in by id, anything installed as 'custom'.
- * False when storage refused.
- */
+// What analytics may say about a theme: a built-in's id, an official theme's slug and how it's followed,
+// or 'custom'. Never a URL.
+const analyticsTheme = (target: string, library: LibraryEntry[]): Record<string, string> => {
+  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, target)
+  if (official) return { theme: official.slug, track: official.track.kind }
+  return { theme: library.some(entry => entry.id === target && entry.builtin) ? target : 'custom' }
+}
+
+/** Chooses the theme for one mode, by id or by URL, and reports which. False when storage refused. */
 export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity; id: string }) => {
   if (!persist(get, set, [[selectionStore.stored, { ...get(themeSelectionAtom), [polarity]: id }]])) return false
-  const builtin = get(themeLibraryAtom).some(entry => entry.id === id && entry.builtin)
-  trackEvent('theme_selected', { theme: builtin ? id : 'custom', mode: polarity, scope: 'personal' })
+  trackEvent('theme_selected', { ...analyticsTheme(id, get(themeLibraryAtom)), mode: polarity, scope: 'personal' })
   return true
 })
 
@@ -345,9 +355,8 @@ export const setProjectOverrideAtom = atom(
     if (!persist(get, set, [[overridesStore.stored, next]])) return false
     const parsed = reference === null ? null : parseReference(reference)
     if (parsed) {
-      const builtin = get(themeLibraryAtom).some(entry => entry.id === parsed.target && entry.builtin)
       trackEvent('theme_selected', {
-        theme: builtin ? parsed.target : 'custom',
+        ...analyticsTheme(parsed.target, get(themeLibraryAtom)),
         mode: parsed.pin ?? 'both',
         scope: 'project',
       })

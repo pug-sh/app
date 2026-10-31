@@ -32,10 +32,12 @@ const failureMessage = (failure: Failure) => {
 const Report = ({
   result,
   disclosure,
+  requires,
   onUse,
 }: {
   result: PastedTheme
   disclosure: boolean
+  requires?: Polarity
   onUse: (file: CheckedFile) => void
 }) => {
   if (!result.ok) return <p className="text-xs text-negative">{failureMessage(result)}</p>
@@ -70,15 +72,31 @@ const Report = ({
       {disclosure && (
         <p className="text-xs text-muted-foreground">Members’ browsers will load this file from {new URL(url).host}.</p>
       )}
-      <Button size="sm" variant="outline" onClick={() => onUse({ url, pin, family })}>
-        Use this theme
-      </Button>
+      {requires && !family.variants[requires] ? (
+        <p className="text-xs text-muted-foreground">
+          {family.name} has no {requires} variant.
+        </p>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => onUse({ url, pin, family })}>
+          Use this theme
+        </Button>
+      )}
     </div>
   )
 }
 
 // Checks a pasted URL from this browser, the origin members' browsers fetch from too, and reports it.
-const ThemeUrlField = ({ disclosure, onUse }: { disclosure: boolean; onUse: (file: CheckedFile) => void }) => {
+const ThemeUrlField = ({
+  disclosure,
+  label = 'Theme URL',
+  requires,
+  onUse,
+}: {
+  disclosure: boolean
+  label?: string
+  requires?: Polarity
+  onUse: (file: CheckedFile) => void
+}) => {
   const [input, setInput] = useState('')
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState<PastedTheme | null>(null)
@@ -100,7 +118,7 @@ const ThemeUrlField = ({ disclosure, onUse }: { disclosure: boolean; onUse: (fil
         }}
       >
         <Input
-          aria-label="Theme URL"
+          aria-label={label}
           placeholder="themes.pug.sh/linen, or a link to a theme file"
           value={input}
           onChange={event => setInput(event.target.value)}
@@ -112,7 +130,7 @@ const ThemeUrlField = ({ disclosure, onUse }: { disclosure: boolean; onUse: (fil
       </form>
       {result && (
         <div role="status">
-          <Report result={result} disclosure={disclosure} onUse={onUse} />
+          <Report result={result} disclosure={disclosure} requires={requires} onUse={onUse} />
         </div>
       )}
     </div>

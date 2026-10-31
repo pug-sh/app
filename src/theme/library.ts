@@ -20,7 +20,7 @@ export const isRemoteId = (id: unknown): id is RemoteId => typeof id === 'string
 
 export type InstalledTheme = { id: InstalledId; text: string; hash: string; installedAt: number; source: 'file' }
 
-type EntryInfo = { name: string; author?: string; issues: Issue[] }
+type EntryInfo = { name: string; author?: string; release?: string; issues: Issue[] }
 
 export type LibraryEntry =
   | (EntryInfo & { id: BuiltinId; builtin: true; family: ThemeFamily })
@@ -97,7 +97,15 @@ const textEntry = (id: InstalledId | RemoteId, text: string, parse: () => ParseR
     const { family } = parsed
     const issues = [...parsed.issues, ...validateFamily(id, family)]
     const usable = !issues.some(i => i.severity === 'error')
-    return { id, builtin: false, name: family.name, author: family.author, family: usable ? family : null, issues }
+    return {
+      id,
+      builtin: false,
+      name: family.name,
+      author: family.author,
+      release: family.release,
+      family: usable ? family : null,
+      issues,
+    }
   } catch (err) {
     // A theme the engine can't parse or compile is a bug in the engine, not the file, but it must not
     // take the app down with it, since App reads the library while rendering. It stays listed,

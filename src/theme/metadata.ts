@@ -16,3 +16,11 @@ export const isCalendarDay = (text: string) => {
   const days = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
   return day <= days
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** A created day as month and year, "Oct 2026", from its own numbers. */
+export const formatCreated = (day: string) => {
+  const [year, month] = day.split('-').map(Number)
+  return `${MONTHS[month - 1]} ${year}`
+}

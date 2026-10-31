@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { act, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
@@ -221,6 +221,39 @@ describe('the first paint, handed to React', () => {
     root.classList.add('dark')
     mount({ signedIn: false })
     expect(root.classList.contains('dark')).toBe(false)
+  })
+})
+
+describe('a member’s own theme by URL', () => {
+  const CLAY = 'https://themes.pug.sh/clay/1/theme.json'
+  const clay = JSON.stringify({ version: 1, name: 'Clay', variants: { light: { colors: { background: '#f3eee4' } } } })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('still paints after an offline reload', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => fakeResponse(clay)),
+    )
+    const store = mount()
+    act(() => store.set(themeModeAtom, 'light'))
+    act(() => store.set(selectThemeAtom, { polarity: 'light', id: CLAY }))
+    await waitFor(() => expect(inline()).toHaveLength(TOKENS.length))
+    const background = root.style.getPropertyValue('--background')
+
+    // The reload: nothing on the page, no network, and only what the browser kept.
+    cleanup()
+    root.removeAttribute('style')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch')
+      }),
+    )
+    runPaintScript()
+    expect(root.style.getPropertyValue('--background')).toBe(background)
+    mount()
+    expect(root.style.getPropertyValue('--background')).toBe(background)
   })
 })
 

@@ -10,6 +10,7 @@ import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { type Project, ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
 import { jwtFor } from '@/test/jwt'
+import { clayFile } from '@/test/theme-repository'
 
 const { batchGet, deleteProject, updateMeta } = vi.hoisted(() => ({
   batchGet: vi.fn(),
@@ -304,10 +305,21 @@ describe('the default theme', () => {
       'fetch',
       vi.fn(async () => fakeResponse(linen)),
     )
-    const url = 'https://themes.pug.sh/linen/theme.json'
+    const url = 'https://cdn.example.com/linen/theme.json'
     const store = mountWith(OrgRole.VIEWER, `${url}#light`)
     await act(() => store.set(refreshFetchedThemeAtom, url))
-    expect(screen.getByText('Linen (themes.pug.sh), always light')).toBeTruthy()
+    expect(screen.getByText('Linen (cdn.example.com), always light')).toBeTruthy()
+  })
+
+  it('reads an official default by how it follows and what it is now', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => fakeResponse(JSON.stringify(clayFile('1.1.0')))),
+    )
+    const url = 'https://themes.pug.sh/clay/1/theme.json'
+    const store = mountWith(OrgRole.VIEWER, `${url}#light`)
+    await act(() => store.set(refreshFetchedThemeAtom, url))
+    expect(screen.getByText('Clay, following 1.x (now 1.1.0), always light')).toBeTruthy()
   })
 
   it('lists the errors of a default whose file broke', async () => {
