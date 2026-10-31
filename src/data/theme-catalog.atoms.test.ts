@@ -35,4 +35,44 @@ describe('the theme catalog', () => {
     await loaded(store, 'failed')
     expect(store.get(themeCatalogAtom).themes.map(theme => theme.slug)).toEqual(['clay'])
   })
+
+  it('stops saying it failed while it tries again', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch')
+      }),
+    )
+    const store = createStore()
+    await loaded(store, 'failed')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    )
+    const unsubscribe = store.sub(themeCatalogAtom, () => {})
+    expect(store.get(themeCatalogAtom).status).toBe('loading')
+    unsubscribe()
+  })
+
+  // Moving between pages while a read hangs starts a second one. The first failing afterwards used to put
+  // the failure line over a list that had loaded.
+  it('lets the latest read decide when an older one finishes last', async () => {
+    let failOlder = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((_resolve, reject) => {
+            failOlder = () => reject(new TypeError('Failed to fetch'))
+          }),
+      ),
+    )
+    const store = createStore()
+    store.sub(themeCatalogAtom, () => {})()
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    await loaded(store, 'ok')
+    failOlder()
+    await new Promise(resolve => setTimeout(resolve))
+    expect(store.get(themeCatalogAtom).status).toBe('ok')
+  })
 })

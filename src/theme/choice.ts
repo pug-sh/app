@@ -1,6 +1,6 @@
 import type { LibraryEntry } from './library'
 import { parseReference } from './reference'
-import type { Polarity } from './tokens'
+import { POLARITIES, type Polarity } from './tokens'
 
 // Override, then project default, then the member's own. A reference with no usable theme yet is skipped,
 // and a pin counts only when the family has that variant.
@@ -41,4 +41,12 @@ export const ignoredPin = (value: string, library: LibraryEntry[]) => {
   const family = usableFamily(reference.target, library)
   if (!family || family.variants[reference.pin]) return null
   return reference.pin
+}
+
+/** The mode a reference's file has no variant for, while members can land in it and see Pug there. */
+export const missingMode = (value: string, library: LibraryEntry[]) => {
+  const reference = parseReference(value)
+  const family = reference && usableFamily(reference.target, library)
+  if (!family || (reference.pin && family.variants[reference.pin])) return null
+  return POLARITIES.find(polarity => !family.variants[polarity]) ?? null
 }

@@ -1,4 +1,4 @@
-// The official repository in tests: Clay as published, and list.json around it.
+// The official repository in tests: a small Clay in the published file's shape, and list.json around it.
 
 export const LIST_URL = 'https://themes.pug.sh/list.json'
 

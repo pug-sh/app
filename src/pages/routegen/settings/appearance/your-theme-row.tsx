@@ -2,6 +2,7 @@ import { useAtomValue, useSetAtom } from 'jotai'
 import { toast } from 'sonner'
 import {
   fetchStatusAtom,
+  refreshFetchedThemeAtom,
   resolvableLibraryAtom,
   STORAGE_REFUSED,
   selectThemeAtom,
@@ -9,9 +10,10 @@ import {
 } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import OfficialThemeDetails from '@/pages/routegen/settings/official-theme-details'
-import { FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
+import { describeReference, FetchStatusLine, fileName, statusOf } from '@/pages/routegen/settings/theme-status'
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
 import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
+import { isRemoteId } from '@/theme/library'
 import { OFFICIAL_REPOSITORY, parseThemeFileUrl, startingTrack, themeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 import { rowThemes } from './row-themes'
@@ -27,20 +29,28 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
   const catalog = useAtomValue(themeCatalogAtom)
   const statuses = useAtomValue(fetchStatusAtom)
   const selectTheme = useSetAtom(selectThemeAtom)
+  const refresh = useSetAtom(refreshFetchedThemeAtom)
   // A write the browser refused changed nothing: say so, or the click looks like it did nothing.
   const select = (id: string) => {
     if (!selectTheme({ polarity, id })) toast.error(STORAGE_REFUSED)
   }
+  const retry = () => {
+    if (isRemoteId(selected)) void refresh(selected)
+  }
 
   const themes = rowThemes({ polarity, selected, library, catalog: catalog.themes })
+  const copy = library.find(entry => entry.id === selected)
   // The theme selected for this mode, when it can't be used. Pug is showing in its place.
-  const unusable = library.find(entry => entry.id === selected && !entry.family)
+  const unusable = copy && !copy.family ? copy : undefined
   const reason = unusable?.issues.find(issue => issue.severity === 'error')?.message
   // A file with no variant for this mode, a followed release or a version that dropped it. Pug shows here too.
-  const lacking = library.find(entry => entry.id === selected && entry.family && !entry.family.variants[polarity])
+  const lacking = copy?.family && !copy.family.variants[polarity] ? copy : undefined
   const status = statusOf(selected, statuses)
   const followed = parseThemeFileUrl(OFFICIAL_REPOSITORY, selected)
-  const following = followed && themes.find(theme => theme.selected && theme.official?.slug === followed.slug)
+  // From the catalog, not the swatches: a theme with no swatch in this mode still needs its Updates buttons.
+  const listed = followed && catalog.themes.find(theme => theme.slug === followed.slug)
+  // A file that never arrived, so no copy stands in. The pick already replaced the old choice: Pug shows.
+  const unread = status?.state === 'failed' && !copy
 
   return (
     <div>
@@ -49,7 +59,8 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
       <div role="group" aria-label={ROW_TITLE[polarity]} className="flex flex-wrap gap-3">
         {themes.map(({ entry, selected: isSelected, official }) => (
           <ThemeSwatch
-            key={entry.id}
+            // Not the entry's id, which is a URL that changes with the track: the focused button would be replaced.
+            key={official ? `official:${official.slug}` : entry.id}
             entry={entry}
             polarity={polarity}
             selected={isSelected}
@@ -62,7 +73,12 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
           />
         ))}
       </div>
-      {status && <FetchStatusLine status={status} />}
+      {status && <FetchStatusLine status={status} onRetry={retry} />}
+      {unread && (
+        <p className="mt-2 text-xs text-negative">
+          {listed?.family.name ?? describeReference(selected, library)?.name} hasn’t loaded, so Pug is showing instead.
+        </p>
+      )}
       {unusable && (
         <p className="mt-2 text-xs text-negative">
           {unusable.name} can’t be used, so Pug is showing instead{reason ? `: ${reason}` : '.'}
@@ -70,15 +86,15 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
       )}
       {lacking && (
         <p className="mt-2 text-xs text-negative">
-          {lacking.name}
-          {lacking.release && ` ${lacking.release}`} has no {polarity} variant, so Pug is showing instead.
+          {fileName(lacking)} has no {polarity} variant, so Pug is showing instead.
         </p>
       )}
-      {followed && following?.official && (
+      {followed && listed && (
         <div className="mt-3 space-y-2">
-          <OfficialThemeDetails family={following.entry.family} />
+          <OfficialThemeDetails family={copy?.family ?? listed.family} />
           <ThemeUpdates
-            releases={following.official.releases}
+            label={`${ROW_TITLE[polarity]} updates`}
+            releases={listed.releases}
             track={followed.track}
             onChange={track => select(themeFileUrl(OFFICIAL_REPOSITORY, followed.slug, track))}
           />

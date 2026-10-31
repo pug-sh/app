@@ -59,12 +59,14 @@ const { default: App } = await import('./App')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 const {
   compiledThemeAtom,
+  fetchedThemesAtom,
   fetchStatusAtom,
   installThemeAtom,
   removeThemeAtom,
   selectThemeAtom,
   setProjectOverrideAtom,
   themeModeAtom,
+  themeSelectionAtom,
 } = await import('@/data/theme.atoms')
 const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, commitProjectsAtom } = await import(
   '@/data/workspace.atoms'
@@ -77,7 +79,13 @@ const inline = () => TOKENS.filter(t => root.style.getPropertyValue(`--${t}`) !=
 const GRAPE = JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } })
 const orgA = create(OrgSchema, { id: 'org-a', displayName: 'Org A' })
 
-type Mount = { path?: string; signedIn?: boolean; settled?: boolean; project?: Project }
+type Mount = {
+  path?: string
+  signedIn?: boolean
+  settled?: boolean
+  project?: Project
+  seed?: (store: ReturnType<typeof createStore>) => void
+}
 
 // A settled workspace has its org picked and its project list landed, with `project` active when given.
 const settle = (store: ReturnType<typeof createStore>, project?: Project) => {
@@ -88,8 +96,9 @@ const settle = (store: ReturnType<typeof createStore>, project?: Project) => {
 }
 
 // The real App. An unsettled workspace is still loading, and stays so until a test settles it.
-const mount = ({ path = '/', signedIn = true, settled = true, project }: Mount = {}) => {
+const mount = ({ path = '/', signedIn = true, settled = true, project, seed }: Mount = {}) => {
   const store = createStore()
+  seed?.(store)
   if (signedIn) {
     store.set(refreshTokenAtom, 'refresh-token')
     store.set(jwtAtom, jwtFor('cust-1'))
@@ -228,6 +237,17 @@ describe('a member’s own theme by URL', () => {
   const CLAY = 'https://themes.pug.sh/clay/1/theme.json'
   const clay = JSON.stringify({ version: 1, name: 'Clay', variants: { light: { colors: { background: '#f3eee4' } } } })
 
+  // A real load reads these at import, through getOnInit, so its first render has them. A second mount shares
+  // that import, and jotai won't re-render App for what storage gives it on mount, so it fetches nothing
+  // unless it's handed what the load would have read.
+  const reload = () =>
+    mount({
+      seed: store => {
+        store.set(themeSelectionAtom, JSON.parse(localStorage.getItem('pug:theme-selection') ?? 'null'))
+        store.set(fetchedThemesAtom, JSON.parse(localStorage.getItem('pug:theme-remote') ?? '{}'))
+      },
+    })
+
   afterEach(() => vi.unstubAllGlobals())
 
   it('still paints after an offline reload', async () => {
@@ -252,8 +272,40 @@ describe('a member’s own theme by URL', () => {
     )
     runPaintScript()
     expect(root.style.getPropertyValue('--background')).toBe(background)
-    mount()
+    const reloaded = reload()
+    await waitFor(() => expect(reloaded.get(fetchStatusAtom)[CLAY]).toMatchObject({ state: 'failed' }))
     expect(root.style.getPropertyValue('--background')).toBe(background)
+  })
+
+  // What Latest and Follow promise. A load that trusted its cached copy would leave a member on the
+  // release they first fetched.
+  it('brings in a newer file on the next load', async () => {
+    const newer = JSON.stringify({
+      version: 1,
+      name: 'Clay',
+      variants: { light: { colors: { background: '#dcd2c0' } } },
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => fakeResponse(clay)),
+    )
+    const store = mount()
+    act(() => store.set(themeModeAtom, 'light'))
+    act(() => store.set(selectThemeAtom, { polarity: 'light', id: CLAY }))
+    await waitFor(() => expect(inline()).toHaveLength(TOKENS.length))
+    const background = root.style.getPropertyValue('--background')
+
+    cleanup()
+    root.removeAttribute('style')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => fakeResponse(newer)),
+    )
+    reload()
+    await waitFor(() => {
+      expect(root.style.getPropertyValue('--background')).not.toBe('')
+      expect(root.style.getPropertyValue('--background')).not.toBe(background)
+    })
   })
 })
 

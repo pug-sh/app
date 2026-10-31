@@ -3,7 +3,7 @@ import { isRemoteId, type LibraryEntry, type RemoteId, type UsableEntry } from '
 import { OFFICIAL_REPOSITORY, parseThemeFileUrl, themeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
-export type RowTheme = { entry: UsableEntry; selected: boolean; official?: { slug: string; releases: string[] } }
+type RowTheme = { entry: UsableEntry; selected: boolean; official?: { slug: string; releases: string[] } }
 
 // The swatches one of a member's own rows offers: built-ins and installed themes, then the catalog's
 // official themes, each only in a mode it has. The official theme the row follows draws its fetched copy,
@@ -28,8 +28,7 @@ export const rowThemes = ({
   const fetched = library.find((entry): entry is UsableEntry => entry.id === selected && entry.family !== null)
   const official = catalog.flatMap(theme => {
     const following = followed?.slug === theme.slug
-    // A followed release can lack this mode. It stays listed from the catalog, so the row can say why
-    // it isn't showing, and can move to another release.
+    // A followed release can lack this mode. Its swatch is the catalog's then, while the latest has the mode.
     const family = following && fetched?.family.variants[polarity] ? fetched.family : theme.family
     if (!family.variants[polarity]) return []
     // Following means the row's selection parsed as this theme's file URL.

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { chooseTheme, ignoredPin } from './choice'
+import { chooseTheme, ignoredPin, missingMode } from './choice'
 import { buildLibrary, type InstalledTheme, remoteEntries } from './library'
 
 const LINEN = 'https://themes.pug.sh/linen/theme.json' as const
@@ -79,4 +79,26 @@ describe('ignoredPin', () => {
     expect(ignoredPin(LINEN, library)).toBeNull()
     expect(ignoredPin('', library)).toBeNull()
   })
+})
+
+describe('missingMode', () => {
+  it('names the mode a file lacks while members can land in it', () => {
+    expect(missingMode(LINEN, library)).toBe('dark')
+    expect(missingMode(grape.id, library)).toBe('light')
+  })
+
+  it('counts a pin the file can’t honour as no pin', () => {
+    expect(missingMode(`${LINEN}#dark`, library)).toBe('dark')
+  })
+
+  it('has nothing to say about a pin that holds everyone in a mode the file has', () => {
+    expect(missingMode(`${LINEN}#light`, library)).toBeNull()
+  })
+
+  it.each(['pug', 'https://themes.pug.sh/unfetched/theme.json', 'pug#dim', ''])(
+    'has nothing to say about %j',
+    value => {
+      expect(missingMode(value, library)).toBeNull()
+    },
+  )
 })

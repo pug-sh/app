@@ -409,6 +409,20 @@ describe('project themes', () => {
     expect(store.get(compiledThemeAtom)).toMatchObject({ id: LINEN })
   })
 
+  // What following a theme is for: a new release replaces the copy a member already has.
+  it('replaces its copy when the file changes', async () => {
+    const newer = JSON.stringify({
+      version: 1,
+      name: 'Linen',
+      variants: { light: { colors: { background: '#dcd2c0' } } },
+    })
+    serve(fakeResponse(linenText), fakeResponse(newer))
+    const store = inProject(LINEN)
+    await store.set(refreshFetchedThemeAtom, LINEN)
+    await store.set(refreshFetchedThemeAtom, LINEN)
+    expect(store.get(fetchedThemesAtom)[LINEN]).toBe(newer)
+  })
+
   // A fetch that never ends would hold "Checking the file…" for the session, and every later refresh
   // would join it, so a host that recovers would never be asked again. Its own URL: a fetch that hangs
   // stays shared for the whole file.
@@ -529,16 +543,19 @@ describe('the member’s own theme by URL', () => {
   beforeEach(() => vi.mocked(trackEvent).mockClear())
   afterEach(() => vi.unstubAllGlobals())
 
-  it('is kept fresh, and paints once fetched', async () => {
-    serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
-    const store = createStore()
-    store.set(themeModeAtom, 'light')
-    store.set(selectThemeAtom, { polarity: 'light', id: CLAY_1 })
-    expect(store.get(activeThemeUrlsAtom)).toEqual([CLAY_1])
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug' })
-    await store.set(refreshFetchedThemeAtom, CLAY_1)
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: CLAY_1, builtin: false, polarity: 'light' })
-  })
+  it.each(['light', 'dark'] as const)(
+    'keeps the %s choice’s file fresh, and paints it once fetched',
+    async polarity => {
+      serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+      const store = createStore()
+      store.set(themeModeAtom, polarity)
+      store.set(selectThemeAtom, { polarity, id: CLAY_1 })
+      expect(store.get(activeThemeUrlsAtom)).toEqual([CLAY_1])
+      expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug' })
+      await store.set(refreshFetchedThemeAtom, CLAY_1)
+      expect(store.get(compiledThemeAtom)).toMatchObject({ id: CLAY_1, builtin: false, polarity })
+    },
+  )
 
   it('reports an official theme by slug and track, and any other URL as custom', () => {
     const store = createStore()

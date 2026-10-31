@@ -60,7 +60,7 @@ const Appearance = () => {
             <YourThemeRow key={polarity} polarity={polarity} />
           ))}
         </div>
-        {catalogFailed && <p className="mt-2 text-xs text-muted-foreground">Couldn’t reach themes.pug.sh.</p>}
+        {catalogFailed && <p className="mt-2 text-xs text-muted-foreground">Couldn’t load the theme list.</p>}
       </section>
 
       <section>

@@ -24,10 +24,10 @@ export const isRepositoryRelease = (release: Release) => release.major >= 1
 export type Track = { kind: 'latest' } | { kind: 'major'; major: number } | { kind: 'exact'; release: string }
 
 /** The file a track names in a repository. */
-export const themeFileUrl = (repository: string, slug: string, track: Track) => {
-  if (track.kind === 'latest') return `${repository}/${slug}/theme.json` as RemoteId
-  if (track.kind === 'major') return `${repository}/${slug}/${track.major}/theme.json` as RemoteId
-  return `${repository}/${slug}/${track.release}/theme.json` as RemoteId
+export const themeFileUrl = (repository: RemoteId, slug: string, track: Track): RemoteId => {
+  if (track.kind === 'latest') return `${repository}/${slug}/theme.json`
+  if (track.kind === 'major') return `${repository}/${slug}/${track.major}/theme.json`
+  return `${repository}/${slug}/${track.release}/theme.json`
 }
 
 const MAJOR = /^[1-9][0-9]*$/
@@ -88,6 +88,14 @@ export const unreachedRelease = (releases: string[], track: Track) => {
   if (track.kind === 'major') return highest.major > track.major ? formatRelease(highest) : null
   const pinned = parseRelease(track.release)
   return pinned && compareReleases(highest, pinned) > 0 ? formatRelease(highest) : null
+}
+
+/** The notice for a track that stops short of the highest release, or null when it reaches it. */
+export const updateNotice = (releases: string[], track: Track) => {
+  const unreached = unreachedRelease(releases, track)
+  if (!unreached) return null
+  if (track.kind === 'major') return `${unreached} is out. You stay on ${track.major}.x until you switch.`
+  return `${unreached} is out.`
 }
 
 /** An official reference in words: "Clay, following 1.x (now 1.1.0)", "Clay, latest (now 2.0.0)", "Clay 1.1.0". */

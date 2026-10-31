@@ -94,8 +94,8 @@ const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   return null
 }
 
-// Fetches the theme files the active project names whenever it or its references change, saving the same
-// one again included; a cached copy paints meanwhile.
+// Fetches the theme files activeThemeUrlsAtom names, the active project's and the member's own, whenever
+// that list changes, saving the same one again included; a cached copy paints meanwhile.
 const FetchedThemeSync = () => {
   const urls = useAtomValue(activeThemeUrlsAtom)
   const refresh = useSetAtom(refreshFetchedThemeAtom)
@@ -133,7 +133,7 @@ const LandingPreload = () => {
 // the refresh token) reaches no component and cannot navigate for itself, and on a shared machine
 // that expiry ends more sessions than anyone clicking Sign out.
 //
-// Keyed on the true→false transition, NOT on !authenticated: arriving already signed out is how a
+// Keyed on the true-to-false transition, NOT on !authenticated: arriving already signed out is how a
 // shared /p/ link works, and that URL has to survive the sign-in that follows it. Replace rather than
 // push, or Back steps into the URL this just dropped.
 export const SessionUrlGuard = () => {

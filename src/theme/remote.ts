@@ -9,7 +9,7 @@ import type { Polarity } from './tokens'
 export type FetchFailure = 'network' | 'status' | 'too-large' | 'insecure' | 'timeout'
 export type FetchResult = { ok: true; text: string } | { ok: false; reason: FetchFailure; status?: number }
 
-/** How long a theme file may take, its answer and its body together. */
+/** How long a fetch may take, its answer and its body together. */
 export const FETCH_TIMEOUT_MS = 10_000
 
 type Fetcher = (url: string, init: RequestInit) => Promise<Response>
