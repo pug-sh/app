@@ -1,7 +1,7 @@
 "use client";
 
-import { scaleLinear, scaleTime } from "@visx/scale";
 import { bisector, extent } from "d3-array";
+import { scaleLinear, scaleTime } from "d3-scale";
 import type { Transition } from "motion/react";
 import {
   Children,
@@ -34,7 +34,7 @@ import {
 } from "./chart-child-passthrough";
 import { ChartProvider, type LineConfig, type Margin } from "./chart-context";
 import { isGradientDefComponent, isPatternDefComponent } from "./chart-defs";
-import { shortDateFmt } from "./chart-formatters";
+import { lazyLabels, shortDateFmt } from "./chart-formatters";
 import {
   type ChartPhase,
   type ChartStatus,
@@ -284,10 +284,7 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
       maxTime = mergeProjectionXDomainMax(maxTime, projectionConfigs);
     }
 
-    return scaleTime({
-      range: [0, innerWidth],
-      domain: [minTime, maxTime],
-    });
+    return scaleTime().domain([minTime, maxTime]).range([0, innerWidth]);
   }, [innerWidth, plotData, projectionConfigs, xAccessor, xDomain]);
 
   // When brushing, keep the full series for path rendering so edge fades stay
@@ -394,11 +391,16 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
 
   const yScale = getPrimaryYScale(
     yScales,
-    scaleLinear({ range: [innerHeight, 0], domain: [0, 100], nice: true })
+    scaleLinear().domain([0, 100]).nice().range([innerHeight, 0])
   );
 
   const dateLabels = useMemo(
-    () => visiblePlotData.map((d) => shortDateFmt.format(xAccessor(d))),
+    () =>
+      lazyLabels(visiblePlotData.length, (index) =>
+        shortDateFmt.format(
+          xAccessor(visiblePlotData[index] as Record<string, unknown>)
+        )
+      ),
     [visiblePlotData, xAccessor]
   );
 

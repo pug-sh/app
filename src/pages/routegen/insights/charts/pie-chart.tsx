@@ -1,4 +1,4 @@
-import { Pie } from '@visx/shape'
+import { arc as d3Arc, pie as d3Pie, type PieArcDatum } from 'd3-shape'
 import { useEffect, useState } from 'react'
 import { AggregationType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
@@ -40,6 +40,12 @@ const labelName = (name: string, maxLength = 16) =>
 // Labels on very small arcs collide more than they help. Those slices remain
 // named in the legend, through keyboard focus, and in the donut centre.
 const MIN_LABEL_SHARE = 0.08
+
+const pie = d3Pie<PieSlice>()
+  .value(slice => slice.value)
+  .sort(null)
+  .padAngle(0.012)
+const path = d3Arc<PieArcDatum<PieSlice>>().innerRadius(78).outerRadius(138).cornerRadius(3)
 
 export const PieChart = ({
   data,
@@ -97,62 +103,49 @@ export const PieChart = ({
         role="group"
         aria-label="Pie chart"
       >
-        <Pie<PieSlice>
-          data={slices}
-          pieValue={slice => slice.value}
-          pieSort={null}
-          pieSortValues={null}
-          outerRadius={138}
-          innerRadius={78}
-          cornerRadius={3}
-          padAngle={0.012}
-        >
-          {({ arcs, path }) =>
-            arcs.map((arc, index) => {
-              const [labelX, labelY] = path.centroid(arc)
-              const share = arc.data.value / total
-              return (
-                <g key={`${index}-${arc.data.name}`}>
-                  <path
-                    d={path(arc) ?? undefined}
-                    fill={arc.data.color}
-                    opacity={active === null || active.name === arc.data.name ? 0.9 : 0.3}
-                    className="outline-none transition-opacity focus:opacity-100"
-                    data-pie-slice={arc.data.name}
-                    tabIndex={0}
-                    role="img"
-                    aria-label={`${arc.data.name}: ${arc.data.value.toLocaleString()} (${percent(arc.data.value, total)})`}
-                    onMouseEnter={() => setActiveName(arc.data.name)}
-                    onMouseLeave={() => setActiveName(null)}
-                    onFocus={() => setActiveName(arc.data.name)}
-                    onBlur={() => setActiveName(null)}
-                  />
-                  {showLabels && share >= MIN_LABEL_SHARE ? (
-                    <text
-                      x={labelX}
-                      y={labelY}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      className="pointer-events-none fill-white text-xs font-medium"
-                      stroke="rgba(0, 0, 0, 0.45)"
-                      strokeWidth="2.5"
-                      paintOrder="stroke"
-                      aria-hidden
-                      data-pie-label={arc.data.name}
-                    >
-                      <tspan x={labelX} dy="-0.55em">
-                        {labelName(arc.data.name)}
-                      </tspan>
-                      <tspan x={labelX} dy="1.2em" className="tabular-nums">
-                        {percent(arc.data.value, total)}
-                      </tspan>
-                    </text>
-                  ) : null}
-                </g>
-              )
-            })
-          }
-        </Pie>
+        {pie(slices).map((arc, index) => {
+          const [labelX, labelY] = path.centroid(arc)
+          const share = arc.data.value / total
+          return (
+            <g key={`${index}-${arc.data.name}`}>
+              <path
+                d={path(arc) ?? undefined}
+                fill={arc.data.color}
+                opacity={active === null || active.name === arc.data.name ? 0.9 : 0.3}
+                className="outline-none transition-opacity focus:opacity-100"
+                data-pie-slice={arc.data.name}
+                tabIndex={0}
+                role="img"
+                aria-label={`${arc.data.name}: ${arc.data.value.toLocaleString()} (${percent(arc.data.value, total)})`}
+                onMouseEnter={() => setActiveName(arc.data.name)}
+                onMouseLeave={() => setActiveName(null)}
+                onFocus={() => setActiveName(arc.data.name)}
+                onBlur={() => setActiveName(null)}
+              />
+              {showLabels && share >= MIN_LABEL_SHARE ? (
+                <text
+                  x={labelX}
+                  y={labelY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="pointer-events-none fill-white text-xs font-medium"
+                  stroke="rgba(0, 0, 0, 0.45)"
+                  strokeWidth="2.5"
+                  paintOrder="stroke"
+                  aria-hidden
+                  data-pie-label={arc.data.name}
+                >
+                  <tspan x={labelX} dy="-0.55em">
+                    {labelName(arc.data.name)}
+                  </tspan>
+                  <tspan x={labelX} dy="1.2em" className="tabular-nums">
+                    {percent(arc.data.value, total)}
+                  </tspan>
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
         <text
           textAnchor="middle"
           y="-4"

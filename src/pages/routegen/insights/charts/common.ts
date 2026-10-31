@@ -1,5 +1,5 @@
-import { curveMonotoneX } from '@visx/curve'
-import { scaleLinear } from '@visx/scale'
+import { scaleLinear } from 'd3-scale'
+import { curveMonotoneX } from 'd3-shape'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ChartStableContextValue, TooltipData } from '@/components/charts/chart-context'
@@ -41,14 +41,14 @@ export const useChartMargin = (
       }, 0)
     const stackedMax = stacked ? Math.max(...rows.map(rowSum)) : undefined
     const domain = niceYDomain(resolveTimeSeriesYDomain(rows, keys, stackedMax))
-    const ticks = scaleLinear({ domain }).ticks(Y_AXIS_DEFAULT_TICK_COUNT)
+    const ticks = scaleLinear().domain(domain).ticks(Y_AXIS_DEFAULT_TICK_COUNT)
     const widest = Math.max(0, ...ticks.map(tick => yAxisLabelWidth(formatValue(tick))))
     // The table is for 12px, but text-xs is rem, so the browser's font size setting scales the labels.
     const rootScale = (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16
     return Math.ceil(widest * rootScale) + Y_LABEL_PAD + Y_AXIS_GAP
   }, [rows, seriesCount, formatValue, compare, stacked])
 
-  // The axis tweens its labels to a new domain, so a column that narrows waits for it or the old labels overflow.
+  // The axis fades its old labels out as a new domain lands, so a column that narrows at once would clip them.
   const [held, setHeld] = useState(left)
   useEffect(() => {
     if (left >= held) {

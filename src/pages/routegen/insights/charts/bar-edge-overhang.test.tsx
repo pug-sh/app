@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MotionGlobalConfig } from 'motion/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -19,10 +18,8 @@ vi.mock('@/components/charts/chart-parent-size', () => ({
     children({ width: WIDTH, height: HEIGHT }),
 }))
 
-// visx's localPoint needs SVG geometry happy-dom lacks; with no screen CTM it falls back to the bounding rect.
+// The vendored localPoint needs SVG geometry happy-dom lacks; with no screen CTM it falls back to the bounding rect.
 Object.defineProperty(window.SVGSVGElement.prototype, 'getScreenCTM', { value: () => null, configurable: true })
-// The tooltip box cancels a Web Animation on hover, and happy-dom rejects a cancelled one's promise unhandled.
-MotionGlobalConfig.skipAnimations = true
 
 const NAMES = ['macOS', 'Windows', 'Linux']
 const COLORS: SeriesColor[] = NAMES.map(() => ({ line: '#4c8dff', fill: '#4c8dff1a', dot: '#4c8dff' }))

@@ -20,6 +20,16 @@ Object.defineProperty(globalThis, 'fetch', {
   writable: true,
 })
 
+// The spec marks a cancelled animation's finished promise as handled and happy-dom doesn't, so every animation Motion
+// cancels (the y axis fades labels on each data change) fails the run. The node-environment files have no Animation.
+if (typeof Animation !== 'undefined') {
+  const cancelAnimation = Animation.prototype.cancel
+  Animation.prototype.cancel = function (this: Animation) {
+    this.finished.catch(() => {})
+    cancelAnimation.call(this)
+  }
+}
+
 // Tests import their globals from 'vitest' explicitly (no `globals: true`), which also means RTL's
 // automatic teardown never registers: it hooks the global afterEach. Unmount here instead, or a
 // test's components stay mounted and keep reacting to the next test's store writes.
