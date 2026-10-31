@@ -8,8 +8,9 @@ import { activeProjectAtom, saveProjectThemeAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
 import { cn } from '@/lib/utils'
 import ThemePicker from '@/pages/routegen/settings/theme-picker'
-import { describeReference, FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
-import { ignoredPin } from '@/theme/choice'
+import { describeReference, FetchStatusLine, fileName, statusOf } from '@/pages/routegen/settings/theme-status'
+import { ignoredPin, missingMode } from '@/theme/choice'
+import { parseReference } from '@/theme/reference'
 
 // Everyone sees the project's default theme; admins (project:update) set it.
 const DefaultTheme = () => {
@@ -25,6 +26,9 @@ const DefaultTheme = () => {
   const described = describeReference(current, library)
   const status = statusOf(current, statuses)
   const ignored = ignoredPin(current, library)
+  // Members differ in mode, so this says who lands on Pug. A pin that went wrong has its own line.
+  const missing = ignored ? null : missingMode(current, library)
+  const file = library.find(entry => entry.id === parseReference(current)?.target)
   let summary = 'No default. Members see their own theme.'
   if (described) {
     const where = described.host && described.host !== described.name ? ` (${described.host})` : ''
@@ -55,10 +59,16 @@ const DefaultTheme = () => {
           Pinned to {ignored}, but the file has no {ignored} variant, so it follows each member’s mode.
         </p>
       )}
+      {missing && file && (
+        <p className="mt-1 text-xs text-caution">
+          {fileName(file)} has no {missing} variant, so members in {missing} see Pug.
+        </p>
+      )}
       <Can action="update" resource="project">
         <div className="mt-4 space-y-4">
           <ThemePicker
             shared
+            current={current}
             followLabel="Follow each member’s mode"
             saveLabel="Save default theme"
             saving={saving}

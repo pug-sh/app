@@ -7,7 +7,7 @@ import { isRepositoryRelease, isSlug } from './repository'
 // A repository's catalog, list.json: each theme's slug, its releases and its latest file. Read as
 // untrusted input, entry by entry, so a bad entry costs only itself.
 
-export const MAX_LIST_BYTES = 512 * 1024
+const MAX_LIST_BYTES = 512 * 1024
 const LIST_VERSION = 1
 
 export type CatalogTheme = { slug: string; releases: string[]; family: ThemeFamily }

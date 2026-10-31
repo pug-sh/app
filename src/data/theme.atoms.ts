@@ -20,7 +20,7 @@ import {
 } from '@/theme/library'
 import { parseReference } from '@/theme/reference'
 import { type FetchFailure, fetchThemeText } from '@/theme/remote'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl } from '@/theme/repository'
+import { OFFICIAL_REPOSITORY, parseThemeFileUrl, type Track } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -84,7 +84,10 @@ const selectionStore = guardedStorage('pug:theme-selection', { light: 'pug', dar
   return { light: idFor('light'), dark: idFor('dark') }
 })
 
-/** Which theme paints each mode. An id that's gone falls back to Pug at resolution, not here. */
+/**
+ * Which theme paints each mode: a built-in id, an installed id, or an https URL with no pin. One with no usable
+ * entry, gone or not fetched yet, falls back to Pug at resolution, not here.
+ */
 export const themeSelectionAtom = selectionStore.guarded
 
 /** Swap in Pug High Contrast when the OS asks for more contrast. Only an explicit false turns it off. */
@@ -329,7 +332,8 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
 
 // What analytics may say about a theme: a built-in's id, an official theme's slug and how it's followed,
 // or 'custom'. Never a URL.
-const analyticsTheme = (target: string, library: LibraryEntry[]): Record<string, string> => {
+type ThemeProps = { theme: string } | { theme: string; track: Track['kind'] }
+const analyticsTheme = (target: string, library: LibraryEntry[]): ThemeProps => {
   const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, target)
   if (official) return { theme: official.slug, track: official.track.kind }
   return { theme: library.some(entry => entry.id === target && entry.builtin) ? target : 'custom' }

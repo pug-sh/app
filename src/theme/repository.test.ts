@@ -12,6 +12,7 @@ import {
   type Track,
   themeFileUrl,
   unreachedRelease,
+  updateNotice,
 } from './repository'
 
 describe('the repository convention', () => {
@@ -53,6 +54,7 @@ describe('official theme files', () => {
     'https://themes.pug.sh/clay/1.0/theme.json',
     'https://themes.pug.sh/schema/theme.json',
     'https://themes.pug.sh/clay/1/2/theme.json',
+    'https://themes.pug.sh/clay/9007199254740993/theme.json',
     'https://cdn.example.com/clay/theme.json',
   ])('reads %s as a plain URL', url => expect(parseThemeFileUrl(R, url)).toBeNull())
 })
@@ -83,6 +85,13 @@ describe('following a theme’s releases', () => {
     expect(unreachedRelease(CLAY, { kind: 'major', major: 1 })).toBe('2.0.0')
     expect(unreachedRelease(CLAY, { kind: 'exact', release: '1.0.0' })).toBe('2.0.0')
     expect(unreachedRelease(CLAY, { kind: 'exact', release: '2.0.0' })).toBeNull()
+  })
+
+  it('says what a track won’t reach, and how it stays put', () => {
+    expect(updateNotice(CLAY, { kind: 'latest' })).toBeNull()
+    expect(updateNotice(CLAY, { kind: 'major', major: 2 })).toBeNull()
+    expect(updateNotice(CLAY, { kind: 'major', major: 1 })).toBe('2.0.0 is out. You stay on 1.x until you switch.')
+    expect(updateNotice(CLAY, { kind: 'exact', release: '1.0.0' })).toBe('2.0.0 is out.')
   })
 
   it('reads a reference in words', () => {

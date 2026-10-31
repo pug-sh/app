@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { clayFile } from '@/test/theme-repository'
 import type { CatalogTheme } from '@/theme/catalog'
 import { parseThemeObject } from '@/theme/format'
@@ -28,6 +28,27 @@ describe('rowThemes', () => {
     expect(light.map(t => t.entry.name).slice(-2)).toEqual(['Clay', 'Paper'])
     expect(dark.map(t => t.entry.name)).not.toContain('Paper')
     expect(light.find(t => t.entry.name === 'Pug')?.selected).toBe(true)
+  })
+
+  // The fetch cache holds other projects' defaults and URLs someone only tried.
+  it('leaves out a fetched file the row doesn’t name', () => {
+    const url = 'https://example.com/tried.json' as RemoteId
+    const text = JSON.stringify({
+      version: 1,
+      name: 'Tried',
+      variants: { light: { colors: { background: '#fafafa' } } },
+    })
+    const library = [...buildLibrary([]), ...remoteEntries([{ url, text }])]
+    const names = rowThemes({ polarity: 'light', selected: 'pug', library, catalog }).map(t => t.entry.name)
+    expect(names).not.toContain('Tried')
+  })
+
+  it('marks only the theme it follows', () => {
+    const row = rowThemes({ polarity: 'light', selected: CLAY_1, library: buildLibrary([]), catalog })
+    expect(row.find(t => t.official?.slug === 'paper')).toMatchObject({
+      selected: false,
+      entry: { id: 'https://themes.pug.sh/paper/theme.json', name: 'Paper' },
+    })
   })
 
   it('draws the followed copy, not the catalog’s latest', () => {
@@ -60,6 +81,28 @@ describe('rowThemes', () => {
     const lightOnly = JSON.stringify({ ...clayFile('1.0.0'), variants: { light } })
     const library = [...buildLibrary([]), ...remoteEntries([{ url, text: lightOnly }])]
     const clay = rowThemes({ polarity: 'dark', selected: url, library, catalog }).find(t => t.official?.slug === 'clay')
+    expect(clay?.selected).toBe(true)
+    expect(clay?.entry.family.release).toBe('2.0.0')
+  })
+
+  it('draws a followed copy that has this mode when the catalog’s latest lost it', () => {
+    const { light } = clayFile('2.0.0').variants
+    const family = familyOf({ ...clayFile('2.0.0'), variants: { light } })
+    const lightOnly: CatalogTheme[] = [{ slug: 'clay', releases: ['2.0.0', '1.1.0'], family }]
+    const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
+    const row = rowThemes({ polarity: 'dark', selected: CLAY_1, library, catalog: lightOnly })
+    const clay = row.find(t => t.official?.slug === 'clay')
+    expect(clay?.selected).toBe(true)
+    expect(clay?.entry.family.release).toBe('1.1.0')
+  })
+
+  // A copy this build can't read is listed with no family.
+  it('draws from the catalog when the followed copy can’t be used', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: '{' }])]
+    const clay = rowThemes({ polarity: 'light', selected: CLAY_1, library, catalog }).find(
+      t => t.official?.slug === 'clay',
+    )
     expect(clay?.selected).toBe(true)
     expect(clay?.entry.family.release).toBe('2.0.0')
   })

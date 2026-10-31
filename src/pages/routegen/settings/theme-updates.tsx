@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { majorLines, resolveTrack, type Track, unreachedRelease } from '@/theme/repository'
+import { majorLines, resolveTrack, type Track, updateNotice } from '@/theme/repository'
 
 const segment = (pressed: boolean) =>
   cn(
@@ -19,28 +19,26 @@ const segment = (pressed: boolean) =>
 const ThemeUpdates = ({
   releases,
   track,
+  label = 'Updates',
   onChange,
 }: {
   releases: string[]
   track: Track
+  label?: string
   onChange: (track: Track) => void
 }) => {
   const lines = majorLines(releases)
   const now = resolveTrack(releases, track)
-  const unreached = unreachedRelease(releases, track)
   const followed = track.kind === 'major' ? track.major : (lines[0]?.major ?? 1)
   const follow = `Follow ${followed}.x`
   const only = track.kind === 'exact' ? `Only ${track.release}` : 'Only one release'
-  let notice: string | null = null
-  if (unreached && track.kind === 'major')
-    notice = `${unreached} is out. You stay on ${track.major}.x until you switch.`
-  else if (unreached) notice = `${unreached} is out.`
+  const notice = updateNotice(releases, track)
 
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium text-muted-foreground">Updates</span>
-        <div role="group" aria-label="Updates" className="inline-flex rounded-lg border border-border p-0.5">
+        <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border p-0.5">
           <button
             type="button"
             aria-pressed={track.kind === 'latest'}
@@ -68,7 +66,7 @@ const ThemeUpdates = ({
                   onValueChange={value => onChange({ kind: 'major', major: Number(value) })}
                 >
                   {lines.map(line => (
-                    <DropdownMenuRadioItem key={line.major} value={String(line.major)}>
+                    <DropdownMenuRadioItem key={line.major} value={String(line.major)} closeOnClick>
                       {line.major}.x, now {line.release}
                     </DropdownMenuRadioItem>
                   ))}
@@ -104,7 +102,7 @@ const ThemeUpdates = ({
                   onValueChange={value => onChange({ kind: 'exact', release: String(value) })}
                 >
                   {releases.map(release => (
-                    <DropdownMenuRadioItem key={release} value={release}>
+                    <DropdownMenuRadioItem key={release} value={release} closeOnClick>
                       {release}
                     </DropdownMenuRadioItem>
                   ))}

@@ -10,7 +10,8 @@ import { OrgRole, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { type Project, ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
 import { jwtFor } from '@/test/jwt'
-import { clayFile } from '@/test/theme-repository'
+import { serveByUrl } from '@/test/serve'
+import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
 
 const { batchGet, deleteProject, updateMeta } = vi.hoisted(() => ({
   batchGet: vi.fn(),
@@ -291,8 +292,44 @@ describe('the default theme', () => {
     const url = 'https://themes.pug.sh/gone/theme.json'
     const store = mountWith(OrgRole.ADMIN, url)
     await act(() => store.set(refreshFetchedThemeAtom, url))
-    expect(screen.getByText('themes.pug.sh, follows each member’s mode')).toBeTruthy()
+    expect(screen.getByText('gone, latest (themes.pug.sh), follows each member’s mode')).toBeTruthy()
     expect(screen.getByText('Last check failed: the host answered 404.')).toBeTruthy()
+  })
+
+  it('warns that members in a mode the file lacks see Pug', async () => {
+    const linen = JSON.stringify({
+      version: 1,
+      name: 'Linen',
+      variants: { light: { colors: { background: '#f3eee4' } } },
+    })
+    const url = 'https://cdn.example.com/linen/theme.json'
+    serveByUrl({ [url]: linen })
+    const store = mountWith(OrgRole.VIEWER, url)
+    await act(() => store.set(refreshFetchedThemeAtom, url))
+    expect(screen.getByText('Linen has no dark variant, so members in dark see Pug.')).toBeTruthy()
+  })
+
+  it('leaves that to the pin warning when a pin is what went wrong', async () => {
+    const linen = JSON.stringify({
+      version: 1,
+      name: 'Linen',
+      variants: { light: { colors: { background: '#f3eee4' } } },
+    })
+    const url = 'https://cdn.example.com/linen/theme.json'
+    serveByUrl({ [url]: linen })
+    const store = mountWith(OrgRole.VIEWER, `${url}#dark`)
+    await act(() => store.set(refreshFetchedThemeAtom, url))
+    expect(screen.getByText(/Pinned to dark, but the file has no dark variant/)).toBeTruthy()
+    expect(screen.queryByText(/members in dark see Pug/)).toBeNull()
+  })
+
+  it('keeps the default’s track when an admin picks its theme, and says what it won’t reach', async () => {
+    const url = 'https://themes.pug.sh/clay/1/theme.json'
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify(clayFile('1.1.0')) })
+    mountWith(OrgRole.ADMIN, url)
+    expect(await screen.findByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
+    pickSwatch('Clay')
+    expect(screen.getByRole('button', { name: 'Follow 1.x' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('names the default’s file and its host once it has loaded', async () => {

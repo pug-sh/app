@@ -119,7 +119,7 @@ const ThemeUrlField = ({
       >
         <Input
           aria-label={label}
-          placeholder="themes.pug.sh/linen, or a link to a theme file"
+          placeholder="themes.pug.sh/name, or a link to a theme file"
           value={input}
           onChange={event => setInput(event.target.value)}
         />

@@ -12,9 +12,9 @@ export type CompiledTheme = {
   builtin: boolean
   polarity: Polarity
   contrast: Contrast
-  /** Content hash of the id, the mode, the vars and the data — any change to what draws changes it. */
+  /** Content hash of the id, the mode, the vars and the data: any change to what draws changes it. */
   revision: string
-  /** `--token` → canonical oklch, for every registry token. */
+  /** `--token` to canonical oklch, for every registry token. */
   vars: Record<`--${TokenName}`, CssColor>
   tokens: Record<TokenName, Oklch>
   provenance: Record<TokenName, Provenance>
@@ -22,7 +22,7 @@ export type CompiledTheme = {
   report: Issue[]
 }
 
-// FNV-1a, 32-bit — a cache key, not a security boundary.
+// FNV-1a, 32-bit: a cache key, not a security boundary.
 export const hashString = (text: string) => {
   let h = 0x811c9dc5
   for (let i = 0; i < text.length; i++) {
@@ -58,10 +58,12 @@ export const compileVariant = (input: CompileInput) => {
   return compiled
 }
 
-// One compile per family and mode. Families are stable objects — built-ins parse once, installed
-// themes once per text — so a compiled theme keeps its identity until something it depends on
-// changes, and effects keyed on it don't re-run when an unrelated theme is installed. Each family
-// object only ever arrives with its own id, so the family is the whole key.
+// One compile per family and mode. Families are stable objects (built-ins parse once, installed
+// themes once per text), so a compiled theme keeps its identity until something it depends on
+// changes, and effects keyed on it don't re-run when an unrelated theme is installed. A family object
+// arrives with its own id, so the family is the whole key. Catalog families are the exception: parsed
+// on every read of the list, and compiled for swatches under any of their theme's URLs, which is
+// safe because a swatch reads only `vars` and `data`.
 const compiledByFamily = new WeakMap<ThemeFamily, Partial<Record<Polarity, CompiledTheme>>>()
 export const compileOnce = (input: CompileInput) => {
   const byMode = compiledByFamily.get(input.family) ?? {}

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { inZone } from '@/test/timezone'
 import { formatCreated, isCalendarDay } from './metadata'
 
 describe('formatCreated', () => {
+  // Through Date a bare day is midnight UTC, which is still the month before anywhere west of it.
   it('shows month and year, read from the numbers', () => {
-    expect(formatCreated('2026-10-13')).toBe('Oct 2026')
-    expect(formatCreated('2026-01-01')).toBe('Jan 2026')
+    inZone('America/Los_Angeles', () => {
+      expect(formatCreated('2026-10-13')).toBe('Oct 2026')
+      expect(formatCreated('2026-01-01')).toBe('Jan 2026')
+    })
   })
 })
 

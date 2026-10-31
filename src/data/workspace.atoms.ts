@@ -155,10 +155,10 @@ export const fetchProjectsAtom = atom(null, async (get, set) => {
   set(projectsOrgIdAtom, null)
   const projectsRPC = get(projectsRPCAtom)
   // A response outlives the request that asked for it: switch org (or sign out) while batchGet is
-  // in flight and it resolves into a workspace that has moved on. Committing then doesn't just write
-  // the wrong org's list, it keys that list to the org now active, and projectsOrgIdAtom saying "this
-  // org's projects have landed" is the one claim workspaceSettledAtom trusts. Drop the response
-  // instead: whatever moved the org has already started the fetch that answers for it.
+  // in flight and it resolves into a workspace that has moved on. Committing then writes the wrong
+  // org's list and keys it to the org now active, and projectsOrgIdAtom saying "this org's projects
+  // have landed" is the one claim workspaceSettledAtom trusts. Drop the response instead: whatever
+  // moved the org has already started the fetch that answers for it.
   const stale = () => get(activeOrgAtom)?.id !== org.id
   try {
     const resp = await projectsRPC.batchGet({ orgId: org.id })
@@ -220,7 +220,7 @@ export const projectsLoadedAtom = atom(get => {
 // True once the org and project have stopped resolving on their own: bootstrap has either finished
 // picking them or reached a state where it never will.
 //
-// A load walks through several honest-but-incomplete states (no org → org → org + project) a render
+// A load walks through several honest-but-incomplete states (no org, org, org + project) a render
 // apart. Anything that *reports* workspace state rather than merely rendering it has to wait for the
 // end of that walk, or it reports each step as though it were the answer: analytics, and ThemeApplier,
 // which would otherwise paint each step's theme. Rendering code wants the intermediate states and
@@ -246,7 +246,7 @@ export const workspaceSettledAtom = atom(get => {
   return get(projectsAtom).length === 0 || get(activeProjectAtom) !== null
 })
 
-// Last project visited per org (orgId → projectId) for the signed-in customer, restored when
+// Last project visited per org (orgId to projectId) for the signed-in customer, restored when
 // switching orgs and when a bare URL leaves the project unnamed.
 //
 // Stamped with the customer it belongs to because one browser outlives one account: under an org key
