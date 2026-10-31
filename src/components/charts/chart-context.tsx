@@ -1,16 +1,15 @@
 "use client";
 
-import type { scaleBand, scaleLinear, scaleTime } from "@visx/scale";
+import {
+  type ScaleBand as D3ScaleBand,
+  type ScaleLinear as D3ScaleLinear,
+  type ScaleTime as D3ScaleTime,
+  scaleLinear,
+} from "d3-scale";
 
-type ScaleLinear<Output, _Input = number> = ReturnType<
-  typeof scaleLinear<Output>
->;
-type ScaleTime<Output, _Input = Date | number> = ReturnType<
-  typeof scaleTime<Output>
->;
-type ScaleBand<Domain extends { toString(): string }> = ReturnType<
-  typeof scaleBand<Domain>
->;
+type ScaleLinear<Output, _Input = number> = D3ScaleLinear<Output, Output>;
+type ScaleTime<Output, _Input = Date | number> = D3ScaleTime<Output, Output>;
+type ScaleBand<Domain extends { toString(): string }> = D3ScaleBand<Domain>;
 
 import type { Transition } from "motion/react";
 import {
@@ -21,6 +20,7 @@ import {
   type SetStateAction,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -258,6 +258,10 @@ export type ChartStableContextValue = Omit<
   keyof ChartHoverContextValue
 >;
 
+/** `useLayoutEffect` in the browser, `useEffect` on the server (no SSR warning). */
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 const ChartStableContext = createContext<ChartStableContextValue | null>(null);
 const ChartHoverContext = createContext<ChartHoverContextValue | null>(null);
 
@@ -422,17 +426,27 @@ export function useChartStable(): ChartStableContextValue {
 /**
  * Resolves a chart container element to use as a `createPortal` target.
  *
- * The element is captured from the ref in an effect (after mount) and kept in
- * state, so nothing reads `ref.current` during render (React Compiler
- * `react-hooks/refs`). Costs the same single post-mount render as the previous
- * `mounted` flag pattern and returns `null` during SSR / the first render.
+ * The element is captured from the ref after mount and kept in state, so
+ * nothing reads `ref.current` during render (React Compiler
+ * `react-hooks/refs`). Returns `null` during SSR / the first render.
+ *
+ * - Layout effect: when the container is a sibling or ancestor already
+ *   attached, the synchronous re-render puts portalled axes and tooltips in
+ *   the same painted frame as the plot.
+ * - Passive effect: React attaches refs child-first in the layout phase, so a
+ *   portal rendered *inside* its container (heatmap, choropleth tooltips) sees
+ *   `null` above. By the passive phase every ref is attached; this picks it up.
  */
 export function useChartPortalContainer<T extends HTMLElement>(
   containerRef: RefObject<T | null> | undefined
 ): T | null {
   const [container, setContainer] = useState<T | null>(null);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     setContainer(containerRef?.current ?? null);
+  }, [containerRef]);
+  useEffect(() => {
+    const element = containerRef?.current ?? null;
+    setContainer((previous) => (previous === element ? previous : element));
   }, [containerRef]);
   return container;
 }
@@ -445,6 +459,32 @@ export function useYScale(
   const id =
     yAxisId == null || yAxisId === "" ? DEFAULT_Y_AXIS_ID : String(yAxisId);
   return yScales[id] ?? yScale;
+}
+
+/**
+ * Y-scale at the end of the y-domain tween (the target domain), for series
+ * that animate toward their final pixels rather than the mid-tween scale.
+ * Falls back to {@link useYScale} when no target domain is published.
+ */
+export function useSettledYScale(
+  yAxisId?: string | number
+): ScaleLinear<number, number> {
+  const { yDomainTargetByAxis, innerHeight } = useChartStable();
+  const liveScale = useYScale(yAxisId);
+  const id =
+    yAxisId == null || yAxisId === "" ? DEFAULT_Y_AXIS_ID : String(yAxisId);
+  const domain =
+    yDomainTargetByAxis?.[id] ?? yDomainTargetByAxis?.[DEFAULT_Y_AXIS_ID];
+  const min = domain?.[0];
+  const max = domain?.[1];
+  const settled = useMemo(
+    () =>
+      min == null || max == null
+        ? null
+        : scaleLinear().domain([min, max]).range([innerHeight, 0]),
+    [min, max, innerHeight]
+  );
+  return settled ?? liveScale;
 }
 
 /**

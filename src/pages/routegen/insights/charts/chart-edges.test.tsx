@@ -63,7 +63,7 @@ const xAxisLabels = (container: HTMLElement) =>
     .filter(label => label.text !== '')
 
 const yLabelColumn = (container: HTMLElement) => {
-  const column = container.querySelector<HTMLElement>('div.absolute.top-0.bottom-0')
+  const column = container.querySelector<HTMLElement>('div.absolute.overflow-hidden')
   return {
     width: Number.parseFloat(column?.style.width ?? ''),
     pad: Number.parseFloat(column?.querySelector<HTMLElement>('div')?.style.paddingRight ?? ''),
@@ -139,8 +139,8 @@ describe('chart edges', () => {
     }
   })
 
-  // The axis tweens its labels to a new domain, so a column that narrowed with the data would leave the old, wider
-  // labels overflowing it. Static skips the reveal, during which a new domain snaps instead of tweening.
+  // The axis fades its old labels out as a new domain lands, so a column that narrowed with the data would clip the
+  // old, wider ones. Static skips the reveal, during which a new domain snaps instead of tweening.
   it('keeps the y label column until the labels narrow', async () => {
     const chart = (data: ChartPoint[]) => (
       <StaticChartPreviewProvider>

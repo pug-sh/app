@@ -12,7 +12,7 @@ updates:
     groups:
       react:
         patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
-      # Runtime, codegen and the committed clients in src/api/genproto are version-coupled — a
+      # Runtime, codegen and the committed clients in src/api/genproto are version-coupled: a
       # split bump can leave generated code out of step with the protobuf runtime.
       connectrpc:
         patterns: ['@connectrpc/*', '@bufbuild/*']
@@ -21,9 +21,9 @@ updates:
         patterns: ['tailwindcss', '@tailwindcss/*']
       # Dependencies of the vendored charts, which we can't hand-patch. One reviewable PR beats
       # drifting the zone a package at a time.
-      visx:
-        patterns: ['@visx/*']
-      # A font bump is a design change — the weight axis and cap height are load-bearing.
+      d3:
+        patterns: ['d3-*', '@types/d3-*']
+      # A font bump is a design change: the weight axis and cap height are load-bearing.
       fontsource:
         patterns: ['@fontsource-variable/*']
       dev-tooling:
