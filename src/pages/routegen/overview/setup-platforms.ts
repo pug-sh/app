@@ -2,11 +2,12 @@
 //
 // Snippets are verified against the published SDKs: @pug-sh/browser (init(projectId, { apiKey })),
 // pug_flutter (Pug.init(projectId, PugOptions(apiKey))), sh.pug:android (Pug.init(context,
-// projectId, Options(apiKey))), @pug-sh/node (new Pug({ apiKey })), and the pug-sh gem
-// (Pug::Client.new(api_key:)). Client SDKs (web, script, Flutter, Android) take the project ID at
-// init: it namespaces the stored identity/session/consent and stamps every event, so it's
-// required, not cosmetic. The server SDKs (Node, Ruby) omit it: the secret private key is
-// project-scoped, and track() takes the distinctId first since a server has no ambient user.
+// projectId, Options(apiKey))), @pug-sh/node (new Pug({ apiKey })), the pug-sh gem
+// (Pug::Client.new(api_key:)), and github.com/pug-sh/sdk-go (pug.New(pug.Options{APIKey})). Client
+// SDKs (web, script, Flutter, Android) take the project ID at init: it namespaces the stored
+// identity/session/consent and stamps every event, so it's required, not cosmetic. The server SDKs
+// (Node, Ruby, Go) omit it: the secret private key is project-scoped, and track() takes the
+// distinctId first since a server has no ambient user.
 //
 // Only the web snippet seeds `trackingConsent: 'granted'`: the browser SDK alone defaults to
 // 'cookieless', under which identify() silently no-ops. Flutter and Android default to granted.
@@ -45,7 +46,7 @@ const PUG_ANDROID_VERSION = '0.1.0'
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
 // Adding a platform = one entry here + one in PLATFORMS (the total Record makes the latter a
 // compile error if forgotten).
-export const PLATFORM_ORDER = ['web', 'script', 'node', 'ruby', 'flutter', 'android'] as const
+export const PLATFORM_ORDER = ['web', 'script', 'node', 'ruby', 'go', 'flutter', 'android'] as const
 
 export type PlatformId = (typeof PLATFORM_ORDER)[number]
 
@@ -182,6 +183,40 @@ pug.track("user_123", "order_completed", revenue: 49)
 
 # Drain on shutdown so no buffered events are lost
 pug.close`,
+      },
+    ],
+  },
+  go: {
+    label: 'Go',
+    icon: '/sdk/go.svg',
+    docsUrl: `${DOCS_BASE}/go/`,
+    needsPrivateKey: true,
+    sections: [
+      { label: 'Install', credential: 'none', code: () => 'go get github.com/pug-sh/sdk-go' },
+      {
+        label: 'Initialize & track',
+        credential: 'none',
+        lang: 'go',
+        code: () => `import (
+	"context"
+	"log"
+	"os"
+
+	pug "github.com/pug-sh/sdk-go"
+)
+
+// Server-side: use your private key, read from the environment (never hardcode it)
+client, err := pug.New(pug.Options{APIKey: os.Getenv("PUG_API_KEY")})
+if err != nil {
+	log.Fatal(err)
+}
+
+client.Identify("user_123", pug.Email("ada@example.com"), pug.String("plan", "pro"))
+
+client.Track("user_123", "order_completed", pug.Int("revenue", 49))
+
+// Drain on shutdown so no queued events are lost
+client.Close(context.Background())`,
       },
     ],
   },
