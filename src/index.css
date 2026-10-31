@@ -273,6 +273,8 @@
   --sh-keyword: var(--syntax-keyword);
   --sh-string: var(--syntax-string);
   --sh-class: var(--syntax-class);
+  /* The Go snippet is gofmt-indented with tabs, which a browser otherwise widens to 8 columns. */
+  tab-size: 4;
 }
 
 /* Thin scrollbars — the platform default is chunky against these surfaces. Styling
