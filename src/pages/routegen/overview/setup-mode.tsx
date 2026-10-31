@@ -131,8 +131,8 @@ const SetupMode = ({ project }: { project: Project }) => {
       <section className="space-y-3">
         <SectionHeader title="Install the SDK" />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="inline-flex h-7 items-center overflow-hidden rounded-md border border-border text-xs">
+        <div className="@container flex flex-wrap items-center justify-between gap-3">
+          <span className="inline-flex h-7 max-w-full items-center overflow-x-auto rounded-md border border-border text-xs">
             {PLATFORM_ORDER.map((id, i) => (
               <span key={id} className="inline-flex h-full items-center">
                 {i > 0 && <span className="h-full w-px bg-border" />}
@@ -140,7 +140,7 @@ const SetupMode = ({ project }: { project: Project }) => {
                   type="button"
                   onClick={() => setPlatformId(id)}
                   className={cn(
-                    'inline-flex h-full items-center gap-1.5 px-2.5 transition-colors',
+                    'inline-flex h-full items-center gap-1.5 px-2.5 transition-colors @max-sm:px-1.5',
                     platformId === id ? 'bg-primary/10 text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -149,7 +149,7 @@ const SetupMode = ({ project }: { project: Project }) => {
                     alt=""
                     aria-hidden
                     draggable={false}
-                    className="size-4 saturate-[0.5] max-sm:hidden"
+                    className="size-4 saturate-[0.5] @max-xl:hidden"
                   />
                   {PLATFORMS[id].label}
                 </button>
