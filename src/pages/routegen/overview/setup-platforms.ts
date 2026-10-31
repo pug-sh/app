@@ -46,7 +46,7 @@ const PUG_ANDROID_VERSION = '0.1.0'
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
 // Adding a platform = one entry here + one in PLATFORMS (the total Record makes the latter a
 // compile error if forgotten).
-export const PLATFORM_ORDER = ['web', 'script', 'node', 'ruby', 'go', 'flutter', 'android'] as const
+export const PLATFORM_ORDER = ['web', 'script', 'android', 'flutter', 'node', 'go', 'ruby'] as const
 
 export type PlatformId = (typeof PLATFORM_ORDER)[number]
 
@@ -140,6 +140,65 @@ track('signed_up', { plan: 'pro' })`,
       },
     ],
   },
+  android: {
+    label: 'Android',
+    icon: '/sdk/android.svg',
+    docsUrl: `${DOCS_BASE}/android/`,
+    sections: [
+      {
+        label: 'Install',
+        credential: 'none',
+        lang: 'kotlin',
+        code: () => `// app/build.gradle.kts
+dependencies {
+    implementation("sh.pug:android:${PUG_ANDROID_VERSION}")
+}`,
+      },
+      {
+        label: 'Initialize & track',
+        credential: 'public',
+        lang: 'kotlin',
+        code: (projectId, publicKey) => `import android.app.Application
+import sh.pug.android.Options
+import sh.pug.android.Pug
+
+// Register it in AndroidManifest.xml: <application android:name=".App">
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        Pug.init(this, "${projectId}", Options("${publicKey}"))
+    }
+}
+
+// Tie events to a user once they sign in
+Pug.identify("user_123", mapOf("email" to "ada@example.com", "plan" to "pro"))
+
+// Track what they do
+Pug.track("signed_up", mapOf("plan" to "pro"))`,
+      },
+    ],
+  },
+  flutter: {
+    label: 'Flutter',
+    icon: '/sdk/flutter.svg',
+    docsUrl: `${DOCS_BASE}/flutter/`,
+    sections: [
+      { label: 'Install', credential: 'none', code: () => 'flutter pub add pug_flutter' },
+      {
+        label: 'Initialize & track',
+        credential: 'public',
+        code: (projectId, publicKey) => `import 'package:pug_flutter/pug_flutter.dart';
+
+await Pug.init('${projectId}', const PugOptions(apiKey: '${publicKey}'));
+
+// Tie events to a user once they sign in
+await Pug.identify('user_123', traits: {'email': 'ada@example.com', 'plan': 'pro'});
+
+// Track what they do
+Pug.track('signed_up', props: {'plan': 'pro'});`,
+      },
+    ],
+  },
   node: {
     label: 'Node',
     icon: '/sdk/nodejs.svg',
@@ -158,31 +217,6 @@ const pug = new Pug({ apiKey: process.env.PUG_API_KEY })
 await pug.identify('user_123', { email: 'ada@example.com', plan: 'pro' })
 
 pug.track('user_123', 'order_completed', { revenue: 49 })`,
-      },
-    ],
-  },
-  ruby: {
-    label: 'Ruby',
-    icon: '/sdk/rubygems.svg',
-    docsUrl: `${DOCS_BASE}/ruby/`,
-    needsPrivateKey: true,
-    sections: [
-      { label: 'Install', credential: 'none', code: () => 'bundle add pug-sh' },
-      {
-        label: 'Initialize & track',
-        credential: 'none',
-        lang: 'ruby',
-        code: () => `require "pug"
-
-# Server-side: use your private key, read from the environment (never hardcode it)
-pug = Pug::Client.new(api_key: ENV.fetch("PUG_API_KEY"))
-
-pug.identify("user_123", email: "ada@example.com", plan: "pro")
-
-pug.track("user_123", "order_completed", revenue: 49)
-
-# Drain on shutdown so no buffered events are lost
-pug.close`,
       },
     ],
   },
@@ -220,62 +254,28 @@ client.Close(context.Background())`,
       },
     ],
   },
-  flutter: {
-    label: 'Flutter',
-    icon: '/sdk/flutter.svg',
-    docsUrl: `${DOCS_BASE}/flutter/`,
+  ruby: {
+    label: 'Ruby',
+    icon: '/sdk/rubygems.svg',
+    docsUrl: `${DOCS_BASE}/ruby/`,
+    needsPrivateKey: true,
     sections: [
-      { label: 'Install', credential: 'none', code: () => 'flutter pub add pug_flutter' },
+      { label: 'Install', credential: 'none', code: () => 'bundle add pug-sh' },
       {
         label: 'Initialize & track',
-        credential: 'public',
-        code: (projectId, publicKey) => `import 'package:pug_flutter/pug_flutter.dart';
-
-await Pug.init('${projectId}', const PugOptions(apiKey: '${publicKey}'));
-
-// Tie events to a user once they sign in
-await Pug.identify('user_123', traits: {'email': 'ada@example.com', 'plan': 'pro'});
-
-// Track what they do
-Pug.track('signed_up', props: {'plan': 'pro'});`,
-      },
-    ],
-  },
-  android: {
-    label: 'Android',
-    icon: '/sdk/android.svg',
-    docsUrl: `${DOCS_BASE}/android/`,
-    sections: [
-      {
-        label: 'Install',
         credential: 'none',
-        lang: 'kotlin',
-        code: () => `// app/build.gradle.kts
-dependencies {
-    implementation("sh.pug:android:${PUG_ANDROID_VERSION}")
-}`,
-      },
-      {
-        label: 'Initialize & track',
-        credential: 'public',
-        lang: 'kotlin',
-        code: (projectId, publicKey) => `import android.app.Application
-import sh.pug.android.Options
-import sh.pug.android.Pug
+        lang: 'ruby',
+        code: () => `require "pug"
 
-// Register it in AndroidManifest.xml: <application android:name=".App">
-class App : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        Pug.init(this, "${projectId}", Options("${publicKey}"))
-    }
-}
+# Server-side: use your private key, read from the environment (never hardcode it)
+pug = Pug::Client.new(api_key: ENV.fetch("PUG_API_KEY"))
 
-// Tie events to a user once they sign in
-Pug.identify("user_123", mapOf("email" to "ada@example.com", "plan" to "pro"))
+pug.identify("user_123", email: "ada@example.com", plan: "pro")
 
-// Track what they do
-Pug.track("signed_up", mapOf("plan" to "pro"))`,
+pug.track("user_123", "order_completed", revenue: 49)
+
+# Drain on shutdown so no buffered events are lost
+pug.close`,
       },
     ],
   },
