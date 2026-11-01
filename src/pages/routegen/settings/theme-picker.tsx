@@ -64,7 +64,7 @@ const ThemePicker = ({
   const choose = (theme: GalleryTheme) => {
     if (target && theme.held) return
     if (!theme.listed) {
-      if (theme.family) pick({ id: theme.id, family: theme.family })
+      if (theme.family) pick({ id: theme.id, family: theme.family }, saved?.target === theme.id ? saved.pin : undefined)
       return
     }
     const { slug, repository, releases } = theme.listed

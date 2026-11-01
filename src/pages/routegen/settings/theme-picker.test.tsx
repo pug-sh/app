@@ -298,6 +298,14 @@ describe('official themes', () => {
     expect(onSave).toHaveBeenLastCalledWith(`${CLAY_1}#dark`)
   })
 
+  it('gives a saved built-in back with its mode', async () => {
+    const onSave = mount({ current: 'pug-colourblind#dark' })
+    await choose('Pug Colourblind-safe')
+    expect(pressed('Always dark')).toBe('true')
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('pug-colourblind#dark')
+  })
+
   it('still gives the saved theme back after another pick', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     mount({ current: CLAY_1 })
