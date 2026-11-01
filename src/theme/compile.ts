@@ -62,8 +62,8 @@ export const compileVariant = (input: CompileInput) => {
 // themes once per text), so a compiled theme keeps its identity until something it depends on
 // changes, and effects keyed on it don't re-run when an unrelated theme is installed. A family object
 // arrives with its own id, so the family is the whole key. Catalog families are the exception: parsed
-// on every read of the list, and compiled for swatches under any of their theme's URLs, which is
-// safe because a swatch reads only `vars` and `data`.
+// on every read of the list, and compiled for tiles under any of their theme's URLs, which is safe
+// because a tile reads only `vars`, `data` and `tokens`, none of which depend on the id.
 const compiledByFamily = new WeakMap<ThemeFamily, Partial<Record<Polarity, CompiledTheme>>>()
 export const compileOnce = (input: CompileInput) => {
   const byMode = compiledByFamily.get(input.family) ?? {}

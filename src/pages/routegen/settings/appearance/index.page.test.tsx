@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
+import { applyTheme, findTile, openTheme, panel, themeList, tile } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL, listOf } from '@/test/theme-repository'
+import type { RemoteId } from '@/theme/library'
 
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
@@ -33,6 +35,11 @@ const { activeProjectAtom } = await import('@/data/workspace.atoms')
 const Appearance = (await import('./index.page')).default
 
 const grape = JSON.stringify({ version: 1, name: 'Grape', variants: { dark: { colors: { background: '#1e1b2e' } } } })
+const muddy = JSON.stringify({
+  version: 1,
+  name: 'Muddy',
+  variants: { light: { colors: { foreground: '#bbbbbb' } } },
+})
 
 const mount = () => {
   const store = createStore()
@@ -44,8 +51,22 @@ const mount = () => {
   return store
 }
 
-const pick = (text: string, name = 'theme.json') =>
+const chip = (label: string) => screen.getByRole('button', { name: new RegExp(`^${label}`) })
+const addTheme = () => {
+  if (!screen.queryByLabelText('Theme URL')) fireEvent.click(screen.getByRole('button', { name: 'Add a theme' }))
+}
+const pick = (text: string, name = 'theme.json') => {
+  addTheme()
   fireEvent.change(screen.getByLabelText('Theme file'), { target: { files: [new File([text], name)] } })
+}
+const check = (url: string) => {
+  addTheme()
+  fireEvent.change(screen.getByLabelText('Theme URL'), { target: { value: url } })
+  fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+}
+const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
+const splitModes = () => fireEvent.click(screen.getByRole('button', { name: 'Use a different theme for dark' }))
+const installed = () => screen.findByRole('group', { name: 'Installed' })
 
 // restoreMocks does not clear call history.
 beforeEach(() => {
@@ -61,58 +82,53 @@ describe('Settings, Appearance', () => {
     expect(store.get(themeModeAtom)).toBe('dark')
   })
 
-  // Swatches are real buttons, named by their theme, carrying their state, and each
-  // row is a labelled group, or a screen reader hears "Pug, pressed" twice with nothing to say which
-  // mode either one sets.
-  it('offers each built-in as a pressable button inside a labelled group per mode', () => {
+  // Tiles are real buttons, named by their theme, carrying their state, and each group is labelled,
+  // or a screen reader can't say what a tile belongs to: two groups can hold one name.
+  it('offers each built-in as a pressable button inside a labelled group', () => {
     mount()
-    for (const mode of ['Light theme', 'Dark theme']) {
-      const row = screen.getByRole('group', { name: mode })
-      expect(within(row).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
-      expect(within(row).getByRole('button', { name: 'Pug High Contrast' }).getAttribute('aria-pressed')).toBe('false')
-    }
+    const group = screen.getByRole('group', { name: 'Built in' })
+    expect(within(group).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(group).getByRole('button', { name: 'Pug High Contrast' }).getAttribute('aria-pressed')).toBe('false')
   })
 
   // A pressed swatch used to differ from the rest by one pixel of border colour, the one cue the
   // colourblind and high-contrast themes' own users are least able to see. It carries a mark too.
-  it('marks the selected swatch with more than colour', () => {
+  it('marks the selected tile with more than colour', () => {
     mount()
-    const row = screen.getByRole('group', { name: 'Light theme' })
-    expect(within(row).getByRole('button', { name: 'Pug' }).querySelector('.lucide-check')).not.toBeNull()
-    expect(within(row).getByRole('button', { name: 'Pug High Contrast' }).querySelector('.lucide-check')).toBeNull()
+    expect(tile('Pug').querySelector('.lucide-check')).not.toBeNull()
+    expect(tile('Pug High Contrast').querySelector('.lucide-check')).toBeNull()
   })
 
-  it('installs a clean file, lists it, and selects it for its mode', async () => {
+  it('installs a clean file, lists it, and applies it from its tile', async () => {
     const store = mount()
     pick(grape)
-    const table = await screen.findByRole('table')
-    expect(within(table).getByText('Grape')).toBeTruthy()
+    expect(within(await installed()).getByRole('button', { name: 'Grape, Dark only' })).toBeTruthy()
     expect(toast.success).toHaveBeenCalledWith('Installed Grape')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Grape' }))
+    await applyTheme('Grape, Dark only')
     const id = store.get(installedThemesAtom)[0].id
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: id })
-    expect(trackEvent).toHaveBeenCalledWith('theme_selected', { theme: 'custom', mode: 'dark', scope: 'personal' })
+    expect(store.get(themeSelectionAtom)).toEqual({ light: id, dark: id })
+    expect(trackEvent).toHaveBeenCalledWith('theme_selected', { theme: 'custom', mode: 'both', scope: 'personal' })
   })
 
   it('refuses a file that is not a theme', async () => {
     mount()
     pick('\u0089PNG\r\n', 'logo.png')
     expect(await screen.findByText('Not valid JSON')).toBeTruthy()
-    expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Installed' })).toBeNull()
   })
 
   it('refuses a duplicate', async () => {
     mount()
     pick(grape)
-    await screen.findByRole('table')
+    await installed()
     pick(grape)
     expect(await screen.findByText('Already installed.')).toBeTruthy()
   })
 
   it('asks before installing a theme with warnings', async () => {
     const store = mount()
-    pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
+    pick(muddy)
     fireEvent.click(await screen.findByRole('button', { name: 'Install anyway' }))
     expect(store.get(installedThemesAtom)).toHaveLength(1)
   })
@@ -127,8 +143,9 @@ describe('Settings, Appearance', () => {
       new Promise(resolve => {
         release = () => resolve(grape)
       })
+    addTheme()
     fireEvent.change(screen.getByLabelText('Theme file'), { target: { files: [slow] } })
-    pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
+    pick(muddy)
     await screen.findByRole('button', { name: 'Install anyway' })
 
     await act(async () => release())
@@ -141,34 +158,33 @@ describe('Settings, Appearance', () => {
     mount()
     const name = '<img src=x onerror=alert(1)>'
     pick(JSON.stringify({ version: 1, name, variants: { dark: { colors: { background: '#1e1b2e' } } } }))
-    const table = await screen.findByRole('table')
-    expect(within(table).getByText(name)).toBeTruthy()
+    expect(within(await installed()).getByText(name)).toBeTruthy()
     expect(document.querySelector('img[src="x"]')).toBeNull()
   })
 
   it('removes a theme on the second click and falls its mode back to Pug', async () => {
     const store = mount()
     pick(grape)
-    await screen.findByRole('table')
-    fireEvent.click(screen.getByRole('button', { name: 'Grape' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Remove theme' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm remove' }))
+    await installed()
+    await applyTheme('Grape, Dark only')
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Remove theme' }))
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Confirm remove' }))
     expect(store.get(installedThemesAtom)).toEqual([])
     expect(store.get(themeSelectionAtom).dark).toBe('pug')
   })
 
   // A full quota or a blocked profile: the choice can't be kept, and saying nothing would leave the
   // page looking as if the click did nothing at all.
-  it('says so when the browser refuses to save a choice, and keeps the old one', () => {
+  it('says so when the browser refuses to save a choice, and keeps the old one', async () => {
     mount()
+    await openTheme('Pug High Contrast')
     const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
     try {
-      const row = screen.getByRole('group', { name: 'Light theme' })
-      fireEvent.click(within(row).getByRole('button', { name: 'Pug High Contrast' }))
+      fireEvent.click(within(panel()).getByRole('button', { name: 'Use this theme' }))
       expect(toast.error).toHaveBeenCalledWith(STORAGE_REFUSED)
-      expect(within(row).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
+      expect(tile('Pug').getAttribute('aria-pressed')).toBe('true')
 
       fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
       expect(toast.error).toHaveBeenCalledTimes(2)
@@ -177,7 +193,7 @@ describe('Settings, Appearance', () => {
     }
   })
 
-  // The theme selected for a mode can stop parsing after an upgrade. Pug takes over; the row has to
+  // The theme selected for a mode can stop parsing after an upgrade. Pug takes over; the strip has to
   // say why, or the page just looks like it lost the choice.
   it('says when the theme selected for a mode can no longer be used', () => {
     const store = createStore()
@@ -196,8 +212,8 @@ describe('Settings, Appearance', () => {
         <Appearance />
       </Provider>,
     )
-    const row = screen.getByRole('group', { name: 'Dark theme' }).parentElement as HTMLElement
-    expect(within(row).getByText(/Midnight can’t be used/)).toBeTruthy()
+    fireEvent.click(chip('In dark'))
+    expect(screen.getByText(/Midnight can’t be used/)).toBeTruthy()
   })
 
   // An ignored key is not a contrast problem. A file whose only issue is a typo'd key used to be
@@ -212,13 +228,159 @@ describe('Settings, Appearance', () => {
   // The table's check used to be a bare count, or an error behind a tooltip. Either is readable now.
   it("opens an installed theme's warnings in place", async () => {
     mount()
-    pick(JSON.stringify({ version: 1, name: 'Muddy', variants: { light: { colors: { foreground: '#bbbbbb' } } } }))
+    pick(muddy)
     fireEvent.click(await screen.findByRole('button', { name: 'Install anyway' }))
-    const toggle = await screen.findByRole('button', { name: /warnings?$/ })
+    const toggle = await findTile('Muddy, Light only')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(toggle)
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(within(screen.getByRole('table')).getByText(/foreground on background is/)).toBeTruthy()
+    expect(within(panel()).getByText(/foreground on background is/)).toBeTruthy()
+  })
+})
+
+describe('In use', () => {
+  const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
+  const differing = () => {
+    const store = createStore()
+    store.set(themeSelectionAtom, { light: 'pug', dark: 'pug-colourblind' })
+    const view = render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    return { store, view }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('applies a theme to both modes while there’s one choice', async () => {
+    const store = mount()
+    await applyTheme('Pug High Contrast')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-high-contrast', dark: 'pug-high-contrast' })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
+      theme: 'pug-high-contrast',
+      mode: 'both',
+      scope: 'personal',
+    })
+  })
+
+  it('adds a chip for dark on request, starting as the light choice', () => {
+    mount()
+    expect(screen.queryByRole('button', { name: /^In dark/ })).toBeNull()
+    splitModes()
+    expect(chip('In dark').textContent).toContain('Same as light')
+    expect(chip('In dark').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('lands on the split view when the two choices differ, with nothing changed', () => {
+    const { store } = differing()
+    expect(chip('In dark').textContent).toContain('Pug Colourblind-safe')
+    expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug-colourblind' })
+  })
+
+  it('starts on In dark when dark is what’s painting', () => {
+    const store = createStore()
+    store.set(themeSelectionAtom, { light: 'pug', dark: 'pug-colourblind' })
+    store.set(themeModeAtom, 'dark')
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    expect(chip('In dark').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('writes one mode from each chip once they’re split', async () => {
+    const store = mount()
+    splitModes()
+    await applyTheme('Pug Colourblind-safe', 'Use for dark')
+    fireEvent.click(chip('Your theme'))
+    await applyTheme('Pug High Contrast')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-high-contrast', dark: 'pug-colourblind' })
+  })
+
+  it('keeps the chip when both modes come to hold one theme, until the page reloads', async () => {
+    const { store, view } = differing()
+    fireEvent.click(chip('In dark'))
+    await applyTheme('Pug', 'Use for dark')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
+    expect(chip('In dark').textContent).toContain('Same as light')
+    view.unmount()
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    expect(screen.queryByRole('button', { name: /^In dark/ })).toBeNull()
+  })
+
+  it('writes the light choice to dark for one theme for both', () => {
+    const { store } = differing()
+    fireEvent.click(screen.getByRole('button', { name: 'Use one theme for both' }))
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
+    expect(screen.queryByRole('button', { name: /^In dark/ })).toBeNull()
+    expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('leaves the split as it was when storage refuses one theme for both', () => {
+    differing()
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Use one theme for both' }))
+    } finally {
+      refusal.mockRestore()
+    }
+    expect(toast.error).toHaveBeenCalledWith(STORAGE_REFUSED)
+    expect(chip('In dark')).toBeTruthy()
+  })
+
+  it('shows every theme with one choice, and only those with the mode once split', async () => {
+    const paper = { version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }
+    serveByUrl({ [LIST_URL]: listOf({ slug: 'paper', releases: ['1.0.0'], latest: paper }) })
+    mount()
+    expect(await findTile('Paper, Light only')).toBeTruthy()
+    splitModes()
+    expect(within(themeList()).queryByRole('button', { name: 'Paper, Light only' })).toBeNull()
+  })
+
+  it('reads In use on what the chip holds', async () => {
+    mount()
+    await openTheme('Pug')
+    expect(within(panel()).getByRole('button', { name: 'In use' })).toBeTruthy()
+  })
+
+  it('reads a saved file as a plain URL with no default repository', async () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: CLAY_1, dark: CLAY_1 })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
+    expect(chip('Your theme').textContent).toContain('Clay (themes.pug.sh)')
+    expect(screen.queryByRole('group', { name: /updates/i })).toBeNull()
+  })
+
+  // Review Focus 2.
+  it.each([
+    ['a file from any other URL', 'https://example.com/paper.json', 'Elsewhere (example.com)'],
+    ['a followed theme the catalog doesn’t list', CLAY_1, 'Clay, following 1.x (now 1.1.0)'],
+  ])('carries a theme with no tile on its chip, by name and host: %s', async (_, url, name) => {
+    const file = url === CLAY_1 ? clayFile('1.1.0') : { ...clayFile('1.0.0'), name: 'Elsewhere' }
+    serveByUrl({ [url]: JSON.stringify(file) })
+    const store = mount()
+    act(() => {
+      store.set(themeSelectionAtom, { light: url, dark: url })
+    })
+    await act(() => store.set(refreshFetchedThemeAtom, url as RemoteId))
+    expect(chip('Your theme').textContent).toContain(name)
+    expect(within(themeList()).queryAllByRole('button', { pressed: true })).toHaveLength(0)
   })
 })
 
@@ -323,15 +485,13 @@ describe('This project', () => {
     expect(screen.getByText('Project default: Linen, follows each member’s mode')).toBeTruthy()
   })
 
-  it('keeps the member’s own rows under Your theme', () => {
+  it('keeps the caption under Your theme', () => {
     inProject('')
     expect(screen.getByText('Used in projects without a default')).toBeTruthy()
-    expect(screen.getByRole('group', { name: 'Light theme' })).toBeTruthy()
   })
 
   describe('an override on an official theme', () => {
     const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
-    const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
 
     it('keeps its track and mode when its theme is picked again', async () => {
       serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
@@ -394,8 +554,6 @@ describe('This project', () => {
 
 describe('official themes in your own rows', () => {
   const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
-  const row = (name: 'Light theme' | 'Dark theme') => screen.getByRole('group', { name })
-  const urlForm = (label: string) => screen.getByLabelText(label).closest('form') as HTMLFormElement
 
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -408,7 +566,7 @@ describe('official themes in your own rows', () => {
     mount()
     await screen.findAllByRole('button', { name: 'Pug' })
     expect(fetcher).not.toHaveBeenCalled()
-    expect(screen.queryByText('Couldn’t load the theme list.')).toBeNull()
+    expect(screen.queryByText(/Couldn’t reach/)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Clay' })).toBeNull()
   })
 
@@ -426,7 +584,7 @@ describe('official themes in your own rows', () => {
     expect(screen.getByText('Using Clay, latest (now 2.0.0) in this project.')).toBeTruthy()
   })
 
-  it('shows an installed theme’s release beside its author', () => {
+  it('shows an installed theme’s release beside its author', async () => {
     const clay = JSON.stringify({
       version: 1,
       name: 'Clay',
@@ -440,11 +598,12 @@ describe('official themes in your own rows', () => {
         <Appearance />
       </Provider>,
     )
-    const cell = screen.getByRole('cell', { name: /Clay/ })
-    expect(cell.textContent).toBe('Clay 1.0.0 · Pug')
+    await openTheme('Clay, Light only')
+    expect(within(panel()).getByText('Clay 1.0.0')).toBeTruthy()
+    expect(within(panel()).getByText('· by Pug · Installed')).toBeTruthy()
   })
 
-  it('lists them in the rows that have their mode', async () => {
+  it('lists a theme only in a mode it has once the modes are split', async () => {
     const paper = { version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }
     serveByUrl({
       [LIST_URL]: listOf(
@@ -453,20 +612,21 @@ describe('official themes in your own rows', () => {
       ),
     })
     mount()
-    expect(await within(row('Light theme')).findByRole('button', { name: 'Paper' })).toBeTruthy()
-    expect(within(row('Dark theme')).getByRole('button', { name: 'Clay' })).toBeTruthy()
-    expect(within(row('Dark theme')).queryByRole('button', { name: 'Paper' })).toBeNull()
+    expect(await findTile('Paper, Light only')).toBeTruthy()
+    splitModes()
+    expect(tile('Clay')).toBeTruthy()
+    expect(within(themeList()).queryByRole('button', { name: 'Paper, Light only' })).toBeNull()
   })
 
   it('follows the newest major line when picked, and says so', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     const store = mount()
-    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    await applyTheme('Clay')
     expect(store.get(themeSelectionAtom).light).toBe('https://themes.pug.sh/clay/2/theme.json')
     expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
       theme: 'clay',
       track: 'major',
-      mode: 'light',
+      mode: 'both',
       scope: 'personal',
     })
     expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
@@ -476,7 +636,7 @@ describe('official themes in your own rows', () => {
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
     const store = mount()
-    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    await applyTheme('Clay')
     expect(store.get(themeSelectionAtom).light).toBe('https://themes.acme.com/clay/2/theme.json')
     fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
     expect(store.get(themeSelectionAtom).light).toBe('https://themes.acme.com/clay/theme.json')
@@ -506,6 +666,7 @@ describe('official themes in your own rows', () => {
     vi.stubEnv('VITE_PUG_SERVICES_ENABLED', services)
     vi.stubEnv('VITE_THEME_REPOSITORY', address)
     mount()
+    addTheme()
     expect(screen.getAllByPlaceholderText(placeholder).length).toBeGreaterThan(0)
   })
 
@@ -513,12 +674,13 @@ describe('official themes in your own rows', () => {
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
     mount()
-    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    await applyTheme('Clay')
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Close' }))
     expect(await screen.findByText('· by Pug · created Oct 2026 · themes.acme.com')).toBeTruthy()
     expect(screen.queryByText(/themes\.pug\.sh/)).toBeNull()
   })
 
-  it('changes how the row follows Clay, saving at once', async () => {
+  it('changes how Your theme follows Clay, saving at once', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     const store = mount()
     act(() => {
@@ -530,29 +692,36 @@ describe('official themes in your own rows', () => {
     expect(store.get(themeSelectionAtom).light).toBe('https://themes.pug.sh/clay/theme.json')
   })
 
-  // A swatch's id is its URL, which changes when it's picked. Keyed on that, the focused button was replaced
-  // and the next Tab started from the top of the page.
-  it('keeps keyboard focus on an official swatch when it’s picked', async () => {
-    serveByUrl({ [LIST_URL]: CLAY_LIST })
-    mount()
-    const clay = await within(row('Light theme')).findByRole('button', { name: 'Clay' })
-    clay.focus()
-    fireEvent.click(clay)
-    expect(document.activeElement).toBe(clay)
+  // Review Focus 5. A tile's id is its URL, which changes when it's picked, and the theme in use sorts first. Keyed on
+  // that id, the focused button was replaced and the next Tab started from the top of the page.
+  it('keeps focus on the button when a theme is applied, and keeps its tile', async () => {
+    const CLAY_2 = 'https://themes.pug.sh/clay/2/theme.json'
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_2]: JSON.stringify(clayFile('2.0.0')) })
+    const store = mount()
+    await openTheme('Clay')
+    const before = tile('Clay')
+    const use = within(panel()).getByRole('button', { name: 'Use this theme' })
+    use.focus()
+    fireEvent.click(use)
+    await act(() => store.set(refreshFetchedThemeAtom, CLAY_2))
+    expect(document.activeElement).toBe(use)
+    expect(use.textContent).toBe('In use')
+    expect(tile('Clay')).toBe(before)
   })
 
-  it('leaves the track alone when the followed swatch is clicked again', async () => {
+  it('leaves the track alone on the theme a slot follows', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     const store = mount()
     act(() => {
       store.set(themeSelectionAtom, { light: CLAY_1, dark: 'pug' })
     })
     await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
-    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    await openTheme('Clay')
+    fireEvent.click(within(panel()).getByRole('button', { name: 'In use' }))
     expect(store.get(themeSelectionAtom).light).toBe(CLAY_1)
   })
 
-  it('describes the file the row follows, not the catalog’s latest', async () => {
+  it('describes the file a slot follows, not the catalog’s latest', async () => {
     const file = clayFile('1.1.0')
     const older = { ...file, metadata: { ...file.metadata, description: 'The older, paler Clay.' } }
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(older) })
@@ -564,22 +733,23 @@ describe('official themes in your own rows', () => {
     expect(await screen.findByText('The older, paler Clay.')).toBeTruthy()
   })
 
-  it('names each row’s Updates, or a screen reader hears two the same', async () => {
+  it('names Updates by its chip', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     const store = mount()
     act(() => {
       store.set(themeSelectionAtom, { light: CLAY_1, dark: CLAY_1 })
     })
-    expect(await screen.findByRole('group', { name: 'Light theme updates' })).toBeTruthy()
-    expect(screen.getByRole('group', { name: 'Dark theme updates' })).toBeTruthy()
+    expect(await screen.findByRole('group', { name: 'Your theme updates' })).toBeTruthy()
+    splitModes()
+    expect(screen.getByRole('group', { name: 'In dark updates' })).toBeTruthy()
   })
 
-  it('says when the theme list can’t be loaded', async () => {
+  it('says when the theme repository can’t be read', async () => {
     mount()
-    expect(await screen.findByText('Couldn’t load the theme list.')).toBeTruthy()
+    expect(await screen.findByText('Couldn’t reach themes.pug.sh.')).toBeTruthy()
   })
 
-  it('says why the row shows Pug while its file loads or fails', async () => {
+  it('says why Pug shows while a slot’s file loads or fails', async () => {
     let answer: (response: Response) => void = () => {}
     vi.stubGlobal(
       'fetch',
@@ -591,7 +761,7 @@ describe('official themes in your own rows', () => {
       }),
     )
     const store = mount()
-    await within(row('Light theme')).findByRole('button', { name: 'Clay' })
+    await findTile('Clay')
     act(() => {
       store.set(themeSelectionAtom, { light: CLAY_1, dark: 'pug' })
       void store.set(refreshFetchedThemeAtom, CLAY_1)
@@ -654,23 +824,23 @@ describe('official themes in your own rows', () => {
       store.set(themeSelectionAtom, { light: 'pug', dark: LATEST })
     })
     await act(() => store.set(refreshFetchedThemeAtom, LATEST))
-    expect(await screen.findByText('Clay 2.0.0 has no dark variant, so Pug is showing instead.')).toBeTruthy()
+    fireEvent.click(chip('In dark'))
+    expect(await screen.findByText('Clay 2.0.0 has no dark version, so Pug is showing instead.')).toBeTruthy()
     fireEvent.click(await screen.findByRole('button', { name: 'Follow 2.x' }))
     fireEvent.click(await screen.findByRole('menuitemradio', { name: '1.x, now 1.1.0' }))
     expect(store.get(themeSelectionAtom).dark).toBe(CLAY_1)
   })
 
-  // A row is the mode, so a pin on a pasted URL has nothing to say here, and a stored one would match nothing.
-  it('leaves a pasted pin out of a row', async () => {
+  // Your theme is the mode, so a pin on a pasted URL has nothing to say here, and a stored one would match nothing.
+  it('leaves a pasted pin out of Your theme', async () => {
     serveByUrl({ 'https://example.com/clay.json': JSON.stringify(clayFile('1.0.0')) })
     const store = mount()
-    fireEvent.change(screen.getByLabelText('Light theme URL'), { target: { value: 'example.com/clay.json#dark' } })
-    fireEvent.click(within(urlForm('Light theme URL')).getByRole('button', { name: 'Check' }))
+    check('example.com/clay.json#dark')
     fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
     expect(store.get(themeSelectionAtom).light).toBe('https://example.com/clay.json')
   })
 
-  it('says why a followed release without this mode shows Pug, and lets the row move on', async () => {
+  it('says why a followed release without this mode shows Pug, and lets the slot move on', async () => {
     const url = 'https://themes.pug.sh/clay/1.0.0/theme.json'
     const { light } = clayFile('1.0.0').variants
     serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify({ ...clayFile('1.0.0'), variants: { light } }) })
@@ -679,7 +849,8 @@ describe('official themes in your own rows', () => {
       store.set(themeSelectionAtom, { light: 'pug', dark: url })
     })
     await act(() => store.set(refreshFetchedThemeAtom, url))
-    expect(await screen.findByText('Clay 1.0.0 has no dark variant, so Pug is showing instead.')).toBeTruthy()
+    fireEvent.click(chip('In dark'))
+    expect(await screen.findByText('Clay 1.0.0 has no dark version, so Pug is showing instead.')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
     expect(store.get(themeSelectionAtom).dark).toBe('https://themes.pug.sh/clay/theme.json')
   })
@@ -693,7 +864,8 @@ describe('official themes in your own rows', () => {
       store.set(themeSelectionAtom, { light: 'pug', dark: url })
     })
     await act(() => store.set(refreshFetchedThemeAtom, url))
-    expect(screen.getByText('Paper has no dark variant, so Pug is showing instead.')).toBeTruthy()
+    fireEvent.click(chip('In dark'))
+    expect(screen.getByText('Paper has no dark version, so Pug is showing instead.')).toBeTruthy()
   })
 
   it('uses a theme from a URL for one mode, and refuses one without that mode', async () => {
@@ -704,12 +876,11 @@ describe('official themes in your own rows', () => {
     })
     serveByUrl({ 'https://example.com/paper.json': paper })
     const store = mount()
-    fireEvent.change(screen.getByLabelText('Dark theme URL'), { target: { value: 'example.com/paper.json' } })
-    fireEvent.click(within(urlForm('Dark theme URL')).getByRole('button', { name: 'Check' }))
+    splitModes()
+    check('example.com/paper.json')
     expect(await screen.findByText('Paper has no dark variant.')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Use this theme' })).toBeNull()
-    fireEvent.change(screen.getByLabelText('Light theme URL'), { target: { value: 'example.com/paper.json' } })
-    fireEvent.click(within(urlForm('Light theme URL')).getByRole('button', { name: 'Check' }))
+    fireEvent.click(chip('Your theme'))
     fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
     expect(store.get(themeSelectionAtom).light).toBe('https://example.com/paper.json')
   })

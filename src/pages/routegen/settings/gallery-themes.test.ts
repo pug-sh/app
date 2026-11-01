@@ -164,9 +164,15 @@ describe('galleryThemes', () => {
   })
 
   it('keys a repository theme by its slug, whatever track it follows', () => {
-    const keyAt = (target: string) =>
-      slotThemes('light', target, buildLibrary([])).find(t => t.listed?.slug === 'clay')?.key
-    expect(keyAt(CLAY_1)).toBe(keyAt('https://themes.pug.sh/clay/theme.json'))
+    const LATEST = 'https://themes.pug.sh/clay/theme.json' as RemoteId
+    const copies = remoteEntries([
+      { url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) },
+      { url: LATEST, text: JSON.stringify(clayFile('2.0.0')) },
+    ])
+    const clayAt = (target: string) =>
+      slotThemes('light', target, [...buildLibrary([]), ...copies]).find(t => t.listed?.slug === 'clay')
+    expect(clayAt(CLAY_1)?.id).toBe(CLAY_1)
+    expect(clayAt(CLAY_1)?.key).toBe(clayAt(LATEST)?.key)
   })
 
   it('compiles a library theme under its own id', () => {
