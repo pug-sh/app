@@ -61,7 +61,9 @@ const Report = ({
       <div className="flex flex-wrap gap-3">
         {POLARITIES.filter(polarity => family.variants[polarity]).map(polarity => (
           <figure key={polarity} className="w-36 space-y-1">
-            <ThemePreview compiled={compileOnce({ id: url, builtin: false, family, polarity })} />
+            <span className="block h-20 overflow-hidden rounded-md">
+              <ThemePreview compiled={compileOnce({ id: url, builtin: false, family, polarity })} />
+            </span>
             <figcaption className="text-xs text-muted-foreground">
               {family.name}, {polarity}
             </figcaption>

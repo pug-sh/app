@@ -31,7 +31,9 @@ const ThemeSwatch = ({
         selected ? 'border-ring ring-1 ring-ring' : 'border-border hover:border-muted-foreground/50',
       )}
     >
-      <ThemePreview compiled={compiled} />
+      <span className="block h-20 overflow-hidden rounded-md">
+        <ThemePreview compiled={compiled} />
+      </span>
       <span className="flex items-center gap-1 px-0.5 text-xs font-medium">
         {selected && <Check className="size-3 shrink-0" />}
         <span className="truncate">{entry.name}</span>
