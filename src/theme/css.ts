@@ -1,17 +1,17 @@
 import { formatColor, parseColor } from '../lib/color/parse'
-import { BUILTIN_IDS, BUILTINS, type BuiltinId } from './builtin'
+import { BUILTINS, paintKey } from './builtin'
 import { compileVariant } from './compile'
 import { PUG_AUTH_SURFACE } from './presets/pug'
-import { POLARITIES, type Polarity } from './tokens'
+import { ACCESS_MODES, POLARITIES, type Polarity } from './tokens'
 
-// The built-in themes as CSS, written to src/theme/generated/builtin-themes.css by
+// Pug in each of its modes as CSS, written to src/theme/generated/builtin-themes.css by
 // `bun run generate:themes` and imported from index.css, so built-ins ride the same pipeline the
 // tokens always have. Installed themes never come through here — they're applied as inline
 // variables at runtime.
 
-const selectorFor = (id: BuiltinId, polarity: Polarity) => {
+const selectorFor = (key: string, polarity: Polarity) => {
   const dark = polarity === 'dark' ? '.dark' : ''
-  return id === 'pug' ? `:root${dark}` : `:root${dark}[data-theme="${id}"]`
+  return key === 'pug' ? `:root${dark}` : `:root${dark}[data-theme="${key}"]`
 }
 
 const declarations = (vars: Record<string, string>) =>
@@ -22,17 +22,18 @@ const declarations = (vars: Record<string, string>) =>
 export const builtinThemesCss = () => {
   const blocks: string[] = []
   const pugVars = {} as Record<Polarity, Record<string, string>>
-  for (const id of BUILTIN_IDS) {
+  for (const access of ACCESS_MODES) {
+    const key = paintKey(access)
     for (const polarity of POLARITIES) {
-      const compiled = compileVariant({ id, builtin: true, family: BUILTINS[id], polarity })
+      const compiled = compileVariant({ id: 'pug', builtin: true, family: BUILTINS.pug, polarity, access })
       const problems = compiled.report.filter(i => i.severity === 'error' || !(i.rule === 'V2' && i.path === 'faint'))
       if (problems.length) {
         throw new Error(
-          `built-in ${id} (${polarity}) fails validation:\n${problems.map(i => `  ${i.rule} ${i.message}`).join('\n')}`,
+          `built-in ${key} (${polarity}) fails validation:\n${problems.map(i => `  ${i.rule} ${i.message}`).join('\n')}`,
         )
       }
-      if (id === 'pug') pugVars[polarity] = compiled.vars
-      blocks.push(`${selectorFor(id, polarity)} {\n${declarations(compiled.vars)}\n}`)
+      if (key === 'pug') pugVars[polarity] = compiled.vars
+      blocks.push(`${selectorFor(key, polarity)} {\n${declarations(compiled.vars)}\n}`)
     }
   }
 

@@ -3,7 +3,7 @@ import { applyCompiledTheme } from './apply'
 import { BUILTINS } from './builtin'
 import { compileVariant } from './compile'
 import { parseThemeObject } from './format'
-import { TOKENS } from './tokens'
+import { ACCESS_MODES, TOKENS } from './tokens'
 
 const root = document.documentElement
 const inline = () => TOKENS.filter(t => root.style.getPropertyValue(`--${t}`) !== '')
@@ -47,16 +47,19 @@ describe('applyCompiledTheme', () => {
     expect(root.classList.contains('dark')).toBe(false)
   })
 
-  it('selects a built-in other than Pug by attribute, with no inline variables', () => {
-    applyCompiledTheme(
-      compileVariant({
-        id: 'pug-high-contrast',
-        builtin: true,
-        family: BUILTINS['pug-high-contrast'],
-        polarity: 'light',
-      }),
-    )
-    expect(root.getAttribute('data-theme')).toBe('pug-high-contrast')
+  it.each([
+    [ACCESS_MODES[1], 'pug-high-contrast'],
+    [ACCESS_MODES[2], 'pug-colourblind'],
+    [ACCESS_MODES[3], 'pug-high-contrast-colourblind'],
+  ])('selects Pug’s mode by attribute, with no inline variables', (access, key) => {
+    applyCompiledTheme(compileVariant({ id: 'pug', builtin: true, family: BUILTINS.pug, polarity: 'light', access }))
+    expect(root.getAttribute('data-theme')).toBe(key)
     expect(inline()).toEqual([])
+  })
+
+  it('leaves no attribute on Pug at standard, once a mode is switched off', () => {
+    root.setAttribute('data-theme', 'pug-colourblind')
+    applyCompiledTheme(compileVariant({ id: 'pug', builtin: true, family: BUILTINS.pug, polarity: 'light' }))
+    expect(root.hasAttribute('data-theme')).toBe(false)
   })
 })

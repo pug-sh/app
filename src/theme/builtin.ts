@@ -3,7 +3,7 @@ import { parseThemeObject, type ThemeFamily, type ThemeFile } from './format'
 import { pug } from './presets/pug'
 import { pugColourblind } from './presets/pug-colourblind'
 import { pugHighContrast } from './presets/pug-high-contrast'
-import type { Contrast, Polarity, TokenName } from './tokens'
+import type { AccessMode, Contrast, Polarity, TokenName } from './tokens'
 
 // The built-in themes, parsed once at load. A built-in that doesn't parse is a programming error,
 // so it throws rather than reporting.
@@ -24,6 +24,12 @@ export const BUILTINS = Object.fromEntries(
     return [id, parsed.family]
   }),
 ) as Record<BuiltinId, ThemeFamily>
+
+/** The `data-theme` value that selects Pug in a mode. A version 2 paint cache can still name the first three. */
+export const paintKey = ({ contrast, vision }: AccessMode) => {
+  if (contrast === 'high') return vision === 'colourblind' ? 'pug-high-contrast-colourblind' : 'pug-high-contrast'
+  return vision === 'colourblind' ? 'pug-colourblind' : 'pug'
+}
 
 /** Where an unset root falls back to: Pug, or Pug's high-contrast block at that level. */
 export const builtinRoots = (polarity: Polarity, level: Contrast) => {
