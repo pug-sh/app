@@ -19,7 +19,8 @@ export const DomainFavicon = ({ domain, size = 16 }: { domain: string; size?: nu
 
   // onError only fires when the service is unreachable: a domain it simply lacks returns a blank
   // placeholder (HTTP 200), so those rows show no glyph rather than this globe.
-  if (!service || failed) return <Globe aria-hidden size={size} className={cn(ICON_CLASS, 'p-px text-muted-foreground/45')} />
+  if (!service || failed)
+    return <Globe aria-hidden size={size} className={cn(ICON_CLASS, 'p-px text-muted-foreground/45')} />
 
   return (
     <img
