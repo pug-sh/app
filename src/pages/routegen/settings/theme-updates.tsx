@@ -8,7 +8,7 @@ import {
 import { cn } from '@/lib/utils'
 import { majorLines, resolveTrack, type Track, updateNotice } from '@/theme/repository'
 
-const segment = (pressed: boolean) =>
+export const segment = (pressed: boolean) =>
   cn(
     'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
     pressed ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
