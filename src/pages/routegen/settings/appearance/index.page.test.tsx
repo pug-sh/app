@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
@@ -411,15 +411,20 @@ describe('This project', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Only one release' }))
     fireEvent.click(await screen.findByRole('menuitemradio', { name: release }))
   }
-  // A fetch that answers the catalog and leaves every other URL waiting on what it returns.
+  // A fetch that answers the catalog and leaves every other URL waiting on what it returns. Refreshes of one URL
+  // share a fetch, so one left hanging past its test would hold up the next test's.
   const deferred = () => {
-    const answer = { current: (_: Response) => {} }
+    const answer = { current: (_: Response) => {}, to: new Map<string, (response: Response) => void>() }
+    onTestFinished(() => {
+      for (const resolve of answer.to.values()) resolve(fakeResponse('', { status: 404 }))
+    })
     vi.stubGlobal(
       'fetch',
       vi.fn((address: string) => {
         if (address === LIST_URL) return Promise.resolve(fakeResponse(CLAY_LIST))
         return new Promise<Response>(resolve => {
           answer.current = resolve
+          answer.to.set(address, resolve)
         })
       }),
     )
@@ -615,6 +620,61 @@ describe('This project', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
     await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
     expect(store.get(projectOverridesAtom)).toEqual({ p1: 'https://themes.pug.sh/clay/theme.json' })
+  })
+
+  // The earlier read would land first and move the override, and the later one would give way to it.
+  it('lets the latest track land when an earlier read finishes first', async () => {
+    const CLAY_ELEVEN = 'https://themes.pug.sh/clay/1.1.0/theme.json'
+    const answer = deferred()
+    const store = inProject('', CLAY_2)
+    fireEvent.click(chip('This project'))
+    await screen.findByRole('group', { name: 'This project updates' })
+    await onlyRelease('1.0.0')
+    await onlyRelease('1.1.0')
+    await act(async () => answer.to.get(CLAY_ONE)?.(fakeResponse(LIGHT_ONLY)))
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: CLAY_2 })
+    await act(async () => answer.to.get(CLAY_ELEVEN)?.(fakeResponse(JSON.stringify(clayFile('1.1.0')))))
+    await waitFor(() => expect(store.get(projectOverridesAtom)).toEqual({ p1: CLAY_ELEVEN }))
+  })
+
+  // A read can take ten seconds, and the override can move under it from the list or the strip.
+  describe('a write made while a release is being read', () => {
+    const reading = async () => {
+      const answer = deferred()
+      const store = inProject('', CLAY_2)
+      fireEvent.click(chip('This project'))
+      await screen.findByRole('group', { name: 'This project updates' })
+      await onlyRelease('1.0.0')
+      return { answer, store }
+    }
+
+    it('keeps a theme applied from the list', async () => {
+      const { answer, store } = await reading()
+      await applyTheme('Pug High Contrast')
+      await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
+      expect(store.get(projectOverridesAtom)).toEqual({ p1: 'pug-high-contrast' })
+    })
+
+    it('keeps a mode changed from under the chips', async () => {
+      const { answer, store } = await reading()
+      fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
+      await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
+      expect(store.get(projectOverridesAtom)).toEqual({ p1: `${CLAY_2}#dark` })
+    })
+
+    it('keeps the way back', async () => {
+      const { answer, store } = await reading()
+      fireEvent.click(screen.getByRole('button', { name: 'Back to your theme' }))
+      await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
+      expect(store.get(projectOverridesAtom)).toEqual({})
+    })
+
+    it('stops talking about the file once the theme has moved on', async () => {
+      await reading()
+      expect(screen.getByText('Checking the file…')).toBeTruthy()
+      await applyTheme('Pug High Contrast')
+      expect(screen.queryByText('Checking the file…')).toBeNull()
+    })
   })
 
   // Review Focus 3.

@@ -1,5 +1,5 @@
-import { useAtomValue, useSetAtom } from 'jotai'
-import { useRef, useState } from 'react'
+import { useAtomValue, useSetAtom, useStore } from 'jotai'
+import { useEffect, useRef, useState } from 'react'
 import type { Project } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,8 +46,11 @@ const ProjectStrip = ({
   const statuses = useAtomValue(fetchStatusAtom)
   const refresh = useSetAtom(refreshFetchedThemeAtom)
   const readFile = useSetAtom(readThemeFileAtom)
+  const store = useStore()
   const [reading, setReading] = useState<RemoteId | null>(null)
   const turn = useRef(0)
+  // A write to this project's theme ends any read in flight, so its line goes with it.
+  useEffect(() => setReading(null), [override])
 
   const reference = theme.holds ? parseReference(theme.holds) : null
   const target = reference?.target
@@ -69,14 +72,16 @@ const ProjectStrip = ({
   const retry = () => {
     if (isRemoteId(target)) void refresh(target)
   }
-  // A later choice replaces an earlier read: only the latest track lands, whichever read finishes last.
+  // The last click lands, whichever read finishes last: a later Updates click takes the turn, and anything else
+  // that writes moves the override, read fresh from the store because this closure's value is from the click.
   const follow = async (track: Track) => {
     if (!listing) return
     const next = targetFor(listing.theme, track)
     const mine = ++turn.current
+    const before = store.get(activeOverrideAtom)
     setReading(next.family ? null : next.id)
     const read = next.family ?? (await readFile(next.id))
-    if (mine !== turn.current || !read) return
+    if (mine !== turn.current || store.get(activeOverrideAtom) !== before || !read) return
     setReading(null)
     onApply(formatReference({ target: next.id, pin: pinOf(modeFor(read, reference?.pin ?? null)) }))
   }
