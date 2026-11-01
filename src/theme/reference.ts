@@ -10,6 +10,9 @@ export const MAX_REFERENCE_LENGTH = 2048
 
 const ID = /^[a-z0-9-]{1,64}$/
 
+// Their looks are modes of Pug now, which each member chooses. A project's stored default can still name one.
+const RETIRED = new Set(['pug-high-contrast', 'pug-colourblind'])
+
 export const isUrlTarget = (target: string) => target.startsWith('https://')
 
 // The URL parser has the last word on a URL target: it's what fetch uses, and an override from storage
@@ -28,8 +31,9 @@ const isTarget = (target: string) => (isUrlTarget(target) ? parsesAsHttps(target
 export const parseReference = (value: string): ThemeReference | null => {
   if (value.length === 0 || value.length > MAX_REFERENCE_LENGTH) return null
   const at = value.indexOf('#')
-  const target = at === -1 ? value : value.slice(0, at)
-  if (!isTarget(target)) return null
+  const written = at === -1 ? value : value.slice(0, at)
+  if (!isTarget(written)) return null
+  const target = RETIRED.has(written) ? 'pug' : written
   if (at === -1) return { target }
   const pin = value.slice(at + 1)
   if (pin !== 'light' && pin !== 'dark') return null

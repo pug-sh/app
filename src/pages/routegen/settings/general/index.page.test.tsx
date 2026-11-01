@@ -11,7 +11,7 @@ import { type Project, ProjectSchema } from '@/api/genproto/dashboard/projects/v
 import { fakeResponse } from '@/test/fake-response'
 import { jwtFor } from '@/test/jwt'
 import { serveByUrl } from '@/test/serve'
-import { applyTheme } from '@/test/theme-gallery'
+import { applyTheme, tile } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
 
 const { batchGet, deleteProject, updateMeta } = vi.hoisted(() => ({
@@ -231,6 +231,22 @@ describe('the default theme', () => {
     expect(screen.getByText('Pug, always dark')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Add a theme' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Clear default' })).toBeNull()
+  })
+
+  // Review Focus 1: project defaults are live, so one can name a theme that's now a mode of Pug.
+  it('reads a default saved before the modes as Pug, and saves it as Pug', async () => {
+    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
+      project: themed(defaultTheme),
+    }))
+    mountWith(OrgRole.ADMIN, 'pug-colourblind#dark')
+    expect(screen.getByText('Pug, always dark')).toBeTruthy()
+    expect(screen.queryByText(/can’t be used/)).toBeNull()
+    expect(tile('Pug').getAttribute('aria-pressed')).toBe('true')
+    await choose('Pug')
+    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
+    await waitFor(() =>
+      expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } }),
+    )
   })
 
   it('saves a pinned built-in and puts the stored project back into the workspace', async () => {

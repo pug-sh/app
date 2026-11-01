@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { expect, it } from 'vitest'
-import { compiledThemeAtom, themeSelectionAtom } from '@/data/theme.atoms'
+import { compiledThemeAtom, themeVisionAtom } from '@/data/theme.atoms'
 import { setSeriesPalette } from '@/lib/event-colors'
 import { compileDataPalette } from '@/theme/data-palette'
 import { PUG_CANVAS } from '@/theme/fit'
@@ -12,7 +12,7 @@ import { AuthWall } from './auth-wall'
 // surface, fitted to a canvas that isn't there.
 it("draws its cards in Pug's colours whatever theme is active", () => {
   const store = createStore()
-  store.set(themeSelectionAtom, { light: 'pug-colourblind', dark: 'pug' })
+  store.set(themeVisionAtom, 'colourblind')
   // What App does on every render: the active theme's palette goes into the colour module.
   setSeriesPalette(store.get(compiledThemeAtom).data)
   render(

@@ -9,8 +9,8 @@ import { TOKENS } from './tokens'
 // script set before React loaded included.
 export const applyCompiledTheme = (theme: CompiledTheme, root: HTMLElement = document.documentElement) => {
   root.classList.toggle('dark', theme.polarity === 'dark')
-  const key = theme.id === 'pug' ? paintKey(theme) : theme.id
-  if (theme.builtin && key !== 'pug') root.setAttribute('data-theme', key)
+  const key = theme.builtin ? paintKey(theme) : 'pug'
+  if (key !== 'pug') root.setAttribute('data-theme', key)
   else root.removeAttribute('data-theme')
   for (const token of TOKENS) root.style.removeProperty(`--${token}`)
   if (!theme.builtin) {

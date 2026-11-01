@@ -167,21 +167,14 @@ describe('official themes', () => {
     })
     mount()
     await findTile('Moss, Light only')
-    expect(tileNames()).toEqual([
-      'Pug',
-      'Pug High Contrast',
-      'Pug Colourblind-safe',
-      'Moss, Light only',
-      'Slate, Light only',
-      'Ember, Light only',
-    ])
+    expect(tileNames()).toEqual(['Pug', 'Moss, Light only', 'Slate, Light only', 'Ember, Light only'])
   })
 
   it('lists them after the built-ins, with who made them and when', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     mount()
     await openTheme('Clay')
-    expect(tileNames()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe', 'Clay'])
+    expect(tileNames()).toEqual(['Pug', 'Clay'])
     expect(within(panel()).getByText('· by Pug · created Oct 2026 · themes.pug.sh')).toBeTruthy()
     expect(within(panel()).getByText('Warm linen paper.')).toBeTruthy()
   })

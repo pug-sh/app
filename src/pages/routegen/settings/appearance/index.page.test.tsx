@@ -577,6 +577,14 @@ describe('This project', () => {
     expect(screen.getByText('Used in projects without a default')).toBeTruthy()
   })
 
+  // Review Focus 1: an override is a saved choice like any other, and it reads as Pug in the member's own settings.
+  it('reads an override saved before the modes as Pug', () => {
+    inProject('', 'pug-high-contrast')
+    expect(chip('This project').textContent).toContain('Pug')
+    expect(screen.getByText('Using Pug in this project.')).toBeTruthy()
+    expect(screen.queryByText(/can’t be used/)).toBeNull()
+  })
+
   it('starts on what’s painting', () => {
     inProject('pug')
     expect(chip('This project').getAttribute('aria-pressed')).toBe('true')

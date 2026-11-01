@@ -51,7 +51,7 @@ afterEach(() => {
 
 describe('ThemeGallery toolbar', () => {
   it('shows only Add a theme with six themes or fewer', async () => {
-    serve(listing('Moss', 'Slate', 'Ember'))
+    serve(listing('Moss', 'Slate', 'Ember', 'Iris', 'Fern'))
     mount()
     await findTile('Moss, Light only')
     expect(screen.queryByLabelText('Search themes')).toBeNull()
@@ -59,7 +59,7 @@ describe('ThemeGallery toolbar', () => {
   })
 
   it('adds search, source and order above six', async () => {
-    serve(listing('Moss', 'Slate', 'Ember', 'Iris'))
+    serve(listing('Moss', 'Slate', 'Ember', 'Iris', 'Fern', 'Dune'))
     mount()
     await findTile('Moss, Light only')
     expect(screen.getByLabelText('Search themes')).toBeTruthy()
@@ -76,7 +76,7 @@ describe('ThemeGallery toolbar', () => {
     expect(tileNames()).toEqual(['Moss, Light only'])
     rerender({ requires: 'dark' })
     expect(screen.queryByLabelText('Search themes')).toBeNull()
-    expect(tileNames()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe'])
+    expect(tileNames()).toEqual(['Pug'])
   })
 })
 
@@ -132,6 +132,8 @@ describe('ThemeGallery groups', () => {
     vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
     const fetcher = serveByUrl({})
     mount()
+    expect(tileNames()).toEqual(['Pug'])
+    expect(screen.queryByLabelText('Search themes')).toBeNull()
     expect(screen.getByText('No theme repositories here yet.')).toBeTruthy()
     expect(screen.queryByText(/Couldn’t reach/)).toBeNull()
     expect(fetcher).not.toHaveBeenCalled()
