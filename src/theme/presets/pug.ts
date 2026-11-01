@@ -11,6 +11,34 @@ import type { TokenName } from '../tokens'
 // WCAG is polarity-blind, and matching it across modes structurally under-delivers dark. The shipped
 // dark ladder sits two notches below APCA parity — parity read as hot.
 
+// Pug in high contrast: roots only, and every other token is solved to the high-contrast targets, headroom over
+// validation's floors. Light sits on pure white; dark on a near-black ink ground with light fills carrying dark text,
+// so a button reads as a shape against the canvas as well. The tracked builtin-themes.css turns any change into a diff.
+const HIGH_RAMPS = {
+  'heat-1': '#dcfce7',
+  'heat-2': '#86efac',
+  'heat-3': '#4ade80',
+  'heat-4': '#16a34a',
+  'heat-5': '#15803d',
+  'heat-6': '#166534',
+  'heat-7': '#14532d',
+  'heat-ink-dark': '#000000',
+  'heat-ink-light': '#ffffff',
+} as const
+
+// Mirrors the two high-contrast backgrounds below; pug-modes.test.ts pins them together.
+const HIGH_CANVAS = {
+  light: { l: 1, c: 0, h: 0, alpha: 1 },
+  dark: { l: 0.13, c: 0.01, h: 265, alpha: 1 },
+}
+
+// Pug in colourblind-safe: data colours remapped to Okabe–Ito. Failure and success move to vermillion and blue, the
+// pair that stays apart under protan, deutan and tritan vision. The breakdown palette is hand-fitted per mode, because
+// the standard light fit caps lightness at 0.52 and flattens the very channel colourblind readers lean on (orange and
+// vermillion collapse to ΔE 0.001 under deutan). Light carries six colours: yellow can't be both legible on white and
+// still yellow. Domain groups keep Pug's hues.
+const OUTCOMES = { failure: '#d55e00', success: '#0072b2' }
+
 export const pug = {
   version: 1,
   name: 'Pug',
@@ -114,6 +142,38 @@ export const pug = {
         'syntax-class': 'oklch(0.52 0.12 255)',
       },
       data: { categorical: FALLBACK_COLORS.map(fitFor('light', 'standard')), avatars: DEFAULT_AVATARS },
+      modes: {
+        'high-contrast': {
+          colors: {
+            background: 'oklch(1 0 0)',
+            primary: 'oklch(0.45 0.2 265)',
+            destructive: 'oklch(0.44 0.18 25)',
+            success: 'oklch(0.5 0.15 145)',
+            warning: 'oklch(0.62 0.15 70)',
+            'chart-1': 'oklch(0.45 0.2 265)',
+            'chart-2': 'oklch(0.5 0.15 145)',
+            'chart-3': 'oklch(0.58 0.14 70)',
+            'chart-4': 'oklch(0.47 0.18 330)',
+            'chart-5': 'oklch(0.5 0.19 25)',
+            'chart-crosshair': 'oklch(0.25 0.05 265)',
+            'chart-scale-01': 'oklch(0.98 0.003 106)',
+            'chart-scale-02': 'oklch(0.92 0.008 106)',
+            'chart-scale-03': 'oklch(0.82 0.015 106)',
+            'chart-scale-04': 'oklch(0.68 0.02 106)',
+            'chart-scale-05': 'oklch(0.55 0.025 106)',
+            'chart-scale-pattern-color': 'oklch(0.96 0.005 106)',
+            ...HIGH_RAMPS,
+          },
+          // Stated, or the standard list above leaks into every high-contrast chart.
+          data: { categorical: FALLBACK_COLORS.map(fitFor('light', 'high', HIGH_CANVAS.light)) },
+        },
+        colourblind: {
+          data: {
+            groups: OUTCOMES,
+            categorical: ['#005181', '#9e6c00', '#007eb1', '#007655', '#9b4200', '#8a0060'],
+          },
+        },
+      },
     },
     dark: {
       colors: {
@@ -216,6 +276,37 @@ export const pug = {
         'syntax-class': 'oklch(0.8 0.1 255)',
       },
       data: { categorical: FALLBACK_COLORS.map(fitFor('dark', 'standard')), avatars: DEFAULT_AVATARS },
+      modes: {
+        'high-contrast': {
+          colors: {
+            background: 'oklch(0.13 0.01 265)',
+            primary: 'oklch(0.82 0.11 265)',
+            destructive: 'oklch(0.78 0.13 25)',
+            success: 'oklch(0.8 0.14 145)',
+            warning: 'oklch(0.85 0.13 80)',
+            'chart-1': 'oklch(0.8 0.12 265)',
+            'chart-2': 'oklch(0.82 0.14 145)',
+            'chart-3': 'oklch(0.86 0.13 80)',
+            'chart-4': 'oklch(0.8 0.13 330)',
+            'chart-5': 'oklch(0.78 0.14 25)',
+            'chart-crosshair': 'oklch(0.85 0.03 265)',
+            'chart-scale-01': 'oklch(0.205 0.028 265)',
+            'chart-scale-02': 'oklch(0.32 0.055 265)',
+            'chart-scale-03': 'oklch(0.44 0.08 265)',
+            'chart-scale-04': 'oklch(0.56 0.105 265)',
+            'chart-scale-05': 'oklch(0.7 0.13 265)',
+            'chart-scale-pattern-color': 'oklch(0.2 0.012 265)',
+            ...HIGH_RAMPS,
+          },
+          data: { categorical: FALLBACK_COLORS.map(fitFor('dark', 'high', HIGH_CANVAS.dark)) },
+        },
+        colourblind: {
+          data: {
+            groups: OUTCOMES,
+            categorical: ['#56b6ff', '#f9ad00', '#96d7ff', '#00ac7e', '#de6200', '#ff6ec4', '#f5e700'],
+          },
+        },
+      },
     },
   },
 } satisfies ThemeFile
