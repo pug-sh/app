@@ -8,6 +8,7 @@ import { compileOnce } from '@/theme/compile'
 import type { ThemeFamily } from '@/theme/format'
 import type { RemoteId } from '@/theme/library'
 import { type PastedTheme, resolvePastedTheme } from '@/theme/remote'
+import { defaultRepository, repositoryLabel } from '@/theme/repository'
 import { POLARITIES, type Polarity } from '@/theme/tokens'
 
 export type CheckedFile = { url: RemoteId; pin?: Polarity; family: ThemeFamily }
@@ -23,6 +24,10 @@ const FAILURE: Record<Failure['reason'], string> = {
   'too-large': 'Theme files are limited to 64 KB.',
   'not-json': 'That URL doesn’t return a theme file.',
 }
+
+// The short form only means something in a repository this build reads.
+const placeholder = (repository: string | null) =>
+  repository ? `${repositoryLabel(repository)}/name, or a link to a theme file` : 'A link to a theme file'
 
 const failureMessage = (failure: Failure) => {
   if (failure.reason === 'status' && failure.status) return `The host answered ${failure.status}.`
@@ -119,7 +124,7 @@ const ThemeUrlField = ({
       >
         <Input
           aria-label={label}
-          placeholder="themes.pug.sh/name, or a link to a theme file"
+          placeholder={placeholder(defaultRepository())}
           value={input}
           onChange={event => setInput(event.target.value)}
         />

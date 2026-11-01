@@ -498,6 +498,26 @@ describe('official themes in your own rows', () => {
     expect(screen.queryByRole('group', { name: /Updates/ })).toBeNull()
   })
 
+  it.each([
+    ['true', '', 'themes.pug.sh/name, or a link to a theme file'],
+    ['', 'https://themes.acme.com', 'themes.acme.com/name, or a link to a theme file'],
+    ['', '', 'A link to a theme file'],
+  ])('names the default repository in the link field: "%s", "%s"', (services, address, placeholder) => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', services)
+    vi.stubEnv('VITE_THEME_REPOSITORY', address)
+    mount()
+    expect(screen.getAllByPlaceholderText(placeholder).length).toBeGreaterThan(0)
+  })
+
+  it('names the repository a followed theme came from', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
+    mount()
+    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    expect(await screen.findByText('· by Pug · created Oct 2026 · themes.acme.com')).toBeTruthy()
+    expect(screen.queryByText(/themes\.pug\.sh/)).toBeNull()
+  })
+
   it('changes how the row follows Clay, saving at once', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     const store = mount()
