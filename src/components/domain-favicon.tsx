@@ -4,20 +4,27 @@ import { cn } from '@/lib/utils'
 
 const ICON_CLASS = 'shrink-0 rounded-[3px]'
 
-// Site favicon for a referrer domain, from favicons.pug.sh — first-party infrastructure on our own
+// The favicon service, when this build opted out of the air gap. The read and the address share one expression on
+// purpose: Vite inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
+const faviconService = () =>
+  (import.meta.env.VITE_PUG_SERVICES_ENABLED ?? '').trim() === 'true' ? 'https://favicons.pug.sh' : null
+
+// Site favicon for a referrer domain, from favicons.pug.sh: first-party infrastructure on our own
 // domain (like maps.pug.sh for the basemap), which keeps this unbounded, runtime-discovered icon set
 // inside the no-external-CDN rule instead of an exception to it. The path carries a public hostname
 // (self-referral-blanked server-side), not customer PII. Decorative, so the img is aria-hidden.
 export const DomainFavicon = ({ domain, size = 16 }: { domain: string; size?: number }) => {
   const [failed, setFailed] = useState(false)
+  const service = faviconService()
 
-  // onError only fires when the service is unreachable — a domain it simply lacks returns a blank
+  // onError only fires when the service is unreachable: a domain it simply lacks returns a blank
   // placeholder (HTTP 200), so those rows show no glyph rather than this globe.
-  if (failed) return <Globe aria-hidden size={size} className={cn(ICON_CLASS, 'p-px text-muted-foreground/45')} />
+  if (!service || failed)
+    return <Globe aria-hidden size={size} className={cn(ICON_CLASS, 'p-px text-muted-foreground/45')} />
 
   return (
     <img
-      src={`https://favicons.pug.sh/${encodeURIComponent(domain)}`}
+      src={`${service}/${encodeURIComponent(domain)}`}
       alt=""
       aria-hidden
       draggable={false}

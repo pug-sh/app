@@ -50,6 +50,57 @@ export const parseThemeFileUrl = (repository: string, url: string): { slug: stri
   return { slug, track: { kind: 'exact', release: segment } }
 }
 
+// The deployment's default repository. "None" is null, never '': themeFileUrl('', …) builds a same-origin path, and
+// parseThemeFileUrl('', url) matches any URL starting with '/'.
+
+// Pug's repository, when this build opted out of the air gap. The read and the address share one expression on
+// purpose: Vite inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
+const pugRepository = (): RemoteId | null =>
+  (import.meta.env.VITE_PUG_SERVICES_ENABLED ?? '').trim() === 'true' ? OFFICIAL_REPOSITORY : null
+
+// The parser's own form, so what follows the address can't land in a query and a capitalised scheme still reads as a
+// URL everywhere else. Null when it isn't https, or carries anything a folder can't.
+const repositoryAddress = (value: string): RemoteId | null => {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:' || url.search || url.hash || url.username || url.password) return null
+    return `${url.origin}${url.pathname}`.replace(/\/+$/, '') as RemoteId
+  } catch {
+    return null
+  }
+}
+
+let warnedAbout: string | undefined
+
+const namedRepository = () => {
+  const value = (import.meta.env.VITE_THEME_REPOSITORY ?? '').trim()
+  if (!value) return null
+  const address = repositoryAddress(value)
+  if (!address && warnedAbout !== value) {
+    warnedAbout = value
+    console.warn(
+      `[theme] VITE_THEME_REPOSITORY needs an https address with an optional path, so it's ignored: ${value}`,
+    )
+  }
+  return address
+}
+
+/** The repository this deployment lists themes from: the one it named, then Pug's if it opted in. Null for none. */
+export const defaultRepository = () => namedRepository() ?? pugRepository()
+
+/** A file in the default repository as a slug and a track. Null for any other URL, and for every URL with no default. */
+export const parseDefaultThemeFile = (url: string) => {
+  const repository = defaultRepository()
+  return repository ? parseThemeFileUrl(repository, url) : null
+}
+
+/** The same, only while the default is Pug's own: another repository's slug may be a customer's word. */
+export const parsePugThemeFile = (url: string) =>
+  defaultRepository() === pugRepository() ? parseDefaultThemeFile(url) : null
+
+/** A repository as it reads in the UI: its address without the scheme. */
+export const repositoryLabel = (repository: string) => repository.replace(/^https:\/\//, '')
+
 const highestFirst = (releases: string[]) =>
   releases
     .map(parseRelease)

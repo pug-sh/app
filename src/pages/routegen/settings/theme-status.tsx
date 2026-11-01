@@ -2,7 +2,7 @@ import type { FetchStatus } from '@/data/theme.atoms'
 import { IssueList } from '@/pages/routegen/settings/theme-issues'
 import type { LibraryEntry } from '@/theme/library'
 import { isUrlTarget, parseReference } from '@/theme/reference'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl, readOfficial } from '@/theme/repository'
+import { parseDefaultThemeFile, readOfficial } from '@/theme/repository'
 
 export const MODE = { follow: 'follows each member’s mode', light: 'always light', dark: 'always dark' } as const
 
@@ -18,7 +18,7 @@ export const describeReference = (value: string, library: LibraryEntry[]) => {
   if (!reference) return null
   const mode = MODE[reference.pin ?? 'follow']
   const entry = library.find(e => e.id === reference.target)
-  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, reference.target)
+  const official = parseDefaultThemeFile(reference.target)
   if (official && entry?.family) {
     return { name: readOfficial(entry.family.name, official.track, entry.family.release), host: undefined, mode }
   }
