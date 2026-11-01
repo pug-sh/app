@@ -13,7 +13,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Checks out and runs the tests, and nothing else — it needs no write on anything.
+    # Checks out and runs the tests, and nothing else: it needs no write on anything.
     permissions:
       contents: read
     steps:
@@ -29,7 +29,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Lint
-        # `biome ci` rather than `bun run lint`, which is `biome check --write` — a formatter that
+        # `biome ci` rather than `bun run lint`, which is `biome check --write`: a formatter that
         # fixes what it finds reports success on a branch that was never formatted.
         run: bun run lint:ci
 
@@ -39,15 +39,23 @@ jobs:
         # No proto symlink needed: generated clients are committed, and only `bun run generate`
         # reads proto/.
         run: bun run build
+        env:
+          # With no API address transport.ts compiles to a bare `throw`, the bundler drops everything
+          # after it, and the air gap check below would pass for the wrong reason.
+          VITE_API_BASE_URL: https://api.invalid
+
+      - name: Check the air gap
+        # Nothing else is set on the build above, so this dist is the air-gapped build.
+        run: bun run check:air-gap
 
       - name: Knip
-        # Dead files, exports and dependencies. Ordered after tsc so an unresolved import — the one
-        # failure both tools flag — is reported by the compiler rather than as knip noise. Generated
+        # Dead files, exports and dependencies. Ordered after tsc so an unresolved import, the one
+        # failure both tools flag, is reported by the compiler rather than as knip noise. Generated
         # and vendored zones are in `ignore` in knip.jsonc, so it never proposes deleting code we don't own.
         run: bun run knip
 
       # The CLA gate is its own program on bun's runner, so vitest never sees it. This is the only
-      # place it is tested against the PR's own copy — cla.yaml runs the base branch's.
+      # place it is tested against the PR's own copy: cla.yaml runs the base branch's.
       - name: Test the CLA gate
         run: bun test tools/cla/gate
 
