@@ -18,11 +18,11 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Toaster } from '@/components/ui/sonner'
 import {
   activeThemeUrlsAtom,
-  autoContrastAtom,
   compiledThemeAtom,
   refreshFetchedThemeAtom,
   resolvableLibraryAtom,
   themeChoiceAtom,
+  themeContrastAtom,
   themeSelectionAtom,
 } from '@/data/theme.atoms'
 import {
@@ -73,7 +73,7 @@ const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const compiled = useAtomValue(compiledThemeAtom)
   const choice = useAtomValue(themeChoiceAtom)
   const selection = useAtomValue(themeSelectionAtom)
-  const autoContrast = useAtomValue(autoContrastAtom)
+  const autoContrast = useAtomValue(themeContrastAtom) === 'system'
   const library = useAtomValue(resolvableLibraryAtom)
   const projectId = useAtomValue(activeProjectAtom)?.id ?? null
   const authenticated = useAtomValue(isAuthenticatedAtom)

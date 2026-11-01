@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest'
+import { STANDARD_ACCESS } from './tokens'
 
 // Every compile throws: the library must contain the damage, not propagate it into the atoms.
 vi.mock('./compile', async importOriginal => ({
@@ -27,8 +28,7 @@ it('keeps a theme the engine cannot compile out of use, and falls back to Pug', 
   const active = chooseActive({
     polarity: 'dark',
     selection: { light: 'pug', dark: grape.id },
-    autoContrast: false,
-    moreContrast: false,
+    access: STANDARD_ACCESS,
     library,
   })
   expect(active.id).toBe('pug')

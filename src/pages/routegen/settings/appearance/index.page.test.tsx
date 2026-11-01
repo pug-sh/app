@@ -22,6 +22,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const { trackEvent } = await import('@/analytics/pug')
 const { toast } = await import('sonner')
 const {
+  accessModeAtom,
   fetchedThemesAtom,
   installedThemesAtom,
   projectOverridesAtom,
@@ -84,6 +85,43 @@ describe('Settings, Appearance', () => {
     const store = mount()
     fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
     expect(store.get(themeModeAtom)).toBe('dark')
+  })
+
+  it('starts on Match system and Standard', () => {
+    mount()
+    const contrast = screen.getByRole('group', { name: 'Contrast' })
+    const vision = screen.getByRole('group', { name: 'Colour vision' })
+    expect(within(contrast).getByRole('button', { name: 'Match system' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(vision).getByRole('button', { name: 'Standard' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('sets the contrast, and the page follows', () => {
+    const store = mount()
+    const group = screen.getByRole('group', { name: 'Contrast' })
+    fireEvent.click(within(group).getByRole('button', { name: 'High' }))
+    expect(store.get(accessModeAtom).contrast).toBe('high')
+    expect(within(group).getByRole('button', { name: 'High' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('sets colour vision, and the page follows', () => {
+    const store = mount()
+    const group = screen.getByRole('group', { name: 'Colour vision' })
+    fireEvent.click(within(group).getByRole('button', { name: 'Colourblind-safe' }))
+    expect(store.get(accessModeAtom).vision).toBe('colourblind')
+  })
+
+  it('says when the browser refused a setting', () => {
+    const store = mount()
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'High' }))
+    } finally {
+      refusal.mockRestore()
+    }
+    expect(toast.error).toHaveBeenCalledWith(STORAGE_REFUSED)
+    expect(store.get(accessModeAtom).contrast).toBe('standard')
   })
 
   // Tiles are real buttons, named by their theme, carrying their state, and each group is labelled,

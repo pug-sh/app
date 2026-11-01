@@ -137,32 +137,31 @@ export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
 export const remoteEntries = (fetched: { url: RemoteId; text: string }[]) =>
   fetched.map(({ url, text }) => textEntry(url, text, () => parseFetchedOnce(`${url}\n${text}`)))
 
-export type ActiveTheme = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity }
+export type ActiveTheme = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity; access: AccessMode }
 
-/**
- * Which theme paints a mode: the selection, else Pug; Pug High Contrast instead of a standard family
- * when the OS asks for more contrast and auto-contrast is on; the built-in for the family's contrast
- * level when the family has no variant for this mode.
- */
+/** Which theme paints a mode, and how it's seen: the selection, else Pug, which also stands in for a family with no variant for this mode. */
 export const chooseActive = (input: {
   polarity: Polarity
   selection: Record<Polarity, string>
-  autoContrast: boolean
-  moreContrast: boolean
+  access: AccessMode
   library: LibraryEntry[]
 }): ActiveTheme => {
   const { polarity, library } = input
   const usable = (id: string) => library.find((e): e is UsableEntry => e.id === id && e.family !== null)
   const pug = usable('pug')
   if (!pug) throw new Error('theme library: Pug is missing')
-  let entry = usable(input.selection[polarity]) ?? pug
-  if (input.autoContrast && input.moreContrast && entry.family.contrast === 'standard') {
-    entry = usable('pug-high-contrast') ?? entry
-  }
-  if (!entry.family.variants[polarity]) {
-    entry = (entry.family.contrast === 'high' && usable('pug-high-contrast')) || pug
-  }
-  return { id: entry.id, builtin: entry.builtin, family: entry.family, polarity }
+  const active = ({ id, builtin, family }: UsableEntry, access: AccessMode) => ({
+    id,
+    builtin,
+    family,
+    polarity,
+    access,
+  })
+  const entry = usable(input.selection[polarity]) ?? pug
+  if (entry.family.variants[polarity]) return active(entry, input.access)
+  // A file marked high contrast asked for that, so the Pug standing in for it stays there.
+  const contrast = entry.family.contrast === 'high' ? 'high' : input.access.contrast
+  return active(pug, { ...input.access, contrast })
 }
 
 export type InstallCheck =

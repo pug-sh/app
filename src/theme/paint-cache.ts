@@ -1,7 +1,7 @@
 import type { ThemeChoice } from './choice'
 import { compileOnce } from './compile'
 import { chooseActive, type LibraryEntry } from './library'
-import { POLARITIES, type Polarity } from './tokens'
+import { POLARITIES, type Polarity, STANDARD_ACCESS } from './tokens'
 
 // What index.html paints before React: each project with a theme of its own, and the member's own, both
 // modes each. Keep the key, shape and auto-contrast rule in sync with it (paint-script.test.ts).
@@ -28,7 +28,7 @@ export type PaintCache = {
 const paintsFor = (selection: Record<Polarity, string>, library: LibraryEntry[]): ModePaints => {
   const paintFor = (polarity: Polarity): Paint => {
     // The script applies auto-contrast itself, against the live media query.
-    const active = chooseActive({ selection, library, polarity, autoContrast: false, moreContrast: false })
+    const active = chooseActive({ selection, library, polarity, access: STANDARD_ACCESS })
     const standard = active.family.contrast === 'standard'
     if (active.builtin) return { builtin: active.id, standard }
     return { vars: compileOnce(active).vars, standard }
