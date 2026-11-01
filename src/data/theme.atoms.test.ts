@@ -18,6 +18,7 @@ import {
   installedThemesAtom,
   installThemeAtom,
   projectOverridesAtom,
+  readThemeFileAtom,
   refreshFetchedThemeAtom,
   removeThemeAtom,
   resolvedThemeAtom,
@@ -559,6 +560,28 @@ describe('the member’s own theme by URL', () => {
       expect(store.get(compiledThemeAtom)).toMatchObject({ id: CLAY_1, builtin: false, polarity })
     },
   )
+
+  it('writes one theme to both modes, and reports both', () => {
+    const store = createStore()
+    expect(store.set(selectThemeAtom, { polarity: 'both', id: 'pug-colourblind' })).toBe(true)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-colourblind', dark: 'pug-colourblind' })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
+      theme: 'pug-colourblind',
+      mode: 'both',
+      scope: 'personal',
+    })
+  })
+
+  it('gives back the family of a file it reads', async () => {
+    serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    const family = await createStore().set(readThemeFileAtom, CLAY_1)
+    expect(family).toMatchObject({ name: 'Clay', release: '1.1.0' })
+  })
+
+  it('gives back null for a file it couldn’t read', async () => {
+    serveByUrl({})
+    expect(await createStore().set(readThemeFileAtom, CLAY_1)).toBeNull()
+  })
 
   it('reports an official theme by slug and track, and any other URL as custom', () => {
     const store = createStore()

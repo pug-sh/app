@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchedThemesAtom, installedThemesAtom } from '@/data/theme.atoms'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
+import { applyTheme, findTile, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL, listOf } from '@/test/theme-repository'
 import type { InstalledTheme, RemoteId } from '@/theme/library'
 import ThemePicker from './theme-picker'
@@ -17,37 +18,23 @@ const grape: InstalledTheme = {
   source: 'file',
 }
 
-const mount = ({
-  shared = true,
-  current,
-  fetched = {},
-}: {
-  shared?: boolean
-  current?: string
-  fetched?: Record<RemoteId, string>
-} = {}) => {
+const mount = ({ current, fetched = {} }: { current?: string; fetched?: Record<RemoteId, string> } = {}) => {
   const onSave = vi.fn()
   const store = createStore()
   store.set(installedThemesAtom, [grape])
   store.set(fetchedThemesAtom, fetched)
   render(
     <Provider store={store}>
-      <ThemePicker
-        shared={shared}
-        current={current}
-        followLabel="Follow each member’s mode"
-        saveLabel="Save default theme"
-        onSave={onSave}
-      />
+      <ThemePicker current={current} onSave={onSave} />
     </Provider>,
   )
   return onSave
 }
 
-const pickSwatch = (name: string) =>
-  fireEvent.click(within(screen.getByRole('group', { name: 'Themes' })).getByRole('button', { name }))
+const choose = (name: string) => applyTheme(name, 'Choose this theme')
 
 const check = (value: string) => {
+  if (!screen.queryByLabelText('Theme URL')) fireEvent.click(screen.getByRole('button', { name: 'Add a theme' }))
   fireEvent.change(screen.getByLabelText('Theme URL'), { target: { value } })
   fireEvent.click(screen.getByRole('button', { name: 'Check' }))
 }
@@ -58,16 +45,16 @@ afterEach(() => {
 })
 
 describe('ThemePicker', () => {
-  it('saves a built-in that follows the mode', () => {
+  it('saves a built-in that follows the mode', async () => {
     const onSave = mount()
-    pickSwatch('Pug Colourblind-safe')
+    await choose('Pug Colourblind-safe')
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     expect(onSave).toHaveBeenCalledWith('pug-colourblind')
   })
 
-  it('saves a built-in pinned to a mode', () => {
+  it('saves a built-in pinned to a mode', async () => {
     const onSave = mount()
-    pickSwatch('Pug Colourblind-safe')
+    await choose('Pug Colourblind-safe')
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     expect(onSave).toHaveBeenCalledWith('pug-colourblind#dark')
@@ -75,15 +62,25 @@ describe('ThemePicker', () => {
 
   it('leaves installed themes out of a project’s default', () => {
     mount()
-    expect(within(screen.getByRole('group', { name: 'Themes' })).queryByRole('button', { name: 'Grape' })).toBeNull()
+    expect(within(themeList()).queryByRole('button', { name: 'Grape, Dark only' })).toBeNull()
   })
 
-  it('pins a single-variant installed theme to its only mode', () => {
-    const onSave = mount({ shared: false })
-    pickSwatch('Grape')
-    expect(screen.getByText('Grape has only a dark variant.')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
-    expect(onSave).toHaveBeenCalledWith('installed-grape#dark')
+  it('leaves Save closed until a theme is chosen, and opening one chooses nothing', async () => {
+    const onSave = mount()
+    await openTheme('Pug Colourblind-safe')
+    expect(screen.queryByRole('button', { name: 'Save default theme' })).toBeNull()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('fills the block from a pasted link too', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => fakeResponse(clay)),
+    )
+    mount()
+    check('example.com/clay.json')
+    fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
+    expect(screen.getByRole('button', { name: 'Save default theme' })).toBeTruthy()
   })
 
   it('checks a URL, discloses its host, and saves the file’s URL', async () => {
@@ -149,16 +146,11 @@ describe('official themes', () => {
   const CLAY_ONE_RELEASE = 'https://themes.pug.sh/clay/1.0.0/theme.json'
   const LIGHT_ONLY = JSON.stringify({ ...clayFile('1.0.0'), variants: { light: clayFile('1.0.0').variants.light } })
 
-  const themes = () => screen.getByRole('group', { name: 'Themes' })
-  const names = () =>
-    within(themes())
-      .getAllByRole('button')
-      .map(swatch => swatch.textContent)
   const save = () => fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
   const saveButton = () => screen.getByRole('button', { name: 'Save default theme' }) as HTMLButtonElement
   const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
   const alwaysDark = () => screen.getByRole('button', { name: 'Always dark' }) as HTMLButtonElement
-  const pickClay = async () => fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+  const pickClay = () => choose('Clay')
   const onlyRelease = async (release: string) => {
     fireEvent.click(screen.getByRole('button', { name: 'Only one release' }))
     fireEvent.click(await screen.findByRole('menuitemradio', { name: release }))
@@ -174,23 +166,30 @@ describe('official themes', () => {
       ),
     })
     mount()
-    await within(themes()).findByRole('button', { name: 'Moss' })
-    expect(names()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe', 'Moss', 'Slate', 'Ember'])
+    await findTile('Moss, Light only')
+    expect(tileNames()).toEqual([
+      'Pug',
+      'Pug High Contrast',
+      'Pug Colourblind-safe',
+      'Moss, Light only',
+      'Slate, Light only',
+      'Ember, Light only',
+    ])
   })
 
   it('lists them after the built-ins, with who made them and when', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     mount()
-    await pickClay()
-    expect(names()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe', 'Clay'])
-    expect(screen.getByText('· by Pug · created Oct 2026 · themes.pug.sh')).toBeTruthy()
-    expect(screen.getByText('Warm linen paper.')).toBeTruthy()
+    await openTheme('Clay')
+    expect(tileNames()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe', 'Clay'])
+    expect(within(panel()).getByText('· by Pug · created Oct 2026 · themes.pug.sh')).toBeTruthy()
+    expect(within(panel()).getByText('Warm linen paper.')).toBeTruthy()
   })
 
   it('starts on the newest major line, and saves that line’s URL', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     const onSave = mount()
-    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    await pickClay()
     expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
     save()
     expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/2/theme.json')
@@ -200,7 +199,7 @@ describe('official themes', () => {
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
     const onSave = mount()
-    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    await pickClay()
     save()
     expect(onSave).toHaveBeenLastCalledWith('https://themes.acme.com/clay/2/theme.json')
     fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
@@ -212,14 +211,13 @@ describe('official themes', () => {
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
     mount({ current: CLAY_1 })
-    const swatch = await within(themes()).findByRole('button', { name: 'Clay' })
-    expect(swatch.getAttribute('aria-pressed')).toBe('false')
+    expect((await findTile('Clay')).getAttribute('aria-pressed')).toBe('false')
   })
 
   it('follows the latest, or pins one release, and keeps a mode pin', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_ONE_RELEASE]: JSON.stringify(clayFile('1.0.0')) })
     const onSave = mount()
-    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    await pickClay()
     fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
     save()
@@ -233,7 +231,7 @@ describe('official themes', () => {
   it('treats a pasted official URL as official, on the pasted track', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, 'https://themes.pug.sh/clay/1/theme.json': JSON.stringify(clayFile('1.1.0')) })
     const onSave = mount()
-    await within(themes()).findByRole('button', { name: 'Clay' })
+    await findTile('Clay')
     check('themes.pug.sh/clay/1')
     fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
     expect(screen.getByRole('button', { name: 'Follow 1.x' }).getAttribute('aria-pressed')).toBe('true')
@@ -242,24 +240,24 @@ describe('official themes', () => {
     expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/1/theme.json')
   })
 
-  it('says when the theme list can’t be loaded, and keeps the built-ins', async () => {
+  it('says when the theme repository can’t be read, and keeps the built-ins', async () => {
     mount()
-    expect(await screen.findByText('Couldn’t load the theme list.')).toBeTruthy()
-    expect(within(themes()).getByRole('button', { name: 'Pug' })).toBeTruthy()
+    expect(await screen.findByText('Couldn’t reach themes.pug.sh.')).toBeTruthy()
+    expect(tile('Pug')).toBeTruthy()
   })
 
-  it('says nothing about the theme list while it loads', () => {
+  it('says nothing about the theme repository while it loads', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => new Promise(() => {})),
     )
     mount()
-    expect(screen.queryByText('Couldn’t load the theme list.')).toBeNull()
+    expect(screen.queryByText(/Couldn’t reach/)).toBeNull()
   })
 
-  // The spec: "The current choice keeps its track." Clicking the swatch again used to start over on the
+  // The spec: "The current choice keeps its track." Choosing the theme again used to start over on the
   // newest major line, and forget the mode as well.
-  it('leaves a pick’s track and mode alone when its swatch is clicked again', async () => {
+  it('leaves a pick’s track and mode alone when it’s chosen again', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     mount()
     await pickClay()
@@ -273,15 +271,20 @@ describe('official themes', () => {
   it('presses the saved theme, and says what it won’t reach, before anything is picked', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     mount({ current: CLAY_1 })
-    const clayButton = await within(themes()).findByRole('button', { name: 'Clay' })
-    expect(clayButton.getAttribute('aria-pressed')).toBe('true')
+    expect((await findTile('Clay')).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
   })
 
   it('presses a saved built-in the same way', () => {
     mount({ current: 'pug-colourblind#dark' })
-    const swatch = within(themes()).getByRole('button', { name: 'Pug Colourblind-safe' })
-    expect(swatch.getAttribute('aria-pressed')).toBe('true')
+    expect(tile('Pug Colourblind-safe').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('never reads In use, so the saved theme can be chosen again', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    mount({ current: CLAY_1 })
+    await openTheme('Clay')
+    expect(within(panel()).getByRole('button', { name: 'Choose this theme' })).toBeTruthy()
   })
 
   it('gives the saved theme back with its track and mode, not the newest line', async () => {
@@ -295,11 +298,19 @@ describe('official themes', () => {
     expect(onSave).toHaveBeenLastCalledWith(`${CLAY_1}#dark`)
   })
 
+  it('gives a saved built-in back with its mode', async () => {
+    const onSave = mount({ current: 'pug-colourblind#dark' })
+    await choose('Pug Colourblind-safe')
+    expect(pressed('Always dark')).toBe('true')
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('pug-colourblind#dark')
+  })
+
   it('still gives the saved theme back after another pick', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
     mount({ current: CLAY_1 })
-    await within(themes()).findByRole('button', { name: 'Clay' })
-    pickSwatch('Pug')
+    await findTile('Clay')
+    await choose('Pug')
     await pickClay()
     expect(pressed('Follow 1.x')).toBe('true')
   })
@@ -315,7 +326,7 @@ describe('official themes', () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST })
     const followed = JSON.stringify({ ...clayFile('1.1.0'), name: 'Clay Classic' })
     mount({ current: CLAY_1, fetched: { [CLAY_1]: followed } })
-    expect(await within(themes()).findByRole('button', { name: 'Clay Classic' })).toBeTruthy()
+    expect(await findTile('Clay Classic')).toBeTruthy()
   })
 
   // The catalog embeds only the latest file. Going by it, a light-only release looked like it had both modes
@@ -384,7 +395,7 @@ describe('official themes', () => {
   it('drops a single-variant file’s own pin on moving to a file with both modes', async () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_ONE_RELEASE]: LIGHT_ONLY })
     const onSave = mount()
-    await within(themes()).findByRole('button', { name: 'Clay' })
+    await findTile('Clay')
     check(CLAY_ONE_RELEASE)
     fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
     expect(pressed('Always light')).toBe('true')

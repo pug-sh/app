@@ -66,14 +66,6 @@ const DefaultTheme = () => {
       )}
       <Can action="update" resource="project">
         <div className="mt-4 space-y-4">
-          <ThemePicker
-            shared
-            current={current}
-            followLabel="Follow each member’s mode"
-            saveLabel="Save default theme"
-            saving={saving}
-            onSave={reference => void run(reference)}
-          />
           {current !== '' && (
             <Button
               variant="ghost"
@@ -86,6 +78,7 @@ const DefaultTheme = () => {
               {armed ? 'Clear the default?' : 'Clear default'}
             </Button>
           )}
+          <ThemePicker current={current} saving={saving} onSave={reference => void run(reference)} />
         </div>
       </Can>
     </section>
