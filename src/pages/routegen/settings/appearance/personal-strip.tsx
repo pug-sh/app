@@ -4,6 +4,7 @@ import {
   refreshFetchedThemeAtom,
   resolvableLibraryAtom,
   resolvedThemeAtom,
+  themeChoiceAtom,
   themeSelectionAtom,
 } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
@@ -11,19 +12,13 @@ import { listingOf } from '@/pages/routegen/settings/gallery-themes'
 import ThemeDetails from '@/pages/routegen/settings/theme-details'
 import { describeReference, FetchStatusLine, fileName, statusOf } from '@/pages/routegen/settings/theme-status'
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
-import { isInstalledId, isRemoteId, type LibraryEntry } from '@/theme/library'
-import { repositoryLabel, themeFileUrl } from '@/theme/repository'
-import { requiredMode, SLOT_LABEL, type ThemeSlot } from './slots'
+import { isInstalledId, isRemoteId } from '@/theme/library'
+import { themeFileUrl } from '@/theme/repository'
+import { requiredMode, SLOT_LABEL, sourceOf, type ThemeSlot, themeName } from './slots'
 
 const caption = (slot: ThemeSlot, split: boolean) => {
   if (!split) return 'Used in projects without a default'
   return `Applies in ${slot === 'dark' ? 'dark' : 'light'} mode, in projects without a default`
-}
-
-const sourceOf = (selected: string, copy?: LibraryEntry) => {
-  if (copy?.builtin) return 'Built in'
-  if (isRemoteId(selected)) return new URL(selected).host
-  return 'Installed'
 }
 
 // What belongs to Your theme or In dark, always visible, so nobody has to open anything to find it: what the slot
@@ -43,6 +38,7 @@ const PersonalStrip = ({
   const catalog = useAtomValue(themeCatalogAtom)
   const statuses = useAtomValue(fetchStatusAtom)
   const mode = useAtomValue(resolvedThemeAtom)
+  const choice = useAtomValue(themeChoiceAtom)
   const refresh = useSetAtom(refreshFetchedThemeAtom)
 
   const selected = selection[slot === 'dark' ? 'dark' : 'light']
@@ -65,11 +61,15 @@ const PersonalStrip = ({
 
   return (
     <div className="mt-2 space-y-2 border-t border-border/50 pt-2">
-      <p className="text-xs text-muted-foreground">{caption(slot, split)}</p>
+      <p className="text-xs text-muted-foreground">
+        {caption(slot, split)}
+        {choice.source !== 'personal' &&
+          `. This project is using ${themeName(choice.selection.light, library, catalog.themes)}.`}
+      </p>
       {family && (
         <ThemeDetails
           family={family}
-          source={listing ? repositoryLabel(listing.theme.repository) : sourceOf(selected, copy)}
+          source={sourceOf(selected, listing?.theme.repository, copy)}
           name={copy && isInstalledId(copy.id) ? fileName(copy) : undefined}
         />
       )}

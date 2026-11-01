@@ -385,6 +385,17 @@ describe('In use', () => {
 })
 
 describe('This project', () => {
+  const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
+  const CLAY_2 = 'https://themes.pug.sh/clay/2/theme.json'
+  const CLAY_ONE = 'https://themes.pug.sh/clay/1.0.0/theme.json'
+  const LIGHT_ONLY = JSON.stringify({ ...clayFile('1.0.0'), variants: { light: clayFile('1.0.0').variants.light } })
+  const url = 'https://cdn.example.com/linen/theme.json'
+  const linen = JSON.stringify({
+    version: 1,
+    name: 'Linen',
+    variants: { light: { colors: { background: '#f3eee4' } } },
+  })
+
   const inProject = (defaultTheme: string, override?: string) => {
     const store = createStore()
     store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'Acme', defaultTheme }))
@@ -396,16 +407,31 @@ describe('This project', () => {
     )
     return store
   }
-  const pickSwatch = (name: string) =>
-    fireEvent.click(within(screen.getByRole('group', { name: 'Themes' })).getByRole('button', { name }))
+  const onlyRelease = async (release: string) => {
+    fireEvent.click(screen.getByRole('button', { name: 'Only one release' }))
+    fireEvent.click(await screen.findByRole('menuitemradio', { name: release }))
+  }
+  // A fetch that answers the catalog and leaves every other URL waiting on what it returns.
+  const deferred = () => {
+    const answer = { current: (_: Response) => {} }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((address: string) => {
+        if (address === LIST_URL) return Promise.resolve(fakeResponse(CLAY_LIST))
+        return new Promise<Response>(resolve => {
+          answer.current = resolve
+        })
+      }),
+    )
+    return answer
+  }
 
   afterEach(() => vi.unstubAllGlobals())
 
-  it('shows the project’s default, and overrides it in this browser', () => {
+  it('shows the project’s default, and overrides it in this browser', async () => {
     const store = inProject('pug-colourblind#dark')
     expect(screen.getByText('Project default: Pug Colourblind-safe, always dark')).toBeTruthy()
-    pickSwatch('Pug High Contrast')
-    fireEvent.click(screen.getByRole('button', { name: 'Use in this project' }))
+    await applyTheme('Pug High Contrast')
     expect(store.get(projectOverridesAtom)).toEqual({ p1: 'pug-high-contrast' })
     expect(screen.getByText('Using Pug High Contrast in this project.')).toBeTruthy()
     expect(trackEvent).toHaveBeenCalledWith('theme_selected', {
@@ -422,9 +448,10 @@ describe('This project', () => {
       'fetch',
       vi.fn(async () => fakeResponse('', { status: 404 })),
     )
-    const url = 'https://themes.pug.sh/gone/theme.json'
-    const store = inProject(url)
-    await act(() => store.set(refreshFetchedThemeAtom, url))
+    const address = 'https://themes.pug.sh/gone/theme.json'
+    const store = inProject(address)
+    fireEvent.click(chip('This project'))
+    await act(() => store.set(refreshFetchedThemeAtom, address))
     expect(screen.getByText('Couldn’t load this project’s theme. Showing your theme instead.')).toBeTruthy()
   })
 
@@ -433,14 +460,15 @@ describe('This project', () => {
     expect(screen.getByText('This project is always dark.')).toBeTruthy()
   })
 
-  it('says so when storage refuses the override', () => {
+  it('says so when storage refuses the override', async () => {
     const store = inProject('')
-    pickSwatch('Pug High Contrast')
+    fireEvent.click(chip('This project'))
+    await openTheme('Pug High Contrast')
     const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
     try {
-      fireEvent.click(screen.getByRole('button', { name: 'Use in this project' }))
+      fireEvent.click(within(panel()).getByRole('button', { name: 'Use this theme' }))
     } finally {
       refusal.mockRestore()
     }
@@ -451,6 +479,7 @@ describe('This project', () => {
   // A reference from a newer build, or an id set through the API: nothing will load it, so no "Loading".
   it.each(['pug#dim', 'pug-colorblind'])('says a default it can’t use, %j, couldn’t load', defaultTheme => {
     inProject(defaultTheme)
+    fireEvent.click(chip('This project'))
     expect(screen.getByText('Couldn’t load this project’s theme. Showing your theme instead.')).toBeTruthy()
   })
 
@@ -459,27 +488,34 @@ describe('This project', () => {
       'fetch',
       vi.fn(async () => fakeResponse('', { status: 404 })),
     )
-    const url = 'https://themes.pug.sh/mine/theme.json'
+    const address = 'https://themes.pug.sh/mine/theme.json'
     const store = inProject('')
+    fireEvent.click(chip('This project'))
     act(() => {
-      store.set(setProjectOverrideAtom, { projectId: 'p1', reference: url })
+      store.set(setProjectOverrideAtom, { projectId: 'p1', reference: address })
     })
-    await act(() => store.set(refreshFetchedThemeAtom, url))
+    await act(() => store.set(refreshFetchedThemeAtom, address))
     expect(screen.getByText('Last check failed: the host answered 404.')).toBeTruthy()
+    expect(screen.getByText('mine, latest hasn’t loaded, so your theme is showing instead.')).toBeTruthy()
+  })
+
+  it('tries a project’s failed file again on request', async () => {
+    serveByUrl({})
+    const store = inProject('', CLAY_1)
+    fireEvent.click(chip('This project'))
+    await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
+    serveByUrl({ [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(Object.keys(store.get(fetchedThemesAtom))).toEqual([CLAY_1]))
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
   // Linen has no dark variant, so its pin is ignored and the mode is the member's.
   it('describes the mode in effect, not a pin that was ignored', async () => {
-    const linen = JSON.stringify({
-      version: 1,
-      name: 'Linen',
-      variants: { light: { colors: { background: '#f3eee4' } } },
-    })
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => fakeResponse(linen)),
     )
-    const url = 'https://cdn.example.com/linen/theme.json'
     const store = inProject(`${url}#dark`)
     await act(() => store.set(refreshFetchedThemeAtom, url))
     expect(screen.getByText('Project default: Linen, follows each member’s mode')).toBeTruthy()
@@ -490,36 +526,128 @@ describe('This project', () => {
     expect(screen.getByText('Used in projects without a default')).toBeTruthy()
   })
 
-  describe('an override on an official theme', () => {
-    const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
+  it('starts on what’s painting', () => {
+    inProject('pug-colourblind')
+    expect(chip('This project').getAttribute('aria-pressed')).toBe('true')
+  })
 
-    it('keeps its track and mode when its theme is picked again', async () => {
+  it('starts on Your theme when the project’s theme can’t paint', () => {
+    inProject('pug-colorblind')
+    expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('marks a default’s tile as in use, and writes nothing from it', async () => {
+    const store = inProject('pug-colourblind')
+    await openTheme('Pug Colourblind-safe')
+    expect(tile('Pug Colourblind-safe').getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(within(panel()).getByRole('button', { name: 'In use' }))
+    expect(store.get(projectOverridesAtom)).toEqual({})
+  })
+
+  it('says when a project’s theme, not Your theme, is what’s painting', () => {
+    inProject('pug-colourblind')
+    fireEvent.click(chip('Your theme'))
+    expect(
+      screen.getByText(/Used in projects without a default\. This project is using Pug Colourblind-safe\./),
+    ).toBeTruthy()
+  })
+
+  it('applies a repository theme straight away, with no read', async () => {
+    const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const store = inProject('', 'pug')
+    await applyTheme('Clay')
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: CLAY_2 })
+    expect(fetcher).toHaveBeenCalledTimes(1)
+  })
+
+  it('changes the mode at once from under the chips', () => {
+    const store = inProject('', 'pug')
+    fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: 'pug#dark' })
+  })
+
+  it('applies a pasted link, keeping its pin', async () => {
+    serveByUrl({ 'https://example.com/clay.json': JSON.stringify(clayFile('1.0.0')) })
+    const store = inProject('', 'pug')
+    check('example.com/clay.json#dark')
+    fireEvent.click(await screen.findByRole('button', { name: 'Use this theme' }))
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: 'https://example.com/clay.json#dark' })
+  })
+
+  it('leaves the saved reference as it was when a release can’t be read, and says why', async () => {
+    serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const store = inProject('', CLAY_2)
+    fireEvent.click(chip('This project'))
+    await screen.findByRole('group', { name: 'This project updates' })
+    await onlyRelease('1.0.0')
+    expect(await screen.findByText('Last check failed: the host answered 404.')).toBeTruthy()
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: CLAY_2 })
+  })
+
+  it('reads a release the catalog doesn’t carry first, and says so', async () => {
+    const answer = deferred()
+    const store = inProject('', CLAY_2)
+    fireEvent.click(chip('This project'))
+    await screen.findByRole('group', { name: 'This project updates' })
+    await onlyRelease('1.0.0')
+    expect(screen.getByText('Checking the file…')).toBeTruthy()
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: CLAY_2 })
+    await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
+    await waitFor(() => expect(store.get(projectOverridesAtom)).toEqual({ p1: `${CLAY_ONE}#light` }))
+  })
+
+  // Review Focus 4.
+  it('lets only the latest track land when an earlier read finishes last', async () => {
+    const answer = deferred()
+    const store = inProject('', CLAY_2)
+    fireEvent.click(chip('This project'))
+    await screen.findByRole('group', { name: 'This project updates' })
+    await onlyRelease('1.0.0')
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: 'https://themes.pug.sh/clay/theme.json' })
+  })
+
+  // Review Focus 3.
+  describe('a default that resolves after load', () => {
+    it('moves the target to This project', async () => {
+      serveByUrl({ [url]: linen })
+      const store = inProject(url)
+      expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
+      await act(() => store.set(refreshFetchedThemeAtom, url))
+      expect(chip('This project').getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('stays on the chip someone clicked', async () => {
+      serveByUrl({ [url]: linen })
+      const store = inProject(url)
+      fireEvent.click(chip('Your theme'))
+      await act(() => store.set(refreshFetchedThemeAtom, url))
+      expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
+    })
+  })
+
+  describe('an override on an official theme', () => {
+    it('keeps its track and mode when its theme is opened', async () => {
       serveByUrl({ [LIST_URL]: CLAY_LIST, [CLAY_1]: JSON.stringify(clayFile('1.1.0')) })
       const store = inProject('', `${CLAY_1}#dark`)
-      await within(screen.getByRole('group', { name: 'Themes' })).findByRole('button', { name: 'Clay' })
-      pickSwatch('Clay')
+      await act(() => store.set(refreshFetchedThemeAtom, CLAY_1))
+      await openTheme('Clay')
       expect(pressed('Follow 1.x')).toBe('true')
       await waitFor(() => expect(pressed('Always dark')).toBe('true'))
-      const use = screen.getByRole('button', { name: 'Use in this project' }) as HTMLButtonElement
-      await waitFor(() => expect(use.disabled).toBe(false))
-      fireEvent.click(use)
+      fireEvent.click(within(panel()).getByRole('button', { name: 'In use' }))
       expect(store.get(projectOverridesAtom)).toEqual({ p1: `${CLAY_1}#dark` })
     })
 
     it('says what it won’t reach', async () => {
       serveByUrl({ [LIST_URL]: CLAY_LIST })
       inProject('', CLAY_1)
+      fireEvent.click(chip('This project'))
       expect(await screen.findByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
     })
   })
 
   describe('a theme with no variant for the mode in effect', () => {
-    const url = 'https://cdn.example.com/linen/theme.json'
-    const linen = JSON.stringify({
-      version: 1,
-      name: 'Linen',
-      variants: { light: { colors: { background: '#f3eee4' } } },
-    })
     const reading = async (mode: 'light' | 'dark') => {
       serveByUrl({ [url]: linen })
       const store = inProject(url)
@@ -527,11 +655,11 @@ describe('This project', () => {
         store.set(themeModeAtom, mode)
       })
       await act(() => store.set(refreshFetchedThemeAtom, url))
-      return screen.queryByText(/has no \w+ variant, so Pug is showing instead/)
+      return screen.queryByText(/has no \w+ version, so Pug is showing instead/)
     }
 
     it('says Pug is showing in that mode, or the summary claims a theme that isn’t there', async () => {
-      expect((await reading('dark'))?.textContent).toBe('Linen has no dark variant, so Pug is showing instead.')
+      expect((await reading('dark'))?.textContent).toBe('Linen has no dark version, so Pug is showing instead.')
     })
 
     it('says nothing in a mode the theme has', async () => {
@@ -546,8 +674,8 @@ describe('This project', () => {
         store.set(themeSelectionAtom, { light: 'pug', dark: url })
       })
       await act(() => store.set(refreshFetchedThemeAtom, url))
-      const thisProject = screen.getByText(/in this browser/).closest('section') as HTMLElement
-      expect(within(thisProject).queryByText(/so Pug is showing instead/)).toBeNull()
+      fireEvent.click(chip('This project'))
+      expect(screen.queryByText(/so Pug is showing instead/)).toBeNull()
     })
   })
 })
@@ -655,7 +783,7 @@ describe('official themes in your own rows', () => {
     )
     await act(() => store.set(refreshFetchedThemeAtom, 'https://themes.pug.sh/clay/theme.json'))
     expect(screen.getByText(/Using Clay/).textContent).not.toContain('latest')
-    expect(screen.queryByRole('group', { name: /Updates/ })).toBeNull()
+    expect(screen.queryByRole('group', { name: /updates/i })).toBeNull()
   })
 
   it.each([

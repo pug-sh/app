@@ -1,7 +1,7 @@
 import { useAtomValue } from 'jotai'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { resolvableLibraryAtom, resolvedThemeAtom, themeSelectionAtom } from '@/data/theme.atoms'
+import { compiledThemeAtom, resolvableLibraryAtom, resolvedThemeAtom, themeSelectionAtom } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { cn } from '@/lib/utils'
 import { listingOf } from '@/pages/routegen/settings/gallery-themes'
@@ -11,6 +11,7 @@ import { type CompiledTheme, compileOnce } from '@/theme/compile'
 import type { ThemeFamily } from '@/theme/format'
 import { parseReference } from '@/theme/reference'
 import type { Polarity } from '@/theme/tokens'
+import type { ProjectTheme } from './project-theme'
 import { SLOT_LABEL, type ThemeSlot, themeName } from './slots'
 
 const Chip = ({
@@ -51,11 +52,13 @@ const Chip = ({
 const InUse = ({
   slot,
   split,
+  project,
   onSlot,
   onSplit,
 }: {
   slot: ThemeSlot
   split: boolean
+  project: ProjectTheme | null
   onSlot: (slot: ThemeSlot) => void
   onSplit: () => void
 }) => {
@@ -63,6 +66,7 @@ const InUse = ({
   const library = useAtomValue(resolvableLibraryAtom)
   const catalog = useAtomValue(themeCatalogAtom).themes
   const mode = useAtomValue(resolvedThemeAtom)
+  const painted = useAtomValue(compiledThemeAtom)
 
   // From the copy, then the catalog: a theme the file hasn't reached yet is still drawn.
   const drawn = (reference: string, polarity: (family: ThemeFamily) => Polarity) => {
@@ -80,7 +84,7 @@ const InUse = ({
       <div
         role="group"
         aria-label="Where a theme applies"
-        className={cn('grid gap-2 sm:grid-cols-2', split && 'sm:grid-cols-3')}
+        className={cn('grid gap-2 sm:grid-cols-2', split && project && 'sm:grid-cols-3')}
       >
         <Chip
           slot="yours"
@@ -96,6 +100,15 @@ const InUse = ({
             compiled={drawn(selection.dark, family => shownPolarity(family, 'dark'))}
             selected={slot === 'dark'}
             onSelect={() => onSlot('dark')}
+          />
+        )}
+        {project && (
+          <Chip
+            slot="project"
+            name={project.chip}
+            compiled={painted}
+            selected={slot === 'project'}
+            onSelect={() => onSlot('project')}
           />
         )}
       </div>

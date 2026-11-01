@@ -2,8 +2,9 @@ import { listingOf } from '@/pages/routegen/settings/gallery-themes'
 import { describeReference } from '@/pages/routegen/settings/theme-status'
 import type { CatalogTheme } from '@/theme/catalog'
 import type { ChoiceSource } from '@/theme/choice'
-import type { LibraryEntry } from '@/theme/library'
+import { isRemoteId, type LibraryEntry, type RemoteId } from '@/theme/library'
 import { parseReference } from '@/theme/reference'
+import { repositoryLabel } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
 // A slot is one chip: what a theme applied from the list goes to.
@@ -41,6 +42,13 @@ export const requiredMode = (slot: ThemeSlot, split: boolean) => {
 }
 
 export const writesTo = (slot: ThemeSlot, split: boolean) => requiredMode(slot, split) ?? 'both'
+
+/** Where a held theme comes from, for its byline: its repository, the URL's host, or this browser's library. */
+export const sourceOf = (target: string, repository: RemoteId | undefined, copy: LibraryEntry | undefined) => {
+  if (repository) return repositoryLabel(repository)
+  if (copy?.builtin) return 'Built in'
+  return isRemoteId(target) ? new URL(target).host : 'Installed'
+}
 
 /** A reference as a chip names it. Pug when it can't be read, since that's what paints. */
 export const themeName = (reference: string, library: LibraryEntry[], catalog: CatalogTheme[]) => {
