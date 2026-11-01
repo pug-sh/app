@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai'
 import { type CSSProperties, Fragment, memo, type ReactNode } from 'react'
-import { resolvedThemeAtom } from '@/data/theme.atoms'
+import { accessModeAtom, resolvedThemeAtom } from '@/data/theme.atoms'
 import { indexedColorIn, pugDataPalette, seriesColorIn } from '@/lib/event-colors'
 import type { CompiledDataPalette } from '@/theme/data-palette'
 
@@ -236,11 +236,12 @@ const COLUMNS = [
 // page re-renders 150 cards. The theme subscription below still re-renders it on toggle.
 export const AuthWall = memo(() => {
   // The sign-in pages stay Pug whatever theme is active: .auth-surface resets the CSS tokens, and the
-  // cards draw from Pug's own data palette for the mode, never the active theme's. So light/dark is
-  // all this depends on — and the glow wants more presence on dark.
+  // cards draw from Pug's own data palette for the mode and contrast, never the active theme's. So
+  // those two are all this depends on — and the glow wants more presence on dark.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
+  const { contrast } = useAtomValue(accessModeAtom)
   const glow = resolvedTheme === 'dark' ? '22%' : '14%'
-  const deck = buildDeck(pugDataPalette(resolvedTheme))
+  const deck = buildDeck(pugDataPalette(resolvedTheme, contrast))
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>

@@ -52,6 +52,7 @@
         if (entry.pin === 'light' || entry.pin === 'dark') dark = entry.pin === 'dark'
         if (dark) root.classList.add('dark')
         const high = contrast === 'high' || (contrast === 'system' && matchMedia('(prefers-contrast: more)').matches)
+        if (high) root.setAttribute('data-contrast', 'high')
         let paint = entry[dark ? 'dark' : 'light'] || fallback
         if (levels) paint = paint[high ? 'high' : 'standard'] || fallback
         else if (high && paint.standard) paint = { builtin: 'pug-high-contrast' }

@@ -15,6 +15,7 @@ const inline = () => TOKENS.filter(t => root.style.getPropertyValue(`--${t}`) !=
 beforeEach(() => {
   root.className = ''
   root.removeAttribute('data-theme')
+  root.removeAttribute('data-contrast')
   root.removeAttribute('style')
   localStorage.clear()
   media({})
@@ -315,6 +316,20 @@ describe('the first-paint script, version 3', () => {
     v3({ personal: { light: blind, dark: blind } })
     paint()
     expect(root.getAttribute('data-theme')).toBe('pug-colourblind')
+  })
+
+  it('says when high contrast is on, under an installed theme too', () => {
+    const paints = { standard: { vars: {} }, high: { vars: { '--background': 'oklch(1 0 0)' } } }
+    v3({ contrast: 'high', personal: { light: paints, dark: paints } })
+    paint()
+    expect(root.getAttribute('data-contrast')).toBe('high')
+    expect(root.hasAttribute('data-theme')).toBe(false)
+  })
+
+  it('leaves it off at standard', () => {
+    v3({ contrast: 'standard' })
+    paint()
+    expect(root.hasAttribute('data-contrast')).toBe(false)
   })
 
   it('paints Pug when a level is missing, rather than nothing at all', () => {

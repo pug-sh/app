@@ -3,7 +3,7 @@ import { applyCompiledTheme } from './apply'
 import { BUILTINS } from './builtin'
 import { compileVariant } from './compile'
 import { parseThemeObject } from './format'
-import { ACCESS_MODES, TOKENS } from './tokens'
+import { ACCESS_MODES, STANDARD_ACCESS, TOKENS } from './tokens'
 
 const root = document.documentElement
 const inline = () => TOKENS.filter(t => root.style.getPropertyValue(`--${t}`) !== '')
@@ -55,6 +55,17 @@ describe('applyCompiledTheme', () => {
     applyCompiledTheme(compileVariant({ id: 'pug', builtin: true, family: BUILTINS.pug, polarity: 'light', access }))
     expect(root.getAttribute('data-theme')).toBe(key)
     expect(inline()).toEqual([])
+  })
+
+  // The sign-in pages read it, and `data-theme` is absent under an installed theme.
+  it('says when high contrast is on, whatever the theme', () => {
+    const compile = (access = STANDARD_ACCESS) =>
+      compileVariant({ id: 'grape', builtin: false, family: grape, polarity: 'dark', access })
+    applyCompiledTheme(compile(ACCESS_MODES[1]))
+    expect(root.getAttribute('data-contrast')).toBe('high')
+    expect(root.hasAttribute('data-theme')).toBe(false)
+    applyCompiledTheme(compile())
+    expect(root.hasAttribute('data-contrast')).toBe(false)
   })
 
   it('leaves no attribute on Pug at standard, once a mode is switched off', () => {

@@ -80,6 +80,15 @@ describe.each([
   })
 })
 
+describe.each([
+  ['light', ':root[data-contrast="high"] .auth-surface'],
+  ['dark', ':root.dark[data-contrast="high"] .auth-surface'],
+] as const)('the generated high-contrast %s sign-in block', (polarity, selector) => {
+  it('resets every token to Pug High Contrast', () => {
+    expect(declaredIn(builtinThemesCss(), selector)).toEqual(frozenHighContrast(polarity))
+  })
+})
+
 // A token added to index.css's @theme inline without a registry entry would silently stay at Pug's
 // value under every custom theme. This turns that into a failure.
 it('registers every colour index.css exposes to Tailwind', () => {
