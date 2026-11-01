@@ -165,8 +165,8 @@ describe('the theme on <html>', () => {
 describe('the first paint, handed to React', () => {
   const pug = { builtin: 'pug', standard: true }
   const colourblind = { builtin: 'pug-colourblind', standard: true }
-  // Pinned dark on Pug Colourblind, where the member's own is Pug following a light OS.
-  const pinned = create(ProjectSchema, { id: 'p1', displayName: 'First', defaultTheme: 'pug-colourblind#dark' })
+  // Pinned dark, where the member's own is Pug following a light OS.
+  const pinned = create(ProjectSchema, { id: 'p1', displayName: 'First', defaultTheme: 'pug#dark' })
 
   it('keeps the project’s paint while the workspace loads', () => {
     localStorage.setItem(
@@ -189,7 +189,6 @@ describe('the first paint, handed to React', () => {
   it('paints the project’s theme once the workspace has picked it', () => {
     mount({ path: '/p/p1/overview', project: pinned })
     expect(root.classList.contains('dark')).toBe(true)
-    expect(root.getAttribute('data-theme')).toBe('pug-colourblind')
   })
 
   // The cached paint is stale: p1's default was cleared since, so settling has to repaint even though the
@@ -214,8 +213,11 @@ describe('the first paint, handed to React', () => {
   it('keeps the project’s paint for the next load', () => {
     mount({ path: '/p/p1/overview', project: pinned })
     expect(JSON.parse(localStorage.getItem(PAINT_CACHE_KEY) ?? 'null')).toMatchObject({
+      v: 3,
+      contrast: 'system',
+      vision: 'standard',
       last: 'p1',
-      projects: { p1: { pin: 'dark', dark: colourblind } },
+      projects: { p1: { pin: 'dark', dark: { standard: { builtin: 'pug' }, high: { builtin: 'pug-high-contrast' } } } },
     })
   })
 

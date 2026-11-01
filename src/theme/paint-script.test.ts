@@ -72,7 +72,7 @@ describe('the first-paint script', () => {
   })
 
   it('ignores a cache from another version, or one that is not JSON', () => {
-    cache({ v: 3, autoContrast: false, light: { builtin: 'pug-colourblind', standard: true } })
+    cache({ v: 4, autoContrast: false, light: { builtin: 'pug-colourblind', standard: true } })
     paint()
     expect(root.hasAttribute('data-theme')).toBe(false)
     localStorage.setItem(PAINT_CACHE_KEY, '{')
@@ -148,8 +148,8 @@ describe('the first-paint script', () => {
   })
 
   // The two halves meet here: what buildPaintCache writes for a real installed theme has to be what
-  // the script puts on <html>, token for token, in the mode it paints.
-  it('paints exactly what the app compiles for an installed theme, in each mode', () => {
+  // the script puts on <html>, token for token, in the mode, at the level and in the colour vision it paints.
+  it.each(POLARITIES)('paints exactly what the app compiles for an installed theme, %s', polarity => {
     const text = JSON.stringify({
       version: 1,
       name: 'Duo',
@@ -167,17 +167,20 @@ describe('the first-paint script', () => {
         projectId: null,
         choice: { selection, source: 'personal' },
         personal: selection,
-        autoContrast: false,
+        contrast: 'system',
+        vision: 'colourblind',
         library,
       }),
     )
 
-    for (const polarity of POLARITIES) {
+    for (const contrast of ['standard', 'high'] as const) {
       root.className = ''
       root.removeAttribute('style')
       localStorage.setItem('pug:theme', JSON.stringify(polarity))
+      media({ '(prefers-contrast: more)': contrast === 'high' })
       paint()
-      const { vars } = compileVariant({ id: check.theme.id, builtin: false, family, polarity })
+      const access = { contrast, vision: 'colourblind' as const }
+      const { vars } = compileVariant({ id: check.theme.id, builtin: false, family, polarity, access })
       for (const [name, value] of Object.entries(vars)) expect(root.style.getPropertyValue(name)).toBe(value)
     }
   })
@@ -242,5 +245,81 @@ describe('the first-paint script, per project', () => {
     at('/p/__proto__/overview')
     paint()
     expect(root.getAttribute('data-theme')).toBe('pug-colourblind')
+  })
+})
+
+describe('the first-paint script, version 3', () => {
+  const MORE = '(prefers-contrast: more)'
+  const at = (path: string) => window.history.replaceState(null, '', path)
+  const pug = { standard: { builtin: 'pug' }, high: { builtin: 'pug-high-contrast' } }
+  const blind = { standard: { builtin: 'pug-colourblind' }, high: { builtin: 'pug-high-contrast-colourblind' } }
+  const v3 = (fields: Record<string, unknown>) =>
+    cache({
+      v: 3,
+      contrast: 'system',
+      vision: 'standard',
+      personal: { light: pug, dark: pug },
+      projects: {},
+      ...fields,
+    })
+
+  afterEach(() => at('/'))
+
+  it('paints High when set, whatever the OS says', () => {
+    v3({ contrast: 'high' })
+    paint()
+    expect(root.getAttribute('data-theme')).toBe('pug-high-contrast')
+  })
+
+  it('paints Standard when set, whatever the OS says', () => {
+    media({ [MORE]: true })
+    v3({ contrast: 'standard' })
+    paint()
+    expect(root.hasAttribute('data-theme')).toBe(false)
+  })
+
+  it.each([
+    [true, 'pug-high-contrast'],
+    [false, null],
+  ])('follows the OS under Match system: more contrast asked for, %s', (more, key) => {
+    media({ [MORE]: more })
+    v3({ contrast: 'system' })
+    paint()
+    expect(root.getAttribute('data-theme')).toBe(key)
+  })
+
+  it('reads an unknown contrast as Match system', () => {
+    media({ [MORE]: true })
+    v3({ contrast: 'loud' })
+    paint()
+    expect(root.getAttribute('data-theme')).toBe('pug-high-contrast')
+  })
+
+  it('paints the project in the path at the right level', () => {
+    v3({ contrast: 'high', projects: { p1: { light: blind, dark: blind } } })
+    at('/p/p1/overview')
+    paint()
+    expect(root.getAttribute('data-theme')).toBe('pug-high-contrast-colourblind')
+  })
+
+  it('lets a pin beat the mode', () => {
+    localStorage.setItem('pug:theme', JSON.stringify('light'))
+    v3({ projects: { p1: { pin: 'dark', light: pug, dark: blind } } })
+    at('/p/p1/overview')
+    paint()
+    expect(root.classList.contains('dark')).toBe(true)
+    expect(root.getAttribute('data-theme')).toBe('pug-colourblind')
+  })
+
+  it('paints the member’s colour vision', () => {
+    v3({ personal: { light: blind, dark: blind } })
+    paint()
+    expect(root.getAttribute('data-theme')).toBe('pug-colourblind')
+  })
+
+  it('paints Pug when a level is missing, rather than nothing at all', () => {
+    v3({ contrast: 'high', personal: { light: { standard: { builtin: 'pug-colourblind' } }, dark: pug } })
+    paint()
+    expect(root.hasAttribute('data-theme')).toBe(false)
   })
 })
