@@ -9,12 +9,12 @@ import {
   themeSelectionAtom,
 } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
-import OfficialThemeDetails from '@/pages/routegen/settings/official-theme-details'
+import ThemeDetails from '@/pages/routegen/settings/theme-details'
 import { describeReference, FetchStatusLine, fileName, statusOf } from '@/pages/routegen/settings/theme-status'
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
 import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
 import { isRemoteId } from '@/theme/library'
-import { parseDefaultThemeFile, startingTrack, themeFileUrl } from '@/theme/repository'
+import { parseDefaultThemeFile, repositoryLabel, startingTrack, themeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 import { rowThemes } from './row-themes'
 import ThemeSwatch from './theme-swatch'
@@ -91,7 +91,7 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
       )}
       {followed && listed && (
         <div className="mt-3 space-y-2">
-          <OfficialThemeDetails family={copy?.family ?? listed.family} />
+          <ThemeDetails family={copy?.family ?? listed.family} source={repositoryLabel(listed.repository)} />
           <ThemeUpdates
             label={`${ROW_TITLE[polarity]} updates`}
             releases={listed.releases}

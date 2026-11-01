@@ -10,7 +10,7 @@ import {
 } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import ThemeSwatch from '@/pages/routegen/settings/appearance/theme-swatch'
-import OfficialThemeDetails from '@/pages/routegen/settings/official-theme-details'
+import ThemeDetails from '@/pages/routegen/settings/theme-details'
 import ThemeModeControl from '@/pages/routegen/settings/theme-mode-control'
 import { FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
 import {
@@ -28,7 +28,14 @@ import type { CatalogTheme } from '@/theme/catalog'
 import type { ThemeFamily } from '@/theme/format'
 import type { UsableEntry } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
-import { parseDefaultThemeFile, startingTrack, type Track, themeFileUrl, updateNotice } from '@/theme/repository'
+import {
+  parseDefaultThemeFile,
+  repositoryLabel,
+  startingTrack,
+  type Track,
+  themeFileUrl,
+  updateNotice,
+} from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
 // Picks a theme reference and its mode. `shared` is a project's default, which every member's browser
@@ -133,7 +140,11 @@ const ThemePicker = ({
       <ThemeUrlField disclosure={shared} onUse={file => pick({ id: file.url, family: file.family }, file.pin)} />
       {target && shown && (
         <div className="space-y-3">
-          {official ? <OfficialThemeDetails family={shown} /> : <p className="text-sm">{shown.name}</p>}
+          {official ? (
+            <ThemeDetails family={shown} source={repositoryLabel(official.repository)} />
+          ) : (
+            <p className="text-sm">{shown.name}</p>
+          )}
           {single && (
             <p className="text-xs text-muted-foreground">
               {shown.name} has only a {single} variant.
