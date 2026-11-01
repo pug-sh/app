@@ -552,6 +552,15 @@ describe('This project', () => {
     ).toBeTruthy()
   })
 
+  it('pins a single-variant installed theme to its only mode', async () => {
+    const store = inProject('', 'pug')
+    pick(grape)
+    await installed()
+    await applyTheme('Grape, Dark only')
+    expect(screen.getByText('Grape has only a dark variant.')).toBeTruthy()
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: `${store.get(installedThemesAtom)[0].id}#dark` })
+  })
+
   it('applies a repository theme straight away, with no read', async () => {
     const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
     const store = inProject('', 'pug')

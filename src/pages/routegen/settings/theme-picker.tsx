@@ -1,16 +1,11 @@
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  fetchStatusAtom,
-  refreshFetchedThemeAtom,
-  resolvableLibraryAtom,
-  resolvedThemeAtom,
-  themeLibraryAtom,
-} from '@/data/theme.atoms'
+import { fetchStatusAtom, refreshFetchedThemeAtom, resolvableLibraryAtom } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
-import ThemeSwatch from '@/pages/routegen/settings/appearance/theme-swatch'
+import { type GalleryTheme, listingOf } from '@/pages/routegen/settings/gallery-themes'
 import ThemeDetails from '@/pages/routegen/settings/theme-details'
+import ThemeGallery from '@/pages/routegen/settings/theme-gallery'
 import ThemeModeControl from '@/pages/routegen/settings/theme-mode-control'
 import { FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
 import {
@@ -18,47 +13,28 @@ import {
   modeFor,
   onlyVariant,
   pinOf,
-  shownPolarity,
   type ThemeTarget,
   targetFor,
 } from '@/pages/routegen/settings/theme-target'
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
-import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
 import type { CatalogTheme } from '@/theme/catalog'
-import type { ThemeFamily } from '@/theme/format'
-import type { UsableEntry } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
-import {
-  parseDefaultThemeFile,
-  repositoryLabel,
-  startingTrack,
-  type Track,
-  themeFileUrl,
-  updateNotice,
-} from '@/theme/repository'
+import { repositoryLabel, startingTrack, type Track, updateNotice } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
-// Picks a theme reference and its mode. `shared` is a project's default, which every member's browser
-// loads: no installed themes, and the URL's host is disclosed. `current` is the reference saved now.
+// Picks a project's default theme and its mode. Every member's browser loads the result, so the list is shared: no
+// installed themes, and the URL's host is disclosed. `current` is the reference saved now.
 const ThemePicker = ({
-  shared,
   current,
-  followLabel,
-  saveLabel,
   saving = false,
   onSave,
 }: {
-  shared: boolean
   current?: string
-  followLabel: string
-  saveLabel: string
   saving?: boolean
   onSave: (reference: string) => void
 }) => {
-  const library = useAtomValue(themeLibraryAtom)
   const files = useAtomValue(resolvableLibraryAtom)
   const statuses = useAtomValue(fetchStatusAtom)
-  const mode = useAtomValue(resolvedThemeAtom)
   const [target, setTarget] = useState<ThemeTarget | null>(null)
   const [choice, setChoice] = useState<ModeChoice | null>(null)
   const catalog = useAtomValue(themeCatalogAtom)
@@ -66,10 +42,9 @@ const ThemePicker = ({
 
   // What's selected: the pick, or the saved reference until there is one.
   const saved = current ? parseReference(current) : null
-  const savedFile = saved && parseDefaultThemeFile(saved.target)
+  const savedListing = listingOf(catalog.themes, saved?.target)
   const selected = target?.id ?? saved?.target
-  const followed = target ? parseDefaultThemeFile(target.id) : savedFile
-  const official = followed && catalog.themes.find(theme => theme.slug === followed.slug)
+  const listing = listingOf(catalog.themes, selected)
   const family = target?.family ?? files.find(entry => entry.id === selected)?.family ?? null
 
   const pick = (next: ThemeTarget, pin?: Polarity) => {
@@ -82,22 +57,26 @@ const ThemePicker = ({
     return next
   }
   const follow = (track: Track) => {
-    if (official) setTarget(readTarget(official, track))
+    if (listing) setTarget(readTarget(listing.theme, track))
   }
   // The current choice keeps its track: a theme already picked stays as it is, and the saved one comes back
   // with its track and mode. Any other starts on its newest major line.
-  const choose = (theme: CatalogTheme) => {
-    if (target && followed?.slug === theme.slug) return
-    if (savedFile?.slug === theme.slug) pick(readTarget(theme, savedFile.track), saved?.pin)
-    else pick(readTarget(theme, startingTrack(theme.releases)))
+  const choose = (theme: GalleryTheme) => {
+    if (target && theme.held) return
+    if (!theme.listed) {
+      if (theme.family) pick({ id: theme.id, family: theme.family })
+      return
+    }
+    const { slug, repository, releases } = theme.listed
+    const back = savedListing?.theme.slug === slug && savedListing.theme.repository === repository
+    if (back) pick(readTarget(theme.listed, savedListing.track), saved?.pin)
+    else pick(readTarget(theme.listed, startingTrack(releases)))
   }
-  const previewMode = (preview: ThemeFamily) => shownPolarity(preview, mode)
-  const entries = library.filter((entry): entry is UsableEntry => entry.family !== null && (entry.builtin || !shared))
   const chosen = family ? modeFor(family, choice) : (choice ?? 'follow')
   const single = family && onlyVariant(family)
-  const shown = family ?? official?.family
+  const shown = family ?? listing?.theme.family
   const status = target && !family ? statusOf(target.id, statuses) : undefined
-  const notice = !target && followed && official ? updateNotice(official.releases, followed.track) : null
+  const notice = !target && listing ? updateNotice(listing.theme.releases, listing.track) : null
 
   const save = () => {
     if (target && family) onSave(formatReference({ target: target.id, pin: pinOf(chosen) }))
@@ -105,43 +84,11 @@ const ThemePicker = ({
 
   return (
     <div className="space-y-4">
-      <div role="group" aria-label="Themes" className="flex flex-wrap gap-3">
-        {entries.map(entry => (
-          <ThemeSwatch
-            key={entry.id}
-            entry={entry}
-            polarity={previewMode(entry.family)}
-            selected={selected === entry.id}
-            onSelect={() => pick(entry)}
-          />
-        ))}
-        {catalog.themes.map(theme => {
-          const isSelected = followed?.slug === theme.slug
-          const drawn = (isSelected && family) || theme.family
-          return (
-            <ThemeSwatch
-              key={`official:${theme.slug}`}
-              entry={{
-                id: themeFileUrl(theme.repository, theme.slug, { kind: 'latest' }),
-                builtin: false,
-                name: drawn.name,
-                family: drawn,
-                issues: [],
-              }}
-              polarity={previewMode(drawn)}
-              selected={isSelected}
-              onSelect={() => choose(theme)}
-            />
-          )
-        })}
-      </div>
       {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
-      {catalog.status === 'failed' && <p className="text-xs text-muted-foreground">Couldn’t load the theme list.</p>}
-      <ThemeUrlField disclosure={shared} onUse={file => pick({ id: file.url, family: file.family }, file.pin)} />
       {target && shown && (
         <div className="space-y-3">
-          {official ? (
-            <ThemeDetails family={shown} source={repositoryLabel(official.repository)} />
+          {listing ? (
+            <ThemeDetails family={shown} source={repositoryLabel(listing.theme.repository)} />
           ) : (
             <p className="text-sm">{shown.name}</p>
           )}
@@ -150,18 +97,28 @@ const ThemePicker = ({
               {shown.name} has only a {single} variant.
             </p>
           )}
-          <ThemeModeControl value={chosen} family={family} followLabel={followLabel} onChange={setChoice} />
-          {official && followed && (
-            <ThemeUpdates releases={official.releases} track={followed.track} onChange={follow} />
-          )}
+          <ThemeModeControl
+            value={chosen}
+            family={family}
+            followLabel="Follow each member’s mode"
+            onChange={setChoice}
+          />
+          {listing && <ThemeUpdates releases={listing.theme.releases} track={listing.track} onChange={follow} />}
           {status && <FetchStatusLine status={status} />}
           <div>
             <Button size="sm" disabled={saving || !family} onClick={save}>
-              {saveLabel}
+              Save default theme
             </Button>
           </div>
         </div>
       )}
+      <ThemeGallery
+        shared
+        held={selected ? { target: selected, family } : null}
+        useLabel="Choose this theme"
+        onUse={choose}
+        onUseFile={file => pick({ id: file.url, family: file.family }, file.pin)}
+      />
     </div>
   )
 }
