@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installedThemesAtom } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { serveByUrl } from '@/test/serve'
-import { applyTheme, findTile, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
+import { applyTheme, findTile, MOSS, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
 import { LIST_URL, listOf } from '@/test/theme-repository'
+import type { InstalledTheme } from '@/theme/library'
 import ThemeGallery from './theme-gallery'
 
 const light = (name: string) => ({
@@ -18,8 +20,9 @@ const OPAL_FILE = 'https://themes.pug.sh/opal/1/theme.json'
 
 type Props = Partial<Parameters<typeof ThemeGallery>[0]>
 
-const mount = (props: Props = {}) => {
+const mount = (props: Props = {}, themes: InstalledTheme[] = []) => {
   const store = createStore()
+  if (themes.length > 0) store.set(installedThemesAtom, themes)
   const onUse = vi.fn()
   const ui = (next: Props) => (
     <Provider store={store}>
@@ -173,12 +176,12 @@ describe('ThemeGallery flat lists', () => {
 describe('ThemeGallery panel', () => {
   it('opens one theme at a time, straight after its tile, and closes it on a second click', async () => {
     serveByUrl({})
-    mount()
+    mount({}, [MOSS])
     await openTheme('Pug')
     expect(tile('Pug').nextElementSibling).toBe(panel())
-    await openTheme('Pug High Contrast')
+    await openTheme('Moss')
     expect(screen.getAllByRole('region')).toHaveLength(1)
-    fireEvent.click(tile('Pug High Contrast'))
+    fireEvent.click(tile('Moss'))
     expect(screen.queryByRole('region')).toBeNull()
   })
 
@@ -193,19 +196,19 @@ describe('ThemeGallery panel', () => {
   it('writes nothing when a theme opens or closes', async () => {
     serveByUrl({})
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
-    const { onUse } = mount()
+    const { onUse } = mount({}, [MOSS])
     await openTheme('Pug')
-    await openTheme('Pug High Contrast')
-    fireEvent.click(tile('Pug High Contrast'))
+    await openTheme('Moss')
+    fireEvent.click(tile('Moss'))
     expect(setItem).not.toHaveBeenCalled()
     expect(onUse).not.toHaveBeenCalled()
   })
 
   it('hands the theme to its host', async () => {
     serveByUrl({})
-    const { onUse } = mount()
-    await applyTheme('Pug High Contrast')
-    expect(onUse).toHaveBeenCalledWith(expect.objectContaining({ id: 'pug-high-contrast' }))
+    const { onUse } = mount({}, [MOSS])
+    await applyTheme('Moss')
+    expect(onUse).toHaveBeenCalledWith(expect.objectContaining({ id: MOSS.id }))
   })
 })
 

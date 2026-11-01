@@ -6,6 +6,7 @@ import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
+import { MOSS } from '@/test/theme-gallery'
 import { clayFile } from '@/test/theme-repository'
 import type { InstalledTheme } from '@/theme/library'
 import { FETCH_TIMEOUT_MS } from '@/theme/remote'
@@ -212,7 +213,7 @@ describe('storage that refuses a write', () => {
   it('leaves the selection as it was', () => {
     const store = createStore()
     refuse()
-    expect(store.set(selectThemeAtom, { polarity: 'dark', id: 'pug-colourblind' })).toBe(false)
+    expect(store.set(selectThemeAtom, { polarity: 'dark', id: MOSS.id })).toBe(false)
     expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
   })
 
@@ -296,8 +297,8 @@ describe('malformed storage', () => {
   // This one reads the guard's own output.
   it('reads a selection that is not a string as Pug', () => {
     const store = createStore()
-    store.set(themeSelectionAtom, { light: 5, dark: 'pug-colourblind' } as never)
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug-colourblind' })
+    store.set(themeSelectionAtom, { light: 5, dark: MOSS.id } as never)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: MOSS.id })
   })
 
   it('keeps the well-formed installed themes next to a broken entry', () => {
@@ -345,6 +346,7 @@ describe('project themes', () => {
   })
   const inProject = (defaultTheme: string, id = 'p1') => {
     const store = createStore()
+    store.set(installedThemesAtom, [MOSS])
     store.set(activeProjectAtom, create(ProjectSchema, { id, displayName: 'P', defaultTheme }))
     return store
   }
@@ -362,20 +364,20 @@ describe('project themes', () => {
   })
 
   it('shows the project’s default over the member’s own choice', () => {
-    expect(inProject('pug-colourblind').get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(inProject(MOSS.id).get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('lets this browser override it per project, and reports the override', () => {
-    const store = inProject('pug-colourblind')
-    expect(store.set(setProjectOverrideAtom, { projectId: 'p1', reference: 'pug-high-contrast' })).toBe(true)
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-high-contrast' })
+    const store = inProject(MOSS.id)
+    expect(store.set(setProjectOverrideAtom, { projectId: 'p1', reference: 'pug' })).toBe(true)
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug' })
     expect(trackEvent).toHaveBeenCalledWith('theme_selected', {
-      theme: 'pug-high-contrast',
+      theme: 'pug',
       mode: 'both',
       scope: 'project',
     })
     store.set(setProjectOverrideAtom, { projectId: 'p1', reference: null })
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('pins the mode when the reference says so', () => {
@@ -489,19 +491,19 @@ describe('project themes', () => {
     )
     const store = inProject(`${LINEN}#light`)
     const pending = store.set(refreshFetchedThemeAtom, LINEN)
-    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p2', displayName: 'Q', defaultTheme: 'pug-colourblind' }))
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p2', displayName: 'Q', defaultTheme: MOSS.id }))
     release(fakeResponse(linenText))
     await pending
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   // Mounted, as the app has it: getOnInit read storage once, at import.
   it('reads stored overrides it can’t use as none', () => {
     localStorage.setItem('pug:theme-project-overrides', '{"p1":"pug#dim","__proto__":"pug","p2":7}')
-    const store = inProject('pug-colourblind')
+    const store = inProject(MOSS.id)
     store.sub(projectOverridesAtom, () => {})
     expect(store.get(projectOverridesAtom)).toEqual({})
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('treats a project default this build can’t read as none', () => {
@@ -563,10 +565,10 @@ describe('the member’s own theme by URL', () => {
 
   it('writes one theme to both modes, and reports both', () => {
     const store = createStore()
-    expect(store.set(selectThemeAtom, { polarity: 'both', id: 'pug-colourblind' })).toBe(true)
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-colourblind', dark: 'pug-colourblind' })
+    expect(store.set(selectThemeAtom, { polarity: 'both', id: MOSS.id })).toBe(true)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: MOSS.id, dark: MOSS.id })
     expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
-      theme: 'pug-colourblind',
+      theme: 'custom',
       mode: 'both',
       scope: 'personal',
     })

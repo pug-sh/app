@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { MOSS } from '@/test/theme-gallery'
 import { clayFile } from '@/test/theme-repository'
 import type { CatalogTheme } from '@/theme/catalog'
 import { parseThemeObject } from '@/theme/format'
@@ -222,7 +223,7 @@ describe('groupThemes', () => {
     galleryThemes({
       held: { target: held, family: null },
       shared: false,
-      library: buildLibrary([grape]),
+      library: buildLibrary([grape, MOSS]),
       catalog: [catalog[0]],
     })
 
@@ -237,9 +238,8 @@ describe('groupThemes', () => {
   })
 
   it('puts the theme in use first, so a collapsed group can’t hide it', () => {
-    const [builtin] = groupThemes(everything('pug-colourblind'), [repository])
-    expect(builtin.themes[0].id).toBe('pug-colourblind')
-    expect(builtin.themes.map(theme => theme.id).slice(1)).toEqual(['pug', 'pug-high-contrast'])
+    const [, installed] = groupThemes(everything(MOSS.id), [repository])
+    expect(installed.themes.map(theme => theme.id)).toEqual([MOSS.id, grape.id])
   })
 
   it('keeps a failed repository’s themes beside its failure, or shows it empty', () => {

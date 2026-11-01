@@ -47,17 +47,17 @@ afterEach(() => {
 describe('ThemePicker', () => {
   it('saves a built-in that follows the mode', async () => {
     const onSave = mount()
-    await choose('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
-    expect(onSave).toHaveBeenCalledWith('pug-colourblind')
+    expect(onSave).toHaveBeenCalledWith('pug')
   })
 
   it('saves a built-in pinned to a mode', async () => {
     const onSave = mount()
-    await choose('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
-    expect(onSave).toHaveBeenCalledWith('pug-colourblind#dark')
+    expect(onSave).toHaveBeenCalledWith('pug#dark')
   })
 
   it('leaves installed themes out of a project’s default', () => {
@@ -67,7 +67,7 @@ describe('ThemePicker', () => {
 
   it('leaves Save closed until a theme is chosen, and opening one chooses nothing', async () => {
     const onSave = mount()
-    await openTheme('Pug Colourblind-safe')
+    await openTheme('Pug')
     expect(screen.queryByRole('button', { name: 'Save default theme' })).toBeNull()
     expect(onSave).not.toHaveBeenCalled()
   })
@@ -276,8 +276,8 @@ describe('official themes', () => {
   })
 
   it('presses a saved built-in the same way', () => {
-    mount({ current: 'pug-colourblind#dark' })
-    expect(tile('Pug Colourblind-safe').getAttribute('aria-pressed')).toBe('true')
+    mount({ current: 'pug#dark' })
+    expect(tile('Pug').getAttribute('aria-pressed')).toBe('true')
   })
 
   it('never reads In use, so the saved theme can be chosen again', async () => {
@@ -299,11 +299,11 @@ describe('official themes', () => {
   })
 
   it('gives a saved built-in back with its mode', async () => {
-    const onSave = mount({ current: 'pug-colourblind#dark' })
-    await choose('Pug Colourblind-safe')
+    const onSave = mount({ current: 'pug#dark' })
+    await choose('Pug')
     expect(pressed('Always dark')).toBe('true')
     save()
-    expect(onSave).toHaveBeenLastCalledWith('pug-colourblind#dark')
+    expect(onSave).toHaveBeenLastCalledWith('pug#dark')
   })
 
   it('still gives the saved theme back after another pick', async () => {

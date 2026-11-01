@@ -227,8 +227,8 @@ describe('the default theme', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('shows everyone what the default is, and only admins the controls', () => {
-    mountWith(OrgRole.VIEWER, 'pug-colourblind#dark')
-    expect(screen.getByText('Pug Colourblind-safe, always dark')).toBeTruthy()
+    mountWith(OrgRole.VIEWER, 'pug#dark')
+    expect(screen.getByText('Pug, always dark')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Add a theme' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Clear default' })).toBeNull()
   })
@@ -238,15 +238,12 @@ describe('the default theme', () => {
       project: themed(defaultTheme),
     }))
     const store = mountWith(OrgRole.ADMIN)
-    await choose('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
-    await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug-colourblind#dark'))
-    expect(updateMeta).toHaveBeenCalledWith(
-      { defaultTheme: 'pug-colourblind#dark' },
-      { headers: { 'x-project-id': 'doomed' } },
-    )
-    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug-colourblind#dark')
+    await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug#dark'))
+    expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } })
+    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug#dark')
   })
 
   // An id this build doesn't have, or a URL the URL parser refuses: never a crash, and the admin can clear it.
@@ -266,7 +263,7 @@ describe('the default theme', () => {
       new ConnectError('default_theme: the host can’t be localhost or an IP address', Code.InvalidArgument),
     )
     const store = mountWith(OrgRole.ADMIN)
-    await choose('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     await waitFor(() => expect(toastError).toHaveBeenCalled())
     expect(store.get(activeProjectAtom)?.defaultTheme).toBe('')
@@ -276,7 +273,7 @@ describe('the default theme', () => {
     updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
       project: themed(defaultTheme),
     }))
-    const store = mountWith(OrgRole.ADMIN, 'pug-colourblind')
+    const store = mountWith(OrgRole.ADMIN, 'pug')
     fireEvent.click(screen.getByRole('button', { name: 'Clear default' }))
     fireEvent.click(screen.getByRole('button', { name: 'Clear the default?' }))
     await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe(''))
