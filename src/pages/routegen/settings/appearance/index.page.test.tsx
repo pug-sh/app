@@ -397,7 +397,20 @@ describe('official themes in your own rows', () => {
   const row = (name: 'Light theme' | 'Dark theme') => screen.getByRole('group', { name })
   const urlForm = (label: string) => screen.getByLabelText(label).closest('form') as HTMLFormElement
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
+
+  it('stays quiet in an air-gapped build', async () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
+    mount()
+    await screen.findAllByRole('button', { name: 'Pug' })
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(screen.queryByText('Couldn’t load the theme list.')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Clay' })).toBeNull()
+  })
 
   it('reads an official override in words', async () => {
     serveByUrl({ 'https://themes.pug.sh/clay/theme.json': JSON.stringify(clayFile('2.0.0')) })
@@ -457,6 +470,32 @@ describe('official themes in your own rows', () => {
       scope: 'personal',
     })
     expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('follows a named repository’s theme at its own address, and changes track there', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
+    const store = mount()
+    fireEvent.click(await within(row('Light theme')).findByRole('button', { name: 'Clay' }))
+    expect(store.get(themeSelectionAtom).light).toBe('https://themes.acme.com/clay/2/theme.json')
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    expect(store.get(themeSelectionAtom).light).toBe('https://themes.acme.com/clay/theme.json')
+  })
+
+  it('reads a saved file as a plain URL once no default claims it', async () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    serveByUrl({ 'https://themes.pug.sh/clay/theme.json': JSON.stringify(clayFile('2.0.0')) })
+    const store = createStore()
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'P' }))
+    store.set(projectOverridesAtom, { p1: 'https://themes.pug.sh/clay/theme.json' })
+    render(
+      <Provider store={store}>
+        <Appearance />
+      </Provider>,
+    )
+    await act(() => store.set(refreshFetchedThemeAtom, 'https://themes.pug.sh/clay/theme.json'))
+    expect(screen.getByText(/Using Clay/).textContent).not.toContain('latest')
+    expect(screen.queryByRole('group', { name: /Updates/ })).toBeNull()
   })
 
   it('changes how the row follows Clay, saving at once', async () => {

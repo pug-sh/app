@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clayFile } from '@/test/theme-repository'
 import type { CatalogTheme } from '@/theme/catalog'
 import { parseThemeObject } from '@/theme/format'
 import { buildLibrary, type RemoteId, remoteEntries } from '@/theme/library'
+import { OFFICIAL_REPOSITORY } from '@/theme/repository'
 import { rowThemes } from './row-themes'
 
 const familyOf = (file: unknown) => {
@@ -13,15 +14,47 @@ const familyOf = (file: unknown) => {
 
 const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json' as RemoteId
 const catalog: CatalogTheme[] = [
-  { slug: 'clay', releases: ['2.0.0', '1.1.0'], family: familyOf(clayFile('2.0.0', '#d8cfc0')) },
+  {
+    slug: 'clay',
+    releases: ['2.0.0', '1.1.0'],
+    family: familyOf(clayFile('2.0.0', '#d8cfc0')),
+    repository: OFFICIAL_REPOSITORY,
+  },
   {
     slug: 'paper',
     releases: ['1.0.0'],
+    repository: OFFICIAL_REPOSITORY,
     family: familyOf({ version: 1, name: 'Paper', variants: { light: { colors: { background: '#ffffff' } } } }),
   },
 ]
 
 describe('rowThemes', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('builds a theme’s file from the repository it came from', () => {
+    const acme = catalog.map(theme => ({ ...theme, repository: 'https://themes.acme.com' as RemoteId }))
+    const row = rowThemes({ polarity: 'light', selected: 'pug', library: buildLibrary([]), catalog: acme })
+    expect(row.find(t => t.official?.slug === 'clay')?.entry.id).toBe('https://themes.acme.com/clay/theme.json')
+  })
+
+  it('doesn’t take a saved file from another repository for the catalog’s theme of that name', () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    const acme = catalog.map(theme => ({ ...theme, repository: 'https://themes.acme.com' as RemoteId }))
+    const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
+    const row = rowThemes({ polarity: 'light', selected: CLAY_1, library, catalog: acme })
+    expect(row.find(t => t.official?.slug === 'clay')?.selected).toBe(false)
+    expect(row.at(-1)).toMatchObject({ selected: true, entry: { id: CLAY_1 } })
+  })
+
+  it('keeps a saved file as a plain URL with no default repository', () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
+    const row = rowThemes({ polarity: 'light', selected: CLAY_1, library, catalog: [] })
+    const saved = row.find(t => t.selected)
+    expect(saved?.entry.id).toBe(CLAY_1)
+    expect(saved?.official).toBeUndefined()
+  })
+
   it('offers the built-ins, then the catalog, each only in a mode it has', () => {
     const light = rowThemes({ polarity: 'light', selected: 'pug', library: buildLibrary([]), catalog })
     const dark = rowThemes({ polarity: 'dark', selected: 'pug', library: buildLibrary([]), catalog })
@@ -88,7 +121,9 @@ describe('rowThemes', () => {
   it('draws a followed copy that has this mode when the catalog’s latest lost it', () => {
     const { light } = clayFile('2.0.0').variants
     const family = familyOf({ ...clayFile('2.0.0'), variants: { light } })
-    const lightOnly: CatalogTheme[] = [{ slug: 'clay', releases: ['2.0.0', '1.1.0'], family }]
+    const lightOnly: CatalogTheme[] = [
+      { slug: 'clay', releases: ['2.0.0', '1.1.0'], family, repository: OFFICIAL_REPOSITORY },
+    ]
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
     const row = rowThemes({ polarity: 'dark', selected: CLAY_1, library, catalog: lightOnly })
     const clay = row.find(t => t.official?.slug === 'clay')

@@ -11,7 +11,10 @@ const loaded = async (store: ReturnType<typeof createStore>, status: 'ok' | 'fai
 }
 
 describe('the theme catalog', () => {
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
 
   it('loads when something starts reading it', async () => {
     const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
@@ -20,6 +23,36 @@ describe('the theme catalog', () => {
     expect(fetcher).not.toHaveBeenCalled()
     await loaded(store, 'ok')
     expect(store.get(themeCatalogAtom).themes.map(theme => theme.slug)).toEqual(['clay'])
+  })
+
+  it('fetches nothing and fails nothing with no default repository', async () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
+    const store = createStore()
+    await loaded(store, 'ok')
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(store.get(themeCatalogAtom).themes).toEqual([])
+  })
+
+  it('reads a named repository instead of Pug’s, and stamps its themes', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://cdn.acme.com/pug-themes/')
+    const fetcher = serveByUrl({ 'https://cdn.acme.com/pug-themes/list.json': CLAY_LIST })
+    const store = createStore()
+    await loaded(store, 'ok')
+    expect(fetcher).toHaveBeenCalledOnce()
+    expect(store.get(themeCatalogAtom).themes[0].repository).toBe('https://cdn.acme.com/pug-themes')
+  })
+
+  it('says so when a named repository is down', async () => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch')
+      }),
+    )
+    await loaded(createStore(), 'failed')
   })
 
   it('keeps the themes it had when a later read fails, and says so', async () => {

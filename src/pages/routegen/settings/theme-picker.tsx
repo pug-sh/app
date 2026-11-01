@@ -20,8 +20,7 @@ import type { ThemeFamily } from '@/theme/format'
 import type { UsableEntry } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
 import {
-  OFFICIAL_REPOSITORY,
-  parseThemeFileUrl,
+  parseDefaultThemeFile,
   resolveTrack,
   startingTrack,
   type Track,
@@ -75,9 +74,9 @@ const ThemePicker = ({
 
   // What's selected: the pick, or the saved reference until there is one.
   const saved = current ? parseReference(current) : null
-  const savedFile = saved && parseThemeFileUrl(OFFICIAL_REPOSITORY, saved.target)
+  const savedFile = saved && parseDefaultThemeFile(saved.target)
   const selected = target?.id ?? saved?.target
-  const followed = target ? parseThemeFileUrl(OFFICIAL_REPOSITORY, target.id) : savedFile
+  const followed = target ? parseDefaultThemeFile(target.id) : savedFile
   const official = followed && catalog.themes.find(theme => theme.slug === followed.slug)
   const family = target?.family ?? files.find(entry => entry.id === selected)?.family ?? null
 
@@ -88,7 +87,7 @@ const ThemePicker = ({
   // A track that stops short of the latest names a file the catalog doesn't carry, and its modes decide what
   // can be saved, so it's read first.
   const targetFor = (theme: CatalogTheme, track: Track): Target => {
-    const id = themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, track)
+    const id = themeFileUrl(theme.repository, theme.slug, track)
     if (resolveTrack(theme.releases, track) === resolveTrack(theme.releases, { kind: 'latest' })) {
       return { id, family: theme.family }
     }
@@ -141,7 +140,7 @@ const ThemePicker = ({
             <ThemeSwatch
               key={`official:${theme.slug}`}
               entry={{
-                id: themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, { kind: 'latest' }),
+                id: themeFileUrl(theme.repository, theme.slug, { kind: 'latest' }),
                 builtin: false,
                 name: drawn.name,
                 family: drawn,
