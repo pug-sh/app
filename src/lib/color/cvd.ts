@@ -1,7 +1,7 @@
 import { clamp01, linearToOklab, type Oklch, toLinearRgb } from './oklch'
 
 // Colour-vision-deficiency simulation (Machado, Oliveira & Fernandes 2009, severity 1.0), applied in
-// linear sRGB. Used by the colourblind-safe preset's acceptance test.
+// linear sRGB. The theme engine's colourblind-safe step searches with it, and rule V14 measures with it.
 
 export type Deficiency = 'protan' | 'deutan' | 'tritan'
 

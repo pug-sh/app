@@ -203,6 +203,15 @@ const PARAMS = Object.fromEntries(
   ]),
 ) as Record<Polarity, Record<TokenName, Params>>
 
+const highTarget = (tier: Tier, p: Params) => Math.max(HIGH_TARGETS[tier], p.target * 1.15)
+
+/** The contrast a token solved against the canvas has to reach in high contrast, or null for any other token. */
+export const highInkTarget = (token: TokenName, polarity: Polarity) => {
+  const rule = ruleFor(token, polarity, 'high')
+  if ((rule.f !== 'ink' && rule.f !== 'textFrom') || rule.ground !== 'background') return null
+  return highTarget(rule.tier, PARAMS[polarity][token])
+}
+
 // Whichever of two inks reads better on a ground — the first on a tie.
 const higherContrast = (a: Oklch, b: Oklch, ground: Oklch) => (contrast(a, ground) >= contrast(b, ground) ? a : b)
 
@@ -213,7 +222,7 @@ const hueOf = (ground: Oklch, p: Params) => (ground.c < 0.002 ? p.h : ground.h)
 export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, get: Get): Oklch => {
   const rule = ruleFor(token, polarity, level)
   const p = PARAMS[polarity][token]
-  const target = (tier: Tier) => (level === 'high' ? Math.max(HIGH_TARGETS[tier], p.target * 1.15) : p.target)
+  const target = (tier: Tier) => (level === 'high' ? highTarget(tier, p) : p.target)
   switch (rule.f) {
     case 'root':
       throw new Error(`registry: ${token} is a root and has no formula`)

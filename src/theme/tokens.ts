@@ -145,3 +145,15 @@ export type GroupName = (typeof GROUPS)[number]
 export type Polarity = 'light' | 'dark'
 export type Contrast = 'standard' | 'high'
 export const POLARITIES: Polarity[] = ['light', 'dark']
+
+export type Vision = 'standard' | 'colourblind'
+/** How someone sees whichever theme is showing. Personal: no project or reference ever sets it. */
+export type AccessMode = { contrast: Contrast; vision: Vision }
+export const STANDARD_ACCESS: AccessMode = { contrast: 'standard', vision: 'standard' }
+// In this order: the stylesheet's blocks and the sweep read it, and a theme's standard issues come first.
+export const ACCESS_MODES: AccessMode[] = [
+  STANDARD_ACCESS,
+  { contrast: 'high', vision: 'standard' },
+  { contrast: 'standard', vision: 'colourblind' },
+  { contrast: 'high', vision: 'colourblind' },
+]
