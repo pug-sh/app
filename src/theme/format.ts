@@ -27,8 +27,8 @@ const CURRENT_VERSION = 1 satisfies Version
 export const MAX_THEME_BYTES = 64 * 1024
 const MAX_EVENTS = 300
 
-/** V1–V11 are validation; V12 (ignored input) and V13 (refused input) come from parsing. */
-export type RuleId = `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13}`
+/** V1–V11 and V14 are validation; V12 (ignored input) and V13 (refused input) come from parsing. */
+export type RuleId = `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14}`
 
 export type Issue = { severity: 'error' | 'warning'; rule: RuleId; path: string; message: string }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import clay from './__fixtures__/clay.json'
 import {
   buildLibrary,
   checkInstall,
@@ -216,6 +217,40 @@ describe('checkThemeText', () => {
     expect(clean).toMatchObject({ ok: true, issues: [] })
     if (clean.ok) expect(clean.hash).toMatch(/^[0-9a-f]{8}$/)
     expect(checkThemeText('{"version":1}')).toMatchObject({ ok: false })
+  })
+})
+
+describe('checking every mode', () => {
+  const file = (colors: object, modes?: object) =>
+    JSON.stringify({ version: 1, name: 'Tuned', variants: { light: { colors, modes } } })
+
+  it('says which mode a problem belongs to', () => {
+    const same = 'oklch(0.44 0.1 30)'
+    const { issues } = checkThemeText(file({}, { colourblind: { colors: { positive: same, negative: same } } }))
+    expect(issues.map(issue => issue.path)).toContain('variants.light.colourblind.positive')
+  })
+
+  it('reports a problem a mode shares with standard once', () => {
+    const { issues } = checkThemeText(file({ foreground: '#bbbbbb' }))
+    const paths = issues.map(issue => issue.path)
+    expect(paths).toContain('variants.light.foreground')
+    expect(paths.filter(path => path.includes('colourblind'))).toEqual([])
+    expect(
+      issues.filter(issue => issue.rule === 'V2' && issue.message.startsWith('foreground on background')),
+    ).toHaveLength(1)
+  })
+
+  it('refuses a mode block whose background has the wrong polarity', () => {
+    const check = checkThemeText(file({}, { 'high-contrast': { colors: { background: '#000000' } } }))
+    expect(check).toMatchObject({ ok: false })
+    expect(check.issues.map(issue => [issue.rule, issue.path])).toContainEqual([
+      'V1',
+      'variants.light.high-contrast.background',
+    ])
+  })
+
+  it('checks Clay clean in all eight', () => {
+    expect(checkThemeText(JSON.stringify(clay))).toMatchObject({ ok: true, issues: [] })
   })
 })
 
