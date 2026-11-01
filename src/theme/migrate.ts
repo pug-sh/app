@@ -25,8 +25,11 @@ const asRecord = (value: unknown) =>
 
 const isOld = (id: unknown) => id === OLD_HIGH_CONTRAST || id === OLD_COLOURBLIND
 
-export const migrateThemeStorage = (storage: Storage = localStorage) => {
+export const migrateThemeStorage = (given?: Storage) => {
   try {
+    // Reached for in here: a browser that blocks storage throws on the name alone, and this runs at import, before
+    // main.tsx can show its page for that.
+    const storage = given ?? localStorage
     // Written once the settings are safe, so its presence says the move is done and anything short of it runs again.
     if (storage.getItem(CONTRAST) !== null) return
     const selection = asRecord(read(storage, SELECTION))

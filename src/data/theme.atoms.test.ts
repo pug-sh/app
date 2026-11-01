@@ -228,6 +228,22 @@ describe('contrast and colour vision', () => {
     expect(store.get(fresh.themeContrastAtom)).toBe('standard')
   })
 
+  // The import is what matters here: it runs before main.tsx can show its page for a browser that blocks storage.
+  it('still imports when the browser blocks storage outright', async () => {
+    const real = Object.getOwnPropertyDescriptor(globalThis, 'localStorage') as PropertyDescriptor
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('denied', 'SecurityError')
+      },
+    })
+    try {
+      await expect(freshLoad()).resolves.toBeDefined()
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', real)
+    }
+  })
+
   // Review Focus 2: the page has to come up whatever the migration met.
   it('still loads when storage refuses the migration', async () => {
     localStorage.setItem('pug:theme-selection', JSON.stringify({ light: 'pug-high-contrast', dark: 'pug' }))

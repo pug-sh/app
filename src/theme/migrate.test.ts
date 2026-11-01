@@ -115,6 +115,23 @@ describe('migrateThemeStorage', () => {
     expect(page.read(CONTRAST)).toBe('system')
   })
 
+  // Safari's "Block all cookies" and Firefox's dom.storage.enabled=false make the global itself throw. main.tsx has a
+  // page for that, and this runs at import, before it can show.
+  it('doesn’t throw when the browser blocks storage outright', () => {
+    const real = Object.getOwnPropertyDescriptor(globalThis, 'localStorage') as PropertyDescriptor
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('denied', 'SecurityError')
+      },
+    })
+    try {
+      expect(() => migrateThemeStorage()).not.toThrow()
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', real)
+    }
+  })
+
   it('reads a selection that isn’t text as holding neither old id', () => {
     const { read } = migrated({ [SELECTION]: { light: 5, dark: null }, [OVERRIDES]: { p1: 7 } })
     expect(read(CONTRAST)).toBe('system')
