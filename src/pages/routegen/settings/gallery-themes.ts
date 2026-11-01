@@ -4,7 +4,7 @@ import { compileOnce } from '@/theme/compile'
 import type { ThemeFamily } from '@/theme/format'
 import { isRemoteId, type LibraryEntry, type RemoteId } from '@/theme/library'
 import { parseThemeFileUrl, repositoryLabel, startingTrack, themeFileUrl } from '@/theme/repository'
-import type { Polarity } from '@/theme/tokens'
+import type { AccessMode, Polarity } from '@/theme/tokens'
 
 export type ThemeSource = 'builtin' | 'installed' | RemoteId
 /** What a slot holds. The family is null until the file has been read. */
@@ -100,13 +100,21 @@ export const galleryThemes = ({
 
 // Under the entry's real id and `builtin`: compileOnce memoizes on the family alone and keeps the first id it's
 // given, and what paints reads that id.
-export const compiledTheme = (theme: DrawableTheme, polarity: Polarity) =>
+export const compiledTheme = (theme: DrawableTheme, polarity: Polarity, access: AccessMode) =>
   compileOnce({
     id: theme.id,
     builtin: theme.builtin,
     family: theme.family,
     polarity: shownPolarity(theme.family, polarity),
+    access,
   })
+
+/** Whether a file hand-tunes this version. Both at once is always computed. */
+export const tunedIn = (family: ThemeFamily, polarity: Polarity, { contrast, vision }: AccessMode) => {
+  const modes = family.variants[polarity]?.modes
+  if (contrast === 'high') return vision === 'standard' && Boolean(modes?.['high-contrast'])
+  return vision === 'colourblind' && Boolean(modes?.colourblind)
+}
 
 export const modeNote = (family: ThemeFamily | null) => {
   if (!family) return 'Can’t be used'
@@ -144,13 +152,13 @@ const matches = (theme: GalleryTheme, query: string) =>
   [theme.name, theme.family?.description, theme.family?.author].some(text => text?.toLowerCase().includes(query))
 
 // Hues first, then near-neutrals by lightness, then a theme with nothing to compare.
-const colourRank = (theme: GalleryTheme, polarity: Polarity) => {
+const colourRank = (theme: GalleryTheme, polarity: Polarity, access: AccessMode) => {
   if (!theme.family) return [2, 0]
-  const { h, c, l } = compiledTheme({ ...theme, family: theme.family }, polarity).tokens.primary
+  const { h, c, l } = compiledTheme({ ...theme, family: theme.family }, polarity, access).tokens.primary
   return c < NEUTRAL_CHROMA ? [1, l] : [0, h]
 }
 
-export const siftThemes = (themes: GalleryTheme[], filters: ThemeFilters, polarity: Polarity) => {
+export const siftThemes = (themes: GalleryTheme[], filters: ThemeFilters, polarity: Polarity, access: AccessMode) => {
   const query = filters.query.trim().toLowerCase()
   const kept = themes.filter(
     theme => (filters.source === 'all' || theme.source === filters.source) && matches(theme, query),
@@ -159,7 +167,7 @@ export const siftThemes = (themes: GalleryTheme[], filters: ThemeFilters, polari
   if (filters.order === 'az') return kept.toSorted(byName)
   if (filters.order !== 'colour') return kept
   return kept
-    .map(theme => ({ theme, rank: colourRank(theme, polarity) }))
+    .map(theme => ({ theme, rank: colourRank(theme, polarity, access) }))
     .toSorted((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || byName(a.theme, b.theme))
     .map(({ theme }) => theme)
 }

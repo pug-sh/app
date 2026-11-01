@@ -115,11 +115,11 @@ it('gives a partial high-contrast theme high-contrast tokens on any plausible ca
 // Acceptance: in each mode, under protan, deutan and tritan simulation, every categorical
 // pair stays ≥ 0.05 apart and every failure × success pair ≥ 0.15 — measured on the colours as drawn.
 describe.each([
-  ['light', BLIND],
-  ['dark', BLIND],
-  ['light', BOTH],
-  ['dark', BOTH],
-] as const)('Pug colourblind-safe, %s, $contrast contrast', (polarity, access) => {
+  ['light', 'alone', BLIND],
+  ['dark', 'alone', BLIND],
+  ['light', 'with high contrast', BOTH],
+  ['dark', 'with high contrast', BOTH],
+] as const)('Pug colourblind-safe, %s, %s', (polarity, _, access) => {
   const { data } = compileIn(polarity, access)
 
   it('keeps every breakdown pair apart under each deficiency', () => {

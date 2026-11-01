@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { installedThemesAtom } from '@/data/theme.atoms'
+import { installedThemesAtom, themeContrastAtom, themeVisionAtom } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { serveByUrl } from '@/test/serve'
 import { applyTheme, findTile, MOSS, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
@@ -77,6 +77,25 @@ describe('ThemeGallery toolbar', () => {
     rerender({ requires: 'dark' })
     expect(screen.queryByLabelText('Search themes')).toBeNull()
     expect(tileNames()).toEqual(['Pug'])
+  })
+})
+
+describe('ThemeGallery tiles', () => {
+  it('draws tiles in the member’s own contrast and colour vision', () => {
+    serveByUrl({})
+    const { store } = mount()
+    const paper = () => tile('Pug').querySelector('rect')?.getAttribute('fill')
+    const line = () => tile('Pug').querySelector('path[fill="none"]')?.getAttribute('stroke')
+    expect(paper()).toBe('oklch(0.943 0.005 265)')
+    expect(line()).toBe('#4164b9')
+    act(() => {
+      store.set(themeContrastAtom, 'high')
+    })
+    expect(paper()).toBe('oklch(1 0 0)')
+    act(() => {
+      store.set(themeVisionAtom, 'colourblind')
+    })
+    expect(line()).toBe('#005181')
   })
 })
 

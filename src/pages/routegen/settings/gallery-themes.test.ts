@@ -5,7 +5,7 @@ import type { CatalogTheme } from '@/theme/catalog'
 import { parseThemeObject } from '@/theme/format'
 import { buildLibrary, type InstalledTheme, type LibraryEntry, type RemoteId, remoteEntries } from '@/theme/library'
 import { OFFICIAL_REPOSITORY } from '@/theme/repository'
-import type { Polarity } from '@/theme/tokens'
+import { ACCESS_MODES, type AccessMode, type Polarity, STANDARD_ACCESS } from '@/theme/tokens'
 import {
   compiledTheme,
   type GalleryTheme,
@@ -17,6 +17,7 @@ import {
   NO_FILTERS,
   siftThemes,
   startingFile,
+  tunedIn,
 } from './gallery-themes'
 
 const familyOf = (file: unknown) => {
@@ -181,7 +182,7 @@ describe('galleryThemes', () => {
     const library = buildLibrary([{ ...grape, id: 'installed-sloe', hash: 'sloe', text }])
     const sloe = galleryThemes({ held: null, shared: false, library, catalog: [] }).find(t => t.name === 'Sloe')
     if (!sloe?.family) throw new Error('refused')
-    expect(compiledTheme({ ...sloe, family: sloe.family }, 'dark')).toMatchObject({
+    expect(compiledTheme({ ...sloe, family: sloe.family }, 'dark', STANDARD_ACCESS)).toMatchObject({
       id: 'installed-sloe',
       builtin: false,
     })
@@ -259,23 +260,40 @@ describe('siftThemes', () => {
   const four = listed(grey, blue, red, green)
 
   it('searches name, description and author, ignoring case', () => {
-    const search = (query: string) => names(siftThemes(four, { ...NO_FILTERS, query }, 'light'))
+    const search = (query: string) => names(siftThemes(four, { ...NO_FILTERS, query }, 'light', STANDARD_ACCESS))
     expect(search('ocean')).toEqual(['Blue'])
     expect(search(' ada ')).toEqual(['Red'])
     expect(search('GREEN')).toEqual(['Green'])
   })
 
   it('orders A to Z', () => {
-    expect(names(siftThemes(four, { ...NO_FILTERS, order: 'az' }, 'light'))).toEqual(['Blue', 'Green', 'Grey', 'Red'])
+    expect(names(siftThemes(four, { ...NO_FILTERS, order: 'az' }, 'light', STANDARD_ACCESS))).toEqual([
+      'Blue',
+      'Green',
+      'Grey',
+      'Red',
+    ])
   })
 
   it('orders by the primary’s hue, near-neutrals last', () => {
-    expect(names(siftThemes(four, { ...NO_FILTERS, order: 'colour' }, 'light'))).toEqual([
+    expect(names(siftThemes(four, { ...NO_FILTERS, order: 'colour' }, 'light', STANDARD_ACCESS))).toEqual([
       'Red',
       'Green',
       'Blue',
       'Grey',
     ])
+  })
+
+  // Sorted on what's on screen: a hand-tuned primary moves a theme once that mode is showing.
+  it('sorts By colour in the mode on screen', () => {
+    const colors = { background: '#ffffff', primary: '#c0392b' }
+    const modes = { 'high-contrast': { colors: { primary: '#2563eb' } } }
+    const family = familyOf({ version: 1, name: 'Tuned', variants: { light: { colors, modes } } })
+    const tuned = { ...paper('Tuned'), family }
+    const order = (access: AccessMode) =>
+      names(siftThemes(listed(tuned, green), { ...NO_FILTERS, order: 'colour' }, 'light', access))
+    expect(order(STANDARD_ACCESS)).toEqual(['Tuned', 'Green'])
+    expect(order(ACCESS_MODES[1])).toEqual(['Green', 'Tuned'])
   })
 
   it('flattens for a search, a source or an order, and not otherwise', () => {
@@ -297,5 +315,24 @@ describe('siftThemes', () => {
   it('reads a source no theme has as all', () => {
     const seven = listed(...['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(name => paper(name)))
     expect(liveFilters(seven, { ...NO_FILTERS, source: 'installed' }).source).toBe('all')
+  })
+})
+
+describe('tunedIn', () => {
+  const [standard, high, blind, both] = ACCESS_MODES
+  const family = familyOf({
+    version: 1,
+    name: 'Tuned',
+    variants: { light: { modes: { colourblind: { colors: { positive: '#123456' } } } }, dark: {} },
+  })
+
+  it.each([
+    ['light', 'standard', standard, false],
+    ['light', 'high contrast', high, false],
+    ['light', 'colourblind', blind, true],
+    ['light', 'both', both, false],
+    ['dark', 'colourblind', blind, false],
+  ] as const)('%s, %s', (polarity, _, access, tuned) => {
+    expect(tunedIn(family, polarity, access)).toBe(tuned)
   })
 })

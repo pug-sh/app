@@ -29,6 +29,7 @@ const {
   refreshFetchedThemeAtom,
   STORAGE_REFUSED,
   setProjectOverrideAtom,
+  themeContrastAtom,
   themeModeAtom,
   themeSelectionAtom,
 } = await import('@/data/theme.atoms')
@@ -309,6 +310,14 @@ describe('In use', () => {
       mode: 'both',
       scope: 'personal',
     })
+  })
+
+  it('draws the chips in the member’s mode', () => {
+    const store = mount()
+    act(() => {
+      store.set(themeContrastAtom, 'high')
+    })
+    expect(chip('Your theme').querySelector('rect')?.getAttribute('fill')).toBe('oklch(1 0 0)')
   })
 
   it('adds a chip for dark on request, starting as the light choice', () => {
