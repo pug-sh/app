@@ -239,6 +239,12 @@ const fetchedEntriesAtom = atom(get =>
 /** Everything a reference can name: built-ins, installed themes and the fetched files. */
 export const resolvableLibraryAtom = atom(get => [...get(themeLibraryAtom), ...get(fetchedEntriesAtom)])
 
+/** Reads a theme's file and gives back its family, or null with no usable copy. A failed read keeps a cached one. */
+export const readThemeFileAtom = atom(null, async (get, set, url: RemoteId) => {
+  await set(refreshFetchedThemeAtom, url)
+  return get(resolvableLibraryAtom).find(entry => entry.id === url)?.family ?? null
+})
+
 /** This browser's override for the active project. */
 export const activeOverrideAtom = atom(get => {
   const project = get(activeProjectAtom)
@@ -340,8 +346,9 @@ const analyticsTheme = (target: string, library: LibraryEntry[]): ThemeProps => 
 }
 
 /** Chooses the theme for one mode, by id or by URL, and reports which. False when storage refused. */
-export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity; id: string }) => {
-  if (!persist(get, set, [[selectionStore.stored, { ...get(themeSelectionAtom), [polarity]: id }]])) return false
+export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity | 'both'; id: string }) => {
+  const selection = polarity === 'both' ? { light: id, dark: id } : { ...get(themeSelectionAtom), [polarity]: id }
+  if (!persist(get, set, [[selectionStore.stored, selection]])) return false
   trackEvent('theme_selected', { ...analyticsTheme(id, get(themeLibraryAtom)), mode: polarity, scope: 'personal' })
   return true
 })

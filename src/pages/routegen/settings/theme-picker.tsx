@@ -9,42 +9,27 @@ import {
   themeLibraryAtom,
 } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
-import { cn } from '@/lib/utils'
 import ThemeSwatch from '@/pages/routegen/settings/appearance/theme-swatch'
 import OfficialThemeDetails from '@/pages/routegen/settings/official-theme-details'
+import ThemeModeControl from '@/pages/routegen/settings/theme-mode-control'
 import { FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
+import {
+  type ModeChoice,
+  modeFor,
+  onlyVariant,
+  pinOf,
+  shownPolarity,
+  type ThemeTarget,
+  targetFor,
+} from '@/pages/routegen/settings/theme-target'
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
 import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
 import type { CatalogTheme } from '@/theme/catalog'
 import type { ThemeFamily } from '@/theme/format'
 import type { UsableEntry } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
-import {
-  parseDefaultThemeFile,
-  resolveTrack,
-  startingTrack,
-  type Track,
-  themeFileUrl,
-  updateNotice,
-} from '@/theme/repository'
-import { POLARITIES, type Polarity } from '@/theme/tokens'
-
-// A file and its family. Null until it's been read: the catalog carries only each theme's latest file.
-type Target = { id: string; family: ThemeFamily | null }
-type ModeChoice = 'follow' | Polarity
-
-// The one variant a single-variant family has.
-const onlyVariant = (family: ThemeFamily) => {
-  const variants = POLARITIES.filter(polarity => family.variants[polarity])
-  return variants.length === 1 ? variants[0] : null
-}
-
-// The mode a file is saved with: what was chosen, as long as the file has it, else its one variant, or its
-// other mode would show Pug, else each member's own.
-const modeFor = (family: ThemeFamily, choice: ModeChoice | null) => {
-  if (choice === 'follow' || (choice && family.variants[choice])) return choice
-  return onlyVariant(family) ?? 'follow'
-}
+import { parseDefaultThemeFile, startingTrack, type Track, themeFileUrl, updateNotice } from '@/theme/repository'
+import type { Polarity } from '@/theme/tokens'
 
 // Picks a theme reference and its mode. `shared` is a project's default, which every member's browser
 // loads: no installed themes, and the URL's host is disclosed. `current` is the reference saved now.
@@ -67,7 +52,7 @@ const ThemePicker = ({
   const files = useAtomValue(resolvableLibraryAtom)
   const statuses = useAtomValue(fetchStatusAtom)
   const mode = useAtomValue(resolvedThemeAtom)
-  const [target, setTarget] = useState<Target | null>(null)
+  const [target, setTarget] = useState<ThemeTarget | null>(null)
   const [choice, setChoice] = useState<ModeChoice | null>(null)
   const catalog = useAtomValue(themeCatalogAtom)
   const refresh = useSetAtom(refreshFetchedThemeAtom)
@@ -80,37 +65,27 @@ const ThemePicker = ({
   const official = followed && catalog.themes.find(theme => theme.slug === followed.slug)
   const family = target?.family ?? files.find(entry => entry.id === selected)?.family ?? null
 
-  const pick = (next: Target, pin?: Polarity) => {
+  const pick = (next: ThemeTarget, pin?: Polarity) => {
     setTarget(next)
     setChoice(pin ?? null)
   }
-  // A track that stops short of the latest names a file the catalog doesn't carry, and its modes decide what
-  // can be saved, so it's read first.
-  const targetFor = (theme: CatalogTheme, track: Track): Target => {
-    const id = themeFileUrl(theme.repository, theme.slug, track)
-    if (resolveTrack(theme.releases, track) === resolveTrack(theme.releases, { kind: 'latest' })) {
-      return { id, family: theme.family }
-    }
-    void refresh(id)
-    return { id, family: null }
+  const readTarget = (theme: CatalogTheme, track: Track) => {
+    const next = targetFor(theme, track)
+    if (!next.family) void refresh(next.id)
+    return next
   }
   const follow = (track: Track) => {
-    if (official) setTarget(targetFor(official, track))
+    if (official) setTarget(readTarget(official, track))
   }
   // The current choice keeps its track: a theme already picked stays as it is, and the saved one comes back
   // with its track and mode. Any other starts on its newest major line.
   const choose = (theme: CatalogTheme) => {
     if (target && followed?.slug === theme.slug) return
-    if (savedFile?.slug === theme.slug) pick(targetFor(theme, savedFile.track), saved?.pin)
-    else pick(targetFor(theme, startingTrack(theme.releases)))
+    if (savedFile?.slug === theme.slug) pick(readTarget(theme, savedFile.track), saved?.pin)
+    else pick(readTarget(theme, startingTrack(theme.releases)))
   }
-  const previewMode = (preview: ThemeFamily) => (preview.variants[mode] ? mode : (onlyVariant(preview) ?? mode))
+  const previewMode = (preview: ThemeFamily) => shownPolarity(preview, mode)
   const entries = library.filter((entry): entry is UsableEntry => entry.family !== null && (entry.builtin || !shared))
-  const choices: [ModeChoice, string][] = [
-    ['follow', followLabel],
-    ['light', 'Always light'],
-    ['dark', 'Always dark'],
-  ]
   const chosen = family ? modeFor(family, choice) : (choice ?? 'follow')
   const single = family && onlyVariant(family)
   const shown = family ?? official?.family
@@ -118,7 +93,7 @@ const ThemePicker = ({
   const notice = !target && followed && official ? updateNotice(official.releases, followed.track) : null
 
   const save = () => {
-    if (target && family) onSave(formatReference({ target: target.id, pin: chosen === 'follow' ? undefined : chosen }))
+    if (target && family) onSave(formatReference({ target: target.id, pin: pinOf(chosen) }))
   }
 
   return (
@@ -164,27 +139,7 @@ const ThemePicker = ({
               {shown.name} has only a {single} variant.
             </p>
           )}
-          <div
-            role="group"
-            aria-label="Mode for this theme"
-            className="inline-flex rounded-lg border border-border p-0.5"
-          >
-            {choices.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={chosen === value}
-                disabled={value !== 'follow' && !family?.variants[value]}
-                onClick={() => setChoice(value)}
-                className={cn(
-                  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40',
-                  chosen === value ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <ThemeModeControl value={chosen} family={family} followLabel={followLabel} onChange={setChoice} />
           {official && followed && (
             <ThemeUpdates releases={official.releases} track={followed.track} onChange={follow} />
           )}
