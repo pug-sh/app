@@ -1,11 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  defaultRepository,
   isRepositoryRelease,
   isSlug,
   majorLines,
   OFFICIAL_REPOSITORY,
+  parseDefaultThemeFile,
+  parsePugThemeFile,
   parseThemeFileUrl,
   readOfficial,
+  repositoryLabel,
   resolveTrack,
   SCHEMA_URL,
   startingTrack,
@@ -14,6 +18,92 @@ import {
   unreachedRelease,
   updateNotice,
 } from './repository'
+
+describe('the default repository', () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  const build = (services: string, address = '') => {
+    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', services)
+    vi.stubEnv('VITE_THEME_REPOSITORY', address)
+  }
+  const ACME = 'https://themes.acme.com'
+
+  it.each([
+    ['', '', null],
+    ['', ACME, ACME],
+    ['true', '', OFFICIAL_REPOSITORY],
+    ['true', ACME, ACME],
+  ])('with the switch at "%s" and the address "%s" it is %s', (services, address, expected) => {
+    build(services, address)
+    expect(defaultRepository()).toBe(expected)
+  })
+
+  it.each([
+    [' true ', OFFICIAL_REPOSITORY],
+    ['TRUE', null],
+    ['1', null],
+    ['false', null],
+  ])('reads the switch "%s" as %s', (services, expected) => {
+    build(services)
+    expect(defaultRepository()).toBe(expected)
+  })
+
+  it('drops trailing slashes and keeps a path', () => {
+    build('', 'https://cdn.acme.com/pug-themes/')
+    expect(defaultRepository()).toBe('https://cdn.acme.com/pug-themes')
+  })
+
+  it('keeps an address in the form every other URL check expects', () => {
+    build('', 'HTTPS://Themes.Acme.com/')
+    expect(defaultRepository()).toBe('https://themes.acme.com')
+  })
+
+  it.each([
+    'http://themes.acme.com',
+    'themes.acme.com',
+    'https://acme.com/?x=1',
+    'https://acme.com/#top',
+    'https://me:pw@acme.com',
+  ])('ignores %s with one warning, and the switch decides', address => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    build('', address)
+    expect(defaultRepository()).toBeNull()
+    build('true', address)
+    expect(defaultRepository()).toBe(OFFICIAL_REPOSITORY)
+    expect(warn).toHaveBeenCalledOnce()
+    expect(warn.mock.calls[0][0]).toContain('VITE_THEME_REPOSITORY')
+  })
+
+  it('reads a file in the default repository, path included', () => {
+    build('', 'https://cdn.acme.com/pug-themes')
+    expect(parseDefaultThemeFile('https://cdn.acme.com/pug-themes/brand/1/theme.json')).toEqual({
+      slug: 'brand',
+      track: { kind: 'major', major: 1 },
+    })
+    expect(parseDefaultThemeFile('https://themes.pug.sh/clay/theme.json')).toBeNull()
+  })
+
+  it('reads nothing with no default, not even a same-origin path', () => {
+    build('')
+    expect(parseDefaultThemeFile('/clay/theme.json')).toBeNull()
+    expect(parseDefaultThemeFile('https://themes.pug.sh/clay/theme.json')).toBeNull()
+  })
+
+  it('calls a file Pug’s only while Pug’s repository is the default', () => {
+    const CLAY = 'https://themes.pug.sh/clay/theme.json'
+    build('true')
+    expect(parsePugThemeFile(CLAY)?.slug).toBe('clay')
+    build('true', ACME)
+    expect(parsePugThemeFile(CLAY)).toBeNull()
+    expect(parsePugThemeFile(`${ACME}/brand/theme.json`)).toBeNull()
+    build('')
+    expect(parsePugThemeFile(CLAY)).toBeNull()
+  })
+
+  it('shows an address without its scheme', () => {
+    expect(repositoryLabel('https://cdn.acme.com/pug-themes')).toBe('cdn.acme.com/pug-themes')
+  })
+})
 
 describe('the repository convention', () => {
   it('takes slugs by the built-in id rule, except reserved ones', () => {
