@@ -108,7 +108,7 @@ describe('V14', () => {
 })
 
 // Generalisation: a theme that sets only a canvas (and maybe a primary) gets a coherent result on any
-// plausible canvas — dark from 0.12 to Nord-light 0.36, light from 0.9 to white. In every mode, so no theme
+// plausible canvas: dark from 0.12 to Nord-light 0.36, light from 0.9 to white. In every mode, so no theme
 // that passes today can come out broken in one.
 describe.each(ACCESS_MODES)('partial themes across canvases, $contrast contrast, $vision vision', access => {
   const grids: Record<Polarity, number[]> = {

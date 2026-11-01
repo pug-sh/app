@@ -21,11 +21,11 @@ const frozenHighContrast = (polarity: Polarity) =>
   )
 
 describe('generated files', () => {
-  it('builtin-themes.css is up to date — run `bun run generate:themes`', () => {
+  it('builtin-themes.css is up to date: run `bun run generate:themes`', () => {
     expect(read('src/theme/generated/builtin-themes.css')).toBe(builtinThemesCss())
   })
 
-  it('schemas/theme/v1.json is up to date — run `bun run generate:themes`', () => {
+  it('schemas/theme/v1.json is up to date: run `bun run generate:themes`', () => {
     expect(read('schemas/theme/v1.json')).toBe(themeJsonSchema())
   })
 })
@@ -63,7 +63,7 @@ it.each([
   expect(Object.keys(declaredIn(builtinThemesCss(), selector))).toHaveLength(TOKENS.length)
 })
 
-// The sign-in pages reset every token to Pug whatever the root carries — light with its own re-solved
+// The sign-in pages reset every token to Pug whatever the root carries, light with its own re-solved
 // ground. Compared against the frozen fixture, not the preset, so a regenerate can't paper over a change.
 describe.each([
   ['light', '.auth-surface', { ...tokens.light, ...tokens.authSurface }],

@@ -28,7 +28,7 @@ export const RESOLUTION_ORDER = (() => {
 })()
 
 /**
- * @param roots the built-in's values for this mode and contrast level — where an unset root falls back.
+ * @param roots the built-in's values for this mode and contrast level: where an unset root falls back.
  */
 export const resolveTokens = (
   variant: Pick<Variant, 'colors'> | undefined,

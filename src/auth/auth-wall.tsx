@@ -4,7 +4,7 @@ import { accessModeAtom, resolvedThemeAtom } from '@/data/theme.atoms'
 import { indexedColorIn, pugDataPalette, seriesColorIn } from '@/lib/event-colors'
 import type { CompiledDataPalette } from '@/theme/data-palette'
 
-// Decorative stand-ins for real dashboard tiles — hand-drawn SVG, never the vendored charts:
+// Decorative stand-ins for real dashboard tiles, hand-drawn SVG, never the vendored charts:
 // this sits behind a rotation at low contrast, so it must not pull in a chart runtime or any data.
 
 // Must match the viewBox on the <svg> that renders the path.
@@ -217,11 +217,11 @@ const buildDeck = (palette: CompiledDataPalette) => [
 ]
 
 // Each column renders the deck COPIES times and the track scrolls by exactly one copy, so the
-// loop is seamless only while one copy is taller than the column. A copy is ~1325px and the
+// loop only joins up while one copy is taller than the column. A copy is ~1325px and the
 // column is 150vh, so 2 copies drained visibly above a ~883px window; 3 clears any real display.
 const COPIES = [0, 1, 2]
 
-// Slow and desynchronised — this is a background, so nothing should read as busy.
+// Slow and desynchronised: this is a background, so nothing should read as busy.
 // Five columns: at 1440x900, rotating -35° needs ~1100px of wall to cover the panel's corners,
 // which four at this width don't reach. Wider viewports need more; the edge fade covers the rest.
 const COLUMNS = [
@@ -237,7 +237,7 @@ const COLUMNS = [
 export const AuthWall = memo(() => {
   // The sign-in pages stay Pug whatever theme is active: .auth-surface resets the CSS tokens, and the
   // cards draw from Pug's own data palette for the mode and contrast, never the active theme's. So
-  // those two are all this depends on — and the glow wants more presence on dark.
+  // those two are all this depends on, and the glow wants more presence on dark.
   const resolvedTheme = useAtomValue(resolvedThemeAtom)
   const { contrast } = useAtomValue(accessModeAtom)
   const glow = resolvedTheme === 'dark' ? '22%' : '14%'

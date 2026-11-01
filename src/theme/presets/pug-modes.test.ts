@@ -76,7 +76,7 @@ describe.each(['light', 'dark'] as const)('Pug in high contrast, %s', polarity =
     }
   })
 
-  // The spec's high-contrast levels are APCA Lc 90 / 75 / 60 — about 12:1, 7:1 and 4.5:1 in WCAG
+  // The spec's high-contrast levels are APCA Lc 90 / 75 / 60, about 12:1, 7:1 and 4.5:1 in WCAG
   // terms. Clearing them on the lightest ground each ink lands on is what makes HC visibly stronger
   // than Pug, rather than Pug on a different canvas.
   it('reaches the spec’s contrast levels on every ground', () => {
@@ -113,7 +113,7 @@ it('gives a partial high-contrast theme high-contrast tokens on any plausible ca
 })
 
 // Acceptance: in each mode, under protan, deutan and tritan simulation, every categorical
-// pair stays ≥ 0.05 apart and every failure × success pair ≥ 0.15 — measured on the colours as drawn.
+// pair stays ≥ 0.05 apart and every failure × success pair ≥ 0.15, measured on the colours as drawn.
 describe.each([
   ['light', 'alone', BLIND],
   ['dark', 'alone', BLIND],

@@ -3,7 +3,7 @@ import { fitChroma, type Oklch } from '../lib/color/oklch'
 import type { Polarity } from './tokens'
 
 /**
- * The lightness, searched from `from` toward the extreme — down in light mode, up in dark — at which
+ * The lightness, searched from `from` toward the extreme (down in light mode, up in dark) at which
  * `measure` first reaches `target`. Returns the extreme (0 or 1) when the target is out of reach;
  * validation reports the shortfall.
  */
