@@ -27,8 +27,8 @@ const CURRENT_VERSION = 1 satisfies Version
 export const MAX_THEME_BYTES = 64 * 1024
 const MAX_EVENTS = 300
 
-/** V1–V11 are validation; V12 (ignored input) and V13 (refused input) come from parsing. */
-export type RuleId = `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13}`
+/** V1–V11 and V14 are validation; V12 (ignored input) and V13 (refused input) come from parsing. */
+export type RuleId = `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14}`
 
 export type Issue = { severity: 'error' | 'warning'; rule: RuleId; path: string; message: string }
 
@@ -40,7 +40,20 @@ export type DataSpec = {
   adapt: boolean
 }
 
-export type Variant = { colors: Partial<Record<TokenName, Oklch>>; data: DataSpec }
+export const MODE_NAMES = ['high-contrast', 'colourblind'] as const
+export type ModeName = (typeof MODE_NAMES)[number]
+
+/** Hand-tuning for one mode: a variant's shape, stating only what the computed version gets wrong. */
+export type ModeBlock = {
+  colors: Partial<Record<TokenName, Oklch>>
+  data: Omit<DataSpec, 'adapt'> & { adapt?: boolean }
+}
+
+export type Variant = {
+  colors: Partial<Record<TokenName, Oklch>>
+  data: DataSpec
+  modes?: Partial<Record<ModeName, ModeBlock>>
+}
 
 export type ThemeFamily = {
   name: string
@@ -65,6 +78,7 @@ type VariantFile = {
     avatars?: string[]
     adapt?: boolean
   }
+  modes?: Partial<Record<ModeName, Omit<VariantFile, 'modes'>>>
 }
 
 export type ThemeFile = {
@@ -112,9 +126,14 @@ const legacyFields = {
 
 const colorString = z.string().max(MAX_COLOR_LENGTH)
 const dataShape = z.looseObject(dataFields(colorString, z.record(z.string(), colorString)))
-const variantShape = z.looseObject({
+const blockShape = z.looseObject({
   colors: z.record(z.string(), colorString).optional(),
   data: dataShape.optional(),
+})
+// An older build warns about `modes` and shows the standard colours, which is why this is still format v1.
+const variantShape = z.looseObject({
+  ...blockShape.shape,
+  modes: z.looseObject({ 'high-contrast': blockShape.optional(), colourblind: blockShape.optional() }).optional(),
 })
 // metadata passes through unread here: readMetadata turns each problem in it into a warning, where a
 // typed field would refuse the whole theme.
@@ -136,7 +155,14 @@ export const authoringSchema = (() => {
   const colors = z.strictObject(Object.fromEntries(TOKENS.map(t => [t, color.optional()])))
   const groups = z.strictObject(Object.fromEntries(GROUPS.map(g => [g, color.optional()])))
   const data = z.strictObject(dataFields(color, groups))
-  const variant = z.strictObject({ colors: colors.optional(), data: data.optional() })
+  const block = z.strictObject({ colors: colors.optional(), data: data.optional() })
+  const variant = z.strictObject({
+    ...block.shape,
+    modes: z
+      .strictObject({ 'high-contrast': block.optional(), colourblind: block.optional() })
+      .describe('Hand-tuning for a mode: only what the computed version gets wrong')
+      .optional(),
+  })
   const metadata = z.strictObject({
     author: z.string().max(METADATA_TEXT.author).describe('Who made the theme').optional(),
     description: z.string().max(METADATA_TEXT.description).describe('One line about the theme').optional(),
@@ -173,6 +199,8 @@ const KNOWN = {
   root: Object.keys(fileShape.shape),
   variants: [...POLARITIES],
   variant: Object.keys(variantShape.shape),
+  block: Object.keys(blockShape.shape),
+  modes: [...MODE_NAMES],
   data: Object.keys(dataShape.shape),
 }
 
@@ -244,10 +272,13 @@ export const parseThemeObject = (input: unknown): ParseResult => {
   for (const polarity of POLARITIES) {
     const source = file.variants[polarity]
     if (!source) continue
-    variants[polarity] = parseVariant(source, `variants.${polarity}`, issues)
-    if (hasProtoEventKey(raw, polarity)) {
-      const at = `variants.${polarity}.data.events.__proto__`
-      issues.push(warning('V12', at, '"__proto__" can’t name an event, so it was ignored'))
+    variants[polarity] = parseVariant(source, `variants.${polarity}`, file.contrast === 'high', issues)
+    const inVariant = ['variants', polarity]
+    for (const path of [inVariant, ...MODE_NAMES.map(name => [...inVariant, 'modes', name])]) {
+      if (hasProtoEventKey(raw, path)) {
+        const at = `${path.join('.')}.data.events.__proto__`
+        issues.push(warning('V12', at, '"__proto__" can’t name an event, so it was ignored'))
+      }
     }
   }
   // Ahead of the gate, so a file whose variants and name are both broken hears about both at once.
@@ -322,17 +353,17 @@ const readMetadata = (input: unknown, issues: Issue[]) => {
 
 // zod drops a "__proto__" record key, so it never reaches the parsed file to be warned about. JSON.parse
 // made it an ordinary own key, so look for it on the raw input.
-const hasProtoEventKey = (raw: Record<string, unknown>, polarity: Polarity) => {
+const hasProtoEventKey = (raw: Record<string, unknown>, path: string[]) => {
   let at: unknown = raw
-  for (const key of ['variants', polarity, 'data', 'events']) {
+  for (const key of [...path, 'data', 'events']) {
     if (typeof at !== 'object' || at === null || !Object.hasOwn(at, key)) return false
     at = (at as Record<string, unknown>)[key]
   }
   return typeof at === 'object' && at !== null && Object.hasOwn(at, '__proto__')
 }
 
-const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues: Issue[]): Variant => {
-  unknownKeys(source, KNOWN.variant, path, issues)
+const parseColorsAndData = (source: z.infer<typeof blockShape>, known: string[], path: string, issues: Issue[]) => {
+  unknownKeys(source, known, path, issues)
   const colors = namedColors(source.colors ?? {}, TOKENS, 'token', `${path}.colors`, issues, (value, at, token) => {
     const parsed = colorAt(value, at, issues)
     if (parsed && parsed.alpha < 0.999 && SURFACES.has(token)) {
@@ -376,6 +407,41 @@ const parseVariant = (source: z.infer<typeof variantShape>, path: string, issues
     }
   }
   return { colors, data }
+}
+
+const parseBlock = (source: z.infer<typeof blockShape>, path: string, issues: Issue[]): ModeBlock => {
+  const { colors, data } = parseColorsAndData(source, KNOWN.block, path, issues)
+  const { adapt, ...rest } = data
+  return { colors, data: source.data?.adapt === undefined ? rest : { ...rest, adapt } }
+}
+
+// A file marked high contrast says its own colours already are, so a high-contrast block has nothing to tune.
+const parseModes = (source: z.infer<typeof variantShape>, path: string, markedHigh: boolean, issues: Issue[]) => {
+  const blocks = source.modes
+  if (!blocks) return undefined
+  unknownKeys(blocks, KNOWN.modes, `${path}.modes`, issues)
+  const modes: Partial<Record<ModeName, ModeBlock>> = {}
+  for (const name of MODE_NAMES) {
+    const block = blocks[name]
+    if (!block) continue
+    const at = `${path}.modes.${name}`
+    if (name === 'high-contrast' && markedHigh) {
+      issues.push(
+        warning('V12', at, 'A file marked high contrast has no separate high-contrast version, so this was ignored'),
+      )
+    } else {
+      modes[name] = parseBlock(block, at, issues)
+    }
+  }
+  return Object.keys(modes).length > 0 ? modes : undefined
+}
+
+// `modes` is set only when there's a block: a family's hash reads its keys, and an installed theme's id is that hash.
+const parseVariant = (source: z.infer<typeof variantShape>, path: string, markedHigh: boolean, issues: Issue[]) => {
+  const variant: Variant = parseColorsAndData(source, KNOWN.variant, path, issues)
+  const modes = parseModes(source, path, markedHigh, issues)
+  if (modes) variant.modes = modes
+  return variant
 }
 
 // Colours keyed by a registry name: tokens or groups. An unknown name gets a warning; known ones are

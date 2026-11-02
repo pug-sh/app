@@ -17,7 +17,7 @@ const linenText = JSON.stringify({
 })
 // Grape is dark-only and installed; Linen is light-only and fetched.
 const library = [...buildLibrary([grape]), ...remoteEntries([{ url: LINEN, text: linenText }])]
-const personal = { light: 'pug', dark: 'pug-colourblind' }
+const personal = { light: 'pug', dark: grape.id }
 
 describe('chooseTheme', () => {
   it('uses the member’s own choice with no override and no default', () => {
@@ -25,14 +25,14 @@ describe('chooseTheme', () => {
   })
 
   it('puts the project’s default over the member’s own choice', () => {
-    expect(chooseTheme({ projectDefault: 'pug-high-contrast', personal, library })).toEqual({
-      selection: { light: 'pug-high-contrast', dark: 'pug-high-contrast' },
+    expect(chooseTheme({ projectDefault: 'pug', personal, library })).toEqual({
+      selection: { light: 'pug', dark: 'pug' },
       source: 'project',
     })
   })
 
   it('puts the member’s override over the project’s default', () => {
-    expect(chooseTheme({ override: grape.id, projectDefault: 'pug-high-contrast', personal, library })).toEqual({
+    expect(chooseTheme({ override: grape.id, projectDefault: 'pug', personal, library })).toEqual({
       selection: { light: grape.id, dark: grape.id },
       source: 'override',
     })

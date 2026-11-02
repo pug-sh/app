@@ -3,13 +3,41 @@ import { fitFor } from '../fit'
 import type { ThemeFile } from '../format'
 import type { TokenName } from '../tokens'
 
-// Pug — today's look, as data. Every token is explicit in both modes, so resolving Pug changes
+// Pug: today's look, as data. Every token is explicit in both modes, so resolving Pug changes
 // nothing; the golden fixtures pin these values to what index.css held before the refactor.
 //
 // Light is the reference mode and is considered finished; dark is solved against it. Every neutral
 // sits at hue 265. Contrast between the modes was matched with APCA (offline, in design tooling):
 // WCAG is polarity-blind, and matching it across modes structurally under-delivers dark. The shipped
-// dark ladder sits two notches below APCA parity — parity read as hot.
+// dark ladder sits two notches below APCA parity, since parity read as hot.
+
+// Pug in high contrast: roots only, and every other token is solved to the high-contrast targets, headroom over
+// validation's floors. Light sits on pure white; dark on a near-black ink ground with light fills carrying dark text,
+// so a button reads as a shape against the canvas as well. The tracked builtin-themes.css turns any change into a diff.
+const HIGH_RAMPS = {
+  'heat-1': '#dcfce7',
+  'heat-2': '#86efac',
+  'heat-3': '#4ade80',
+  'heat-4': '#16a34a',
+  'heat-5': '#15803d',
+  'heat-6': '#166534',
+  'heat-7': '#14532d',
+  'heat-ink-dark': '#000000',
+  'heat-ink-light': '#ffffff',
+} as const
+
+// Mirrors the two high-contrast backgrounds below; pug-modes.test.ts pins them together.
+const HIGH_CANVAS = {
+  light: { l: 1, c: 0, h: 0, alpha: 1 },
+  dark: { l: 0.13, c: 0.01, h: 265, alpha: 1 },
+}
+
+// Pug in colourblind-safe: data colours remapped to Okabe–Ito. Failure and success move to vermillion and blue, the
+// pair that stays apart under protan, deutan and tritan vision. The breakdown palette is hand-fitted per mode, because
+// the standard light fit caps lightness at 0.52 and flattens the very channel colourblind readers lean on (orange and
+// vermillion collapse to ΔE 0.001 under deutan). Light carries six colours: yellow can't be both legible on white and
+// still yellow. Domain groups keep Pug's hues.
+const OUTCOMES = { failure: '#d55e00', success: '#0072b2' }
 
 export const pug = {
   version: 1,
@@ -18,7 +46,7 @@ export const pug = {
   variants: {
     light: {
       colors: {
-        // Shift these together — moving one alone collides with its neighbour. .auth-surface
+        // Shift these together: moving one alone collides with its neighbour. .auth-surface
         // (PUG_AUTH_SURFACE below) shadows them on the sign-in pages: re-solve it whenever they move.
         background: 'oklch(0.943 0.005 265)',
         foreground: 'oklch(0.365 0.006 265)',
@@ -34,9 +62,9 @@ export const pug = {
         secondary: 'oklch(0.911 0.008 265)',
         'secondary-foreground': 'oklch(0.402 0.008 265)',
         muted: 'oklch(0.911 0.008 265)',
-        // Coupled to the surface ramp — retune whenever it moves.
+        // Coupled to the surface ramp: retune whenever it moves.
         'muted-foreground': 'oklch(0.49 0.008 265)',
-        // Fourth ink tier (text-faint) — timestamps, counts, hints. Solid, not alpha: alpha
+        // Fourth ink tier (text-faint): timestamps, counts, hints. Solid, not alpha: alpha
         // composites to a different weight per mode.
         faint: 'oklch(0.611 0.008 265)',
         accent: 'oklch(0.911 0.008 265)',
@@ -48,7 +76,7 @@ export const pug = {
         ring: 'oklch(0.55 0.18 265)',
         success: 'oklch(0.6 0.17 145)',
         warning: 'oklch(0.7 0.15 70)',
-        // Text tier for the three semantic fills — same split as link vs primary, since a fill and
+        // Text tier for the three semantic fills: the same split as link vs primary, since a fill and
         // coloured text pull lightness in opposite directions. Chroma held at the series cap.
         positive: 'oklch(0.431 0.14 145)',
         caution: 'oklch(0.451 0.14 70)',
@@ -88,7 +116,7 @@ export const pug = {
         'chart-scale-04': 'oklch(0.68 0.02 106)',
         'chart-scale-05': 'oklch(0.55 0.025 106)',
         'chart-scale-pattern-color': 'oklch(0.96 0.005 106)',
-        // Retention heatmap — value intensity, low to high. Identical in both modes today (a known
+        // Retention heatmap: value intensity, low to high. Identical in both modes today (a known
         // issue: the pale low end glows on the dark canvas).
         'heat-1': '#dcfce7',
         'heat-2': '#86efac',
@@ -106,7 +134,7 @@ export const pug = {
         'heat-5-ink': '#f8fafc',
         'heat-6-ink': '#f8fafc',
         'heat-7-ink': '#f8fafc',
-        // Name chips: only L and C are used — the hue comes from the name.
+        // Name chips: only L and C are used, since the hue comes from the name.
         'identity-surface': 'oklch(0.93 0.035 0)',
         'identity-ink': 'oklch(0.45 0.08 0)',
         'syntax-keyword': 'oklch(0.55 0.16 18)',
@@ -114,12 +142,44 @@ export const pug = {
         'syntax-class': 'oklch(0.52 0.12 255)',
       },
       data: { categorical: FALLBACK_COLORS.map(fitFor('light', 'standard')), avatars: DEFAULT_AVATARS },
+      modes: {
+        'high-contrast': {
+          colors: {
+            background: 'oklch(1 0 0)',
+            primary: 'oklch(0.45 0.2 265)',
+            destructive: 'oklch(0.44 0.18 25)',
+            success: 'oklch(0.5 0.15 145)',
+            warning: 'oklch(0.62 0.15 70)',
+            'chart-1': 'oklch(0.45 0.2 265)',
+            'chart-2': 'oklch(0.5 0.15 145)',
+            'chart-3': 'oklch(0.58 0.14 70)',
+            'chart-4': 'oklch(0.47 0.18 330)',
+            'chart-5': 'oklch(0.5 0.19 25)',
+            'chart-crosshair': 'oklch(0.25 0.05 265)',
+            'chart-scale-01': 'oklch(0.98 0.003 106)',
+            'chart-scale-02': 'oklch(0.92 0.008 106)',
+            'chart-scale-03': 'oklch(0.82 0.015 106)',
+            'chart-scale-04': 'oklch(0.68 0.02 106)',
+            'chart-scale-05': 'oklch(0.55 0.025 106)',
+            'chart-scale-pattern-color': 'oklch(0.96 0.005 106)',
+            ...HIGH_RAMPS,
+          },
+          // Stated, or the standard list above leaks into every high-contrast chart.
+          data: { categorical: FALLBACK_COLORS.map(fitFor('light', 'high', HIGH_CANVAS.light)) },
+        },
+        colourblind: {
+          data: {
+            groups: OUTCOMES,
+            categorical: ['#005181', '#9e6c00', '#007eb1', '#007655', '#9b4200', '#8a0060'],
+          },
+        },
+      },
     },
     dark: {
       colors: {
         // Ground is an ink blue-black, not a grey: chroma rides up as lightness comes down so the deep
         // surfaces read as a material. Ink stays near-neutral so text never takes the cast.
-        // EXPERIMENT: canvas pinned to the card tone — one flat plane, regions defined by hairlines
+        // EXPERIMENT: canvas pinned to the card tone: one flat plane, regions defined by hairlines
         // rather than elevation. Revert background to 0.175 0.014 to restore the elevated look.
         background: 'oklch(0.215 0.013 265)',
         foreground: 'oklch(0.818 0.004 265)',
@@ -154,7 +214,7 @@ export const pug = {
         border: 'oklch(0.68 0.022 265 / 0.22)',
         input: 'oklch(0.252 0.014 265)',
         ring: 'oklch(0.62 0.15 265)',
-        // A rung below body ink — data reads as data, never the loudest thing on the page.
+        // A rung below body ink: data reads as data, never the loudest thing on the page.
         'chart-1': 'oklch(0.66 0.165 265)',
         'chart-2': 'oklch(0.672 0.16 145)',
         'chart-3': 'oklch(0.715 0.15 70)',
@@ -162,11 +222,11 @@ export const pug = {
         'chart-5': 'oklch(0.666 0.165 25)',
         sidebar: 'oklch(0.158 0.014 265)',
         'sidebar-foreground': 'oklch(0.8 0.005 265)',
-        // Must match primary — white text on it is sub-AA otherwise.
+        // Must match primary: white text on it is sub-AA otherwise.
         'sidebar-primary': 'oklch(0.55 0.175 265)',
         'sidebar-primary-foreground': 'oklch(0.985 0.005 265)',
         // Seated on the sidebar and held below card, so the active pill can never outshine content;
-        // the active item is marked by its ink — which sits above body ink here, deliberately.
+        // the active item is marked by its ink, which sits above body ink here, deliberately.
         'sidebar-accent': 'oklch(0.205 0.016 265)',
         'sidebar-accent-foreground': 'oklch(0.86 0.004 265)',
         'sidebar-border': 'oklch(0.68 0.022 265 / 0.14)',
@@ -186,7 +246,7 @@ export const pug = {
         'chart-marker-background': 'oklch(0.242 0.013 265)',
         'chart-marker-border': 'oklch(0.36 0.016 265)',
         'chart-marker-foreground': 'oklch(0.87 0.003 265)',
-        // Heatmap ramp — low end seated just above the canvas so near-empty cells read as surface.
+        // Heatmap ramp: low end seated just above the canvas so near-empty cells read as surface.
         'chart-scale-01': 'oklch(0.205 0.028 265)',
         'chart-scale-02': 'oklch(0.32 0.055 265)',
         'chart-scale-03': 'oklch(0.44 0.08 265)',
@@ -216,16 +276,47 @@ export const pug = {
         'syntax-class': 'oklch(0.8 0.1 255)',
       },
       data: { categorical: FALLBACK_COLORS.map(fitFor('dark', 'standard')), avatars: DEFAULT_AVATARS },
+      modes: {
+        'high-contrast': {
+          colors: {
+            background: 'oklch(0.13 0.01 265)',
+            primary: 'oklch(0.82 0.11 265)',
+            destructive: 'oklch(0.78 0.13 25)',
+            success: 'oklch(0.8 0.14 145)',
+            warning: 'oklch(0.85 0.13 80)',
+            'chart-1': 'oklch(0.8 0.12 265)',
+            'chart-2': 'oklch(0.82 0.14 145)',
+            'chart-3': 'oklch(0.86 0.13 80)',
+            'chart-4': 'oklch(0.8 0.13 330)',
+            'chart-5': 'oklch(0.78 0.14 25)',
+            'chart-crosshair': 'oklch(0.85 0.03 265)',
+            'chart-scale-01': 'oklch(0.205 0.028 265)',
+            'chart-scale-02': 'oklch(0.32 0.055 265)',
+            'chart-scale-03': 'oklch(0.44 0.08 265)',
+            'chart-scale-04': 'oklch(0.56 0.105 265)',
+            'chart-scale-05': 'oklch(0.7 0.13 265)',
+            'chart-scale-pattern-color': 'oklch(0.2 0.012 265)',
+            ...HIGH_RAMPS,
+          },
+          data: { categorical: FALLBACK_COLORS.map(fitFor('dark', 'high', HIGH_CANVAS.dark)) },
+        },
+        colourblind: {
+          data: {
+            groups: OUTCOMES,
+            categorical: ['#56b6ff', '#f9ad00', '#96d7ff', '#00ac7e', '#de6200', '#ff6ec4', '#f5e700'],
+          },
+        },
+      },
     },
   },
 } satisfies ThemeFile
 
-// The sign-in pages' light ground — a third ramp shadowing light mode. Tuned to be read in fragments
+// The sign-in pages' light ground: a third ramp shadowing light mode. Tuned to be read in fragments
 // between tiles; a full-screen field of the canvas reads as gray paper. Re-solved against the new
 // ground, holding the app's ratios to within 0.01. Pug-only: not part of the public format.
 // Only these nine are re-solved: popover, secondary, muted, accent and ring keep light mode's values,
 // and nothing on the sign-in pages uses them yet. --popover at 0.958 sits below this 0.985 ground, so
-// a popover added there would invert the elevation ramp — re-solve them at that point.
+// a popover added there would invert the elevation ramp, so re-solve them at that point.
 export const PUG_AUTH_SURFACE: Partial<Record<TokenName, string>> = {
   background: 'oklch(0.985 0.002 265)',
   card: 'oklch(0.998 0.002 265)',

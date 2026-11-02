@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeResponse } from '@/test/fake-response'
 import { CLAY_LIST, clayFile, listOf } from '@/test/theme-repository'
 import { fetchCatalog, parseList } from './catalog'
+import { checkThemeText } from './library'
 
 const slugsAndReleases = (text: string) => {
   const read = parseList(text)
@@ -12,6 +13,18 @@ describe('parseList', () => {
   it('reads each theme’s slug, its releases highest first, and its latest file', () => {
     const text = listOf({ slug: 'clay', releases: ['1.9.0', '2.0.0', '1.10.0'], latest: clayFile('2.0.0') })
     expect(slugsAndReleases(text)).toEqual([['clay', ['2.0.0', '1.10.0', '1.9.0'], '2.0.0']])
+  })
+
+  // Every mode costs a compile per file, and a list holds them all. A fetch of the file still checks each one.
+  it('reads a list on standard variants alone', () => {
+    const latest = {
+      ...clayFile('1.0.0'),
+      variants: { light: { modes: { 'high-contrast': { colors: { background: '#000000' } } } } },
+    }
+    expect(slugsAndReleases(listOf({ slug: 'clay', releases: ['1.0.0'], latest }))).toEqual([
+      ['clay', ['1.0.0'], '1.0.0'],
+    ])
+    expect(checkThemeText(JSON.stringify(latest)).ok).toBe(false)
   })
 
   it('leaves out an entry it can’t use, and keeps the rest', () => {

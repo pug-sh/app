@@ -11,7 +11,7 @@
     <title>Pug</title>
     <script>
       // Paint the stored theme before first paint. Mirrors src/theme/paint-cache.ts: keep the keys,
-      // the cache shape and the auto-contrast rule in sync with it (paint-script.test.ts runs this).
+      // the cache shape and the contrast rule in sync with it (paint-script.test.ts runs this).
       // Values are applied only in the exact oklch() form the theme compiler writes. The mode and the
       // cache are read apart, so a bad value in one can't stop the other from painting.
       try {
@@ -26,30 +26,36 @@
         try {
           cache = JSON.parse(localStorage.getItem('pug:theme-paint') || 'null')
         } catch {}
-        // v2: the path's project, or on '/' the last one, since '/' redirects there; else the member's own.
+        // v3 holds a paint per contrast level, in the member's colour vision. v2 and v1 hold one per mode, in
+        // standard colour vision, for the first load after an upgrade.
+        // v2 and v3: the path's project, or on '/' the last one, since '/' redirects there; else the member's own.
         // v1 holds only the member's own.
         let entry = null
-        let autoContrast = true
+        let contrast = 'system'
+        let levels = false
         if (cache && cache.v === 1) {
           entry = cache
-          autoContrast = cache.autoContrast
-        } else if (cache && cache.v === 2) {
+          contrast = cache.autoContrast ? 'system' : 'standard'
+        } else if (cache && (cache.v === 2 || cache.v === 3)) {
           const projects = cache.projects && typeof cache.projects === 'object' ? cache.projects : {}
           const match = location.pathname.match(/^\/p\/([^/]+)/)
           let id = match ? match[1] : null
           if (location.pathname === '/') id = cache.last
           entry = typeof id === 'string' && Object.hasOwn(projects, id) ? projects[id] : cache.personal
-          autoContrast = cache.autoContrast
+          levels = cache.v === 3
+          if (!levels) contrast = cache.autoContrast ? 'system' : 'standard'
+          else if (cache.contrast === 'standard' || cache.contrast === 'high') contrast = cache.contrast
         }
         if (!entry || typeof entry !== 'object') entry = { light: fallback, dark: fallback }
         // A project's pin beats the mode.
         let dark = mode === 'dark' || (mode !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
         if (entry.pin === 'light' || entry.pin === 'dark') dark = entry.pin === 'dark'
         if (dark) root.classList.add('dark')
+        const high = contrast === 'high' || (contrast === 'system' && matchMedia('(prefers-contrast: more)').matches)
+        if (high) root.setAttribute('data-contrast', 'high')
         let paint = entry[dark ? 'dark' : 'light'] || fallback
-        if (autoContrast && paint.standard && matchMedia('(prefers-contrast: more)').matches) {
-          paint = { builtin: 'pug-high-contrast' }
-        }
+        if (levels) paint = paint[high ? 'high' : 'standard'] || fallback
+        else if (high && paint.standard) paint = { builtin: 'pug-high-contrast' }
         if (typeof paint.builtin === 'string' && /^[a-z0-9-]+$/.test(paint.builtin)) {
           if (paint.builtin !== 'pug') root.setAttribute('data-theme', paint.builtin)
         } else if (paint.vars && typeof paint.vars === 'object') {

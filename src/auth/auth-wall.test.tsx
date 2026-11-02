@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { expect, it } from 'vitest'
-import { compiledThemeAtom, themeSelectionAtom } from '@/data/theme.atoms'
+import { compiledThemeAtom, themeContrastAtom, themeVisionAtom } from '@/data/theme.atoms'
 import { setSeriesPalette } from '@/lib/event-colors'
+import { builtinRoots } from '@/theme/builtin'
 import { compileDataPalette } from '@/theme/data-palette'
 import { PUG_CANVAS } from '@/theme/fit'
 import { AuthWall } from './auth-wall'
@@ -12,7 +13,7 @@ import { AuthWall } from './auth-wall'
 // surface, fitted to a canvas that isn't there.
 it("draws its cards in Pug's colours whatever theme is active", () => {
   const store = createStore()
-  store.set(themeSelectionAtom, { light: 'pug-colourblind', dark: 'pug' })
+  store.set(themeVisionAtom, 'colourblind')
   // What App does on every render: the active theme's palette goes into the colour module.
   setSeriesPalette(store.get(compiledThemeAtom).data)
   render(
@@ -25,4 +26,22 @@ it("draws its cards in Pug's colours whatever theme is active", () => {
   expect(store.get(compiledThemeAtom).data.events.payment_failed.line).not.toBe(pug)
   const drawn = new Set(screen.getAllByText('payment_failed').map(el => el.style.color))
   expect([...drawn]).toEqual([pug])
+})
+
+// Someone who needs high contrast meets the sign-in wall first, and every other colour on it is Pug High Contrast's.
+it('draws its cards in Pug High Contrast’s colours in high contrast', () => {
+  const store = createStore()
+  store.set(themeContrastAtom, 'high')
+  render(
+    <Provider store={store}>
+      <AuthWall />
+    </Provider>,
+  )
+
+  const canvas = builtinRoots('light', 'high').background
+  const high = compileDataPalette(undefined, 'light', 'high', canvas).events.payment_failed.line
+  const standard = compileDataPalette(undefined, 'light', 'standard', PUG_CANVAS.light).events.payment_failed.line
+  expect(high).not.toBe(standard)
+  const drawn = new Set(screen.getAllByText('payment_failed').map(el => el.style.color))
+  expect([...drawn]).toEqual([high])
 })

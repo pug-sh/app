@@ -1,7 +1,13 @@
 import { useAtomValue } from 'jotai'
 import SectionHeader from '@/components/section-header'
 import { Button } from '@/components/ui/button'
-import { compiledThemeAtom, resolvableLibraryAtom, resolvedThemeAtom, themeSelectionAtom } from '@/data/theme.atoms'
+import {
+  accessModeAtom,
+  compiledThemeAtom,
+  resolvableLibraryAtom,
+  resolvedThemeAtom,
+  themeSelectionAtom,
+} from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { cn } from '@/lib/utils'
 import { listingOf } from '@/pages/routegen/settings/gallery-themes'
@@ -66,6 +72,7 @@ const InUse = ({
   const library = useAtomValue(resolvableLibraryAtom)
   const catalog = useAtomValue(themeCatalogAtom).themes
   const mode = useAtomValue(resolvedThemeAtom)
+  const access = useAtomValue(accessModeAtom)
   const painted = useAtomValue(compiledThemeAtom)
 
   // From the copy, then the catalog: a theme the file hasn't reached yet is still drawn.
@@ -74,7 +81,7 @@ const InUse = ({
     const copy = library.find(entry => entry.id === target)
     const family = copy?.family ?? listingOf(catalog, target)?.theme.family
     if (!family) return null
-    return compileOnce({ id: target, builtin: copy?.builtin ?? false, family, polarity: polarity(family) })
+    return compileOnce({ id: target, builtin: copy?.builtin ?? false, family, polarity: polarity(family), access })
   }
   const sameInBoth = selection.light === selection.dark
 

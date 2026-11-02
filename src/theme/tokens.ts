@@ -89,7 +89,7 @@ export const TOKENS = [
 export type TokenName = (typeof TOKENS)[number]
 
 // What text and other colours are drawn on: canvas, cards, chips, filled controls, heat cells. These
-// must be opaque — validation measures ink against them as solid colours, and the registry derives one
+// must be opaque: validation measures ink against them as solid colours, and the registry derives one
 // surface from another's lightness. Lines and inks may be see-through: contrast blends an ink onto
 // its ground.
 export const SURFACES: ReadonlySet<TokenName> = new Set<TokenName>([
@@ -145,3 +145,17 @@ export type GroupName = (typeof GROUPS)[number]
 export type Polarity = 'light' | 'dark'
 export type Contrast = 'standard' | 'high'
 export const POLARITIES: Polarity[] = ['light', 'dark']
+
+/** The contrast setting: a level, or whatever the OS asks for. */
+export type ContrastSetting = Contrast | 'system'
+export type Vision = 'standard' | 'colourblind'
+/** How someone sees whichever theme is showing. Personal: no project or reference ever sets it. */
+export type AccessMode = { contrast: Contrast; vision: Vision }
+export const STANDARD_ACCESS: AccessMode = { contrast: 'standard', vision: 'standard' }
+// In this order: the stylesheet's blocks and the sweep read it, and a theme's standard issues come first.
+export const ACCESS_MODES: AccessMode[] = [
+  STANDARD_ACCESS,
+  { contrast: 'high', vision: 'standard' },
+  { contrast: 'standard', vision: 'colourblind' },
+  { contrast: 'high', vision: 'colourblind' },
+]

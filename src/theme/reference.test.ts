@@ -6,11 +6,20 @@ const LINEN = 'https://themes.pug.sh/linen/theme.json'
 describe('parseReference', () => {
   it.each([
     ['pug', { target: 'pug' }],
-    ['pug-colourblind#dark', { target: 'pug-colourblind', pin: 'dark' }],
+    ['pug#dark', { target: 'pug', pin: 'dark' }],
     ['installed-3f9a01bc', { target: 'installed-3f9a01bc' }],
     [LINEN, { target: LINEN }],
     [`${LINEN}#light`, { target: LINEN, pin: 'light' }],
   ])('reads %s', (value, expected) => {
+    expect(parseReference(value)).toEqual(expected)
+  })
+
+  // A project's stored default can still name one. Their looks are modes of Pug now, which each member chooses.
+  it.each([
+    ['pug-colourblind', { target: 'pug' }],
+    ['pug-high-contrast', { target: 'pug' }],
+    ['pug-colourblind#dark', { target: 'pug', pin: 'dark' }],
+  ])('reads a retired id as Pug: %s', (value, expected) => {
     expect(parseReference(value)).toEqual(expected)
   })
 

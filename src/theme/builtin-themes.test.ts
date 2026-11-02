@@ -2,19 +2,30 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { formatColor, parseColor } from '../lib/color/parse'
+import frozen from './__fixtures__/pug-modes.json'
 import tokens from './__fixtures__/tokens.json'
 import { builtinThemesCss } from './css'
 import { themeJsonSchema } from './schema'
-import { TOKENS } from './tokens'
+import { type Polarity, TOKENS } from './tokens'
 
 const read = (file: string) => readFileSync(join(process.cwd(), file), 'utf8')
 
+const declaredIn = (css: string, selector: string) => {
+  const body = css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? ''
+  return Object.fromEntries([...body.matchAll(/ {2}--([a-z0-9-]+): ([^;]+);/g)].map(m => [m[1], m[2]]))
+}
+
+const frozenHighContrast = (polarity: Polarity) =>
+  Object.fromEntries(
+    Object.entries(frozen['high-contrast'][polarity].vars).map(([name, value]) => [name.slice(2), value]),
+  )
+
 describe('generated files', () => {
-  it('builtin-themes.css is up to date — run `bun run generate:themes`', () => {
+  it('builtin-themes.css is up to date: run `bun run generate:themes`', () => {
     expect(read('src/theme/generated/builtin-themes.css')).toBe(builtinThemesCss())
   })
 
-  it('schemas/theme/v1.json is up to date — run `bun run generate:themes`', () => {
+  it('schemas/theme/v1.json is up to date: run `bun run generate:themes`', () => {
     expect(read('schemas/theme/v1.json')).toBe(themeJsonSchema())
   })
 })
@@ -24,9 +35,7 @@ describe.each([
   ['light', ':root'],
   ['dark', ':root.dark'],
 ] as const)('the generated Pug %s block', (polarity, selector) => {
-  const css = builtinThemesCss()
-  const body = css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? ''
-  const declared = Object.fromEntries([...body.matchAll(/ {2}--([a-z0-9-]+): ([^;]+);/g)].map(m => [m[1], m[2]]))
+  const declared = declaredIn(builtinThemesCss(), selector)
 
   it('matches index.css before the refactor', () => {
     for (const [token, value] of Object.entries(tokens[polarity])) {
@@ -36,15 +45,31 @@ describe.each([
   })
 })
 
-// The sign-in pages reset every token to Pug whatever the root carries — light with its own re-solved
+describe.each([
+  ['light', ':root[data-theme="pug-high-contrast"]'],
+  ['dark', ':root.dark[data-theme="pug-high-contrast"]'],
+] as const)('the generated high-contrast %s block', (polarity, selector) => {
+  it('is today’s Pug High Contrast', () => {
+    expect(declaredIn(builtinThemesCss(), selector)).toEqual(frozenHighContrast(polarity))
+  })
+})
+
+it.each([
+  ':root[data-theme="pug-colourblind"]',
+  ':root.dark[data-theme="pug-colourblind"]',
+  ':root[data-theme="pug-high-contrast-colourblind"]',
+  ':root.dark[data-theme="pug-high-contrast-colourblind"]',
+])('declares every token under %s', selector => {
+  expect(Object.keys(declaredIn(builtinThemesCss(), selector))).toHaveLength(TOKENS.length)
+})
+
+// The sign-in pages reset every token to Pug whatever the root carries, light with its own re-solved
 // ground. Compared against the frozen fixture, not the preset, so a regenerate can't paper over a change.
 describe.each([
   ['light', '.auth-surface', { ...tokens.light, ...tokens.authSurface }],
   ['dark', '.dark .auth-surface', tokens.dark],
 ] as const)('the generated %s sign-in block', (_, selector, expected) => {
-  const css = builtinThemesCss()
-  const body = css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? ''
-  const declared = Object.fromEntries([...body.matchAll(/ {2}--([a-z0-9-]+): ([^;]+);/g)].map(m => [m[1], m[2]]))
+  const declared = declaredIn(builtinThemesCss(), selector)
 
   it('resets every token to Pug', () => {
     expect(Object.keys(declared)).toHaveLength(TOKENS.length)
@@ -52,6 +77,15 @@ describe.each([
       const parsed = parseColor(value)
       expect(declared[token], token).toBe(parsed && formatColor(parsed))
     }
+  })
+})
+
+describe.each([
+  ['light', ':root[data-contrast="high"] .auth-surface'],
+  ['dark', ':root.dark[data-contrast="high"] .auth-surface'],
+] as const)('the generated high-contrast %s sign-in block', (polarity, selector) => {
+  it('resets every token to Pug High Contrast', () => {
+    expect(declaredIn(builtinThemesCss(), selector)).toEqual(frozenHighContrast(polarity))
   })
 })
 
