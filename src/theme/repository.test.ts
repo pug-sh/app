@@ -22,39 +22,39 @@ import {
 describe('the default repository', () => {
   afterEach(() => vi.unstubAllEnvs())
 
-  const build = (services: string, address = '') => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', services)
+  const build = (airGap: string, address = '') => {
+    vi.stubEnv('VITE_AIR_GAP', airGap)
     vi.stubEnv('VITE_THEME_REPOSITORY', address)
   }
   const ACME = 'https://themes.acme.com'
 
   it.each([
-    ['', '', null],
+    ['', '', OFFICIAL_REPOSITORY],
     ['', ACME, ACME],
-    ['true', '', OFFICIAL_REPOSITORY],
+    ['true', '', null],
     ['true', ACME, ACME],
-  ])('with the switch at "%s" and the address "%s" it is %s', (services, address, expected) => {
-    build(services, address)
+  ])('with the air gap at "%s" and the address "%s" it is %s', (airGap, address, expected) => {
+    build(airGap, address)
     expect(defaultRepository()).toBe(expected)
   })
 
   it.each([
-    [' true ', OFFICIAL_REPOSITORY],
-    ['TRUE', null],
-    ['1', null],
-    ['false', null],
-  ])('reads the switch "%s" as %s', (services, expected) => {
-    build(services)
+    [' true ', null],
+    ['TRUE', OFFICIAL_REPOSITORY],
+    ['1', OFFICIAL_REPOSITORY],
+    ['false', OFFICIAL_REPOSITORY],
+  ])('reads the air gap "%s" as %s', (airGap, expected) => {
+    build(airGap)
     expect(defaultRepository()).toBe(expected)
   })
 
   it('drops trailing slashes and keeps a path', () => {
-    build('', 'https://cdn.acme.com/pug-themes/')
+    build('true', 'https://cdn.acme.com/pug-themes/')
     expect(defaultRepository()).toBe('https://cdn.acme.com/pug-themes')
   })
 
   it('keeps an address in the form every other URL check expects', () => {
-    build('', 'HTTPS://Themes.Acme.com/')
+    build('true', 'HTTPS://Themes.Acme.com/')
     expect(defaultRepository()).toBe('https://themes.acme.com')
   })
 
@@ -64,18 +64,18 @@ describe('the default repository', () => {
     'https://acme.com/?x=1',
     'https://acme.com/#top',
     'https://me:pw@acme.com',
-  ])('ignores %s with one warning, and the switch decides', address => {
+  ])('ignores %s with one warning, and the air gap decides', address => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    build('', address)
-    expect(defaultRepository()).toBeNull()
     build('true', address)
+    expect(defaultRepository()).toBeNull()
+    build('', address)
     expect(defaultRepository()).toBe(OFFICIAL_REPOSITORY)
     expect(warn).toHaveBeenCalledOnce()
     expect(warn.mock.calls[0][0]).toContain('VITE_THEME_REPOSITORY')
   })
 
   it('reads a file in the default repository, path included', () => {
-    build('', 'https://cdn.acme.com/pug-themes')
+    build('true', 'https://cdn.acme.com/pug-themes')
     expect(parseDefaultThemeFile('https://cdn.acme.com/pug-themes/brand/1/theme.json')).toEqual({
       slug: 'brand',
       track: { kind: 'major', major: 1 },
@@ -84,19 +84,19 @@ describe('the default repository', () => {
   })
 
   it('reads nothing with no default, not even a same-origin path', () => {
-    build('')
+    build('true')
     expect(parseDefaultThemeFile('/clay/theme.json')).toBeNull()
     expect(parseDefaultThemeFile('https://themes.pug.sh/clay/theme.json')).toBeNull()
   })
 
   it('calls a file Pug’s only while Pug’s repository is the default', () => {
     const CLAY = 'https://themes.pug.sh/clay/theme.json'
-    build('true')
+    build('')
     expect(parsePugThemeFile(CLAY)?.slug).toBe('clay')
-    build('true', ACME)
+    build('', ACME)
     expect(parsePugThemeFile(CLAY)).toBeNull()
     expect(parsePugThemeFile(`${ACME}/brand/theme.json`)).toBeNull()
-    build('')
+    build('true')
     expect(parsePugThemeFile(CLAY)).toBeNull()
   })
 

@@ -1,6 +1,6 @@
 // Fails a built dashboard that isn't air-gapped: the address of something Pug hosts in any file, or a preconnect in
-// index.html. CI builds with only VITE_API_BASE_URL set, so its dist is the air-gapped build, and the hosts being gone
-// is what proves the switch is read statically: Vite inlines it and the minifier drops the branch.
+// index.html. CI builds with VITE_AIR_GAP=true, and the hosts being gone is what proves the switch is read statically:
+// Vite inlines it and the minifier drops the branch.
 //   bun run check:air-gap [dir]
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'

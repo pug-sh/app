@@ -11,7 +11,7 @@ describe('DomainFavicon', () => {
   })
 
   it('draws the globe and requests nothing in an air-gapped build', () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     const { container } = render(<DomainFavicon domain="news.example.com" />)
     expect(container.querySelector('img')).toBeNull()
     expect(container.querySelector('svg.lucide-globe')).not.toBeNull()

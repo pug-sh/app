@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest'
 // code names has to say why it's safe, and a new one fails here until someone does. Comments count, which keeps this
 // simple. The bundle can't be checked this way: dist holds dozens of dependency strings that make no request.
 const ALLOWED: Record<string, string> = {
-  'https://themes.pug.sh': 'gated by VITE_PUG_SERVICES_ENABLED',
-  'https://favicons.pug.sh': 'gated by VITE_PUG_SERVICES_ENABLED',
+  'https://themes.pug.sh': 'gated by VITE_AIR_GAP',
+  'https://favicons.pug.sh': 'gated by VITE_AIR_GAP',
   'https://challenges.cloudflare.com': 'gated by a Turnstile key',
   'https://accounts.google.com': 'label, compared with a provider’s issuer',
   'https://cdn.pugs.dev': 'label, text in an SDK snippet',

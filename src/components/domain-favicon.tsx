@@ -4,10 +4,9 @@ import { cn } from '@/lib/utils'
 
 const ICON_CLASS = 'shrink-0 rounded-[3px]'
 
-// The favicon service, when this build opted out of the air gap. The read and the address share one expression on
-// purpose: Vite inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
-const faviconService = () =>
-  (import.meta.env.VITE_PUG_SERVICES_ENABLED ?? '').trim() === 'true' ? 'https://favicons.pug.sh' : null
+// The favicon service, unless this build is air-gapped. The read and the address share one expression on purpose:
+// Vite inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
+const faviconService = () => ((import.meta.env.VITE_AIR_GAP ?? '').trim() === 'true' ? null : 'https://favicons.pug.sh')
 
 // Site favicon for a referrer domain, from favicons.pug.sh: first-party infrastructure on our own
 // domain (like maps.pug.sh for the basemap), which keeps this unbounded, runtime-discovered icon set

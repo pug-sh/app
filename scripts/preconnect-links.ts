@@ -14,7 +14,7 @@ const webOrigin = (value: string | undefined) => {
 
 export const preconnectLinks = (env: Record<string, string | undefined>) => {
   const links: string[] = []
-  if ((env.VITE_PUG_SERVICES_ENABLED ?? '').trim() === 'true') {
+  if ((env.VITE_AIR_GAP ?? '').trim() !== 'true') {
     links.push('<link rel="preconnect" href="https://pug.sh" />')
     links.push('<link rel="preconnect" href="https://docs.pug.sh" />')
   }

@@ -47,7 +47,7 @@ describe('rowThemes', () => {
   })
 
   it('keeps a saved file as a plain URL with no default repository', () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
     const row = rowThemes({ polarity: 'light', selected: CLAY_1, library, catalog: [] })
     const saved = row.find(t => t.selected)

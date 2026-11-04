@@ -403,7 +403,7 @@ describe('official themes in your own rows', () => {
   })
 
   it('stays quiet in an air-gapped build', async () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
     mount()
     await screen.findAllByRole('button', { name: 'Pug' })
@@ -483,7 +483,7 @@ describe('official themes in your own rows', () => {
   })
 
   it('reads a saved file as a plain URL once no default claims it', async () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     serveByUrl({ 'https://themes.pug.sh/clay/theme.json': JSON.stringify(clayFile('2.0.0')) })
     const store = createStore()
     store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'P' }))
@@ -499,11 +499,11 @@ describe('official themes in your own rows', () => {
   })
 
   it.each([
-    ['true', '', 'themes.pug.sh/name, or a link to a theme file'],
-    ['', 'https://themes.acme.com', 'themes.acme.com/name, or a link to a theme file'],
-    ['', '', 'A link to a theme file'],
-  ])('names the default repository in the link field: "%s", "%s"', (services, address, placeholder) => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', services)
+    ['', '', 'themes.pug.sh/name, or a link to a theme file'],
+    ['true', 'https://themes.acme.com', 'themes.acme.com/name, or a link to a theme file'],
+    ['true', '', 'A link to a theme file'],
+  ])('names the default repository in the link field: "%s", "%s"', (airGap, address, placeholder) => {
+    vi.stubEnv('VITE_AIR_GAP', airGap)
     vi.stubEnv('VITE_THEME_REPOSITORY', address)
     mount()
     expect(screen.getAllByPlaceholderText(placeholder).length).toBeGreaterThan(0)
