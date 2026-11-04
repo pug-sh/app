@@ -108,4 +108,21 @@ describe('a partial theme', () => {
     expect(provenance['chart-1']).toBe('built-in')
     expect(tokens['chart-1']).toEqual(pug.variants.light?.colors['chart-1'])
   })
+
+  it('keeps a dark shell as deep as Pug’s on a lighter page, and a step below a darker one', () => {
+    const shellOn = (l: number) => {
+      const parsed = parseThemeObject({
+        version: 1,
+        name: 'partial',
+        variants: { dark: { colors: { background: `oklch(${l} 0.02 260)` } } },
+      })
+      if (!parsed.ok) throw new Error('did not parse')
+      return resolveTokens(parsed.family.variants.dark, 'dark', 'standard', builtinRoots('dark', 'standard')).tokens
+        .sidebar
+    }
+    const pugs = pug.variants.dark?.colors.sidebar as Oklch
+    expect(shellOn(0.32).l).toBeLessThanOrEqual(pugs.l + 1e-6)
+    expect(shellOn(0.32).h).toBeCloseTo(260, 6)
+    expect(shellOn(0.12).l).toBeLessThan(0.12)
+  })
 })

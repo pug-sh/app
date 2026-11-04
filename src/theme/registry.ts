@@ -16,7 +16,7 @@ export type Tier = 'body' | 'secondary' | 'faint' | 'nonText'
 export type Rule =
   | { f: 'root' }
   | { f: 'ref'; of: TokenName }
-  | { f: 'shift'; base: TokenName; absoluteChroma?: true }
+  | { f: 'shift'; base: TokenName; absoluteChroma?: true; pugsDepth?: true }
   | { f: 'ink'; ground: TokenName; also?: TokenName[]; tier: Tier; capToBody?: true; allHues?: true }
   | { f: 'textFrom'; source: TokenName; ground: TokenName; tier: Tier }
   | { f: 'hueText'; hue: number; tier: Tier }
@@ -82,7 +82,8 @@ const RULES: Record<TokenName, Def> = {
   'chart-3': root,
   'chart-4': root,
   'chart-5': root,
-  sidebar: shift('background'),
+  // Dark's shell sits no lighter than Pug's: on a lighter page the step widens, so the panel still reads as one.
+  sidebar: { light: shift('background'), dark: { f: 'shift', base: 'background', pugsDepth: true } },
   'sidebar-foreground': ink('sidebar', 'body'),
   'sidebar-primary': ref('primary'),
   'sidebar-primary-foreground': ref('primary-foreground'),
@@ -264,7 +265,9 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
       if (p.dl === 0) return { l: base.l, c, h, alpha: 1 }
       // The step keeps Pug's contrast against its base, so a lighter dark canvas takes a smaller one.
       const step = (l: number) => contrast({ l, c, h, alpha: 1 }, base)
-      return { l: bisectLightness(base.l, p.dl > 0 ? 'dark' : 'light', p.target, step), c, h, alpha: 1 }
+      let l = bisectLightness(base.l, p.dl > 0 ? 'dark' : 'light', p.target, step)
+      if (rule.pugsDepth) l = p.dl > 0 ? Math.max(l, p.l) : Math.min(l, p.l)
+      return { l, c, h, alpha: 1 }
     }
     case 'ink': {
       const grounds = inkGrounds(rule, get)
