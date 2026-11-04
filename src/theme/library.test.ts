@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import clay from './__fixtures__/clay.json'
 import {
   buildLibrary,
   checkInstall,
@@ -8,6 +9,9 @@ import {
   MAX_INSTALLED,
   remoteEntries,
 } from './library'
+import { ACCESS_MODES, STANDARD_ACCESS } from './tokens'
+
+const [, HIGH, , BOTH] = ACCESS_MODES
 
 const grape: InstalledTheme = {
   id: 'installed-grape' as const,
@@ -21,8 +25,7 @@ const choose = (over: Partial<Parameters<typeof chooseActive>[0]> = {}) =>
   chooseActive({
     polarity: 'dark',
     selection: { light: 'pug', dark: 'pug' },
-    autoContrast: false,
-    moreContrast: false,
+    access: STANDARD_ACCESS,
     library: buildLibrary([]),
     ...over,
   })
@@ -42,51 +45,42 @@ describe('chooseActive', () => {
     expect(choose({ selection: { light: 'gone', dark: 'gone' } }).id).toBe('pug')
   })
 
-  it('swaps in High Contrast only when the OS asks and auto-contrast is on', () => {
-    expect(choose({ autoContrast: true, moreContrast: true }).id).toBe('pug-high-contrast')
-    expect(choose({ autoContrast: false, moreContrast: true }).id).toBe('pug')
-    expect(choose({ autoContrast: true, moreContrast: false }).id).toBe('pug')
+  it('compiles the chosen theme in the member’s mode', () => {
+    expect(choose({ access: HIGH })).toMatchObject({ id: 'pug', access: HIGH })
   })
 
-  // Auto contrast exists to give a standard theme more contrast. A theme that is already high contrast
-  // is what the person chose for that need, so it stays.
-  it('leaves an installed high-contrast theme in place when the OS asks for more contrast', () => {
-    const night: InstalledTheme = {
-      ...grape,
-      id: 'installed-night' as const,
-      text: JSON.stringify({
-        version: 1,
-        name: 'Night',
-        contrast: 'high',
-        variants: { dark: { colors: { background: '#000000' } } },
-      }),
-    }
+  const night: InstalledTheme = {
+    ...grape,
+    id: 'installed-night' as const,
+    text: JSON.stringify({
+      version: 1,
+      name: 'Night',
+      contrast: 'high',
+      variants: { dark: { colors: { background: '#000000' } } },
+    }),
+  }
+
+  // A theme that is already high contrast is what the person chose for that need, so it stays.
+  it('leaves a high-contrast file in place', () => {
     const library = buildLibrary([night])
-    const active = choose({
-      selection: { light: 'pug', dark: night.id },
-      autoContrast: true,
-      moreContrast: true,
-      library,
-    })
+    const active = choose({ selection: { light: 'pug', dark: night.id }, access: HIGH, library })
     expect(active.id).toBe(night.id)
   })
 
-  // A high-contrast theme with no variant for this mode falls back to the built-in at its own level.
-  it('falls back to Pug High Contrast for a high-contrast family without this mode', () => {
-    const night: InstalledTheme = {
-      ...grape,
-      id: 'installed-night' as const,
-      text: JSON.stringify({
-        version: 1,
-        name: 'Night',
-        contrast: 'high',
-        variants: { dark: { colors: { background: '#000000' } } },
-      }),
-    }
+  // Review Focus 4.
+  it('falls back to Pug in the member’s mode for a family without this mode', () => {
+    const library = buildLibrary([grape])
+    const active = choose({ polarity: 'light', selection: { light: grape.id, dark: 'pug' }, access: BOTH, library })
+    expect(active).toMatchObject({ id: 'pug', access: BOTH })
+  })
+
+  // Review Focus 4: a file marked high contrast asked for that, so the Pug standing in for it stays there.
+  it('falls back to Pug in High for a high-contrast file without this mode', () => {
     const library = buildLibrary([night])
-    expect(choose({ polarity: 'light', selection: { light: night.id, dark: 'pug' }, library }).id).toBe(
-      'pug-high-contrast',
-    )
+    expect(choose({ polarity: 'light', selection: { light: night.id, dark: 'pug' }, library })).toMatchObject({
+      id: 'pug',
+      access: { contrast: 'high', vision: 'standard' },
+    })
   })
 
   it('falls back to Pug for a family without this mode', () => {
@@ -216,6 +210,40 @@ describe('checkThemeText', () => {
     expect(clean).toMatchObject({ ok: true, issues: [] })
     if (clean.ok) expect(clean.hash).toMatch(/^[0-9a-f]{8}$/)
     expect(checkThemeText('{"version":1}')).toMatchObject({ ok: false })
+  })
+})
+
+describe('checking every mode', () => {
+  const file = (colors: object, modes?: object) =>
+    JSON.stringify({ version: 1, name: 'Tuned', variants: { light: { colors, modes } } })
+
+  it('says which mode a problem belongs to', () => {
+    const same = 'oklch(0.44 0.1 30)'
+    const { issues } = checkThemeText(file({}, { colourblind: { colors: { positive: same, negative: same } } }))
+    expect(issues.map(issue => issue.path)).toContain('variants.light.colourblind.positive')
+  })
+
+  it('reports a problem a mode shares with standard once', () => {
+    const { issues } = checkThemeText(file({ foreground: '#bbbbbb' }))
+    const paths = issues.map(issue => issue.path)
+    expect(paths).toContain('variants.light.foreground')
+    expect(paths.filter(path => path.includes('colourblind'))).toEqual([])
+    expect(
+      issues.filter(issue => issue.rule === 'V2' && issue.message.startsWith('foreground on background')),
+    ).toHaveLength(1)
+  })
+
+  it('refuses a mode block whose background has the wrong polarity', () => {
+    const check = checkThemeText(file({}, { 'high-contrast': { colors: { background: '#000000' } } }))
+    expect(check).toMatchObject({ ok: false })
+    expect(check.issues.map(issue => [issue.rule, issue.path])).toContainEqual([
+      'V1',
+      'variants.light.high-contrast.background',
+    ])
+  })
+
+  it('checks Clay clean in all eight', () => {
+    expect(checkThemeText(JSON.stringify(clay))).toMatchObject({ ok: true, issues: [] })
   })
 })
 

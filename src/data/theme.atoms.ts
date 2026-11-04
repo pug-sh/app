@@ -18,10 +18,11 @@ import {
   type RemoteId,
   remoteEntries,
 } from '@/theme/library'
+import { migrateThemeStorage } from '@/theme/migrate'
 import { parseReference } from '@/theme/reference'
 import { type FetchFailure, fetchThemeText } from '@/theme/remote'
 import { parsePugThemeFile, type Track } from '@/theme/repository'
-import type { Polarity } from '@/theme/tokens'
+import type { AccessMode, ContrastSetting, Polarity, Vision } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
@@ -66,6 +67,9 @@ const guardedStorage = <T>(key: string, initial: T, guard: (stored: unknown) => 
   return { stored, guarded }
 }
 
+// Before any store below is created: getOnInit reads storage at that moment.
+migrateThemeStorage()
+
 const modeStore = guardedStorage(
   'pug:theme',
   'system',
@@ -90,8 +94,35 @@ const selectionStore = guardedStorage('pug:theme-selection', { light: 'pug', dar
  */
 export const themeSelectionAtom = selectionStore.guarded
 
-/** Swap in Pug High Contrast when the OS asks for more contrast. Only an explicit false turns it off. */
-export const autoContrastAtom = guardedStorage('pug:theme-auto-contrast', true, stored => stored !== false).guarded
+const contrastStore = guardedStorage<ContrastSetting>('pug:theme-contrast', 'system', stored =>
+  stored === 'standard' || stored === 'high' ? stored : 'system',
+)
+const visionStore = guardedStorage<Vision>('pug:theme-vision', 'standard', stored =>
+  stored === 'colourblind' ? stored : 'standard',
+)
+
+const reportModes = (get: Getter) =>
+  trackEvent('theme_mode_set', { contrast: get(contrastStore.guarded), vision: get(visionStore.guarded) })
+
+/** Standard, High, or whatever the OS asks for. Personal: it applies to every theme this member sees. */
+export const themeContrastAtom = atom(
+  get => get(contrastStore.guarded),
+  (get, set, value: ContrastSetting) => {
+    const saved = set(contrastStore.guarded, value)
+    if (saved) reportModes(get)
+    return saved
+  },
+)
+
+/** Standard or colourblind-safe, by hand: no OS signal exists for it. Personal, like contrast. */
+export const themeVisionAtom = atom(
+  get => get(visionStore.guarded),
+  (get, set, value: Vision) => {
+    const saved = set(visionStore.guarded, value)
+    if (saved) reportModes(get)
+    return saved
+  },
+)
 
 // An installed entry needs an installed-theme id and its text; anything else about it can be defaulted.
 const asInstalledTheme = (value: unknown): InstalledTheme | null => {
@@ -230,6 +261,13 @@ const mediaAtom = (query: string) => {
 const systemDarkAtom = mediaAtom('(prefers-color-scheme: dark)')
 const systemMoreContrastAtom = mediaAtom('(prefers-contrast: more)')
 
+/** How this member sees whichever theme is showing. */
+export const accessModeAtom = atom<AccessMode>(get => {
+  const setting = get(themeContrastAtom)
+  const more = get(systemMoreContrastAtom)
+  return { contrast: setting === 'system' ? (more ? 'high' : 'standard') : setting, vision: get(themeVisionAtom) }
+})
+
 export const themeLibraryAtom = atom(get => buildLibrary(get(installedThemesAtom)))
 
 const fetchedEntriesAtom = atom(get =>
@@ -238,6 +276,12 @@ const fetchedEntriesAtom = atom(get =>
 
 /** Everything a reference can name: built-ins, installed themes and the fetched files. */
 export const resolvableLibraryAtom = atom(get => [...get(themeLibraryAtom), ...get(fetchedEntriesAtom)])
+
+/** Reads a theme's file and gives back its family, or null with no usable copy. A failed read keeps a cached one. */
+export const readThemeFileAtom = atom(null, async (get, set, url: RemoteId) => {
+  await set(refreshFetchedThemeAtom, url)
+  return get(resolvableLibraryAtom).find(entry => entry.id === url)?.family ?? null
+})
 
 /** This browser's override for the active project. */
 export const activeOverrideAtom = atom(get => {
@@ -284,8 +328,7 @@ export const compiledThemeAtom = atom(get =>
     chooseActive({
       polarity: get(resolvedThemeAtom),
       selection: get(themeChoiceAtom).selection,
-      autoContrast: get(autoContrastAtom),
-      moreContrast: get(systemMoreContrastAtom),
+      access: get(accessModeAtom),
       library: get(resolvableLibraryAtom),
     }),
   ),
@@ -340,8 +383,9 @@ const analyticsTheme = (target: string, library: LibraryEntry[]): ThemeProps => 
 }
 
 /** Chooses the theme for one mode, by id or by URL, and reports which. False when storage refused. */
-export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity; id: string }) => {
-  if (!persist(get, set, [[selectionStore.stored, { ...get(themeSelectionAtom), [polarity]: id }]])) return false
+export const selectThemeAtom = atom(null, (get, set, { polarity, id }: { polarity: Polarity | 'both'; id: string }) => {
+  const selection = polarity === 'both' ? { light: id, dark: id } : { ...get(themeSelectionAtom), [polarity]: id }
+  if (!persist(get, set, [[selectionStore.stored, selection]])) return false
   trackEvent('theme_selected', { ...analyticsTheme(id, get(themeLibraryAtom)), mode: polarity, scope: 'personal' })
   return true
 })

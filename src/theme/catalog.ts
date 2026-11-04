@@ -3,6 +3,7 @@ import { checkThemeText, type RemoteId } from './library'
 import { compareReleases, parseRelease } from './release'
 import { fetchCapped } from './remote'
 import { isRepositoryRelease, isSlug } from './repository'
+import { STANDARD_ACCESS } from './tokens'
 
 // A repository's catalog, list.json: each theme's slug, its releases and its latest file. Read as
 // untrusted input, entry by entry, so a bad entry costs only itself.
@@ -49,7 +50,8 @@ export const parseList = (text: string): ListRead => {
     const releases = releasesOf(entry.releases)
     const latest = asObject(entry.latest)
     if (releases.length === 0 || !latest) continue
-    const check = checkThemeText(JSON.stringify(latest))
+    // A list read only needs to know a file is usable, and every mode costs 1.3 ms a variant.
+    const check = checkThemeText(JSON.stringify(latest), [STANDARD_ACCESS])
     if (check.ok) themes.push({ slug, releases, family: check.family })
   }
   return { ok: true, themes }

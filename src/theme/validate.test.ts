@@ -3,13 +3,13 @@ import { formatColor } from '../lib/color/parse'
 import { BUILTINS } from './builtin'
 import { compileVariant } from './compile'
 import { parseThemeObject, type ThemeFile } from './format'
-import { type Polarity, SURFACES, type TokenName } from './tokens'
+import { ACCESS_MODES, type AccessMode, type Polarity, STANDARD_ACCESS, SURFACES, type TokenName } from './tokens'
 import { FILL_PAIRS, FLOORS, measureFloors, V2_PAIRS } from './validate'
 
-const compileFile = (file: ThemeFile, polarity: Polarity) => {
+const compileFile = (file: ThemeFile, polarity: Polarity, access = STANDARD_ACCESS) => {
   const parsed = parseThemeObject(file)
   if (!parsed.ok) throw new Error(JSON.stringify(parsed.issues))
-  return compileVariant({ id: 'test', builtin: false, family: parsed.family, polarity })
+  return compileVariant({ id: 'test', builtin: false, family: parsed.family, polarity, access })
 }
 
 const rules = (file: ThemeFile, polarity: Polarity = 'light') => compileFile(file, polarity).report.map(i => i.rule)
@@ -74,9 +74,43 @@ describe('each rule fires', () => {
   })
 })
 
+describe('V14', () => {
+  const blind = ACCESS_MODES[2]
+  const tuned = (block: object): ThemeFile => ({
+    version: 1,
+    name: 'test',
+    variants: { light: { modes: { colourblind: block } } },
+  })
+
+  it('fires on good and bad text a colour deficiency can’t tell apart, and only in colourblind-safe', () => {
+    const file = tuned({ colors: { positive: 'oklch(0.44 0.1 30)', negative: 'oklch(0.44 0.1 30)' } })
+    const v14 = (access: AccessMode) => compileFile(file, 'light', access).report.filter(i => i.rule === 'V14')
+    expect(v14(blind).map(i => i.path)).toEqual(['positive'])
+    expect(v14(STANDARD_ACCESS)).toEqual([])
+  })
+
+  it('fires on failure and success events too close together', () => {
+    const file = tuned({ data: { groups: { failure: '#0072b2', success: '#0072b2' } } })
+    const { report } = compileFile(file, 'light', blind)
+    expect(report.map(i => [i.rule, i.path])).toContainEqual(['V14', 'data'])
+  })
+
+  // A pair either side of the line, so a moved threshold shows: same hue and chroma, lightness apart by the gap.
+  it.each([
+    [0.06, false],
+    [0.04, true],
+  ])('at %s of lightness between good and bad, warns: %s', (gap, warns) => {
+    const color = (l: number) => `oklch(${l} 0 0)`
+    const file = tuned({ colors: { positive: color(0.4), negative: color(0.4 + gap) } })
+    const { report } = compileFile(file, 'light', blind)
+    expect(report.some(i => i.rule === 'V14')).toBe(warns)
+  })
+})
+
 // Generalisation: a theme that sets only a canvas (and maybe a primary) gets a coherent result on any
-// plausible canvas — dark from 0.12 to Nord-light 0.36, light from 0.9 to white.
-describe('partial themes across canvases', () => {
+// plausible canvas: dark from 0.12 to Nord-light 0.36, light from 0.9 to white. In every mode, so no theme
+// that passes today can come out broken in one.
+describe.each(ACCESS_MODES)('partial themes across canvases, $contrast contrast, $vision vision', access => {
   const grids: Record<Polarity, number[]> = {
     dark: [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36],
     light: [0.9, 0.925, 0.95, 0.975, 1],
@@ -95,7 +129,7 @@ describe('partial themes across canvases', () => {
     const failures = cases.flatMap(({ polarity, l, h, c, primary }) => {
       const colors: Record<string, string> = { background: formatColor({ l, c, h, alpha: 1 }) }
       if (primary) colors.primary = primary
-      return compileFile(theme(colors, {}, polarity), polarity).report.map(
+      return compileFile(theme(colors, {}, polarity), polarity, access).report.map(
         i => `${polarity} ${colors.background}: ${i.message}`,
       )
     })

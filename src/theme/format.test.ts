@@ -275,3 +275,85 @@ describe('metadata', () => {
     expect(messages(result)).toEqual(['V12 metadata.author: Control and direction-override characters were removed'])
   })
 })
+
+describe('mode blocks', () => {
+  const file = (modes: unknown, extra: object = {}) => ({
+    version: 1,
+    name: 'Tuned',
+    ...extra,
+    variants: { light: { colors: { background: '#f3eee4' }, modes } },
+  })
+  const parsed = (modes: unknown, extra?: object) => {
+    const result = parseThemeObject(file(modes, extra))
+    if (!result.ok) throw new Error(JSON.stringify(result.issues))
+    return result
+  }
+  const refused = (modes: unknown) => {
+    const result = parseThemeObject(file(modes))
+    if (result.ok) throw new Error('it parsed')
+    return result.issues
+  }
+
+  it('reads hand-tuning for each mode, in a variant’s shape', () => {
+    const { family, issues } = parsed({
+      'high-contrast': { colors: { primary: '#223344' } },
+      colourblind: { data: { groups: { failure: '#d55e00' } } },
+    })
+    expect(issues).toEqual([])
+    const modes = family.variants.light?.modes
+    expect(modes?.['high-contrast']?.colors.primary).toEqual(parseColor('#223344'))
+    expect(modes?.colourblind?.data.groups.failure).toEqual(parseColor('#d55e00'))
+  })
+
+  // A block's merge would otherwise turn a variant's `adapt: false` back on.
+  it('leaves a block’s adapt unset unless it says so', () => {
+    const modes = parsed({ colourblind: { data: {} }, 'high-contrast': { data: { adapt: false } } }).family.variants
+      .light?.modes
+    expect(modes?.colourblind?.data.adapt).toBeUndefined()
+    expect(modes?.['high-contrast']?.data.adapt).toBe(false)
+  })
+
+  // familyHash stringifies the family, and an installed theme's id is that hash.
+  it('adds no modes key to a variant without any', () => {
+    const { family } = parsed(undefined)
+    expect(Object.keys(family.variants.light ?? {})).toEqual(['colors', 'data'])
+  })
+
+  it('warns about an unknown mode, and a key a block can’t hold', () => {
+    const { issues } = parsed({ sepia: {}, colourblind: { modes: {} } })
+    expect(issues.map(i => [i.rule, i.path])).toEqual([
+      ['V12', 'variants.light.modes.sepia'],
+      ['V12', 'variants.light.modes.colourblind.modes'],
+    ])
+  })
+
+  it('refuses a bad colour inside a block, and says where', () => {
+    expect(refused({ 'high-contrast': { colors: { primary: 'nope' } } })).toMatchObject([
+      { rule: 'V13', path: 'variants.light.modes.high-contrast.colors.primary' },
+    ])
+  })
+
+  it('refuses a see-through surface inside a block', () => {
+    expect(refused({ colourblind: { colors: { card: 'oklch(0.9 0 0 / 0.5)' } } })).toMatchObject([{ rule: 'V5' }])
+  })
+
+  // From raw text: JSON.parse keeps this as an ordinary own key, and zod then drops it unseen.
+  it('warns about a __proto__ event inside a block', () => {
+    const result = parseThemeText(
+      '{"version":1,"name":"T","variants":{"light":{"modes":{"colourblind":{"data":{"events":{"__proto__":"#123456"}}}}}}}',
+    )
+    expect(result.issues.map(i => i.path)).toEqual(['variants.light.modes.colourblind.data.events.__proto__'])
+  })
+
+  // Its standard and high-contrast versions are the same file, so there's nothing for this to tune.
+  it('ignores a high-contrast block on a file already marked high contrast', () => {
+    const { family, issues } = parsed({ 'high-contrast': { colors: { primary: '#223344' } } }, { contrast: 'high' })
+    expect(issues).toMatchObject([{ rule: 'V12', path: 'variants.light.modes.high-contrast' }])
+    expect(family.variants.light?.modes?.['high-contrast']).toBeUndefined()
+  })
+
+  it('offers modes to editors', () => {
+    expect(authoringSchema.safeParse(file({ colourblind: { colors: { primary: '#223344' } } })).success).toBe(true)
+    expect(authoringSchema.safeParse(file({ sepia: {} })).success).toBe(false)
+  })
+})

@@ -4,11 +4,11 @@ import { builtinRoots } from './builtin'
 import { bisectLightness, solveLightness } from './solve'
 import { type Contrast, POLARITIES, type Polarity, TOKENS, type TokenName } from './tokens'
 
-// The token registry: how every token a theme leaves out is computed from the ones it set — VSCode's
+// The token registry: how every token a theme leaves out is computed from the ones it set, VSCode's
 // colour-registry model. Standard-contrast parameters are measured from Pug at load, so applying the
 // formulas to Pug's own roots reproduces Pug. High contrast never sits below standard: each target is
 // the higher of its tier's level and 115% of Pug's own ratio. The levels are the spec's APCA Lc
-// 90 / 75 / 60 in WCAG terms — 12:1 body, 7:1 secondary, 4.5:1 faint — plus headroom, because an ink
+// 90 / 75 / 60 in WCAG terms (12:1 body, 7:1 secondary, 4.5:1 faint) plus headroom, because an ink
 // solved against the canvas also lands on popovers and chips, which sit a step lighter.
 
 export type Tier = 'body' | 'secondary' | 'faint' | 'nonText'
@@ -154,14 +154,14 @@ export const isRoot = (token: TokenName) => {
 const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
 // Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black. Pug's
-// light candidate isn't pure white, so a mid-grey fill can fall just short of 4.5:1 with both — V3
+// light candidate isn't pure white, so a mid-grey fill can fall just short of 4.5:1 with both, and V3
 // reports it. High contrast's light candidate is pure white, and against white or black every fill
 // clears 4.5:1.
 const BLACK_ON_FILL = { l: 0, c: 0 }
 
 export const IDENTITY_HUES = Array.from({ length: 12 }, (_, i) => i * 30)
 
-/** Worst contrast across 12 hues, every 30° — chips swap in the name's hue at render. */
+/** Worst contrast across 12 hues, every 30°: chips swap in the name's hue at render. */
 export const identityContrast = (ink: Oklch, surface: Oklch) =>
   Math.min(...IDENTITY_HUES.map(h => contrast({ ...ink, h }, { ...surface, h })))
 
@@ -203,17 +203,26 @@ const PARAMS = Object.fromEntries(
   ]),
 ) as Record<Polarity, Record<TokenName, Params>>
 
-// Whichever of two inks reads better on a ground — the first on a tie.
+const highTarget = (tier: Tier, p: Params) => Math.max(HIGH_TARGETS[tier], p.target * 1.15)
+
+/** The contrast a token solved against the canvas has to reach in high contrast, or null for any other token. */
+export const highInkTarget = (token: TokenName, polarity: Polarity) => {
+  const rule = ruleFor(token, polarity, 'high')
+  if ((rule.f !== 'ink' && rule.f !== 'textFrom') || rule.ground !== 'background') return null
+  return highTarget(rule.tier, PARAMS[polarity][token])
+}
+
+// Whichever of two inks reads better on a ground, the first on a tie.
 const higherContrast = (a: Oklch, b: Oklch, ground: Oklch) => (contrast(a, ground) >= contrast(b, ground) ? a : b)
 
-// A grey ground has no hue to lend, so its inks keep Pug's — otherwise they'd take hue 0, a red cast.
+// A grey ground has no hue to lend, so its inks keep Pug's: otherwise they'd take hue 0, a red cast.
 const hueOf = (ground: Oklch, p: Params) => (ground.c < 0.002 ? p.h : ground.h)
 
 /** Evaluates one computed token. `get` returns tokens already resolved this pass. */
 export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, get: Get): Oklch => {
   const rule = ruleFor(token, polarity, level)
   const p = PARAMS[polarity][token]
-  const target = (tier: Tier) => (level === 'high' ? Math.max(HIGH_TARGETS[tier], p.target * 1.15) : p.target)
+  const target = (tier: Tier) => (level === 'high' ? highTarget(tier, p) : p.target)
   switch (rule.f) {
     case 'root':
       throw new Error(`registry: ${token} is a root and has no formula`)
@@ -263,7 +272,7 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
   }
 }
 
-// What one rule reads — a switch over every kind, so a new kind can't be added without saying.
+// What one rule reads: a switch over every kind, so a new kind can't be added without saying.
 const readsOf = (rule: Rule): TokenName[] => {
   switch (rule.f) {
     case 'root':
@@ -287,7 +296,7 @@ const readsOf = (rule: Rule): TokenName[] => {
   }
 }
 
-/** Every token a rule reads, across both modes and both contrast levels — for the resolution order. */
+/** Every token a rule reads, across both modes and both contrast levels, for the resolution order. */
 export const dependenciesOf = (token: TokenName) => {
   const deps = new Set<TokenName>()
   for (const polarity of POLARITIES) {
