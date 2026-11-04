@@ -20,7 +20,7 @@ import {
 } from '@/theme/library'
 import { parseReference } from '@/theme/reference'
 import { type FetchFailure, fetchThemeText } from '@/theme/remote'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl, type Track } from '@/theme/repository'
+import { parsePugThemeFile, type Track } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -334,7 +334,7 @@ export const removeThemeAtom = atom(null, (get, set, id: string) => {
 // or 'custom'. Never a URL.
 type ThemeProps = { theme: string } | { theme: string; track: Track['kind'] }
 const analyticsTheme = (target: string, library: LibraryEntry[]): ThemeProps => {
-  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, target)
+  const official = parsePugThemeFile(target)
   if (official) return { theme: official.slug, track: official.track.kind }
   return { theme: library.some(entry => entry.id === target && entry.builtin) ? target : 'custom' }
 }

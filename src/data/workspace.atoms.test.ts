@@ -1,7 +1,7 @@
 import { create, isFieldSet } from '@bufbuild/protobuf'
 import { ConnectError } from '@connectrpc/connect'
 import { createStore } from 'jotai'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { type ListResponse, ListResponseSchema, OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema, UpdateMetaRequestSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { rpcErrorMessage } from '@/lib/rpc-error'
@@ -493,6 +493,7 @@ describe('saveProjectThemeAtom', () => {
   }
 
   beforeEach(() => vi.mocked(trackEvent).mockClear())
+  afterEach(() => vi.unstubAllEnvs())
 
   // Only default_theme goes out: UpdateMeta is a partial update, and resending the name could overwrite
   // one an admin just changed elsewhere. What comes back is the stored project, renamed or not.
@@ -534,6 +535,16 @@ describe('saveProjectThemeAtom', () => {
       theme: 'clay',
       track: 'major',
     })
+  })
+
+  it('reports a default by slug only while Pug’s repository is the default', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    projectsUpdateMeta.mockResolvedValue({})
+    const store = inOne()
+    await store.set(saveProjectThemeAtom, 'https://themes.acme.com/brand/1/theme.json')
+    expect(trackEvent).toHaveBeenLastCalledWith('project_theme_set', { kind: 'url', pinned: false })
+    await store.set(saveProjectThemeAtom, 'https://themes.pug.sh/clay/1/theme.json')
+    expect(trackEvent).toHaveBeenLastCalledWith('project_theme_set', { kind: 'url', pinned: false })
   })
 
   // A server without default_theme drops it and answers with the project unchanged.

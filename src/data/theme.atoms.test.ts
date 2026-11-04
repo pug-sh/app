@@ -541,7 +541,10 @@ describe('the member’s own theme by URL', () => {
   const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
 
   beforeEach(() => vi.mocked(trackEvent).mockClear())
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
+  })
 
   it.each(['light', 'dark'] as const)(
     'keeps the %s choice’s file fresh, and paints it once fetched',
@@ -567,6 +570,15 @@ describe('the member’s own theme by URL', () => {
       scope: 'personal',
     })
     store.set(selectThemeAtom, { polarity: 'dark', id: 'https://example.com/paper.json' })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', { theme: 'custom', mode: 'dark', scope: 'personal' })
+  })
+
+  it('reports a theme by slug only while Pug’s repository is the default', () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    const store = createStore()
+    store.set(selectThemeAtom, { polarity: 'light', id: 'https://themes.acme.com/brand/1/theme.json' })
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', { theme: 'custom', mode: 'light', scope: 'personal' })
+    store.set(selectThemeAtom, { polarity: 'dark', id: CLAY_1 })
     expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', { theme: 'custom', mode: 'dark', scope: 'personal' })
   })
 

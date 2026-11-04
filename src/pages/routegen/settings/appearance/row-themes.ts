@@ -1,9 +1,13 @@
 import type { CatalogTheme } from '@/theme/catalog'
 import { isRemoteId, type LibraryEntry, type RemoteId, type UsableEntry } from '@/theme/library'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl, themeFileUrl } from '@/theme/repository'
+import { parseDefaultThemeFile, themeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 
-type RowTheme = { entry: UsableEntry; selected: boolean; official?: { slug: string; releases: string[] } }
+type RowTheme = {
+  entry: UsableEntry
+  selected: boolean
+  official?: { slug: string; releases: string[]; repository: RemoteId }
+}
 
 // The swatches one of a member's own rows offers: built-ins and installed themes, then the catalog's
 // official themes, each only in a mode it has. The official theme the row follows draws its fetched copy,
@@ -24,7 +28,7 @@ export const rowThemes = ({
     .filter(entry => !isRemoteId(entry.id))
     .filter(hasMode)
     .map(entry => ({ entry, selected: entry.id === selected }))
-  const followed = parseThemeFileUrl(OFFICIAL_REPOSITORY, selected)
+  const followed = parseDefaultThemeFile(selected)
   const fetched = library.find((entry): entry is UsableEntry => entry.id === selected && entry.family !== null)
   const official = catalog.flatMap(theme => {
     const following = followed?.slug === theme.slug
@@ -32,9 +36,10 @@ export const rowThemes = ({
     const family = following && fetched?.family.variants[polarity] ? fetched.family : theme.family
     if (!family.variants[polarity]) return []
     // Following means the row's selection parsed as this theme's file URL.
-    const id = following ? (selected as RemoteId) : themeFileUrl(OFFICIAL_REPOSITORY, theme.slug, { kind: 'latest' })
+    const id = following ? (selected as RemoteId) : themeFileUrl(theme.repository, theme.slug, { kind: 'latest' })
     const entry: UsableEntry = { id, builtin: false, name: family.name, family, issues: [] }
-    return [{ entry, selected: following, official: { slug: theme.slug, releases: theme.releases } }]
+    const { slug, releases, repository } = theme
+    return [{ entry, selected: following, official: { slug, releases, repository } }]
   })
   // A file the catalog doesn't claim still paints: from any other URL, or a followed theme while list.json
   // hasn't answered, can't be reached, or no longer lists it.

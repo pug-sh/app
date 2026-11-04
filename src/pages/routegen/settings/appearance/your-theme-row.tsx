@@ -14,7 +14,7 @@ import { describeReference, FetchStatusLine, fileName, statusOf } from '@/pages/
 import ThemeUpdates from '@/pages/routegen/settings/theme-updates'
 import ThemeUrlField from '@/pages/routegen/settings/theme-url-field'
 import { isRemoteId } from '@/theme/library'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl, startingTrack, themeFileUrl } from '@/theme/repository'
+import { parseDefaultThemeFile, startingTrack, themeFileUrl } from '@/theme/repository'
 import type { Polarity } from '@/theme/tokens'
 import { rowThemes } from './row-themes'
 import ThemeSwatch from './theme-swatch'
@@ -46,7 +46,7 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
   // A file with no variant for this mode, a followed release or a version that dropped it. Pug shows here too.
   const lacking = copy?.family && !copy.family.variants[polarity] ? copy : undefined
   const status = statusOf(selected, statuses)
-  const followed = parseThemeFileUrl(OFFICIAL_REPOSITORY, selected)
+  const followed = parseDefaultThemeFile(selected)
   // From the catalog, not the swatches: a theme with no swatch in this mode still needs its Updates buttons.
   const listed = followed && catalog.themes.find(theme => theme.slug === followed.slug)
   // A file that never arrived, so no copy stands in. The pick already replaced the old choice: Pug shows.
@@ -67,7 +67,7 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
             onSelect={() => {
               if (!official) select(entry.id)
               else if (!isSelected) {
-                select(themeFileUrl(OFFICIAL_REPOSITORY, official.slug, startingTrack(official.releases)))
+                select(themeFileUrl(official.repository, official.slug, startingTrack(official.releases)))
               }
             }}
           />
@@ -96,7 +96,7 @@ const YourThemeRow = ({ polarity }: { polarity: Polarity }) => {
             label={`${ROW_TITLE[polarity]} updates`}
             releases={listed.releases}
             track={followed.track}
-            onChange={track => select(themeFileUrl(OFFICIAL_REPOSITORY, followed.slug, track))}
+            onChange={track => select(themeFileUrl(listed.repository, followed.slug, track))}
           />
         </div>
       )}

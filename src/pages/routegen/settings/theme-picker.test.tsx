@@ -52,7 +52,10 @@ const check = (value: string) => {
   fireEvent.click(screen.getByRole('button', { name: 'Check' }))
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('ThemePicker', () => {
   it('saves a built-in that follows the mode', () => {
@@ -191,6 +194,26 @@ describe('official themes', () => {
     expect(screen.getByRole('button', { name: 'Follow 2.x' }).getAttribute('aria-pressed')).toBe('true')
     save()
     expect(onSave).toHaveBeenLastCalledWith('https://themes.pug.sh/clay/2/theme.json')
+  })
+
+  it('saves a named repository’s own address, on any track', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
+    const onSave = mount()
+    fireEvent.click(await within(themes()).findByRole('button', { name: 'Clay' }))
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.acme.com/clay/2/theme.json')
+    fireEvent.click(screen.getByRole('button', { name: 'Latest' }))
+    save()
+    expect(onSave).toHaveBeenLastCalledWith('https://themes.acme.com/clay/theme.json')
+  })
+
+  it('doesn’t take a saved file from another repository for the catalog’s theme of that name', async () => {
+    vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
+    serveByUrl({ 'https://themes.acme.com/list.json': CLAY_LIST })
+    mount({ current: CLAY_1 })
+    const swatch = await within(themes()).findByRole('button', { name: 'Clay' })
+    expect(swatch.getAttribute('aria-pressed')).toBe('false')
   })
 
   it('follows the latest, or pins one release, and keeps a mode pin', async () => {
