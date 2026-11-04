@@ -28,6 +28,29 @@ if (typeof Animation !== 'undefined') {
     this.finished.catch(() => {})
     cancelAnimation.call(this)
   }
+
+  // Setting startTime on an idle animation plays it, per spec; happy-dom only stores it. Motion starts its WAAPI
+  // animations that way since 14.7, so an exiting label's animation would never finish and never unmount.
+  class StartableAnimation extends Animation {
+    constructor(...args: ConstructorParameters<typeof Animation>) {
+      super(...args)
+      let start = this.startTime
+      let starting = false
+      Object.defineProperty(this, 'startTime', {
+        get: () => start,
+        set: (value: CSSNumberish | null) => {
+          start = value
+          const now = this.timeline?.currentTime
+          if (starting || value === null || now == null || this.playState === 'running') return
+          starting = true
+          this.currentTime = (Number(now) - Number(value)) * this.playbackRate
+          this.play()
+          starting = false
+        },
+      })
+    }
+  }
+  globalThis.Animation = StartableAnimation
 }
 
 // Tests import their globals from 'vitest' explicitly (no `globals: true`), which also means RTL's
