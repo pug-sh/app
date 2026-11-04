@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import ChartStableContext, { useChartStable } from '@/components/charts/chart-context'
 import { YAxis as VendoredYAxis, type YAxisProps } from '@/components/charts/y-axis'
-import { Y_AXIS_GAP } from './common'
+import { Y_AXIS_GAP, Y_TICK_COUNT } from './common'
 
 // The vendored axis right-aligns its labels in a column as wide as margin.left. Handing it a narrower one
 // leaves the labels where they were and opens the gap between them and the plot.
@@ -14,7 +14,7 @@ export function YAxis(props: YAxisProps) {
 
   return (
     <ChartStableContext.Provider value={value}>
-      <VendoredYAxis {...props} />
+      <VendoredYAxis numTicks={Y_TICK_COUNT} {...props} />
     </ChartStableContext.Provider>
   )
 }

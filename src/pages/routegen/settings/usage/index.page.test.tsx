@@ -639,8 +639,10 @@ describe('Usage page: theme', () => {
     const light = dot()
     expect(light).not.toBe('')
 
+    // Pug's first breakdown colour is the same in both modes, so the flip brings a palette that differs there.
+    const dark = pugPalette('dark')
     act(() => {
-      setSeriesPalette(pugPalette('dark'))
+      setSeriesPalette({ ...dark, categorical: [...dark.categorical].reverse() })
       store.set(themeModeAtom, 'dark')
     })
 

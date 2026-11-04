@@ -22,7 +22,7 @@ describe('resolution order', () => {
 })
 
 // The order above is only as good as dependenciesOf, which states the reads by hand. Evaluating every
-// formula with a get that records what it actually reads catches a read the list forgot — the one
+// formula with a get that records what it actually reads catches a read the list forgot, the one
 // thing checking the order against that same list never could.
 it('declares every token a formula reads', () => {
   for (const polarity of ['light', 'dark'] as const) {
@@ -98,11 +98,30 @@ describe('a partial theme', () => {
     expect(tokens.card.l).toBeGreaterThan(tokens.background.l)
     expect(tokens.sidebar.l).toBeLessThan(tokens.background.l)
     expect(tokens.card.h).toBeCloseTo(90, 6)
+    expect(tokens.card.c).toBeCloseTo(0.02, 6)
+    expect(tokens.sidebar.c).toBeCloseTo(0.02, 6)
   })
 
   it('falls back to Pug for roots it leaves out', () => {
     const { tokens, provenance } = resolve({ background: 'oklch(0.97 0.02 90)' })
     expect(provenance['chart-1']).toBe('built-in')
     expect(tokens['chart-1']).toEqual(pug.variants.light?.colors['chart-1'])
+  })
+
+  it('keeps a dark shell as deep as Pug’s on a lighter page, and a step below a darker one', () => {
+    const shellOn = (l: number) => {
+      const parsed = parseThemeObject({
+        version: 1,
+        name: 'partial',
+        variants: { dark: { colors: { background: `oklch(${l} 0.02 260)` } } },
+      })
+      if (!parsed.ok) throw new Error('did not parse')
+      return resolveTokens(parsed.family.variants.dark, 'dark', 'standard', builtinRoots('dark', 'standard')).tokens
+        .sidebar
+    }
+    const pugs = pug.variants.dark?.colors.sidebar as Oklch
+    expect(shellOn(0.32).l).toBeLessThanOrEqual(pugs.l + 1e-6)
+    expect(shellOn(0.32).h).toBeCloseTo(260, 0)
+    expect(shellOn(0.12).l).toBeLessThan(0.12)
   })
 })

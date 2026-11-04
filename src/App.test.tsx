@@ -33,6 +33,8 @@ vi.mock('@/api/rpc', async () => {
     // The over-quota banner reads both; unresolved, it stays unrendered.
     billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
     usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
+    // The account menu's GetMe; unresolved, its trigger reads 'Account'.
+    customersRPCAtom: atom({ getMe: vi.fn(() => new Promise(() => {})) }),
     // A signed-in App prefetches the overview schema at boot.
     insightsRPCAtom: atom({ getFilterSchema: vi.fn(() => new Promise(() => {})) }),
   }
@@ -1072,15 +1074,17 @@ describe('the demo', () => {
     onDemoHost()
     mountApp('/', { signedIn: false })
 
-    await screen.findByRole('button', { name: /^(light|dark|system)$/i }, { timeout: 5000 })
-    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull()
+    fireEvent.click(await screen.findByRole('button', { name: 'Account' }, { timeout: 5000 }))
+    await screen.findByRole('menuitem', { name: 'Discord' })
+    expect(screen.queryByRole('menuitem', { name: 'Sign out' })).toBeNull()
   })
 
   it('still offers Sign out to a real account on that origin', async () => {
     onDemoHost()
     mountApp('/')
 
-    expect(await screen.findByRole('button', { name: 'Sign out' })).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Account' }))
+    expect(await screen.findByRole('menuitem', { name: 'Sign out' })).toBeTruthy()
   })
 
   it('offers a retry, not a sign-in, when the demo is down on its own origin, and logs why', async () => {

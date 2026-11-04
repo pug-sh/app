@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,7 +11,7 @@ import { type Project, ProjectSchema } from '@/api/genproto/dashboard/projects/v
 import { fakeResponse } from '@/test/fake-response'
 import { jwtFor } from '@/test/jwt'
 import { serveByUrl } from '@/test/serve'
-import { applyTheme, tile } from '@/test/theme-gallery'
+import { applyTheme, openTheme, panel, tile } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
 
 const { batchGet, deleteProject, updateMeta } = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ const { WorkspaceBootstrap } = await import('@/App')
 const { ProjectRedirect, ProjectSync } = await import('@/pages/router')
 const { jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 const { activeOrgAtom, activeProjectAtom, bootstrapStatusAtom, projectsAtom } = await import('@/data/workspace.atoms')
-const { refreshFetchedThemeAtom } = await import('@/data/theme.atoms')
+const { projectOverridesAtom, refreshFetchedThemeAtom } = await import('@/data/theme.atoms')
 const General = (await import('./index.page')).default
 
 const orgAs = (role: OrgRole) => create(OrgSchema, { id: 'org-a', displayName: 'Org A', role })
@@ -210,11 +210,12 @@ describe('deleting a project', () => {
 describe('the default theme', () => {
   const themed = (defaultTheme: string) =>
     create(ProjectSchema, { id: 'doomed', displayName: 'Doomed', orgId: 'org-a', defaultTheme })
-  const mountWith = (role: OrgRole, defaultTheme = '') => {
+  const mountWith = (role: OrgRole, defaultTheme = '', override?: string) => {
     const store = createStore()
     store.set(activeOrgAtom, orgAs(role))
     store.set(projectsAtom, [themed(defaultTheme)])
     store.set(activeProjectAtom, themed(defaultTheme))
+    if (override) store.set(projectOverridesAtom, { doomed: override })
     render(
       <Provider store={store}>
         <General />
@@ -222,7 +223,11 @@ describe('the default theme', () => {
     )
     return store
   }
-  const choose = (name: string) => applyTheme(name, 'Choose this theme')
+  const choose = (name: string) => applyTheme(name, 'Set as project default')
+  const saves = () =>
+    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
+      project: themed(defaultTheme),
+    }))
 
   afterEach(() => vi.unstubAllGlobals())
 
@@ -235,31 +240,52 @@ describe('the default theme', () => {
 
   // Review Focus 1: project defaults are live, so one can name a theme that's now a mode of Pug.
   it('reads a default saved before the modes as Pug, and saves it as Pug', async () => {
-    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
-      project: themed(defaultTheme),
-    }))
+    saves()
     mountWith(OrgRole.ADMIN, 'pug-colourblind#dark')
     expect(screen.getByText('Pug, always dark')).toBeTruthy()
     expect(screen.queryByText(/can’t be used/)).toBeNull()
     expect(tile('Pug').getAttribute('aria-pressed')).toBe('true')
-    await choose('Pug')
-    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Follow each member’s mode' }))
     await waitFor(() =>
-      expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } }),
+      expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug' }, { headers: { 'x-project-id': 'doomed' } }),
     )
   })
 
-  it('saves a pinned built-in and puts the stored project back into the workspace', async () => {
-    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
-      project: themed(defaultTheme),
-    }))
+  it('saves a theme from its own button, and puts the stored project back into the workspace', async () => {
+    saves()
     const store = mountWith(OrgRole.ADMIN)
     await choose('Pug')
+    await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug'))
+    expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug' }, { headers: { 'x-project-id': 'doomed' } })
+    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug')
+    expect(within(panel()).getByRole('button', { name: 'Project default' })).toBeTruthy()
+  })
+
+  it('pins the saved default to a mode at once', async () => {
+    saves()
+    const store = mountWith(OrgRole.ADMIN, 'pug')
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug#dark'))
-    expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } })
-    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug#dark')
+    expect(screen.getByText('Pug, always dark')).toBeTruthy()
+  })
+
+  // Your own pick for the project paints over the default, so saving one used to change nothing on your screen.
+  it('says when your own pick for this project hides the default, and shows the default on request', async () => {
+    saves()
+    const store = mountWith(OrgRole.ADMIN, '', 'pug#dark')
+    expect(screen.queryByText(/so that’s what you see/)).toBeNull()
+    await choose('Pug')
+    const note = 'You picked Pug for this project in Appearance, so that’s what you see.'
+    expect(await within(panel()).findByText(note, { exact: false })).toBeTruthy()
+    fireEvent.click(within(panel()).getByRole('button', { name: 'Show the default' }))
+    expect(store.get(projectOverridesAtom)).toEqual({})
+    expect(screen.queryByText(/so that’s what you see/)).toBeNull()
+  })
+
+  it('says so to anyone whose own pick hides the default', () => {
+    mountWith(OrgRole.VIEWER, 'pug', 'pug#dark')
+    expect(screen.getByText(/You picked Pug for this project in Appearance/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Show the default' })).toBeTruthy()
   })
 
   // An id this build doesn't have, or a URL the URL parser refuses: never a crash, and the admin can clear it.
@@ -280,15 +306,13 @@ describe('the default theme', () => {
     )
     const store = mountWith(OrgRole.ADMIN)
     await choose('Pug')
-    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     await waitFor(() => expect(toastError).toHaveBeenCalled())
     expect(store.get(activeProjectAtom)?.defaultTheme).toBe('')
+    expect(within(panel()).getByRole('button', { name: 'Set as project default' })).toBeTruthy()
   })
 
   it('clears the default on a second click', async () => {
-    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
-      project: themed(defaultTheme),
-    }))
+    saves()
     const store = mountWith(OrgRole.ADMIN, 'pug')
     fireEvent.click(screen.getByRole('button', { name: 'Clear default' }))
     fireEvent.click(screen.getByRole('button', { name: 'Clear the default?' }))
@@ -336,12 +360,13 @@ describe('the default theme', () => {
     expect(screen.queryByText(/members in dark see Pug/)).toBeNull()
   })
 
-  it('keeps the default’s track when an admin picks its theme, and says what it won’t reach', async () => {
+  it('keeps the default’s track when an admin opens its theme, and says what it won’t reach', async () => {
     const url = 'https://themes.pug.sh/clay/1/theme.json'
     serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify(clayFile('1.1.0')) })
     mountWith(OrgRole.ADMIN, url)
     expect(await screen.findByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
-    await choose('Clay')
+    await openTheme('Clay')
+    expect(within(panel()).getByRole('button', { name: 'Project default' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Follow 1.x' }).getAttribute('aria-pressed')).toBe('true')
   })
 

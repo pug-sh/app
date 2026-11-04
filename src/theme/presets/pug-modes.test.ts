@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { contrast } from '../../lib/color/contrast'
 import { deltaE, worstDeltaE } from '../../lib/color/cvd'
-import { fromHex, toHex } from '../../lib/color/oklch'
+import { fromHex } from '../../lib/color/oklch'
 import { formatColor } from '../../lib/color/parse'
 import frozen from '../__fixtures__/pug-modes.json'
 import { BUILTINS, builtinRoots } from '../builtin'
 import { compileVariant, hashString } from '../compile'
-import { FALLBACK_COLORS, groupOf } from '../data-palette'
+import { CHART_DEFAULTS, groupOf } from '../data-palette'
 import { fitFor } from '../fit'
 import { parseThemeObject } from '../format'
 import { ACCESS_MODES, type AccessMode, type Polarity, STANDARD_ACCESS } from '../tokens'
@@ -51,10 +51,10 @@ describe.each(['light', 'dark'] as const)('Pug’s modes, %s', polarity => {
     expect(compileIn(polarity, access).report).toEqual([])
   })
 
-  it('fits its high-contrast breakdown list to that mode’s own canvas', () => {
+  it('fits the chart defaults to its high-contrast canvas for breakdowns', () => {
     const canvas = builtinRoots(polarity, 'high').background
-    expect(blocks?.['high-contrast']?.data.categorical?.map(toHex)).toEqual(
-      FALLBACK_COLORS.map(fitFor(polarity, 'high', canvas)),
+    expect(compileIn(polarity, HIGH).data.categorical.map(c => c.line)).toEqual(
+      CHART_DEFAULTS[polarity].map(fitFor(polarity, 'high', canvas)),
     )
   })
 })

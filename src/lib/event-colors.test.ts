@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import series from '@/theme/__fixtures__/series.json'
+import { BUILTINS } from '@/theme/builtin'
 import { compileDataPalette } from '@/theme/data-palette'
 import { PUG_CANVAS } from '@/theme/fit'
 import { fadedSeriesColor, getIndexedColor, getSeriesColor, setSeriesPalette } from './event-colors'
@@ -8,17 +9,23 @@ import { fadedSeriesColor, getIndexedColor, getSeriesColor, setSeriesPalette } f
 // byte for byte, in both modes.
 describe.each(['light', 'dark'] as const)('series colours on Pug %s', polarity => {
   const golden = series[polarity]
-  setSeriesPalette(compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]))
+  setSeriesPalette(
+    compileDataPalette(BUILTINS.pug.variants[polarity]?.data, polarity, 'standard', PUG_CANVAS[polarity]),
+  )
 
   it('match today for every named, family and unmapped event', () => {
-    setSeriesPalette(compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]))
+    setSeriesPalette(
+      compileDataPalette(BUILTINS.pug.variants[polarity]?.data, polarity, 'standard', PUG_CANVAS[polarity]),
+    )
     for (const [name, line] of Object.entries(golden.named)) {
       expect(getSeriesColor(name), name).toEqual({ line, fill: `${line}1a`, dot: line })
     }
   })
 
   it('match today for generic labels and breakdown indices', () => {
-    setSeriesPalette(compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]))
+    setSeriesPalette(
+      compileDataPalette(BUILTINS.pug.variants[polarity]?.data, polarity, 'standard', PUG_CANVAS[polarity]),
+    )
     golden.generic.forEach((line, i) => expect(getSeriesColor(`Step ${i + 1}`, i).line).toBe(line))
     golden.indexed.forEach((line, i) => expect(getIndexedColor(i).line).toBe(line))
   })

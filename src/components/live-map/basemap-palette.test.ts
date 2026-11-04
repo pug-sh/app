@@ -11,12 +11,11 @@ const canonical = (value: string) => formatColor(parseColor(value) as NonNullabl
 const pugDark = BUILTINS.pug.variants.dark?.colors
 
 describe('the dark basemap', () => {
-  it('is exactly today’s palette on Pug dark', () => {
-    const palette = basemapPalette({
-      dark: true,
-      cardL: pugDark?.card?.l as number,
-      neutralHue: pugDark?.background?.h as number,
-    }) as Record<string, string | Record<string, string>>
+  it('is exactly the authored palette on the card it was authored against', () => {
+    const palette = basemapPalette({ dark: true, cardL: 0.215, neutralHue: 265 }) as Record<
+      string,
+      string | Record<string, string>
+    >
     for (const [key, value] of Object.entries(DARK_BASEMAP)) {
       const got = palette[key]
       if (typeof value === 'string') expect(canonical(got as string), key).toBe(canonical(value))
@@ -24,6 +23,13 @@ describe('the dark basemap', () => {
         for (const [k, v] of Object.entries(value))
           expect(canonical((got as Record<string, string>)[k]), `${key}.${k}`).toBe(canonical(v))
     }
+  })
+
+  it('seats itself on Pug dark’s card like any other theme’s', () => {
+    const cardL = pugDark?.card?.l as number
+    const neutralHue = pugDark?.background?.h as number
+    const palette = basemapPalette({ dark: true, cardL, neutralHue }) as Record<string, string>
+    expect(palette.background).toBe(rebaseDarkEntry(DARK_BASEMAP.background, cardL, neutralHue))
   })
 
   it('seats itself on another dark canvas, keeping water and vegetation hues', () => {

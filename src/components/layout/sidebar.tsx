@@ -6,24 +6,21 @@ import {
   ContactRound,
   LayoutDashboard,
   Loader2,
-  LogOut,
-  Monitor,
-  Moon,
   PanelsTopLeft,
   Plus,
   Radio,
   Settings,
-  Sun,
   TrendingUp,
   Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Link, useLocation } from 'wouter'
-import { signOutAtom } from '@/auth/auth.atoms'
 import { Can } from '@/auth/can'
-import { isDemoHost, isDemoSessionAtom } from '@/auth/demo'
+import { isDemoSessionAtom } from '@/auth/demo'
 import UsageMeter from '@/components/billing/usage-meter'
+import { AccountMenu } from '@/components/layout/account-menu'
+import { ThemeModeSwitch } from '@/components/layout/theme-mode-switch'
 import { NameChip } from '@/components/name-chip'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -38,9 +35,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { STORAGE_REFUSED, type ThemeMode, themeChoiceAtom, themeModeAtom } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
   activeProjectAtom,
@@ -91,13 +88,7 @@ const AppSidebar = () => {
   const createProject = useSetAtom(createProjectAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const refreshOrgs = useSetAtom(refreshOrgsAtom)
-  const signOut = useSetAtom(signOutAtom)
   const isDemo = useAtomValue(isDemoSessionAtom)
-  const [theme, setTheme] = useAtom(themeModeAtom)
-  // A pinned mode wins over the member's setting, so the button says so and stays put: flipping a setting
-  // that changes nothing on screen would read as a bug.
-  const pin = useAtomValue(themeChoiceAtom).pin
-  const shown = pin ?? theme
   const { setOpenMobile } = useSidebar()
 
   const routeProjectId = useRouteProjectId()
@@ -176,13 +167,8 @@ const AppSidebar = () => {
     }
   }
 
-  const cycleTheme = () => {
-    const next: Record<ThemeMode, ThemeMode> = { light: 'dark', dark: 'system', system: 'light' }
-    if (!setTheme(next[theme])) toast.error(STORAGE_REFUSED)
-  }
-
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -322,6 +308,7 @@ const AppSidebar = () => {
                         isActive={isActive}
                         tooltip={item.label}
                         onClick={closeMobileSidebar}
+                        className="data-active:shadow-[0_0_0_1px_var(--sidebar-border),0_1px_2px_0_rgb(0_0_0/0.05)]"
                       >
                         <item.icon />
                         <span>{item.label}</span>
@@ -337,36 +324,12 @@ const AppSidebar = () => {
 
       <SidebarFooter>
         <UsageMeter href={`${prefix}/settings/billing`} />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={pin ? undefined : cycleTheme}
-              aria-disabled={pin ? true : undefined}
-              // Hoverable while disabled, so the collapsed sidebar's tooltip can still say why.
-              className="aria-disabled:pointer-events-auto"
-              tooltip={pin ? `This project is always ${pin}` : `Mode: ${theme}`}
-            >
-              {shown === 'light' && <Sun />}
-              {shown === 'dark' && <Moon />}
-              {shown === 'system' && <Monitor />}
-              {pin ? <span>Always {pin}</span> : <span className="capitalize">{theme}</span>}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          {/* Signing the demo viewer out on its own origin would only start the demo again. */}
-          {!(isDemoHost() && isDemo) && (
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                // Dropping the /p/:projectId URL is App's job, not this button's: it has to happen
-                // for a session that expires too, which has no button to hang off. See App.tsx.
-                onClick={() => signOut()}
-                tooltip="Sign out"
-              >
-                <LogOut />
-                <span>Sign out</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          )}
-        </SidebarMenu>
+        <AccountMenu />
+        <div className="flex items-center justify-between">
+          <ThemeModeSwitch className="group-data-[collapsible=icon]:hidden" />
+          {/* Desktop has no header, so this and Cmd/Ctrl+B are the toggle; on mobile the header keeps its own. */}
+          <SidebarTrigger className="text-muted-foreground max-md:hidden" />
+        </div>
       </SidebarFooter>
 
       <SidebarRail />

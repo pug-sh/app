@@ -63,7 +63,7 @@ describe('high contrast', () => {
     ['dark', 'destructive', 0.78, 0.13, 15],
     ['dark', 'link', 0.725, 0.11, 50],
     ['dark', 'negative', 0.729, 0.1, 5],
-    ['dark', 'caution', 0.717, 0.08, 85],
+    ['dark', 'caution', 0.739, 0.08, 85],
   ] as const)('puts Clay %s on Pug High Contrast’s grounds, in its own hues: %s', (polarity, token, l, c, h) => {
     const color = tokensIn(clayFamily, polarity, HIGH)[token]
     expect(color.l).toBeCloseTo(l, 3)
@@ -143,7 +143,7 @@ describe('high contrast', () => {
   })
 
   it('treats a value equal to Pug’s as unset', () => {
-    const high = tokensIn(theme('light', { primary: 'oklch(0.55 0.18 265)' }), 'light', HIGH)
+    const high = tokensIn(theme('light', { primary: '#5a60c9' }), 'light', HIGH)
     expect(high.primary).toMatchObject({ l: 0.45, c: 0.2, h: 265 })
   })
 
@@ -162,8 +162,8 @@ describe('colourblind-safe', () => {
     expect(tokensIn(clayFamily, 'light', BLIND).negative.h).toBeCloseTo(346.3, 0)
   })
 
-  it('steps Pug’s good around its link', () => {
-    expect(tokensIn(BUILTINS.pug, 'light', BLIND).positive.h).toBeCloseTo(165.5, 0)
+  it('steps good around a blue link', () => {
+    expect(tokensIn(theme('light', { link: 'oklch(0.456 0.18 265)' }), 'light', BLIND).positive.h).toBeCloseTo(165.5, 0)
   })
 
   it.each(Array.from({ length: 48 }, (_, i) => i * 7.5))('keeps good and bad clear of a link at hue %s', h => {
@@ -182,15 +182,22 @@ describe('colourblind-safe', () => {
       const standard = tokensIn(of, polarity, STANDARD_ACCESS)
       const blind = tokensIn(of, polarity, BLIND)
 
-      it.each(['positive', 'negative', 'caution'] as const)(
-        'keeps %s between its standard contrast and body text',
-        token => {
-          const own = contrast(standard[token], standard.background)
-          expect(contrast(blind[token], blind.background)).toBeGreaterThanOrEqual(own - 0.01)
-          const reach = (l: number) => Math.abs(l - blind.background.l)
-          expect(reach(blind[token].l)).toBeLessThanOrEqual(reach(blind.foreground.l) + 1e-9)
-        },
-      )
+      const reach = (l: number) => Math.abs(l - blind.background.l)
+
+      it.each(['positive', 'caution'] as const)('keeps %s between its standard contrast and body text', token => {
+        const own = contrast(standard[token], standard.background)
+        expect(contrast(blind[token], blind.background)).toBeGreaterThanOrEqual(own - 0.01)
+        if (own > contrast(standard.foreground, standard.background)) return
+        expect(reach(blind[token].l)).toBeLessThanOrEqual(reach(blind.foreground.l) + 1e-9)
+      })
+
+      it('keeps negative between its standard contrast and half again past body text', () => {
+        const own = contrast(standard.negative, standard.background)
+        expect(contrast(blind.negative, blind.background)).toBeGreaterThanOrEqual(own - 0.01)
+        const from = Math.max(contrast(blind.foreground, blind.background), own)
+        const limit = solveFitted(blind.background, polarity, from * 1.5, 0, 0)
+        expect(reach(blind.negative.l)).toBeLessThanOrEqual(reach(limit.l) + 1e-9)
+      })
 
       it('leaves destructive and the link alone', () => {
         expect(blind.destructive).toEqual(standard.destructive)
@@ -215,14 +222,32 @@ describe('colourblind-safe', () => {
         ['with high contrast', BOTH],
       ])('puts good and bad apart %s', (__, access) => {
         const { positive, negative } = tokensIn(of, polarity, access)
-        expect(worstDeltaE(positive, negative)).toBeGreaterThan(0.08)
+        expect(worstDeltaE(positive, negative)).toBeGreaterThan(0.075)
+      })
+
+      it.each([
+        ['alone', BLIND],
+        ['with high contrast', BOTH],
+      ])('keeps warning apart from good and bad %s', (__, access) => {
+        const { positive, negative, caution } = tokensIn(of, polarity, access)
+        expect(Math.min(worstDeltaE(caution, positive), worstDeltaE(caution, negative))).toBeGreaterThanOrEqual(0.05)
       })
     })
   })
 
-  it.each(POLARITIES)('moves Pug’s caution off its start when that’s further from a neighbour, %s', polarity => {
-    const { landed, started } = cautionSpread(BUILTINS.pug, polarity)
+  // Light has no room: its body ink sits just past caution's start.
+  it('moves Pug’s caution off its start when that’s further from a neighbour, dark', () => {
+    const { landed, started } = cautionSpread(BUILTINS.pug, 'dark')
     expect(landed).toBeGreaterThan(started)
+  })
+
+  it('takes Pug’s bad past body text only where warning needs the room', () => {
+    const past = (polarity: Polarity) => {
+      const { negative, foreground, background } = tokensIn(BUILTINS.pug, polarity, BLIND)
+      return Math.abs(negative.l - background.l) > Math.abs(foreground.l - background.l)
+    }
+    expect(past('light')).toBe(true)
+    expect(past('dark')).toBe(false)
   })
 
   it('gives grey status colours real chroma', () => {

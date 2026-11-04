@@ -36,7 +36,7 @@ import {
   type ThemeFilters,
   type ThemeSource,
 } from '@/pages/routegen/settings/gallery-themes'
-import ThemePanel from '@/pages/routegen/settings/theme-panel'
+import ThemePanel, { type ThemeActions } from '@/pages/routegen/settings/theme-panel'
 import ThemeTile from '@/pages/routegen/settings/theme-tile'
 import { segment } from '@/pages/routegen/settings/theme-updates'
 import type { CheckedFile } from '@/pages/routegen/settings/theme-url-field'
@@ -50,27 +50,26 @@ const ORDERS: [ThemeFilters['order'], string][] = [
 ]
 
 // The one theme list on a page. It draws gallery-themes' model and owns only view state, so nothing here persists and
-// looking around writes nothing: `onUse` and `onUseFile` hand a choice to the host, which decides what that means.
+// looking around writes nothing: the open theme's buttons and a checked link's are the host's. `requires` is the mode
+// a link's file must have.
 const ThemeGallery = ({
   held,
   requires,
   shared = false,
-  useLabel,
-  heldLabel,
-  onUse,
+  fileLabel,
+  actions,
   onUseFile,
 }: {
   held: Held | null
   requires?: Polarity
   shared?: boolean
-  useLabel: string
-  heldLabel?: string
-  onUse: (theme: GalleryTheme) => void
+  fileLabel: string
+  actions: (theme: GalleryTheme) => ThemeActions
   onUseFile: (file: CheckedFile) => void
 }) => {
   const library = useAtomValue(resolvableLibraryAtom)
   const catalog = useAtomValue(themeCatalogAtom)
-  const mode = useAtomValue(resolvedThemeAtom)
+  const polarity = useAtomValue(resolvedThemeAtom)
   const access = useAtomValue(accessModeAtom)
   const removeTheme = useSetAtom(removeThemeAtom)
   const columns = useIsMobile() ? 2 : 3
@@ -84,8 +83,7 @@ const ThemeGallery = ({
   const addButton = useRef<HTMLButtonElement>(null)
   const panelId = useId()
 
-  const polarity = requires ?? mode
-  const themes = galleryThemes({ held, requires, shared, library, catalog: catalog.themes })
+  const themes = galleryThemes({ held, shared, library, catalog: catalog.themes })
   // Read through liveFilters, never the state: a filter whose control has gone mustn't go on hiding themes.
   const filters = liveFilters(themes, { query, source, order })
   const repository = defaultRepository()
@@ -135,9 +133,7 @@ const ThemeGallery = ({
                 polarity={polarity}
                 access={access}
                 id={panelId}
-                useLabel={useLabel}
-                heldLabel={heldLabel}
-                onUse={() => onUse(theme)}
+                actions={actions(theme)}
                 onRemove={theme.source === 'installed' ? () => remove(theme) : undefined}
                 onClose={close}
               />
@@ -252,7 +248,7 @@ const ThemeGallery = ({
           Add a theme
         </Button>
       </div>
-      {adding && <AddTheme shared={shared} requires={requires} onUseFile={onUseFile} />}
+      {adding && <AddTheme shared={shared} requires={requires} fileLabel={fileLabel} onUseFile={onUseFile} />}
       {!repository && <p className="mb-3 text-xs text-muted-foreground">No theme repositories here yet.</p>}
       <div role="group" aria-label="Theme list" className="space-y-4">
         {isFlat(filters) ? flatList() : groups()}

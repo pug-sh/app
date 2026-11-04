@@ -38,11 +38,13 @@ const Report = ({
   result,
   disclosure,
   requires,
+  useLabel,
   onUse,
 }: {
   result: PastedTheme
   disclosure: boolean
   requires?: Polarity
+  useLabel: string
   onUse: (file: CheckedFile) => void
 }) => {
   if (!result.ok) return <p className="text-xs text-negative">{failureMessage(result)}</p>
@@ -85,7 +87,7 @@ const Report = ({
         </p>
       ) : (
         <Button size="sm" variant="outline" onClick={() => onUse({ url, pin, family })}>
-          Use this theme
+          {useLabel}
         </Button>
       )}
     </div>
@@ -97,11 +99,13 @@ const ThemeUrlField = ({
   disclosure,
   label = 'Theme URL',
   requires,
+  useLabel,
   onUse,
 }: {
   disclosure: boolean
   label?: string
   requires?: Polarity
+  useLabel: string
   onUse: (file: CheckedFile) => void
 }) => {
   const [input, setInput] = useState('')
@@ -137,7 +141,7 @@ const ThemeUrlField = ({
       </form>
       {result && (
         <div role="status">
-          <Report result={result} disclosure={disclosure} requires={requires} onUse={onUse} />
+          <Report result={result} disclosure={disclosure} requires={requires} useLabel={useLabel} onUse={onUse} />
         </div>
       )}
     </div>

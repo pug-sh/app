@@ -55,10 +55,10 @@ export const seriesColorIn = (source: CompiledDataPalette, seriesName: string, f
   if (Object.hasOwn(source.events, canonical)) return source.events[canonical]
 
   // Unmapped (custom) event: deterministic by name, identical for every user and view. Borrow the
-  // matching family's hue; otherwise hash into the categorical palette.
+  // matching family's hue; otherwise hash into the fallback palette.
   const family = source.families.find(f => f.prefixes.some(p => canonical.startsWith(p)))
   if (family) return family.palette[hashString(canonical) % family.palette.length]
-  return indexedColorIn(source, hashString(canonical))
+  return source.fallback[hashString(canonical) % source.fallback.length]
 }
 
 export const getSeriesColor = (seriesName: string, fallbackIndex = 0) =>

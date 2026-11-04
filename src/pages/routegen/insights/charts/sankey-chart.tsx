@@ -13,7 +13,7 @@ const PADDING_Y = 16
 // Gap between a node and its label.
 const LABEL_OFFSET = 6
 
-// An UPPER bound on per-character width at text-xs, not an average — shared with the axis fitter
+// An UPPER bound on per-character width at text-xs, not an average, shared with the axis fitter
 // so the two cannot be re-measured apart. It has to be an upper bound because the gutter and the
 // truncation threshold are both derived from it, so on the **end columns** they cancel exactly:
 // widestAt() sizes a gutter of chars * PX_PER_CHAR (+ the offsets labelWidth then subtracts back),
@@ -23,10 +23,10 @@ const LABEL_OFFSET = 6
 // The cancellation does NOT extend to middle columns: those read into the gap before the next
 // column (labelWidth's third branch), which is set by column spacing and knows nothing about label
 // length. At the MIN_COLUMN_WIDTH floor that is 146px, so a middle name past ~20 characters is
-// ellipsized — expected, and the second reason truncation fires alongside the MAX_GUTTER_RATIO cap.
+// ellipsized: expected, and the second reason truncation fires alongside the MAX_GUTTER_RATIO cap.
 //
 // **Re-measure on a font change**, against the widest realistic label rather than a typical one:
-// the 7.0 is Figtree's all-digit clock, and uppercase-heavy property values run wider still.
+// the 7.0 is Inter's all-digit clock, and uppercase-heavy property values run wider still.
 const LABEL_PX_PER_CHAR = AXIS_LABEL_PX_PER_CHAR
 const MIN_GUTTER = 72
 // Past this the labels start costing the flow more room than they are worth.
@@ -49,7 +49,7 @@ const truncateLabel = (text: string, maxPx: number) => {
   // The epsilon is insurance, not a fix for an observed failure: a gutter sized as
   // chars * PX_PER_CHAR divides back by the same constant, and at 7.0 that round-trips exactly for
   // every realistic length. It exists because the constant is re-measured per font (6.5 / 7.2 /
-  // 6.7 / 7.0 so far), and a non-dyadic one can land a hair under the integer — ellipsizing a name
+  // 6.7 / 7.0 so far), and a non-dyadic one can land a hair under the integer, ellipsizing a name
   // the gutter was sized exactly for. Don't delete it after failing to reproduce the bug.
   const maxChars = Math.floor(maxPx / LABEL_PX_PER_CHAR + 1e-6)
   if (text.length <= maxChars) return text
@@ -91,7 +91,7 @@ export const SankeyChart = ({
   // The hovered index is captured against a layout that a refetch rebuilds, and useDebouncedQuery
   // keeps serving the old response until the new one lands, so the stale chart stays interactive.
   // A resting cursor fires no mousemove to correct the index, and one that is still *in range*
-  // reports a different node's figures under the old node's name — the resolved-datum guard below
+  // reports a different node's figures under the old node's name, and the resolved-datum guard below
   // only catches indices past the end. Clear it when the data changes.
   useEffect(() => {
     setHovered(null)
@@ -109,7 +109,7 @@ export const SankeyChart = ({
   }, [])
 
   // Only the end columns read into a gutter, so they are the only ones that size it. Both
-  // are measured independently — a long name on the left shouldn't cost the right column
+  // are measured independently: a long name on the left shouldn't cost the right column
   // room it doesn't need.
   const gutters = useMemo(() => {
     const { nodes } = sankeyData
@@ -146,7 +146,7 @@ export const SankeyChart = ({
   }, [sankeyData, size.width, size.height, gutters])
 
   // Fading the content rather than laying a coloured panel over it means the chart carries
-  // no assumption about the surface behind it — it reads the same on a card, a tile, or the
+  // no assumption about the surface behind it: it reads the same on a card, a tile, or the
   // canvas. Only the edges that actually have content past them fade.
   const maskImage = useMemo(() => {
     if (!edges.above && !edges.below) return undefined
@@ -177,7 +177,7 @@ export const SankeyChart = ({
 
   // Re-check after the drawn height changes: growing the graph is what makes it scrollable in the
   // first place, and that happens without a scroll event. Keyed on the height actually drawn, not
-  // the estimated one — a column that overflows only changes the former.
+  // the estimated one: a column that overflows only changes the former.
   useEffect(() => {
     syncEdges()
   }, [syncEdges, drawnHeight, size.height])
@@ -197,7 +197,7 @@ export const SankeyChart = ({
   const stepCount = depths.length > 0 ? lastDepth - firstDepth + 1 : 0
 
   // A middle column's label reads into the gap before the next column, which is far wider
-  // than a gutter — sizing it by the gutter truncated names that had room to spare.
+  // than a gutter, and sizing it by the gutter truncated names that had room to spare.
   const columnXs = [...new Set(layout.nodes.map(node => node.x))].sort((a, b) => a - b)
   const columnGap = columnXs.length > 1 ? columnXs[1] - columnXs[0] : canvas.width
   const labelWidth = (depth: number) => {
@@ -306,7 +306,7 @@ export const SankeyChart = ({
       </div>
 
       {/* The chart is role="img", so assistive technology never reaches the shapes inside it, and
-          every ribbon and node is pointer-driven — there is nothing to tab to. This carries the
+          every ribbon and node is pointer-driven: there is nothing to tab to. This carries the
           hover card's *link* figures as text, which is the only route to them without a mouse.
           Ordered by volume so the largest paths are read first. The card's per-node summary (step
           number, and the continued/ended split) has no equivalent here yet. */}
@@ -362,7 +362,7 @@ export const SankeyChart = ({
 //
 // Every sentence here is qualified, because a missing side does not only mean "end of the flow".
 // buildSankeyData drops links it cannot draw, and a node whose inbound was dropped has inflow 0
-// while sitting mid-funnel — so position in the flow decides whether a missing side is a fact
+// while sitting mid-funnel, so position in the flow decides whether a missing side is a fact
 // about the data or a gap in it. Unqualified, this relabelled a middle step as the funnel's
 // start, and reported "All continued" over a step that shed sessions. Where the two disagree, say
 // nothing and let the chart's caption carry it.

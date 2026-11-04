@@ -5,13 +5,14 @@ import type { CatalogTheme } from '@/theme/catalog'
 import { parseThemeObject } from '@/theme/format'
 import { buildLibrary, type InstalledTheme, type LibraryEntry, type RemoteId, remoteEntries } from '@/theme/library'
 import { OFFICIAL_REPOSITORY } from '@/theme/repository'
-import { ACCESS_MODES, type AccessMode, type Polarity, STANDARD_ACCESS } from '@/theme/tokens'
+import { ACCESS_MODES, type AccessMode, STANDARD_ACCESS } from '@/theme/tokens'
 import {
   compiledTheme,
   type GalleryTheme,
   galleryThemes,
   groupThemes,
   isFlat,
+  isTheme,
   listingOf,
   liveFilters,
   NO_FILTERS,
@@ -57,10 +58,9 @@ const paper = (name: string, primary = '#2563eb', metadata = {}): CatalogTheme =
   family: familyOf({ version: 1, name, metadata, variants: { light: { colors: { background: '#ffffff', primary } } } }),
 })
 
-// What a chip lists: a mode it requires, and what it holds, with the family the library has for it.
-const slotThemes = (requires: Polarity, target: string, library: LibraryEntry[], themes = catalog) =>
+// What a list holds, with the family the library has for it.
+const holding = (target: string, library: LibraryEntry[], themes = catalog) =>
   galleryThemes({
-    requires,
     held: { target, family: library.find(entry => entry.id === target)?.family ?? null },
     library,
     catalog: themes,
@@ -79,7 +79,7 @@ describe('galleryThemes', () => {
 
   it('builds a theme’s file from the repository it came from', () => {
     const acme = catalog.map(theme => ({ ...theme, repository: 'https://themes.acme.com' as RemoteId }))
-    const themes = slotThemes('light', 'pug', buildLibrary([]), acme)
+    const themes = holding('pug', buildLibrary([]), acme)
     expect(themes.find(t => t.listed?.slug === 'clay')?.id).toBe('https://themes.acme.com/clay/theme.json')
   })
 
@@ -87,16 +87,15 @@ describe('galleryThemes', () => {
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     const acme = catalog.map(theme => ({ ...theme, repository: 'https://themes.acme.com' as RemoteId }))
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
-    const themes = slotThemes('light', CLAY_1, library, acme)
+    const themes = holding(CLAY_1, library, acme)
     expect(themes.find(t => t.listed?.slug === 'clay')?.held).toBe(false)
   })
 
-  it('offers the built-ins, then the catalog, each only in a mode it has', () => {
-    const light = slotThemes('light', 'pug', buildLibrary([]))
-    const dark = slotThemes('dark', 'pug', buildLibrary([]))
-    expect(names(light).slice(-2)).toEqual(['Clay', 'Paper'])
-    expect(names(dark)).not.toContain('Paper')
-    expect(light.find(t => t.name === 'Pug')?.held).toBe(true)
+  // A theme's buttons offer only the modes it has, so the list keeps a light-only theme for someone choosing dark.
+  it('offers the built-ins, then the catalog, whatever modes they have', () => {
+    const themes = holding('pug', buildLibrary([]))
+    expect(names(themes)).toEqual(['Pug', 'Clay', 'Paper'])
+    expect(themes.find(t => t.name === 'Pug')?.held).toBe(true)
   })
 
   // The fetch cache holds other projects' defaults and URLs someone only tried.
@@ -108,11 +107,11 @@ describe('galleryThemes', () => {
       variants: { light: { colors: { background: '#fafafa' } } },
     })
     const library = [...buildLibrary([]), ...remoteEntries([{ url, text }])]
-    expect(names(slotThemes('light', 'pug', library))).not.toContain('Tried')
+    expect(names(holding('pug', library))).not.toContain('Tried')
   })
 
   it('marks only the theme it follows', () => {
-    const themes = slotThemes('light', CLAY_1, buildLibrary([]))
+    const themes = holding(CLAY_1, buildLibrary([]))
     expect(themes.find(t => t.listed?.slug === 'paper')).toMatchObject({
       held: false,
       id: 'https://themes.pug.sh/paper/theme.json',
@@ -122,36 +121,38 @@ describe('galleryThemes', () => {
 
   it('draws the followed copy, not the catalog’s latest', () => {
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
-    const clay = slotThemes('light', CLAY_1, library).find(t => t.listed?.slug === 'clay')
+    const clay = holding(CLAY_1, library).find(t => t.listed?.slug === 'clay')
     expect(clay?.held).toBe(true)
     expect(clay?.id).toBe(CLAY_1)
     expect(clay?.family?.release).toBe('1.1.0')
   })
 
   it('shows a followed theme from the catalog before its copy arrives', () => {
-    const clay = slotThemes('light', CLAY_1, buildLibrary([])).find(t => t.listed?.slug === 'clay')
+    const clay = holding(CLAY_1, buildLibrary([])).find(t => t.listed?.slug === 'clay')
     expect(clay?.held).toBe(true)
     expect(clay?.family?.release).toBe('2.0.0')
   })
 
-  it('keeps a followed release without this mode listed, drawn from the catalog', () => {
+  // Its tile says Light only, which is what the release it follows is.
+  it('draws a followed release without a mode as it is, not as the catalog’s latest', () => {
     const url = 'https://themes.pug.sh/clay/1.0.0/theme.json' as RemoteId
     const { light } = clayFile('1.0.0').variants
     const lightOnly = JSON.stringify({ ...clayFile('1.0.0'), variants: { light } })
     const library = [...buildLibrary([]), ...remoteEntries([{ url, text: lightOnly }])]
-    const clay = slotThemes('dark', url, library).find(t => t.listed?.slug === 'clay')
+    const clay = holding(url, library).find(t => t.listed?.slug === 'clay')
     expect(clay?.held).toBe(true)
-    expect(clay?.family?.release).toBe('2.0.0')
+    expect(clay?.family?.release).toBe('1.0.0')
+    expect(clay?.family?.variants.dark).toBeUndefined()
   })
 
-  it('draws a followed copy that has this mode when the catalog’s latest lost it', () => {
+  it('draws a followed copy with both modes when the catalog’s latest lost one', () => {
     const { light } = clayFile('2.0.0').variants
     const family = familyOf({ ...clayFile('2.0.0'), variants: { light } })
     const lightOnly: CatalogTheme[] = [
       { slug: 'clay', releases: ['2.0.0', '1.1.0'], family, repository: OFFICIAL_REPOSITORY },
     ]
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: JSON.stringify(clayFile('1.1.0')) }])]
-    const clay = slotThemes('dark', CLAY_1, library, lightOnly).find(t => t.listed?.slug === 'clay')
+    const clay = holding(CLAY_1, library, lightOnly).find(t => t.listed?.slug === 'clay')
     expect(clay?.held).toBe(true)
     expect(clay?.family?.release).toBe('1.1.0')
   })
@@ -160,7 +161,7 @@ describe('galleryThemes', () => {
   it('draws from the catalog when the followed copy can’t be used', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     const library = [...buildLibrary([]), ...remoteEntries([{ url: CLAY_1, text: '{' }])]
-    const clay = slotThemes('light', CLAY_1, library).find(t => t.listed?.slug === 'clay')
+    const clay = holding(CLAY_1, library).find(t => t.listed?.slug === 'clay')
     expect(clay?.held).toBe(true)
     expect(clay?.family?.release).toBe('2.0.0')
   })
@@ -172,7 +173,7 @@ describe('galleryThemes', () => {
       { url: LATEST, text: JSON.stringify(clayFile('2.0.0')) },
     ])
     const clayAt = (target: string) =>
-      slotThemes('light', target, [...buildLibrary([]), ...copies]).find(t => t.listed?.slug === 'clay')
+      holding(target, [...buildLibrary([]), ...copies]).find(t => t.listed?.slug === 'clay')
     expect(clayAt(CLAY_1)?.id).toBe(CLAY_1)
     expect(clayAt(CLAY_1)?.key).toBe(clayAt(LATEST)?.key)
   })
@@ -194,16 +195,35 @@ describe('galleryThemes', () => {
     expect(names(themes)).toContain('Pug')
   })
 
-  it('keeps an installed theme it can’t use, whatever the mode', () => {
+  it('keeps an installed theme it can’t use', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     const midnight = { ...grape, text: '{"version":2,"name":"Midnight"}' }
-    const themes = slotThemes('dark', 'pug', buildLibrary([midnight]), [])
+    const themes = holding('pug', buildLibrary([midnight]), [])
     expect(themes.find(t => t.id === midnight.id)).toMatchObject({ family: null, source: 'installed' })
   })
 
   it('starts a repository theme on its newest major line', () => {
     const [clay] = listed({ ...catalog[0], releases: ['2.0.0', '1.0.0'] })
     expect(startingFile(clay)).toBe('https://themes.pug.sh/clay/2/theme.json')
+  })
+})
+
+describe('isTheme', () => {
+  const [pug, clay] = holding('pug', buildLibrary([]))
+
+  it('matches a library theme by id, and a repository theme on any track', () => {
+    expect(isTheme(pug, 'pug')).toBe(true)
+    expect(isTheme(pug, 'pug#dark')).toBe(false)
+    for (const track of ['clay/theme.json', 'clay/1/theme.json', 'clay/1.1.0/theme.json']) {
+      expect(isTheme(clay, `https://themes.pug.sh/${track}`)).toBe(true)
+    }
+  })
+
+  it('matches no other repository, theme or nothing', () => {
+    expect(isTheme(clay, 'https://themes.acme.com/clay/theme.json')).toBe(false)
+    expect(isTheme(clay, 'https://themes.pug.sh/paper/theme.json')).toBe(false)
+    expect(isTheme(clay, undefined)).toBe(false)
+    expect(isTheme(pug, undefined)).toBe(false)
   })
 })
 

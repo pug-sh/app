@@ -23,6 +23,8 @@ vi.mock('@/api/rpc', async () => {
     // expects.
     billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
     usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
+    // The account menu's GetMe; unresolved, its trigger reads 'Account'.
+    customersRPCAtom: atom({ getMe: vi.fn(() => new Promise(() => {})) }),
   }
 })
 
@@ -131,11 +133,12 @@ describe('the sidebar on mobile', () => {
     expect(history).toContain('/p/p3/overview')
   })
 
-  it('stays open when the theme is cycled', async () => {
-    const { nav } = await mount('/p/p1/overview')
+  it('stays open when the theme is changed', async () => {
+    const { nav, store } = await mount('/p/p1/overview')
 
-    fireEvent.click(screen.getByRole('button', { name: /light|dark|system/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
 
+    expect(store.get(themeModeAtom)).toBe('dark')
     expect(document.body.contains(nav)).toBe(true)
   })
 
@@ -144,9 +147,11 @@ describe('the sidebar on mobile', () => {
     act(() => {
       store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'First', defaultTheme: 'pug#dark' }))
     })
-    const button = screen.getByRole('button', { name: 'Always dark' })
-    expect(button.getAttribute('aria-disabled')).toBe('true')
-    fireEvent.click(button)
+    expect(screen.getByRole('group', { name: 'Theme' }).title).toBe('This project is always dark')
+    expect(screen.getByRole('button', { name: 'Dark' }).getAttribute('aria-pressed')).toBe('true')
+    const light = screen.getByRole('button', { name: 'Light' })
+    expect(light).toHaveProperty('disabled', true)
+    fireEvent.click(light)
     expect(store.get(themeModeAtom)).toBe('system')
   })
 })

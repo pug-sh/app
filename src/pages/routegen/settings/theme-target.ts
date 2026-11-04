@@ -3,8 +3,6 @@ import type { ThemeFamily } from '@/theme/format'
 import { resolveTrack, type Track, themeFileUrl } from '@/theme/repository'
 import { POLARITIES, type Polarity } from '@/theme/tokens'
 
-// A file and its family. Null until it's been read: the catalog carries only each theme's latest file.
-export type ThemeTarget = { id: string; family: ThemeFamily | null }
 export type ModeChoice = 'follow' | Polarity
 
 // The one variant a single-variant family has.

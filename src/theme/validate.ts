@@ -45,9 +45,10 @@ export const FILL_PAIRS: [TokenName, TokenName][] = [
   ['sidebar-primary-foreground', 'sidebar-primary'],
 ]
 const BLACK = { l: 0, c: 0, h: 0, alpha: 1 }
-// Apart under the worst of protan, deutan and tritan. Measured across the four-mode sweep: good vs bad holds 0.084 and
-// failure vs success 0.145, so the solver meets this and it still means something. Pug's standard dark measures 0.005.
-const V14_APART = 0.05
+// Apart under the worst of protan, deutan and tritan. Measured across the four-mode sweep: good vs bad holds 0.072,
+// warning vs either 0.051 and failure vs success 0.143, so the solver meets this and it still means something. Pug's
+// standard dark measures 0.005.
+export const V14_APART = 0.05
 
 export type Floors = {
   v2: Record<string, number>
@@ -67,31 +68,31 @@ export const FLOORS: Record<Polarity, Floors> = {
       'card-foreground@card': 7,
       'popover-foreground@popover': 7,
       'sidebar-foreground@sidebar': 7,
-      'sidebar-accent-foreground@sidebar-accent': 6.31,
-      'muted-foreground@background': 4.77,
-      'muted-foreground@card': 4.98,
-      'muted-foreground@popover': 4.98,
-      'muted-foreground@muted': 4.32,
-      'secondary-foreground@secondary': 6.31,
-      'accent-foreground@accent': 6.31,
-      'link@background': 5.77,
-      'link@card': 6.03,
-      'positive@background': 5.77,
-      'positive@card': 6.03,
-      'caution@background': 5.78,
-      'caution@card': 6.04,
-      'negative@background': 5.78,
-      'negative@card': 6.04,
-      'chart-label@chart-background': 4.77,
+      'sidebar-accent-foreground@sidebar-accent': 7,
+      'muted-foreground@background': 4.19,
+      'muted-foreground@card': 4.52,
+      'muted-foreground@popover': 4.52,
+      'muted-foreground@muted': 4.05,
+      'secondary-foreground@secondary': 6.81,
+      'accent-foreground@accent': 6.81,
+      'link@background': 4.42,
+      'link@card': 4.78,
+      'positive@background': 6.31,
+      'positive@card': 6.82,
+      'caution@background': 6.32,
+      'caution@card': 6.83,
+      'negative@background': 6.32,
+      'negative@card': 6.83,
+      'chart-label@chart-background': 4.19,
       'chart-marker-foreground@chart-marker-background': 7,
-      'syntax-keyword@syntax': 3.82,
-      'syntax-string@syntax': 4.13,
-      'syntax-class@syntax': 4.01,
-      'faint@background': 2.87,
-      'faint@card': 3,
-      'faint@popover': 3,
+      'syntax-keyword@syntax': 4.32,
+      'syntax-string@syntax': 4.67,
+      'syntax-class@syntax': 4.53,
+      'faint@background': 2.66,
+      'faint@card': 2.87,
+      'faint@popover': 2.87,
     },
-    data: 3.7,
+    data: 4.05,
     avatars: 6.72,
     identity: 4.5,
     heat: 2.83,
@@ -105,30 +106,30 @@ export const FLOORS: Record<Polarity, Floors> = {
       'popover-foreground@popover': 7,
       'sidebar-foreground@sidebar': 7,
       'sidebar-accent-foreground@sidebar-accent': 7,
-      'muted-foreground@background': 6.1,
-      'muted-foreground@card': 6.1,
-      'muted-foreground@popover': 5.7,
-      'muted-foreground@muted': 5.54,
+      'muted-foreground@background': 6.54,
+      'muted-foreground@card': 5.8,
+      'muted-foreground@popover': 5.34,
+      'muted-foreground@muted': 5.34,
       'secondary-foreground@secondary': 7,
-      'accent-foreground@accent': 6.43,
-      'link@background': 5.5,
-      'link@card': 5.5,
-      'positive@background': 6.37,
-      'positive@card': 6.37,
-      'caution@background': 6.25,
-      'caution@card': 6.25,
-      'negative@background': 5.65,
-      'negative@card': 5.65,
-      'chart-label@chart-background': 6.1,
+      'accent-foreground@accent': 6.53,
+      'link@background': 5.95,
+      'link@card': 5.27,
+      'positive@background': 6.91,
+      'positive@card': 6.12,
+      'caution@background': 6.78,
+      'caution@card': 6.01,
+      'negative@background': 6.13,
+      'negative@card': 5.43,
+      'chart-label@chart-background': 6.54,
       'chart-marker-foreground@chart-marker-background': 7,
-      'syntax-keyword@syntax': 6.87,
+      'syntax-keyword@syntax': 7,
       'syntax-string@syntax': 7,
       'syntax-class@syntax': 7,
-      'faint@background': 4.07,
-      'faint@card': 4.07,
-      'faint@popover': 3.8,
+      'faint@background': 3.4,
+      'faint@card': 3.01,
+      'faint@popover': 2.77,
     },
-    data: 3.76,
+    data: 4.08,
     avatars: 6.72,
     identity: 4.5,
     heat: 2.83,
@@ -146,10 +147,12 @@ export type Subject = {
 const groundValue = (s: Subject, ground: Ground) =>
   ground === 'syntax' ? syntaxGround(t => s.tokens[t]) : s.tokens[ground]
 
+// Every colour an event can be drawn in, badge text included. The default breakdown colours are left
+// out: they are drawn exactly as the vendored charts ship them.
 const dataColors = (data: CompiledDataPalette) => [
   ...Object.values(data.events).map(c => c.line),
   ...data.families.flatMap(f => f.palette.map(c => c.line)),
-  ...data.categorical.map(c => c.line),
+  ...data.fallback.map(c => c.line),
 ]
 
 const minOf = (values: number[]) => Math.min(...values)
@@ -230,8 +233,10 @@ export const validateTheme = (s: Subject): Issue[] => {
     below('popover', 'accent')
     below('sidebar-accent', 'card')
   } else {
-    for (const chip of ['secondary', 'muted', 'accent'] as const) below(chip, 'background')
-    below('background', 'card', true)
+    for (const chip of ['secondary', 'muted', 'accent'] as const) {
+      below(chip, 'background')
+      below(chip, 'card')
+    }
     below('card', 'popover', true)
     below('sidebar', 'background')
   }
@@ -291,10 +296,13 @@ export const validateTheme = (s: Subject): Issue[] => {
     }
   }
 
-  // V14: in colourblind-safe, the pairs that read as opposites have to stay apart.
+  // V14: in colourblind-safe, good, warning and bad text, and failure and success events, have to stay apart.
   if (s.vision === 'colourblind') {
     if (worstDeltaE(t.positive, t.negative) < V14_APART) {
       warn('V14', 'positive', 'positive and negative are too close under a colour deficiency')
+    }
+    if (Math.min(worstDeltaE(t.caution, t.positive), worstDeltaE(t.caution, t.negative)) < V14_APART) {
+      warn('V14', 'caution', 'caution is too close to positive or negative under a colour deficiency')
     }
     const outcome = (group: 'failure' | 'success') =>
       Object.entries(s.data.events)

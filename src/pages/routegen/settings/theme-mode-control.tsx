@@ -7,11 +7,13 @@ const ThemeModeControl = ({
   value,
   family,
   followLabel,
+  disabled = false,
   onChange,
 }: {
   value: ModeChoice
   family: ThemeFamily | null
   followLabel: string
+  disabled?: boolean
   onChange: (mode: ModeChoice) => void
 }) => {
   const choices: [ModeChoice, string][] = [
@@ -27,7 +29,7 @@ const ThemeModeControl = ({
           key={choice}
           type="button"
           aria-pressed={value === choice}
-          disabled={choice !== 'follow' && !family?.variants[choice]}
+          disabled={disabled || (choice !== 'follow' && !family?.variants[choice])}
           onClick={() => onChange(choice)}
           className={cn(
             'rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40',

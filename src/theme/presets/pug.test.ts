@@ -5,7 +5,7 @@ import tokens from '../__fixtures__/tokens.json'
 import { PUG_CANVAS } from '../fit'
 import { parseThemeObject } from '../format'
 import { TOKENS, type TokenName } from '../tokens'
-import { PUG_AUTH_SURFACE, pug } from './pug'
+import { pug } from './pug'
 
 const canonical = (value: string) => {
   const parsed = parseColor(value)
@@ -17,8 +17,7 @@ const parsed = parseThemeObject(pug)
 if (!parsed.ok) throw new Error('the Pug preset does not parse')
 const family = parsed.family
 
-// Golden: the preset holds exactly what index.css, name-chip.tsx and retention-cohort.tsx held
-// before the refactor.
+// Golden: the preset holds exactly the pinned palette. A deliberate retune moves both together.
 describe.each(['light', 'dark'] as const)('Pug %s', polarity => {
   const colors = family.variants[polarity]?.colors ?? {}
   const value = (token: TokenName) => formatColor(colors[token] as NonNullable<(typeof colors)[TokenName]>)
@@ -28,7 +27,7 @@ describe.each(['light', 'dark'] as const)('Pug %s', polarity => {
     for (const token of TOKENS) expect(colors[token], token).toBeDefined()
   })
 
-  it('matches every token index.css declared', () => {
+  it('matches every pinned token', () => {
     for (const [token, css] of Object.entries(tokens[polarity]))
       expect(value(token as TokenName), token).toBe(canonical(css))
   })
@@ -48,10 +47,4 @@ describe.each(['light', 'dark'] as const)('Pug %s', polarity => {
   it('agrees with the canvas the fit is anchored to', () => {
     expect(value('background')).toBe(formatColor(PUG_CANVAS[polarity]))
   })
-})
-
-it('keeps the sign-in surface index.css re-solved', () => {
-  const fromPreset = Object.fromEntries(Object.entries(PUG_AUTH_SURFACE).map(([k, v]) => [k, canonical(v as string)]))
-  const fromCss = Object.fromEntries(Object.entries(tokens.authSurface).map(([k, v]) => [k, canonical(v)]))
-  expect(fromPreset).toEqual(fromCss)
 })

@@ -14,7 +14,7 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
-import { fadedSeriesColor, getIndexedColor, getSeriesColor } from '@/lib/event-colors'
+import { fadedSeriesColor, getIndexedColor, getSeriesColor, type SeriesColor } from '@/lib/event-colors'
 import type { ChartComparison } from '../insights/charts'
 import { formatTooltipDate } from '../insights/charts/helpers'
 import { isIncompleteNumericAggregation } from '../insights/constants'
@@ -86,6 +86,7 @@ export const InsightTileView = ({
   lightMetrics = false,
   hideSummary = false,
   seriesLabel,
+  seriesColor,
   onComparisonCaption,
   emptyQualifier,
 }: {
@@ -110,9 +111,10 @@ export const InsightTileView = ({
   hideSummary?: boolean
   // Name a single-series trend after what it measures. The traffic chart scopes every stat to the
   // navigation event, so the backend labels all six series `page_view`, meaningless in a tooltip
-  // under a "Visitors" / "Bounce rate" title. Colors still key off the event kind, so the hue holds
-  // across a stat switch.
+  // under a "Visitors" / "Bounce rate" title.
   seriesLabel?: string
+  // A single series's colour, overriding the event kind's (the traffic chart matches its stat tiles).
+  seriesColor?: SeriesColor
   onComparisonCaption?: (draws: boolean) => void
   emptyQualifier?: string
 }) => {
@@ -194,8 +196,9 @@ export const InsightTileView = ({
     // Breakdown splits (by $os, $utmSource, …) have no semantic palette identity,
     // so color them by index for distinctness; coloring by the "event · value"
     // label made every split inherit the event's family hue (all blue). Without a
-    // breakdown, keep the event kind's semantic color.
+    // breakdown, keep the event kind's semantic color unless the caller names one.
     if (result.case === 'trends') {
+      if (seriesColor && trendSeries.length === 1) return [seriesColor]
       return trendSeries.map((series, index) =>
         hasBreakdown(series.breakdown)
           ? getIndexedColor(index)
@@ -203,7 +206,7 @@ export const InsightTileView = ({
       )
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
-  }, [result.case, trendSeries, seriesNames, themeRevision])
+  }, [result.case, trendSeries, seriesNames, themeRevision, seriesColor])
   // The prior window as a dashed reference series, in a receded shade of the live one's color.
   // Single-series only: a dashed twin per split doubles a breakdown's lines with no way to tell
   // which pairs with which, and the two windows' splits need not match.

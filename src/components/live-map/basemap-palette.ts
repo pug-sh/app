@@ -6,7 +6,7 @@ import { cssColorToRgb } from '@/lib/maplibre'
 // Light mode uses protomaps' stock theme untouched. Only dark is overridden: its ocean sat at the
 // same lightness as the app's header bar, so the map had no top edge and read as a hole in the
 // chrome rather than a surface. Since shadows don't register on dark, elevation there is carried by
-// fill — the same reason card and popover sit above the canvas — so the map is lifted to match.
+// fill (the same reason card and popover sit above the canvas), so the map is lifted to match.
 // Everything is re-based on the app's ladder (hue 265 for neutrals, ink on the muted/faint tiers)
 // with the vegetation hues kept, at low chroma so they don't compete with the visitor markers.
 
@@ -104,9 +104,9 @@ export const DARK_BASEMAP = {
   address_label_halo: 'oklch(0.285 0.008 265)',
 } satisfies Partial<Theme>
 
-// DARK_BASEMAP was authored against Pug dark's card (L 0.215) with neutrals at hue 265. Another dark
-// theme gets the same map seated on its own canvas: lightness moves by the card's offset, neutrals
-// take the canvas hue, water and vegetation keep theirs. On Pug dark this changes nothing.
+// DARK_BASEMAP was authored against a card at L 0.215 with neutrals at hue 265 (Pug dark's before the
+// 2026-11-04 retune). Every dark theme, Pug's included, gets the map seated on its own canvas: lightness
+// moves by the card's offset, neutrals take the canvas hue, water and vegetation keep theirs.
 const AUTHORED_CARD_L = 0.215
 const NEUTRAL_HUE = 265
 
@@ -122,7 +122,7 @@ export const rebaseDarkEntry = (value: string, cardL: number, neutralHue: number
   })
 }
 
-// Resolution touches a canvas, so it can't run at module scope — resolve on first use, per canvas.
+// Resolution touches a canvas, so it can't run at module scope: resolve on first use, per canvas.
 const resolved = new Map<string, Partial<Theme>>()
 
 /** Dark-mode overrides for the protomaps theme, seated on the active theme's canvas; light passes through. */

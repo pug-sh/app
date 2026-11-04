@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import {
   activeOverrideAtom,
   fetchStatusAtom,
+  refreshFetchedThemeAtom,
   resolvableLibraryAtom,
   resolvedThemeAtom,
   STORAGE_REFUSED,
@@ -13,21 +14,25 @@ import {
   themeSelectionAtom,
 } from '@/data/theme.atoms'
 import { activeProjectAtom } from '@/data/workspace.atoms'
-import { type GalleryTheme, startingFile } from '@/pages/routegen/settings/gallery-themes'
+import { type GalleryTheme, isTheme, startingFile } from '@/pages/routegen/settings/gallery-themes'
 import ThemeGallery from '@/pages/routegen/settings/theme-gallery'
+import type { ThemeActions } from '@/pages/routegen/settings/theme-panel'
+import { FetchStatusLine, statusOf } from '@/pages/routegen/settings/theme-status'
 import { modeFor, pinOf } from '@/pages/routegen/settings/theme-target'
-import type { CheckedFile } from '@/pages/routegen/settings/theme-url-field'
+import type { ThemeFamily } from '@/theme/format'
+import { isRemoteId } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
+import type { Polarity } from '@/theme/tokens'
+import { applyButtons, type Destination, mainDestination, mainLabel, type Placement, unseenHint } from './apply'
 import HowYouSeeIt from './how-you-see-it'
 import InUse from './in-use'
 import PersonalStrip from './personal-strip'
 import ProjectStrip from './project-strip'
 import { projectTheme } from './project-theme'
-import { paintingSlot, requiredMode, resolveSlot, type ThemeSlot, writesTo } from './slots'
 
 const Appearance = () => {
   const choice = useAtomValue(themeChoiceAtom)
-  const resolved = useAtomValue(resolvedThemeAtom)
+  const mode = useAtomValue(resolvedThemeAtom)
   const selection = useAtomValue(themeSelectionAtom)
   const library = useAtomValue(resolvableLibraryAtom)
   const project = useAtomValue(activeProjectAtom)
@@ -35,84 +40,108 @@ const Appearance = () => {
   const statuses = useAtomValue(fetchStatusAtom)
   const selectTheme = useSetAtom(selectThemeAtom)
   const setOverride = useSetAtom(setProjectOverrideAtom)
-  // The chip someone clicked. Until then the target follows whatever is painting, so a file that lands late moves it.
-  const [picked, setPicked] = useState<ThemeSlot | null>(null)
-  // Once the two differ, In dark stays until the page reloads, so it doesn't vanish under the cursor when both match.
+  const refresh = useSetAtom(refreshFetchedThemeAtom)
+  // Once the two differ, the split stays until the page reloads, so it doesn't vanish under the cursor when both match.
   const [keptSplit, setKeptSplit] = useState(false)
   const differ = selection.light !== selection.dark
   if (differ && !keptSplit) setKeptSplit(true)
   const split = differ || keptSplit
 
-  const slot = resolveSlot({
-    picked,
-    painting: paintingSlot(choice.source, split, resolved),
-    split,
-    hasProject: Boolean(project),
-  })
+  // A project with a theme of its own shows it over yours, so the list applies to it there, and every click shows.
   const theme = project ? projectTheme({ project, override, choice, library, statuses }) : null
-  const heldReference = slot === 'project' ? theme?.holds : selection[slot === 'dark' ? 'dark' : 'light']
-  const heldTarget = heldReference && (parseReference(heldReference)?.target ?? heldReference)
-  const held = heldTarget
-    ? { target: heldTarget, family: library.find(entry => entry.id === heldTarget)?.family ?? null }
-    : null
+  const heldReference = theme?.holds ?? selection[split ? mode : 'light']
+  const heldTarget = parseReference(heldReference)?.target ?? heldReference
+  const held = { target: heldTarget, family: library.find(entry => entry.id === heldTarget)?.family ?? null }
+  const placement: Placement = {
+    hasProject: Boolean(project),
+    projectHolds: theme?.holds === undefined ? undefined : heldTarget,
+    split,
+    mode,
+    selection,
+  }
+  const own = placement.projectHolds !== undefined
 
   // A write the browser refused changed nothing: say so, or the click looks like it did nothing.
   const saved = (ok: boolean) => {
     if (!ok) toast.error(STORAGE_REFUSED)
+    return ok
   }
-  const select = (id: string) => saved(selectTheme({ polarity: writesTo(slot, split), id }))
+  const select = (polarity: Polarity | 'both', id: string) => saved(selectTheme({ polarity, id }))
   const applyToProject = (reference: string | null) => {
     if (project) saved(setOverride({ projectId: project.id, reference }))
   }
-  // A theme that isn't held draws the catalog's latest, so a new pick for This project needs no read.
-  const use = (chosen: GalleryTheme) => {
-    if (slot !== 'project') {
-      select(startingFile(chosen))
+  // Your theme is the mode, so a pin has nothing to say there. A project's takes the file's one variant, if that's all.
+  const apply = (destination: Destination, target: string, family: ThemeFamily, pin?: Polarity) => {
+    if (destination !== 'project') {
+      select(destination, target)
       return
     }
-    if (!chosen.family) return
-    applyToProject(formatReference({ target: startingFile(chosen), pin: pinOf(modeFor(chosen.family, null)) }))
-  }
-  const useFile = (file: CheckedFile) => {
-    if (slot !== 'project') {
-      select(file.url)
-      return
-    }
-    applyToProject(formatReference({ target: file.url, pin: pinOf(modeFor(file.family, file.pin ?? null)) }))
+    applyToProject(formatReference({ target, pin: pinOf(modeFor(family, pin ?? null)) }))
   }
   const toggleSplit = () => {
     if (!split) {
       setKeptSplit(true)
-      setPicked('dark')
       return
     }
-    const ok = selectTheme({ polarity: 'both', id: selection.light })
-    saved(ok)
-    if (!ok) return
-    setKeptSplit(false)
-    setPicked('yours')
+    if (select('both', selection[mode])) setKeptSplit(false)
+  }
+
+  // A theme that isn't held draws the catalog's latest, so a new pick needs no read.
+  const actions = (chosen: GalleryTheme): ThemeActions => {
+    const { family } = chosen
+    if (!family) return { buttons: [] }
+    const buttons = applyButtons({ ...chosen, family }, placement)
+    const hint = unseenHint(buttons, placement, choice.source !== 'personal')
+    const status = chosen.held ? statusOf(heldReference, statuses) : undefined
+    const painting = isTheme(chosen, choice.selection[mode])
+    const paints = library.find(entry => entry.id === choice.selection[mode])?.family
+    const lacking = painting && paints && !paints.variants[mode]
+    return {
+      buttons: buttons.map(button => ({
+        id: button.id,
+        label: button.label,
+        disabled: button.held,
+        onClick: () => apply(button.id, startingFile(chosen), family),
+      })),
+      note: (
+        <>
+          {lacking && (
+            <p className="text-xs text-negative">
+              {chosen.name} has no {mode} version, so Pug is showing instead.
+            </p>
+          )}
+          {status && (
+            <FetchStatusLine
+              status={status}
+              onRetry={isRemoteId(heldTarget) ? () => void refresh(heldTarget) : undefined}
+            />
+          )}
+          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        </>
+      ),
+    }
   }
 
   return (
     <div className="max-w-3xl space-y-8">
       <section>
-        <InUse slot={slot} split={split} project={theme} onSlot={setPicked} onSplit={toggleSplit} />
-        {slot === 'project' && project && theme ? (
-          <ProjectStrip project={project} theme={theme} onApply={applyToProject} />
-        ) : (
-          <PersonalStrip slot={slot} split={split} onSelect={select} />
-        )}
+        <InUse split={split} project={theme} onSplit={toggleSplit}>
+          {own && project && theme ? (
+            <ProjectStrip project={project} theme={theme} onApply={applyToProject} />
+          ) : (
+            <PersonalStrip split={split} onSelect={id => select(split ? mode : 'both', id)} />
+          )}
+        </InUse>
       </section>
 
       <HowYouSeeIt />
 
       <ThemeGallery
         held={held}
-        requires={requiredMode(slot, split)}
-        useLabel={slot === 'dark' ? 'Use for dark' : 'Use this theme'}
-        heldLabel="In use"
-        onUse={use}
-        onUseFile={useFile}
+        requires={!own && split ? mode : undefined}
+        fileLabel={mainLabel(placement)}
+        actions={actions}
+        onUseFile={file => apply(mainDestination(placement), file.url, file.family, file.pin)}
       />
     </div>
   )

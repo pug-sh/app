@@ -119,7 +119,18 @@ describe('chart edges', () => {
       expect(short).toBeLessThan(long)
     })
 
-    // Peaks where dropping the nice step, or asking for four or six ticks, changes the labels drawn. The "%" makes
+    // Y_TICK_COUNT drives the labels and the grid rows alike, so every label sits on a line.
+    it(`${name}: draws a grid row for every y label`, () => {
+      const { container } = renderChart(
+        Chart,
+        HOURLY.map((p, i) => ({ ...p, values: [i === 2 ? 146 : 0] })),
+      )
+      const { labels } = yLabelColumn(container)
+      expect(labels.length).toBeGreaterThan(1)
+      expect(container.querySelectorAll('g.chart-grid line')).toHaveLength(labels.length)
+    })
+
+    // Peaks where dropping the nice step, or asking for four or six ticks, changes the labels drawn. The "." makes
     // the width fractional, so it has to round up.
     it(`${name}: fits the labels upstream's domain and tick count decide`, () => {
       for (const peak of [8.5, 0.27, 0.35]) {

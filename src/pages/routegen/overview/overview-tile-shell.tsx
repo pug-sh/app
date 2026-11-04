@@ -14,7 +14,7 @@ export function OverviewTileShell({ title, footer, meta, children, contentClassN
   return (
     <div
       className={cn(
-        'flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-card p-4',
+        'flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-background p-4 dark:border-foreground/15',
         className,
       )}
     >

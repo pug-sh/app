@@ -10,7 +10,7 @@ import { majorLines, resolveTrack, type Track, updateNotice } from '@/theme/repo
 
 export const segment = (pressed: boolean) =>
   cn(
-    'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+    'rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40',
     pressed ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground',
   )
 
@@ -20,11 +20,13 @@ const ThemeUpdates = ({
   releases,
   track,
   label = 'Updates',
+  disabled = false,
   onChange,
 }: {
   releases: string[]
   track: Track
   label?: string
+  disabled?: boolean
   onChange: (track: Track) => void
 }) => {
   const lines = majorLines(releases)
@@ -41,6 +43,7 @@ const ThemeUpdates = ({
         <div role="group" aria-label={label} className="inline-flex rounded-lg border border-border p-0.5">
           <button
             type="button"
+            disabled={disabled}
             aria-pressed={track.kind === 'latest'}
             onClick={() => onChange({ kind: 'latest' })}
             className={segment(track.kind === 'latest')}
@@ -50,6 +53,7 @@ const ThemeUpdates = ({
           {lines.length > 1 ? (
             <DropdownMenu>
               <DropdownMenuTrigger
+                disabled={disabled}
                 render={
                   <button
                     type="button"
@@ -76,6 +80,7 @@ const ThemeUpdates = ({
           ) : (
             <button
               type="button"
+              disabled={disabled}
               aria-pressed={track.kind === 'major'}
               onClick={() => onChange({ kind: 'major', major: followed })}
               className={segment(track.kind === 'major')}
@@ -86,6 +91,7 @@ const ThemeUpdates = ({
           {releases.length > 1 ? (
             <DropdownMenu>
               <DropdownMenuTrigger
+                disabled={disabled}
                 render={
                   <button
                     type="button"
@@ -112,6 +118,7 @@ const ThemeUpdates = ({
           ) : (
             <button
               type="button"
+              disabled={disabled}
               aria-pressed={track.kind === 'exact'}
               onClick={() => onChange({ kind: 'exact', release: releases[0] })}
               className={segment(track.kind === 'exact')}

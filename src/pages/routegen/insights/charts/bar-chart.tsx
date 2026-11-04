@@ -7,7 +7,7 @@ import { SeriesBar } from '@/components/charts/series-bar'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { edgeBucketHover, PAD_ROW_KEY, useChartMargin, useVendoredChartPrep } from './common'
+import { edgeBucketHover, PAD_ROW_KEY, useChartMargin, useVendoredChartPrep, Y_TICK_COUNT } from './common'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 import { YAxis } from './y-axis'
@@ -96,7 +96,7 @@ export const BarChart = memo(function BarChart({
         margin={margin}
         stacked={stacked}
       >
-        <Grid horizontal />
+        <Grid horizontal numTicksRows={Y_TICK_COUNT} />
         <XAxis />
         <YAxis formatValue={formatValue} />
         {seriesNames.map((_, si) => (

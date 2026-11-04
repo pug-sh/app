@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useAtomValue } from 'jotai'
+import { useMemo, useState } from 'react'
 import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity, QueryRequest } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { compiledThemeAtom } from '@/data/theme.atoms'
+import { toHex } from '@/lib/color/oklch'
+import { seriesColor } from '@/theme/data-palette'
 import { DashboardInsightContent } from '../dashboards/insight-tile-content'
 import { COMPARE_CAPTION } from '../insights/content'
 import { OverviewTileShell } from './overview-tile-shell'
@@ -15,12 +19,15 @@ type Props = {
   queryKeyPrefix: string
 }
 
-// Its own component so the compare caption's state flip re-renders this tile alone — held one level
+// Its own component so the compare caption's state flip re-renders this tile alone, held one level
 // up it also re-rendered the six stat tiles, both breakdown panels and the MapLibre map beside it.
 export const TrafficChartTile = ({ statLabel, navName, query, range, granularity, queryKeyPrefix }: Props) => {
   // The chart reports whether it drew the dashed series; the caption rides the shell's own footer
   // rather than stacking under the chart as a second faint line.
   const [drawsCompare, setDrawsCompare] = useState(false)
+  // The selected stat tile's blue: page_view's own colour is fitted duller than it on light.
+  const chartOne = useAtomValue(compiledThemeAtom).tokens['chart-1']
+  const color = useMemo(() => seriesColor(toHex(chartOne)), [chartOne])
 
   return (
     <OverviewTileShell
@@ -43,6 +50,7 @@ export const TrafficChartTile = ({ statLabel, navName, query, range, granularity
           lightMetrics
           hideSummary
           seriesLabel={statLabel}
+          seriesColor={color}
         />
       </div>
     </OverviewTileShell>

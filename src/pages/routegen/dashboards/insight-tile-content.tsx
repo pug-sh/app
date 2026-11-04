@@ -20,6 +20,7 @@ import type { TimeRange } from '@/components/date-range-picker'
 import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import type { SeriesColor } from '@/lib/event-colors'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { mapSpecIncompleteReason } from '../insights/map'
@@ -63,6 +64,7 @@ export const DashboardInsightContent = ({
   lightMetrics = false,
   hideSummary = false,
   seriesLabel,
+  seriesColor,
   onComparisonCaption,
   emptyQualifier,
 }: {
@@ -84,6 +86,7 @@ export const DashboardInsightContent = ({
   // Suppress the chart's value·avg·peak summary row (forwarded to InsightTileView's hideSummary).
   hideSummary?: boolean
   seriesLabel?: string
+  seriesColor?: SeriesColor
   onComparisonCaption?: (draws: boolean) => void
   emptyQualifier?: string
 }) => {
@@ -199,6 +202,7 @@ export const DashboardInsightContent = ({
       lightMetrics={lightMetrics}
       hideSummary={hideSummary}
       seriesLabel={seriesLabel}
+      seriesColor={seriesColor}
       onComparisonCaption={onComparisonCaption}
       emptyQualifier={emptyQualifier}
     />

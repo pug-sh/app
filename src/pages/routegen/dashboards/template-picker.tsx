@@ -8,7 +8,7 @@ type InlineTemplatePickerProps = {
   // Resolved project context, used to hide templates that aren't applicable
   // (e.g. Revenue when the project has no monetization event).
   context: TemplateContext
-  // When provided, render a collapse (×) control — used for the "add another
+  // When provided, render a collapse (×) control, used for the "add another
   // tile" flow. Omitted on an empty dashboard, where the picker is shown
   // directly and there is nothing to collapse back to.
   onCancel?: () => void
@@ -46,7 +46,7 @@ export const InlineTemplatePicker = ({ onSelect, onCancel, context }: InlineTemp
                       key={template.id}
                       type="button"
                       onClick={() => onSelect(template)}
-                      className="flex items-start gap-3 rounded-lg border border-border/60 bg-card p-3 text-left transition-colors hover:border-border hover:bg-muted"
+                      className="flex items-start gap-3 rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-foreground/20 dark:border-foreground/15 dark:hover:border-foreground/25"
                     >
                       <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted/60 text-muted-foreground">
                         <Icon className="size-4" />

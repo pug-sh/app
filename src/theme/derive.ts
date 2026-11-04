@@ -8,7 +8,7 @@ import { highInkTarget } from './registry'
 import { resolveTokens } from './resolve'
 import { bisectLightness, fitted, solveFitted } from './solve'
 import { type AccessMode, type Contrast, type Polarity, TOKENS, type TokenName } from './tokens'
-import { FLOORS } from './validate'
+import { FLOORS, V14_APART } from './validate'
 
 // What a theme becomes in a mode: the colours and data the registry resolves. Colours a theme set are carried across,
 // a mode block's values win over anything computed, and whatever's left falls to Pug's version of the mode. Pug itself
@@ -132,6 +132,9 @@ const LINK_GAP = 30
 const LINK_CHROMA = 0.04
 const SEARCH_STEPS = 8
 const DATA_HEADROOM = 0.05
+// How far past body text's contrast, or its own where that's higher, bad may go when warning would otherwise sit on good
+// or bad. On a light paper with soft body ink all three can meet at one lightness, where yellow and red look alike.
+const BAD_REACH = 1.5
 
 const hueGap = (a: number, b: number) => {
   const gap = Math.abs(a - b) % 360
@@ -158,31 +161,41 @@ const highest = <T>(items: T[], score: (item: T) => number) => {
 }
 
 // Each status colour is searched from its own contrast toward body text: it can gain contrast, never lose it, and
-// never passes body text. Good against bad comes first, under the worst of the three deficiencies. Chroma stays at
-// least Pug's, or a grey status colour leaves the hue nothing to carry.
+// only bad ever passes body text (BAD_REACH). Good against bad comes first, under the worst of the three deficiencies.
+// Chroma stays at least Pug's, or a grey status colour leaves the hue nothing to carry.
 const statusColors = (tokens: Tokens, polarity: Polarity, block: ModeBlock | undefined, exact: boolean) => {
   const pug = pugColors(polarity)
   const paper = tokens.background
   const body = tokens.foreground
-  const stops = (role: Role) => {
+  const stops = (role: Role, limit = body) => {
     const token = STATUS[role]
     const tuned = block?.colors[token]
     if (tuned && exact) return [tuned]
     const h = tuned?.h ?? statusHue(role, tokens.link)
     const c = Math.max(tuned?.c ?? tokens[token].c, pug[token].c)
     const start = solveFitted(paper, polarity, contrast(tokens[token], paper), c, h)
-    const spent = polarity === 'light' ? start.l <= body.l : start.l >= body.l
+    const spent = polarity === 'light' ? start.l <= limit.l : start.l >= limit.l
     if (spent) return [start]
     return Array.from({ length: SEARCH_STEPS + 1 }, (_, i) =>
-      fitted(start.l + ((body.l - start.l) * i) / SEARCH_STEPS, c, h),
+      fitted(start.l + ((limit.l - start.l) * i) / SEARCH_STEPS, c, h),
     )
   }
-  const bads = stops('bad')
-  const pairs = stops('good').flatMap(good => bads.map(bad => ({ good, bad })))
-  const { good, bad } = highest(pairs, pair => worstDeltaE(pair.good, pair.bad))
-  const warn = highest(stops('warn'), stop =>
-    Math.min(worstDeltaE(stop, good), worstDeltaE(stop, bad), worstDeltaE(stop, body)),
-  )
+  const search = (badLimit: Oklch) => {
+    const bads = stops('bad', badLimit)
+    const pairs = stops('good').flatMap(good => bads.map(bad => ({ good, bad })))
+    const { good, bad } = highest(pairs, pair => worstDeltaE(pair.good, pair.bad))
+    const warn = highest(stops('warn'), stop =>
+      Math.min(worstDeltaE(stop, good), worstDeltaE(stop, bad), worstDeltaE(stop, body)),
+    )
+    return { good, bad, warn, apart: Math.min(worstDeltaE(warn, good), worstDeltaE(warn, bad)) }
+  }
+  let found = search(body)
+  if (found.apart < V14_APART) {
+    const from = Math.max(contrast(body, paper), contrast(tokens.negative, paper))
+    const reached = search(solveFitted(paper, polarity, from * BAD_REACH, 0, 0))
+    if (reached.apart > found.apart) found = reached
+  }
+  const { good, bad, warn } = found
   return {
     positive: good,
     negative: bad,

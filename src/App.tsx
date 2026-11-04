@@ -2,7 +2,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle } from 'lucide-react'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { Route, useLocation, useRouter } from 'wouter'
+import { Route, useLocation, useRoute, useRouter } from 'wouter'
 import AnalyticsIdentity from '@/analytics/identity'
 import { isAuthenticatedAtom } from '@/auth/auth.atoms'
 import { AuthSplit } from '@/auth/auth-split'
@@ -12,7 +12,6 @@ import { customerIdAtom } from '@/auth/jwt.atoms'
 import UsageBanner from '@/components/billing/usage-banner'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
-import { SocialNav } from '@/components/social-nav'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -327,18 +326,26 @@ export const WorkspaceBootstrap = () => {
 }
 
 const AuthenticatedApp = () => {
+  const [fullBleed] = useRoute('/p/:projectId/live')
   return (
-    <SidebarProvider>
+    <SidebarProvider className="md:h-svh">
       <Suspense fallback={null}>
         <AppSidebar />
       </Suspense>
-      <SidebarInset className="min-h-0">
+      <SidebarInset className="min-h-0 md:overflow-y-auto md:border md:peer-data-[variant=inset]:shadow-xs">
         <DemoBanner />
         <UsageBanner />
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter">
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter md:hidden">
           <SidebarTrigger className="-ml-1" />
-          <SocialNav className="ml-auto -mr-1" />
         </header>
+        {/* The panel scrolls inside itself, so content would be sliced at its edges; the two fades soften
+            the cut. A full-bleed page has no edge to soften. */}
+        {!fullBleed && (
+          <div
+            aria-hidden
+            className="pointer-events-none sticky top-0 z-10 -mb-6 hidden h-6 shrink-0 bg-gradient-to-b from-background to-transparent md:block"
+          />
+        )}
         {/*
           data-pug-no-capture blanks the text our own click/dead-click capture would otherwise read
           out of this subtree. Everything a page renders here belongs to a customer (their
@@ -352,11 +359,17 @@ const AuthenticatedApp = () => {
           and forgetting one puts a third party's PII in our project permanently. The cost is that
           button labels in here are blanked too; trackFeature() names those explicitly instead.
         */}
-        <main className="relative flex min-h-0 flex-1 flex-col overflow-x-clip" data-pug-no-capture>
+        <main className="relative flex flex-1 flex-col overflow-x-clip" data-pug-no-capture>
           <Suspense fallback={<LoadingSpinner />}>
             <Router />
           </Suspense>
         </main>
+        {!fullBleed && (
+          <div
+            aria-hidden
+            className="pointer-events-none sticky bottom-0 z-10 -mt-6 hidden h-6 shrink-0 bg-gradient-to-t from-background to-transparent md:block"
+          />
+        )}
       </SidebarInset>
     </SidebarProvider>
   )

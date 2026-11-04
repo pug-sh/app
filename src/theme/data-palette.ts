@@ -16,7 +16,7 @@ export type SeriesColor = {
 }
 
 /** Build a series color from a 6-char hex: solid line/dot, plus a 10%-alpha fill (`1a` suffix). */
-const seriesColor = (hex: string): SeriesColor => ({ line: hex, fill: `${hex}1a`, dot: hex })
+export const seriesColor = (hex: string): SeriesColor => ({ line: hex, fill: `${hex}1a`, dot: hex })
 
 export const EVENT_COLORS: Record<string, string> = {
   // navigation + interactions: blue (nav) · cyan (click) · red (degraded)
@@ -183,8 +183,8 @@ export const EVENT_COLORS: Record<string, string> = {
   share: '#ea580c',
 }
 
-// Breakdown palette (getIndexedColor) and the fallback for unmapped events. A theme replaces it per
-// mode with data.categorical, used exactly as given; Pug's preset lists these through its fit.
+// Unmapped events hash into this list, fitted to the canvas: their colour is also badge text, so it has
+// to read on the canvas. A theme's data.categorical replaces it, used exactly as given.
 export const FALLBACK_COLORS = [
   '#3b6cf0',
   '#059669',
@@ -199,6 +199,15 @@ export const FALLBACK_COLORS = [
   '#475569',
   '#84cc16',
 ]
+
+// Breakdown palette (getIndexedColor): the vendored charts' own --chart-1…5 hues (bklit's indigo, yellow,
+// fuchsia, mist, then ink), with the three saturated ones held near two-thirds of their chroma: at full
+// strength they glare against the quiet UI. Bars and lines carry their labels, so yellow on white stays
+// pale, as bklit draws it. A theme's data.categorical replaces it too.
+export const CHART_DEFAULTS: Record<Polarity, string[]> = {
+  light: ['#666ed8', '#ddb961', '#c16fce', '#67787c', '#0d0e10'],
+  dark: ['#666ed8', '#e9cc72', '#c16fce', '#67787c', '#e5e5ea'],
+}
 
 // Non-well-known kinds borrow their domain family's hue by name prefix, matched against the
 // resolveKind() form. Each palette holds only on-hue shades: outcome crossovers are excluded so a
@@ -385,14 +394,16 @@ export type CompiledDataPalette = {
   events: Record<string, SeriesColor>
   families: { prefixes: string[]; palette: SeriesColor[] }[]
   categorical: SeriesColor[]
+  /** What an unmapped event hashes into. */
+  fallback: SeriesColor[]
   /** 6-digit hex with a leading '#'. */
   avatars: string[]
 }
 
 /**
  * Resolves a variant's data colours into the palette getSeriesColor looks up. `canvas` is the resolved
- * background the fit is placed against. A variant without its own categorical colours gets the
- * default breakdown palette through this canvas's fit: on Pug's canvas, exactly Pug's list.
+ * background the fit is placed against. A variant without its own categorical colours breaks down in
+ * the chart defaults (fitted in high contrast) and hashes unmapped events into the fitted fallback list.
  */
 export const compileDataPalette = (
   data: DataSpec | undefined,
@@ -426,9 +437,18 @@ export const compileDataPalette = (
     palette: f.palette.map(hex => seriesColor(fit(base(hex, f.group)))),
   }))
 
-  const categorical = data?.categorical ? data.categorical.map(toHex) : FALLBACK_COLORS.map(canvasFit)
+  const own = data?.categorical?.map(toHex)
+  const defaults = contrast === 'high' ? CHART_DEFAULTS[polarity].map(canvasFit) : CHART_DEFAULTS[polarity]
+  const categorical = own ?? defaults
+  const fallback = own ?? FALLBACK_COLORS.map(canvasFit)
   const avatars = data?.avatars ? data.avatars.map(toHex) : DEFAULT_AVATARS
-  return { events, families, categorical: categorical.map(seriesColor), avatars }
+  return {
+    events,
+    families,
+    categorical: categorical.map(seriesColor),
+    fallback: fallback.map(seriesColor),
+    avatars,
+  }
 }
 
 // Every group must have its anchor in the map, or a renamed event would silently stop moving.

@@ -28,9 +28,8 @@ const mount = (props: Props = {}, themes: InstalledTheme[] = []) => {
     <Provider store={store}>
       <ThemeGallery
         held={null}
-        useLabel="Use this theme"
-        heldLabel="In use"
-        onUse={onUse}
+        fileLabel="Use this theme"
+        actions={theme => ({ buttons: [{ id: 'use', label: 'Use this theme', onClick: () => onUse(theme) }] })}
         onUseFile={() => {}}
         {...next}
       />
@@ -70,13 +69,14 @@ describe('ThemeGallery toolbar', () => {
   // Review Focus 1: no control that's gone can hide a theme.
   it('drops a filter the toolbar no longer shows', async () => {
     serve(EIGHT)
-    const { rerender } = mount()
+    const { store } = mount()
     await findTile('Moss, Light only')
     search('moss')
     expect(tileNames()).toEqual(['Moss, Light only'])
-    rerender({ requires: 'dark' })
+    serve(listing('Slate'))
+    await act(() => store.set(themeCatalogAtom))
     expect(screen.queryByLabelText('Search themes')).toBeNull()
-    expect(tileNames()).toEqual(['Pug'])
+    expect(tileNames()).toEqual(['Pug', 'Slate, Light only'])
   })
 })
 
@@ -84,14 +84,14 @@ describe('ThemeGallery tiles', () => {
   it('draws tiles in the member’s own contrast and colour vision', () => {
     serveByUrl({})
     const { store } = mount()
-    const paper = () => tile('Pug').querySelector('rect')?.getAttribute('fill')
+    const ink = () => tile('Pug').querySelector('rect[x="44"]')?.getAttribute('fill')
     const line = () => tile('Pug').querySelector('path[fill="none"]')?.getAttribute('stroke')
-    expect(paper()).toBe('oklch(0.943 0.005 265)')
-    expect(line()).toBe('#4164b9')
+    expect(ink()).toBe('oklch(0.420237 0 0)')
+    expect(line()).toBe('#666ed8')
     act(() => {
       store.set(themeContrastAtom, 'high')
     })
-    expect(paper()).toBe('oklch(1 0 0)')
+    expect(ink()).toBe('oklch(0.313357 0 0)')
     act(() => {
       store.set(themeVisionAtom, 'colourblind')
     })
@@ -225,11 +225,20 @@ describe('ThemeGallery panel', () => {
     expect(onUse).not.toHaveBeenCalled()
   })
 
-  it('hands the theme to its host', async () => {
+  it('asks its host for the open theme’s buttons, and hands it back from them', async () => {
     serveByUrl({})
     const { onUse } = mount({}, [MOSS])
     await applyTheme('Moss')
     expect(onUse).toHaveBeenCalledWith(expect.objectContaining({ id: MOSS.id }))
+  })
+
+  it('names a checked link’s button as its host asks', async () => {
+    serveByUrl({ 'https://example.com/moss.json': MOSS.text })
+    mount({ fileLabel: 'Set as project default' })
+    fireEvent.click(screen.getByRole('button', { name: 'Add a theme' }))
+    fireEvent.change(screen.getByLabelText('Theme URL'), { target: { value: 'example.com/moss.json' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }))
+    expect(await screen.findByRole('button', { name: 'Set as project default' })).toBeTruthy()
   })
 })
 

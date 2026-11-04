@@ -1,7 +1,5 @@
-import { formatColor, parseColor } from '../lib/color/parse'
 import { BUILTINS, paintKey } from './builtin'
 import { compileVariant } from './compile'
-import { PUG_AUTH_SURFACE } from './presets/pug'
 import { ACCESS_MODES, POLARITIES, type Polarity } from './tokens'
 
 // Pug in each of its modes as CSS, written to src/theme/generated/builtin-themes.css by
@@ -39,16 +37,9 @@ export const builtinThemesCss = () => {
     }
   }
 
-  // The sign-in pages stay on Pug whatever the root carries: a full reset, plus light's nine
-  // re-solved tokens. `color` is re-anchored because elements inheriting it from body would
-  // otherwise keep the outer theme's ink.
-  const authLight = { ...pugVars.light }
-  for (const [token, value] of Object.entries(PUG_AUTH_SURFACE)) {
-    const parsed = parseColor(value as string)
-    if (!parsed) throw new Error(`PUG_AUTH_SURFACE.${token} is not a colour`)
-    authLight[`--${token}`] = formatColor(parsed)
-  }
-  blocks.push(`.auth-surface {\n${declarations(authLight)}\n  color: var(--foreground);\n}`)
+  // The sign-in pages stay on Pug whatever the root carries. `color` is re-anchored because elements
+  // inheriting it from body would otherwise keep the outer theme's ink.
+  blocks.push(`.auth-surface {\n${declarations(pugVars.light)}\n  color: var(--foreground);\n}`)
   blocks.push(`.dark .auth-surface {\n${declarations(pugVars.dark)}\n  color: var(--foreground);\n}`)
 
   // Someone who needs high contrast needs it here first. Contrast has its own attribute because `data-theme` is absent

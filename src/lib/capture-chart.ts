@@ -1,14 +1,14 @@
-// Screenshot a live DOM node to a PNG — no html2canvas/dom-to-image dependency.
+// Screenshot a live DOM node to a PNG, with no html2canvas/dom-to-image dependency.
 //
 // Technique: clone the node, inline every computed style onto the clone (so it
 // renders identically without the document's stylesheet), wrap it in an SVG
 // <foreignObject>, and load that SVG through an <img>. The <img> stays
-// vector — drawing it onto a scaled canvas rasterizes crisply at device
+// vector: drawing it onto a scaled canvas rasterizes crisply at device
 // resolution. The SVG loads in an isolated document that cannot see the page's
 // @font-face faces, so the UI font is re-supplied by embedding it in the SVG (see
-// loadFontFaceCss) — without it the chart text falls back to the system stack.
+// loadFontFaceCss); without it the chart text falls back to the system stack.
 
-import figtreeWoff2 from '@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url'
+import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
 
 // Force both overflow axes open with !important (overriding the stylesheet's overflow
 // class). On live elements, measureFullSize saves and restores these exact properties.
@@ -29,7 +29,7 @@ const inlineComputedStyles = (source: Element, target: Element, unclip: Set<Elem
   }
   // Re-open scroll regions (and the wrappers between them and the captured root) so
   // the full content lays out in the snapshot instead of the scrolled-into-view
-  // slice — otherwise horizontally/vertically scrollable tiles export clipped.
+  // slice; otherwise horizontally/vertically scrollable tiles export clipped.
   if (unclip.has(source)) openOverflow(style)
   // The width pinned above leaves no slack, so a label that fits on screen still ellipsizes here.
   if (computed.textOverflow === 'ellipsis' && source.scrollWidth <= source.clientWidth) {
@@ -67,16 +67,16 @@ const loadImage = (src: string, width: number, height: number) =>
   })
 
 // The SVG-image renderer loads in an isolated document that cannot see the page's
-// @font-face faces, so chart text otherwise falls back to the system sans stack —
+// @font-face faces, so chart text otherwise falls back to the system sans stack,
 // visibly different from the rest of the UI. We re-supply the font by embedding it
 // directly in the SVG as a base64 data: URL @font-face (an external url() would not
 // load inside an <img>-loaded SVG). One variable file covers every weight; the latin
 // subset is enough for tile text. Fetched and base64-encoded once, then cached.
 // Keep FONT_FAMILY, the import path and the font-weight range below in step with --font-sans
-// in index.css — each variable face declares its own axis range, and a wrong one renders the
+// in index.css: each variable face declares its own axis range, and a wrong one renders the
 // export off-weight rather than failing.
-const FONT_FAMILY = 'Figtree Variable'
-const FONT_URL = figtreeWoff2
+const FONT_FAMILY = 'Inter Variable'
+const FONT_URL = interWoff2
 let fontFaceCssPromise: Promise<string> | undefined
 
 const loadFontFaceCss = () => {
@@ -89,7 +89,7 @@ const loadFontFaceCss = () => {
         for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
         const base64 = btoa(binary)
         return (
-          `@font-face{font-family:"${FONT_FAMILY}";font-style:normal;font-weight:300 900;` +
+          `@font-face{font-family:"${FONT_FAMILY}";font-style:normal;font-weight:100 900;` +
           `src:url(data:font/woff2;base64,${base64}) format("woff2");}`
         )
       })
@@ -142,7 +142,7 @@ const resolveCardColors = (node: HTMLElement) => {
 // A scrollable region (retention heatmap, data table) clips its content to the
 // visible box, so the live tile shows only the scrolled-into-view slice. To
 // snapshot the whole thing we re-open every such region. We match only intentional
-// scrollers (overflow auto/scroll) — never overflow:hidden, which also drives
+// scrollers (overflow auto/scroll), never overflow:hidden, which also drives
 // single-line text truncation and must stay clipped.
 const SCROLLABLE_OVERFLOW = /^(?:auto|scroll)$/
 
@@ -152,7 +152,7 @@ const findScrollClippers = (node: HTMLElement) => {
     if (!(el instanceof HTMLElement)) return
     const cs = window.getComputedStyle(el)
     // +1 tolerates sub-pixel rounding: scrollWidth/clientWidth are integer-rounded, so a
-    // 1px delta is layout noise, not real overflow — without it a non-scrolling element
+    // 1px delta is layout noise, not real overflow; without it a non-scrolling element
     // gets flagged as a clipper and needlessly forced open.
     const clipsX = SCROLLABLE_OVERFLOW.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 1
     const clipsY = SCROLLABLE_OVERFLOW.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1
@@ -165,7 +165,7 @@ const findScrollClippers = (node: HTMLElement) => {
 
 // Re-opening a scroll region is not enough on its own: any overflow:hidden wrapper
 // between it and the captured root would re-clip the freed content. So expand each
-// clipper to its ancestor chain up to (and including) `node` — the whole path must
+// clipper to its ancestor chain up to (and including) `node`: the whole path must
 // be opened for the full content to lay out.
 const expandToRoot = (clippers: Set<Element>, node: HTMLElement) => {
   const unclip = new Set<Element>()
@@ -182,7 +182,7 @@ const expandToRoot = (clippers: Set<Element>, node: HTMLElement) => {
 
 // Measure `node`'s full content size with every clipper on the path re-opened, so
 // off-screen scroll content contributes to the extent. The live nodes' inline
-// overflow is mutated and restored synchronously — no await in between — so the
+// overflow is mutated and restored synchronously (no await in between), so the
 // browser never paints the transient un-clipped layout.
 const measureFullSize = (node: HTMLElement, unclip: Set<Element>) => {
   const rect = node.getBoundingClientRect()
@@ -192,7 +192,7 @@ const measureFullSize = (node: HTMLElement, unclip: Set<Element>) => {
   // Save each element's inline overflow (value + priority) and its scroll offset.
   // Forcing overflow:visible makes a scroll container non-scrollable, which clamps
   // scrollLeft/scrollTop to 0 during the reflow; restoring overflow does not bring
-  // the offset back, so we reassign it — otherwise a tile the user had scrolled
+  // the offset back, so we reassign it; otherwise a tile the user had scrolled
   // jumps to the top-left the moment they open Share.
   const saved: Array<{ el: HTMLElement; x: string; xp: string; y: string; yp: string; left: number; top: number }> = []
   for (const element of unclip) {
@@ -237,7 +237,7 @@ const MAX_CAPTURE_ELEMENTS = 25_000
 // itself is never re-themed.
 export const captureElementToImage = async (node: HTMLElement): Promise<CapturedChart> => {
   if (node.querySelectorAll('*').length > MAX_CAPTURE_ELEMENTS) {
-    throw new Error('This view is too detailed to export — narrow the date range or use a coarser granularity')
+    throw new Error('This view is too detailed to export. Narrow the date range or use a coarser granularity.')
   }
 
   // Scrollable tiles (retention heatmaps, data tables) clip their content to the
@@ -269,7 +269,7 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
   // Must be a data: URL, never a Blob URL: Chrome drops the canvas origin-clean flag for an
   // <img>-loaded SVG holding a <foreignObject> sourced from blob: (an empty one is enough), so
   // composeShareCard's toBlob() then throws SecurityError. encodeURIComponent is what keeps this
-  // safe — it covers UTF-8 tile text and the '#' in the charts' url(#clip) refs, which would
+  // safe: it covers UTF-8 tile text and the '#' in the charts' url(#clip) refs, which would
   // otherwise truncate the URL at a fragment.
   const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
   const img = await loadImage(svgUrl, width, height)
@@ -278,14 +278,14 @@ export const captureElementToImage = async (node: HTMLElement): Promise<Captured
 
 // logo.svg bakes in a pale badge plate so the full-color mark reads on any surface.
 // That plate is what makes the mark legible on the dark card, but on the light card
-// it reads as a stray pale tile — so strip it there and let the mark sit directly on
+// it reads as a stray pale tile, so strip it there and let the mark sit directly on
 // the surface. Stripping leaves the viewBox alone, so the mark keeps its drawn size.
 const BADGE_PLATE = /<rect\b[^>]*\bid="badge-plate"[^>]*\/>\s*/
 
 const stripBadgePlate = (markup: string) => {
   const stripped = markup.replace(BADGE_PLATE, '')
   // A renamed/removed id would otherwise quietly restore the plate on light cards.
-  if (stripped === markup) console.error('Brand logo badge plate not found — light share card will show it')
+  if (stripped === markup) console.error('Brand logo badge plate not found: the light share card will show it')
   return stripped
 }
 
@@ -329,7 +329,7 @@ const truncateToWidth = (ctx: CanvasRenderingContext2D, text: string, maxWidth: 
 // Device-independent export target scale: each laid-out pixel becomes up to a 3×3
 // block in the PNG, so a ~600px tile exports near 1800px wide regardless of the
 // viewer's monitor. The card source is vector SVG, so this is true detail, not
-// upscaling. This is a target, not a guarantee — composeShareCard lowers it toward
+// upscaling. This is a target, not a guarantee: composeShareCard lowers it toward
 // 1× for tiles large enough to approach the canvas caps below.
 const EXPORT_SCALE = 3
 
@@ -389,7 +389,7 @@ export const composeShareCard = async ({
   const cardH = CARD_PAD + headerBand + card.height + brandBand + CARD_PAD
 
   // Now that scroll tiles export at full content size, a wide/tall retention table
-  // can push the 3× canvas past the caps — so scale down to fit (never below 1×, to
+  // can push the 3× canvas past the caps, so scale down to fit (never below 1×, to
   // avoid a blurry sub-pixel export).
   const safeScale = Math.max(1, Math.min(scale, Math.floor(MAX_CANVAS_DIM / Math.max(cardW, cardH))))
   const pxW = cardW * safeScale
@@ -398,7 +398,7 @@ export const composeShareCard = async ({
   // the canvas silently encode blank, fail with a message the caller can surface so
   // the user knows to narrow the range instead of downloading a broken image.
   if (pxW > MAX_CANVAS_DIM || pxH > MAX_CANVAS_DIM || pxW * pxH > MAX_CANVAS_AREA) {
-    throw new Error('Chart is too large to export — narrow the date range or remove a breakdown')
+    throw new Error('Chart is too large to export. Narrow the date range or remove a breakdown.')
   }
 
   const canvas = document.createElement('canvas')
@@ -495,7 +495,7 @@ export const copyImageToClipboard = async (blob: Blob): Promise<boolean> => {
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
     return true
   } catch (error) {
-    // Blocked/denied (e.g. lost focus, non-secure context) vs. unsupported — the
+    // Blocked/denied (e.g. lost focus, non-secure context) vs. unsupported: the
     // caller can't tell them apart, so log the reason for debuggability.
     console.error('Failed to copy image to clipboard', error)
     return false

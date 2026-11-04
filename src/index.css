@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/figtree";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 /* Colour tokens: generated from src/theme/presets by `bun run generate:themes`. */
 @import "./theme/generated/builtin-themes.css";
@@ -36,7 +36,7 @@
   --color-caution: var(--caution);
   --color-negative: var(--negative);
 
-  /* Hardcoded, not derived from --radius — rounded-md/lg read these, so retune the ramp. */
+  /* Hardcoded, not derived from --radius: rounded-md/lg read these, so retune the ramp. */
   --radius-sm: 0.5rem;
   --radius-md: 0.625rem;
   --radius-lg: 0.75rem;
@@ -44,10 +44,10 @@
 
   --spacing-page-gutter: var(--page-gutter);
 
-  --font-sans: "Figtree Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
-  /* Three weights carry the whole hierarchy: 400 body, 500 labels, 600 titles + hero numerals. */
+  /* Two weights carry the hierarchy: 400 for everything read, 500 for labels and controls. */
   --font-weight-medium: 500;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -65,7 +65,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  /* Keep the single prefix — the registry installer writes var(----chart-grid),
+  /* Keep the single prefix: the registry installer writes var(----chart-grid),
      which silently kills every utility built on these. */
   --color-chart-scale-pattern-color: var(--chart-scale-pattern-color);
   --color-chart-scale-05: var(--chart-scale-05);
@@ -104,7 +104,7 @@
     @apply font-sans;
   }
 
-  /* Headings carry no weight of their own — size, ink and tracking do the work. Weight is
+  /* Headings carry no weight of their own: size, ink and tracking do the work. Weight is
      reserved for labels/controls (font-medium at 500), which is the one place it reads as
      emphasis rather than heft. */
   h1,
@@ -115,8 +115,8 @@
     letter-spacing: -0.014em;
   }
 
-  /* Big numerals need *some* negative tracking — text spacing is drawn for 14px, not a 36px
-     figure — but only enough to close the gaps, or an airy face stops being one. */
+  /* Big numerals need *some* negative tracking (text spacing is drawn for 14px, not a 36px
+     figure), but only enough to close the gaps, or an airy face stops being one. */
   .text-3xl,
   .text-4xl,
   .text-5xl {
@@ -125,7 +125,7 @@
 
   /* Display sizes come back down to 400: weight that reads as emphasis at 14px reads as heft at
      24px+, and size is already carrying the emphasis. Utilities beat @layer base, so a weight class
-     at the call site still wins — the display sites deliberately set none. */
+     at the call site still wins, and the display sites deliberately set none. */
   .text-xl,
   .text-2xl,
   .text-3xl,
@@ -139,7 +139,7 @@
     font-weight: 400;
   }
 
-  /* <strong>/<b> take the label weight instead of the UA's 700 — the only emphasis weight this
+  /* <strong>/<b> take the label weight instead of the UA's 700, the only emphasis weight this
      system has. Nothing in app code emits them; they arrive from markdown (snarkdown turns
      `**x**` into <strong>), which is why the UA default was the last bold left on screen. */
   strong,
@@ -236,7 +236,7 @@
   z-index: 30 !important;
 }
 
-/* Auth card wall — each column renders the deck --wall-copies times and scrolls by exactly
+/* Auth card wall: each column renders the deck --wall-copies times and scrolls by exactly
    one copy, so the loop distance has to track the count (set from the TSX) rather than a literal.
    Cards carry their own bottom margin rather than a flex gap on the track: N cards yield 2N-1
    gaps where the repeating unit needs 2N, so -50% lands half a gap short and jumps. */
@@ -261,7 +261,7 @@
   }
 }
 
-/* sugar-high palette for the SDK setup snippets. Everything reads theme tokens — keyword, string
+/* sugar-high palette for the SDK setup snippets. Everything reads theme tokens: keyword, string
    and class have their own (syntax-*), solved against the snippet's bg-muted/50 ground. */
 .sugar-high {
   --sh-identifier: var(--foreground);
@@ -277,7 +277,7 @@
   tab-size: 4;
 }
 
-/* Thin scrollbars — the platform default is chunky against these surfaces. Styling
+/* Thin scrollbars: the platform default is chunky against these surfaces. Styling
    ::-webkit-scrollbar makes Chromium ignore scrollbar-width, so the two engines never
    double up; Firefox takes the standard properties. */
 * {

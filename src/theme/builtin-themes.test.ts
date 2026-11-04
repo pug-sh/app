@@ -30,14 +30,14 @@ describe('generated files', () => {
   })
 })
 
-// End to end: the CSS the app now ships declares exactly what index.css declared before.
+// End to end: the CSS the app ships declares exactly the pinned palette.
 describe.each([
   ['light', ':root'],
   ['dark', ':root.dark'],
 ] as const)('the generated Pug %s block', (polarity, selector) => {
   const declared = declaredIn(builtinThemesCss(), selector)
 
-  it('matches index.css before the refactor', () => {
+  it('matches the pinned palette', () => {
     for (const [token, value] of Object.entries(tokens[polarity])) {
       const parsed = parseColor(value)
       expect(declared[token], token).toBe(parsed && formatColor(parsed))
@@ -63,10 +63,10 @@ it.each([
   expect(Object.keys(declaredIn(builtinThemesCss(), selector))).toHaveLength(TOKENS.length)
 })
 
-// The sign-in pages reset every token to Pug whatever the root carries, light with its own re-solved
-// ground. Compared against the frozen fixture, not the preset, so a regenerate can't paper over a change.
+// The sign-in pages reset every token to Pug whatever the root carries. Compared against the frozen
+// fixture, not the preset, so a regenerate can't paper over a change.
 describe.each([
-  ['light', '.auth-surface', { ...tokens.light, ...tokens.authSurface }],
+  ['light', '.auth-surface', tokens.light],
   ['dark', '.dark .auth-surface', tokens.dark],
 ] as const)('the generated %s sign-in block', (_, selector, expected) => {
   const declared = declaredIn(builtinThemesCss(), selector)

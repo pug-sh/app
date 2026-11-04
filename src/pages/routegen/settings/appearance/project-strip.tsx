@@ -22,9 +22,9 @@ import { missingMode } from '@/theme/choice'
 import { isInstalledId, isRemoteId, type RemoteId } from '@/theme/library'
 import { formatReference, parseReference } from '@/theme/reference'
 import type { Track } from '@/theme/repository'
+import { sourceOf } from './names'
 import type { ProjectTheme } from './project-theme'
 import { skippedOverride } from './project-theme'
-import { sourceOf } from './slots'
 
 // What belongs to This project, always visible: what it holds, how its file is doing, and the controls that need no
 // tile, since a pasted link has none. Each writes at once, after reading a file the catalog doesn't carry: a release's
