@@ -90,7 +90,7 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     if (awaitWorkspace && !workspaceSettled) return
 
     // 'error' has to open this, or one failed GetMe leaves the session anonymous until something
-    // else happens to call fetchMe, and the only thing that does is the Account tab's mount.
+    // else calls fetchMe: the Account tab's mount, or opening the sidebar's account menu.
     if (emailExpected && meStatus !== 'ready' && meStatus !== 'error') return
 
     const traits: CustomerTraits = {

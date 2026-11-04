@@ -1,4 +1,5 @@
 import { resolveKind } from '@/lib/event-aliases'
+import { BUILTINS } from '@/theme/builtin'
 import { type CompiledDataPalette, compileDataPalette, type SeriesColor } from '@/theme/data-palette'
 import { PUG_CANVAS } from '@/theme/fit'
 import type { Polarity } from '@/theme/tokens'
@@ -14,7 +15,12 @@ const pugPalettes: Partial<Record<Polarity, CompiledDataPalette>> = {}
 
 /** Pug's own data palette, whatever theme is active, for surfaces that stay Pug, like the sign-in pages. */
 export const pugDataPalette = (polarity: Polarity) =>
-  (pugPalettes[polarity] ??= compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]))
+  (pugPalettes[polarity] ??= compileDataPalette(
+    BUILTINS.pug.variants[polarity]?.data,
+    polarity,
+    'standard',
+    PUG_CANVAS[polarity],
+  ))
 
 let palette = pugDataPalette(
   typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light',
@@ -49,10 +55,10 @@ export const seriesColorIn = (source: CompiledDataPalette, seriesName: string, f
   if (Object.hasOwn(source.events, canonical)) return source.events[canonical]
 
   // Unmapped (custom) event: deterministic by name, identical for every user and view. Borrow the
-  // matching family's hue; otherwise hash into the categorical palette.
+  // matching family's hue; otherwise hash into the fallback palette.
   const family = source.families.find(f => f.prefixes.some(p => canonical.startsWith(p)))
   if (family) return family.palette[hashString(canonical) % family.palette.length]
-  return indexedColorIn(source, hashString(canonical))
+  return source.fallback[hashString(canonical) % source.fallback.length]
 }
 
 export const getSeriesColor = (seriesName: string, fallbackIndex = 0) =>

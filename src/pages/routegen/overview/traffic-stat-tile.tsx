@@ -23,7 +23,7 @@ import { useTrafficQuery } from './use-traffic-query'
 
 // A single headline stat: the exact window scalar (SegmentationResult.total) for its metric, a
 // compare-vs-prior delta badge (matching the product KPI tiles), and a sparkline of the metric over
-// the window. The selected tile drives the main chart and reads in the accent color.
+// the window. The selected tile drives the main chart and reads in its colour, --chart-1.
 export const TrafficStatTile = ({
   statId,
   nav,
@@ -90,7 +90,7 @@ export const TrafficStatTile = ({
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
     return (
-      <div className="flex h-[8.5rem] min-h-0 flex-col rounded-lg border border-border/60 bg-card px-4 py-3 text-left">
+      <div className="flex h-[9.25rem] min-h-0 flex-col rounded-lg border border-transparent bg-card px-4 py-3 text-left dark:border-border/60">
         <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
           <span className="text-xs text-muted-foreground" title={error}>
@@ -125,23 +125,13 @@ export const TrafficStatTile = ({
       onClick={() => onSelect(statId)}
       aria-pressed={selected}
       className={cn(
-        'flex h-[8.5rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
+        'flex h-[9.25rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
         selected
-          ? 'border-primary/50 bg-primary/[0.07]'
-          : 'border-border/60 bg-card hover:border-border hover:bg-accent/40',
+          ? 'border-chart-1/50 bg-chart-1/[0.07]'
+          : 'border-transparent bg-card hover:border-border hover:bg-accent dark:border-border/60 dark:hover:border-border dark:hover:bg-accent/40',
       )}
     >
-      {/* min-h reserves the badge row so numbers stay aligned across tiles whether or not a delta is present. */}
-      <div className="flex min-h-[1.375rem] items-center justify-between gap-2">
-        <span className="min-w-0 truncate text-sm font-medium text-muted-foreground">{label}</span>
-        {hovered?.time ? (
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {formatTooltipDate(timestampDate(hovered.time), granularity, timeZone)}
-          </span>
-        ) : (
-          delta && <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} />
-        )}
-      </div>
+      <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
       <span
         className={cn(
           'mt-1 text-4xl tracking-tight tabular-nums',
@@ -150,10 +140,22 @@ export const TrafficStatTile = ({
       >
         {shown !== undefined ? formatTrafficStatValue(statId, shown) : '—'}
       </span>
+      <div className="mt-1 flex h-5 items-center">
+        {hovered?.time ? (
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {formatTooltipDate(timestampDate(hovered.time), granularity, timeZone)}
+          </span>
+        ) : (
+          delta && <DeltaBadge pct={delta.pct} label={delta.label} lowerIsBetter={stat.lowerIsBetter} />
+        )}
+      </div>
 
       {/* Fixed shallow band pinned to the bottom edge: given the full leftover height the vertical stretch
-          exaggerated every wiggle and the trend out-shouted the number. Accent when this stat drives the chart. */}
-      <div aria-hidden className={cn('-mx-4 -mb-3 mt-auto h-10', selected ? 'text-link' : 'text-muted-foreground/35')}>
+          exaggerated every wiggle and the trend out-shouted the number. Chart-1 when this stat drives the chart. */}
+      <div
+        aria-hidden
+        className={cn('-mx-4 -mb-3 mt-auto h-10', selected ? 'text-chart-1' : 'text-muted-foreground/35')}
+      >
         {sparkPoints.length >= 2 ? (
           <Sparkline points={sparkPoints} baseline="zero" strokeWidth={1.5} {...hover.sparklineProps} />
         ) : null}

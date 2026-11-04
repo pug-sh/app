@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fromHex } from '../lib/color/oklch'
 import { parseColor } from '../lib/color/parse'
-import { ANCHORS, compileDataPalette, EVENT_COLORS, groupOf } from './data-palette'
+import { ANCHORS, CHART_DEFAULTS, compileDataPalette, EVENT_COLORS, groupOf } from './data-palette'
 import { bandShift, PUG_CANVAS } from './fit'
 import { GROUPS } from './tokens'
 
@@ -98,11 +98,13 @@ describe('compileDataPalette', () => {
     const data = spec({ categorical: [color('#005181'), color('#9e6c00'), color('#007eb1')] })
     const palette = compileDataPalette(data, 'light', 'standard', PUG_CANVAS.light)
     expect(palette.categorical.map(c => c.line)).toEqual(['#005181', '#9e6c00', '#007eb1'])
+    expect(palette.fallback.map(c => c.line)).toEqual(['#005181', '#9e6c00', '#007eb1'])
   })
 
-  it('re-fits the default breakdown palette to a canvas other than Pug', () => {
+  it('draws the chart defaults as given on any canvas, and re-fits the unmapped-event list', () => {
     const pug = compileDataPalette(undefined, 'dark', 'standard', PUG_CANVAS.dark)
     const lighter = compileDataPalette(undefined, 'dark', 'standard', color('oklch(0.32 0.01 265)'))
-    expect(lighter.categorical[0].line).not.toBe(pug.categorical[0].line)
+    expect(lighter.categorical.map(c => c.line)).toEqual(CHART_DEFAULTS.dark)
+    expect(lighter.fallback[0].line).not.toBe(pug.fallback[0].line)
   })
 })

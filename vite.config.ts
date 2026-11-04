@@ -40,6 +40,25 @@ const faviconFromLogo = (): Plugin => {
   }
 }
 
+// bklit pads the y-domain a tenth past the peak, then rounds it at d3's default ten ticks while labelling five, so plots
+// topped out well above the data in an unlabelled strip. Round the bare peak at Y_TICK_COUNT (insights/charts/common.ts).
+const Y_DOMAIN_PATCHES = [
+  ['scaleLinear().domain(domain).nice().range([0, 1])', 'scaleLinear().domain(domain).nice(6).range([0, 1])'],
+  ['return [0, yScaleDomainMax * 1.1];', 'return [0, yScaleDomainMax];'],
+  ['const top = maxValue <= 0 ? 100 : maxValue * 1.1;', 'const top = maxValue <= 0 ? 100 : maxValue;'],
+]
+const alignYDomainToAxisTicks = (): Plugin => ({
+  name: 'align-y-domain-to-axis-ticks',
+  enforce: 'pre',
+  transform(code, id) {
+    if (!id.split('?')[0].endsWith('/components/charts/y-domain-utils.ts')) return
+    return Y_DOMAIN_PATCHES.reduce((patched, [from, to]) => {
+      if (!patched.includes(from)) throw new Error(`y-domain-utils.ts changed upstream; re-check: ${from}`)
+      return patched.replace(from, to)
+    }, code)
+  },
+})
+
 export default defineConfig({
   // react-draggable (via react-grid-layout) reads process.env.DRAGGABLE_DEBUG at
   // runtime, which throws "process is not defined" in the browser. Statically
@@ -86,5 +105,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), tailwindcss(), faviconFromLogo()],
+  plugins: [react(), tailwindcss(), faviconFromLogo(), alignYDomainToAxisTicks()],
 })

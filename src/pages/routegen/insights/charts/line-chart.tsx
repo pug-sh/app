@@ -6,7 +6,14 @@ import { LineChart as VendoredLineChart } from '@/components/charts/line-chart'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { type ChartComparison, COMPARE_KEY, SERIES_CURVE, useChartMargin, useVendoredChartPrep } from './common'
+import {
+  type ChartComparison,
+  COMPARE_KEY,
+  SERIES_CURVE,
+  useChartMargin,
+  useVendoredChartPrep,
+  Y_TICK_COUNT,
+} from './common'
 import { CompareLine } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
@@ -51,7 +58,7 @@ export const LineChart = memo(function LineChart({
   return (
     <DateLabelProvider value={dateLabelFormatters}>
       <VendoredLineChart aspectRatio="auto" className={cn(PILL_SCALING, className)} data={chartData} margin={margin}>
-        <Grid horizontal />
+        <Grid horizontal numTicksRows={Y_TICK_COUNT} />
         <XAxis />
         <YAxis formatValue={formatValue} />
         {/* Line defaults fadeEdges on (Area defaults it off): a faded first/last

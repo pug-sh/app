@@ -4,14 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ChartStableContextValue, TooltipData } from '@/components/charts/chart-context'
 import { DEFAULT_Y_DOMAIN_TWEEN_MS } from '@/components/charts/chart-phase'
-import { Y_AXIS_DEFAULT_TICK_COUNT } from '@/components/charts/y-axis-ticks'
 import { niceYDomain, resolveTimeSeriesYDomain } from '@/components/charts/y-domain-utils'
 import type { SeriesColor } from '@/lib/event-colors'
 import { formatAxisDate, formatTooltipDate, formatTooltipTitle, spansMultipleDays, yAxisLabelWidth } from './helpers'
 import type { ChartPoint } from './types'
 
-// Line defaults to curveNatural, which overshoots, and the y-domain pads the top but pins
-// the floor at 0, so a series touching 0 gets drawn below the axis. Monotone can't overshoot.
+// Line defaults to curveNatural, which overshoots, and the y-domain pins the floor at 0 and (with the
+// build patch) the top just above the peak, so the overshoot crosses both. Monotone can't overshoot.
 export const SERIES_CURVE = curveMonotoneX
 
 // The vendored y axis pins its labels 8px off the plot; our YAxis wrapper widens that by this much, so the
@@ -22,6 +21,9 @@ const Y_LABEL_PAD = 8
 // Top: 8px is the floor, room for the top tick label's upper half. Right: just clears the hover dot's 13px halo;
 // the end date label and the pill are kept inside. Left is sized to the y labels by useChartMargin.
 export const CHART_MARGIN = { top: 8, right: 13 }
+
+// Labels and grid rows; vite.config.ts rounds the vendored y-domain at the same count, so the top is always a label.
+export const Y_TICK_COUNT = 6
 
 // A fixed y label column indents a short axis ("8") and clips a long one ("100,000"), so this reruns the shell's
 // target domain and the axis's ticks to fit the widest label.
@@ -41,7 +43,7 @@ export const useChartMargin = (
       }, 0)
     const stackedMax = stacked ? Math.max(...rows.map(rowSum)) : undefined
     const domain = niceYDomain(resolveTimeSeriesYDomain(rows, keys, stackedMax))
-    const ticks = scaleLinear().domain(domain).ticks(Y_AXIS_DEFAULT_TICK_COUNT)
+    const ticks = scaleLinear().domain(domain).ticks(Y_TICK_COUNT)
     const widest = Math.max(0, ...ticks.map(tick => yAxisLabelWidth(formatValue(tick))))
     // The table is for 12px, but text-xs is rem, so the browser's font size setting scales the labels.
     const rootScale = (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16

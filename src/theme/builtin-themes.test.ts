@@ -10,16 +10,16 @@ import { TOKENS } from './tokens'
 const read = (file: string) => readFileSync(join(process.cwd(), file), 'utf8')
 
 describe('generated files', () => {
-  it('builtin-themes.css is up to date — run `bun run generate:themes`', () => {
+  it('builtin-themes.css is up to date (run `bun run generate:themes`)', () => {
     expect(read('src/theme/generated/builtin-themes.css')).toBe(builtinThemesCss())
   })
 
-  it('schemas/theme/v1.json is up to date — run `bun run generate:themes`', () => {
+  it('schemas/theme/v1.json is up to date (run `bun run generate:themes`)', () => {
     expect(read('schemas/theme/v1.json')).toBe(themeJsonSchema())
   })
 })
 
-// End to end: the CSS the app now ships declares exactly what index.css declared before.
+// End to end: the CSS the app ships declares exactly the pinned palette.
 describe.each([
   ['light', ':root'],
   ['dark', ':root.dark'],
@@ -28,7 +28,7 @@ describe.each([
   const body = css.split(`\n${selector} {\n`)[1]?.split('\n}')[0] ?? ''
   const declared = Object.fromEntries([...body.matchAll(/ {2}--([a-z0-9-]+): ([^;]+);/g)].map(m => [m[1], m[2]]))
 
-  it('matches index.css before the refactor', () => {
+  it('matches the pinned palette', () => {
     for (const [token, value] of Object.entries(tokens[polarity])) {
       const parsed = parseColor(value)
       expect(declared[token], token).toBe(parsed && formatColor(parsed))
@@ -36,10 +36,10 @@ describe.each([
   })
 })
 
-// The sign-in pages reset every token to Pug whatever the root carries — light with its own re-solved
-// ground. Compared against the frozen fixture, not the preset, so a regenerate can't paper over a change.
+// The sign-in pages reset every token to Pug whatever the root carries. Compared against the frozen
+// fixture, not the preset, so a regenerate can't paper over a change.
 describe.each([
-  ['light', '.auth-surface', { ...tokens.light, ...tokens.authSurface }],
+  ['light', '.auth-surface', tokens.light],
   ['dark', '.dark .auth-surface', tokens.dark],
 ] as const)('the generated %s sign-in block', (_, selector, expected) => {
   const css = builtinThemesCss()

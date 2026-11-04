@@ -1,16 +1,28 @@
+import { useAtomValue } from 'jotai'
 import { memo } from 'react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { Area } from '@/components/charts/area'
 import { AreaChart as VendoredAreaChart } from '@/components/charts/area-chart'
 import { Grid } from '@/components/charts/grid'
+import { resolvedThemeAtom } from '@/data/theme.atoms'
 import type { SeriesColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { type ChartComparison, COMPARE_KEY, SERIES_CURVE, useChartMargin, useVendoredChartPrep } from './common'
+import {
+  type ChartComparison,
+  COMPARE_KEY,
+  SERIES_CURVE,
+  useChartMargin,
+  useVendoredChartPrep,
+  Y_TICK_COUNT,
+} from './common'
 import { CompareArea } from './compare-series'
 import { ChartTooltip, DateLabelProvider, PILL_SCALING, XAxis } from './date-labels'
 import type { ChartPoint } from './types'
 import { YAxis } from './y-axis'
+
+// Upstream's 0.4 wash reads calm on dark but loud on light.
+const FILL_OPACITY = { light: 0.1, dark: 0.4 } as const
 
 // Wraps the vendored chart (src/components/charts); never edit that directory.
 // Series colors, tooltip rows and date labels are ours to inject; the chart
@@ -43,6 +55,7 @@ export const AreaChart = memo(function AreaChart({
     comparison,
   )
   const formatValue = yTickFormatter ?? compactNumber
+  const polarity = useAtomValue(resolvedThemeAtom)
   const margin = useChartMargin(chartData, seriesNames.length, formatValue, { compare: !!comparison })
 
   if (data.length === 0) return null
@@ -51,7 +64,7 @@ export const AreaChart = memo(function AreaChart({
   return (
     <DateLabelProvider value={dateLabelFormatters}>
       <VendoredAreaChart aspectRatio="auto" className={cn(PILL_SCALING, className)} data={chartData} margin={margin}>
-        <Grid horizontal />
+        <Grid horizontal numTicksRows={Y_TICK_COUNT} />
         <XAxis />
         <YAxis formatValue={formatValue} />
         {seriesNames.map((_, si) => (
@@ -60,6 +73,7 @@ export const AreaChart = memo(function AreaChart({
             curve={SERIES_CURVE}
             dataKey={`series${si}`}
             fill={seriesColors[si]?.line}
+            fillOpacity={FILL_OPACITY[polarity]}
             stroke={seriesColors[si]?.line}
           />
         ))}

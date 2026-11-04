@@ -75,7 +75,7 @@ describe('each rule fires', () => {
 })
 
 // Generalisation: a theme that sets only a canvas (and maybe a primary) gets a coherent result on any
-// plausible canvas — dark from 0.12 to Nord-light 0.36, light from 0.9 to white.
+// plausible canvas: dark from 0.12 to Nord-light 0.36, light from 0.9 to white.
 describe('partial themes across canvases', () => {
   const grids: Record<Polarity, number[]> = {
     dark: [0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36],
@@ -133,12 +133,22 @@ describe('rule boundaries', () => {
     expect(report.some(i => i.rule === 'V1')).toBe(refused)
   })
 
-  // Body ink on white at about 7.1:1 and 6.9:1, either side of the 7:1 floor.
+  // Light tiles draw no outline, so a card within 0.01 L of the canvas has no edge at all.
+  it.each([
+    ['#f7f7fa', false],
+    ['#fdfdfd', true],
+  ])('V4: a %s card on white warns: %s', (card, warns) => {
+    const report = issuesFor(theme({ background: '#ffffff', card }))
+    expect(report.some(i => i.rule === 'V4' && i.path === 'card')).toBe(warns)
+  })
+
+  // Body ink on white at about 7.1:1 and 6.9:1, either side of the 7:1 floor. The card is pinned white
+  // too: derived, it sits a step below the canvas.
   it.each([
     ['#585858', false],
     ['#5a5a5a', true],
   ])('V2: body ink %s on white warns: %s', (ink, warns) => {
-    const report = issuesFor(theme({ background: '#ffffff', foreground: ink }))
+    const report = issuesFor(theme({ background: '#ffffff', card: '#ffffff', foreground: ink }))
     expect(report.some(i => i.rule === 'V2' && i.path === 'foreground')).toBe(warns)
   })
 

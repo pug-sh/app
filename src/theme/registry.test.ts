@@ -22,7 +22,7 @@ describe('resolution order', () => {
 })
 
 // The order above is only as good as dependenciesOf, which states the reads by hand. Evaluating every
-// formula with a get that records what it actually reads catches a read the list forgot — the one
+// formula with a get that records what it actually reads catches a read the list forgot, the one
 // thing checking the order against that same list never could.
 it('declares every token a formula reads', () => {
   for (const polarity of ['light', 'dark'] as const) {
@@ -95,9 +95,12 @@ describe('a partial theme', () => {
 
   it('builds a surface ladder on a new background', () => {
     const { tokens } = resolve({ background: 'oklch(0.97 0.02 90)' })
-    expect(tokens.card.l).toBeGreaterThan(tokens.background.l)
+    expect(tokens.card.l).toBeLessThan(tokens.background.l)
     expect(tokens.sidebar.l).toBeLessThan(tokens.background.l)
     expect(tokens.card.h).toBeCloseTo(90, 6)
+    // Pug's white canvas has no chroma to scale from, so the steps keep the canvas's tint.
+    expect(tokens.card.c).toBeCloseTo(0.02, 6)
+    expect(tokens.sidebar.c).toBeCloseTo(0.02, 6)
   })
 
   it('falls back to Pug for roots it leaves out', () => {

@@ -1,15 +1,15 @@
 import { composite, contrast } from '../lib/color/contrast'
-import { clamp01, type Oklch } from '../lib/color/oklch'
+import { normHue, type Oklch } from '../lib/color/oklch'
 import { builtinRoots } from './builtin'
 import { bisectLightness, solveLightness } from './solve'
 import { type Contrast, POLARITIES, type Polarity, TOKENS, type TokenName } from './tokens'
 
-// The token registry: how every token a theme leaves out is computed from the ones it set — VSCode's
-// colour-registry model. Standard-contrast parameters are measured from Pug at load, so applying the
+// The token registry: how every token a theme leaves out is computed from the ones it set (VSCode's
+// colour-registry model). Standard-contrast parameters are measured from Pug at load, so applying the
 // formulas to Pug's own roots reproduces Pug. High contrast never sits below standard: each target is
 // the higher of its tier's level and 115% of Pug's own ratio. The levels are the spec's APCA Lc
-// 90 / 75 / 60 in WCAG terms — 12:1 body, 7:1 secondary, 4.5:1 faint — plus headroom, because an ink
-// solved against the canvas also lands on popovers and chips, which sit a step lighter.
+// 90 / 75 / 60 in WCAG terms (12:1 body, 7:1 secondary, 4.5:1 faint) plus headroom, because an ink
+// solved for one ground also lands on others a step lighter.
 
 export type Tier = 'body' | 'secondary' | 'faint' | 'nonText'
 
@@ -17,7 +17,7 @@ export type Rule =
   | { f: 'root' }
   | { f: 'ref'; of: TokenName }
   | { f: 'shift'; base: TokenName; absoluteChroma?: true }
-  | { f: 'ink'; ground: TokenName; tier: Tier; capToBody?: true; allHues?: true }
+  | { f: 'ink'; ground: TokenName; also?: TokenName[]; tier: Tier; capToBody?: true; allHues?: true }
   | { f: 'textFrom'; source: TokenName; ground: TokenName; tier: Tier }
   | { f: 'hueText'; hue: number; tier: Tier }
   | { f: 'onFill'; fill: TokenName }
@@ -31,7 +31,13 @@ type Def = Rule | { light: Formula; dark: Formula; high?: Formula }
 const root: Rule = { f: 'root' }
 const ref = (of: TokenName): Formula => ({ f: 'ref', of })
 const shift = (base: TokenName): Formula => ({ f: 'shift', base })
-const ink = (ground: TokenName, tier: Tier): Formula => ({ f: 'ink', ground, tier })
+// `also`: the other grounds the ink lands on. It's solved for the worst of them.
+const ink = (ground: TokenName, tier: Tier, also?: TokenName[]): Formula => ({
+  f: 'ink',
+  ground,
+  tier,
+  ...(also && { also }),
+})
 const textFrom = (source: TokenName, tier: Tier = 'secondary'): Formula => ({
   f: 'textFrom',
   source,
@@ -42,19 +48,19 @@ const pick = (cell: TokenName): Formula => ({ f: 'pick', cell, a: 'heat-ink-dark
 
 const RULES: Record<TokenName, Def> = {
   background: root,
-  foreground: ink('background', 'body'),
+  foreground: ink('background', 'body', ['card', 'popover']),
   card: shift('background'),
-  'card-foreground': ref('foreground'),
+  'card-foreground': ink('card', 'body'),
   popover: shift('background'),
-  'popover-foreground': ref('foreground'),
+  'popover-foreground': ink('popover', 'body'),
   primary: root,
   'primary-foreground': { f: 'onFill', fill: 'primary' },
   link: textFrom('primary'),
   secondary: shift('background'),
   'secondary-foreground': { f: 'ink', ground: 'secondary', tier: 'secondary', capToBody: true },
   muted: ref('secondary'),
-  'muted-foreground': ink('background', 'secondary'),
-  faint: ink('background', 'faint'),
+  'muted-foreground': ink('background', 'secondary', ['card', 'popover', 'muted']),
+  faint: ink('background', 'faint', ['card', 'popover']),
   accent: { light: ref('secondary'), dark: shift('background') },
   'accent-foreground': { f: 'ink', ground: 'accent', tier: 'secondary', capToBody: true },
   destructive: root,
@@ -80,21 +86,18 @@ const RULES: Record<TokenName, Def> = {
   'sidebar-foreground': ink('sidebar', 'body'),
   'sidebar-primary': ref('primary'),
   'sidebar-primary-foreground': ref('primary-foreground'),
-  'sidebar-accent': { light: ref('accent'), dark: shift('sidebar') },
-  // Deliberately above body ink in dark: the active nav item is marked by its ink, not its fill.
-  'sidebar-accent-foreground': {
-    light: ref('accent-foreground'),
-    dark: ink('sidebar-accent', 'body'),
-    high: ink('sidebar-accent', 'body'),
-  },
+  // The active nav item is a piece of the page panel on the sidebar's shell.
+  'sidebar-accent': ref('background'),
+  'sidebar-accent-foreground': ink('sidebar-accent', 'body'),
   'sidebar-border': {
     light: shift('background'),
     dark: { f: 'translucent', ground: 'background' },
     high: ref('border'),
   },
   'sidebar-ring': ref('ring'),
-  'chart-background': ref('background'),
-  'chart-foreground': ref('foreground'),
+  // Charts sit on tiles, and the hover dot's halo is drawn in this.
+  'chart-background': ref('card'),
+  'chart-foreground': ref('card-foreground'),
   'chart-foreground-muted': ref('muted-foreground'),
   'chart-label': ref('muted-foreground'),
   'chart-line-primary': ref('chart-1'),
@@ -154,14 +157,12 @@ export const isRoot = (token: TokenName) => {
 const HIGH_TARGETS: Record<Tier, number> = { body: 13, secondary: 8, faint: 4.8, nonText: 3.3 }
 
 // Inks on a filled control: the light candidate is Pug's own (per mode), the dark one pure black. Pug's
-// light candidate isn't pure white, so a mid-grey fill can fall just short of 4.5:1 with both — V3
-// reports it. High contrast's light candidate is pure white, and against white or black every fill
-// clears 4.5:1.
+// is pure white, as high contrast's always is, and against white or black every fill clears 4.5:1.
 const BLACK_ON_FILL = { l: 0, c: 0 }
 
 export const IDENTITY_HUES = Array.from({ length: 12 }, (_, i) => i * 30)
 
-/** Worst contrast across 12 hues, every 30° — chips swap in the name's hue at render. */
+/** Worst contrast across 12 hues, every 30°: chips swap in the name's hue at render. */
 export const identityContrast = (ink: Oklch, surface: Oklch) =>
   Math.min(...IDENTITY_HUES.map(h => contrast({ ...ink, h }, { ...surface, h })))
 
@@ -177,22 +178,45 @@ const groundOf = (rule: Rule, get: Get) => {
 
 // ── Parameters measured from Pug ────────────────────────────────────────────────────────────────
 
-type Params = { l: number; dl: number; c: number; h: number; alpha: number; target: number; chromaRatio: number }
+type Params = {
+  l: number
+  dl: number
+  c: number
+  h: number
+  alpha: number
+  target: number
+  // Unset off a grey base: white has no chroma to scale, so the step keeps its own instead.
+  chromaRatio?: number
+  // Pug's hue offset from what the token is drawn from, which a tinted theme keeps.
+  dh: number
+}
+
+const GREY = 0.002
+
+const hueSource = (rule: Rule) => {
+  if (rule.f === 'shift') return rule.base
+  if (rule.f === 'ink' || rule.f === 'translucent') return rule.ground
+  if (rule.f === 'textFrom') return rule.source
+}
+
+const inkGrounds = (rule: Extract<Rule, { f: 'ink' }>, get: Get) => [rule.ground, ...(rule.also ?? [])].map(get)
 
 const measure = (token: TokenName, rule: Rule, polarity: Polarity) => {
   const pug = builtinRoots(polarity, 'standard')
   const pugGet: Get = t => pug[t]
   const self = pug[token]
-  const params = { l: self.l, dl: 0, c: self.c, h: self.h, alpha: self.alpha, target: 0, chromaRatio: 1 }
+  const params: Params = { l: self.l, dl: 0, c: self.c, h: self.h, alpha: self.alpha, target: 0, dh: 0 }
+  const source = hueSource(rule)
+  if (source && pug[source].c >= GREY) params.dh = self.h - pug[source].h
   if (rule.f === 'shift') {
     const base = pugGet(rule.base)
     params.dl = self.l - base.l
-    params.chromaRatio = self.c / Math.max(base.c, 1e-6)
+    params.target = contrast(self, base)
+    if (base.c >= GREY) params.chromaRatio = self.c / base.c
   }
   if (rule.f === 'ink' && rule.allHues) params.target = identityContrast(self, groundOf(rule, pugGet))
-  else if (rule.f === 'ink' || rule.f === 'textFrom' || rule.f === 'hueText') {
-    params.target = contrast(self, groundOf(rule, pugGet))
-  }
+  else if (rule.f === 'ink') params.target = Math.min(...inkGrounds(rule, pugGet).map(g => contrast(self, g)))
+  else if (rule.f === 'textFrom' || rule.f === 'hueText') params.target = contrast(self, groundOf(rule, pugGet))
   return params
 }
 
@@ -203,11 +227,12 @@ const PARAMS = Object.fromEntries(
   ]),
 ) as Record<Polarity, Record<TokenName, Params>>
 
-// Whichever of two inks reads better on a ground — the first on a tie.
+// Whichever of two inks reads better on a ground, the first on a tie.
 const higherContrast = (a: Oklch, b: Oklch, ground: Oklch) => (contrast(a, ground) >= contrast(b, ground) ? a : b)
 
-// A grey ground has no hue to lend, so its inks keep Pug's — otherwise they'd take hue 0, a red cast.
-const hueOf = (ground: Oklch, p: Params) => (ground.c < 0.002 ? p.h : ground.h)
+// A grey ground has no hue to lend, so its inks keep Pug's (hue 0 would be a red cast). A tinted one
+// lends its own, turned by Pug's offset.
+const hueOf = (ground: Oklch, p: Params) => (ground.c < GREY ? p.h : normHue(ground.h + p.dh))
 
 /** Evaluates one computed token. `get` returns tokens already resolved this pass. */
 export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, get: Get): Oklch => {
@@ -221,12 +246,20 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
       return get(rule.of)
     case 'shift': {
       const base = get(rule.base)
-      const l = clamp01(base.l + p.dl)
-      if (rule.absoluteChroma) return { l, c: p.c, h: p.h, alpha: 1 }
-      return { l, c: base.c * p.chromaRatio, h: base.h, alpha: 1 }
+      let c = p.c
+      let h = p.h
+      if (!rule.absoluteChroma) {
+        c = p.chromaRatio === undefined ? Math.max(base.c, p.c) : base.c * p.chromaRatio
+        h = hueOf(base, p)
+      }
+      if (p.dl === 0) return { l: base.l, c, h, alpha: 1 }
+      // The step keeps Pug's contrast against its base, so a lighter dark canvas takes a smaller one.
+      const step = (l: number) => contrast({ l, c, h, alpha: 1 }, base)
+      return { l: bisectLightness(base.l, p.dl > 0 ? 'dark' : 'light', p.target, step), c, h, alpha: 1 }
     }
     case 'ink': {
-      const ground = get(rule.ground)
+      const grounds = inkGrounds(rule, get)
+      const ground = grounds[0]
       let goal = target(rule.tier)
       if (rule.capToBody) goal = Math.min(goal, contrast(get('foreground'), get('background')))
       if (rule.allHues) {
@@ -235,12 +268,16 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
         return { l: bisectLightness(ground.l, polarity, goal, worst), c: p.c, h: ground.h, alpha: 1 }
       }
       const h = hueOf(ground, p)
-      return { l: solveLightness(ground, polarity, goal, p.c, h), c: p.c, h, alpha: 1 }
+      const ls = grounds.map(g => g.l)
+      const from = polarity === 'dark' ? Math.max(...ls) : Math.min(...ls)
+      const worst = (l: number) => Math.min(...grounds.map(g => contrast({ l, c: p.c, h, alpha: 1 }, g)))
+      return { l: bisectLightness(from, polarity, goal, worst), c: p.c, h, alpha: 1 }
     }
     case 'textFrom': {
       const source = get(rule.source)
       const c = Math.min(source.c, p.c)
-      return { l: solveLightness(get(rule.ground), polarity, target(rule.tier), c, source.h), c, h: source.h, alpha: 1 }
+      const h = hueOf(source, p)
+      return { l: solveLightness(get(rule.ground), polarity, target(rule.tier), c, h), c, h, alpha: 1 }
     }
     case 'hueText':
       return {
@@ -263,7 +300,7 @@ export const evaluate = (token: TokenName, polarity: Polarity, level: Contrast, 
   }
 }
 
-// What one rule reads — a switch over every kind, so a new kind can't be added without saying.
+// What one rule reads: a switch over every kind, so a new kind can't be added without saying.
 const readsOf = (rule: Rule): TokenName[] => {
   switch (rule.f) {
     case 'root':
@@ -273,7 +310,7 @@ const readsOf = (rule: Rule): TokenName[] => {
     case 'shift':
       return [rule.base]
     case 'ink':
-      return rule.capToBody ? [rule.ground, 'foreground', 'background'] : [rule.ground]
+      return [rule.ground, ...(rule.also ?? []), ...(rule.capToBody ? (['foreground', 'background'] as const) : [])]
     case 'textFrom':
       return [rule.source, rule.ground]
     case 'hueText':
@@ -287,7 +324,7 @@ const readsOf = (rule: Rule): TokenName[] => {
   }
 }
 
-/** Every token a rule reads, across both modes and both contrast levels — for the resolution order. */
+/** Every token a rule reads, across both modes and both contrast levels, for the resolution order. */
 export const dependenciesOf = (token: TokenName) => {
   const deps = new Set<TokenName>()
   for (const polarity of POLARITIES) {

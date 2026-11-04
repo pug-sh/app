@@ -39,10 +39,9 @@ const Account = () => {
   const [saved, setSaved] = useState(false)
   const savedTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  // The only GetMe on a build with analytics unconfigured, and in a demo session — the identity
-  // sync's fetch is gated on both — so this can't be dropped as a duplicate of it. fetchMe (a
-  // Jotai setter) is stable, so this runs once; we don't depend on `me` (that would make a
-  // mount-only fetch reactive to later writes, e.g. sign-out).
+  // Runs on every mount, unlike the sidebar menu's and the identity sync's fetches, which start from
+  // idle, so this is what refreshes the address. fetchMe (a Jotai setter) is stable, so this runs once;
+  // we don't depend on `me` (that would make a mount-only fetch reactive to later writes, e.g. sign-out).
   useEffect(() => {
     fetchMe()
   }, [fetchMe])

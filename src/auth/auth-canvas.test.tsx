@@ -17,6 +17,8 @@ vi.mock('@/api/rpc', async () => {
     orgsRPCAtom: atom({ list: orgsList, get: vi.fn() }),
     billingRPCAtom: atom({ getBillingStatus: vi.fn(() => new Promise(() => {})) }),
     usageRPCAtom: atom({ getUsage: vi.fn(() => new Promise(() => {})) }),
+    // The sidebar's account menu asks for the signed-in address.
+    customersRPCAtom: atom({ getMe: vi.fn(() => new Promise(() => {})) }),
   }
 })
 

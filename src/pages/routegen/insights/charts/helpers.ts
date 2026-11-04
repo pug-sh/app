@@ -65,17 +65,18 @@ export const formatAxisDate = (d: Date, granularity: Granularity, timeZone?: str
   return fmtInZone(d, timeZone, { month: 'short', day: 'numeric' })
 }
 
-// Measured off Figtree at text-xs, worst case: an all-digit clock ("00:00") runs 7.0px/char, well
-// above the ~4.9px of a label with spaces. Fitting to the average overprints exactly the labels
-// that are hardest to read, so this tracks the widest, not the mean. Re-measure on a face change.
+// Measured off Inter at text-xs: an all-digit clock ("00:00") runs 7.0px/char hinted and a short date
+// ("May 22") 7.1, well above the 5 to 6 of a label with spaces. Fitting to the average overprints exactly
+// the labels that are hardest to read, so this tracks the widest; the 16px gap absorbs the date's extra
+// tenth. Re-measure on a face change.
 // Exported because the Sankey sizes its label gutters off the same figure: CLAUDE.md requires a
 // re-measure per face, and two private copies is one of them silently keeping the old value.
 export const AXIS_LABEL_PX_PER_CHAR = 7.0
 const AXIS_LABEL_MIN_GAP_PX = 16
 
-// Figtree's advances at 12px, the larger of hinted and unhinted; unlisted glyphs get the widest digit's. An upper
+// Inter's advances at 12px, the larger of hinted and unhinted; unlisted glyphs get the widest digit's. An upper
 // bound: the y label column is sized off it, and a label wider than its column is clipped. Re-measure on a face change.
-const Y_LABEL_GLYPH_PX: Record<string, number> = { '1': 5, '.': 3, ',': 3, '%': 9.5, M: 10.5, m: 10.5 }
+const Y_LABEL_GLYPH_PX: Record<string, number> = { '1': 5, '.': 3.5, ',': 3.5, '%': 12, K: 8.5, M: 11, m: 11 }
 export const yAxisLabelWidth = (label: string) =>
   [...label].reduce((width, glyph) => width + (Y_LABEL_GLYPH_PX[glyph] ?? 8), 0)
 

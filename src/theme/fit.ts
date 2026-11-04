@@ -5,15 +5,15 @@ import { solveLightness } from './solve'
 import type { Contrast, Polarity } from './tokens'
 
 // The per-mode fit for event colours. On Pug's canvas the standard fit reproduces Pug's series palette
-// exactly — series.json pins it, and Pug's pixel identity depends on it. On any other canvas the band
+// exactly: series.json pins it, and Pug's pixel identity depends on it. On any other canvas the band
 // moves so its anchor keeps the contrast it has against Pug's canvas. Note the light path still caps
 // lightness and clips per channel without fitChroma: a known issue kept on purpose to hold Pug's
-// identity, to be changed as its own visual change — not an oversight to fix in passing.
+// identity, to be changed as its own visual change, not an oversight to fix in passing.
 
 // Mirrors the Pug preset's backgrounds; presets/pug.test.ts pins the two together.
 export const PUG_CANVAS: Record<Polarity, Oklch> = {
-  light: { l: 0.943, c: 0.005, h: 265, alpha: 1 },
-  dark: { l: 0.215, c: 0.013, h: 265, alpha: 1 },
+  light: { l: 1, c: 0, h: 0, alpha: 1 },
+  dark: { l: 0.204627, c: 0, h: 0, alpha: 1 },
 }
 
 // The light cap sits below the dark one because mid-lightness colors on white read as more
@@ -34,7 +34,7 @@ export const bandShift = (polarity: Polarity, canvas: Oklch) => {
 }
 
 // Dark canvas: lift lightness into a legible band, taming extreme chroma. The band is deliberately
-// shallow — every point of lift spent is chroma the hue can no longer hold.
+// shallow: every point of lift spent is chroma the hue can no longer hold.
 const standardDark = (shift: number) =>
   memoize(hex => {
     const [L, C, H] = hexToOklch(hex)
@@ -76,10 +76,12 @@ const transforms = new Map<string, (hex: string) => string>()
  * `canvas` defaults to Pug's for that mode.
  */
 export const fitFor = (polarity: Polarity, level: Contrast, canvas: Oklch = PUG_CANVAS[polarity]) => {
-  const knob =
-    level === 'high'
-      ? Math.round(solveLightness(canvas, polarity, HIGH_DATA_CONTRAST, 0, 0) * 1e4) / 1e4
-      : bandShift(polarity, canvas)
+  let knob = bandShift(polarity, canvas)
+  if (level === 'high') {
+    knob = Math.round(solveLightness(canvas, polarity, HIGH_DATA_CONTRAST, 0, 0) * 1e4) / 1e4
+    // On white, 4.5:1 alone caps lighter than the standard band does, so it takes the darker of the two.
+    if (polarity === 'light') knob = Math.min(knob, ANCHOR.light + bandShift('light', canvas))
+  }
   const key = `${polarity}|${level}|${knob}`
   let fit = transforms.get(key)
   if (!fit) {

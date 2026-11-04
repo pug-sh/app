@@ -19,7 +19,7 @@ type Props = GlobalOverrides & {
 
 // Overview KPIs aren't real dashboard tiles, but DashboardInsightContent's KPI
 // path (big number + delta-vs-prior + sparkline) needs a tile. Hand it this
-// shared, immutable render config — compare:PRIOR drives the delta.
+// shared, immutable render config; compare:PRIOR drives the delta.
 const KPI_TILE = create(DashboardTileSchema, {
   viewMode: DashboardTileViewMode.KPI,
   compare: ComparePeriod.PRIOR,
@@ -27,7 +27,7 @@ const KPI_TILE = create(DashboardTileSchema, {
 })
 
 const KpiTile = ({ title, via, query, globalTimeRange, globalGranularity, queryKeyPrefix }: Props) => (
-  <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border/60 bg-card px-4 py-3">
+  <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-transparent bg-card px-4 py-3 dark:border-border/60">
     <h3 className="truncate text-sm text-muted-foreground">{title}</h3>
     <div className="mt-1 min-h-0">
       <DashboardInsightContent
