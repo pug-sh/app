@@ -6,11 +6,9 @@ const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(
 
 const fromPreset = (preset: DatePreset): TimeRange => ({ ...preset.resolve(), label: preset.label })
 
-// Midnight-to-now, behind the 'Today' preset.
 export const todayRange = (): TimeRange => ({ from: startOfDay(new Date()), to: new Date() })
 
-// Elapsed hours, not wall-clock: setHours spans 25 real hours across a fall-back day, 23 across a
-// spring-forward one.
+// Elapsed hours, not wall-clock: setHours is an hour off across a DST change.
 const lastNHours = (n: number): TimeRange => {
   const now = new Date()
   return { from: new Date(now.getTime() - n * 60 * 60 * 1000), to: now }
@@ -18,8 +16,7 @@ const lastNHours = (n: number): TimeRange => {
 
 const LAST_24_HOURS_PRESET: DatePreset = { label: 'Last 24 hours', resolve: () => lastNHours(24) }
 
-// Shared by the 'Last 24 hours' preset and the Overview default landing window, so the two never
-// drift and neither hard-codes a preset-label lookup.
+// Shared with the Overview default so the two never drift.
 export const last24HoursRange = () => fromPreset(LAST_24_HOURS_PRESET)
 
 const lastNDays = (n: number): TimeRange => {
@@ -35,8 +32,7 @@ const lastNMonths = (n: number): TimeRange => {
   from.setMonth(from.getMonth() - n)
   // setMonth overflows forward when the target month is shorter (May 31 → Feb 31 → Mar 3).
   if (from.getDate() !== now.getDate()) from.setDate(0)
-  // +1 day so the window spans exactly n months of buckets. Without it "Last 12 months" is 365
-  // days plus today's elapsed hours, over the backend's 365-day cap for Day granularity.
+  // +1 day keeps "Last 12 months" within the backend's 365-day cap for Day granularity.
   from.setDate(from.getDate() + 1)
   return { from: startOfDay(from), to: now }
 }
@@ -83,29 +79,27 @@ const thisYear = (): TimeRange => {
   return { from: new Date(now.getFullYear(), 0, 1), to: now }
 }
 
-const THIS_MONTH_PRESET: DatePreset = { label: 'This month', resolve: thisMonth }
+const LAST_30_DAYS_PRESET: DatePreset = { label: 'Last 30 days', resolve: () => lastNDays(30) }
 
-// One list behind every page-level picker, so a range offered on one page is offered on all.
-// Rolling first, then calendar-anchored next to its previous-period counterpart.
+// One list behind every page-level picker.
 export const TIME_RANGE_PRESETS: DatePreset[] = [
   LAST_24_HOURS_PRESET,
   { label: 'Today', resolve: todayRange },
   { label: 'Yesterday', resolve: yesterday },
   { label: 'Last 7 days', resolve: () => lastNDays(7) },
   { label: 'Last 14 days', resolve: () => lastNDays(14) },
-  { label: 'Last 30 days', resolve: () => lastNDays(30) },
+  LAST_30_DAYS_PRESET,
   { label: 'Last 3 months', resolve: () => lastNMonths(3) },
   { label: 'Last 6 months', resolve: () => lastNMonths(6) },
   { label: 'Last 12 months', resolve: () => lastNMonths(12) },
   { label: 'This week', resolve: thisWeek },
   { label: 'Last week', resolve: lastWeek },
-  THIS_MONTH_PRESET,
+  { label: 'This month', resolve: thisMonth },
   { label: 'Last month', resolve: lastMonth },
   { label: 'This year', resolve: thisYear },
 ]
 
-// A preset names a window relative to now, so a stored one is already stale by the next query.
-// Re-resolve it by label; unlabelled, undefined, and labels no preset claims pass through.
+// A stored preset is stale by the next query, so re-resolve it by label; anything else passes through.
 export const refreshTimeRange = (range: TimeRange | undefined) => {
   if (!range?.label) return range
   const preset = TIME_RANGE_PRESETS.find(item => item.label === range.label)
@@ -151,5 +145,5 @@ export const fmtDate = (d: Date) => {
 
 export const fmtDateRange = (range: TimeRange) => `${fmtDate(range.from)} – ${fmtDate(range.to)}`
 
-// Labelled, so refreshTimeRange can re-resolve it the same way a picked preset is re-resolved.
-export const defaultRange = () => fromPreset(THIS_MONTH_PRESET)
+// Labelled so refreshTimeRange re-resolves it; rolling because 'This month' shrinks to hours on the 1st.
+export const defaultRange = () => fromPreset(LAST_30_DAYS_PRESET)
