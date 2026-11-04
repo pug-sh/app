@@ -1,6 +1,20 @@
 import { fireEvent, screen, within } from '@testing-library/react'
+import type { InstalledTheme } from '@/theme/library'
 
 // Reading and driving the theme gallery from a test.
+
+/** A second theme that needs no network: installed, with both modes. */
+export const MOSS: InstalledTheme = {
+  id: 'installed-moss',
+  text: JSON.stringify({
+    version: 1,
+    name: 'Moss',
+    variants: { light: { colors: { background: '#eef1e6' } }, dark: { colors: { background: '#1c211a' } } },
+  }),
+  hash: 'moss',
+  installedAt: 0,
+  source: 'file',
+}
 
 export const themeList = () => screen.getByRole('group', { name: 'Theme list' })
 export const tile = (name: string | RegExp) => within(themeList()).getByRole('button', { name })

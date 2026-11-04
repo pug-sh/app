@@ -12,7 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
-import { removeThemeAtom, resolvableLibraryAtom, resolvedThemeAtom, STORAGE_REFUSED } from '@/data/theme.atoms'
+import {
+  accessModeAtom,
+  removeThemeAtom,
+  resolvableLibraryAtom,
+  resolvedThemeAtom,
+  STORAGE_REFUSED,
+} from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
@@ -65,6 +71,7 @@ const ThemeGallery = ({
   const library = useAtomValue(resolvableLibraryAtom)
   const catalog = useAtomValue(themeCatalogAtom)
   const mode = useAtomValue(resolvedThemeAtom)
+  const access = useAtomValue(accessModeAtom)
   const removeTheme = useSetAtom(removeThemeAtom)
   const columns = useIsMobile() ? 2 : 3
   const [query, setQuery] = useState('')
@@ -116,6 +123,7 @@ const ThemeGallery = ({
               ref={open ? openTile : undefined}
               theme={theme}
               polarity={polarity}
+              access={access}
               open={open}
               panelId={panelId}
               source={flat ? sourceLabel(theme.source) : undefined}
@@ -125,6 +133,7 @@ const ThemeGallery = ({
               <ThemePanel
                 theme={theme}
                 polarity={polarity}
+                access={access}
                 id={panelId}
                 useLabel={useLabel}
                 heldLabel={heldLabel}
@@ -178,7 +187,7 @@ const ThemeGallery = ({
     )
 
   const flatList = () => {
-    const matches = siftThemes(themes, filters, polarity)
+    const matches = siftThemes(themes, filters, polarity, access)
     if (matches.length === 0) return <p className="text-xs text-muted-foreground">No theme matches that.</p>
     return grid(matches, true)
   }

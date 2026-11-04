@@ -3,7 +3,7 @@ import { compileVariant, hashString } from './compile'
 import { error, type Issue, type ParseResult, parseThemeText, readableName, type ThemeFamily } from './format'
 import { memoize } from './memoize'
 import { isUrlTarget } from './reference'
-import { POLARITIES, type Polarity } from './tokens'
+import { ACCESS_MODES, type AccessMode, POLARITIES, type Polarity } from './tokens'
 
 // The theme library: built-ins, installed themes and files fetched by URL, and which one is active. Kept
 // as text and re-parsed on load, so a registry change between releases applies to themes kept before it.
@@ -35,16 +35,29 @@ export type UsableEntry = LibraryEntry & { family: ThemeFamily }
 const parseInstalledOnce = memoize(parseThemeText)
 const parseFetchedOnce = memoize((key: string) => parseThemeText(key.slice(key.indexOf('\n') + 1)))
 
-/** Validation issues for every variant a family has, with paths that say which variant. */
-const validateFamily = (id: string, family: ThemeFamily): Issue[] =>
-  POLARITIES.flatMap(polarity =>
-    family.variants[polarity]
-      ? compileVariant({ id, builtin: false, family, polarity }).report.map(i => ({
-          ...i,
-          path: `variants.${polarity}.${i.path}`,
-        }))
-      : [],
-  )
+const modePath = ({ contrast, vision }: AccessMode) => {
+  const names = [contrast === 'high' && 'high-contrast', vision === 'colourblind' && 'colourblind'].filter(Boolean)
+  return names.length > 0 ? `${names.join('+')}.` : ''
+}
+
+/**
+ * Validation issues for every variant a family has, in the modes asked for, with paths that say which. A problem a
+ * mode shares with an earlier one counts once: colourblind-safe repeats everything standard says about its other tokens.
+ */
+const validateFamily = (id: string, family: ThemeFamily, modes: AccessMode[]): Issue[] => {
+  const seen = new Set<string>()
+  return POLARITIES.flatMap(polarity => {
+    if (!family.variants[polarity]) return []
+    return modes.flatMap(access =>
+      compileVariant({ id, builtin: false, family, polarity, access }).report.flatMap(issue => {
+        const key = `${polarity} ${issue.rule} ${issue.path} ${issue.message}`
+        if (seen.has(key)) return []
+        seen.add(key)
+        return [{ ...issue, path: `variants.${polarity}.${modePath(access)}${issue.path}` }]
+      }),
+    )
+  })
+}
 
 // Event colours by key, whatever order the file listed them in. An object's own keys are unique, so the
 // comparison never sees a tie.
@@ -62,11 +75,11 @@ export type TextCheck =
   | { ok: false; issues: Issue[] }
 
 /** Parses and validates a theme file's text, for an install or a fetch: errors make it unusable. */
-export const checkThemeText = (text: string): TextCheck => {
+export const checkThemeText = (text: string, modes = ACCESS_MODES): TextCheck => {
   try {
     const parsed = parseThemeText(text)
     if (!parsed.ok) return { ok: false, issues: parsed.issues }
-    const issues = [...parsed.issues, ...validateFamily('candidate', parsed.family)]
+    const issues = [...parsed.issues, ...validateFamily('candidate', parsed.family, modes)]
     if (issues.some(i => i.severity === 'error')) return { ok: false, issues }
     return { ok: true, family: parsed.family, issues, hash: familyHash(parsed.family) }
   } catch (err) {
@@ -95,7 +108,7 @@ const textEntry = (id: InstalledId | RemoteId, text: string, parse: () => ParseR
       return unusable(id, text, parsed.issues)
     }
     const { family } = parsed
-    const issues = [...parsed.issues, ...validateFamily(id, family)]
+    const issues = [...parsed.issues, ...validateFamily(id, family, ACCESS_MODES)]
     const usable = !issues.some(i => i.severity === 'error')
     return {
       id,
@@ -124,32 +137,31 @@ export const buildLibrary = (installed: InstalledTheme[]): LibraryEntry[] => [
 export const remoteEntries = (fetched: { url: RemoteId; text: string }[]) =>
   fetched.map(({ url, text }) => textEntry(url, text, () => parseFetchedOnce(`${url}\n${text}`)))
 
-export type ActiveTheme = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity }
+export type ActiveTheme = { id: string; builtin: boolean; family: ThemeFamily; polarity: Polarity; access: AccessMode }
 
-/**
- * Which theme paints a mode: the selection, else Pug; Pug High Contrast instead of a standard family
- * when the OS asks for more contrast and auto-contrast is on; the built-in for the family's contrast
- * level when the family has no variant for this mode.
- */
+/** Which theme paints a mode, and how it's seen: the selection, else Pug, which also stands in for a family with no variant for this mode. */
 export const chooseActive = (input: {
   polarity: Polarity
   selection: Record<Polarity, string>
-  autoContrast: boolean
-  moreContrast: boolean
+  access: AccessMode
   library: LibraryEntry[]
 }): ActiveTheme => {
   const { polarity, library } = input
   const usable = (id: string) => library.find((e): e is UsableEntry => e.id === id && e.family !== null)
   const pug = usable('pug')
   if (!pug) throw new Error('theme library: Pug is missing')
-  let entry = usable(input.selection[polarity]) ?? pug
-  if (input.autoContrast && input.moreContrast && entry.family.contrast === 'standard') {
-    entry = usable('pug-high-contrast') ?? entry
-  }
-  if (!entry.family.variants[polarity]) {
-    entry = (entry.family.contrast === 'high' && usable('pug-high-contrast')) || pug
-  }
-  return { id: entry.id, builtin: entry.builtin, family: entry.family, polarity }
+  const active = ({ id, builtin, family }: UsableEntry, access: AccessMode) => ({
+    id,
+    builtin,
+    family,
+    polarity,
+    access,
+  })
+  const entry = usable(input.selection[polarity]) ?? pug
+  if (entry.family.variants[polarity]) return active(entry, input.access)
+  // A file marked high contrast asked for that, so the Pug standing in for it stays there.
+  const contrast = entry.family.contrast === 'high' ? 'high' : input.access.contrast
+  return active(pug, { ...input.access, contrast })
 }
 
 export type InstallCheck =

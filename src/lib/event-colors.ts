@@ -1,7 +1,7 @@
 import { resolveKind } from '@/lib/event-aliases'
+import { builtinRoots } from '@/theme/builtin'
 import { type CompiledDataPalette, compileDataPalette, type SeriesColor } from '@/theme/data-palette'
-import { PUG_CANVAS } from '@/theme/fit'
-import type { Polarity } from '@/theme/tokens'
+import type { Contrast, Polarity } from '@/theme/tokens'
 
 // The lookup over whichever palette the active theme compiled. The tables themselves live in
 // theme/data-palette.ts. These are JS inline styles and SVG fills, not CSS variables, so App pushes
@@ -10,11 +10,17 @@ import type { Polarity } from '@/theme/tokens'
 
 export type { SeriesColor } from '@/theme/data-palette'
 
-const pugPalettes: Partial<Record<Polarity, CompiledDataPalette>> = {}
+const pugPalettes = new Map<string, CompiledDataPalette>()
 
 /** Pug's own data palette, whatever theme is active, for surfaces that stay Pug, like the sign-in pages. */
-export const pugDataPalette = (polarity: Polarity) =>
-  (pugPalettes[polarity] ??= compileDataPalette(undefined, polarity, 'standard', PUG_CANVAS[polarity]))
+export const pugDataPalette = (polarity: Polarity, contrast: Contrast = 'standard') => {
+  const key = `${polarity} ${contrast}`
+  const known = pugPalettes.get(key)
+  if (known) return known
+  const compiled = compileDataPalette(undefined, polarity, contrast, builtinRoots(polarity, contrast).background)
+  pugPalettes.set(key, compiled)
+  return compiled
+}
 
 let palette = pugDataPalette(
   typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light',

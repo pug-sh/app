@@ -6,12 +6,13 @@ import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { activeProjectAtom } from '@/data/workspace.atoms'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
+import { MOSS } from '@/test/theme-gallery'
 import { clayFile } from '@/test/theme-repository'
 import type { InstalledTheme } from '@/theme/library'
 import { FETCH_TIMEOUT_MS } from '@/theme/remote'
 import {
+  accessModeAtom,
   activeThemeUrlsAtom,
-  autoContrastAtom,
   compiledThemeAtom,
   fetchedThemesAtom,
   fetchStatusAtom,
@@ -24,10 +25,12 @@ import {
   resolvedThemeAtom,
   selectThemeAtom,
   setProjectOverrideAtom,
+  themeContrastAtom,
   themeLibraryAtom,
   themeModeAtom,
   themeRevisionAtom,
   themeSelectionAtom,
+  themeVisionAtom,
 } from './theme.atoms'
 
 vi.mock('@/analytics/pug', () => ({
@@ -137,22 +140,122 @@ describe('the OS colour scheme', () => {
 
 // On by default, so a regression here turns it off for everyone who relies on it, and the first
 // paint, which reads the OS itself, would then disagree with React on every load.
-describe('auto contrast', () => {
+describe('contrast and colour vision', () => {
   afterEach(() => vi.unstubAllGlobals())
+  beforeEach(() => vi.mocked(trackEvent).mockClear())
 
-  it('swaps in Pug High Contrast when the OS asks for more contrast, until it is turned off', async () => {
+  // An OS the test can flip, installed before a fresh load of the atoms: they read it at import.
+  const stubOs = (more: boolean) => {
+    const listeners = new Set<() => void>()
+    const os = { more }
     vi.stubGlobal('matchMedia', (query: string) => ({
       media: query,
-      matches: query === '(prefers-contrast: more)',
-      addEventListener: () => {},
-      removeEventListener: () => {},
+      get matches() {
+        return query === '(prefers-contrast: more)' && os.more
+      },
+      addEventListener: (_: string, fn: () => void) => listeners.add(fn),
+      removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
     }))
+    return {
+      flip: (next: boolean) => {
+        os.more = next
+        for (const fn of listeners) fn()
+      },
+    }
+  }
+  const freshLoad = async () => {
     vi.resetModules()
-    const fresh = await import('./theme.atoms')
+    return import('./theme.atoms')
+  }
+
+  it('follows the OS under Match system, live, until set by hand', async () => {
+    const { flip } = stubOs(true)
+    const fresh = await freshLoad()
     const store = createStore()
-    expect(store.get(fresh.compiledThemeAtom).id).toBe('pug-high-contrast')
-    store.set(fresh.autoContrastAtom, false)
-    expect(store.get(fresh.compiledThemeAtom).id).toBe('pug')
+    const unsubscribe = store.sub(fresh.compiledThemeAtom, () => {})
+    expect(store.get(fresh.compiledThemeAtom).contrast).toBe('high')
+    flip(false)
+    expect(store.get(fresh.compiledThemeAtom).contrast).toBe('standard')
+    flip(true)
+    store.set(fresh.themeContrastAtom, 'standard')
+    expect(store.get(fresh.compiledThemeAtom).contrast).toBe('standard')
+    unsubscribe()
+  })
+
+  it('ignores the OS once set to High', async () => {
+    const { flip } = stubOs(false)
+    const fresh = await freshLoad()
+    const store = createStore()
+    store.set(fresh.themeContrastAtom, 'high')
+    flip(false)
+    expect(store.get(fresh.accessModeAtom).contrast).toBe('high')
+  })
+
+  // Review Focus 3: Pug paints through CSS, but anything memoized on the revision still has to re-colour.
+  it('moves the revision with either setting, on Pug too', () => {
+    const store = createStore()
+    const before = store.get(themeRevisionAtom)
+    store.set(themeContrastAtom, 'high')
+    const high = store.get(themeRevisionAtom)
+    store.set(themeVisionAtom, 'colourblind')
+    expect(new Set([before, high, store.get(themeRevisionAtom)]).size).toBe(3)
+  })
+
+  it('reads anything else in storage as the default', async () => {
+    localStorage.setItem('pug:theme-contrast', '"loud"')
+    localStorage.setItem('pug:theme-vision', '7')
+    const fresh = await freshLoad()
+    const store = createStore()
+    expect(store.get(fresh.themeContrastAtom)).toBe('system')
+    expect(store.get(fresh.themeVisionAtom)).toBe('standard')
+  })
+
+  it('reports a setting with labels only', () => {
+    const store = createStore()
+    store.set(themeContrastAtom, 'high')
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_mode_set', { contrast: 'high', vision: 'standard' })
+    store.set(themeVisionAtom, 'colourblind')
+    expect(trackEvent).toHaveBeenLastCalledWith('theme_mode_set', { contrast: 'high', vision: 'colourblind' })
+  })
+
+  it('finds a stored choice migrated by the time the atoms read it', async () => {
+    localStorage.setItem('pug:theme-selection', JSON.stringify({ light: 'pug-colourblind', dark: 'pug-colourblind' }))
+    localStorage.setItem('pug:theme-auto-contrast', 'false')
+    const fresh = await freshLoad()
+    const store = createStore()
+    expect(store.get(fresh.themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
+    expect(store.get(fresh.themeVisionAtom)).toBe('colourblind')
+    expect(store.get(fresh.themeContrastAtom)).toBe('standard')
+  })
+
+  // The import is what matters here: it runs before main.tsx can show its page for a browser that blocks storage.
+  it('still imports when the browser blocks storage outright', async () => {
+    const real = Object.getOwnPropertyDescriptor(globalThis, 'localStorage') as PropertyDescriptor
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get: () => {
+        throw new DOMException('denied', 'SecurityError')
+      },
+    })
+    try {
+      await expect(freshLoad()).resolves.toBeDefined()
+    } finally {
+      Object.defineProperty(globalThis, 'localStorage', real)
+    }
+  })
+
+  // Review Focus 2: the page has to come up whatever the migration met.
+  it('still loads when storage refuses the migration', async () => {
+    localStorage.setItem('pug:theme-selection', JSON.stringify({ light: 'pug-high-contrast', dark: 'pug' }))
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      const fresh = await freshLoad()
+      expect(createStore().get(fresh.accessModeAtom)).toEqual({ contrast: 'standard', vision: 'standard' })
+    } finally {
+      refusal.mockRestore()
+    }
   })
 })
 
@@ -212,17 +315,20 @@ describe('storage that refuses a write', () => {
   it('leaves the selection as it was', () => {
     const store = createStore()
     refuse()
-    expect(store.set(selectThemeAtom, { polarity: 'dark', id: 'pug-colourblind' })).toBe(false)
+    expect(store.set(selectThemeAtom, { polarity: 'dark', id: MOSS.id })).toBe(false)
     expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug' })
   })
 
-  it('leaves the mode and auto contrast as they were', () => {
+  it('leaves the mode, contrast and colour vision as they were, and reports neither setting', () => {
     const store = createStore()
+    vi.mocked(trackEvent).mockClear()
     refuse()
     expect(store.set(themeModeAtom, 'dark')).toBe(false)
-    expect(store.set(autoContrastAtom, false)).toBe(false)
+    expect(store.set(themeContrastAtom, 'high')).toBe(false)
+    expect(store.set(themeVisionAtom, 'colourblind')).toBe(false)
     expect(store.get(themeModeAtom)).toBe('system')
-    expect(store.get(autoContrastAtom)).toBe(true)
+    expect(store.get(accessModeAtom)).toEqual({ contrast: 'standard', vision: 'standard' })
+    expect(trackEvent).not.toHaveBeenCalled()
   })
 
   // Removing writes the selection and then the list. When only the list is refused, the selection
@@ -296,8 +402,8 @@ describe('malformed storage', () => {
   // This one reads the guard's own output.
   it('reads a selection that is not a string as Pug', () => {
     const store = createStore()
-    store.set(themeSelectionAtom, { light: 5, dark: 'pug-colourblind' } as never)
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug-colourblind' })
+    store.set(themeSelectionAtom, { light: 5, dark: MOSS.id } as never)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: MOSS.id })
   })
 
   it('keeps the well-formed installed themes next to a broken entry', () => {
@@ -345,6 +451,7 @@ describe('project themes', () => {
   })
   const inProject = (defaultTheme: string, id = 'p1') => {
     const store = createStore()
+    store.set(installedThemesAtom, [MOSS])
     store.set(activeProjectAtom, create(ProjectSchema, { id, displayName: 'P', defaultTheme }))
     return store
   }
@@ -362,20 +469,20 @@ describe('project themes', () => {
   })
 
   it('shows the project’s default over the member’s own choice', () => {
-    expect(inProject('pug-colourblind').get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(inProject(MOSS.id).get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('lets this browser override it per project, and reports the override', () => {
-    const store = inProject('pug-colourblind')
-    expect(store.set(setProjectOverrideAtom, { projectId: 'p1', reference: 'pug-high-contrast' })).toBe(true)
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-high-contrast' })
+    const store = inProject(MOSS.id)
+    expect(store.set(setProjectOverrideAtom, { projectId: 'p1', reference: 'pug' })).toBe(true)
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug' })
     expect(trackEvent).toHaveBeenCalledWith('theme_selected', {
-      theme: 'pug-high-contrast',
+      theme: 'pug',
       mode: 'both',
       scope: 'project',
     })
     store.set(setProjectOverrideAtom, { projectId: 'p1', reference: null })
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('pins the mode when the reference says so', () => {
@@ -489,19 +596,19 @@ describe('project themes', () => {
     )
     const store = inProject(`${LINEN}#light`)
     const pending = store.set(refreshFetchedThemeAtom, LINEN)
-    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p2', displayName: 'Q', defaultTheme: 'pug-colourblind' }))
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'p2', displayName: 'Q', defaultTheme: MOSS.id }))
     release(fakeResponse(linenText))
     await pending
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   // Mounted, as the app has it: getOnInit read storage once, at import.
   it('reads stored overrides it can’t use as none', () => {
     localStorage.setItem('pug:theme-project-overrides', '{"p1":"pug#dim","__proto__":"pug","p2":7}')
-    const store = inProject('pug-colourblind')
+    const store = inProject(MOSS.id)
     store.sub(projectOverridesAtom, () => {})
     expect(store.get(projectOverridesAtom)).toEqual({})
-    expect(store.get(compiledThemeAtom)).toMatchObject({ id: 'pug-colourblind' })
+    expect(store.get(compiledThemeAtom)).toMatchObject({ id: MOSS.id })
   })
 
   it('treats a project default this build can’t read as none', () => {
@@ -563,10 +670,10 @@ describe('the member’s own theme by URL', () => {
 
   it('writes one theme to both modes, and reports both', () => {
     const store = createStore()
-    expect(store.set(selectThemeAtom, { polarity: 'both', id: 'pug-colourblind' })).toBe(true)
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-colourblind', dark: 'pug-colourblind' })
+    expect(store.set(selectThemeAtom, { polarity: 'both', id: MOSS.id })).toBe(true)
+    expect(store.get(themeSelectionAtom)).toEqual({ light: MOSS.id, dark: MOSS.id })
     expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
-      theme: 'pug-colourblind',
+      theme: 'custom',
       mode: 'both',
       scope: 'personal',
     })

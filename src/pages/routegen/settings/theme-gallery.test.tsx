@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { installedThemesAtom, themeContrastAtom, themeVisionAtom } from '@/data/theme.atoms'
 import { themeCatalogAtom } from '@/data/theme-catalog.atoms'
 import { serveByUrl } from '@/test/serve'
-import { applyTheme, findTile, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
+import { applyTheme, findTile, MOSS, openTheme, panel, themeList, tile, tileNames } from '@/test/theme-gallery'
 import { LIST_URL, listOf } from '@/test/theme-repository'
+import type { InstalledTheme } from '@/theme/library'
 import ThemeGallery from './theme-gallery'
 
 const light = (name: string) => ({
@@ -18,8 +20,9 @@ const OPAL_FILE = 'https://themes.pug.sh/opal/1/theme.json'
 
 type Props = Partial<Parameters<typeof ThemeGallery>[0]>
 
-const mount = (props: Props = {}) => {
+const mount = (props: Props = {}, themes: InstalledTheme[] = []) => {
   const store = createStore()
+  if (themes.length > 0) store.set(installedThemesAtom, themes)
   const onUse = vi.fn()
   const ui = (next: Props) => (
     <Provider store={store}>
@@ -48,7 +51,7 @@ afterEach(() => {
 
 describe('ThemeGallery toolbar', () => {
   it('shows only Add a theme with six themes or fewer', async () => {
-    serve(listing('Moss', 'Slate', 'Ember'))
+    serve(listing('Moss', 'Slate', 'Ember', 'Iris', 'Fern'))
     mount()
     await findTile('Moss, Light only')
     expect(screen.queryByLabelText('Search themes')).toBeNull()
@@ -56,7 +59,7 @@ describe('ThemeGallery toolbar', () => {
   })
 
   it('adds search, source and order above six', async () => {
-    serve(listing('Moss', 'Slate', 'Ember', 'Iris'))
+    serve(listing('Moss', 'Slate', 'Ember', 'Iris', 'Fern', 'Dune'))
     mount()
     await findTile('Moss, Light only')
     expect(screen.getByLabelText('Search themes')).toBeTruthy()
@@ -73,7 +76,26 @@ describe('ThemeGallery toolbar', () => {
     expect(tileNames()).toEqual(['Moss, Light only'])
     rerender({ requires: 'dark' })
     expect(screen.queryByLabelText('Search themes')).toBeNull()
-    expect(tileNames()).toEqual(['Pug', 'Pug High Contrast', 'Pug Colourblind-safe'])
+    expect(tileNames()).toEqual(['Pug'])
+  })
+})
+
+describe('ThemeGallery tiles', () => {
+  it('draws tiles in the member’s own contrast and colour vision', () => {
+    serveByUrl({})
+    const { store } = mount()
+    const paper = () => tile('Pug').querySelector('rect')?.getAttribute('fill')
+    const line = () => tile('Pug').querySelector('path[fill="none"]')?.getAttribute('stroke')
+    expect(paper()).toBe('oklch(0.943 0.005 265)')
+    expect(line()).toBe('#4164b9')
+    act(() => {
+      store.set(themeContrastAtom, 'high')
+    })
+    expect(paper()).toBe('oklch(1 0 0)')
+    act(() => {
+      store.set(themeVisionAtom, 'colourblind')
+    })
+    expect(line()).toBe('#005181')
   })
 })
 
@@ -129,6 +151,8 @@ describe('ThemeGallery groups', () => {
     vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
     const fetcher = serveByUrl({})
     mount()
+    expect(tileNames()).toEqual(['Pug'])
+    expect(screen.queryByLabelText('Search themes')).toBeNull()
     expect(screen.getByText('No theme repositories here yet.')).toBeTruthy()
     expect(screen.queryByText(/Couldn’t reach/)).toBeNull()
     expect(fetcher).not.toHaveBeenCalled()
@@ -173,12 +197,12 @@ describe('ThemeGallery flat lists', () => {
 describe('ThemeGallery panel', () => {
   it('opens one theme at a time, straight after its tile, and closes it on a second click', async () => {
     serveByUrl({})
-    mount()
+    mount({}, [MOSS])
     await openTheme('Pug')
     expect(tile('Pug').nextElementSibling).toBe(panel())
-    await openTheme('Pug High Contrast')
+    await openTheme('Moss')
     expect(screen.getAllByRole('region')).toHaveLength(1)
-    fireEvent.click(tile('Pug High Contrast'))
+    fireEvent.click(tile('Moss'))
     expect(screen.queryByRole('region')).toBeNull()
   })
 
@@ -193,19 +217,19 @@ describe('ThemeGallery panel', () => {
   it('writes nothing when a theme opens or closes', async () => {
     serveByUrl({})
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
-    const { onUse } = mount()
+    const { onUse } = mount({}, [MOSS])
     await openTheme('Pug')
-    await openTheme('Pug High Contrast')
-    fireEvent.click(tile('Pug High Contrast'))
+    await openTheme('Moss')
+    fireEvent.click(tile('Moss'))
     expect(setItem).not.toHaveBeenCalled()
     expect(onUse).not.toHaveBeenCalled()
   })
 
   it('hands the theme to its host', async () => {
     serveByUrl({})
-    const { onUse } = mount()
-    await applyTheme('Pug High Contrast')
-    expect(onUse).toHaveBeenCalledWith(expect.objectContaining({ id: 'pug-high-contrast' }))
+    const { onUse } = mount({}, [MOSS])
+    await applyTheme('Moss')
+    expect(onUse).toHaveBeenCalledWith(expect.objectContaining({ id: MOSS.id }))
   })
 })
 

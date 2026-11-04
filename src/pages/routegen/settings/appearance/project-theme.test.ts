@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import type { FetchStatus } from '@/data/theme.atoms'
+import { MOSS } from '@/test/theme-gallery'
 import { chooseTheme } from '@/theme/choice'
 import { buildLibrary } from '@/theme/library'
 import { projectTheme, skippedOverride } from './project-theme'
@@ -10,7 +11,7 @@ const FILE = 'https://themes.pug.sh/paper/theme.json'
 const failed: Record<string, FetchStatus> = { [FILE]: { state: 'failed', reason: 'status', status: 404 } }
 
 const inputs = (defaultTheme: string, override?: string, statuses: Record<string, FetchStatus> = {}) => {
-  const library = buildLibrary([])
+  const library = buildLibrary([MOSS])
   const personal = { light: 'pug', dark: 'pug' }
   return {
     project: create(ProjectSchema, { id: 'p1', displayName: 'Acme', defaultTheme }),
@@ -23,18 +24,18 @@ const inputs = (defaultTheme: string, override?: string, statuses: Record<string
 
 describe('projectTheme', () => {
   it('reads an override', () => {
-    expect(projectTheme(inputs('', 'pug-colourblind'))).toEqual({
-      holds: 'pug-colourblind',
-      chip: 'Pug Colourblind-safe',
-      sentence: 'Using Pug Colourblind-safe in this project.',
+    expect(projectTheme(inputs('', MOSS.id))).toEqual({
+      holds: MOSS.id,
+      chip: 'Moss',
+      sentence: 'Using Moss in this project.',
     })
   })
 
   it('reads a default, and holds it', () => {
-    expect(projectTheme(inputs('pug-colourblind#dark'))).toEqual({
-      holds: 'pug-colourblind#dark',
-      chip: 'Default: Pug Colourblind-safe',
-      sentence: 'Project default: Pug Colourblind-safe, always dark',
+    expect(projectTheme(inputs('pug#dark'))).toEqual({
+      holds: 'pug#dark',
+      chip: 'Default: Pug',
+      sentence: 'Project default: Pug, always dark',
     })
   })
 
@@ -72,6 +73,6 @@ describe('skippedOverride', () => {
 
   it('says nothing while an override loads, or once it paints', () => {
     expect(skippedOverride(inputs('', FILE, { [FILE]: { state: 'loading' } }))).toBeNull()
-    expect(skippedOverride(inputs('', 'pug-colourblind'))).toBeNull()
+    expect(skippedOverride(inputs('', MOSS.id))).toBeNull()
   })
 })

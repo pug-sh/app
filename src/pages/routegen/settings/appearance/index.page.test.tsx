@@ -5,9 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { fakeResponse } from '@/test/fake-response'
 import { serveByUrl } from '@/test/serve'
-import { applyTheme, findTile, openTheme, panel, themeList, tile } from '@/test/theme-gallery'
+import { applyTheme, findTile, MOSS, openTheme, panel, themeList, tile } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL, listOf } from '@/test/theme-repository'
-import type { RemoteId } from '@/theme/library'
+import type { InstalledTheme, RemoteId } from '@/theme/library'
 
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
@@ -22,12 +22,14 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const { trackEvent } = await import('@/analytics/pug')
 const { toast } = await import('sonner')
 const {
+  accessModeAtom,
   fetchedThemesAtom,
   installedThemesAtom,
   projectOverridesAtom,
   refreshFetchedThemeAtom,
   STORAGE_REFUSED,
   setProjectOverrideAtom,
+  themeContrastAtom,
   themeModeAtom,
   themeSelectionAtom,
 } = await import('@/data/theme.atoms')
@@ -41,8 +43,11 @@ const muddy = JSON.stringify({
   variants: { light: { colors: { foreground: '#bbbbbb' } } },
 })
 
-const mount = () => {
+const FERN: InstalledTheme = { ...MOSS, id: 'installed-fern', text: MOSS.text.replace('Moss', 'Fern'), hash: 'fern' }
+
+const mount = (themes: InstalledTheme[] = []) => {
   const store = createStore()
+  if (themes.length > 0) store.set(installedThemesAtom, themes)
   render(
     <Provider store={store}>
       <Appearance />
@@ -50,6 +55,7 @@ const mount = () => {
   )
   return store
 }
+const mountWithMoss = () => mount([MOSS])
 
 const chip = (label: string) => screen.getByRole('button', { name: new RegExp(`^${label}`) })
 const addTheme = () => {
@@ -82,21 +88,59 @@ describe('Settings, Appearance', () => {
     expect(store.get(themeModeAtom)).toBe('dark')
   })
 
+  it('starts on Match system and Standard', () => {
+    mount()
+    const contrast = screen.getByRole('group', { name: 'Contrast' })
+    const vision = screen.getByRole('group', { name: 'Colour vision' })
+    expect(within(contrast).getByRole('button', { name: 'Match system' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(vision).getByRole('button', { name: 'Standard' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('sets the contrast, and the page follows', () => {
+    const store = mount()
+    const group = screen.getByRole('group', { name: 'Contrast' })
+    fireEvent.click(within(group).getByRole('button', { name: 'High' }))
+    expect(store.get(accessModeAtom).contrast).toBe('high')
+    expect(within(group).getByRole('button', { name: 'High' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('sets colour vision, and the page follows', () => {
+    const store = mount()
+    const group = screen.getByRole('group', { name: 'Colour vision' })
+    fireEvent.click(within(group).getByRole('button', { name: 'Colourblind-safe' }))
+    expect(store.get(accessModeAtom).vision).toBe('colourblind')
+  })
+
+  it('says when the browser refused a setting', () => {
+    const store = mount()
+    const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+      throw new DOMException('full', 'QuotaExceededError')
+    })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'High' }))
+    } finally {
+      refusal.mockRestore()
+    }
+    expect(toast.error).toHaveBeenCalledWith(STORAGE_REFUSED)
+    expect(store.get(accessModeAtom).contrast).toBe('standard')
+  })
+
   // Tiles are real buttons, named by their theme, carrying their state, and each group is labelled,
   // or a screen reader can't say what a tile belongs to: two groups can hold one name.
-  it('offers each built-in as a pressable button inside a labelled group', () => {
-    mount()
-    const group = screen.getByRole('group', { name: 'Built in' })
-    expect(within(group).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
-    expect(within(group).getByRole('button', { name: 'Pug High Contrast' }).getAttribute('aria-pressed')).toBe('false')
+  it('offers each theme as a pressable button inside a labelled group', () => {
+    mountWithMoss()
+    const builtIn = screen.getByRole('group', { name: 'Built in' })
+    const yours = screen.getByRole('group', { name: 'Installed' })
+    expect(within(builtIn).getByRole('button', { name: 'Pug' }).getAttribute('aria-pressed')).toBe('true')
+    expect(within(yours).getByRole('button', { name: 'Moss' }).getAttribute('aria-pressed')).toBe('false')
   })
 
   // A pressed swatch used to differ from the rest by one pixel of border colour, the one cue the
   // colourblind and high-contrast themes' own users are least able to see. It carries a mark too.
   it('marks the selected tile with more than colour', () => {
-    mount()
+    mountWithMoss()
     expect(tile('Pug').querySelector('.lucide-check')).not.toBeNull()
-    expect(tile('Pug High Contrast').querySelector('.lucide-check')).toBeNull()
+    expect(tile('Moss').querySelector('.lucide-check')).toBeNull()
   })
 
   it('installs a clean file, lists it, and applies it from its tile', async () => {
@@ -176,8 +220,8 @@ describe('Settings, Appearance', () => {
   // A full quota or a blocked profile: the choice can't be kept, and saying nothing would leave the
   // page looking as if the click did nothing at all.
   it('says so when the browser refuses to save a choice, and keeps the old one', async () => {
-    mount()
-    await openTheme('Pug High Contrast')
+    mountWithMoss()
+    await openTheme('Moss')
     const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
@@ -242,7 +286,8 @@ describe('In use', () => {
   const CLAY_1 = 'https://themes.pug.sh/clay/1/theme.json'
   const differing = () => {
     const store = createStore()
-    store.set(themeSelectionAtom, { light: 'pug', dark: 'pug-colourblind' })
+    store.set(installedThemesAtom, [MOSS])
+    store.set(themeSelectionAtom, { light: 'pug', dark: MOSS.id })
     const view = render(
       <Provider store={store}>
         <Appearance />
@@ -257,14 +302,22 @@ describe('In use', () => {
   })
 
   it('applies a theme to both modes while there’s one choice', async () => {
-    const store = mount()
-    await applyTheme('Pug High Contrast')
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-high-contrast', dark: 'pug-high-contrast' })
+    const store = mountWithMoss()
+    await applyTheme('Moss')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: MOSS.id, dark: MOSS.id })
     expect(trackEvent).toHaveBeenLastCalledWith('theme_selected', {
-      theme: 'pug-high-contrast',
+      theme: 'custom',
       mode: 'both',
       scope: 'personal',
     })
+  })
+
+  it('draws the chips in the member’s mode', () => {
+    const store = mount()
+    act(() => {
+      store.set(themeContrastAtom, 'high')
+    })
+    expect(chip('Your theme').querySelector('rect')?.getAttribute('fill')).toBe('oklch(1 0 0)')
   })
 
   it('adds a chip for dark on request, starting as the light choice', () => {
@@ -277,14 +330,15 @@ describe('In use', () => {
 
   it('lands on the split view when the two choices differ, with nothing changed', () => {
     const { store } = differing()
-    expect(chip('In dark').textContent).toContain('Pug Colourblind-safe')
+    expect(chip('In dark').textContent).toContain('Moss')
     expect(chip('Your theme').getAttribute('aria-pressed')).toBe('true')
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: 'pug-colourblind' })
+    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug', dark: MOSS.id })
   })
 
   it('starts on In dark when dark is what’s painting', () => {
     const store = createStore()
-    store.set(themeSelectionAtom, { light: 'pug', dark: 'pug-colourblind' })
+    store.set(installedThemesAtom, [MOSS])
+    store.set(themeSelectionAtom, { light: 'pug', dark: MOSS.id })
     store.set(themeModeAtom, 'dark')
     render(
       <Provider store={store}>
@@ -295,12 +349,12 @@ describe('In use', () => {
   })
 
   it('writes one mode from each chip once they’re split', async () => {
-    const store = mount()
+    const store = mount([MOSS, FERN])
     splitModes()
-    await applyTheme('Pug Colourblind-safe', 'Use for dark')
+    await applyTheme('Moss', 'Use for dark')
     fireEvent.click(chip('Your theme'))
-    await applyTheme('Pug High Contrast')
-    expect(store.get(themeSelectionAtom)).toEqual({ light: 'pug-high-contrast', dark: 'pug-colourblind' })
+    await applyTheme('Fern')
+    expect(store.get(themeSelectionAtom)).toEqual({ light: FERN.id, dark: MOSS.id })
   })
 
   it('keeps the chip when both modes come to hold one theme, until the page reloads', async () => {
@@ -396,8 +450,9 @@ describe('This project', () => {
     variants: { light: { colors: { background: '#f3eee4' } } },
   })
 
-  const inProject = (defaultTheme: string, override?: string) => {
+  const inProject = (defaultTheme: string, override?: string, themes: InstalledTheme[] = []) => {
     const store = createStore()
+    if (themes.length > 0) store.set(installedThemesAtom, themes)
     store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'Acme', defaultTheme }))
     if (override) store.set(projectOverridesAtom, { p1: override })
     render(
@@ -434,13 +489,13 @@ describe('This project', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('shows the project’s default, and overrides it in this browser', async () => {
-    const store = inProject('pug-colourblind#dark')
-    expect(screen.getByText('Project default: Pug Colourblind-safe, always dark')).toBeTruthy()
-    await applyTheme('Pug High Contrast')
-    expect(store.get(projectOverridesAtom)).toEqual({ p1: 'pug-high-contrast' })
-    expect(screen.getByText('Using Pug High Contrast in this project.')).toBeTruthy()
+    const store = inProject('pug#dark', undefined, [MOSS])
+    expect(screen.getByText('Project default: Pug, always dark')).toBeTruthy()
+    await applyTheme('Moss')
+    expect(store.get(projectOverridesAtom)).toEqual({ p1: MOSS.id })
+    expect(screen.getByText('Using Moss in this project.')).toBeTruthy()
     expect(trackEvent).toHaveBeenCalledWith('theme_selected', {
-      theme: 'pug-high-contrast',
+      theme: 'custom',
       mode: 'both',
       scope: 'project',
     })
@@ -466,9 +521,9 @@ describe('This project', () => {
   })
 
   it('says so when storage refuses the override', async () => {
-    const store = inProject('')
+    const store = inProject('', undefined, [MOSS])
     fireEvent.click(chip('This project'))
-    await openTheme('Pug High Contrast')
+    await openTheme('Moss')
     const refusal = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new DOMException('full', 'QuotaExceededError')
     })
@@ -531,8 +586,16 @@ describe('This project', () => {
     expect(screen.getByText('Used in projects without a default')).toBeTruthy()
   })
 
+  // Review Focus 1: an override is a saved choice like any other, and it reads as Pug in the member's own settings.
+  it('reads an override saved before the modes as Pug', () => {
+    inProject('', 'pug-high-contrast')
+    expect(chip('This project').textContent).toContain('Pug')
+    expect(screen.getByText('Using Pug in this project.')).toBeTruthy()
+    expect(screen.queryByText(/can’t be used/)).toBeNull()
+  })
+
   it('starts on what’s painting', () => {
-    inProject('pug-colourblind')
+    inProject('pug')
     expect(chip('This project').getAttribute('aria-pressed')).toBe('true')
   })
 
@@ -542,19 +605,17 @@ describe('This project', () => {
   })
 
   it('marks a default’s tile as in use, and writes nothing from it', async () => {
-    const store = inProject('pug-colourblind')
-    await openTheme('Pug Colourblind-safe')
-    expect(tile('Pug Colourblind-safe').getAttribute('aria-pressed')).toBe('true')
+    const store = inProject(MOSS.id, undefined, [MOSS])
+    await openTheme('Moss')
+    expect(tile('Moss').getAttribute('aria-pressed')).toBe('true')
     fireEvent.click(within(panel()).getByRole('button', { name: 'In use' }))
     expect(store.get(projectOverridesAtom)).toEqual({})
   })
 
   it('says when a project’s theme, not Your theme, is what’s painting', () => {
-    inProject('pug-colourblind')
+    inProject(MOSS.id, undefined, [MOSS])
     fireEvent.click(chip('Your theme'))
-    expect(
-      screen.getByText(/Used in projects without a default\. This project is using Pug Colourblind-safe\./),
-    ).toBeTruthy()
+    expect(screen.getByText(/Used in projects without a default\. This project is using Moss\./)).toBeTruthy()
   })
 
   it('pins a single-variant installed theme to its only mode', async () => {
@@ -641,7 +702,7 @@ describe('This project', () => {
   describe('a write made while a release is being read', () => {
     const reading = async () => {
       const answer = deferred()
-      const store = inProject('', CLAY_2)
+      const store = inProject('', CLAY_2, [MOSS])
       fireEvent.click(chip('This project'))
       await screen.findByRole('group', { name: 'This project updates' })
       await onlyRelease('1.0.0')
@@ -650,9 +711,9 @@ describe('This project', () => {
 
     it('keeps a theme applied from the list', async () => {
       const { answer, store } = await reading()
-      await applyTheme('Pug High Contrast')
+      await applyTheme('Moss')
       await act(async () => answer.current(fakeResponse(LIGHT_ONLY)))
-      expect(store.get(projectOverridesAtom)).toEqual({ p1: 'pug-high-contrast' })
+      expect(store.get(projectOverridesAtom)).toEqual({ p1: MOSS.id })
     })
 
     it('keeps a mode changed from under the chips', async () => {
@@ -672,7 +733,7 @@ describe('This project', () => {
     it('stops talking about the file once the theme has moved on', async () => {
       await reading()
       expect(screen.getByText('Checking the file…')).toBeTruthy()
-      await applyTheme('Pug High Contrast')
+      await applyTheme('Moss')
       expect(screen.queryByText('Checking the file…')).toBeNull()
     })
   })
