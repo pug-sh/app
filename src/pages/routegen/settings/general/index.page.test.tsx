@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -11,6 +11,7 @@ import { type Project, ProjectSchema } from '@/api/genproto/dashboard/projects/v
 import { fakeResponse } from '@/test/fake-response'
 import { jwtFor } from '@/test/jwt'
 import { serveByUrl } from '@/test/serve'
+import { applyTheme, tile } from '@/test/theme-gallery'
 import { CLAY_LIST, clayFile, LIST_URL } from '@/test/theme-repository'
 
 const { batchGet, deleteProject, updateMeta } = vi.hoisted(() => ({
@@ -221,16 +222,31 @@ describe('the default theme', () => {
     )
     return store
   }
-  const pickSwatch = (name: string) =>
-    fireEvent.click(within(screen.getByRole('group', { name: 'Themes' })).getByRole('button', { name }))
+  const choose = (name: string) => applyTheme(name, 'Choose this theme')
 
   afterEach(() => vi.unstubAllGlobals())
 
   it('shows everyone what the default is, and only admins the controls', () => {
-    mountWith(OrgRole.VIEWER, 'pug-colourblind#dark')
-    expect(screen.getByText('Pug Colourblind-safe, always dark')).toBeTruthy()
-    expect(screen.queryByLabelText('Theme URL')).toBeNull()
+    mountWith(OrgRole.VIEWER, 'pug#dark')
+    expect(screen.getByText('Pug, always dark')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Add a theme' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Clear default' })).toBeNull()
+  })
+
+  // Review Focus 1: project defaults are live, so one can name a theme that's now a mode of Pug.
+  it('reads a default saved before the modes as Pug, and saves it as Pug', async () => {
+    updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
+      project: themed(defaultTheme),
+    }))
+    mountWith(OrgRole.ADMIN, 'pug-colourblind#dark')
+    expect(screen.getByText('Pug, always dark')).toBeTruthy()
+    expect(screen.queryByText(/can’t be used/)).toBeNull()
+    expect(tile('Pug').getAttribute('aria-pressed')).toBe('true')
+    await choose('Pug')
+    fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
+    await waitFor(() =>
+      expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } }),
+    )
   })
 
   it('saves a pinned built-in and puts the stored project back into the workspace', async () => {
@@ -238,15 +254,12 @@ describe('the default theme', () => {
       project: themed(defaultTheme),
     }))
     const store = mountWith(OrgRole.ADMIN)
-    pickSwatch('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Always dark' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
-    await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug-colourblind#dark'))
-    expect(updateMeta).toHaveBeenCalledWith(
-      { defaultTheme: 'pug-colourblind#dark' },
-      { headers: { 'x-project-id': 'doomed' } },
-    )
-    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug-colourblind#dark')
+    await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe('pug#dark'))
+    expect(updateMeta).toHaveBeenCalledWith({ defaultTheme: 'pug#dark' }, { headers: { 'x-project-id': 'doomed' } })
+    expect(store.get(projectsAtom)[0].defaultTheme).toBe('pug#dark')
   })
 
   // An id this build doesn't have, or a URL the URL parser refuses: never a crash, and the admin can clear it.
@@ -266,7 +279,7 @@ describe('the default theme', () => {
       new ConnectError('default_theme: the host can’t be localhost or an IP address', Code.InvalidArgument),
     )
     const store = mountWith(OrgRole.ADMIN)
-    pickSwatch('Pug Colourblind-safe')
+    await choose('Pug')
     fireEvent.click(screen.getByRole('button', { name: 'Save default theme' }))
     await waitFor(() => expect(toastError).toHaveBeenCalled())
     expect(store.get(activeProjectAtom)?.defaultTheme).toBe('')
@@ -276,7 +289,7 @@ describe('the default theme', () => {
     updateMeta.mockImplementation(async ({ defaultTheme }: { defaultTheme: string }) => ({
       project: themed(defaultTheme),
     }))
-    const store = mountWith(OrgRole.ADMIN, 'pug-colourblind')
+    const store = mountWith(OrgRole.ADMIN, 'pug')
     fireEvent.click(screen.getByRole('button', { name: 'Clear default' }))
     fireEvent.click(screen.getByRole('button', { name: 'Clear the default?' }))
     await waitFor(() => expect(store.get(activeProjectAtom)?.defaultTheme).toBe(''))
@@ -328,7 +341,7 @@ describe('the default theme', () => {
     serveByUrl({ [LIST_URL]: CLAY_LIST, [url]: JSON.stringify(clayFile('1.1.0')) })
     mountWith(OrgRole.ADMIN, url)
     expect(await screen.findByText('2.0.0 is out. You stay on 1.x until you switch.')).toBeTruthy()
-    pickSwatch('Clay')
+    await choose('Clay')
     expect(screen.getByRole('button', { name: 'Follow 1.x' }).getAttribute('aria-pressed')).toBe('true')
   })
 

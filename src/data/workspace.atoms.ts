@@ -10,7 +10,7 @@ import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { browserTimezone } from '@/lib/timezone'
 import { isUrlTarget, parseReference } from '@/theme/reference'
-import { OFFICIAL_REPOSITORY, parseThemeFileUrl } from '@/theme/repository'
+import { parsePugThemeFile } from '@/theme/repository'
 
 // Synchronous initial read avoids a first-render flash.
 export const LAST_ORG_ID_KEY = 'pug:lastOrgId'
@@ -417,7 +417,7 @@ export const saveProjectThemeAtom = atom(null, async (get, set, reference: strin
     get(projectsAtom).map(p => (p.id === saved.id ? saved : p)),
   )
   const pinned = reference.includes('#')
-  const official = parseThemeFileUrl(OFFICIAL_REPOSITORY, parseReference(reference)?.target ?? '')
+  const official = parsePugThemeFile(parseReference(reference)?.target ?? '')
   if (official) {
     trackEvent('project_theme_set', { kind: 'official', pinned, theme: official.slug, track: official.track.kind })
     return

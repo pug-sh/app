@@ -1,8 +1,9 @@
 import type { ThemeFamily } from './format'
-import { checkThemeText } from './library'
+import { checkThemeText, type RemoteId } from './library'
 import { compareReleases, parseRelease } from './release'
 import { fetchCapped } from './remote'
 import { isRepositoryRelease, isSlug } from './repository'
+import { STANDARD_ACCESS } from './tokens'
 
 // A repository's catalog, list.json: each theme's slug, its releases and its latest file. Read as
 // untrusted input, entry by entry, so a bad entry costs only itself.
@@ -10,8 +11,10 @@ import { isRepositoryRelease, isSlug } from './repository'
 const MAX_LIST_BYTES = 512 * 1024
 const LIST_VERSION = 1
 
-export type CatalogTheme = { slug: string; releases: string[]; family: ThemeFamily }
-type CatalogRead = { ok: true; themes: CatalogTheme[] } | { ok: false }
+type ListedTheme = { slug: string; releases: string[]; family: ThemeFamily }
+/** A theme in a catalog, and the repository that listed it: its files are built from that address. */
+export type CatalogTheme = ListedTheme & { repository: RemoteId }
+type ListRead = { ok: true; themes: ListedTheme[] } | { ok: false }
 
 const asObject = (value: unknown) =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null
@@ -27,7 +30,7 @@ const releasesOf = (value: unknown) => {
 }
 
 /** Reads list.json. A list in a newer format is refused; an entry this build can't use is left out. */
-export const parseList = (text: string): CatalogRead => {
+export const parseList = (text: string): ListRead => {
   let json: unknown
   try {
     json = JSON.parse(text)
@@ -39,7 +42,7 @@ export const parseList = (text: string): CatalogRead => {
   if (!list || typeof version !== 'number' || version < 1 || version > LIST_VERSION || !Array.isArray(list.themes)) {
     return { ok: false }
   }
-  const themes: CatalogTheme[] = []
+  const themes: ListedTheme[] = []
   for (const value of list.themes) {
     const entry = asObject(value)
     const slug = entry?.slug
@@ -47,14 +50,17 @@ export const parseList = (text: string): CatalogRead => {
     const releases = releasesOf(entry.releases)
     const latest = asObject(entry.latest)
     if (releases.length === 0 || !latest) continue
-    const check = checkThemeText(JSON.stringify(latest))
+    // A list read only needs to know a file is usable, and every mode costs 1.3 ms a variant.
+    const check = checkThemeText(JSON.stringify(latest), [STANDARD_ACCESS])
     if (check.ok) themes.push({ slug, releases, family: check.family })
   }
   return { ok: true, themes }
 }
 
 /** Fetches and reads a repository's list.json. */
-export const fetchCatalog = async (repository: string): Promise<CatalogRead> => {
+export const fetchCatalog = async (repository: RemoteId) => {
   const fetched = await fetchCapped(`${repository}/list.json`, MAX_LIST_BYTES)
-  return fetched.ok ? parseList(fetched.text) : { ok: false }
+  const read: ListRead = fetched.ok ? parseList(fetched.text) : { ok: false }
+  if (!read.ok) return read
+  return { ok: true as const, themes: read.themes.map((theme): CatalogTheme => ({ ...theme, repository })) }
 }

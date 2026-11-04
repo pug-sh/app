@@ -18,12 +18,13 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { Toaster } from '@/components/ui/sonner'
 import {
   activeThemeUrlsAtom,
-  autoContrastAtom,
   compiledThemeAtom,
   refreshFetchedThemeAtom,
   resolvableLibraryAtom,
   themeChoiceAtom,
+  themeContrastAtom,
   themeSelectionAtom,
+  themeVisionAtom,
 } from '@/data/theme.atoms'
 import {
   activeOrgAtom,
@@ -73,7 +74,8 @@ const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const compiled = useAtomValue(compiledThemeAtom)
   const choice = useAtomValue(themeChoiceAtom)
   const selection = useAtomValue(themeSelectionAtom)
-  const autoContrast = useAtomValue(autoContrastAtom)
+  const contrast = useAtomValue(themeContrastAtom)
+  const vision = useAtomValue(themeVisionAtom)
   const library = useAtomValue(resolvableLibraryAtom)
   const projectId = useAtomValue(activeProjectAtom)?.id ?? null
   const authenticated = useAtomValue(isAuthenticatedAtom)
@@ -83,13 +85,21 @@ const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     if (!waiting) applyCompiledTheme(compiled)
   }, [compiled, waiting])
   // What index.html paints on the next load, before React: this project's theme and the member's own,
-  // both modes each, since the OS can flip.
+  // both modes and both contrast levels each, since the OS can flip either.
   useEffect(
     () =>
       writePaintCache(
-        buildPaintCache({ previous: readPaintCache(), projectId, choice, personal: selection, autoContrast, library }),
+        buildPaintCache({
+          previous: readPaintCache(),
+          projectId,
+          choice,
+          personal: selection,
+          contrast,
+          vision,
+          library,
+        }),
       ),
-    [projectId, choice, selection, autoContrast, library],
+    [projectId, choice, selection, contrast, vision, library],
   )
   return null
 }

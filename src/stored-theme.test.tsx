@@ -52,7 +52,7 @@ it('colors series for the stored theme, not the OS one', () => {
 
   expect(getSeriesColor('page_view')).toEqual(dark)
   expect(JSON.parse(localStorage.getItem('pug:theme-paint') ?? 'null')).toMatchObject({
-    v: 2,
-    personal: { dark: { builtin: 'pug' } },
+    v: 3,
+    personal: { dark: { standard: { builtin: 'pug' } } },
   })
 })
