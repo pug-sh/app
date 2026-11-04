@@ -12,8 +12,8 @@ import type { Contrast, Polarity } from './tokens'
 
 // Mirrors the Pug preset's backgrounds; presets/pug.test.ts pins the two together.
 export const PUG_CANVAS: Record<Polarity, Oklch> = {
-  light: { l: 1, c: 0, h: 0, alpha: 1 },
-  dark: { l: 0.204627, c: 0, h: 0, alpha: 1 },
+  light: { l: 0.973427, c: 0.001324, h: 286.375, alpha: 1 },
+  dark: { l: 0.173482, c: 0.002043, h: 286.185, alpha: 1 },
 }
 
 // The light cap sits below the dark one because mid-lightness colors on white read as more

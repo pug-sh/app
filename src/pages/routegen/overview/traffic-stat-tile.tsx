@@ -90,7 +90,7 @@ export const TrafficStatTile = ({
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
     return (
-      <div className="flex h-[9.25rem] min-h-0 flex-col rounded-lg border border-transparent bg-card px-4 py-3 text-left dark:border-border/60">
+      <div className="flex h-[9.25rem] min-h-0 flex-col rounded-lg border border-border bg-background px-4 py-3 text-left dark:border-foreground/15">
         <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
           <span className="text-xs text-muted-foreground" title={error}>
@@ -127,8 +127,8 @@ export const TrafficStatTile = ({
       className={cn(
         'flex h-[9.25rem] min-h-0 flex-col overflow-hidden rounded-lg border px-4 py-3 text-left transition-colors',
         selected
-          ? 'border-chart-1/50 bg-chart-1/[0.07]'
-          : 'border-transparent bg-card hover:border-border hover:bg-accent dark:border-border/60 dark:hover:border-border dark:hover:bg-accent/40',
+          ? 'border-chart-1/50 bg-background'
+          : 'border-border bg-background dark:border-foreground/15 dark:hover:border-foreground/25',
       )}
     >
       <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>

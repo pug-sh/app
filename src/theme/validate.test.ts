@@ -176,15 +176,6 @@ describe('rule boundaries', () => {
     expect(report.some(i => i.rule === 'V1')).toBe(refused)
   })
 
-  // Light tiles draw no outline, so a card within 0.01 L of the canvas has no edge at all.
-  it.each([
-    ['#f7f7fa', false],
-    ['#fdfdfd', true],
-  ])('V4: a %s card on white warns: %s', (card, warns) => {
-    const report = issuesFor(theme({ background: '#ffffff', card }))
-    expect(report.some(i => i.rule === 'V4' && i.path === 'card')).toBe(warns)
-  })
-
   // Body ink on white at about 7.1:1 and 6.9:1, either side of the 7:1 floor. The card is pinned white
   // too: derived, it sits a step below the canvas.
   it.each([

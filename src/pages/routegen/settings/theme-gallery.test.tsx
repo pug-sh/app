@@ -91,7 +91,7 @@ describe('ThemeGallery tiles', () => {
     act(() => {
       store.set(themeContrastAtom, 'high')
     })
-    expect(ink()).toBe('oklch(0.29448 0 0)')
+    expect(ink()).toBe('oklch(0.313357 0 0)')
     act(() => {
       store.set(themeVisionAtom, 'colourblind')
     })

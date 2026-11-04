@@ -652,7 +652,7 @@ const Insights = () => {
 
       {/* Same tile shell as the overview and dashboard tiles: the chart is the page's one
           object, so it sits on the card surface rather than flush on the canvas. */}
-      <div className="rounded-lg border border-transparent bg-card p-4 dark:border-border/60">
+      <div className="rounded-lg border border-border bg-background p-4 dark:border-foreground/15">
         <div ref={chartRef}>
           <InsightsContent
             error={error}

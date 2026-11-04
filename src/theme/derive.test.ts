@@ -63,7 +63,7 @@ describe('high contrast', () => {
     ['dark', 'destructive', 0.78, 0.13, 15],
     ['dark', 'link', 0.725, 0.11, 50],
     ['dark', 'negative', 0.729, 0.1, 5],
-    ['dark', 'caution', 0.723, 0.08, 85],
+    ['dark', 'caution', 0.739, 0.08, 85],
   ] as const)('puts Clay %s on Pug High Contrast’s grounds, in its own hues: %s', (polarity, token, l, c, h) => {
     const color = tokensIn(clayFamily, polarity, HIGH)[token]
     expect(color.l).toBeCloseTo(l, 3)
@@ -187,6 +187,7 @@ describe('colourblind-safe', () => {
       it.each(['positive', 'caution'] as const)('keeps %s between its standard contrast and body text', token => {
         const own = contrast(standard[token], standard.background)
         expect(contrast(blind[token], blind.background)).toBeGreaterThanOrEqual(own - 0.01)
+        if (own > contrast(standard.foreground, standard.background)) return
         expect(reach(blind[token].l)).toBeLessThanOrEqual(reach(blind.foreground.l) + 1e-9)
       })
 

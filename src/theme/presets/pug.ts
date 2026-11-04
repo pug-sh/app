@@ -34,10 +34,10 @@ export const pug = {
   variants: {
     light: {
       colors: {
-        // The sidebar's grey is the shell the white page panel sits on.
-        background: '#ffffff',
+        // The sidebar's grey is the shell the page panel sits on.
+        background: '#f6f6f7',
         foreground: '#4d4d4d',
-        card: '#f7f7fa',
+        card: '#ffffff',
         'card-foreground': '#0d0e10',
         popover: '#ffffff',
         'popover-foreground': '#0d0e10',
@@ -73,16 +73,16 @@ export const pug = {
         'chart-3': 'oklch(0.7 0.15 70)',
         'chart-4': 'oklch(0.55 0.16 330)',
         'chart-5': 'oklch(0.58 0.2 25)',
-        sidebar: '#f2f2f7',
+        sidebar: '#efeff0',
         'sidebar-foreground': '#0d0e10',
         'sidebar-primary': '#5a60c9',
         'sidebar-primary-foreground': '#ffffff',
-        // The active nav item is a small white panel on the shell.
-        'sidebar-accent': '#ffffff',
+        // The active nav item is a piece of the page panel on the shell.
+        'sidebar-accent': '#f6f6f7',
         'sidebar-accent-foreground': '#0d0e10',
         'sidebar-border': '#e5e5ea',
         'sidebar-ring': '#5a60c9',
-        'chart-background': '#f7f7fa',
+        'chart-background': '#f6f6f7',
         'chart-foreground': '#0d0e10',
         'chart-foreground-muted': '#6c6e7f',
         'chart-label': '#6c6e7f',
@@ -164,7 +164,7 @@ export const pug = {
       colors: {
         // The sidebar's near-black is the shell; the page panel sits a step above it, cards a step
         // above that.
-        background: '#171717',
+        background: '#101011',
         // Softer than the off-white that cards, menus and the sidebar keep: at body size it glares
         // on these grounds. Text on fills stays white.
         foreground: 'oklch(0.8 0.006 286)',
@@ -203,16 +203,16 @@ export const pug = {
         'chart-3': 'oklch(0.715 0.15 70)',
         'chart-4': 'oklch(0.65 0.15 330)',
         'chart-5': 'oklch(0.666 0.165 25)',
-        sidebar: '#121212',
+        sidebar: '#080809',
         'sidebar-foreground': '#e5e5ea',
         'sidebar-primary': '#5a60c9',
         'sidebar-primary-foreground': '#ffffff',
         // The panel's own tone, held below card so the active nav item never outshines content.
-        'sidebar-accent': '#171717',
+        'sidebar-accent': '#101011',
         'sidebar-accent-foreground': '#e5e5ea',
         'sidebar-border': 'oklch(1 0 0 / 0.055)',
         'sidebar-ring': '#8591f0',
-        'chart-background': '#1d1d1d',
+        'chart-background': '#101011',
         'chart-foreground': '#e5e5ea',
         'chart-foreground-muted': '#a0a0a0',
         'chart-label': '#a0a0a0',

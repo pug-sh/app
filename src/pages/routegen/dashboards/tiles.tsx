@@ -96,7 +96,7 @@ export const TileShell = ({
     <div
       className={[
         'group relative flex h-full min-h-0 flex-col overflow-hidden rounded-lg p-4',
-        borderless ? '' : 'border border-transparent bg-card dark:border-border/60',
+        borderless ? '' : 'border border-border bg-background dark:border-foreground/15',
       ].join(' ')}
     >
       {accent ? (

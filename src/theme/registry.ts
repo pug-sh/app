@@ -97,7 +97,7 @@ const RULES: Record<TokenName, Def> = {
   },
   'sidebar-ring': ref('ring'),
   // Charts sit on tiles, and the hover dot's halo is drawn in this.
-  'chart-background': ref('card'),
+  'chart-background': ref('background'),
   'chart-foreground': ref('card-foreground'),
   'chart-foreground-muted': ref('muted-foreground'),
   'chart-label': ref('muted-foreground'),

@@ -101,7 +101,7 @@ describe('ThemePanel', () => {
     const { onUse } = mount(themeNamed('Pug'))
     const large = () => within(screen.getByRole('region')).getAllByText('Overview')[0].closest('[aria-hidden]')
     const background = () => (large() as HTMLElement).style.getPropertyValue('--background')
-    expect(background()).toBe('oklch(1 0 0)')
+    expect(background()).toBe('oklch(0.973427 0.001324 286.375)')
     fireEvent.click(screen.getByRole('button', { name: 'Show dark, both' }))
     expect(pressed('Show dark, both')).toBe('true')
     expect(pressed('Show light')).toBe('false')

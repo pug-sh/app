@@ -27,7 +27,7 @@ const KPI_TILE = create(DashboardTileSchema, {
 })
 
 const KpiTile = ({ title, via, query, globalTimeRange, globalGranularity, queryKeyPrefix }: Props) => (
-  <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-transparent bg-card px-4 py-3 dark:border-border/60">
+  <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-background px-4 py-3 dark:border-foreground/15">
     <h3 className="truncate text-sm text-muted-foreground">{title}</h3>
     <div className="mt-1 min-h-0">
       <DashboardInsightContent
