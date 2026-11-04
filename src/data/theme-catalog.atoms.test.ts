@@ -26,7 +26,7 @@ describe('the theme catalog', () => {
   })
 
   it('fetches nothing and fails nothing with no default repository', async () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     const fetcher = serveByUrl({ [LIST_URL]: CLAY_LIST })
     const store = createStore()
     await loaded(store, 'ok')
@@ -44,7 +44,7 @@ describe('the theme catalog', () => {
   })
 
   it('says so when a named repository is down', async () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     vi.stubEnv('VITE_THEME_REPOSITORY', 'https://themes.acme.com')
     vi.stubGlobal(
       'fetch',

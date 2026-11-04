@@ -148,7 +148,7 @@ describe('ThemeGallery groups', () => {
   })
 
   it('reads as complete with no repository at all', () => {
-    vi.stubEnv('VITE_PUG_SERVICES_ENABLED', '')
+    vi.stubEnv('VITE_AIR_GAP', 'true')
     const fetcher = serveByUrl({})
     mount()
     expect(tileNames()).toEqual(['Pug'])

@@ -43,9 +43,9 @@ jobs:
           # With no API address transport.ts compiles to a bare `throw`, the bundler drops everything
           # after it, and the air gap check below would pass for the wrong reason.
           VITE_API_BASE_URL: https://api.invalid
+          VITE_AIR_GAP: 'true'
 
       - name: Check the air gap
-        # Nothing else is set on the build above, so this dist is the air-gapped build.
         run: bun run check:air-gap
 
       - name: Knip

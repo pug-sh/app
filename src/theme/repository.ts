@@ -53,10 +53,10 @@ export const parseThemeFileUrl = (repository: string, url: string): { slug: stri
 // The deployment's default repository. "None" is null, never '': themeFileUrl('', …) builds a same-origin path, and
 // parseThemeFileUrl('', url) matches any URL starting with '/'.
 
-// Pug's repository, when this build opted out of the air gap. The read and the address share one expression on
-// purpose: Vite inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
+// Pug's repository, unless this build is air-gapped. The read and the address share one expression on purpose: Vite
+// inlines the value and the minifier drops the branch, so an air-gapped bundle holds no address.
 const pugRepository = (): RemoteId | null =>
-  (import.meta.env.VITE_PUG_SERVICES_ENABLED ?? '').trim() === 'true' ? OFFICIAL_REPOSITORY : null
+  (import.meta.env.VITE_AIR_GAP ?? '').trim() === 'true' ? null : OFFICIAL_REPOSITORY
 
 // The parser's own form, so what follows the address can't land in a query and a capitalised scheme still reads as a
 // URL everywhere else. Null when it isn't https, or carries anything a folder can't.
@@ -85,7 +85,7 @@ const namedRepository = () => {
   return address
 }
 
-/** The repository this deployment lists themes from: the one it named, then Pug's if it opted in. Null for none. */
+/** The repository this deployment lists themes from: the one it named, then Pug's unless air-gapped. Null for none. */
 export const defaultRepository = () => namedRepository() ?? pugRepository()
 
 /** A file in the default repository as a slug and a track. Null for any other URL, and for every URL with no default. */
