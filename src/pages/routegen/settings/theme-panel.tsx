@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { compiledTheme, type GalleryTheme, sourceLabel, tunedIn } from '@/pages/routegen/settings/gallery-themes'
@@ -22,6 +22,11 @@ const VERSIONS = [
 
 const sameAccess = (a: AccessMode, b: AccessMode) => a.contrast === b.contrast && a.vision === b.vision
 
+// Keyed by `id`, not label: a button that's been used keeps its element, and the focus, as its label changes.
+export type ThemeButton = { id: string; label: string; disabled?: boolean; onClick?: () => void }
+/** What the host offers for one theme: its buttons, the first the main one, and a line on what they did. */
+export type ThemeActions = { buttons: ThemeButton[]; note?: ReactNode }
+
 // Confirmation by button state, not a dialog: the first click arms it, the second removes.
 const RemoveButton = ({ onRemove }: { onRemove: () => void }) => {
   const [armed, setArmed] = useState(false)
@@ -42,16 +47,13 @@ const RemoveButton = ({ onRemove }: { onRemove: () => void }) => {
 
 // The close look at one theme, in place under its tile. Looking writes nothing, so it can't cost anyone a saved
 // release, mode or choice: flipping a version only changes what's shown here, and it opens on the version the member
-// sees. `heldLabel` is what the button reads on a theme the slot already holds. Without one it keeps working, since
-// General can choose the saved theme again.
+// sees. The buttons and the line under them are the host's, so whatever a click can't show is said where it was made.
 const ThemePanel = ({
   theme,
   polarity,
   access,
   id,
-  useLabel,
-  heldLabel,
-  onUse,
+  actions,
   onRemove,
   onClose,
 }: {
@@ -59,9 +61,7 @@ const ThemePanel = ({
   polarity: Polarity
   access: AccessMode
   id: string
-  useLabel: string
-  heldLabel?: string
-  onUse: () => void
+  actions: ThemeActions
   onRemove?: () => void
   onClose: () => void
 }) => {
@@ -69,7 +69,6 @@ const ThemePanel = ({
   const { family, entry, source, name } = theme
   const issues = entry?.issues ?? []
   const installed = source === 'installed'
-  const inUse = theme.held && heldLabel !== undefined
   const shown = family && (flip ?? { polarity: shownPolarity(family, polarity), access })
 
   return (
@@ -147,17 +146,29 @@ const ThemePanel = ({
         </div>
       )}
       {!family && <IssueList issues={issues} />}
-      <div className="flex items-center justify-between gap-2">
-        {family && (
-          <Button size="sm" disabled={inUse} focusableWhenDisabled onClick={onUse} className="aria-disabled:opacity-50">
-            {inUse ? heldLabel : useLabel}
-          </Button>
-        )}
-        {installed && onRemove && (
-          <span className="ml-auto">
-            <RemoveButton onRemove={onRemove} />
-          </span>
-        )}
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          {family &&
+            actions.buttons.map((button, index) => (
+              <Button
+                key={button.id}
+                size="sm"
+                variant={index === 0 ? 'default' : 'ghost'}
+                disabled={button.disabled}
+                focusableWhenDisabled
+                onClick={button.onClick}
+                className="aria-disabled:opacity-50"
+              >
+                {button.label}
+              </Button>
+            ))}
+          {installed && onRemove && (
+            <span className="ml-auto">
+              <RemoveButton onRemove={onRemove} />
+            </span>
+          )}
+        </div>
+        {family && actions.note}
       </div>
     </div>
   )

@@ -7,7 +7,7 @@ import { buildLibrary, type InstalledTheme } from '@/theme/library'
 import { ACCESS_MODES, type AccessMode, STANDARD_ACCESS } from '@/theme/tokens'
 import { compiledTheme, type GalleryTheme, galleryThemes, type Held } from './gallery-themes'
 import ThemeLargePreview from './theme-large-preview'
-import ThemePanel from './theme-panel'
+import ThemePanel, { type ThemeActions } from './theme-panel'
 import ThemeTile from './theme-tile'
 
 const grape: InstalledTheme = {
@@ -37,24 +37,24 @@ const themeNamed = (name: string, held: Held | null = null) => {
   return theme
 }
 
-const mount = (theme: GalleryTheme, props: { useLabel?: string; heldLabel?: string; access?: AccessMode } = {}) => {
+const mount = (theme: GalleryTheme, props: { actions?: ThemeActions; access?: AccessMode } = {}) => {
   const onUse = vi.fn()
   const onRemove = vi.fn()
-  render(
+  const actions = { buttons: [{ id: 'use', label: 'Use this theme', onClick: onUse }] }
+  const panel = (next: typeof props) => (
     <ThemePanel
       theme={theme}
       polarity="light"
       access={STANDARD_ACCESS}
       id="panel"
-      useLabel="Use this theme"
-      heldLabel="In use"
-      onUse={onUse}
+      actions={actions}
       onRemove={onRemove}
       onClose={() => {}}
-      {...props}
-    />,
+      {...next}
+    />
   )
-  return { onUse, onRemove }
+  const { rerender } = render(panel(props))
+  return { onUse, onRemove, rerender: (next: typeof props) => rerender(panel(next)) }
 }
 
 const pressed = (name: string) => screen.getByRole('button', { name }).getAttribute('aria-pressed')
@@ -133,8 +133,25 @@ describe('ThemePanel', () => {
     expect(onUse).toHaveBeenCalledOnce()
   })
 
-  it('reads In use on what the slot holds, does nothing, and stays focusable', () => {
-    const { onUse } = mount(themeNamed('Pug', { target: 'pug', family: null }))
+  it('offers the host’s buttons in order, the first as the main one, and its note under them', () => {
+    const actions = {
+      buttons: [
+        { id: 'project', label: 'Use in this project', onClick: () => {} },
+        { id: 'both', label: 'Make it my theme', onClick: () => {} },
+      ],
+      note: <p>Where it went.</p>,
+    }
+    mount(themeNamed('Pug'), { actions })
+    const [main, other] = within(screen.getByRole('region')).getAllByRole('button', { name: /this project|my theme/ })
+    expect(main.textContent).toBe('Use in this project')
+    expect(main.className).toContain('bg-primary')
+    expect(other.className).not.toContain('bg-primary')
+    expect(screen.getByText('Where it went.')).toBeTruthy()
+  })
+
+  it('does nothing from a disabled button, and keeps it focusable', () => {
+    const onUse = vi.fn()
+    mount(themeNamed('Pug'), { actions: { buttons: [{ id: 'use', label: 'In use', disabled: true, onClick: onUse }] } })
     const button = screen.getByRole<HTMLButtonElement>('button', { name: 'In use' })
     expect(button.disabled).toBe(false)
     expect(button.getAttribute('aria-disabled')).toBe('true')
@@ -142,13 +159,23 @@ describe('ThemePanel', () => {
     expect(onUse).not.toHaveBeenCalled()
   })
 
-  it('keeps its label on a held theme when no held label is given', () => {
-    const { onUse } = mount(themeNamed('Pug', { target: 'pug', family: null }), {
-      useLabel: 'Choose this theme',
-      heldLabel: undefined,
+  // A button keyed by its label is replaced when the label changes, and focus drops to the page.
+  it('keeps a used button, and the focus, as its label changes and it moves', () => {
+    const use = (label: string) => ({ id: 'project', label, onClick: () => {} })
+    const mine = { id: 'both', label: 'Use this theme', onClick: () => {} }
+    const { rerender } = mount(themeNamed('Pug'), { actions: { buttons: [mine, use('Only in this project')] } })
+    const button = screen.getByRole('button', { name: 'Only in this project' })
+    button.focus()
+    rerender({
+      actions: {
+        buttons: [
+          { ...use('In use'), disabled: true },
+          { ...mine, label: 'Make it my theme' },
+        ],
+      },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Choose this theme' }))
-    expect(onUse).toHaveBeenCalledOnce()
+    expect(document.activeElement).toBe(button)
+    expect(button.textContent).toBe('In use')
   })
 
   it('shows an installed theme’s checks, and removes it on the second click', () => {

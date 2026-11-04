@@ -51,10 +51,12 @@ const InstallReport = ({
 const AddTheme = ({
   shared,
   requires,
+  fileLabel,
   onUseFile,
 }: {
   shared: boolean
   requires?: Polarity
+  fileLabel: string
   onUseFile: (file: CheckedFile) => void
 }) => {
   const installed = useAtomValue(installedThemesAtom)
@@ -95,7 +97,7 @@ const AddTheme = ({
 
   return (
     <div className="mb-4 space-y-3">
-      <ThemeUrlField disclosure={shared} requires={requires} onUse={onUseFile} />
+      <ThemeUrlField disclosure={shared} requires={requires} useLabel={fileLabel} onUse={onUseFile} />
       {!shared && (
         <div>
           <input

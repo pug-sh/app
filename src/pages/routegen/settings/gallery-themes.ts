@@ -45,27 +45,29 @@ export const listingOf = (catalog: CatalogTheme[], target: string | undefined) =
   return null
 }
 
-// The themes a list offers: built-ins and installed themes, then the catalog, each only in a mode the slot
-// requires. The one a slot follows draws its copy, which can be an older line than the catalog's latest, and falls
-// back to the catalog's while that copy lacks the mode or hasn't arrived. A theme that can't be used stays, so it
-// stays removable.
+const followsListed = (theme: CatalogTheme, target: string | undefined) =>
+  target !== undefined && parseThemeFileUrl(theme.repository, target)?.slug === theme.slug
+
+/** Whether a reference's target is this theme: its id, or any file of a repository theme, whatever its track. */
+export const isTheme = (theme: GalleryTheme, target: string | undefined) =>
+  theme.listed ? followsListed(theme.listed, target) : theme.id === target
+
+// The themes a list offers: built-ins and installed themes, then the catalog. The one a list holds draws its copy,
+// which can be an older line than the catalog's latest, and falls back to the catalog's until that copy arrives. A
+// theme that can't be used stays, so it stays removable.
 export const galleryThemes = ({
   held,
-  requires,
   shared,
   library,
   catalog,
 }: {
   held: Held | null
-  requires?: Polarity
   shared: boolean
   library: LibraryEntry[]
   catalog: CatalogTheme[]
 }): GalleryTheme[] => {
-  const hasMode = (family: ThemeFamily) => !requires || Boolean(family.variants[requires])
   const own = library
     .filter(entry => !isRemoteId(entry.id) && (entry.builtin || !shared))
-    .filter(entry => !entry.family || hasMode(entry.family))
     .map(entry => ({
       key: entry.id,
       id: entry.id,
@@ -76,24 +78,19 @@ export const galleryThemes = ({
       held: entry.id === held?.target,
       entry,
     }))
-  const repository = catalog.flatMap(theme => {
-    const followed = held && parseThemeFileUrl(theme.repository, held.target)?.slug === theme.slug ? held : null
-    const copy = followed?.family && hasMode(followed.family) ? followed : null
-    const family = copy?.family ?? theme.family
-    if (!hasMode(family)) return []
-    const latest = themeFileUrl(theme.repository, theme.slug, { kind: 'latest' })
-    return [
-      {
-        key: `official:${theme.repository}:${theme.slug}`,
-        id: copy?.target ?? latest,
-        builtin: false,
-        source: theme.repository,
-        name: family.name,
-        family,
-        held: followed !== null,
-        listed: theme,
-      },
-    ]
+  const repository = catalog.map(theme => {
+    const followed = held && followsListed(theme, held.target) ? held : null
+    const family = followed?.family ?? theme.family
+    return {
+      key: `official:${theme.repository}:${theme.slug}`,
+      id: followed?.family ? followed.target : themeFileUrl(theme.repository, theme.slug, { kind: 'latest' }),
+      builtin: false,
+      source: theme.repository,
+      name: family.name,
+      family,
+      held: followed !== null,
+      listed: theme,
+    }
   })
   return [...own, ...repository]
 }
