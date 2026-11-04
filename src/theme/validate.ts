@@ -1,14 +1,15 @@
 import { composite, contrast } from '../lib/color/contrast'
+import { worstDeltaE } from '../lib/color/cvd'
 import { fromHex, type Oklch } from '../lib/color/oklch'
-import type { CompiledDataPalette } from './data-palette'
+import { type CompiledDataPalette, EVENT_COLORS, groupOf } from './data-palette'
 import { error, type Issue, type RuleId, warning } from './format'
 import { IDENTITY_HUES, identityContrast, syntaxGround } from './registry'
-import type { Contrast, Polarity, TokenName } from './tokens'
+import type { Contrast, Polarity, TokenName, Vision } from './tokens'
 
-// Validation rules V1–V11. V12 and V13 are raised while parsing, and so is V5 for a surface the file
+// Validation rules V1–V11 and V14. V12 and V13 are raised while parsing, and so is V5 for a surface the file
 // sets see-through; here V5 catches an input the registry derived from a see-through line. Standard
 // floors are Pug's own measured ratio less 10%, pinned below as constants so retuning Pug forces a
-// deliberate floor update; the floors test re-measures them. High-contrast floors are the spec's APCA
+// deliberate floor update: the floors test re-measures them. High-contrast floors are the spec's APCA
 // Lc 90 / 75 / 60 in WCAG terms (12 / 7 / 4.5), with 7:1 text on fills and 3:1 for lines and data,
 // and never below the standard floor, where that asks for more.
 
@@ -44,6 +45,9 @@ export const FILL_PAIRS: [TokenName, TokenName][] = [
   ['sidebar-primary-foreground', 'sidebar-primary'],
 ]
 const BLACK = { l: 0, c: 0, h: 0, alpha: 1 }
+// Apart under the worst of protan, deutan and tritan. Measured across the four-mode sweep: good vs bad holds 0.069 and
+// failure vs success 0.143, so the solver meets this and it still means something. Pug's standard dark measures 0.005.
+const V14_APART = 0.05
 
 export type Floors = {
   v2: Record<string, number>
@@ -136,6 +140,7 @@ export type Subject = {
   data: CompiledDataPalette
   polarity: Polarity
   contrast: Contrast
+  vision?: Vision
 }
 
 const groundValue = (s: Subject, ground: Ground) =>
@@ -162,7 +167,7 @@ const avatarRatio = (hex: string) => contrast(BLACK, fromHex(hex))
 // lighter canvas can't always reach what Pug's does.
 const floor90 = (ratio: number) => Math.min(7, Math.floor(ratio * 0.9 * 100) / 100)
 
-/** Measures every standard floor from a subject (Pug): what FLOORS was generated from. */
+/** Measures every standard floor from a subject (Pug), what FLOORS was generated from. */
 export const measureFloors = (s: Subject): Floors => {
   const v2: Record<string, number> = {}
   for (const pair of V2_PAIRS) {
@@ -176,7 +181,7 @@ export const measureFloors = (s: Subject): Floors => {
     v2,
     data: floor90(minOf(dataColors(s.data).map(hex => dataRatio(hex, s.tokens.background)))),
     avatars: floor90(minOf(s.data.avatars.map(avatarRatio))),
-    // Chips are aria-hidden initials, so AA is the bar, even where Pug clears more.
+    // Chips are aria-hidden initials: AA is the bar, even where Pug clears more.
     identity: Math.min(4.5, floor90(identityContrast(identityInk, surface))),
     heat: floor90(minOf(HEAT_STOPS.map(n => heatRatio(s.tokens, n)))),
   }
@@ -289,6 +294,21 @@ export const validateTheme = (s: Subject): Issue[] => {
     for (const line of ['border', 'input', 'sidebar-border'] as const) {
       const measured = contrast(composite(t[line], t.background), t.background)
       if (measured < HIGH.nonText) warn('V11', line, `${line} is ${ratio(measured)}; needs ${ratio(HIGH.nonText)}`)
+    }
+  }
+
+  // V14: in colourblind-safe, the pairs that read as opposites have to stay apart.
+  if (s.vision === 'colourblind') {
+    if (worstDeltaE(t.positive, t.negative) < V14_APART) {
+      warn('V14', 'positive', 'positive and negative are too close under a colour deficiency')
+    }
+    const outcome = (group: 'failure' | 'success') =>
+      Object.entries(s.data.events)
+        .filter(([event]) => Object.hasOwn(EVENT_COLORS, event) && groupOf(event) === group)
+        .map(([, color]) => fromHex(color.line))
+    const failures = outcome('failure')
+    if (outcome('success').some(a => failures.some(b => worstDeltaE(a, b) < V14_APART))) {
+      warn('V14', 'data', 'failure and success events are too close under a colour deficiency')
     }
   }
   return issues

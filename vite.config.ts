@@ -3,6 +3,7 @@ import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
+import { preconnectLinks } from './scripts/preconnect-links'
 
 // Generated from logo.svg rather than committed alongside it, so the artwork has one
 // source. It can't be logo.svg itself: that file's <img> sites sit on app-themed
@@ -59,6 +60,25 @@ const alignYDomainToAxisTicks = (): Plugin => ({
   },
 })
 
+const PRECONNECTS_MARKER = '<!-- preconnects -->'
+
+// Written at build time from the build's own settings, so an air-gapped index.html names no outside host.
+const preconnects = (): Plugin => {
+  let env: Record<string, string> = {}
+
+  return {
+    name: 'preconnects',
+    configResolved(config) {
+      env = config.env
+    },
+    transformIndexHtml(html) {
+      // Fail loudly: a moved marker would otherwise ship a page with no preconnects, or one still holding the comment.
+      if (!html.includes(PRECONNECTS_MARKER)) throw new Error(`index.html has no ${PRECONNECTS_MARKER} marker`)
+      return html.replace(PRECONNECTS_MARKER, () => preconnectLinks(env).join('\n    '))
+    },
+  }
+}
+
 export default defineConfig({
   // react-draggable (via react-grid-layout) reads process.env.DRAGGABLE_DEBUG at
   // runtime, which throws "process is not defined" in the browser. Statically
@@ -105,5 +125,5 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), tailwindcss(), faviconFromLogo(), alignYDomainToAxisTicks()],
+  plugins: [react(), tailwindcss(), faviconFromLogo(), alignYDomainToAxisTicks(), preconnects()],
 })
