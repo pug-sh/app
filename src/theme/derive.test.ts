@@ -182,15 +182,21 @@ describe('colourblind-safe', () => {
       const standard = tokensIn(of, polarity, STANDARD_ACCESS)
       const blind = tokensIn(of, polarity, BLIND)
 
-      it.each(['positive', 'negative', 'caution'] as const)(
-        'keeps %s between its standard contrast and body text',
-        token => {
-          const own = contrast(standard[token], standard.background)
-          expect(contrast(blind[token], blind.background)).toBeGreaterThanOrEqual(own - 0.01)
-          const reach = (l: number) => Math.abs(l - blind.background.l)
-          expect(reach(blind[token].l)).toBeLessThanOrEqual(reach(blind.foreground.l) + 1e-9)
-        },
-      )
+      const reach = (l: number) => Math.abs(l - blind.background.l)
+
+      it.each(['positive', 'caution'] as const)('keeps %s between its standard contrast and body text', token => {
+        const own = contrast(standard[token], standard.background)
+        expect(contrast(blind[token], blind.background)).toBeGreaterThanOrEqual(own - 0.01)
+        expect(reach(blind[token].l)).toBeLessThanOrEqual(reach(blind.foreground.l) + 1e-9)
+      })
+
+      it('keeps negative between its standard contrast and half again past body text', () => {
+        const own = contrast(standard.negative, standard.background)
+        expect(contrast(blind.negative, blind.background)).toBeGreaterThanOrEqual(own - 0.01)
+        const from = Math.max(contrast(blind.foreground, blind.background), own)
+        const limit = solveFitted(blind.background, polarity, from * 1.5, 0, 0)
+        expect(reach(blind.negative.l)).toBeLessThanOrEqual(reach(limit.l) + 1e-9)
+      })
 
       it('leaves destructive and the link alone', () => {
         expect(blind.destructive).toEqual(standard.destructive)
@@ -217,6 +223,14 @@ describe('colourblind-safe', () => {
         const { positive, negative } = tokensIn(of, polarity, access)
         expect(worstDeltaE(positive, negative)).toBeGreaterThan(0.075)
       })
+
+      it.each([
+        ['alone', BLIND],
+        ['with high contrast', BOTH],
+      ])('keeps warning apart from good and bad %s', (__, access) => {
+        const { positive, negative, caution } = tokensIn(of, polarity, access)
+        expect(Math.min(worstDeltaE(caution, positive), worstDeltaE(caution, negative))).toBeGreaterThanOrEqual(0.05)
+      })
     })
   })
 
@@ -224,6 +238,15 @@ describe('colourblind-safe', () => {
   it('moves Pug’s caution off its start when that’s further from a neighbour, dark', () => {
     const { landed, started } = cautionSpread(BUILTINS.pug, 'dark')
     expect(landed).toBeGreaterThan(started)
+  })
+
+  it('takes Pug’s bad past body text only where warning needs the room', () => {
+    const past = (polarity: Polarity) => {
+      const { negative, foreground, background } = tokensIn(BUILTINS.pug, polarity, BLIND)
+      return Math.abs(negative.l - background.l) > Math.abs(foreground.l - background.l)
+    }
+    expect(past('light')).toBe(true)
+    expect(past('dark')).toBe(false)
   })
 
   it('gives grey status colours real chroma', () => {

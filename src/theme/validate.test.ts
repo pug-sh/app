@@ -82,11 +82,21 @@ describe('V14', () => {
     variants: { light: { modes: { colourblind: block } } },
   })
 
+  const v14 = (file: ThemeFile, access: AccessMode) =>
+    compileFile(file, 'light', access).report.filter(i => i.rule === 'V14')
+  const SAME = 'oklch(0.44 0.1 30)'
+  const APART = 'oklch(0.8 0.1 250)'
+
   it('fires on good and bad text a colour deficiency can’t tell apart, and only in colourblind-safe', () => {
-    const file = tuned({ colors: { positive: 'oklch(0.44 0.1 30)', negative: 'oklch(0.44 0.1 30)' } })
-    const v14 = (access: AccessMode) => compileFile(file, 'light', access).report.filter(i => i.rule === 'V14')
-    expect(v14(blind).map(i => i.path)).toEqual(['positive'])
-    expect(v14(STANDARD_ACCESS)).toEqual([])
+    const file = tuned({ colors: { positive: SAME, negative: SAME, caution: APART } })
+    expect(v14(file, blind).map(i => i.path)).toEqual(['positive'])
+    expect(v14(file, STANDARD_ACCESS)).toEqual([])
+  })
+
+  it('fires on warning text a colour deficiency can’t tell from bad, and only in colourblind-safe', () => {
+    const file = tuned({ colors: { positive: APART, negative: SAME, caution: SAME } })
+    expect(v14(file, blind).map(i => i.path)).toEqual(['caution'])
+    expect(v14(file, STANDARD_ACCESS)).toEqual([])
   })
 
   it('fires on failure and success events too close together', () => {
@@ -102,8 +112,7 @@ describe('V14', () => {
   ])('at %s of lightness between good and bad, warns: %s', (gap, warns) => {
     const color = (l: number) => `oklch(${l} 0 0)`
     const file = tuned({ colors: { positive: color(0.4), negative: color(0.4 + gap) } })
-    const { report } = compileFile(file, 'light', blind)
-    expect(report.some(i => i.rule === 'V14')).toBe(warns)
+    expect(v14(file, blind).some(i => i.path === 'positive')).toBe(warns)
   })
 })
 

@@ -45,9 +45,10 @@ export const FILL_PAIRS: [TokenName, TokenName][] = [
   ['sidebar-primary-foreground', 'sidebar-primary'],
 ]
 const BLACK = { l: 0, c: 0, h: 0, alpha: 1 }
-// Apart under the worst of protan, deutan and tritan. Measured across the four-mode sweep: good vs bad holds 0.069 and
-// failure vs success 0.143, so the solver meets this and it still means something. Pug's standard dark measures 0.005.
-const V14_APART = 0.05
+// Apart under the worst of protan, deutan and tritan. Measured across the four-mode sweep: good vs bad holds 0.072,
+// warning vs either 0.051 and failure vs success 0.143, so the solver meets this and it still means something. Pug's
+// standard dark measures 0.005.
+export const V14_APART = 0.05
 
 export type Floors = {
   v2: Record<string, number>
@@ -297,10 +298,13 @@ export const validateTheme = (s: Subject): Issue[] => {
     }
   }
 
-  // V14: in colourblind-safe, the pairs that read as opposites have to stay apart.
+  // V14: in colourblind-safe, good, warning and bad text, and failure and success events, have to stay apart.
   if (s.vision === 'colourblind') {
     if (worstDeltaE(t.positive, t.negative) < V14_APART) {
       warn('V14', 'positive', 'positive and negative are too close under a colour deficiency')
+    }
+    if (Math.min(worstDeltaE(t.caution, t.positive), worstDeltaE(t.caution, t.negative)) < V14_APART) {
+      warn('V14', 'caution', 'caution is too close to positive or negative under a colour deficiency')
     }
     const outcome = (group: 'failure' | 'success') =>
       Object.entries(s.data.events)
