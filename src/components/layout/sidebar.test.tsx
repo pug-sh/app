@@ -136,7 +136,7 @@ describe('the sidebar on mobile', () => {
   it('stays open when the theme is changed', async () => {
     const { nav, store } = await mount('/p/p1/overview')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to dark mode' }))
 
     expect(store.get(themeModeAtom)).toBe('dark')
     expect(document.body.contains(nav)).toBe(true)
@@ -147,11 +147,9 @@ describe('the sidebar on mobile', () => {
     act(() => {
       store.set(activeProjectAtom, create(ProjectSchema, { id: 'p1', displayName: 'First', defaultTheme: 'pug#dark' }))
     })
-    expect(screen.getByRole('group', { name: 'Theme' }).title).toBe('This project is always dark')
-    expect(screen.getByRole('button', { name: 'Dark' }).getAttribute('aria-pressed')).toBe('true')
-    const light = screen.getByRole('button', { name: 'Light' })
-    expect(light).toHaveProperty('disabled', true)
-    fireEvent.click(light)
+    const toggle = screen.getByRole('button', { name: 'This project is always dark' })
+    expect(toggle).toHaveProperty('disabled', true)
+    fireEvent.click(toggle)
     expect(store.get(themeModeAtom)).toBe('system')
   })
 })
