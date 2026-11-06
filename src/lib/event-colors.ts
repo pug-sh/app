@@ -66,6 +66,14 @@ export const getSeriesColor = (seriesName: string, fallbackIndex = 0) =>
 
 export const getIndexedColor = (index: number) => indexedColorIn(palette, index)
 
+// The trends $others series folds every value past the breakdown limit, so it recedes in the muted ink
+// the top-K list gives its $others row instead of taking a palette slot.
+export const OTHERS_SERIES_COLOR: SeriesColor = {
+  line: 'var(--muted-foreground)',
+  fill: 'color-mix(in srgb, var(--muted-foreground) 10%, transparent)',
+  dot: 'var(--muted-foreground)',
+}
+
 const HEX6 = /^#[0-9a-f]{6}$/i
 
 // Line and dot at 60% alpha, for a reference series drawn against a live one. Alpha rather than a

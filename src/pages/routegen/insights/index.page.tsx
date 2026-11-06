@@ -63,10 +63,10 @@ import {
   buildChartData,
   canShareInsight,
   disambiguateLabels,
-  hasBreakdown,
   resolveSeriesAggregations,
   shareCardTitle,
   sortFunnelSteps,
+  trendSeriesColor,
   trendSeriesNames,
 } from './helpers'
 import { buildMapQuery, DEFAULT_MAP, mapIncompleteReason } from './map'
@@ -449,9 +449,7 @@ const Insights = () => {
     // hue (e.g. all page_view-by-$os bars came out blue). Without a breakdown,
     // keep the event kind's semantic color.
     if (result.case === 'trends') {
-      return trendSeries.map((s, i) =>
-        hasBreakdown(s.breakdown) ? getIndexedColor(i) : getSeriesColor(s.eventKind || `Series ${i + 1}`, i),
-      )
+      return trendSeries.map((s, i) => trendSeriesColor(s, i))
     }
     return seriesNames.map((name, i) => getSeriesColor(name, i))
   }, [result.case, trendSeries, seriesNames, themeRevision])
