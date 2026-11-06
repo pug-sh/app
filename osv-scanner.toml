@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2027-02-06
+reason = "deepmerge has no fixed release; it reaches us only through the shadcn CLI, a dev tool fed our own registry config"

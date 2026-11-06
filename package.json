@@ -68,7 +68,7 @@
     "twemoji": "^14.0.2",
     "world-atlas": "^2.0.2",
     "wouter": "^3.11.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",
@@ -95,6 +95,12 @@
     "vitest": "^5.0.5"
   },
   "overrides": {
-    "@types/react": "$@types/react"
+    "@types/react": "$@types/react",
+    "baseline-browser-mapping": "^2.11.35",
+    "brace-expansion": "^5.0.12",
+    "browserslist": "^4.29.5",
+    "ip-address": "^10.7.6",
+    "minimatch": "^11.0.5",
+    "source-map-js": "^1.2.2"
   }
 }
