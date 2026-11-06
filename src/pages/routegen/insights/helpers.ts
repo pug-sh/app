@@ -9,6 +9,7 @@ import {
   TopKQuery_Dimension,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { getIndexedColor, getSeriesColor, OTHERS_SERIES_COLOR, type SeriesColor } from '@/lib/event-colors'
 import { propertyValueLabel } from '@/lib/property-values'
 import { tsToDate } from '@/lib/timestamp'
 import { nextZoneBucket } from '@/lib/timezone'
@@ -197,6 +198,14 @@ export const trendSeriesNames = (trendSeries: TrendSeries[]) => {
     if (showEventKind && series.eventKind) return `${series.eventKind} · ${value}`
     return value
   })
+}
+
+// Splits are coloured by index (see getIndexedColor), except the $others overflow; an unsplit series
+// keeps its event's colour.
+export const trendSeriesColor = (series: TrendSeries, index: number): SeriesColor => {
+  if (!hasBreakdown(series.breakdown)) return getSeriesColor(series.eventKind || `Series ${index + 1}`, index)
+  const isOthers = Object.values(series.breakdown).every(value => value === '$others')
+  return isOthers ? OTHERS_SERIES_COLOR : getIndexedColor(index)
 }
 
 // An insight has no user-given name the way a dashboard tile does, so name it by what it plots.

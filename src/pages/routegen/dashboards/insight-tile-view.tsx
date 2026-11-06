@@ -25,9 +25,9 @@ import {
   buildChartData,
   disambiguateLabels,
   emptyReadsAsZero,
-  hasBreakdown,
   sortFunnelSteps,
   specAggregationResolver,
+  trendSeriesColor,
   trendSeriesNames,
 } from '../insights/helpers'
 import { mapSpecIncompleteReason } from '../insights/map'
@@ -199,11 +199,7 @@ export const InsightTileView = ({
     // breakdown, keep the event kind's semantic color unless the caller names one.
     if (result.case === 'trends') {
       if (seriesColor && trendSeries.length === 1) return [seriesColor]
-      return trendSeries.map((series, index) =>
-        hasBreakdown(series.breakdown)
-          ? getIndexedColor(index)
-          : getSeriesColor(series.eventKind || `Series ${index + 1}`, index),
-      )
+      return trendSeries.map((series, index) => trendSeriesColor(series, index))
     }
     return seriesNames.map((name, index) => getSeriesColor(name, index))
   }, [result.case, trendSeries, seriesNames, themeRevision, seriesColor])

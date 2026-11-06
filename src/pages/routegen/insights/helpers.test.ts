@@ -13,6 +13,7 @@ import {
   SessionQuerySchema,
   TrendSeriesSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { getIndexedColor, getSeriesColor, OTHERS_SERIES_COLOR } from '@/lib/event-colors'
 import {
   alignComparisonValues,
   breakdownLabel,
@@ -22,6 +23,7 @@ import {
   emptyReadsAsZero,
   SERIES_COLLAPSE,
   specAggregationResolver,
+  trendSeriesColor,
 } from './helpers'
 
 const series = (eventKind: string) => create(TrendSeriesSchema, { eventKind })
@@ -150,6 +152,19 @@ describe('buildChartData', () => {
     const data = buildChartData([seriesAt('page_view', pts)], Granularity.UNSPECIFIED, 'UTC')
     expect(times(data)).toEqual([hour(0), hour(3)].map(h => h.getTime()))
     expect(data.map(d => d.values[0])).toEqual([5, 2])
+  })
+})
+
+describe('trendSeriesColor', () => {
+  const split = (breakdown: Record<string, string>) => create(TrendSeriesSchema, { eventKind: 'purchase', breakdown })
+
+  it('mutes the $others overflow instead of giving it the next palette slot', () => {
+    expect(trendSeriesColor(split({ category: '$others' }), 4)).toEqual(OTHERS_SERIES_COLOR)
+    expect(trendSeriesColor(split({ category: 'toys' }), 4)).toEqual(getIndexedColor(4))
+  })
+
+  it('keeps the event colour on an unsplit series', () => {
+    expect(trendSeriesColor(series('purchase'), 0)).toEqual(getSeriesColor('purchase', 0))
   })
 })
 
