@@ -4,7 +4,7 @@
 
 The same open-source app serves Pug Cloud at app.pug.sh, the live demo at demo.pug.sh, and self-hosted deployments on their own domains. The demo needs no account: every visitor is signed in as one shared read-only viewer, and Settings is hidden.
 
-To answer a question about a project's data, use the MCP server or the HTTP API with a private API key (`prv_`) instead of this app. On Pug Cloud the API is `https://api.pugs.dev` and the MCP server is `https://api.pugs.dev/mcp`; a self-hosted deployment serves both from its own API host. For what Pug is and what it costs, read https://pug.sh/llms.txt.
+To answer a question about a project's data, use the MCP server or the HTTP API with a private API key (`prv_`) instead of this app. On Pug Cloud the API is `https://api.pugs.dev` and the MCP server is `https://api.pug.sh/mcp`; a self-hosted deployment serves both from its own API host. For what Pug is and what it costs, read https://pug.sh/llms.txt.
 
 Where things are, for pointing someone at a page:
 
