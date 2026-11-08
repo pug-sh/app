@@ -2,7 +2,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf'
 import { ConnectError } from '@connectrpc/connect'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, Loader2, TriangleAlert } from 'lucide-react'
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearch } from 'wouter'
 import {
   AuthorizationErrorSchema,
@@ -103,9 +103,11 @@ const loadRefusal = (err: unknown): Refusal => {
 }
 
 // What a failed Allow says under the form, which stays for another try. UNAUTHENTICATED and SSO_REQUIRED
-// fall through: the transport refreshes the session first and signs out if that is refused.
+// get the generic retry: the transport refreshes the session first and signs out if that is refused.
 const approvalProblem = (err: unknown) => {
   switch (errorReason(err)) {
+    case 'PROJECT_NOT_FOUND':
+      return "You can't read that project anymore."
     case 'ORG_ROLE_FORBIDDEN':
       return "This account is read-only, so it can't connect apps."
     case 'MCP_CLIENT_UNAVAILABLE':
@@ -128,6 +130,42 @@ const byOrg = (projects: Project[]) => {
   return [...groups.entries()]
 }
 
+const AccountLine = ({ disabled, onSwitch }: { disabled: boolean; onSwitch: () => void }) => {
+  const email = useAtomValue(meAtom)?.email
+  const meStatus = useAtomValue(meStatusAtom)
+  const fetchMe = useSetAtom(fetchMeAtom)
+
+  useEffect(() => {
+    if (meStatus === 'idle') fetchMe()
+  }, [meStatus, fetchMe])
+
+  const switchAccount = (
+    <button type="button" onClick={onSwitch} disabled={disabled} className={LINK_BUTTON}>
+      Switch account
+    </button>
+  )
+  if (email) {
+    return (
+      <p className="wrap-break-word">
+        Signed in as <span className="font-medium text-foreground">{email}</span>. {switchAccount}
+      </p>
+    )
+  }
+  if (meStatus === 'error') {
+    const retry = (
+      <button type="button" onClick={() => fetchMe()} className={LINK_BUTTON}>
+        Try again
+      </button>
+    )
+    return (
+      <p className="wrap-break-word">
+        Couldn't load your email. {retry} <span aria-hidden>·</span> {switchAccount}
+      </p>
+    )
+  }
+  return <p className="wrap-break-word">Signed in. {switchAccount}</p>
+}
+
 const ConsentForm = ({
   consent,
   query,
@@ -140,18 +178,11 @@ const ConsentForm = ({
   onRefused: (refusal: Refusal) => void
 }) => {
   const mcpGrantsRPC = useAtomValue(mcpGrantsRPCAtom)
-  const email = useAtomValue(meAtom)?.email
-  const meStatus = useAtomValue(meStatusAtom)
-  const fetchMe = useSetAtom(fetchMeAtom)
   const signOut = useSetAtom(signOutAtom)
   const [projects, setProjects] = useState(consent.projects)
   const [projectId, setProjectId] = useState(projects.length === 1 ? projects[0].id : null)
   const [pending, setPending] = useState<'allow' | 'switch' | null>(null)
   const [problem, setProblem] = useState('')
-
-  useEffect(() => {
-    if (meStatus === 'idle') fetchMe()
-  }, [meStatus, fetchMe])
 
   const cancelUrl = followable(consent.cancelUri)
   const picked = projects.find(project => project.id === projectId)
@@ -177,11 +208,8 @@ const ConsentForm = ({
         return
       }
       if (errorReason(err) === 'PROJECT_NOT_FOUND') {
-        const left = projects.filter(project => project.id !== picked.id)
-        setProjects(left)
+        setProjects(current => current.filter(project => project.id !== picked.id))
         setProjectId(null)
-        setProblem(`You can't read that project anymore.${left.length > 0 ? ' Pick another one.' : ''}`)
-        return
       }
       setProblem(approvalProblem(err))
     } finally {
@@ -192,25 +220,6 @@ const ConsentForm = ({
   const switchAccount = async () => {
     setPending('switch')
     await signOut()
-  }
-
-  let account: ReactNode = 'Signed in.'
-  if (email) {
-    account = (
-      <>
-        Signed in as <span className="font-medium text-foreground">{email}</span>.
-      </>
-    )
-  } else if (meStatus === 'error') {
-    account = (
-      <>
-        Couldn't load your email.{' '}
-        <button type="button" onClick={() => fetchMe()} className={LINK_BUTTON}>
-          Try again
-        </button>
-        <span aria-hidden> ·</span>
-      </>
-    )
   }
 
   return (
@@ -264,12 +273,7 @@ const ConsentForm = ({
       )}
 
       <div className="mt-6 space-y-1 text-center text-xs text-muted-foreground">
-        <p className="wrap-break-word">
-          {account}{' '}
-          <button type="button" onClick={switchAccount} disabled={pending !== null} className={LINK_BUTTON}>
-            Switch account
-          </button>
-        </p>
+        <AccountLine disabled={pending !== null} onSwitch={switchAccount} />
         <p className="wrap-break-word">After this you go back to {consent.redirectHost}.</p>
       </div>
 

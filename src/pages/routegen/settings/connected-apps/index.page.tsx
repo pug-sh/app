@@ -52,13 +52,19 @@ const ConnectedApps = () => {
         </div>
       )
     }
-    if (!result.enabled || result.grants.length === 0) {
+    if (!result.enabled) {
       return (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <Plug className="mb-3 size-8 opacity-15" />
-          <p className="text-sm text-muted-foreground">
-            {result.enabled ? 'No apps are connected.' : "This Pug server doesn't let apps connect."}
-          </p>
+          <p className="text-sm text-muted-foreground">This Pug server doesn't let apps connect.</p>
+        </div>
+      )
+    }
+    if (result.grants.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <Plug className="mb-3 size-8 opacity-15" />
+          <p className="text-sm text-muted-foreground">No apps are connected.</p>
         </div>
       )
     }

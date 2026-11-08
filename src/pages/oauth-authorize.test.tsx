@@ -338,8 +338,9 @@ describe('the consent page', () => {
     await pick('Staging')
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
 
-    expect(await screen.findByText("You can't read that project anymore. Pick another one.")).toBeTruthy()
+    expect(await screen.findByText("You can't read that project anymore.")).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('combobox').textContent).toContain('Pick a project')
     fireEvent.click(screen.getByRole('combobox'))
     await screen.findByRole('option', { name: 'Production' })
     expect(screen.queryByRole('option', { name: 'Staging' })).toBeNull()
@@ -359,23 +360,26 @@ describe('the consent page', () => {
   })
 
   // The transport refreshes the session before an Unauthenticated reaches the page, and signs out on a refusal.
-  it.each([
-    ['UNAUTHENTICATED', Code.Unauthenticated, "Couldn't connect the app. Try again."],
-    ['SSO_REQUIRED', Code.Unauthenticated, "Couldn't connect the app. Try again."],
-    [
-      'MCP_CLIENT_UNAVAILABLE',
-      Code.FailedPrecondition,
-      "Pug couldn't load the app's details to confirm who it is. Try again.",
-    ],
-  ])('keeps the picked project for another try after %s', async (reason, code, problem) => {
+  it.each(['UNAUTHENTICATED', 'SSO_REQUIRED'])('offers a plain retry after %s', async reason => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
-    rpc.approveAuthorization.mockRejectedValue(refusal(code, reason))
+    rpc.approveAuthorization.mockRejectedValue(refusal(Code.Unauthenticated, reason))
     mount()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
 
-    expect(await screen.findByText(problem)).toBeTruthy()
+    expect(await screen.findByText("Couldn't connect the app. Try again.")).toBeTruthy()
+  })
+
+  it('keeps the picked project when Allow fails for any other reason', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+    rpc.approveAuthorization.mockRejectedValue(refusal(Code.FailedPrecondition, 'MCP_CLIENT_UNAVAILABLE'))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
+
+    await screen.findByText("Pug couldn't load the app's details to confirm who it is. Try again.")
     expect(screen.getByRole('combobox').textContent).toContain('Personal / Side project')
     expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(false)
   })
