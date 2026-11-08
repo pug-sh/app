@@ -3,9 +3,12 @@ import { OidcClient, UserManager, type UserManagerSettings, WebStorageStateStore
 import { type AuthProviderConfig, AuthProviderConfigSchema } from '@/api/genproto/public/auth/v1/auth_pb'
 
 const callbackPath = '/oauth/callback'
+const consentPath = '/oauth/authorize'
 const pendingProviderKey = 'pug.oidc.pending-provider'
 const pendingConnectionKey = 'pug.oidc.pending-connection'
 const pendingInviteKey = 'pug.oidc.pending-invite'
+const pendingReturnKey = 'pug.oidc.pending-return'
+const RETURN_MAX_AGE_MS = 10 * 60_000
 
 // Keyed on the issuer, not the id: the id is operator-chosen and can be anything.
 export const isGoogleProvider = (provider: AuthProviderConfig) =>
@@ -64,10 +67,22 @@ const assertSafeAuthorizationEndpoint = async (manager: UserManager) => {
   }
 }
 
+// The consent page signs in where it stands, so the callback returns to it. The SSO screen on the
+// callback can start a second sign-in, which keeps the first one's return.
+const rememberReturn = () => {
+  const { pathname, search } = window.location
+  if (pathname === consentPath) {
+    sessionStorage.setItem(pendingReturnKey, JSON.stringify({ path: `${pathname}${search}`, savedAt: Date.now() }))
+  } else if (pathname !== callbackPath && !pathname.startsWith(`${callbackPath}/`)) {
+    sessionStorage.removeItem(pendingReturnKey)
+  }
+}
+
 export const startOIDCSignIn = async (
   provider: AuthProviderConfig,
   { loginHint, domain, inviteToken }: OIDCSignInOptions = {},
 ) => {
+  rememberReturn()
   // GetAuthConfig doesn't list connections, so the callback can only read one's config from here.
   if (provider.connectionId) {
     sessionStorage.setItem(pendingConnectionKey, toJsonString(AuthProviderConfigSchema, provider))
@@ -115,6 +130,24 @@ export const clearPendingOIDCProvider = () => {
   sessionStorage.removeItem(pendingConnectionKey)
   sessionStorage.removeItem(pendingInviteKey)
 }
+
+// The consent page the sign-in started from, while it is under 10 minutes old.
+export const pendingOIDCReturn = () => {
+  const stored = sessionStorage.getItem(pendingReturnKey)
+  if (!stored) return null
+  try {
+    const { path, savedAt } = JSON.parse(stored)
+    const age = Date.now() - savedAt
+    if (typeof path === 'string' && path.startsWith(`${consentPath}?`) && age >= 0 && age < RETURN_MAX_AGE_MS) {
+      return path
+    }
+  } catch (error) {
+    console.error('Discarding an unreadable sign-in return', error)
+  }
+  return null
+}
+
+export const clearPendingOIDCReturn = () => sessionStorage.removeItem(pendingReturnKey)
 
 export const completeOIDCRedirect = async (provider: AuthProviderConfig) => {
   const expectedRedirectURI = redirectURIFor(provider)

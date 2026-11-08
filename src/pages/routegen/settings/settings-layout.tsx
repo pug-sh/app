@@ -1,4 +1,4 @@
-import { useAtomValue } from 'jotai'
+import { useAtomValue, useSetAtom } from 'jotai'
 import { type ReactNode, useEffect } from 'react'
 import { useLocation } from 'wouter'
 import { useCan } from '@/auth/can'
@@ -9,6 +9,7 @@ import ProjectLink from '@/components/project-link'
 import { useBilling } from '@/hooks/use-billing'
 import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
+import { grantsAtom, loadGrantsAtom } from './connected-apps/grants.atoms'
 
 // Grouped by scope: project, then organization, then you. Not every tab scopes to the project URL it
 // is reached through, so each carries its own description.
@@ -21,6 +22,7 @@ const SETTINGS_TABS = [
   { path: 'billing', label: 'Billing', description: 'Plan and billed usage for this organization' },
   { path: 'account', label: 'Account', description: 'Your personal account settings' },
   { path: 'appearance', label: 'Appearance', description: 'Theme and colours for this browser' },
+  { path: 'connected-apps', label: 'Connected apps', description: 'Apps that read Pug as you' },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
@@ -32,6 +34,12 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   // Kept while the answer is coming, so the bar doesn't reflow, and on a failed load, or the route
   // explaining it is unreachable. Not where there is no billing service: a retry cannot get past it.
   const showBilling = !billing.loaded || (!!billing.error && !billing.unsupported) || !!billing.status?.billingEnabled
+  // Kept the same way: only a server with OAuth off drops it. Last, so dropping it moves no other tab.
+  const grants = useAtomValue(grantsAtom)
+  const loadGrants = useSetAtom(loadGrantsAtom)
+  useEffect(() => {
+    void loadGrants()
+  }, [loadGrants])
 
   // Settings is hidden in the read-only demo: it exposes the shared demo account's email/password
   // and org config. The sidebar entry is dropped (DEMO_HIDDEN_PATHS in sidebar.tsx); this guards a
@@ -50,8 +58,12 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   // viewed, or a fresh load draws the bar with nothing highlighted.
   const showBillingTab = activeTab.path === 'billing' || (showBilling && can('read', 'billing'))
   const showSsoTab = activeTab.path === 'sso' || can('read', 'domain')
+  const showConnectedAppsTab = activeTab.path === 'connected-apps' || grants?.enabled !== false
   const tabs = SETTINGS_TABS.filter(
-    tab => (tab.path !== 'billing' || showBillingTab) && (tab.path !== 'sso' || showSsoTab),
+    tab =>
+      (tab.path !== 'billing' || showBillingTab) &&
+      (tab.path !== 'sso' || showSsoTab) &&
+      (tab.path !== 'connected-apps' || showConnectedAppsTab),
   )
 
   return (

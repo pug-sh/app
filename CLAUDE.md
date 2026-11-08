@@ -46,6 +46,7 @@ This is a young suite covering load-order and state bugs, not a coverage regime.
 - **happy-dom leaves a cancelled animation's promise unhandled.** The Web Animations spec marks it handled, so `src/test/setup.ts` does too: Motion cancels animations routinely (the vendored y axis fades its labels on every data change), and each one would otherwise fail the run with an `AbortError` while every test passes. No test needs `MotionGlobalConfig.skipAnimations` for it.
 - **A second mount is not a reload.** The theme atoms read storage at import (`getOnInit`), and jotai won't re-render a component for what storage gives an atom on mount, so a second `mount()` in one file renders the import's values and fetches nothing. `reload` in `theme-applier.test.tsx` hands it what a real load would have read. An assertion after a bare second mount can pass without the fetch it's named after ever happening.
 - **Fake the RPC atoms, not the transport** (`vi.mock('@/api/rpc', …)`); a hand-held `batchGet` lets a test decide when a call resolves, which is the only way to land a response into a workspace that has moved on.
+- **Mount a page that waits on data with `await act(async () => …)` once its chunk can already be loaded.** RTL's `render` is a synchronous act: a page suspending there on an atom's promise leaves its retry in an act queue React drops, and the retry lane's placeholder callback is reused forever, so the page never renders. A lazy chunk's own first suspend is safe, which is why it bites only after an earlier test in the file loaded the chunk (the sign-in page, in `App.test.tsx`).
 
 ## Proto Code Generation
 
@@ -521,6 +522,16 @@ Current manual events beyond `feature_used`: `signin` (`method`), `signout`, `ap
 - **With a key, `take()` never lets a request go out without a token.** It waits for one that isn't ready. It resets the widget as it hands one out, because a token works once and a wrong password spends it too. It returns `null` when the widget errors or can't load.
 - **The refusals are mapped on the code, like OAuth's, but only on an error that carries a detail.** On these two RPCs only the check answers `PermissionDenied` (`TURNSTILE_FAILED`) or `Unavailable` (`TURNSTILE_UNAVAILABLE`), but Connect turns a proxy's bare 403 or 429/502/503/504 into the same codes. The server's own refusal always carries an `ErrorInfo` detail, and a status-derived error never does. A `PermissionDenied` fetches the config again. That covers a page opened before the keys were set or rotated, and a failed first fetch.
 - **The widget is `interaction-only`**, an empty box until Cloudflare wants a click, and an empty box adds no gap to the form's `space-y` stack. Cloudflare's test site keys work on localhost with the dummy secrets in the backend's `.env.example`, since a real secret refuses their tokens: `1x00000000000000000000AA` always passes, `3x00000000000000000000FF` forces the click.
+
+### MCP connections
+
+Claude, ChatGPT and other MCP clients sign people in through `/oauth/authorize` (`pages/oauth-authorize.tsx`), the backend's OAuth authorization endpoint (its `docs/architecture/mcp-oauth.md` has the design). Settings > Connected apps lists and revokes what was approved.
+
+- **The consent page mounts no workspace.** App routes it after the signed-out check and before org selection, and skips `WorkspaceBootstrap` and `LandingPreload` there as on `/shared/`, because `ProjectRedirect` would drop the client's query. A signed-out visitor signs in at the same URL. A Google or SSO sign-in started there saves the URL (`pendingOIDCReturn` in `auth/oidc.ts`, 10 minutes) and the callback returns to it, across the second sign-in the SSO screen can start too.
+- **Every URL back to the client is the server's** (Allow, Cancel, a bad request's way back), followed with `location.replace` and only when https or http on a loopback host. The page never builds one.
+- **Refusals are told apart by their `ErrorInfo` reason**, read by `errorReason` (`lib/rpc-error.ts`) straight off the wire, since `google.rpc.ErrorInfo` isn't generated here. Only `MCP_AUTHORIZATION_INVALID` has a way back, in its `AuthorizationError` detail.
+- **It never renders in a frame.** `public/_headers` denies framing `/oauth/authorize`; Cloudflare matches those rules on the request path, so they reach the SPA fallback. The page refuses a frame itself as well, for a server that sends no such headers.
+- **Connected apps is dropped where `ListGrants` says OAuth is off** or the service is missing, like Billing. The tab bar and the page share one request (`connected-apps/grants.atoms.ts`).
 
 ### Demo
 

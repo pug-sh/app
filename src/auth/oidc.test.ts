@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProviderConfigSchema, AuthProviderType } from '@/api/genproto/public/auth/v1/auth_pb'
 
 const oidc = vi.hoisted(() => ({
@@ -31,6 +31,7 @@ import {
   pendingOIDCConnection,
   pendingOIDCInviteToken,
   pendingOIDCProviderID,
+  pendingOIDCReturn,
   startOIDCSignIn,
   UnsafeProviderError,
 } from './oidc'
@@ -268,5 +269,66 @@ describe('OIDC redirect lifecycle', () => {
     await startOIDCSignIn(provider, { inviteToken: 'invite-token' })
     clearPendingOIDCProvider()
     expect(pendingOIDCInviteToken()).toBe('')
+  })
+})
+
+describe('returning to the consent page', () => {
+  const consentPage = '/oauth/authorize?client_id=https%3A%2F%2Fclient.example%2Fmeta&state=s'
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    window.history.replaceState(null, '', consentPage)
+    oidc.signinRedirect.mockReset().mockResolvedValue(undefined)
+    oidc.clearStaleState.mockReset().mockResolvedValue(undefined)
+    oidc.getAuthorizationEndpoint.mockReset().mockResolvedValue('https://login.example.com/authorize')
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    window.history.replaceState(null, '', '/')
+  })
+
+  it('remembers the consent page a sign-in starts from', async () => {
+    await startOIDCSignIn(provider)
+
+    expect(pendingOIDCReturn()).toBe(consentPage)
+  })
+
+  // A sign-in that didn't prove the domain ends on the callback's SSO screen, which starts another.
+  it('keeps it across a second sign-in started from the callback', async () => {
+    await startOIDCSignIn(provider)
+    landOn('/oauth/callback')
+    await startOIDCSignIn(connection)
+
+    expect(pendingOIDCReturn()).toBe(consentPage)
+  })
+
+  it('forgets it when a sign-in starts anywhere else', async () => {
+    await startOIDCSignIn(provider)
+    window.history.replaceState(null, '', '/')
+    await startOIDCSignIn(provider)
+
+    expect(pendingOIDCReturn()).toBeNull()
+  })
+
+  it('restores it for 10 minutes', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const startedAt = Date.now()
+    await startOIDCSignIn(provider)
+
+    vi.setSystemTime(startedAt + 10 * 60_000 - 1)
+    expect(pendingOIDCReturn()).toBe(consentPage)
+    vi.setSystemTime(startedAt + 10 * 60_000)
+    expect(pendingOIDCReturn()).toBeNull()
+  })
+
+  it.each([
+    ['another page', '/p/p1/overview'],
+    ['another origin', 'https://attacker.example/oauth/authorize?client_id=x'],
+    ['a consent page with no request', '/oauth/authorize'],
+  ])('restores only a consent request, not %s', (_kind, path) => {
+    sessionStorage.setItem('pug.oidc.pending-return', JSON.stringify({ path, savedAt: Date.now() }))
+
+    expect(pendingOIDCReturn()).toBeNull()
   })
 })

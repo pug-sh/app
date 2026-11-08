@@ -6,22 +6,33 @@ import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Route, Router, Switch } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
+import { DescribeAuthorizationResponseSchema } from '@/api/genproto/dashboard/mcpgrants/v1/mcpgrants_pb'
 import { OrgSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { GetAuthConfigResponseSchema } from '@/api/genproto/public/auth/v1/auth_pb'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, orgsList, orgsGet, orgsUpdateDisplayName, demoSignIn, completeMagicLink, signOut, getAuthConfig } =
-  vi.hoisted(() => ({
-    batchGet: vi.fn(),
-    orgsList: vi.fn(),
-    orgsGet: vi.fn(),
-    orgsUpdateDisplayName: vi.fn(),
-    demoSignIn: vi.fn(),
-    completeMagicLink: vi.fn(),
-    signOut: vi.fn(),
-    getAuthConfig: vi.fn(() => new Promise(() => {})),
-  }))
+const {
+  batchGet,
+  orgsList,
+  orgsGet,
+  orgsUpdateDisplayName,
+  demoSignIn,
+  completeMagicLink,
+  signOut,
+  getAuthConfig,
+  describeAuthorization,
+} = vi.hoisted(() => ({
+  batchGet: vi.fn(),
+  orgsList: vi.fn(),
+  orgsGet: vi.fn(),
+  orgsUpdateDisplayName: vi.fn(),
+  demoSignIn: vi.fn(),
+  completeMagicLink: vi.fn(),
+  signOut: vi.fn(),
+  getAuthConfig: vi.fn(() => new Promise(() => {})),
+  describeAuthorization: vi.fn(),
+}))
 
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
@@ -37,6 +48,7 @@ vi.mock('@/api/rpc', async () => {
     customersRPCAtom: atom({ getMe: vi.fn(() => new Promise(() => {})) }),
     // A signed-in App prefetches the overview schema at boot.
     insightsRPCAtom: atom({ getFilterSchema: vi.fn(() => new Promise(() => {})) }),
+    mcpGrantsRPCAtom: atom({ describeAuthorization }),
   }
 })
 
@@ -1018,7 +1030,7 @@ describe('the demo', () => {
 
   it('has no demo without its own origin, so /demo shows a signed-out visitor sign-in', async () => {
     getAuthConfig.mockResolvedValueOnce(create(GetAuthConfigResponseSchema, {}))
-    mountApp('/demo', { signedIn: false })
+    await act(async () => mountApp('/demo', { signedIn: false }))
 
     expect(await screen.findByLabelText('Email', {}, { timeout: 3000 })).toBeTruthy()
     expect(demoSignIn).not.toHaveBeenCalled()
@@ -1097,5 +1109,51 @@ describe('the demo', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
     expect(reload).toHaveBeenCalled()
     expect(logged).toHaveBeenCalledWith('demoSignIn failed', expect.objectContaining({ code: Code.Unavailable }))
+  })
+})
+
+describe("an MCP client's consent page", () => {
+  const consentPage = '/oauth/authorize?client_id=https%3A%2F%2Fclient.example%2Fmeta&state=s'
+  const heading = 'client.example wants to read your data in Pug'
+
+  beforeEach(() => {
+    orgsGet.mockResolvedValue({ org: orgA })
+    batchGet.mockResolvedValue({ projects })
+    describeAuthorization.mockResolvedValue(
+      create(DescribeAuthorizationResponseSchema, {
+        clientHost: 'client.example',
+        clientName: 'Client',
+        redirectHost: 'client.example',
+        cancelUri: 'https://client.example/cb?error=access_denied',
+      }),
+    )
+  })
+
+  // The bootstrap's project redirect would drop the client's query.
+  it('shows the request without loading a workspace, keeping the query', async () => {
+    const { history } = mountApp(consentPage)
+
+    expect(await screen.findByRole('heading', { name: heading }, { timeout: 5000 })).toBeTruthy()
+    expect(describeAuthorization).toHaveBeenCalledWith({
+      request: expect.objectContaining({ clientId: 'https://client.example/meta', state: 's' }),
+    })
+    expect(orgsGet).not.toHaveBeenCalled()
+    expect(history).toEqual([consentPage])
+  })
+
+  // As an email link opened in another tab of the same browser does. Mounted in an awaited act: with the sign-in
+  // chunk already loaded, a sync render's retry for its config lands in an act queue nothing flushes.
+  it('signs a visitor in where they stand, then shows the request', async () => {
+    getAuthConfig.mockResolvedValueOnce(create(GetAuthConfigResponseSchema, {}))
+    const { store, history } = await act(async () => mountApp(consentPage, { signedIn: false }))
+    await screen.findByLabelText('Email', {}, { timeout: 3000 })
+
+    await act(async () => {
+      store.set(jwtAtom, jwtFor('cust-1'))
+      store.set(refreshTokenAtom, 'refresh-token')
+    })
+
+    expect(await screen.findByRole('heading', { name: heading }, { timeout: 5000 })).toBeTruthy()
+    expect(history).toEqual([consentPage])
   })
 })

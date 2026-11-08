@@ -4,6 +4,7 @@ import { publicTransportAtom, transportAtom } from '@/network/transport'
 import { BillingService } from './genproto/dashboard/billing/v1/billing_pb'
 import { CustomersService } from './genproto/dashboard/customers/v1/customers_pb'
 import { DashboardsService } from './genproto/dashboard/dashboards/v1/dashboards_pb'
+import { MCPGrantsService } from './genproto/dashboard/mcpgrants/v1/mcpgrants_pb'
 import { OrgsService } from './genproto/dashboard/orgs/v1/orgs_pb'
 import { ProjectsService } from './genproto/dashboard/projects/v1/projects_pb'
 import { UsageService } from './genproto/dashboard/usage/v1/usage_pb'
@@ -13,15 +14,17 @@ import { ActivityService } from './genproto/shared/activity/v1/activity_pb'
 import { InsightsService } from './genproto/shared/insights/v1/insights_pb'
 import { ProfilesService } from './genproto/shared/profiles/v1/profiles_pb'
 
-// Public (unauthenticated) — every method is credential-free, and on the authenticated transport a
+// Public (unauthenticated): every method is credential-free, and on the authenticated transport a
 // 401 from CompleteOIDCSignIn would refresh-and-retry, replaying a single-use authorization code.
 export const authRPCAtom = atom(get => createClient(AuthService, get(publicTransportAtom)))
-// Shared dashboards are read by anonymous visitors — use the credential-free
+// Shared dashboards are read by anonymous visitors: use the credential-free
 // transport so a logged-in viewer's JWT is never attached to the public read path.
 export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboardsService, get(publicTransportAtom)))
 
-// Dashboard — org-scoped (JWT auth)
+// Dashboard, org-scoped (JWT auth)
 export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))
+// The signed-in person's own app connections, across every org.
+export const mcpGrantsRPCAtom = atom(get => createClient(MCPGrantsService, get(transportAtom)))
 export const orgsRPCAtom = atom(get => createClient(OrgsService, get(transportAtom)))
 export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(transportAtom)))
 // Org-scoped despite returning per-project cells: usage spans every project the org owns, so
@@ -30,7 +33,7 @@ export const usageRPCAtom = atom(get => createClient(UsageService, get(transport
 // Org-scoped like usage: orgId in the message, no x-project-id header.
 export const billingRPCAtom = atom(get => createClient(BillingService, get(transportAtom)))
 
-// Dashboard — project-scoped (JWT auth + x-project-id header from projectHeaderAtom)
+// Dashboard, project-scoped (JWT auth + x-project-id header from projectHeaderAtom)
 export const dashboardsRPCAtom = atom(get => createClient(DashboardsService, get(transportAtom)))
 export const insightsRPCAtom = atom(get => createClient(InsightsService, get(transportAtom)))
 export const activityRPCAtom = atom(get => createClient(ActivityService, get(transportAtom)))

@@ -60,6 +60,7 @@ const SignIn = lazyWithRetry(() => import('@/pages/sign-in'), 'sign-in')
 const SelectOrg = lazyWithRetry(() => import('@/pages/select-org'), 'select-org')
 const MagicLink = lazyWithRetry(() => import('@/pages/magic-link'), 'magic-link')
 const OAuthCallback = lazyWithRetry(() => import('@/pages/oauth-callback'), 'oauth-callback')
+const OAuthAuthorize = lazyWithRetry(() => import('@/pages/oauth-authorize'), 'oauth-authorize')
 const SharedDashboard = lazyWithRetry(() => import('@/pages/shared-dashboard'), 'shared-dashboard')
 const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 
@@ -68,7 +69,7 @@ const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 // atoms' matchMedia subscriptions.
 //
 // Held while a workspace picks its project, or the member's own theme flashes over index.html's paint.
-// awaitWorkspace says whether one is coming: the shared route mounts none.
+// awaitWorkspace says whether one is coming: the shared route and the consent page mount none.
 const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const compiled = useAtomValue(compiledThemeAtom)
   const choice = useAtomValue(themeChoiceAtom)
@@ -403,15 +404,25 @@ const App = () => {
   const isSharedRoute = location.startsWith('/shared/')
   const isMagicLink = location === '/magic-link'
   const isOAuthCallback = location === '/oauth/callback' || location.startsWith('/oauth/callback/')
+  // An MCP client's consent page. It lists every project itself, and the bootstrap's project
+  // redirect would drop the client's query.
+  const isOAuthAuthorize = location === '/oauth/authorize'
   const isDemoHandoff = location === '/demo' && demoHandoffUrl() !== null
   const failed = !!workspaceError || status === 'error'
+  const mountsWorkspace = !isSharedRoute && !isOAuthAuthorize
 
   // A screen that is unambiguously part of the signed-out flow. Bootstrap is excluded: it is the
   // one state that straddles, running both between sign-in and the picker and on the way from a
   // restored session into the dashboard.
   const onAuthScreen =
     !isSharedRoute &&
-    (isMagicLink || isOAuthCallback || isDemoHandoff || !authenticated || failed || status === 'needs-selection')
+    (isMagicLink ||
+      isOAuthCallback ||
+      isOAuthAuthorize ||
+      isDemoHandoff ||
+      !authenticated ||
+      failed ||
+      status === 'needs-selection')
 
   // Which of the two bootstraps this is, latched from whether an auth screen came first. A
   // restored session never shows one, so it boots on the plain spinner and never flashes the wall.
@@ -434,6 +445,7 @@ const App = () => {
     if (isDemoHandoff) return <Demo />
     // The demo's own origin has no sign-in: everyone there is the demo viewer.
     if (!authenticated) return isDemoHost() ? <Demo /> : <SignIn />
+    if (isOAuthAuthorize) return <OAuthAuthorize />
     if (failed) return <WorkspaceError message={workspaceError ?? 'Please try again.'} />
     if (status === 'needs-selection') return <SelectOrg />
     return <AuthPending label="Loading your workspace…" />
@@ -464,7 +476,7 @@ const App = () => {
 
   return (
     <>
-      <ThemeApplier awaitWorkspace={!isSharedRoute} />
+      <ThemeApplier awaitWorkspace={mountsWorkspace} />
       <FetchedThemeSync />
       <SessionUrlGuard />
       {/*
@@ -474,12 +486,12 @@ const App = () => {
         also why it's told: waiting for a workspace that is never coming would mean never
         identifying. Kept near the line that decides it so the two can't drift apart.
       */}
-      <AnalyticsIdentity awaitWorkspace={!isSharedRoute} />
+      <AnalyticsIdentity awaitWorkspace={mountsWorkspace} />
       {content()}
       {/* After the content: effects run in sibling order, and the bootstrap can pick the project in the commit that
           mounts the redirect and the sidebar. A pick made before they subscribe never reaches them. */}
-      {isSharedRoute ? null : <WorkspaceBootstrap />}
-      {isSharedRoute ? null : <LandingPreload />}
+      {mountsWorkspace ? <WorkspaceBootstrap /> : null}
+      {mountsWorkspace ? <LandingPreload /> : null}
       <Toaster position="bottom-right" />
     </>
   )

@@ -7,10 +7,12 @@ import { authProvidersAtom, completeOIDCAtom } from '@/auth/auth.atoms'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import {
   clearPendingOIDCProvider,
+  clearPendingOIDCReturn,
   completeOIDCRedirect,
   pendingOIDCConnection,
   pendingOIDCInviteToken,
   pendingOIDCProviderID,
+  pendingOIDCReturn,
 } from '@/auth/oidc'
 import { SSORequiredScreen, wrongAccountHint } from '@/auth/sso-required-screen'
 
@@ -22,6 +24,8 @@ const OAuthCallback = () => {
   const [error, setError] = useState('')
   const [ssoRequired, setSSORequired] = useState<SSORequired | null>(null)
   const [inviteToken] = useState(pendingOIDCInviteToken)
+  // The consent page signs in where it stands, so a sign-in started there goes back to it.
+  const [returnTo] = useState(() => pendingOIDCReturn() ?? '/')
 
   useEffect(() => {
     if (started.current) return
@@ -51,13 +55,14 @@ const OAuthCallback = () => {
           else setError(result.error)
           return
         }
-        navigate('/', { replace: true })
+        clearPendingOIDCReturn()
+        navigate(returnTo, { replace: true })
       } catch (callbackError) {
         console.error('OIDC callback failed', callbackError)
         setError(`${provider.displayName} sign-in could not be completed. Try again.`)
       }
     })()
-  }, [completeOIDC, navigate, providers, inviteToken])
+  }, [completeOIDC, navigate, providers, inviteToken, returnTo])
 
   if (ssoRequired) {
     return (
@@ -65,7 +70,7 @@ const OAuthCallback = () => {
         detail={ssoRequired}
         description={wrongAccountHint(ssoRequired)}
         inviteToken={inviteToken}
-        onUseDifferentEmail={() => navigate('/', { replace: true })}
+        onUseDifferentEmail={() => navigate(returnTo, { replace: true })}
       />
     )
   }
@@ -73,7 +78,7 @@ const OAuthCallback = () => {
   if (!error) return <AuthPending label="Completing secure sign-in…" />
 
   // A failed sign-in leaves the invite link unused, so going back to it starts over with the invite.
-  const backTo = inviteToken ? `/magic-link?token=${encodeURIComponent(inviteToken)}` : '/'
+  const backTo = inviteToken ? `/magic-link?token=${encodeURIComponent(inviteToken)}` : returnTo
   // The error can name an org's connection, and this screen is outside <main>'s capture marker.
   return (
     <div data-pug-no-capture>

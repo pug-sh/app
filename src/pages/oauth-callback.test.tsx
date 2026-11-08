@@ -23,6 +23,8 @@ const oidc = vi.hoisted(() => ({
   pendingOIDCProviderID: vi.fn(() => 'company_sso'),
   pendingOIDCConnection: vi.fn((): AuthProviderConfig | null => null),
   pendingOIDCInviteToken: vi.fn(() => ''),
+  pendingOIDCReturn: vi.fn((): string | null => null),
+  clearPendingOIDCReturn: vi.fn(),
   startOIDCSignIn: vi.fn(),
 }))
 
@@ -91,6 +93,8 @@ describe('OAuth callback provider lookup', () => {
     oidc.pendingOIDCProviderID.mockReset().mockReturnValue('company_sso')
     oidc.pendingOIDCConnection.mockReset().mockReturnValue(null)
     oidc.pendingOIDCInviteToken.mockReset().mockReturnValue('')
+    oidc.pendingOIDCReturn.mockReset().mockReturnValue(null)
+    oidc.clearPendingOIDCReturn.mockReset()
     oidc.startOIDCSignIn.mockReset()
     completeOIDC.mockClear().mockResolvedValue({ ok: true })
   })
@@ -103,7 +107,7 @@ describe('OAuth callback provider lookup', () => {
     expect(oidc.completeOIDCRedirect).not.toHaveBeenCalled()
   })
 
-  // A server with zero providers is not a load failure — it must not tell the user to retry.
+  // A server with zero providers is not a load failure, so it must not tell the user to retry.
   it('clears pending state when the server reports no configured providers', async () => {
     state.providers = []
 
@@ -219,6 +223,52 @@ describe('OAuth callback provider lookup', () => {
     const location = renderCallback()
 
     await vi.waitFor(() => expect(location.history.at(-1)).toBe('/'))
+  })
+
+  describe('a sign-in started on the consent page', () => {
+    const consentPage = '/oauth/authorize?client_id=https%3A%2F%2Fclient.example%2Fmeta&state=s'
+
+    beforeEach(() => {
+      oidc.pendingOIDCReturn.mockReturnValue(consentPage)
+    })
+
+    it('returns to it once signed in', async () => {
+      state.providers = [companySSO]
+      oidc.completeOIDCRedirect.mockResolvedValue(authorization)
+
+      const location = renderCallback()
+
+      await vi.waitFor(() => expect(location.history.at(-1)).toBe(consentPage))
+      expect(oidc.clearPendingOIDCReturn).toHaveBeenCalledOnce()
+    })
+
+    // The SSO screen's own sign-in still has to land there.
+    it("keeps it for the SSO screen's sign-in, and as its way back", async () => {
+      state.providers = [companySSO]
+      oidc.completeOIDCRedirect.mockResolvedValue(authorization)
+      completeOIDC.mockResolvedValue({
+        ok: false,
+        error: 'acme.com accounts sign in through SSO.',
+        ssoRequired: create(SSORequiredSchema, { domain: 'acme.com', providers: [companySSO] }),
+      })
+
+      const location = renderCallback()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Use a different email' }))
+      expect(location.history.at(-1)).toBe(consentPage)
+      expect(oidc.clearPendingOIDCReturn).not.toHaveBeenCalled()
+    })
+
+    it('goes back to it when the sign-in fails', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      state.providers = [companySSO]
+      oidc.completeOIDCRedirect.mockRejectedValue(new Error('The identity provider rejected the sign-in request'))
+
+      const location = renderCallback()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Back to sign in' }))
+      expect(location.history.at(-1)).toBe(consentPage)
+    })
   })
 
   it('shows the error the exchange returned rather than navigating', async () => {

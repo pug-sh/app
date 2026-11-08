@@ -1,3 +1,8 @@
 # Cloudflare already noindexes previews, but not the production pages.dev alias, which duplicates the app's domain.
 https://:project.pages.dev/*
   X-Robots-Tag: noindex
+
+# The MCP consent page must never load in a frame, where another site could steer a click onto Allow.
+/oauth/authorize
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
