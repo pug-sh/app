@@ -4,7 +4,7 @@
 
 The same open-source app serves Pug Cloud at app.pug.sh, the live demo at demo.pug.sh, and self-hosted deployments on their own domains. The demo needs no account: every visitor is signed in as one shared read-only viewer, and Settings is hidden.
 
-To answer a question about a project's data, use the MCP server or the HTTP API with a private API key (`prv_`) instead of this app. On Pug Cloud the API is `https://api.pugs.dev` and the MCP server is `https://api.pug.sh/mcp`; a self-hosted deployment serves both from its own API host. For what Pug is and what it costs, read https://pug.sh/llms.txt.
+To answer a question about a project's data, use the MCP server or the HTTP API instead of this app. The MCP server takes a sign-in to Pug or a private API key (`prv_`); the HTTP API takes the key. On Pug Cloud the API is `https://api.pugs.dev` and the MCP server is `https://api.pug.sh/mcp`; a self-hosted deployment serves both from its own API host. For what Pug is and what it costs, read https://pug.sh/llms.txt.
 
 Where things are, for pointing someone at a page:
 
@@ -21,6 +21,7 @@ Where things are, for pointing someone at a page:
 - `/p/<projectId>/settings/usage`: event usage across the organization
 - `/p/<projectId>/settings/billing`: the plan and billed usage, on Pug Cloud
 - `/p/<projectId>/settings/organization`, `/p/<projectId>/settings/account` and `/p/<projectId>/settings/appearance`: your organizations, your email and password, and this browser's theme
+- `/p/<projectId>/settings/connected-apps`: apps such as Claude that you let read a project as you, and where to disconnect them
 
 A page that takes no ID also opens without the prefix, in the member's current project, so `/settings/api-keys` is the link to give someone who does not know their project ID.
 
@@ -37,7 +38,7 @@ When helping someone with this dashboard:
 - [Documentation](https://docs.pug.sh/llms.txt): Every docs page, each also served as Markdown
 - [Core concepts](https://docs.pug.sh/get-started/concepts/index.md): Orgs, projects, events, profiles, sessions and insights
 - [Authentication](https://docs.pug.sh/get-started/authentication/index.md): Public keys, private keys and dashboard sign-in, and which credential reaches which service
-- [MCP server](https://docs.pug.sh/mcp/index.md): Twelve read-only analytics tools behind a private API key
+- [MCP server](https://docs.pug.sh/mcp/index.md): Read-only analytics tools for an agent, reached by signing in to Pug or with a private API key
 - [Insights API](https://docs.pug.sh/api/insights/index.md): The queries behind the Insights page, over HTTP with a private key
 - [Self-hosting the dashboard](https://docs.pug.sh/self-hosting/dashboard/index.md): Building this app and serving it against your own API
 
