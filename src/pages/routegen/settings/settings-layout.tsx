@@ -12,7 +12,8 @@ import { cn } from '@/lib/utils'
 import { grantsAtom, loadGrantsAtom } from './connected-apps/grants.atoms'
 
 // Grouped by scope: project, then organization, then you. Not every tab scopes to the project URL it
-// is reached through, so each carries its own description.
+// is reached through, so each carries its own description. Connected apps is last, so dropping it
+// moves no other tab.
 const SETTINGS_TABS = [
   { path: 'general', label: 'General', description: 'Name, timezone and theme for this project' },
   { path: 'api-keys', label: 'API keys', description: 'SDK keys for this project' },
@@ -34,7 +35,6 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   // Kept while the answer is coming, so the bar doesn't reflow, and on a failed load, or the route
   // explaining it is unreachable. Not where there is no billing service: a retry cannot get past it.
   const showBilling = !billing.loaded || (!!billing.error && !billing.unsupported) || !!billing.status?.billingEnabled
-  // Kept the same way: only a server with OAuth off drops it. Last, so dropping it moves no other tab.
   const grants = useAtomValue(grantsAtom)
   const loadGrants = useSetAtom(loadGrantsAtom)
   useEffect(() => {
@@ -58,6 +58,7 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   // viewed, or a fresh load draws the bar with nothing highlighted.
   const showBillingTab = activeTab.path === 'billing' || (showBilling && can('read', 'billing'))
   const showSsoTab = activeTab.path === 'sso' || can('read', 'domain')
+  // Kept while its list loads and when it fails, like billing: only a server with OAuth off drops it.
   const showConnectedAppsTab = activeTab.path === 'connected-apps' || grants?.enabled !== false
   const tabs = SETTINGS_TABS.filter(
     tab =>

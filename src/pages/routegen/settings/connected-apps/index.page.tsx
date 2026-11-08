@@ -52,19 +52,13 @@ const ConnectedApps = () => {
         </div>
       )
     }
-    if (!result.enabled) {
+    if (!result.enabled || result.grants.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <Plug className="mb-3 size-8 opacity-15" />
-          <p className="text-sm text-muted-foreground">This Pug server doesn't let apps connect.</p>
-        </div>
-      )
-    }
-    if (result.grants.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <Plug className="mb-3 size-8 opacity-15" />
-          <p className="text-sm text-muted-foreground">No apps are connected.</p>
+          <p className="text-sm text-muted-foreground">
+            {result.enabled ? 'No apps are connected.' : "This Pug server doesn't let apps connect."}
+          </p>
         </div>
       )
     }
@@ -136,18 +130,15 @@ const ConnectedApps = () => {
     )
   }
 
-  const count = result?.enabled ? result.grants.length : undefined
   return (
-    <div className="max-w-2xl">
-      <section>
-        <SectionHeader
-          title="Connected apps"
-          count={count}
-          description="Apps you let read a project as you, such as Claude or ChatGPT. Disconnect one and its next request fails."
-        />
-        {body()}
-      </section>
-    </div>
+    <section className="max-w-2xl">
+      <SectionHeader
+        title="Connected apps"
+        count={result?.enabled ? result.grants.length : undefined}
+        description="Apps you let read a project as you, such as Claude or ChatGPT. Disconnect one and its next request fails."
+      />
+      {body()}
+    </section>
   )
 }
 

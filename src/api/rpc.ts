@@ -23,7 +23,7 @@ export const sharedDashboardsRPCAtom = atom(get => createClient(SharedDashboards
 
 // Dashboard, org-scoped (JWT auth)
 export const customersRPCAtom = atom(get => createClient(CustomersService, get(transportAtom)))
-// The signed-in person's own app connections, across every org.
+// JWT only, scoped to the person: the consent page and their app connections, across every org.
 export const mcpGrantsRPCAtom = atom(get => createClient(MCPGrantsService, get(transportAtom)))
 export const orgsRPCAtom = atom(get => createClient(OrgsService, get(transportAtom)))
 export const projectsRPCAtom = atom(get => createClient(ProjectsService, get(transportAtom)))

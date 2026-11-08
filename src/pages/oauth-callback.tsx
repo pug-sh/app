@@ -24,7 +24,6 @@ const OAuthCallback = () => {
   const [error, setError] = useState('')
   const [ssoRequired, setSSORequired] = useState<SSORequired | null>(null)
   const [inviteToken] = useState(pendingOIDCInviteToken)
-  // The consent page signs in where it stands, so a sign-in started there goes back to it.
   const [returnTo] = useState(() => pendingOIDCReturn() ?? '/')
 
   useEffect(() => {

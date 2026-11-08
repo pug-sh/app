@@ -5,12 +5,13 @@ import { mcpGrantsRPCAtom } from '@/api/rpc'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import { errorReason } from '@/lib/rpc-error'
 
-// enabled is null when the list couldn't be loaded. A server without the service has OAuth off.
+// enabled is null when the list couldn't be loaded. A backend without the service reads as off only
+// same-origin: across origins its 404 fails the CORS preflight and arrives as Unknown.
 type GrantsResult = { customerId: string; enabled: boolean | null; grants: Grant[] }
 
 const resultAtom = atom<GrantsResult | null>(null)
 const inFlightAtom = atom<{ customerId: string; promise: Promise<void> } | null>(null)
-// Bumped by every load and revoke, so a list asked for earlier can't land over a later one.
+// Bumped by every load and revoke, so a list asked for earlier can't land over a later list or revoke.
 const generationAtom = atom(0)
 
 // Paired with its customer, so another account signing in never sees the last one's connections.
@@ -32,7 +33,7 @@ export const loadGrantsAtom = atom(null, (get, set) => {
     .listGrants({})
     .then(
       resp => ({ customerId, enabled: resp.oauthEnabled, grants: resp.grants }),
-      (err): GrantsResult => {
+      err => {
         if (err instanceof ConnectError && err.code === Code.Unimplemented) {
           return { customerId, enabled: false, grants: [] }
         }

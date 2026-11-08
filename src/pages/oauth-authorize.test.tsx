@@ -1,7 +1,7 @@
 import { create, toBinary } from '@bufbuild/protobuf'
 import { BinaryWriter, WireType } from '@bufbuild/protobuf/wire'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
@@ -49,6 +49,15 @@ const query = new URLSearchParams({
   resource: 'https://api.pugs.dev/mcp',
   scope: 'read',
 }).toString()
+const request = {
+  clientId,
+  redirectUri,
+  responseType: 'code',
+  state: 'st4te',
+  codeChallenge: challenge,
+  codeChallengeMethod: 'S256',
+  resource: 'https://api.pugs.dev/mcp',
+}
 
 const production = {
   id: 'd3uqa6s1m7j9b2c4e5p1',
@@ -66,6 +75,7 @@ const side = {
 
 const cancelUri = `${redirectUri}?error=access_denied&iss=https%3A%2F%2Fapi.pugs.dev&state=st4te`
 const codeUri = `${redirectUri}?code=the-code&iss=https%3A%2F%2Fapi.pugs.dev&state=st4te`
+const backUri = `${redirectUri}?error=invalid_target&iss=https%3A%2F%2Fapi.pugs.dev&state=st4te`
 
 const consent = (init: Record<string, unknown> = {}) =>
   create(DescribeAuthorizationResponseSchema, {
@@ -89,6 +99,18 @@ const refusal = (code: Code, reason: string, details: ConnectError['details'] = 
   err.details.push({ type: 'google.rpc.ErrorInfo', value: errorInfo }, ...details)
   return err
 }
+
+// A bad request the server can still answer, with its way back to the app in an AuthorizationError.
+const invalidRequest = (back = backUri) =>
+  refusal(Code.InvalidArgument, 'MCP_AUTHORIZATION_INVALID', [
+    {
+      type: AuthorizationErrorSchema.typeName,
+      value: toBinary(
+        AuthorizationErrorSchema,
+        create(AuthorizationErrorSchema, { error: 'invalid_target', redirectUri: back }),
+      ),
+    },
+  ])
 
 const mount = (search = query) => {
   const store = createStore()
@@ -127,20 +149,10 @@ describe('the consent page', () => {
     mount()
 
     await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
-    expect(rpc.describeAuthorization).toHaveBeenCalledWith({
-      request: {
-        clientId,
-        redirectUri,
-        responseType: 'code',
-        state: 'st4te',
-        codeChallenge: challenge,
-        codeChallengeMethod: 'S256',
-        resource: 'https://api.pugs.dev/mcp',
-      },
-    })
+    expect(rpc.describeAuthorization).toHaveBeenCalledWith({ request })
   })
 
-  // Anyone can write any name into their own details, but only the app can serve a document on its host.
+  // An app's details can call it anything; its host is where Pug fetched them from.
   it('names the app by its host, its own name in small print, and where it goes back to', async () => {
     rpc.describeAuthorization.mockResolvedValue(consent({ clientName: 'Totally Claude' }))
     mount()
@@ -161,10 +173,36 @@ describe('the consent page', () => {
     fireEvent.click(allow)
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
-    expect(rpc.approveAuthorization).toHaveBeenCalledWith({
-      request: expect.objectContaining({ clientId, redirectUri, state: 'st4te' }),
-      projectId: staging.id,
-    })
+    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request, projectId: staging.id })
+  })
+
+  it('approves the request it showed, even when the address changes under it', async () => {
+    const replace = leaving()
+    const { location } = mount()
+    await pick('Staging')
+
+    const moved = new URLSearchParams(query)
+    moved.set('client_id', 'https://other.example/oauth/metadata')
+    act(() => location.navigate(`/oauth/authorize?${moved}`))
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
+    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request, projectId: staging.id })
+  })
+
+  it('sends one approval however often Allow is pressed, and holds Cancel meanwhile', async () => {
+    const replace = leaving()
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+    rpc.approveAuthorization.mockReturnValue(new Promise(() => {}))
+    mount()
+
+    const allow = await screen.findByRole('button', { name: 'Allow' })
+    fireEvent.click(allow)
+    fireEvent.click(allow)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(rpc.approveAuthorization).toHaveBeenCalledTimes(1)
+    expect(replace).not.toHaveBeenCalled()
   })
 
   it('preselects the only project', async () => {
@@ -186,6 +224,16 @@ describe('the consent page', () => {
 
     expect(replace).toHaveBeenCalledWith(cancelUri)
     expect(rpc.approveAuthorization).not.toHaveBeenCalled()
+  })
+
+  it("won't cancel to an address that isn't safe to open", async () => {
+    const replace = leaving()
+    rpc.describeAuthorization.mockResolvedValue(consent({ cancelUri: 'javascript:alert(1)' }))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
+    expect(replace).not.toHaveBeenCalled()
   })
 
   // Any program on the computer can claim a loopback port.
@@ -225,26 +273,37 @@ describe('the consent page', () => {
   it('offers the way back the server vouches for, carrying the OAuth error', async () => {
     const replace = leaving()
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    const back = `${redirectUri}?error=invalid_target&iss=https%3A%2F%2Fapi.pugs.dev&state=st4te`
-    rpc.describeAuthorization.mockRejectedValue(
-      refusal(Code.InvalidArgument, 'MCP_AUTHORIZATION_INVALID', [
-        {
-          type: AuthorizationErrorSchema.typeName,
-          value: toBinary(
-            AuthorizationErrorSchema,
-            create(AuthorizationErrorSchema, { error: 'invalid_target', redirectUri: back }),
-          ),
-        },
-      ]),
-    )
+    rpc.describeAuthorization.mockRejectedValue(invalidRequest())
     mount()
 
     fireEvent.click(await screen.findByRole('button', { name: 'Back to claude.ai' }))
 
-    expect(replace).toHaveBeenCalledWith(back)
+    expect(replace).toHaveBeenCalledWith(backUri)
   })
 
-  // The redirect itself is what can't be trusted, so there is no way back to offer.
+  it('offers the same way back when Allow is refused for the request itself', async () => {
+    const replace = leaving()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+    rpc.approveAuthorization.mockRejectedValue(invalidRequest())
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Back to claude.ai' }))
+
+    expect(replace).toHaveBeenCalledWith(backUri)
+  })
+
+  it("offers no way back the server sent that isn't safe to open", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.describeAuthorization.mockRejectedValue(invalidRequest('javascript:alert(1)'))
+    mount()
+
+    await screen.findByRole('heading', { name: "Can't connect this app" })
+    expect(screen.queryByRole('button', { name: /Back to/ })).toBeNull()
+  })
+
+  // Nothing vouches for the redirect, so there is no way back to offer.
   it.each([
     ['MCP_CLIENT_INVALID', Code.InvalidArgument, "Can't connect this app"],
     ['MCP_REDIRECT_NOT_LISTED', Code.InvalidArgument, "Can't connect this app"],
@@ -287,6 +346,40 @@ describe('the consent page', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
+  it('says there is nothing left to pick once the last project is gone', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+    rpc.approveAuthorization.mockRejectedValue(refusal(Code.NotFound, 'PROJECT_NOT_FOUND'))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
+
+    expect(await screen.findByText("You can't read that project anymore.")).toBeTruthy()
+    expect(screen.getByText('You have no projects in Pug, so there is nothing to connect.')).toBeTruthy()
+  })
+
+  // The transport refreshes the session before an Unauthenticated reaches the page, and signs out on a refusal.
+  it.each([
+    ['UNAUTHENTICATED', Code.Unauthenticated, "Couldn't connect the app. Try again."],
+    ['SSO_REQUIRED', Code.Unauthenticated, "Couldn't connect the app. Try again."],
+    [
+      'MCP_CLIENT_UNAVAILABLE',
+      Code.FailedPrecondition,
+      "Pug couldn't load the app's details to confirm who it is. Try again.",
+    ],
+  ])('keeps the picked project for another try after %s', async (reason, code, problem) => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+    rpc.approveAuthorization.mockRejectedValue(refusal(code, reason))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
+
+    expect(await screen.findByText(problem)).toBeTruthy()
+    expect(screen.getByRole('combobox').textContent).toContain('Personal / Side project')
+    expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(false)
+  })
+
   it("tells the demo account it can't connect apps", async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
@@ -296,6 +389,17 @@ describe('the consent page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
 
     expect(await screen.findByText("This account is read-only, so it can't connect apps.")).toBeTruthy()
+  })
+
+  it("offers to load the account again when it couldn't", async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.getMe.mockRejectedValueOnce(new ConnectError('down', Code.Unavailable))
+    mount()
+
+    await screen.findByText("Couldn't load your email.")
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('dev@acme.com')).toBeTruthy()
   })
 
   it('switches account by signing out where it stands, keeping the request', async () => {
@@ -313,6 +417,18 @@ describe('the consent page', () => {
 
     const heading = await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
     expect(heading.closest('[data-pug-no-capture]')).not.toBeNull()
+    // The open list portals out of the page.
+    fireEvent.click(screen.getByRole('combobox'))
+    expect((await screen.findByRole('option', { name: 'Staging' })).closest('[data-pug-no-capture]')).not.toBeNull()
+    expect(screen.getByText('Personal').closest('[data-pug-no-capture]')).not.toBeNull()
+  })
+
+  it("draws the open list in the sign-in pages' colours, like the page around it", async () => {
+    mount()
+
+    fireEvent.click(await screen.findByRole('combobox'))
+
+    expect((await screen.findByRole('option', { name: 'Staging' })).closest('.auth-surface')).not.toBeNull()
   })
 
   it('refuses to run inside a frame', async () => {

@@ -69,7 +69,7 @@ const Demo = lazyWithRetry(() => import('@/pages/demo'), 'demo')
 // atoms' matchMedia subscriptions.
 //
 // Held while a workspace picks its project, or the member's own theme flashes over index.html's paint.
-// awaitWorkspace says whether one is coming: the shared route and the consent page mount none.
+// awaitWorkspace says whether one is coming (App's mountsWorkspace).
 const ThemeApplier = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const compiled = useAtomValue(compiledThemeAtom)
   const choice = useAtomValue(themeChoiceAtom)
@@ -404,16 +404,16 @@ const App = () => {
   const isSharedRoute = location.startsWith('/shared/')
   const isMagicLink = location === '/magic-link'
   const isOAuthCallback = location === '/oauth/callback' || location.startsWith('/oauth/callback/')
-  // An MCP client's consent page. It lists every project itself, and the bootstrap's project
-  // redirect would drop the client's query.
+  // An MCP client's consent page, drawn on the auth canvas: in the router, ProjectRedirect would drop the
+  // client's query. It lists every project itself, so it mounts no workspace.
   const isOAuthAuthorize = location === '/oauth/authorize'
   const isDemoHandoff = location === '/demo' && demoHandoffUrl() !== null
   const failed = !!workspaceError || status === 'error'
   const mountsWorkspace = !isSharedRoute && !isOAuthAuthorize
 
-  // A screen that is unambiguously part of the signed-out flow. Bootstrap is excluded: it is the
-  // one state that straddles, running both between sign-in and the picker and on the way from a
-  // restored session into the dashboard.
+  // A screen always drawn on the auth canvas: the signed-out flow, and the consent page. Bootstrap is
+  // excluded: it is the one state that straddles, running both between sign-in and the picker and on
+  // the way from a restored session into the dashboard.
   const onAuthScreen =
     !isSharedRoute &&
     (isMagicLink ||

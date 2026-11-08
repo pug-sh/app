@@ -1,10 +1,12 @@
+import type { MessageInitShape } from '@bufbuild/protobuf'
 import { ConnectError } from '@connectrpc/connect'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, Loader2, TriangleAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useSearch } from 'wouter'
 import {
   AuthorizationErrorSchema,
+  type AuthorizationRequestSchema,
   type DescribeAuthorizationResponse,
   type Project,
 } from '@/api/genproto/dashboard/mcpgrants/v1/mcpgrants_pb'
@@ -24,15 +26,7 @@ import {
 } from '@/components/ui/select'
 import { errorReason } from '@/lib/rpc-error'
 
-type AuthorizationQuery = {
-  clientId: string
-  redirectUri: string
-  responseType: string
-  state: string
-  codeChallenge: string
-  codeChallengeMethod: string
-  resource: string
-}
+type AuthorizationQuery = MessageInitShape<typeof AuthorizationRequestSchema>
 
 // The client's query as it sent it. The server checks every field; its scope is ignored, since every
 // connection reads.
@@ -67,8 +61,8 @@ const followable = (raw: string) => {
 
 type Refusal = { title: string; description: string; back?: URL; retry?: boolean }
 
-// The refusals the request itself earns. Only MCP_AUTHORIZATION_INVALID carries a way back: the
-// others mean the app's redirect can't be trusted.
+// The refusals the request itself earns. Only MCP_AUTHORIZATION_INVALID has a way back, in its AuthorizationError
+// detail: nothing vouches for the others' redirect.
 const requestRefusal = (err: unknown): Refusal | null => {
   const authorizationError = err instanceof ConnectError ? err.findDetails(AuthorizationErrorSchema)[0] : undefined
   if (authorizationError) {
@@ -108,21 +102,19 @@ const loadRefusal = (err: unknown): Refusal => {
   return { title: "Couldn't load this request", description: 'Something went wrong. Try again.', retry: true }
 }
 
-// What a failed Allow says under the form, which stays for another try.
+// What a failed Allow says under the form, which stays for another try. UNAUTHENTICATED and SSO_REQUIRED
+// fall through: the transport refreshes the session first and signs out if that is refused.
 const approvalProblem = (err: unknown) => {
   switch (errorReason(err)) {
-    case 'PROJECT_NOT_FOUND':
-      return "You can't read that project anymore. Pick another one."
     case 'ORG_ROLE_FORBIDDEN':
       return "This account is read-only, so it can't connect apps."
-    case 'SSO_REQUIRED':
-    case 'UNAUTHENTICATED':
-      return 'Sign in again to connect this app.'
     case 'MCP_CLIENT_UNAVAILABLE':
       return "Pug couldn't load the app's details to confirm who it is. Try again."
   }
   return "Couldn't connect the app. Try again."
 }
+
+const LINK_BUTTON = 'font-medium text-link underline-offset-4 hover:underline disabled:opacity-50'
 
 const projectLabel = (project: Project) => `${project.orgDisplayName} / ${project.displayName}`
 
@@ -185,8 +177,11 @@ const ConsentForm = ({
         return
       }
       if (errorReason(err) === 'PROJECT_NOT_FOUND') {
-        setProjects(current => current.filter(project => project.id !== picked.id))
+        const left = projects.filter(project => project.id !== picked.id)
+        setProjects(left)
         setProjectId(null)
+        setProblem(`You can't read that project anymore.${left.length > 0 ? ' Pick another one.' : ''}`)
+        return
       }
       setProblem(approvalProblem(err))
     } finally {
@@ -197,6 +192,25 @@ const ConsentForm = ({
   const switchAccount = async () => {
     setPending('switch')
     await signOut()
+  }
+
+  let account: ReactNode = 'Signed in.'
+  if (email) {
+    account = (
+      <>
+        Signed in as <span className="font-medium text-foreground">{email}</span>.
+      </>
+    )
+  } else if (meStatus === 'error') {
+    account = (
+      <>
+        Couldn't load your email.{' '}
+        <button type="button" onClick={() => fetchMe()} className={LINK_BUTTON}>
+          Try again
+        </button>
+        <span aria-hidden> ·</span>
+      </>
+    )
   }
 
   return (
@@ -213,21 +227,12 @@ const ConsentForm = ({
       {projects.length > 0 ? (
         <div className="mt-6 space-y-2">
           <FieldLabel htmlFor="consent-project">Project</FieldLabel>
-          <Select
-            id="consent-project"
-            value={projectId}
-            onValueChange={value => setProjectId(value)}
-            disabled={pending !== null}
-          >
+          <Select id="consent-project" value={projectId} onValueChange={setProjectId} disabled={pending !== null}>
             <SelectTrigger className="h-10 w-full">
-              <SelectValue>
-                {(id: string | null) => {
-                  const project = projects.find(candidate => candidate.id === id)
-                  return project ? projectLabel(project) : 'Pick a project'
-                }}
-              </SelectValue>
+              <SelectValue>{picked ? projectLabel(picked) : 'Pick a project'}</SelectValue>
             </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false}>
+            {/* Portalled to <body>, so it carries the canvas's capture marker and Pug colours itself. */}
+            <SelectContent alignItemWithTrigger={false} className="auth-surface" data-pug-no-capture>
               {byOrg(projects).map(([orgId, group]) => (
                 <SelectGroup key={orgId}>
                   <SelectLabel>{group.name}</SelectLabel>
@@ -247,7 +252,7 @@ const ConsentForm = ({
         </div>
       ) : (
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          You have no projects in Pug yet, so there is nothing to connect.
+          You have no projects in Pug, so there is nothing to connect.
         </p>
       )}
 
@@ -260,19 +265,8 @@ const ConsentForm = ({
 
       <div className="mt-6 space-y-1 text-center text-xs text-muted-foreground">
         <p className="wrap-break-word">
-          {email ? (
-            <>
-              Signed in as <span className="font-medium text-foreground">{email}</span>.
-            </>
-          ) : (
-            'Signed in.'
-          )}{' '}
-          <button
-            type="button"
-            onClick={switchAccount}
-            disabled={pending !== null}
-            className="font-medium text-link underline-offset-4 hover:underline disabled:opacity-50"
-          >
+          {account}{' '}
+          <button type="button" onClick={switchAccount} disabled={pending !== null} className={LINK_BUTTON}>
             Switch account
           </button>
         </p>
@@ -301,7 +295,7 @@ const ConsentForm = ({
 
 type View =
   | { kind: 'loading' }
-  | { kind: 'consent'; consent: DescribeAuthorizationResponse }
+  | { kind: 'consent'; consent: DescribeAuthorizationResponse; query: AuthorizationQuery }
   | { kind: 'refused'; refusal: Refusal }
   | { kind: 'leaving'; host: string }
 
@@ -314,7 +308,7 @@ const OAuthAuthorize = () => {
   const search = useSearch()
   const query = useMemo(() => queryFrom(search), [search])
   const mcpGrantsRPC = useAtomValue(mcpGrantsRPCAtom)
-  // Backs up the frame headers, which a self-hosted server's web server may not send.
+  // Backs up the frame headers, which a self-hosted deployment's web server may not send.
   const [view, setView] = useState<View>(() =>
     window.self === window.top ? { kind: 'loading' } : { kind: 'refused', refusal: FRAMED_REFUSAL },
   )
@@ -324,7 +318,7 @@ const OAuthAuthorize = () => {
     let cancelled = false
     mcpGrantsRPC.describeAuthorization({ request: query }).then(
       consent => {
-        if (!cancelled) setView({ kind: 'consent', consent })
+        if (!cancelled) setView({ kind: 'consent', consent, query })
       },
       err => {
         if (cancelled) return
@@ -337,7 +331,7 @@ const OAuthAuthorize = () => {
     }
   }, [view.kind, mcpGrantsRPC, query])
 
-  // Replaced, so Back from the app doesn't land on a consent page that would approve again.
+  // Replaced, so Back from the app doesn't return to the form for a request already answered.
   const leave = (url: URL) => {
     setView({ kind: 'leaving', host: url.host })
     window.location.replace(url.href)
@@ -349,11 +343,12 @@ const OAuthAuthorize = () => {
         return <AuthPending label="Checking the app's request…" />
       case 'leaving':
         return <AuthPending label={`Returning you to ${view.host}…`} />
+      // The query it described, not the address's, so Allow approves what was shown.
       case 'consent':
         return (
           <ConsentForm
             consent={view.consent}
-            query={query}
+            query={view.query}
             onLeave={leave}
             onRefused={refusal => setView({ kind: 'refused', refusal })}
           />

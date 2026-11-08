@@ -1129,7 +1129,7 @@ describe("an MCP client's consent page", () => {
     )
   })
 
-  // The bootstrap's project redirect would drop the client's query.
+  // In the router, ProjectRedirect would send it to the overview and drop the client's query.
   it('shows the request without loading a workspace, keeping the query', async () => {
     const { history } = mountApp(consentPage)
 
@@ -1141,8 +1141,7 @@ describe("an MCP client's consent page", () => {
     expect(history).toEqual([consentPage])
   })
 
-  // As an email link opened in another tab of the same browser does. Mounted in an awaited act: with the sign-in
-  // chunk already loaded, a sync render's retry for its config lands in an act queue nothing flushes.
+  // The session arrives as a magic link opened in another tab delivers it.
   it('signs a visitor in where they stand, then shows the request', async () => {
     getAuthConfig.mockResolvedValueOnce(create(GetAuthConfigResponseSchema, {}))
     const { store, history } = await act(async () => mountApp(consentPage, { signedIn: false }))

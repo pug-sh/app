@@ -131,7 +131,6 @@ export const clearPendingOIDCProvider = () => {
   sessionStorage.removeItem(pendingInviteKey)
 }
 
-// The consent page the sign-in started from, while it is under 10 minutes old.
 export const pendingOIDCReturn = () => {
   const stored = sessionStorage.getItem(pendingReturnKey)
   if (!stored) return null

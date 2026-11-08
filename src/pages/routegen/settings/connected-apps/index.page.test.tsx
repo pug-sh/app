@@ -2,7 +2,7 @@ import { create } from '@bufbuild/protobuf'
 import { BinaryWriter, WireType } from '@bufbuild/protobuf/wire'
 import { timestampFromDate } from '@bufbuild/protobuf/wkt'
 import { Code, ConnectError } from '@connectrpc/connect'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { toast } from 'sonner'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -119,6 +119,7 @@ describe('Connected apps', () => {
     await screen.findByText('claude.ai')
     listGrants.mockReturnValueOnce(new Promise(resolve => (land = resolve)))
     const reload = store.set(loadGrantsAtom)
+    expect(listGrants).toHaveBeenCalledTimes(2)
 
     await disconnect('claude.ai')
     await waitFor(() => expect(screen.queryByText('claude.ai')).toBeNull())
@@ -128,6 +129,23 @@ describe('Connected apps', () => {
     })
 
     expect(screen.queryByText('claude.ai')).toBeNull()
+  })
+
+  it("never shows the last account's connections to the next while its own load", async () => {
+    const store = mount()
+    await screen.findByText('claude.ai')
+    cleanup()
+
+    listGrants.mockReturnValueOnce(new Promise(() => {}))
+    store.set(jwtAtom, jwtFor('cust-2'))
+    render(
+      <Provider store={store}>
+        <ConnectedApps />
+      </Provider>,
+    )
+
+    expect(screen.queryByText('claude.ai')).toBeNull()
+    expect(listGrants).toHaveBeenCalledTimes(2)
   })
 
   it("says so where the server doesn't let apps connect", async () => {

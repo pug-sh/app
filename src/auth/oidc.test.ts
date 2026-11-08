@@ -295,9 +295,12 @@ describe('returning to the consent page', () => {
   })
 
   // A sign-in that didn't prove the domain ends on the callback's SSO screen, which starts another.
-  it('keeps it across a second sign-in started from the callback', async () => {
+  it.each([
+    ['a provider', '/oauth/callback'],
+    ['a connection', connectionCallback],
+  ])("keeps it across a second sign-in started from %s's callback", async (_kind, callback) => {
     await startOIDCSignIn(provider)
-    landOn('/oauth/callback')
+    landOn(callback)
     await startOIDCSignIn(connection)
 
     expect(pendingOIDCReturn()).toBe(consentPage)
