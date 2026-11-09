@@ -98,6 +98,8 @@ const approvalProblem = (err: unknown) => {
   switch (errorReason(err)) {
     case 'ORG_ROLE_FORBIDDEN':
       return "This account is read-only, so it can't connect apps."
+    case 'MCP_NO_ORG':
+      return "You aren't in any org anymore."
     case 'MCP_CLIENT_UNAVAILABLE':
       return "Pug couldn't load the app's details to confirm who it is. Try again."
   }
@@ -167,9 +169,10 @@ const ConsentForm = ({
   const signOut = useSetAtom(signOutAtom)
   const [pending, setPending] = useState<'allow' | 'switch' | null>(null)
   const [problem, setProblem] = useState('')
+  const [noOrg, setNoOrg] = useState(false)
 
   const cancelUrl = followable(consent.cancelUri)
-  const nothingToRead = consent.projects.length === 0
+  const nothingToRead = noOrg || consent.projects.length === 0
 
   const allow = async () => {
     setPending('allow')
@@ -190,6 +193,7 @@ const ConsentForm = ({
         onRefused(refusal)
         return
       }
+      if (errorReason(err) === 'MCP_NO_ORG') setNoOrg(true)
       setProblem(approvalProblem(err))
     } finally {
       setPending(null)
@@ -231,7 +235,7 @@ const ConsentForm = ({
           </ul>
           <p className="text-sm text-muted-foreground">
             It can run insights, browse events and look up user profiles in these projects, and in projects added to
-            these orgs later. It can't change or delete anything.
+            your orgs later. It can't change or delete anything.
           </p>
         </div>
       )}

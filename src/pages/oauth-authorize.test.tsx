@@ -165,6 +165,7 @@ describe('the consent page', () => {
     expect(screen.getByText('Production, Staging')).toBeTruthy()
     expect(screen.getByText('Personal')).toBeTruthy()
     expect(screen.getByText('Side project')).toBeTruthy()
+    expect(screen.getByText(/in projects added to your orgs later/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
@@ -321,6 +322,19 @@ describe('the consent page', () => {
     expect(rpc.describeAuthorization).toHaveBeenCalledTimes(2)
   })
 
+  it('has nothing to connect once the person is in no org', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpc.approveAuthorization.mockRejectedValue(refusal(Code.FailedPrecondition, 'MCP_NO_ORG'))
+    mount()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
+
+    expect(await screen.findByText("You aren't in any org anymore.")).toBeTruthy()
+    expect(screen.getByText('You have no projects in Pug, so there is nothing to connect.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled')).toBe(false)
+  })
+
   // The transport refreshes the session before an Unauthenticated reaches the page, and signs out on a refusal.
   it.each(['UNAUTHENTICATED', 'SSO_REQUIRED'])('offers a plain retry after %s', async reason => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -371,7 +385,9 @@ describe('the consent page', () => {
   it('switches account by signing out where it stands, keeping the request', async () => {
     const { store, location } = mount()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Switch account' }))
+    // The account line re-renders when the email lands, replacing the button found before it.
+    await screen.findByText('dev@acme.com')
+    fireEvent.click(screen.getByRole('button', { name: 'Switch account' }))
 
     await waitFor(() => expect(store.get(refreshTokenAtom)).toBe(''))
     expect(rpc.signOut).toHaveBeenCalledWith({ refreshToken: 'refresh-token' })

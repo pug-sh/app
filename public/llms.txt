@@ -21,7 +21,7 @@ Where things are, for pointing someone at a page:
 - `/p/<projectId>/settings/usage`: event usage across the organization
 - `/p/<projectId>/settings/billing`: the plan and billed usage, on Pug Cloud
 - `/p/<projectId>/settings/organization`, `/p/<projectId>/settings/account` and `/p/<projectId>/settings/appearance`: your organizations, your email and password, and this browser's theme
-- `/p/<projectId>/settings/connected-apps`: apps such as Claude that you let read a project as you, and where to disconnect them
+- `/p/<projectId>/settings/connected-apps`: apps such as Claude that you let read your projects as you, and where to disconnect them
 
 A page that takes no ID also opens without the prefix, in the member's current project, so `/settings/api-keys` is the link to give someone who does not know their project ID.
 
