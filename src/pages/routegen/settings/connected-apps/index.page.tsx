@@ -73,7 +73,7 @@ const ConnectedApps = () => {
         <thead>
           <tr className="border-b border-border text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <th className="py-2 pr-4 text-left font-medium">App</th>
-            <th className="py-2 pr-4 text-left font-medium">Project</th>
+            <th className="py-2 pr-4 text-left font-medium">Orgs</th>
             <th className="py-2 pr-4 text-left font-medium">Connected</th>
             <th className="py-2 pr-4 text-left font-medium">Last used</th>
             <th className="w-8" />
@@ -92,14 +92,7 @@ const ConnectedApps = () => {
                 {grant.clientName && <div className="text-xs text-muted-foreground">{grant.clientName}</div>}
               </td>
               <td className="py-2.5 pr-4 text-sm">
-                {grant.project ? (
-                  <>
-                    <span className="text-muted-foreground">{grant.project.orgDisplayName} / </span>
-                    {grant.project.displayName}
-                  </>
-                ) : (
-                  '—'
-                )}
+                {grant.orgs.length > 0 ? grant.orgs.map(org => org.displayName).join(', ') : '—'}
               </td>
               <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-muted-foreground">
                 <When grant={grant} field="createTime" />
@@ -141,7 +134,7 @@ const ConnectedApps = () => {
       <SectionHeader
         title="Connected apps"
         count={result?.enabled ? result.grants.length : undefined}
-        description="Apps you let read a project as you, such as Claude or ChatGPT. Disconnect one and its next request fails."
+        description="Apps you let read your projects as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
       />
       {body()}
     </section>

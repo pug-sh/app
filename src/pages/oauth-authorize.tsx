@@ -14,16 +14,6 @@ import { mcpGrantsRPCAtom } from '@/api/rpc'
 import { fetchMeAtom, meAtom, meStatusAtom, signOutAtom } from '@/auth/auth.atoms'
 import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { Button } from '@/components/ui/button'
-import { FieldLabel } from '@/components/ui/field'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { errorReason } from '@/lib/rpc-error'
 
 type AuthorizationQuery = MessageInitShape<typeof AuthorizationRequestSchema>
@@ -106,10 +96,10 @@ const loadRefusal = (err: unknown): Refusal => {
 // get the generic retry: the transport refreshes the session first and signs out if that is refused.
 const approvalProblem = (err: unknown) => {
   switch (errorReason(err)) {
-    case 'PROJECT_NOT_FOUND':
-      return "You can't read that project anymore."
     case 'ORG_ROLE_FORBIDDEN':
       return "This account is read-only, so it can't connect apps."
+    case 'MCP_NO_ORG':
+      return "You aren't in any org anymore."
     case 'MCP_CLIENT_UNAVAILABLE':
       return "Pug couldn't load the app's details to confirm who it is. Try again."
   }
@@ -117,8 +107,6 @@ const approvalProblem = (err: unknown) => {
 }
 
 const LINK_BUTTON = 'font-medium text-link underline-offset-4 hover:underline disabled:opacity-50'
-
-const projectLabel = (project: Project) => `${project.orgDisplayName} / ${project.displayName}`
 
 const byOrg = (projects: Project[]) => {
   const groups = new Map<string, { name: string; projects: Project[] }>()
@@ -179,20 +167,18 @@ const ConsentForm = ({
 }) => {
   const mcpGrantsRPC = useAtomValue(mcpGrantsRPCAtom)
   const signOut = useSetAtom(signOutAtom)
-  const [projects, setProjects] = useState(consent.projects)
-  const [projectId, setProjectId] = useState(projects.length === 1 ? projects[0].id : null)
   const [pending, setPending] = useState<'allow' | 'switch' | null>(null)
   const [problem, setProblem] = useState('')
+  const [noOrg, setNoOrg] = useState(false)
 
   const cancelUrl = followable(consent.cancelUri)
-  const picked = projects.find(project => project.id === projectId)
+  const nothingToRead = noOrg || consent.projects.length === 0
 
   const allow = async () => {
-    if (!picked) return
     setPending('allow')
     setProblem('')
     try {
-      const { redirectUri } = await mcpGrantsRPC.approveAuthorization({ request: query, projectId: picked.id })
+      const { redirectUri } = await mcpGrantsRPC.approveAuthorization({ request: query })
       const url = followable(redirectUri)
       if (url) {
         onLeave(url)
@@ -207,10 +193,7 @@ const ConsentForm = ({
         onRefused(refusal)
         return
       }
-      if (errorReason(err) === 'PROJECT_NOT_FOUND') {
-        setProjects(current => current.filter(project => project.id !== picked.id))
-        setProjectId(null)
-      }
+      if (errorReason(err) === 'MCP_NO_ORG') setNoOrg(true)
       setProblem(approvalProblem(err))
     } finally {
       setPending(null)
@@ -233,36 +216,28 @@ const ConsentForm = ({
         </p>
       )}
 
-      {projects.length > 0 ? (
-        <div className="mt-6 space-y-2">
-          <FieldLabel htmlFor="consent-project">Project</FieldLabel>
-          <Select id="consent-project" value={projectId} onValueChange={setProjectId} disabled={pending !== null}>
-            <SelectTrigger className="h-10 w-full">
-              <SelectValue>{picked ? projectLabel(picked) : 'Pick a project'}</SelectValue>
-            </SelectTrigger>
-            {/* Portalled to <body>, so it carries the canvas's capture marker and Pug colours itself. */}
-            <SelectContent alignItemWithTrigger={false} className="auth-surface" data-pug-no-capture>
-              {byOrg(projects).map(([orgId, group]) => (
-                <SelectGroup key={orgId}>
-                  <SelectLabel>{group.name}</SelectLabel>
-                  {group.projects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-sm text-muted-foreground">
-            It can run insights, browse events and look up user profiles in this project. It can't change or delete
-            anything.
-          </p>
-        </div>
-      ) : (
+      {nothingToRead ? (
         <p className="mt-6 text-center text-sm text-muted-foreground">
           You have no projects in Pug, so there is nothing to connect.
         </p>
+      ) : (
+        <div className="mt-6 space-y-2">
+          <p className="text-sm font-medium">It can read every project in your orgs</p>
+          <ul className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-border px-3 py-2 text-sm">
+            {byOrg(consent.projects).map(([orgId, group]) => (
+              <li key={orgId} className="wrap-break-word">
+                <div className="font-medium">{group.name}</div>
+                <div className="text-muted-foreground">
+                  {group.projects.map(project => project.displayName).join(', ')}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-muted-foreground">
+            It can run insights, browse events and look up user profiles in these projects, and in projects added to
+            your orgs later. It can't change or delete anything.
+          </p>
+        </div>
       )}
 
       {consent.loopbackRedirect && (
@@ -288,7 +263,7 @@ const ConsentForm = ({
         >
           Cancel
         </Button>
-        <Button className="h-10" disabled={!picked || pending !== null} onClick={allow}>
+        <Button className="h-10" disabled={nothingToRead || pending !== null} onClick={allow}>
           {pending === 'allow' && <Loader2 className="animate-spin" />}
           Allow
         </Button>

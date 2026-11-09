@@ -533,7 +533,7 @@ Claude, ChatGPT and other MCP clients send people to `/oauth/authorize` (`pages/
 - **Every URL back to the client is the server's** (Allow, Cancel, a bad request's way back), followed with `location.replace` and only when https or http on a loopback host. The page never builds one.
 - **Refusals are told apart by their `ErrorInfo` reason**, read by `errorReason` (`lib/rpc-error.ts`) straight off the wire, since `google.rpc.ErrorInfo` isn't generated here. Only `MCP_AUTHORIZATION_INVALID` has a way back, in its `AuthorizationError` detail.
 - **Its form never renders in a frame.** `public/_headers` denies framing `/oauth/authorize`; Cloudflare's asset server matches those rules on the request path, so they reach the SPA fallback. The page refuses a frame itself as well, for a server that sends no such headers.
-- **It names the person, their orgs and projects outside `<main>`**, so it carries its own capture marker. Its project list portals to `<body>`, out of reach of both that marker and the canvas's `.auth-surface`, so it carries both itself.
+- **It names the person, their orgs and projects outside `<main>`**, so it carries its own capture marker.
 - **Connected apps is dropped where `ListGrants` says OAuth is off**, and kept with a load error anywhere else. An `Unimplemented` from a backend without the service drops it too, but only same-origin: CORS is mounted per service, so across origins that backend's 404 fails the preflight and reads as `Unknown`, as it does for Billing and SSO. Ship the backend first. The tab bar and the page share a request in flight (`connected-apps/grants.atoms.ts`).
 
 ### Demo
