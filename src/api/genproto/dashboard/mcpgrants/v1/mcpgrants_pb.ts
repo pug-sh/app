@@ -13,7 +13,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file dashboard/mcpgrants/v1/mcpgrants.proto.
  */
 export const file_dashboard_mcpgrants_v1_mcpgrants: GenFile = /*@__PURE__*/
-  fileDesc("CiZkYXNoYm9hcmQvbWNwZ3JhbnRzL3YxL21jcGdyYW50cy5wcm90bxIWZGFzaGJvYXJkLm1jcGdyYW50cy52MSLyAQoUQXV0aG9yaXphdGlvblJlcXVlc3QSGwoJY2xpZW50X2lkGAEgASgJQgi6SAVyAxiAEBIeCgxyZWRpcmVjdF91cmkYAiABKAlCCLpIBXIDGIAQEh4KDXJlc3BvbnNlX3R5cGUYAyABKAlCB7pIBHICGEASFwoFc3RhdGUYBCABKAlCCLpIBXIDGIAgEiAKDmNvZGVfY2hhbGxlbmdlGAUgASgJQgi6SAVyAxiAARImChVjb2RlX2NoYWxsZW5nZV9tZXRob2QYBiABKAlCB7pIBHICGEASGgoIcmVzb3VyY2UYByABKAlCCLpIBXIDGIAQIjkKEkF1dGhvcml6YXRpb25FcnJvchINCgVlcnJvchgBIAEoCRIUCgxyZWRpcmVjdF91cmkYAiABKAkiVQoHUHJvamVjdBIKCgJpZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSDgoGb3JnX2lkGAMgASgJEhgKEG9yZ19kaXNwbGF5X25hbWUYBCABKAkiXQocRGVzY3JpYmVBdXRob3JpemF0aW9uUmVxdWVzdBI9CgdyZXF1ZXN0GAEgASgLMiwuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BdXRob3JpemF0aW9uUmVxdWVzdCLCAQodRGVzY3JpYmVBdXRob3JpemF0aW9uUmVzcG9uc2USEwoLY2xpZW50X2hvc3QYASABKAkSEwoLY2xpZW50X25hbWUYAiABKAkSFQoNcmVkaXJlY3RfaG9zdBgDIAEoCRIZChFsb29wYmFja19yZWRpcmVjdBgEIAEoCBIxCghwcm9qZWN0cxgFIAMoCzIfLmRhc2hib2FyZC5tY3BncmFudHMudjEuUHJvamVjdBISCgpjYW5jZWxfdXJpGAYgASgJIn0KG0FwcHJvdmVBdXRob3JpemF0aW9uUmVxdWVzdBI9CgdyZXF1ZXN0GAEgASgLMiwuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BdXRob3JpemF0aW9uUmVxdWVzdBIfCgpwcm9qZWN0X2lkGAIgASgJQgu6SAjIAQFyA5gBFCI0ChxBcHByb3ZlQXV0aG9yaXphdGlvblJlc3BvbnNlEhQKDHJlZGlyZWN0X3VyaRgBIAEoCSITChFMaXN0R3JhbnRzUmVxdWVzdCJaChJMaXN0R3JhbnRzUmVzcG9uc2USFQoNb2F1dGhfZW5hYmxlZBgBIAEoCBItCgZncmFudHMYAiADKAsyHS5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkdyYW50ItQBCgVHcmFudBIKCgJpZBgBIAEoCRITCgtjbGllbnRfaG9zdBgCIAEoCRITCgtjbGllbnRfbmFtZRgDIAEoCRIwCgdwcm9qZWN0GAQgASgLMh8uZGFzaGJvYXJkLm1jcGdyYW50cy52MS5Qcm9qZWN0Ei8KC2NyZWF0ZV90aW1lGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIyCg5sYXN0X3VzZWRfdGltZRgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiMwoSUmV2b2tlR3JhbnRSZXF1ZXN0Eh0KCGdyYW50X2lkGAEgASgJQgu6SAjIAQFyA5gBFCIVChNSZXZva2VHcmFudFJlc3BvbnNlMvIDChBNQ1BHcmFudHNTZXJ2aWNlEoYBChVEZXNjcmliZUF1dGhvcml6YXRpb24SNC5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkRlc2NyaWJlQXV0aG9yaXphdGlvblJlcXVlc3QaNS5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkRlc2NyaWJlQXV0aG9yaXphdGlvblJlc3BvbnNlIgASgwEKFEFwcHJvdmVBdXRob3JpemF0aW9uEjMuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BcHByb3ZlQXV0aG9yaXphdGlvblJlcXVlc3QaNC5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkFwcHJvdmVBdXRob3JpemF0aW9uUmVzcG9uc2UiABJlCgpMaXN0R3JhbnRzEikuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5MaXN0R3JhbnRzUmVxdWVzdBoqLmRhc2hib2FyZC5tY3BncmFudHMudjEuTGlzdEdyYW50c1Jlc3BvbnNlIgASaAoLUmV2b2tlR3JhbnQSKi5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLlJldm9rZUdyYW50UmVxdWVzdBorLmRhc2hib2FyZC5tY3BncmFudHMudjEuUmV2b2tlR3JhbnRSZXNwb25zZSIAQk1aS2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vZGFzaGJvYXJkL21jcGdyYW50cy92MTttY3BncmFudHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_google_protobuf_timestamp]);
+  fileDesc("CiZkYXNoYm9hcmQvbWNwZ3JhbnRzL3YxL21jcGdyYW50cy5wcm90bxIWZGFzaGJvYXJkLm1jcGdyYW50cy52MSLyAQoUQXV0aG9yaXphdGlvblJlcXVlc3QSGwoJY2xpZW50X2lkGAEgASgJQgi6SAVyAxiAEBIeCgxyZWRpcmVjdF91cmkYAiABKAlCCLpIBXIDGIAQEh4KDXJlc3BvbnNlX3R5cGUYAyABKAlCB7pIBHICGEASFwoFc3RhdGUYBCABKAlCCLpIBXIDGIAgEiAKDmNvZGVfY2hhbGxlbmdlGAUgASgJQgi6SAVyAxiAARImChVjb2RlX2NoYWxsZW5nZV9tZXRob2QYBiABKAlCB7pIBHICGEASGgoIcmVzb3VyY2UYByABKAlCCLpIBXIDGIAQIjkKEkF1dGhvcml6YXRpb25FcnJvchINCgVlcnJvchgBIAEoCRIUCgxyZWRpcmVjdF91cmkYAiABKAkiVQoHUHJvamVjdBIKCgJpZBgBIAEoCRIUCgxkaXNwbGF5X25hbWUYAiABKAkSDgoGb3JnX2lkGAMgASgJEhgKEG9yZ19kaXNwbGF5X25hbWUYBCABKAkiXQocRGVzY3JpYmVBdXRob3JpemF0aW9uUmVxdWVzdBI9CgdyZXF1ZXN0GAEgASgLMiwuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BdXRob3JpemF0aW9uUmVxdWVzdCLCAQodRGVzY3JpYmVBdXRob3JpemF0aW9uUmVzcG9uc2USEwoLY2xpZW50X2hvc3QYASABKAkSEwoLY2xpZW50X25hbWUYAiABKAkSFQoNcmVkaXJlY3RfaG9zdBgDIAEoCRIZChFsb29wYmFja19yZWRpcmVjdBgEIAEoCBIxCghwcm9qZWN0cxgFIAMoCzIfLmRhc2hib2FyZC5tY3BncmFudHMudjEuUHJvamVjdBISCgpjYW5jZWxfdXJpGAYgASgJIm4KG0FwcHJvdmVBdXRob3JpemF0aW9uUmVxdWVzdBI9CgdyZXF1ZXN0GAEgASgLMiwuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BdXRob3JpemF0aW9uUmVxdWVzdEoECAIQA1IKcHJvamVjdF9pZCI0ChxBcHByb3ZlQXV0aG9yaXphdGlvblJlc3BvbnNlEhQKDHJlZGlyZWN0X3VyaRgBIAEoCSITChFMaXN0R3JhbnRzUmVxdWVzdCJaChJMaXN0R3JhbnRzUmVzcG9uc2USFQoNb2F1dGhfZW5hYmxlZBgBIAEoCBItCgZncmFudHMYAiADKAsyHS5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkdyYW50ItwBCgVHcmFudBIKCgJpZBgBIAEoCRITCgtjbGllbnRfaG9zdBgCIAEoCRITCgtjbGllbnRfbmFtZRgDIAEoCRIvCgtjcmVhdGVfdGltZRgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoObGFzdF91c2VkX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEikKBG9yZ3MYByADKAsyGy5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLk9yZ0oECAQQBVIHcHJvamVjdCInCgNPcmcSCgoCaWQYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJIjMKElJldm9rZUdyYW50UmVxdWVzdBIdCghncmFudF9pZBgBIAEoCUILukgIyAEBcgOYARQiFQoTUmV2b2tlR3JhbnRSZXNwb25zZTLyAwoQTUNQR3JhbnRzU2VydmljZRKGAQoVRGVzY3JpYmVBdXRob3JpemF0aW9uEjQuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5EZXNjcmliZUF1dGhvcml6YXRpb25SZXF1ZXN0GjUuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5EZXNjcmliZUF1dGhvcml6YXRpb25SZXNwb25zZSIAEoMBChRBcHByb3ZlQXV0aG9yaXphdGlvbhIzLmRhc2hib2FyZC5tY3BncmFudHMudjEuQXBwcm92ZUF1dGhvcml6YXRpb25SZXF1ZXN0GjQuZGFzaGJvYXJkLm1jcGdyYW50cy52MS5BcHByb3ZlQXV0aG9yaXphdGlvblJlc3BvbnNlIgASZQoKTGlzdEdyYW50cxIpLmRhc2hib2FyZC5tY3BncmFudHMudjEuTGlzdEdyYW50c1JlcXVlc3QaKi5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLkxpc3RHcmFudHNSZXNwb25zZSIAEmgKC1Jldm9rZUdyYW50EiouZGFzaGJvYXJkLm1jcGdyYW50cy52MS5SZXZva2VHcmFudFJlcXVlc3QaKy5kYXNoYm9hcmQubWNwZ3JhbnRzLnYxLlJldm9rZUdyYW50UmVzcG9uc2UiAEJNWktnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL2Rhc2hib2FyZC9tY3BncmFudHMvdjE7bWNwZ3JhbnRzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_timestamp]);
 
 /**
  * AuthorizationRequest is the query of /oauth/authorize, as the client sent it. Its
@@ -96,7 +96,7 @@ export const AuthorizationErrorSchema: GenMessage<AuthorizationError> = /*@__PUR
   messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 1);
 
 /**
- * Project is a project with its org's name, as the consent page's picker shows it.
+ * Project is a project with its org's name.
  *
  * @generated from message dashboard.mcpgrants.v1.Project
  */
@@ -182,7 +182,8 @@ export type DescribeAuthorizationResponse = Message<"dashboard.mcpgrants.v1.Desc
   loopbackRedirect: boolean;
 
   /**
-   * Every live project in every org the person belongs to, with any role.
+   * Every live project in every org the person belongs to, with any role. A grant
+   * reads them all, and projects added to those orgs later.
    *
    * @generated from field: repeated dashboard.mcpgrants.v1.Project projects = 5;
    */
@@ -212,13 +213,6 @@ export type ApproveAuthorizationRequest = Message<"dashboard.mcpgrants.v1.Approv
    * @generated from field: dashboard.mcpgrants.v1.AuthorizationRequest request = 1;
    */
   request?: AuthorizationRequest | undefined;
-
-  /**
-   * The project picked on the consent page.
-   *
-   * @generated from field: string project_id = 2;
-   */
-  projectId: string;
 };
 
 /**
@@ -288,7 +282,7 @@ export const ListGrantsResponseSchema: GenMessage<ListGrantsResponse> = /*@__PUR
   messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 8);
 
 /**
- * Grant is one connection: one client reading one project as the person.
+ * Grant is one connection: one client reading the person's projects as them.
  *
  * @generated from message dashboard.mcpgrants.v1.Grant
  */
@@ -311,11 +305,6 @@ export type Grant = Message<"dashboard.mcpgrants.v1.Grant"> & {
   clientName: string;
 
   /**
-   * @generated from field: dashboard.mcpgrants.v1.Project project = 4;
-   */
-  project?: Project | undefined;
-
-  /**
    * @generated from field: google.protobuf.Timestamp create_time = 5;
    */
   createTime?: Timestamp | undefined;
@@ -326,6 +315,14 @@ export type Grant = Message<"dashboard.mcpgrants.v1.Grant"> & {
    * @generated from field: google.protobuf.Timestamp last_used_time = 6;
    */
   lastUsedTime?: Timestamp | undefined;
+
+  /**
+   * The orgs it reads every project of: those the person joined before they
+   * approved and hasn't left since, oldest first.
+   *
+   * @generated from field: repeated dashboard.mcpgrants.v1.Org orgs = 7;
+   */
+  orgs: Org[];
 };
 
 /**
@@ -334,6 +331,28 @@ export type Grant = Message<"dashboard.mcpgrants.v1.Grant"> & {
  */
 export const GrantSchema: GenMessage<Grant> = /*@__PURE__*/
   messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 9);
+
+/**
+ * @generated from message dashboard.mcpgrants.v1.Org
+ */
+export type Org = Message<"dashboard.mcpgrants.v1.Org"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string display_name = 2;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message dashboard.mcpgrants.v1.Org.
+ * Use `create(OrgSchema)` to create a new message.
+ */
+export const OrgSchema: GenMessage<Org> = /*@__PURE__*/
+  messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 10);
 
 /**
  * @generated from message dashboard.mcpgrants.v1.RevokeGrantRequest
@@ -350,7 +369,7 @@ export type RevokeGrantRequest = Message<"dashboard.mcpgrants.v1.RevokeGrantRequ
  * Use `create(RevokeGrantRequestSchema)` to create a new message.
  */
 export const RevokeGrantRequestSchema: GenMessage<RevokeGrantRequest> = /*@__PURE__*/
-  messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 10);
+  messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 11);
 
 /**
  * @generated from message dashboard.mcpgrants.v1.RevokeGrantResponse
@@ -363,13 +382,13 @@ export type RevokeGrantResponse = Message<"dashboard.mcpgrants.v1.RevokeGrantRes
  * Use `create(RevokeGrantResponseSchema)` to create a new message.
  */
 export const RevokeGrantResponseSchema: GenMessage<RevokeGrantResponse> = /*@__PURE__*/
-  messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 11);
+  messageDesc(file_dashboard_mcpgrants_v1_mcpgrants, 12);
 
 /**
  * MCPGrantsService backs the consent page at /oauth/authorize and Connected apps.
- * A grant lets one client, such as Claude, read one project as the person who
- * approved it. With OAuth off, every RPC but ListGrants answers FailedPrecondition
- * with MCP_OAUTH_DISABLED.
+ * A grant lets one client, such as Claude, read every project in the orgs the
+ * person belongs to when they approve, as them. With OAuth off, every RPC but
+ * ListGrants answers FailedPrecondition with MCP_OAUTH_DISABLED.
  *
  * @generated from service dashboard.mcpgrants.v1.MCPGrantsService
  */
@@ -392,7 +411,8 @@ export const MCPGrantsService: GenService<{
    * Checks the request again and creates the grant and its code. Unauthenticated
    * when the session has ended or its token has no sid, and with SSO_REQUIRED when
    * the person's domain requires an SSO sign-in this session lacks: refreshing the
-   * session then shows the SSO prompt.
+   * session then shows the SSO prompt. FailedPrecondition with MCP_NO_ORG when the
+   * person is in no org, since a grant reads only the orgs they are in.
    *
    * @generated from rpc dashboard.mcpgrants.v1.MCPGrantsService.ApproveAuthorization
    */

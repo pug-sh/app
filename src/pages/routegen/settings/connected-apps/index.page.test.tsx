@@ -24,7 +24,10 @@ const grantInit = {
   id: 'd3uqa6s1m7j9b2c4e5g1',
   clientHost: 'claude.ai',
   clientName: 'Claude',
-  project: { id: 'd3uqa6s1m7j9b2c4e5p1', displayName: 'Production', orgId: 'o1', orgDisplayName: 'Acme' },
+  orgs: [
+    { id: 'o1', displayName: 'Acme' },
+    { id: 'o2', displayName: 'Globex' },
+  ],
   createTime: timestampFromDate(new Date(Date.now() - 3 * 86_400_000)),
   lastUsedTime: timestampFromDate(new Date(Date.now() - 2 * 3_600_000)),
 }
@@ -68,12 +71,12 @@ beforeEach(() => {
 
 describe('Connected apps', () => {
   // Anyone can write any name into their app's details, so the host leads.
-  it('lists each connection by its host, with its own name and the project it reads', async () => {
+  it('lists each connection by its host, with its own name and the orgs it reads', async () => {
     mount()
 
     const row = (await screen.findByText('claude.ai')).closest('tr')
     expect(row?.textContent).toContain('Claude')
-    expect(row?.textContent).toContain('Acme / Production')
+    expect(row?.textContent).toContain('Acme, Globex')
     expect(row?.textContent).toContain('3d ago')
     expect(row?.textContent).toContain('2h ago')
     expect(screen.getByText('chatgpt.com')).toBeTruthy()

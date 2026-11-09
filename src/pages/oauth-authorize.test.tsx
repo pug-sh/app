@@ -129,14 +129,6 @@ const mount = (search = query) => {
 
 const leaving = () => vi.spyOn(window.location, 'replace').mockImplementation(() => {})
 
-const pick = async (name: string) => {
-  fireEvent.click(await screen.findByRole('combobox'))
-  // Base UI commits a mouse pick only when the press started on the item.
-  const option = await screen.findByRole('option', { name })
-  fireEvent.pointerDown(option)
-  fireEvent.click(option)
-}
-
 beforeEach(() => {
   rpc.describeAuthorization.mockResolvedValue(consent())
   rpc.approveAuthorization.mockResolvedValue({ redirectUri: codeUri })
@@ -163,23 +155,26 @@ describe('the consent page', () => {
     expect(await screen.findByText('dev@acme.com')).toBeTruthy()
   })
 
-  it('makes the person pick a project, then sends the browser back with the code', async () => {
+  // A connection reads every project in the person's orgs, so the page lists them rather than asking.
+  it('lists every project it will read, by org, then sends the browser back with the code', async () => {
     const replace = leaving()
     mount()
 
-    const allow = await screen.findByRole('button', { name: 'Allow' })
-    expect(allow.hasAttribute('disabled')).toBe(true)
-    await pick('Staging')
-    fireEvent.click(allow)
+    expect(await screen.findByText('It can read every project in your orgs')).toBeTruthy()
+    expect(screen.getByText('Acme')).toBeTruthy()
+    expect(screen.getByText('Production, Staging')).toBeTruthy()
+    expect(screen.getByText('Personal')).toBeTruthy()
+    expect(screen.getByText('Side project')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
-    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request, projectId: staging.id })
+    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request })
   })
 
   it('approves the request it showed, even when the address changes under it', async () => {
     const replace = leaving()
     const { location } = mount()
-    await pick('Staging')
+    await screen.findByRole('button', { name: 'Allow' })
 
     const moved = new URLSearchParams(query)
     moved.set('client_id', 'https://other.example/oauth/metadata')
@@ -187,7 +182,7 @@ describe('the consent page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
-    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request, projectId: staging.id })
+    expect(rpc.approveAuthorization).toHaveBeenCalledWith({ request })
   })
 
   it('sends one approval however often Allow is pressed, and holds Cancel meanwhile', async () => {
@@ -205,15 +200,12 @@ describe('the consent page', () => {
     expect(replace).not.toHaveBeenCalled()
   })
 
-  it('preselects the only project', async () => {
-    const replace = leaving()
-    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
+  it('has nothing to connect for a person with no projects', async () => {
+    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [] }))
     mount()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
-
-    await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
-    expect(rpc.approveAuthorization).toHaveBeenCalledWith(expect.objectContaining({ projectId: side.id }))
+    expect(await screen.findByText('You have no projects in Pug, so there is nothing to connect.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(true)
   })
 
   it('sends the browser back with access_denied on Cancel', async () => {
@@ -329,36 +321,6 @@ describe('the consent page', () => {
     expect(rpc.describeAuthorization).toHaveBeenCalledTimes(2)
   })
 
-  it('asks for another project when the one picked is no longer readable', async () => {
-    const replace = leaving()
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    rpc.approveAuthorization.mockRejectedValue(refusal(Code.NotFound, 'PROJECT_NOT_FOUND'))
-    mount()
-
-    await pick('Staging')
-    fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
-
-    expect(await screen.findByText("You can't read that project anymore.")).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(true)
-    expect(screen.getByRole('combobox').textContent).toContain('Pick a project')
-    fireEvent.click(screen.getByRole('combobox'))
-    await screen.findByRole('option', { name: 'Production' })
-    expect(screen.queryByRole('option', { name: 'Staging' })).toBeNull()
-    expect(replace).not.toHaveBeenCalled()
-  })
-
-  it('says there is nothing left to pick once the last project is gone', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
-    rpc.approveAuthorization.mockRejectedValue(refusal(Code.NotFound, 'PROJECT_NOT_FOUND'))
-    mount()
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
-
-    expect(await screen.findByText("You can't read that project anymore.")).toBeTruthy()
-    expect(screen.getByText('You have no projects in Pug, so there is nothing to connect.')).toBeTruthy()
-  })
-
   // The transport refreshes the session before an Unauthenticated reaches the page, and signs out on a refusal.
   it.each(['UNAUTHENTICATED', 'SSO_REQUIRED'])('offers a plain retry after %s', async reason => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -371,7 +333,7 @@ describe('the consent page', () => {
     expect(await screen.findByText("Couldn't connect the app. Try again.")).toBeTruthy()
   })
 
-  it('keeps the picked project when Allow fails for any other reason', async () => {
+  it('keeps the form for another try when Allow fails for any other reason', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     rpc.describeAuthorization.mockResolvedValue(consent({ projects: [side] }))
     rpc.approveAuthorization.mockRejectedValue(refusal(Code.FailedPrecondition, 'MCP_CLIENT_UNAVAILABLE'))
@@ -380,7 +342,7 @@ describe('the consent page', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Allow' }))
 
     await screen.findByText("Pug couldn't load the app's details to confirm who it is. Try again.")
-    expect(screen.getByRole('combobox').textContent).toContain('Personal / Side project')
+    expect(screen.getByText('Side project')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Allow' }).hasAttribute('disabled')).toBe(false)
   })
 
@@ -421,18 +383,8 @@ describe('the consent page', () => {
 
     const heading = await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
     expect(heading.closest('[data-pug-no-capture]')).not.toBeNull()
-    // The open list portals out of the page.
-    fireEvent.click(screen.getByRole('combobox'))
-    expect((await screen.findByRole('option', { name: 'Staging' })).closest('[data-pug-no-capture]')).not.toBeNull()
+    expect(screen.getByText('Production, Staging').closest('[data-pug-no-capture]')).not.toBeNull()
     expect(screen.getByText('Personal').closest('[data-pug-no-capture]')).not.toBeNull()
-  })
-
-  it("draws the open list in the sign-in pages' colours, like the page around it", async () => {
-    mount()
-
-    fireEvent.click(await screen.findByRole('combobox'))
-
-    expect((await screen.findByRole('option', { name: 'Staging' })).closest('.auth-surface')).not.toBeNull()
   })
 
   it('refuses to run inside a frame', async () => {
