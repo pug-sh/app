@@ -1,7 +1,8 @@
 import { useAtomValue, useSetAtom } from 'jotai'
-import { Loader2, Plug, Unplug } from 'lucide-react'
+import { ExternalLink, Loader2, Plug, Unplug } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Grant } from '@/api/genproto/dashboard/mcpgrants/v1/mcpgrants_pb'
+import CopyableCode from '@/components/copyable-code'
 import HoverSwap from '@/components/hover-swap'
 import LoadingSpinner from '@/components/loading-spinner'
 import SectionHeader from '@/components/section-header'
@@ -10,6 +11,10 @@ import { formatRelative } from '@/hooks/use-relative-time'
 import { toastRPCError } from '@/lib/rpc-error'
 import { formatDateTime, tsToDate, validDate } from '@/lib/timestamp'
 import { grantsAtom, loadGrantsAtom, revokeGrantAtom } from './grants.atoms'
+
+const MCP_DOCS_URL = 'https://docs.pug.sh/mcp/'
+// Sign-in works only at the OAuth issuer's /mcp, so this assumes the API origin is PUG_API_BASE_URL, as on Pug Cloud.
+const MCP_URL = `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '')}/mcp`
 
 const When = ({ grant, field }: { grant: Grant; field: 'createTime' | 'lastUsedTime' }) => {
   const date = validDate(tsToDate(grant[field]))
@@ -130,14 +135,39 @@ const ConnectedApps = () => {
   }
 
   return (
-    <section className="max-w-2xl">
-      <SectionHeader
-        title="Connected apps"
-        count={result?.enabled ? result.grants.length : undefined}
-        description="Apps you let read your projects and edit dashboards as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
-      />
-      {body()}
-    </section>
+    <div className="max-w-2xl space-y-8">
+      <section>
+        <SectionHeader
+          title="Connected apps"
+          count={result?.enabled ? result.grants.length : undefined}
+          description="Apps you let read your projects and edit dashboards as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
+        />
+        {body()}
+      </section>
+
+      {result?.enabled && (
+        <section>
+          <SectionHeader
+            title="Connect an app"
+            description={
+              <>
+                Add this URL to Claude or another MCP client that can sign in, then click Allow when Pug asks.{' '}
+                <a
+                  href={MCP_DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-link underline-offset-4 hover:underline"
+                >
+                  Setup guide
+                  <ExternalLink className="size-3" />
+                </a>
+              </>
+            }
+          />
+          <CopyableCode label="Server URL" value={MCP_URL} />
+        </section>
+      )}
+    </div>
   )
 }
 

@@ -1,4 +1,5 @@
 import { X } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { TileSectionHeader } from './editor-shared'
 import { TEMPLATE_GROUPS, type TemplateContext, TILE_TEMPLATES, type TileTemplate } from './templates'
@@ -12,21 +13,25 @@ type InlineTemplatePickerProps = {
   // tile" flow. Omitted on an empty dashboard, where the picker is shown
   // directly and there is nothing to collapse back to.
   onCancel?: () => void
+  hint?: ReactNode
 }
 
 // Inline add-tile picker: renders the tile templates as a grid of light bordered
 // option tiles directly in the canvas flow (no popover). Grouped under the shared
 // section-divider headers to match the rest of the editor.
-export const InlineTemplatePicker = ({ onSelect, onCancel, context }: InlineTemplatePickerProps) => {
+export const InlineTemplatePicker = ({ onSelect, onCancel, context, hint }: InlineTemplatePickerProps) => {
   return (
     <div className="rounded-lg border border-border/60 p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span className="font-medium text-sm">Add a tile</span>
-        {onCancel ? (
-          <Button size="icon-xs" variant="ghost" onClick={onCancel} aria-label="Close">
-            <X className="size-4" />
-          </Button>
-        ) : null}
+      <div className="mb-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-medium text-sm">Add a tile</span>
+          {onCancel ? (
+            <Button size="icon-xs" variant="ghost" onClick={onCancel} aria-label="Close">
+              <X className="size-4" />
+            </Button>
+          ) : null}
+        </div>
+        {hint ? <p className="mt-1 text-muted-foreground text-xs">{hint}</p> : null}
       </div>
 
       <div className="space-y-4">

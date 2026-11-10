@@ -151,11 +151,18 @@ describe('Connected apps', () => {
     expect(listGrants).toHaveBeenCalledTimes(2)
   })
 
+  it('offers the MCP server URL on the API origin to connect another app', async () => {
+    mount()
+
+    expect(await screen.findByText('http://vitest.invalid/mcp')).toBeTruthy()
+  })
+
   it("says so where the server doesn't let apps connect", async () => {
     listGrants.mockResolvedValue(create(ListGrantsResponseSchema, { oauthEnabled: false }))
     mount()
 
     expect(await screen.findByText("This Pug server doesn't let apps connect.")).toBeTruthy()
+    expect(screen.queryByText('http://vitest.invalid/mcp')).toBeNull()
   })
 
   it('retries a list that could not be loaded', async () => {
