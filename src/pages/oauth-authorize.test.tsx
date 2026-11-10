@@ -140,7 +140,7 @@ describe('the consent page', () => {
   it('asks the server about the request exactly as the client sent it', async () => {
     mount()
 
-    await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
+    await screen.findByRole('heading', { name: 'claude.ai wants to read your data and edit dashboards in Pug' })
     expect(rpc.describeAuthorization).toHaveBeenCalledWith({ request })
   })
 
@@ -149,7 +149,7 @@ describe('the consent page', () => {
     rpc.describeAuthorization.mockResolvedValue(consent({ clientName: 'Totally Claude' }))
     mount()
 
-    await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
+    await screen.findByRole('heading', { name: 'claude.ai wants to read your data and edit dashboards in Pug' })
     expect(screen.getByText('It calls itself “Totally Claude”.')).toBeTruthy()
     expect(screen.getByText('After this you go back to claude.ai.')).toBeTruthy()
     expect(await screen.findByText('dev@acme.com')).toBeTruthy()
@@ -166,6 +166,9 @@ describe('the consent page', () => {
     expect(screen.getByText('Personal')).toBeTruthy()
     expect(screen.getByText('Side project')).toBeTruthy()
     expect(screen.getByText(/in projects added to your orgs later/)).toBeTruthy()
+    expect(
+      screen.getByText(/edit existing ones, including removing tiles\. It can't delete or share a dashboard/),
+    ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Allow' }))
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(codeUri))
@@ -318,7 +321,7 @@ describe('the consent page', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
 
-    await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
+    await screen.findByRole('heading', { name: 'claude.ai wants to read your data and edit dashboards in Pug' })
     expect(rpc.describeAuthorization).toHaveBeenCalledTimes(2)
   })
 
@@ -397,7 +400,9 @@ describe('the consent page', () => {
   it('keeps the person, their orgs and projects out of click autocapture', async () => {
     mount()
 
-    const heading = await screen.findByRole('heading', { name: 'claude.ai wants to read your data in Pug' })
+    const heading = await screen.findByRole('heading', {
+      name: 'claude.ai wants to read your data and edit dashboards in Pug',
+    })
     expect(heading.closest('[data-pug-no-capture]')).not.toBeNull()
     expect(screen.getByText('Production, Staging').closest('[data-pug-no-capture]')).not.toBeNull()
     expect(screen.getByText('Personal').closest('[data-pug-no-capture]')).not.toBeNull()

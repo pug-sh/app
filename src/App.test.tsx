@@ -1114,7 +1114,7 @@ describe('the demo', () => {
 
 describe("an MCP client's consent page", () => {
   const consentPage = '/oauth/authorize?client_id=https%3A%2F%2Fclient.example%2Fmeta&state=s'
-  const heading = 'client.example wants to read your data in Pug'
+  const heading = 'client.example wants to read your data and edit dashboards in Pug'
 
   beforeEach(() => {
     orgsGet.mockResolvedValue({ org: orgA })

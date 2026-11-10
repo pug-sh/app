@@ -19,7 +19,7 @@ import { errorReason } from '@/lib/rpc-error'
 type AuthorizationQuery = MessageInitShape<typeof AuthorizationRequestSchema>
 
 // The client's query as it sent it. The server checks every field; its scope is ignored, since every
-// connection reads.
+// connection gets the same access.
 const queryFrom = (search: string): AuthorizationQuery => {
   const params = new URLSearchParams(search)
   const param = (name: string) => params.get(name) ?? ''
@@ -208,7 +208,7 @@ const ConsentForm = ({
   return (
     <>
       <h1 className="text-center text-2xl tracking-tight text-balance wrap-break-word">
-        {consent.clientHost} wants to read your data in Pug
+        {consent.clientHost} wants to read your data and edit dashboards in Pug
       </h1>
       {consent.clientName && (
         <p className="mt-2 text-center text-xs text-muted-foreground wrap-break-word">
@@ -235,7 +235,8 @@ const ConsentForm = ({
           </ul>
           <p className="text-sm text-muted-foreground">
             It can run insights, browse events and look up user profiles in these projects, and in projects added to
-            your orgs later. It can't change or delete anything.
+            your orgs later. Where your role allows, it can also create dashboards in them and edit existing ones,
+            including removing tiles. It can't delete or share a dashboard, or change anything else.
           </p>
         </div>
       )}
