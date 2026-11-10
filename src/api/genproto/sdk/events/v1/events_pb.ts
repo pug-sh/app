@@ -15,13 +15,17 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file sdk/events/v1/events.proto.
  */
 export const file_sdk_events_v1_events: GenFile = /*@__PURE__*/
-  fileDesc("ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSKrAwoSQmF0Y2hDcmVhdGVSZXF1ZXN0Ei8KBmV2ZW50cxgBIAMoCzIULnNkay5ldmVudHMudjEuRXZlbnRCCbpIBpIBAxDoBzrjArpI3wIatQEKJmJhdGNoLmNvb2tpZWxlc3NfaWRlbnRpdHlfc2VydmVyX293bmVkEjljb29raWVsZXNzIGV2ZW50cyBtdXN0IG5vdCBzZW5kIGRpc3RpbmN0X2lkIG9yIHNlc3Npb25faWQaUHRoaXMuZXZlbnRzLmFsbChlLCAhZS5jb29raWVsZXNzIHx8IChlLmRpc3RpbmN0X2lkID09ICcnICYmIGUuc2Vzc2lvbl9pZCA9PSAnJykpGqQBCiFiYXRjaC5kaXN0aW5jdF9pZF9yZXNlcnZlZF9wcmVmaXgSQWRpc3RpbmN0X2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gjx0aGlzLmV2ZW50cy5hbGwoZSwgIWUuZGlzdGluY3RfaWQuc3RhcnRzV2l0aCgnY29va2llbGVzcy0nKSkixAEKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0SDwoHZHJvcHBlZBgCIAEoDRJSChFkcm9wcGVkX2J5X3JlYXNvbhgDIAMoCzI3LnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXNwb25zZS5Ecm9wcGVkQnlSZWFzb25FbnRyeRo2ChREcm9wcGVkQnlSZWFzb25FbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKA06AjgBIvUHCgVFdmVudBIdCghldmVudF9pZBgBIAEoCUILukgIyAEBcgOwAQESQQoPYXV0b19wcm9wZXJ0aWVzGAIgAygLMiguc2RrLmV2ZW50cy52MS5FdmVudC5BdXRvUHJvcGVydGllc0VudHJ5EkUKEWN1c3RvbV9wcm9wZXJ0aWVzGAMgAygLMiouc2RrLmV2ZW50cy52MS5FdmVudC5DdXN0b21Qcm9wZXJ0aWVzRW50cnkSEwoLZGlzdGluY3RfaWQYBCABKAkSKQoEa2luZBgFIAEoCUIbukgYyAEBchMyEV5bYS16QS1aMC05Xy4tXSskEjYKCm9jY3VyX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESHAoKc2Vzc2lvbl9pZBgHIAEoCUIIukgFcgOwAQESEgoKY29va2llbGVzcxgIIAEoCBpPChNBdXRvUHJvcGVydGllc0VudHJ5EgsKA2tleRgBIAEoCRInCgV2YWx1ZRgCIAEoCzIYLmNvbW1vbi52MS5Qcm9wZXJ0eVZhbHVlOgI4ARpRChVDdXN0b21Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBOvQDukjwAxqDAQojZXZlbnQuYXV0b19wcm9wZXJ0aWVzX2RvbGxhcl9wcmVmaXgSKGF1dG9fcHJvcGVydGllcyBrZXlzIG11c3Qgc3RhcnQgd2l0aCAnJCcaMnRoaXMuYXV0b19wcm9wZXJ0aWVzLmFsbChrZXksIGtleS5zdGFydHNXaXRoKCckJykpGrABCihldmVudC5jdXN0b21fcHJvcGVydGllc19ub19kb2xsYXJfcHJlZml4Ek1jdXN0b21fcHJvcGVydGllcyBrZXlzIG11c3Qgbm90IHN0YXJ0IHdpdGggJyQnIChyZXNlcnZlZCBmb3IgYXV0by1wcm9wZXJ0aWVzKRo1dGhpcy5jdXN0b21fcHJvcGVydGllcy5hbGwoa2V5LCAha2V5LnN0YXJ0c1dpdGgoJyQnKSkatAEKKWV2ZW50LmlkZW50aXR5X3JlcXVpcmVkX3VubGVzc19jb29raWVsZXNzEkFkaXN0aW5jdF9pZCBhbmQgc2Vzc2lvbl9pZCBhcmUgcmVxdWlyZWQgdW5sZXNzIGNvb2tpZWxlc3MgaXMgdHJ1ZRpEdGhpcy5jb29raWVsZXNzIHx8ICh0aGlzLmRpc3RpbmN0X2lkICE9ICcnICYmIHRoaXMuc2Vzc2lvbl9pZCAhPSAnJykiUgoKRXZlbnRCYXRjaBIkCgZldmVudHMYASADKAsyFC5zZGsuZXZlbnRzLnYxLkV2ZW50Eh4KCnByb2plY3RfaWQYAiABKAlCCrpIB8gBAXICEAEyZQoNRXZlbnRzU2VydmljZRJUCgtCYXRjaENyZWF0ZRIhLnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXF1ZXN0GiIuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlc3BvbnNlQkFaP2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL2V2ZW50cy92MTtldmVudHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp]);
+  fileDesc("ChpzZGsvZXZlbnRzL3YxL2V2ZW50cy5wcm90bxINc2RrLmV2ZW50cy52MSJKChJCYXRjaENyZWF0ZVJlcXVlc3QSNAoGZXZlbnRzGAEgAygLMhQuc2RrLmV2ZW50cy52MS5FdmVudEIOukgLkgEIEOgHIgPYAQMi+QEKE0JhdGNoQ3JlYXRlUmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0SDwoHZHJvcHBlZBgCIAEoDRJSChFkcm9wcGVkX2J5X3JlYXNvbhgDIAMoCzI3LnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXNwb25zZS5Ecm9wcGVkQnlSZWFzb25FbnRyeRIzCg5pbnZhbGlkX2V2ZW50cxgEIAMoCzIbLnNkay5ldmVudHMudjEuSW52YWxpZEV2ZW50GjYKFERyb3BwZWRCeVJlYXNvbkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoDToCOAEiMQoMSW52YWxpZEV2ZW50Eg0KBWluZGV4GAEgASgNEhIKCnZpb2xhdGlvbnMYAiADKAkilgMKDUluY29taW5nRXZlbnQShAMKBWV2ZW50GAEgASgLMhQuc2RrLmV2ZW50cy52MS5FdmVudELeArpI2gK6AbMBCi9pbmNvbWluZ19ldmVudC5jb29raWVsZXNzX2lkZW50aXR5X3NlcnZlcl9vd25lZBI5Y29va2llbGVzcyBldmVudHMgbXVzdCBub3Qgc2VuZCBkaXN0aW5jdF9pZCBvciBzZXNzaW9uX2lkGkUhdGhpcy5jb29raWVsZXNzIHx8ICh0aGlzLmRpc3RpbmN0X2lkID09ICcnICYmIHRoaXMuc2Vzc2lvbl9pZCA9PSAnJym6AZwBCippbmNvbWluZ19ldmVudC5kaXN0aW5jdF9pZF9yZXNlcnZlZF9wcmVmaXgSQWRpc3RpbmN0X2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4GishdGhpcy5kaXN0aW5jdF9pZC5zdGFydHNXaXRoKCdjb29raWVsZXNzLScpyAEBIvUHCgVFdmVudBIdCghldmVudF9pZBgBIAEoCUILukgIyAEBcgOwAQESQQoPYXV0b19wcm9wZXJ0aWVzGAIgAygLMiguc2RrLmV2ZW50cy52MS5FdmVudC5BdXRvUHJvcGVydGllc0VudHJ5EkUKEWN1c3RvbV9wcm9wZXJ0aWVzGAMgAygLMiouc2RrLmV2ZW50cy52MS5FdmVudC5DdXN0b21Qcm9wZXJ0aWVzRW50cnkSEwoLZGlzdGluY3RfaWQYBCABKAkSKQoEa2luZBgFIAEoCUIbukgYyAEBchMyEV5bYS16QS1aMC05Xy4tXSskEjYKCm9jY3VyX3RpbWUYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQga6SAPIAQESHAoKc2Vzc2lvbl9pZBgHIAEoCUIIukgFcgOwAQESEgoKY29va2llbGVzcxgIIAEoCBpPChNBdXRvUHJvcGVydGllc0VudHJ5EgsKA2tleRgBIAEoCRInCgV2YWx1ZRgCIAEoCzIYLmNvbW1vbi52MS5Qcm9wZXJ0eVZhbHVlOgI4ARpRChVDdXN0b21Qcm9wZXJ0aWVzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhguY29tbW9uLnYxLlByb3BlcnR5VmFsdWU6AjgBOvQDukjwAxqDAQojZXZlbnQuYXV0b19wcm9wZXJ0aWVzX2RvbGxhcl9wcmVmaXgSKGF1dG9fcHJvcGVydGllcyBrZXlzIG11c3Qgc3RhcnQgd2l0aCAnJCcaMnRoaXMuYXV0b19wcm9wZXJ0aWVzLmFsbChrZXksIGtleS5zdGFydHNXaXRoKCckJykpGrABCihldmVudC5jdXN0b21fcHJvcGVydGllc19ub19kb2xsYXJfcHJlZml4Ek1jdXN0b21fcHJvcGVydGllcyBrZXlzIG11c3Qgbm90IHN0YXJ0IHdpdGggJyQnIChyZXNlcnZlZCBmb3IgYXV0by1wcm9wZXJ0aWVzKRo1dGhpcy5jdXN0b21fcHJvcGVydGllcy5hbGwoa2V5LCAha2V5LnN0YXJ0c1dpdGgoJyQnKSkatAEKKWV2ZW50LmlkZW50aXR5X3JlcXVpcmVkX3VubGVzc19jb29raWVsZXNzEkFkaXN0aW5jdF9pZCBhbmQgc2Vzc2lvbl9pZCBhcmUgcmVxdWlyZWQgdW5sZXNzIGNvb2tpZWxlc3MgaXMgdHJ1ZRpEdGhpcy5jb29raWVsZXNzIHx8ICh0aGlzLmRpc3RpbmN0X2lkICE9ICcnICYmIHRoaXMuc2Vzc2lvbl9pZCAhPSAnJykiUgoKRXZlbnRCYXRjaBIkCgZldmVudHMYASADKAsyFC5zZGsuZXZlbnRzLnYxLkV2ZW50Eh4KCnByb2plY3RfaWQYAiABKAlCCrpIB8gBAXICEAEyZQoNRXZlbnRzU2VydmljZRJUCgtCYXRjaENyZWF0ZRIhLnNkay5ldmVudHMudjEuQmF0Y2hDcmVhdGVSZXF1ZXN0GiIuc2RrLmV2ZW50cy52MS5CYXRjaENyZWF0ZVJlc3BvbnNlQkFaP2dpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL2V2ZW50cy92MTtldmVudHN2MWIIZWRpdGlvbnNw6Ac", [file_buf_validate_validate, file_common_v1_property_value, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message sdk.events.v1.BatchCreateRequest
  */
 export type BatchCreateRequest = Message<"sdk.events.v1.BatchCreateRequest"> & {
   /**
+   * BatchCreate validates each event on its own, as an IncomingEvent, so an
+   * event that breaks a rule, or repeats an earlier kept event's event_id, is
+   * dropped as invalid_event and the rest are kept.
+   *
    * @generated from field: repeated sdk.events.v1.Event events = 1;
    */
   events: Event[];
@@ -58,11 +62,20 @@ export type BatchCreateResponse = Message<"sdk.events.v1.BatchCreateResponse"> &
    * Per-reason breakdown of `dropped`, keyed by a stable reason token. This is
    * what makes a drop actionable rather than merely visible: `salt_unavailable`
    * is a server-side fault and the same payload may be retried, whereas
-   * `day_out_of_range` is client clock skew that will drop again on every retry.
+   * `day_out_of_range` is client clock skew and `invalid_event` an event that
+   * broke a validation rule or repeated an earlier kept event's event_id, and
+   * both drop again on every retry.
    *
    * @generated from field: map<string, uint32> dropped_by_reason = 3;
    */
   droppedByReason: { [key: string]: number };
+
+  /**
+   * The events dropped as `invalid_event`, in request order.
+   *
+   * @generated from field: repeated sdk.events.v1.InvalidEvent invalid_events = 4;
+   */
+  invalidEvents: InvalidEvent[];
 };
 
 /**
@@ -71,6 +84,55 @@ export type BatchCreateResponse = Message<"sdk.events.v1.BatchCreateResponse"> &
  */
 export const BatchCreateResponseSchema: GenMessage<BatchCreateResponse> = /*@__PURE__*/
   messageDesc(file_sdk_events_v1_events, 1);
+
+/**
+ * @generated from message sdk.events.v1.InvalidEvent
+ */
+export type InvalidEvent = Message<"sdk.events.v1.InvalidEvent"> & {
+  /**
+   * Position in BatchCreateRequest.events, counting from 0.
+   *
+   * @generated from field: uint32 index = 1;
+   */
+  index: number;
+
+  /**
+   * The rules it broke, e.g. "event.kind: does not match regex pattern `^[a-zA-Z0-9_.-]+$`".
+   * At most 10, then one more entry that counts the rest, e.g. "and 3 more".
+   *
+   * @generated from field: repeated string violations = 2;
+   */
+  violations: string[];
+};
+
+/**
+ * Describes the message sdk.events.v1.InvalidEvent.
+ * Use `create(InvalidEventSchema)` to create a new message.
+ */
+export const InvalidEventSchema: GenMessage<InvalidEvent> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 2);
+
+/**
+ * Never sent. BatchCreate validates each event as one: Event's rules plus two
+ * that hold only at the SDK boundary, since the server fills a cookieless
+ * event's identity with 'cookieless-' ids before the EventBatch envelope
+ * re-validates it.
+ *
+ * @generated from message sdk.events.v1.IncomingEvent
+ */
+export type IncomingEvent = Message<"sdk.events.v1.IncomingEvent"> & {
+  /**
+   * @generated from field: sdk.events.v1.Event event = 1;
+   */
+  event?: Event | undefined;
+};
+
+/**
+ * Describes the message sdk.events.v1.IncomingEvent.
+ * Use `create(IncomingEventSchema)` to create a new message.
+ */
+export const IncomingEventSchema: GenMessage<IncomingEvent> = /*@__PURE__*/
+  messageDesc(file_sdk_events_v1_events, 3);
 
 /**
  * @generated from message sdk.events.v1.Event
@@ -94,7 +156,7 @@ export type Event = Message<"sdk.events.v1.Event"> & {
   /**
    * Empty only when cookieless (event.identity_required_unless_cookieless);
    * never client-settable to a 'cookieless-'-prefixed value
-   * (batch.distinct_id_reserved_prefix).
+   * (incoming_event.distinct_id_reserved_prefix).
    *
    * @generated from field: string distinct_id = 4;
    */
@@ -113,8 +175,8 @@ export type Event = Message<"sdk.events.v1.Event"> & {
   occurTime?: Timestamp | undefined;
 
   /**
-   * A UUID whenever set; omit entirely in cookieless mode (an explicit "" is
-   * also rejected — set fields must satisfy the uuid rule).
+   * A UUID whenever set; omit entirely in cookieless mode (an explicit "" also
+   * drops the event as invalid_event, since a set field must be a UUID).
    *
    * @generated from field: string session_id = 7;
    */
@@ -135,7 +197,7 @@ export type Event = Message<"sdk.events.v1.Event"> & {
  * Use `create(EventSchema)` to create a new message.
  */
 export const EventSchema: GenMessage<Event> = /*@__PURE__*/
-  messageDesc(file_sdk_events_v1_events, 2);
+  messageDesc(file_sdk_events_v1_events, 4);
 
 /**
  * @generated from message sdk.events.v1.EventBatch
@@ -157,7 +219,7 @@ export type EventBatch = Message<"sdk.events.v1.EventBatch"> & {
  * Use `create(EventBatchSchema)` to create a new message.
  */
 export const EventBatchSchema: GenMessage<EventBatch> = /*@__PURE__*/
-  messageDesc(file_sdk_events_v1_events, 3);
+  messageDesc(file_sdk_events_v1_events, 5);
 
 /**
  * @generated from service sdk.events.v1.EventsService

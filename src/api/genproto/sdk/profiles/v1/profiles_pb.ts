@@ -12,20 +12,20 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file sdk/profiles/v1/profiles.proto.
  */
 export const file_sdk_profiles_v1_profiles: GenFile = /*@__PURE__*/
-  fileDesc("Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSKqAgoPSWRlbnRpZnlSZXF1ZXN0EqYBCgtleHRlcm5hbF9pZBgBIAEoCUKQAbpIjAG6AYEBChtleHRlcm5hbF9pZC5yZXNlcnZlZF9wcmVmaXgSQWV4dGVybmFsX2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gh8hdGhpcy5zdGFydHNXaXRoKCdjb29raWVsZXNzLScpyAEBcgIQARInCgZ0cmFpdHMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EikKDGFub255bW91c19pZBgDIAEoCUITukgQcg4Y/wEyCV4kfF5hbm9uLRIaCglkZXZpY2VfaWQYBCABKAlCB7pIBHICGCQiEgoQSWRlbnRpZnlSZXNwb25zZSJXChRCYXRjaElkZW50aWZ5UmVxdWVzdBI/CgppZGVudGlmaWVzGAEgAygLMiAuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVxdWVzdEIJukgGkgEDEOgHIikKFUJhdGNoSWRlbnRpZnlSZXNwb25zZRIQCghhY2NlcHRlZBgBIAEoDSKzAgoWUHJvZmlsZUlkZW50aWZ5TWVzc2FnZRKmAQoLZXh0ZXJuYWxfaWQYASABKAlCkAG6SIwBugGBAQobZXh0ZXJuYWxfaWQucmVzZXJ2ZWRfcHJlZml4EkFleHRlcm5hbF9pZCBtdXN0IG5vdCBzdGFydCB3aXRoIHRoZSByZXNlcnZlZCAnY29va2llbGVzcy0nIHByZWZpeBofIXRoaXMuc3RhcnRzV2l0aCgnY29va2llbGVzcy0nKcgBAXICEAESJwoGdHJhaXRzGAIgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIeCgpwcm9qZWN0X2lkGAMgASgJQgq6SAfIAQFyAhABEhQKDGFub255bW91c19pZBgEIAEoCRIRCglkZXZpY2VfaWQYBSABKAkyxQEKElByb2ZpbGVzU0RLU2VydmljZRJPCghJZGVudGlmeRIgLnNkay5wcm9maWxlcy52MS5JZGVudGlmeVJlcXVlc3QaIS5zZGsucHJvZmlsZXMudjEuSWRlbnRpZnlSZXNwb25zZRJeCg1CYXRjaElkZW50aWZ5EiUuc2RrLnByb2ZpbGVzLnYxLkJhdGNoSWRlbnRpZnlSZXF1ZXN0GiYuc2RrLnByb2ZpbGVzLnYxLkJhdGNoSWRlbnRpZnlSZXNwb25zZUJIWkZnaXRodWIuY29tL3B1Zy1zaC9wdWcvaW50ZXJuYWwvZ2VuL3Byb3RvL3Nkay9wcm9maWxlcy92MTtzZGtwcm9maWxlc3YxYghlZGl0aW9uc3DoBw", [file_buf_validate_validate, file_google_protobuf_struct]);
+  fileDesc("Ch5zZGsvcHJvZmlsZXMvdjEvcHJvZmlsZXMucHJvdG8SD3Nkay5wcm9maWxlcy52MSLGBAoPSWRlbnRpZnlSZXF1ZXN0EoUCCgtleHRlcm5hbF9pZBgBIAEoCULvAbpI6wG6AYEBChtleHRlcm5hbF9pZC5yZXNlcnZlZF9wcmVmaXgSQWV4dGVybmFsX2lkIG11c3Qgbm90IHN0YXJ0IHdpdGggdGhlIHJlc2VydmVkICdjb29raWVsZXNzLScgcHJlZml4Gh8hdGhpcy5zdGFydHNXaXRoKCdjb29raWVsZXNzLScpugFcChJleHRlcm5hbF9pZC5ub19udWwSLGV4dGVybmFsX2lkIG11c3Qgbm90IGNvbnRhaW4gYSBOVUwgY2hhcmFjdGVyGhghdGhpcy5jb250YWlucygnXHUwMDAwJynIAQFyAhABEicKBnRyYWl0cxgCIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSigEKDGFub255bW91c19pZBgDIAEoCUJ0ukhxugFeChNhbm9ueW1vdXNfaWQubm9fbnVsEi1hbm9ueW1vdXNfaWQgbXVzdCBub3QgY29udGFpbiBhIE5VTCBjaGFyYWN0ZXIaGCF0aGlzLmNvbnRhaW5zKCdcdTAwMDAnKXIOGP8BMgleJHxeYW5vbi0SdQoJZGV2aWNlX2lkGAQgASgJQmK6SF+6AVgKEGRldmljZV9pZC5ub19udWwSKmRldmljZV9pZCBtdXN0IG5vdCBjb250YWluIGEgTlVMIGNoYXJhY3RlchoYIXRoaXMuY29udGFpbnMoJ1x1MDAwMCcpcgIYJCISChBJZGVudGlmeVJlc3BvbnNlIlwKFEJhdGNoSWRlbnRpZnlSZXF1ZXN0EkQKCmlkZW50aWZpZXMYASADKAsyIC5zZGsucHJvZmlsZXMudjEuSWRlbnRpZnlSZXF1ZXN0Qg66SAuSAQgQ6AciA9gBAyJnChVCYXRjaElkZW50aWZ5UmVzcG9uc2USEAoIYWNjZXB0ZWQYASABKA0SPAoSaW52YWxpZF9pZGVudGlmaWVzGAIgAygLMiAuc2RrLnByb2ZpbGVzLnYxLkludmFsaWRJZGVudGlmeSI0Cg9JbnZhbGlkSWRlbnRpZnkSDQoFaW5kZXgYASABKA0SEgoKdmlvbGF0aW9ucxgCIAMoCSKSAwoWUHJvZmlsZUlkZW50aWZ5TWVzc2FnZRKFAgoLZXh0ZXJuYWxfaWQYASABKAlC7wG6SOsBugGBAQobZXh0ZXJuYWxfaWQucmVzZXJ2ZWRfcHJlZml4EkFleHRlcm5hbF9pZCBtdXN0IG5vdCBzdGFydCB3aXRoIHRoZSByZXNlcnZlZCAnY29va2llbGVzcy0nIHByZWZpeBofIXRoaXMuc3RhcnRzV2l0aCgnY29va2llbGVzcy0nKboBXAoSZXh0ZXJuYWxfaWQubm9fbnVsEixleHRlcm5hbF9pZCBtdXN0IG5vdCBjb250YWluIGEgTlVMIGNoYXJhY3RlchoYIXRoaXMuY29udGFpbnMoJ1x1MDAwMCcpyAEBcgIQARInCgZ0cmFpdHMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eh4KCnByb2plY3RfaWQYAyABKAlCCrpIB8gBAXICEAESFAoMYW5vbnltb3VzX2lkGAQgASgJEhEKCWRldmljZV9pZBgFIAEoCTLFAQoSUHJvZmlsZXNTREtTZXJ2aWNlEk8KCElkZW50aWZ5EiAuc2RrLnByb2ZpbGVzLnYxLklkZW50aWZ5UmVxdWVzdBohLnNkay5wcm9maWxlcy52MS5JZGVudGlmeVJlc3BvbnNlEl4KDUJhdGNoSWRlbnRpZnkSJS5zZGsucHJvZmlsZXMudjEuQmF0Y2hJZGVudGlmeVJlcXVlc3QaJi5zZGsucHJvZmlsZXMudjEuQmF0Y2hJZGVudGlmeVJlc3BvbnNlQkhaRmdpdGh1Yi5jb20vcHVnLXNoL3B1Zy9pbnRlcm5hbC9nZW4vcHJvdG8vc2RrL3Byb2ZpbGVzL3YxO3Nka3Byb2ZpbGVzdjFiCGVkaXRpb25zcOgH", [file_buf_validate_validate, file_google_protobuf_struct]);
 
 /**
  * @generated from message sdk.profiles.v1.IdentifyRequest
  */
 export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
   /**
-   * Stable user identifier (e.g. email, database ID).
+   * Stable, unique user identifier: your database user ID, not an email, which
+   * can change.
    * The 'cookieless-' prefix is server-owned: ingest mints those ids and the
-   * reserved-prefix rule on BatchCreateRequest.distinct_id already refuses them
+   * reserved-prefix rule on an incoming event's distinct_id already refuses them
    * from clients. external_id needs the same guard because post-identify events
    * are keyed by external_id, so an id accepted here comes back as a distinct_id
-   * that the batch rule then rejects, and because that rule is `all()`, one such
-   * user fails the WHOLE batch, taking unrelated users' events with it.
+   * and BatchCreate drops every event of that user.
    *
    * @generated from field: string external_id = 1;
    */
@@ -33,7 +33,8 @@ export type IdentifyRequest = Message<"sdk.profiles.v1.IdentifyRequest"> & {
 
   /**
    * Profile properties, shallow-merged into existing properties. On key conflict,
-   * these values take precedence over previously stored values.
+   * these values take precedence over previously stored values. A trait whose key,
+   * or any string in it, holds a NUL can't be stored and is dropped.
    *
    * @generated from field: google.protobuf.Struct traits = 2;
    */
@@ -82,8 +83,8 @@ export const IdentifyResponseSchema: GenMessage<IdentifyResponse> = /*@__PURE__*
  */
 export type BatchIdentifyRequest = Message<"sdk.profiles.v1.BatchIdentifyRequest"> & {
   /**
-   * Each item is validated with IdentifyRequest's rules; one invalid item
-   * fails the whole request.
+   * BatchIdentify validates each item on its own with IdentifyRequest's rules,
+   * so an invalid item is skipped and the rest are queued.
    *
    * @generated from field: repeated sdk.profiles.v1.IdentifyRequest identifies = 1;
    */
@@ -107,6 +108,13 @@ export type BatchIdentifyResponse = Message<"sdk.profiles.v1.BatchIdentifyRespon
    * @generated from field: uint32 accepted = 1;
    */
   accepted: number;
+
+  /**
+   * The items skipped for breaking a validation rule, in request order.
+   *
+   * @generated from field: repeated sdk.profiles.v1.InvalidIdentify invalid_identifies = 2;
+   */
+  invalidIdentifies: InvalidIdentify[];
 };
 
 /**
@@ -117,6 +125,34 @@ export const BatchIdentifyResponseSchema: GenMessage<BatchIdentifyResponse> = /*
   messageDesc(file_sdk_profiles_v1_profiles, 3);
 
 /**
+ * @generated from message sdk.profiles.v1.InvalidIdentify
+ */
+export type InvalidIdentify = Message<"sdk.profiles.v1.InvalidIdentify"> & {
+  /**
+   * Position in BatchIdentifyRequest.identifies, counting from 0.
+   *
+   * @generated from field: uint32 index = 1;
+   */
+  index: number;
+
+  /**
+   * The rules it broke, e.g. "external_id: external_id must not start with the
+   * reserved 'cookieless-' prefix". At most 10, then one more entry that counts
+   * the rest, e.g. "and 3 more".
+   *
+   * @generated from field: repeated string violations = 2;
+   */
+  violations: string[];
+};
+
+/**
+ * Describes the message sdk.profiles.v1.InvalidIdentify.
+ * Use `create(InvalidIdentifySchema)` to create a new message.
+ */
+export const InvalidIdentifySchema: GenMessage<InvalidIdentify> = /*@__PURE__*/
+  messageDesc(file_sdk_profiles_v1_profiles, 4);
+
+/**
  * ProfileIdentifyMessage is the internal NATS envelope for the identify worker.
  * project_id is injected server-side from the authenticated principal.
  *
@@ -125,8 +161,8 @@ export const BatchIdentifyResponseSchema: GenMessage<BatchIdentifyResponse> = /*
 export type ProfileIdentifyMessage = Message<"sdk.profiles.v1.ProfileIdentifyMessage"> & {
   /**
    * Mirrors IdentifyRequest.external_id: the worker re-validates this envelope,
-   * so the reserved prefix is enforced at both stages rather than trusting that
-   * the value only ever arrives from an already-validated request.
+   * so its rules hold at both stages rather than trusting that the value only
+   * ever arrives from an already-validated request.
    *
    * @generated from field: string external_id = 1;
    */
@@ -158,7 +194,7 @@ export type ProfileIdentifyMessage = Message<"sdk.profiles.v1.ProfileIdentifyMes
  * Use `create(ProfileIdentifyMessageSchema)` to create a new message.
  */
 export const ProfileIdentifyMessageSchema: GenMessage<ProfileIdentifyMessage> = /*@__PURE__*/
-  messageDesc(file_sdk_profiles_v1_profiles, 4);
+  messageDesc(file_sdk_profiles_v1_profiles, 5);
 
 /**
  * @generated from service sdk.profiles.v1.ProfilesSDKService
@@ -181,7 +217,8 @@ export const ProfilesSDKService: GenService<{
    * worker. Items for one external_id that only set traits may merge in order,
    * later values winning. It is not atomic: an error can follow a partial publish,
    * and a retry repeats what was already published. The worker applies separate
-   * messages in no guaranteed order.
+   * messages in no guaranteed order. An item that breaks a validation rule is
+   * skipped and listed in invalid_identifies; the rest are still queued.
    *
    * @generated from rpc sdk.profiles.v1.ProfilesSDKService.BatchIdentify
    */
