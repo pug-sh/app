@@ -134,7 +134,7 @@ const ConnectedApps = () => {
       <SectionHeader
         title="Connected apps"
         count={result?.enabled ? result.grants.length : undefined}
-        description="Apps you let read your projects as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
+        description="Apps you let read your projects and edit dashboards as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
       />
       {body()}
     </section>

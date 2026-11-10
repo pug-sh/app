@@ -23,7 +23,7 @@ const SETTINGS_TABS = [
   { path: 'billing', label: 'Billing', description: 'Plan and billed usage for this organization' },
   { path: 'account', label: 'Account', description: 'Your personal account settings' },
   { path: 'appearance', label: 'Appearance', description: 'Theme and colours for this browser' },
-  { path: 'connected-apps', label: 'Connected apps', description: 'Apps that read Pug as you' },
+  { path: 'connected-apps', label: 'Connected apps', description: 'Apps that read Pug and edit dashboards as you' },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {

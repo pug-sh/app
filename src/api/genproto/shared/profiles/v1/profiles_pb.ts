@@ -188,8 +188,9 @@ export type GetByExternalIdRequest = Message<"shared.profiles.v1.GetByExternalId
   externalId: string;
 
   /**
-   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
-   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   * Optional. Traffic tagged as automated at ingest ($bot, set only on web events
+   * from a public key: a known crawler, a datacenter network or headless Chrome's
+   * 800x600 screen) is EXCLUDED by default. Set true to include bots.
    *
    * @generated from field: bool include_bots = 2;
    */
@@ -230,8 +231,9 @@ export type GetRequest = Message<"shared.profiles.v1.GetRequest"> & {
   id: string;
 
   /**
-   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
-   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   * Optional. Traffic tagged as automated at ingest ($bot, set only on web events
+   * from a public key: a known crawler, a datacenter network or headless Chrome's
+   * 800x600 screen) is EXCLUDED by default. Set true to include bots.
    *
    * @generated from field: bool include_bots = 2;
    */
@@ -309,8 +311,9 @@ export type ListRequest = Message<"shared.profiles.v1.ListRequest"> & {
   filterGroupsOperator: LogicalOperator;
 
   /**
-   * Optional. Traffic tagged as automated at ingest ($bot: crawler user agents
-   * and datacenter networks) is EXCLUDED by default. Set true to include bots.
+   * Optional. Traffic tagged as automated at ingest ($bot, set only on web events
+   * from a public key: a known crawler, a datacenter network or headless Chrome's
+   * 800x600 screen) is EXCLUDED by default. Set true to include bots.
    * The sort key (first or last seen, or a derived anonymous person's
    * create_time, which is its first event) is computed after this filter, so
    * changing it mid-pagination skips rows. Keep it constant for a page_token run
@@ -631,10 +634,12 @@ export const ProfilesService: GenService<{
   },
   /**
    * Delete erases a data subject identified by profile id. Like
-   * DeleteDataSubject, it enqueues asynchronous hard erasure that reaches the
-   * events table and every derived rollup; the profile is soft-deleted
-   * synchronously in PostgreSQL and physically removed from every store by the
-   * compliance worker.
+   * DeleteDataSubject, it enqueues asynchronous hard erasure of the subject's
+   * events, activity rollup, aliases, devices and profile; the profile is
+   * soft-deleted synchronously in PostgreSQL and physically removed from every
+   * store by the compliance worker. The daily dashboard rollup is kept: it has no
+   * per-person key, though its unique-user counts still hold a hashed token per
+   * person.
    *
    * @generated from rpc shared.profiles.v1.ProfilesService.Delete
    */
