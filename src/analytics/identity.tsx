@@ -49,10 +49,8 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
 
   useEffect(() => {
     if (!customerId) {
-      // Only a real sign-out resets. Without the guard, a signed-out boot would clear the
-      // anonymous ID of a visitor who just arrived from pug.sh. That ID is the cross-subdomain
-      // link between the marketing site and this app, so dropping it would break the funnel for
-      // exactly the people it exists to measure.
+      // Only a real sign-out resets. Without the guard, every signed-out boot would clear the
+      // anonymous ID, leaving the first identify() no pre-sign-in history to merge.
       if (sentCustomerId.current === null) return
       sentCustomerId.current = null
       sentTraits.current = null

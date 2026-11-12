@@ -32,22 +32,9 @@ export const initAnalytics = () => {
 
   init(projectId, {
     apiKey: publicKey,
-    // Shares identity with pug.sh and docs.pug.sh across the registrable domain, which is what
-    // puts "read the docs, then came back and built a dashboard" on one profile. It carries
-    // identity outward only: both of those start cookieless for a visitor we have never met, so a
-    // first-timer has no device ID for the first identify() here to merge, and the pre-signup half
-    // of the funnel stays unjoined. Recovering it means granting consent over there.
-    //
-    // Pinned to 'pug.sh' (must match pug-site). `true` would auto-discover the same domain, but its
-    // widest-first probe tries `domain=.sh` first on an apex host and the browser logs that public-
-    // suffix rejection as "Cookie … rejected for invalid domain". Pinning skips that probe — same
-    // .pug.sh cookie, no console noise, and no write-probe guessing. On app.pug.sh the SDK confirms
-    // the host ends with .pug.sh before using it.
-    crossSubdomainTracking: { domain: 'pug.sh' },
-    // The SDK defaults to 'cookieless': no identifier is written to the device and identify() is a
-    // no-op, which would make the cross-subdomain cookie above dead config and leave every signed-in
-    // session anonymous. Stated explicitly because this is our own product behind a login, not a
-    // marketing page — the funnel is the reason both surfaces are instrumented at all.
+    // No crossSubdomainTracking: identity stays on app.pug.sh, because the privacy policy promises
+    // pug.sh and docs.pug.sh never link a visit to an account. The SDK defaults to 'cookieless',
+    // where identify() is a no-op and every signed-in session would stay anonymous.
     trackingConsent: 'granted',
     // Keeps our own Playwright runs and headless crawlers out of the funnel; the SDK default is off.
     excludeAutomatedBrowsers: true,
