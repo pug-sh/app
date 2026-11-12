@@ -11,6 +11,7 @@ import { granularityDisabledReason } from '@/lib/granularity'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import type { DashboardMetaPatch } from '../draft-state'
 import { InlineEditableText } from '../editor-shared'
+import { McpGuideLink } from '../mcp-guide-link'
 import {
   DASHBOARD_DEFAULT_GRANULARITIES,
   DASHBOARD_DEFAULT_RANGE_OPTIONS,
@@ -82,8 +83,8 @@ export const DashboardHeader = ({
     <div className="shrink-0">
       <div className="flex flex-wrap items-center justify-end gap-2">
         {editing ? (
-          // In edit mode these controls set the dashboard's saved defaults — the range and
-          // granularity it opens at — rather than the ephemeral per-view override.
+          // In edit mode these controls set the dashboard's saved defaults (the range and
+          // granularity it opens at) rather than the ephemeral per-view override.
           <>
             <OptionChip
               label="default range"
@@ -107,6 +108,7 @@ export const DashboardHeader = ({
           </>
         ) : (
           <>
+            {dashboard.tiles.length === 0 ? <McpGuideLink>AI setup</McpGuideLink> : null}
             <DateRangePicker
               value={globalTimeRange}
               onChange={onTimeRangeChange}

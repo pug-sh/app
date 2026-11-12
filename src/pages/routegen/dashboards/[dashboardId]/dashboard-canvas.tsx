@@ -1,30 +1,21 @@
-import { ExternalLink, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { DashboardDeleteConfirmation, type DashboardDeleteTarget } from '../delete-confirmation'
 import { EditBar } from '../edit-bar'
 import { DashboardGrid } from '../grid'
+import { McpGuideLink } from '../mcp-guide-link'
 import { InlineTemplatePicker } from '../template-picker'
 import { TileConfigPanel } from '../tile-config-panel'
 import { DashboardEmptyState } from '../tiles'
 import { ResumeBanner } from './resume-banner'
 import type { useDashboardEditor } from './use-dashboard-editor'
 
-const MCP_DOCS_URL = 'https://docs.pug.sh/mcp/'
-
 const BuildWithAgentHint = () => (
   <>
     Or connect Claude or another AI assistant to Pug's MCP server and ask it to build this dashboard for you.{' '}
-    <a
-      href={MCP_DOCS_URL}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1 text-link underline-offset-4 hover:underline"
-    >
-      Setup guide
-      <ExternalLink className="size-3" />
-    </a>
+    <McpGuideLink>Setup guide</McpGuideLink>
   </>
 )
 
