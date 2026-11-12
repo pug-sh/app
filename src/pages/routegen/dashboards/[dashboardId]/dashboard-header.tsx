@@ -11,7 +11,7 @@ import { granularityDisabledReason } from '@/lib/granularity'
 import { UNTITLED_DASHBOARD_NAME } from '../constants'
 import type { DashboardMetaPatch } from '../draft-state'
 import { InlineEditableText } from '../editor-shared'
-import { McpGuideLink } from '../mcp-guide-link'
+import { AiSetupLink } from '../mcp-guide-link'
 import {
   DASHBOARD_DEFAULT_GRANULARITIES,
   DASHBOARD_DEFAULT_RANGE_OPTIONS,
@@ -20,8 +20,6 @@ import {
 } from './controls-helpers'
 import { ShareControl } from './share-popover'
 
-// Page header: the dashboard title/description (inline-editable in edit mode) plus
-// the global time/granularity controls and the edit/delete actions.
 export const DashboardHeader = ({
   dashboard,
   editing,
@@ -108,7 +106,7 @@ export const DashboardHeader = ({
           </>
         ) : (
           <>
-            {dashboard.tiles.length === 0 ? <McpGuideLink>AI setup</McpGuideLink> : null}
+            <AiSetupLink />
             <DateRangePicker
               value={globalTimeRange}
               onChange={onTimeRangeChange}

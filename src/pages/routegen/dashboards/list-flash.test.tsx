@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { Provider } from 'jotai'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import { createStore, Provider } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Counts renders, not presence: the fetch effect runs before `render()` returns, so the empty
@@ -43,6 +43,7 @@ vi.mock('./list-row', () => ({
 }))
 
 const Dashboards = (await import('./index.page')).default
+const { aiSetupHiddenAtom } = await import('./dashboard.atoms')
 
 const renderDashboards = () =>
   render(
@@ -77,5 +78,22 @@ describe('dashboards list', () => {
 
     listCall.resolve({ dashboards: [] })
     await waitFor(() => expect(screen.getByText('No dashboards yet')).toBeTruthy())
+  })
+})
+
+describe('AI setup on the dashboards list', () => {
+  it('goes when the dashboard header hides it', () => {
+    listCall.promise = new Promise(() => {})
+    const store = createStore()
+    render(
+      <Provider store={store}>
+        <Dashboards />
+      </Provider>,
+    )
+    expect(screen.getByRole('link', { name: 'AI setup' })).toBeTruthy()
+
+    // What the header's X does.
+    act(() => store.set(aiSetupHiddenAtom, true))
+    expect(screen.queryByRole('link', { name: 'AI setup' })).toBeNull()
   })
 })

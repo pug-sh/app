@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { atom, type Getter } from 'jotai'
+import { atomWithStorage } from 'jotai/utils'
 import { trackFeature } from '@/analytics/pug'
 import type { Dashboard, DashboardsServiceUpsertRequest } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import {
@@ -17,11 +18,8 @@ type DashboardListState = {
 
 const dashboardListStateAtom = atom<DashboardListState | null>(null)
 
-// Two rules, both mirroring the overview schema. Null dashboards means "not answered yet": an
-// in-flight flag reads false on the first commit and flashes the empty state over a project that
-// has dashboards. And the state is owned by the project it was fetched for, because the page
-// remounts on a switch while this module-level atom doesn't — an ungated read would show the
-// previous project's rows under the new one.
+// Mirrors the overview schema: null means "not answered yet" (an in-flight flag flashes the empty state),
+// and the state is gated to its project, since the page remounts on a switch and this atom doesn't.
 const ownedState = (get: Getter) => {
   const state = get(dashboardListStateAtom)
   return state?.projectId === get(activeProjectAtom)?.id ? state : null
@@ -61,6 +59,9 @@ export const fetchDashboardsAtom = atom(null, async (get, set) => {
 // can open it directly in edit mode. Consumed (reset to null) on first read.
 export const pendingEditDashboardIdAtom = atom<string | null>(null)
 
+// getOnInit, or a hidden link renders once before storage loads.
+export const aiSetupHiddenAtom = atomWithStorage('pug:dashboardAiSetupHidden', false, undefined, { getOnInit: true })
+
 export const createDashboardAtom = atom(null, async (get, set, input: { displayName: string; description: string }) => {
   const headers = get(projectHeaderAtom)
   if (!headers) return null
@@ -68,7 +69,7 @@ export const createDashboardAtom = atom(null, async (get, set, input: { displayN
   const dashboardsRPC = get(dashboardsRPCAtom)
   const resp = await dashboardsRPC.create(input, { headers })
   // On the atom rather than the button, so every entry point counts and a new one can't forget.
-  // No displayName — that's the customer's text, and featureId already says what happened.
+  // No displayName: that's the customer's text, and featureId already says what happened.
   trackFeature({ featureId: 'dashboard.create', featureName: 'New dashboard' })
   await set(fetchDashboardsAtom)
   const dashboard = resp.dashboard ?? null
@@ -82,8 +83,8 @@ export const deleteDashboardAtom = atom(null, async (get, set, id: string) => {
 
   const dashboardsRPC = get(dashboardsRPCAtom)
   await dashboardsRPC.delete(create(DashboardsServiceDeleteRequestSchema, { id }), { headers })
-  // The delete control is an icon-only, hover-revealed row action — click autocapture reports it
-  // as tag `svg` with no text, so without this the click is unattributable.
+  // The list's delete is an icon-only, hover-revealed row action. Click autocapture reports it as
+  // tag `svg` with no text, so without this the click is unattributable.
   trackFeature({ featureId: 'dashboard.delete', featureName: 'Delete dashboard' })
   return (await set(fetchDashboardsAtom)) ?? []
 })
@@ -99,7 +100,7 @@ export const fetchDashboardAtom = atom(null, async (get, _set, id: string) => {
 
 // Toggle public sharing. The backend mints/clears Dashboard.shareId based on
 // isPublic. Sends the current saved metadata (update overwrites it), never an
-// unsaved draft — the caller passes the server-fetched dashboard.
+// unsaved draft: the caller passes the server-fetched dashboard.
 export const setDashboardVisibilityAtom = atom(
   null,
   async (get, _set, input: { dashboard: Dashboard; isPublic: boolean }) => {

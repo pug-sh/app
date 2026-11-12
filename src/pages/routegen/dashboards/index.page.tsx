@@ -21,7 +21,7 @@ import {
 } from './dashboard.atoms'
 import { DashboardsPlaceholder } from './list-placeholder'
 import { DashboardListRow } from './list-row'
-import { McpGuideLink } from './mcp-guide-link'
+import { AiSetupLink } from './mcp-guide-link'
 
 const NewDashboardButton = ({ creating, onClick }: { creating: boolean; onClick: () => void }) => (
   <Button size="sm" onClick={onClick} disabled={creating}>
@@ -143,7 +143,7 @@ const Dashboards = () => {
       description="Track the metrics and notes your team checks repeatedly"
       actions={
         <>
-          <McpGuideLink>AI setup</McpGuideLink>
+          <AiSetupLink />
           <Can action="create" resource="dashboard">
             <NewDashboardButton creating={creating} onClick={handleCreateDashboard} />
           </Can>
