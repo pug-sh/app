@@ -30,9 +30,9 @@ vi.mock('@/api/rpc', async () => {
 const { billingAtom } = await import('@/data/billing.atoms')
 const { activeOrgAtom } = await import('@/data/workspace.atoms')
 const { jwtAtom } = await import('@/auth/jwt.atoms')
-const { grantsAtom } = await import('./connected-apps/grants.atoms')
+const { grantsAtom } = await import('./ai-connections/grants.atoms')
 const SettingsLayout = (await import('./settings-layout')).default
-const ConnectedApps = (await import('./connected-apps/index.page')).default
+const AiConnections = (await import('./ai-connections/index.page')).default
 
 const org = create(OrgSchema, { id: 'org-a', displayName: 'A', role: OrgRole.ADMIN })
 
@@ -117,44 +117,44 @@ describe('the SSO & domains tab', () => {
   })
 })
 
-describe('the Connected apps tab', () => {
+describe('the AI connections tab', () => {
   beforeEach(() => {
     getBillingStatus.mockResolvedValue(create(GetBillingStatusResponseSchema, { billingEnabled: false }))
   })
 
   it('is offered where the server lets apps connect', async () => {
     await grantsSettled(mount('/p/p1/settings/general'))
-    expect(screen.getByText('Connected apps')).toBeTruthy()
+    expect(screen.getByText('AI connections')).toBeTruthy()
   })
 
   it('is dropped where OAuth is off', async () => {
     listGrants.mockResolvedValue(create(ListGrantsResponseSchema, { oauthEnabled: false }))
     await grantsSettled(mount('/p/p1/settings/general'))
-    expect(screen.queryByText('Connected apps')).toBeNull()
+    expect(screen.queryByText('AI connections')).toBeNull()
   })
 
   it('is dropped where there is no such service', async () => {
     listGrants.mockRejectedValue(new ConnectError('nope', Code.Unimplemented))
     await grantsSettled(mount('/p/p1/settings/general'))
-    expect(screen.queryByText('Connected apps')).toBeNull()
+    expect(screen.queryByText('AI connections')).toBeNull()
   })
 
   it('is kept when the list could not be loaded', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     listGrants.mockRejectedValue(new ConnectError('down', Code.Unavailable))
     await grantsSettled(mount('/p/p1/settings/general'))
-    expect(screen.getByText('Connected apps')).toBeTruthy()
+    expect(screen.getByText('AI connections')).toBeTruthy()
   })
 
   it('is kept while it is the tab being viewed', async () => {
     listGrants.mockResolvedValue(create(ListGrantsResponseSchema, { oauthEnabled: false }))
-    await grantsSettled(mount('/p/p1/settings/connected-apps'))
-    expect(screen.getByText('Connected apps')).toBeTruthy()
+    await grantsSettled(mount('/p/p1/settings/ai-connections'))
+    expect(screen.getByText('AI connections')).toBeTruthy()
   })
 
   // Both ask for the list as they mount.
   it('shares one request for the list with its page', async () => {
-    await grantsSettled(mount('/p/p1/settings/connected-apps', OrgRole.ADMIN, <ConnectedApps />))
+    await grantsSettled(mount('/p/p1/settings/ai-connections', OrgRole.ADMIN, <AiConnections />))
     expect(await screen.findByText('No apps are connected.')).toBeTruthy()
     expect(listGrants).toHaveBeenCalledOnce()
   })

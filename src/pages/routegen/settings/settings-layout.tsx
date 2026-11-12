@@ -1,4 +1,5 @@
 import { useAtomValue, useSetAtom } from 'jotai'
+import { Sparkles } from 'lucide-react'
 import { type ReactNode, useEffect } from 'react'
 import { useLocation } from 'wouter'
 import { useCan } from '@/auth/can'
@@ -9,10 +10,10 @@ import ProjectLink from '@/components/project-link'
 import { useBilling } from '@/hooks/use-billing'
 import { useRouteParams } from '@/lib/route-params'
 import { cn } from '@/lib/utils'
-import { grantsAtom, loadGrantsAtom } from './connected-apps/grants.atoms'
+import { grantsAtom, loadGrantsAtom } from './ai-connections/grants.atoms'
 
 // Grouped by scope: project, then organization, then you. Not every tab scopes to the project URL it
-// is reached through, so each carries its own description. Connected apps is last, so dropping it
+// is reached through, so each carries its own description. AI connections is last, so dropping it
 // moves no other tab.
 const SETTINGS_TABS = [
   { path: 'general', label: 'General', description: 'Name, timezone and theme for this project' },
@@ -23,7 +24,12 @@ const SETTINGS_TABS = [
   { path: 'billing', label: 'Billing', description: 'Plan and billed usage for this organization' },
   { path: 'account', label: 'Account', description: 'Your personal account settings' },
   { path: 'appearance', label: 'Appearance', description: 'Theme and colours for this browser' },
-  { path: 'connected-apps', label: 'Connected apps', description: 'Apps that read Pug and edit dashboards as you' },
+  {
+    path: 'ai-connections',
+    label: 'AI connections',
+    description: 'AI apps that read Pug and edit dashboards as you',
+    icon: Sparkles,
+  },
 ] as const
 
 const SettingsLayout = ({ children }: { children: ReactNode }) => {
@@ -59,12 +65,12 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
   const showBillingTab = activeTab.path === 'billing' || (showBilling && can('read', 'billing'))
   const showSsoTab = activeTab.path === 'sso' || can('read', 'domain')
   // Kept while its list loads and when it fails, like billing: only a server with OAuth off drops it.
-  const showConnectedAppsTab = activeTab.path === 'connected-apps' || grants?.enabled !== false
+  const showAiConnectionsTab = activeTab.path === 'ai-connections' || grants?.enabled !== false
   const tabs = SETTINGS_TABS.filter(
     tab =>
       (tab.path !== 'billing' || showBillingTab) &&
       (tab.path !== 'sso' || showSsoTab) &&
-      (tab.path !== 'connected-apps' || showConnectedAppsTab),
+      (tab.path !== 'ai-connections' || showAiConnectionsTab),
   )
 
   return (
@@ -78,12 +84,13 @@ const SettingsLayout = ({ children }: { children: ReactNode }) => {
                 key={tab.path}
                 href={`/settings/${tab.path}`}
                 className={cn(
-                  'shrink-0 border-b-2 pb-2 text-sm font-medium transition-colors',
+                  'flex shrink-0 items-center gap-1.5 border-b-2 pb-2 text-sm font-medium transition-colors',
                   isActive
                     ? 'border-foreground text-foreground'
                     : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
+                {'icon' in tab ? <tab.icon className="size-3.5" /> : null}
                 {tab.label}
               </ProjectLink>
             )

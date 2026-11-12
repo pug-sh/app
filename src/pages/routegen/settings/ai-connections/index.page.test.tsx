@@ -18,7 +18,7 @@ vi.mock('@/api/rpc', async () => {
 
 const { jwtAtom } = await import('@/auth/jwt.atoms')
 const { loadGrantsAtom } = await import('./grants.atoms')
-const ConnectedApps = (await import('./index.page')).default
+const AiConnections = (await import('./index.page')).default
 
 const grantInit = {
   id: 'd3uqa6s1m7j9b2c4e5g1',
@@ -53,7 +53,7 @@ const mount = () => {
   store.set(jwtAtom, jwtFor('cust-1'))
   render(
     <Provider store={store}>
-      <ConnectedApps />
+      <AiConnections />
     </Provider>,
   )
   return store
@@ -69,7 +69,7 @@ beforeEach(() => {
   revokeGrant.mockResolvedValue({})
 })
 
-describe('Connected apps', () => {
+describe('AI connections', () => {
   // Anyone can write any name into their app's details, so the host leads.
   it('lists each connection by its host, with its own name and the orgs it reads', async () => {
     mount()
@@ -143,7 +143,7 @@ describe('Connected apps', () => {
     store.set(jwtAtom, jwtFor('cust-2'))
     render(
       <Provider store={store}>
-        <ConnectedApps />
+        <AiConnections />
       </Provider>,
     )
 

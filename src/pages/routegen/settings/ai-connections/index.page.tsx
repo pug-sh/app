@@ -22,7 +22,7 @@ const When = ({ grant, field }: { grant: Grant; field: 'createTime' | 'lastUsedT
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
 
-const ConnectedApps = () => {
+const AiConnections = () => {
   const result = useAtomValue(grantsAtom)
   const load = useSetAtom(loadGrantsAtom)
   const revoke = useSetAtom(revokeGrantAtom)
@@ -50,7 +50,7 @@ const ConnectedApps = () => {
     if (result.enabled === null) {
       return (
         <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">Couldn't load your connected apps.</p>
+          <p className="text-sm text-muted-foreground">Couldn't load your AI connections.</p>
           <Button variant="outline" size="sm" onClick={() => load()}>
             Retry
           </Button>
@@ -138,7 +138,7 @@ const ConnectedApps = () => {
     <div className="max-w-2xl space-y-8">
       <section>
         <SectionHeader
-          title="Connected apps"
+          title="AI connections"
           count={result?.enabled ? result.grants.length : undefined}
           description="Apps you let read your projects and edit dashboards as you, such as Claude or ChatGPT. Each reads every project in the orgs you were in when you connected it. Disconnect one and its next request fails."
         />
@@ -171,4 +171,4 @@ const ConnectedApps = () => {
   )
 }
 
-export default ConnectedApps
+export default AiConnections
