@@ -138,9 +138,8 @@ const AppSidebar = () => {
   //
   // Unconditionally '/', unlike a project switch, which keeps you on the current page: deep routes
   // here are keyed by a dashboard or profile belonging to the org being left. Replace rather than
-  // push for the same reason: that URL names a project of the org just left, so Back lands on
-  // "Project not found", and nothing corrects it: the pick has already happened, so the bootstrap's
-  // default-pick effect sees a valid active project and declines to act.
+  // push for the same reason: that URL names a project of the org just left, and Back to it would
+  // reopen that org.
   const handleSelectOrg = (orgId: string) => {
     const target = orgs.find(org => org.id === orgId)
     if (target && target.id !== activeOrg?.id) {

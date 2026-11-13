@@ -78,9 +78,8 @@ export const fetchOrgsAtom = atom(null, async (get, set) => {
   }
 })
 
-// Refreshes the list for a session that already has a workspace (the sidebar switcher). Not
-// fetchOrgsAtom: that one tears the workspace down on failure, which is right for bootstrap and
-// would put every session one flaky list call from the error screen. Here a failure just means stale.
+// For a session that already has a workspace, so a failure keeps the last list and answers null: fetchOrgsAtom's
+// teardown is right for bootstrap, but would put every session one flaky list call from the error screen.
 export const refreshOrgsAtom = atom(null, async (get, set) => {
   const orgsRPC = get(orgsRPCAtom)
   try {
@@ -90,7 +89,7 @@ export const refreshOrgsAtom = atom(null, async (get, set) => {
     return resp.orgs
   } catch (err) {
     console.error('refreshOrgs failed:', err)
-    return get(orgsAtom)
+    return null
   }
 })
 
@@ -190,7 +189,7 @@ export const prefetchProjectsAtom = atom(null, async (get, _set, orgId: string) 
     const resp = await Promise.race([projectsRPC.batchGet({ orgId }), deadline])
     return resp?.projects ?? null
   } catch (err) {
-    console.error('prefetchProjects failed:', err)
+    console.error('prefetchProjects failed:', orgId, err)
     return null
   }
 })
@@ -205,6 +204,23 @@ export const commitProjectsAtom = atom(
     return true
   },
 )
+
+// The org of those given that has the project, and its list; null when all answered without it, undefined when one
+// didn't answer. Lists each org since Get answers 401 for a project the account can't see, costing a token refresh.
+export const findProjectOrgAtom = atom(null, (_get, set, { projectId, orgs }: { projectId: string; orgs: Org[] }) =>
+  Promise.any(
+    orgs.map(async org => {
+      const projects = await set(prefetchProjectsAtom, org.id)
+      if (projects?.some(project => project.id === projectId)) return { org, projects }
+      // Rejected, so Promise.any settles on the first org that has it rather than the slowest.
+      throw projects ? 'missing' : 'unchecked'
+    }),
+  ).catch((err: AggregateError) => (err.errors.includes('unchecked') ? undefined : null)),
+)
+
+// A linked project the last search found in none of the account's orgs, or couldn't rule out because one
+// didn't answer in time. ProjectSync shows it rather than searching again.
+export const missingProjectAtom = atom<{ projectId: string; unchecked: boolean } | null>(null)
 
 export const activeProjectAtom = atom<Project | null>(null)
 
@@ -232,7 +248,8 @@ export const projectsLoadedAtom = atom(get => {
 //
 // It also can't see ProjectSync adopting the URL's project, which happens after this reports
 // settled. What keeps that honest is App's bootstrap declining to default-pick when the route names
-// a project, so there's only ever one pick. Remove that and this quietly under-reports again.
+// a project, and opening the project's org before 'ready' when that's another one, so there's only
+// ever one pick. Remove either and this quietly under-reports again.
 export const workspaceSettledAtom = atom(get => {
   const status = get(bootstrapStatusAtom)
   // The org picker counts as settled only while it's still waiting on the user: selectOrg sets the
@@ -441,6 +458,7 @@ export const resetWorkspaceAtom = atom(null, (_, set) => {
   set(activeProjectAtom, null)
   set(projectsOrgIdAtom, null)
   set(workspaceErrorAtom, null)
+  set(missingProjectAtom, null)
   set(lastOrgIdAtom, '')
   set(bootstrapStatusAtom, 'idle')
 })
