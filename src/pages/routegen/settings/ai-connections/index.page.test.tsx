@@ -5,7 +5,7 @@ import { Code, ConnectError } from '@connectrpc/connect'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import { toast } from 'sonner'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { GrantSchema, ListGrantsResponseSchema } from '@/api/genproto/dashboard/mcpgrants/v1/mcpgrants_pb'
 import { jwtFor } from '@/test/jwt'
 
@@ -48,12 +48,12 @@ const refusal = (code: Code, reason: string) => {
   return err
 }
 
-const mount = () => {
+const mount = (Page = AiConnections, jwt = jwtAtom) => {
   const store = createStore()
-  store.set(jwtAtom, jwtFor('cust-1'))
+  store.set(jwt, jwtFor('cust-1'))
   render(
     <Provider store={store}>
-      <AiConnections />
+      <Page />
     </Provider>,
   )
   return store
@@ -68,6 +68,8 @@ beforeEach(() => {
   listGrants.mockResolvedValue(listed())
   revokeGrant.mockResolvedValue({})
 })
+
+afterEach(() => vi.unstubAllEnvs())
 
 describe('AI connections', () => {
   // Anyone can write any name into their app's details, so the host leads.
@@ -155,6 +157,20 @@ describe('AI connections', () => {
     mount()
 
     expect(await screen.findByText('http://vitest.invalid/mcp')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: "Pug in Claude's directory" })).toBeNull()
+  })
+
+  it("links Claude's directory on Pug Cloud", async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.pug.sh')
+    vi.resetModules()
+    const { jwtAtom: cloudJwtAtom } = await import('@/auth/jwt.atoms')
+    const CloudAiConnections = (await import('./index.page')).default
+    mount(CloudAiConnections, cloudJwtAtom)
+
+    const link = await screen.findByRole('link', { name: "Pug in Claude's directory" })
+    expect(link.getAttribute('href')).toBe('https://claude.ai/directory/pug')
+    expect(screen.getByText(/^Connect Claude from its directory/)).toBeTruthy()
+    expect(screen.getByText('https://api.pug.sh/mcp')).toBeTruthy()
   })
 
   it("says so where the server doesn't let apps connect", async () => {

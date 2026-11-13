@@ -14,6 +14,8 @@ const ALLOWED: Record<string, string> = {
   'https://cdn.pugs.dev': 'label, text in an SDK snippet',
   'https://acme.okta.com': 'label, a form placeholder',
   'https://docs.pug.sh': 'link',
+  'https://claude.ai': 'link',
+  'https://api.pug.sh': 'label, compared with the API’s /mcp',
   'https://discord.gg': 'link',
   'https://www.reddit.com': 'link',
   'https://openstreetmap.org': 'link, map attribution',
