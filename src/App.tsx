@@ -32,14 +32,17 @@ import {
   commitProjectsAtom,
   fetchOrgsAtom,
   fetchProjectsAtom,
+  findProjectOrgAtom,
   joinedOrgIdsAtom,
   lastOrgIdAtom,
   lastProjectByOrgAtom,
   loadOrgAtom,
+  missingProjectAtom,
   orgsAtom,
   prefetchProjectsAtom,
   projectsAtom,
   projectsLoadedAtom,
+  refreshOrgsAtom,
   rememberLastProjectAtom,
   resetWorkspaceAtom,
   selectOrgAtom,
@@ -180,6 +183,9 @@ export const WorkspaceBootstrap = () => {
   const fetchProjects = useSetAtom(fetchProjectsAtom)
   const prefetchProjects = useSetAtom(prefetchProjectsAtom)
   const commitProjects = useSetAtom(commitProjectsAtom)
+  const refreshOrgs = useSetAtom(refreshOrgsAtom)
+  const findProjectOrg = useSetAtom(findProjectOrgAtom)
+  const setMissingProject = useSetAtom(missingProjectAtom)
   const projectsLoaded = useAtomValue(projectsLoadedAtom)
   const selectOrg = useSetAtom(selectOrgAtom)
   const resetWorkspace = useSetAtom(resetWorkspaceAtom)
@@ -221,6 +227,20 @@ export const WorkspaceBootstrap = () => {
           // Committed before 'ready': the org-keyed effect runs off 'ready' and skips a landed list.
           const projects = await prefetched
           if (cancelled) return
+          // A link to a project in another of the account's orgs opens that org before 'ready', or this one
+          // would settle first and paint its project's theme.
+          if (routeProjectId && !projects?.some(project => project.id === routeProjectId)) {
+            const others = (await refreshOrgs())?.filter(other => other.id !== org.id)
+            const found = others ? await findProjectOrg({ projectId: routeProjectId, orgs: others }) : undefined
+            if (cancelled) return
+            if (found) {
+              selectOrg(found.org)
+              commitProjects({ orgId: found.org.id, projects: found.projects })
+              setStatus('ready')
+              return
+            }
+            setMissingProject({ projectId: routeProjectId, unchecked: found === undefined })
+          }
           // Keyed to the org the list was fetched for, not the one that came back: if they differ
           // the commit is dropped and the effect below refetches, rather than mis-filing the list.
           if (projects) commitProjects({ orgId: restoreOrgId, projects })
@@ -246,6 +266,19 @@ export const WorkspaceBootstrap = () => {
         setStatus('ready')
         return
       }
+      // A link that names its project, as an MCP client's dashboard links do, opens that project's org
+      // rather than asking which org to open.
+      if (routeProjectId) {
+        const found = await findProjectOrg({ projectId: routeProjectId, orgs: list })
+        if (cancelled) return
+        if (found) {
+          selectOrg(found.org)
+          commitProjects({ orgId: found.org.id, projects: found.projects })
+          setStatus('ready')
+          return
+        }
+        setMissingProject({ projectId: routeProjectId, unchecked: found === undefined })
+      }
       setStatus('needs-selection')
     })()
     return () => {
@@ -261,6 +294,10 @@ export const WorkspaceBootstrap = () => {
     prefetchProjects,
     commitProjects,
     fetchOrgs,
+    refreshOrgs,
+    routeProjectId,
+    findProjectOrg,
+    setMissingProject,
     selectOrg,
     setStatus,
   ])
@@ -299,8 +336,9 @@ export const WorkspaceBootstrap = () => {
     // Defaulting to projects[0] here would win that race and make a project the user never asked for
     // briefly active for everything watching activeProjectAtom. The page itself is shielded by
     // ProjectSync's gate, but workspaceSettledAtom isn't, and reports a settled workspace around the
-    // wrong project. Only default when the URL has no opinion, or names a project that isn't
-    // available (ProjectSync renders "Project not found" and needs a sane fallback behind it).
+    // wrong project. Only default when the URL has no opinion, or names a project this org doesn't have:
+    // by 'ready' bootstrap has looked in the account's other orgs, so ProjectSync renders "Project not
+    // found" and needs a sane fallback behind it.
     if (routeProjectId && projects.some(project => project.id === routeProjectId)) return
     // The URL has no opinion, so restore the last project visited in this org before falling back to
     // the first: landing on the bare app URL should return you where you left off, the way lastOrgId

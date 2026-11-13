@@ -15,6 +15,15 @@ import { grantsAtom, loadGrantsAtom, revokeGrantAtom } from './grants.atoms'
 const MCP_DOCS_URL = 'https://docs.pug.sh/mcp/'
 // Sign-in works only at the OAuth issuer's /mcp, so this assumes the API origin is PUG_API_BASE_URL, as on Pug Cloud.
 const MCP_URL = `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '')}/mcp`
+// The directory's listing connects to Pug Cloud's /mcp, so only Pug Cloud links to it.
+const CLAUDE_DIRECTORY_URL = MCP_URL === 'https://api.pug.sh/mcp' ? 'https://claude.ai/directory/pug' : null
+
+const connectHint = () => {
+  if (CLAUDE_DIRECTORY_URL) {
+    return 'Connect Claude from its directory, or add this URL to another MCP client that can sign in, then click Allow when Pug asks.'
+  }
+  return 'Add this URL to Claude or another MCP client that can sign in, then click Allow when Pug asks.'
+}
 
 const When = ({ grant, field }: { grant: Grant; field: 'createTime' | 'lastUsedTime' }) => {
   const date = validDate(tsToDate(grant[field]))
@@ -151,7 +160,7 @@ const AiConnections = () => {
             title="Connect an app"
             description={
               <>
-                Add this URL to Claude or another MCP client that can sign in, then click Allow when Pug asks.{' '}
+                {connectHint()}{' '}
                 <a
                   href={MCP_DOCS_URL}
                   target="_blank"
@@ -164,6 +173,20 @@ const AiConnections = () => {
               </>
             }
           />
+          {CLAUDE_DIRECTORY_URL && (
+            <div className="flex items-center gap-4 border-b border-border/50 py-2.5">
+              <span className="w-24 shrink-0 text-xs text-muted-foreground">Claude</span>
+              <a
+                href={CLAUDE_DIRECTORY_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-link underline-offset-4 hover:underline"
+              >
+                Pug in Claude's directory
+                <ExternalLink className="size-3" />
+              </a>
+            </div>
+          )}
           <CopyableCode label="Server URL" value={MCP_URL} />
         </section>
       )}

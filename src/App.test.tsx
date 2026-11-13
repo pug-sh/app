@@ -78,11 +78,13 @@ const {
   lastOrgIdAtom,
   openJoinedOrgsAtom,
   lastProjectByOrgAtom,
+  PREFETCH_DEADLINE_MS,
   projectsAtom,
   rememberLastProjectAtom,
   renameOrgAtom,
   selectOrgAtom,
   workspaceErrorAtom,
+  workspaceSettledAtom,
 } = await import('@/data/workspace.atoms')
 const { customerIdAtom, jwtAtom, refreshTokenAtom } = await import('@/auth/jwt.atoms')
 const { isDemoSessionAtom } = await import('@/auth/demo')
@@ -167,7 +169,7 @@ describe('WorkspaceBootstrap default project pick', () => {
   })
 
   it('still defaults when the route names a project this org does not have', async () => {
-    // ProjectSync renders "Project not found" over this, and needs a sane fallback behind it.
+    // ProjectSync renders "Project not found" over this once no other org has it, and needs a sane fallback.
     const store = mount({ path: '/p/gone/overview', lastProjectByOrg: { 'org-a': 'p2' } })
 
     await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p2'))
@@ -824,6 +826,252 @@ describe('switching organization', () => {
       land()
     })
     await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p1'))
+  })
+})
+
+describe("a link to a project in another of the account's orgs", () => {
+  const orgB = create(OrgSchema, { id: 'org-b', displayName: 'Org B' })
+  const orgC = create(OrgSchema, { id: 'org-c', displayName: 'Org C' })
+  const projectsOfB = [
+    create(ProjectSchema, { id: 'b1', displayName: 'B First' }),
+    create(ProjectSchema, { id: 'b2', displayName: 'B Second' }),
+  ]
+
+  // Keyed like the real router's routes, so leaving a page unmounts its ProjectSync.
+  const mountAt = (store: ReturnType<typeof createStore>, path: string) => {
+    const { hook, navigate } = memoryLocation({ path })
+    render(
+      <Provider store={store}>
+        <Router hook={hook}>
+          <WorkspaceBootstrap />
+          <Switch>
+            {['overview', 'insights'].map(page => (
+              <Route key={page} path={`/p/:projectId/${page}`}>
+                <ProjectSync>
+                  <div>{page}</div>
+                </ProjectSync>
+              </Route>
+            ))}
+            <Route>
+              <ProjectRedirect />
+            </Route>
+          </Switch>
+        </Router>
+      </Provider>,
+    )
+    return { navigate }
+  }
+
+  // Signed in but not yet booted, unlike seedStore, restoring the given org if any.
+  const bootStore = (lastOrgId?: string) => {
+    const store = createStore()
+    store.set(refreshTokenAtom, 'refresh-token')
+    store.set(jwtAtom, jwtFor('cust-1'))
+    if (lastOrgId) store.set(lastOrgIdAtom, lastOrgId)
+    return store
+  }
+
+  // Every org opened from here on: an end state can't tell a direct open from a hop through another org.
+  const recordOpened = (store: ReturnType<typeof createStore>) => {
+    const opened: (string | undefined)[] = []
+    store.sub(activeOrgAtom, () => opened.push(store.get(activeOrgAtom)?.id))
+    return opened
+  }
+
+  // Held open by hand: what's under test is the window before org B's list lands.
+  const holdOrgB = () => {
+    const held = { land: () => {} }
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) => {
+      if (orgId !== 'org-b') return Promise.resolve({ projects })
+      return new Promise(resolve => {
+        held.land = () => resolve({ projects: projectsOfB })
+      })
+    })
+    return held
+  }
+
+  const listsOf = (orgId: string) => batchGet.mock.calls.filter(([req]) => req.orgId === orgId)
+
+  beforeEach(() => {
+    orgsGet.mockReset()
+    orgsGet.mockResolvedValue({ org: orgA })
+    orgsList.mockResolvedValue({ orgs: [orgA, orgB] })
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects }),
+    )
+  })
+
+  it('opens the org that has it', async () => {
+    const store = seedStore()
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(store.get(activeOrgAtom)?.id).toBe('org-b')
+    expect(screen.getByText('overview')).toBeTruthy()
+    expect(listsOf('org-b')).toHaveLength(1)
+  })
+
+  it('opens it from an org with no projects', async () => {
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) =>
+      Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : [] }),
+    )
+    const store = seedStore()
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(store.get(activeOrgAtom)?.id).toBe('org-b')
+  })
+
+  it('looks past an org whose list fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    orgsList.mockResolvedValue({ orgs: [orgA, orgC, orgB] })
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) => {
+      if (orgId === 'org-c') return Promise.reject(new ConnectError('down', Code.Unavailable))
+      return Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects })
+    })
+    const store = seedStore()
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(store.get(activeOrgAtom)?.id).toBe('org-b')
+  })
+
+  it('calls the project missing only once no org of the account has it', async () => {
+    const orgBList = holdOrgB()
+    const store = seedStore()
+    mountAt(store, '/p/gone/overview')
+
+    await waitFor(() => expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-b' }))
+    expect(screen.queryByText('Project not found')).toBeNull()
+    expect(screen.queryByText('overview')).toBeNull()
+    await act(async () => orgBList.land())
+
+    expect(await screen.findByText('Project not found')).toBeTruthy()
+    expect(store.get(activeOrgAtom)?.id).toBe('org-a')
+  })
+
+  it("says so when an org doesn't answer in time, and tries again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      let answers = false
+      batchGet.mockImplementation(({ orgId }: { orgId: string }) => {
+        if (orgId !== 'org-b') return Promise.resolve({ projects })
+        return answers ? Promise.resolve({ projects: projectsOfB }) : new Promise(() => {})
+      })
+      const store = seedStore()
+      mountAt(store, '/p/b2/overview')
+      await waitFor(() => expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-b' }))
+      await act(async () => {
+        vi.advanceTimersByTime(PREFETCH_DEADLINE_MS)
+      })
+
+      expect(await screen.findByText("Couldn't open this project")).toBeTruthy()
+      answers = true
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+      await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+      expect(store.get(activeOrgAtom)?.id).toBe('org-b')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drops the search when the route moves on before it lands', async () => {
+    const orgBList = holdOrgB()
+    const store = seedStore()
+    const { navigate } = mountAt(store, '/p/b2/overview')
+    await waitFor(() => expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-b' }))
+    // A stale switch to org B would miss p2 there, and the search that starts then switches back.
+    const opened = recordOpened(store)
+
+    act(() => navigate('/p/p2/overview'))
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('p2'))
+    // A macrotask, so the dropped search has run to its end before anything is asserted.
+    await act(async () => {
+      orgBList.land()
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+
+    expect(opened).toEqual([])
+    expect(store.get(activeProjectAtom)?.id).toBe('p2')
+  })
+
+  it('drops the search when the page it started on goes away', async () => {
+    const orgBList = holdOrgB()
+    const store = seedStore()
+    const { navigate } = mountAt(store, '/p/b2/overview')
+    await waitFor(() => expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-b' }))
+    const opened = recordOpened(store)
+
+    act(() => navigate('/p/p1/insights'))
+    expect(await screen.findByText('insights')).toBeTruthy()
+    await act(async () => {
+      orgBList.land()
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+
+    expect(opened).toEqual([])
+    expect(store.get(activeProjectAtom)?.id).toBe('p1')
+  })
+
+  it('opens the org that has it rather than asking which org to open', async () => {
+    const store = bootStore()
+    const opened = recordOpened(store)
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(opened).toEqual(['org-b'])
+    expect(store.get(bootstrapStatusAtom)).toBe('ready')
+    expect(batchGet).toHaveBeenCalledTimes(2)
+  })
+
+  it("doesn't wait for an org that never answers once another has it", async () => {
+    orgsList.mockResolvedValue({ orgs: [orgA, orgC, orgB] })
+    batchGet.mockImplementation(({ orgId }: { orgId: string }) => {
+      if (orgId === 'org-c') return new Promise(() => {})
+      return Promise.resolve({ projects: orgId === 'org-b' ? projectsOfB : projects })
+    })
+    const store = bootStore()
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(store.get(activeOrgAtom)?.id).toBe('org-b')
+  })
+
+  it('asks which org to open when none has it, then says so without looking again', async () => {
+    const store = bootStore()
+    mountAt(store, '/p/gone/overview')
+
+    await waitFor(() => expect(store.get(bootstrapStatusAtom)).toBe('needs-selection'))
+    expect(store.get(activeOrgAtom)).toBeNull()
+    act(() => store.set(selectOrgAtom, orgA))
+
+    expect(await screen.findByText('Project not found')).toBeTruthy()
+    expect(orgsList).toHaveBeenCalledTimes(1)
+  })
+
+  // A signed-in browser restores the org it last had open, so this is how most such links arrive.
+  it('settles only on its project when the restored org is another', async () => {
+    const store = bootStore('org-a')
+    const settled: string[] = []
+    store.sub(workspaceSettledAtom, () => {
+      if (!store.get(workspaceSettledAtom)) return
+      settled.push(`${store.get(activeOrgAtom)?.id}/${store.get(activeProjectAtom)?.id}`)
+    })
+    mountAt(store, '/p/b2/overview')
+
+    await waitFor(() => expect(store.get(activeProjectAtom)?.id).toBe('b2'))
+    expect(settled).toEqual(['org-b/b2'])
+  })
+
+  it('says a project is missing without looking again once the restore has', async () => {
+    const store = bootStore('org-a')
+    mountAt(store, '/p/gone/overview')
+
+    expect(await screen.findByText('Project not found')).toBeTruthy()
+    expect(store.get(activeOrgAtom)?.id).toBe('org-a')
+    expect(orgsList).toHaveBeenCalledTimes(1)
+    expect(listsOf('org-b')).toHaveLength(1)
   })
 })
 

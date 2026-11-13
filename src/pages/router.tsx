@@ -1,10 +1,20 @@
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { AlertCircle, FolderPlus } from 'lucide-react'
 import { Component, Fragment, type ReactNode, Suspense, useEffect } from 'react'
 import { Route, Switch, useLocation, useSearch } from 'wouter'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
-import { activeProjectAtom, projectsAtom, projectsLoadedAtom } from '@/data/workspace.atoms'
+import {
+  activeOrgAtom,
+  activeProjectAtom,
+  commitProjectsAtom,
+  findProjectOrgAtom,
+  missingProjectAtom,
+  projectsAtom,
+  projectsLoadedAtom,
+  refreshOrgsAtom,
+  selectOrgAtom,
+} from '@/data/workspace.atoms'
 import { useRouteParams } from '@/lib/route-params'
 import ProfileShell from './routegen/profiles/[profileId]/_shell'
 import SettingsLayout from './routegen/settings/settings-layout'
@@ -61,8 +71,17 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
   const { projectId } = useRouteParams<{ projectId: string }>()
   const [activeProject, setActiveProject] = useAtom(activeProjectAtom)
   const projects = useAtomValue(projectsAtom)
+  const projectsLoaded = useAtomValue(projectsLoadedAtom)
+  const activeOrgId = useAtomValue(activeOrgAtom)?.id
+  const [missingProject, setMissingProject] = useAtom(missingProjectAtom)
+  const refreshOrgs = useSetAtom(refreshOrgsAtom)
+  const findProjectOrg = useSetAtom(findProjectOrgAtom)
+  const selectOrg = useSetAtom(selectOrgAtom)
+  const commitProjects = useSetAtom(commitProjectsAtom)
   const [, navigate] = useLocation()
   const matchedProject = projectId ? projects.find(p => p.id === projectId) : null
+  const missing = !!projectId && projectsLoaded && !matchedProject
+  const verdict = missingProject?.projectId === projectId ? missingProject : null
 
   useEffect(() => {
     if (!projectId || projects.length === 0 || !matchedProject) return
@@ -71,9 +90,62 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
     setActiveProject(matchedProject)
   }, [projectId, projects.length, matchedProject, activeProject, setActiveProject])
 
-  const notFound = !!projectId && projects.length > 0 && !matchedProject
+  // A link can name a project in another of the account's orgs: open that org before calling the project missing.
+  useEffect(() => {
+    if (!missing || verdict) return
+    let cancelled = false
+    void (async () => {
+      const others = (await refreshOrgs())?.filter(org => org.id !== activeOrgId)
+      const found = others ? await findProjectOrg({ projectId, orgs: others }) : undefined
+      if (cancelled) return
+      if (found) {
+        selectOrg(found.org)
+        commitProjects({ orgId: found.org.id, projects: found.projects })
+      } else {
+        setMissingProject({ projectId, unchecked: found === undefined })
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    missing,
+    verdict,
+    projectId,
+    activeOrgId,
+    refreshOrgs,
+    findProjectOrg,
+    selectOrg,
+    commitProjects,
+    setMissingProject,
+  ])
 
-  if (notFound) {
+  if (missing && !verdict) return <LoadingSpinner />
+
+  if (missing && verdict?.unchecked) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+        <p className="text-sm font-medium mb-1">Couldn't open this project</p>
+        <p className="text-xs mb-3">Some of your organizations didn't answer in time.</p>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setMissingProject(null)}
+            className="text-xs text-link hover:underline underline-offset-4"
+          >
+            Try again
+          </button>
+          <button
+            onClick={() => navigate('/', { replace: true })}
+            className="text-xs text-link hover:underline underline-offset-4"
+          >
+            Go to overview
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (missing) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
         <p className="text-sm font-medium mb-1">Project not found</p>
@@ -88,7 +160,7 @@ export const ProjectSync = ({ children }: { children: React.ReactNode }) => {
     )
   }
 
-  // The effect above adopts the route's project a commit later, so a spinner here would only flash.
+  // The first effect adopts the route's project a commit later, so a spinner here would only flash.
   if (projectId && matchedProject && activeProject?.id !== projectId) return null
 
   // Keyed on the route's project so switching projects remounts the page rather than re-rendering
