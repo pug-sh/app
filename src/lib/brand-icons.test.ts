@@ -65,6 +65,7 @@ describe('resolveBrowserIcon', () => {
   // Brave borrowed Chrome's glyph and the other three drew nothing at all.
   it('resolves each Chromium derivative to its own glyph', () => {
     expect(resolveBrowserIcon('Microsoft Edge')).toBe('edge')
+    expect(resolveBrowserIcon('Edge')).toBe('edge')
     expect(resolveBrowserIcon('Brave')).toBe('brave')
     expect(resolveBrowserIcon('Vivaldi')).toBe('vivaldi')
     expect(resolveBrowserIcon('DuckDuckGo')).toBe('duckduckgo')
@@ -93,6 +94,27 @@ describe('resolveBrowserIcon', () => {
     const facebookOnIOS =
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/476.0.0.37.108;FBDV/iPhone14,5;FBMD/iPhone;FBSN/iOS;FBSV/17.5;FBLC/en_US]'
     expect(resolveBrowserIcon(facebookOnIOS)).toBe('facebook')
+
+    const messengerOnIOS =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/MessengerForiOS;FBAV/470.0.0.37.106;FBBV/634476372;FBDV/iPhone14,5;FBMD/iPhone;FBSN/iOS;FBSV/17.5;FBSS/3;FBID/phone;FBLC/en_US;FBOP/5]'
+    expect(resolveBrowserIcon(messengerOnIOS)).toBe('messenger')
+  })
+
+  // Every WeChat UA carries "MicroMessenger", so a bare 'messenger' token would draw Meta's mark for it.
+  it('does not read WeChat as Facebook Messenger', () => {
+    const weChatOnIOS =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003129) NetType/WIFI Language/zh_CN'
+    const weChatOnAndroid =
+      'Mozilla/5.0 (Linux; Android 13; V2227A Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 MMWEBID/2247 MicroMessenger/8.0.47.2560(0x28002F30) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64'
+    expect(resolveBrowserIcon(weChatOnIOS)).toBeNull()
+    expect(resolveBrowserIcon(weChatOnAndroid)).toBe('chrome')
+  })
+
+  // Meta's crawlers carry the word too: ua-parser names them "FacebookBot", and their raw UAs link
+  // facebook.com. Falling through keeps a bot row's robot glyph.
+  it("does not draw Facebook's mark for Meta's crawlers", () => {
+    expect(resolveBrowserIcon('FacebookBot')).toBeNull()
+    expect(resolveBrowserIcon('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')).toBeNull()
   })
 
   it('resolves the browsers below Opera by share', () => {
@@ -120,7 +142,7 @@ describe('resolveBrowserIcon', () => {
   })
 
   // The other half of that rule, and the half that was wrong: a derivative's raw UA carries its own
-  // token *plus* Chrome's and Safari's, so 'opr'/'ucweb'/'samsungbrowser'/'fxios' only ever fire
+  // token *plus* Chrome's and Safari's, so 'opr/'/'ucweb'/'samsungbrowser'/'fxios' only ever fire
   // from above the generic pair. Below it they are dead, and each of these drew Chrome or Safari.
   it('keeps every named brand above Chrome and Safari for a raw user-agent string', () => {
     const uas = {
@@ -151,6 +173,16 @@ describe('resolveBrowserIcon', () => {
     const chromeOnGalaxy =
       'Mozilla/5.0 (Linux; Android 13; SAMSUNG SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Mobile Safari/537.36'
     expect(resolveBrowserIcon(chromeOnGalaxy)).toBe('chrome')
+  })
+
+  // Same shape: a bare 'edge' or 'opr' read a Motorola Edge, or an Android 8 build ID, as the browser.
+  it('does not read the handset or build in a raw user-agent as Edge or Opera', () => {
+    const chromeOnMotorolaEdge =
+      'Mozilla/5.0 (Linux; Android 11; motorola edge) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36'
+    const chromeOnOreo =
+      'Mozilla/5.0 (Linux; Android 8.0.0; Pixel XL Build/OPR6.170623.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.98 Mobile Safari/537.36'
+    expect(resolveBrowserIcon(chromeOnMotorolaEdge)).toBe('chrome')
+    expect(resolveBrowserIcon(chromeOnOreo)).toBe('chrome')
   })
 
   // $browser is whatever the browser declares in userAgentData.brands, so this branch is

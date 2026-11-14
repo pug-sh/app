@@ -22,22 +22,27 @@ const resolveAppleIcon = (os?: string) => {
 
 export const resolveBrowserIcon = (browser?: string) => {
   if (!browser?.trim()) return null
+  const name = browser.toLowerCase().trim()
 
   // $browser is normally a family name ("Google Chrome", "Brave"), so each Chromium derivative needs
-  // its own line; unlisted, it falls through to null, not to Chrome. Order is load-bearing, in one
-  // direction: a raw UA reaching us unnormalized carries the derivative's own token *alongside*
-  // Chrome's and Safari's, so every named brand has to sit above that generic pair or its
-  // 'edg'/'opr'/'ucweb'/'fxios'/'samsungbrowser' token is unreachable. chrome above safari is the
-  // same rule: every Chromium UA ends in "Safari".
+  // its own line; unlisted, it falls through to null, not to Chrome. Order is load-bearing: a raw UA
+  // reaching us unnormalized carries the derivative's own token *alongside* Chrome's and Safari's, so
+  // every named brand has to sit above that generic pair or its 'edg/'/'opr/'/'ucweb'/'fxios'/
+  // 'samsungbrowser' token is unreachable. chrome above safari is the same rule: every Chromium UA
+  // ends in "Safari".
   if (matchToken(browser, ['instagram'])) return 'instagram'
-  // Above Facebook: ua-parser names it "Facebook Messenger", and its raw UA carries the same FBAN/FB_IAB tags.
-  if (matchToken(browser, ['messenger'])) return 'messenger'
-  if (matchToken(browser, ['facebook', 'fban', 'fb_iab'])) return 'facebook'
-  if (matchToken(browser, ['edge', 'edg'])) return 'edge'
+  // Above Facebook, whose name and FBAN/FB_IAB tags it shares. Never a bare 'messenger': every WeChat
+  // UA carries "MicroMessenger".
+  if (matchToken(browser, ['facebook messenger', 'fban/messenger', 'fb_iab/messenger'])) return 'messenger'
+  // The family name, whole: Meta's crawlers carry the word too ("FacebookBot", a facebook.com URL).
+  if (/^facebook\b/.test(name) || matchToken(browser, ['fban', 'fb_iab'])) return 'facebook'
+  // Edge's and Opera's UA tokens keep their slash, and Edge's family is matched from the start: a raw
+  // UA names the handset and build too ("motorola edge 40", Android 8's "OPR6.170623.012").
+  if (/^(?:microsoft )?edge\b/.test(name) || matchToken(browser, ['edg/', 'edga/', 'edgios/', 'edge/'])) return 'edge'
   if (matchToken(browser, ['brave'])) return 'brave'
   if (matchToken(browser, ['vivaldi'])) return 'vivaldi'
   if (matchToken(browser, ['duckduckgo'])) return 'duckduckgo'
-  if (matchToken(browser, ['opera', 'opr'])) return 'opera'
+  if (matchToken(browser, ['opera', 'opr/'])) return 'opera'
   // Never a bare 'uc': two letters would match far too much, DuckDuckGo included.
   if (matchToken(browser, ['uc browser', 'ucbrowser', 'ucweb'])) return 'uc'
   // Never a bare 'samsung' either: a Chrome UA names the handset in the same string
@@ -91,8 +96,8 @@ export const resolveDeviceIcon = (device?: string, os?: string) => {
     const apple = resolveAppleIcon(os) ?? resolveAppleIcon(device)
     if (apple) return apple
     // A named OS decides on its own. Guessing Android for any non-Apple mobile is what drew the
-    // Android glyph for KaiOS, whose 'ios' substring makes isMobileOS true, and Nokia, which
-    // builds both Android and KaiOS handsets, would have the model agree with the wrong answer.
+    // Android glyph for KaiOS, whose 'ios' substring makes isMobileOS true. Nokia, which builds
+    // both Android and KaiOS handsets, would have the model agree with the wrong answer.
     if (os?.trim()) return resolveOsIcon(os)
     return resolveDeviceModelIcon(device)
   }
@@ -110,7 +115,7 @@ const APPLE_MOBILE_MODELS = ['iphone', 'ipod', 'ipad']
 // are covered by the bare `mac` alternative.
 const APPLE_DESKTOP_MODEL = /\b(?:macbook|macintosh|imac|mac)\b/
 // Whole-word for the same reason as APPLE_DESKTOP_MODEL: these run against arbitrary UA text, where a
-// substring hit earns a confidently wrong glyph: "vivo" sits inside "VivoBook", an Asus *laptop*.
+// substring hit earns a confidently wrong glyph ("vivo" sits inside "VivoBook", an Asus *laptop*).
 // `moto` can't reach "Motorola" under \b, so both are listed. Asus and Lenovo are deliberately absent:
 // both ship Windows laptops under the brand that names their Android phones, so a model string alone
 // can't tell the two apart, and Asus phones are already covered by `zenfone`.

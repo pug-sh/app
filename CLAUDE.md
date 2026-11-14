@@ -199,9 +199,10 @@ of every other icon combined. Everything is self-hosted now.
   prove a path resolves: `public/` is copied verbatim and never enters the module graph, so a typo
   or a renamed file is an `<img>` that 404s silently behind `aria-hidden` and still clears `tsc`,
   `vite build`, `knip` and `biome`. **`brand-icon-assets.test.ts` is that check**: it walks both
-  directions (every mapped path exists, case-exact; no orphan files) and covers `public/sdk/` too,
-  whose four language/framework marks are plain literals on `Platform.icon` in `setup-platforms.ts`
-  with no type guarantee of their own.
+  directions (every mapped path exists, case-exact; no orphan files), requires each brand file to be
+  named after its key, so two swapped paths fail, and requires a fill in every SVG. It covers
+  `public/sdk/` too, whose language/framework marks are plain literals on `Platform.icon` in
+  `setup-platforms.ts` with no type guarantee of their own.
 - **Mapping:** `src/lib/brand-icons.ts`: string heuristics over the `$browser`, `$os`, `$device`
   auto-properties.
 - **Components:** `BrandIcon` / `UnknownBrowserIcon` / `BotBrowserIcon` (`src/components/brand-icon.tsx`),
@@ -236,8 +237,8 @@ row doesn't name. That also means an OS-only row shows no bot glyph, bot or not.
 rendered": the slot now has two possible glyphs, and asserting mere presence let an inverted ternary
 pass green.
 
-**Ordering in `resolveBrowserIcon` is load-bearing; do not alphabetise it.** The `edg`, `crios`,
-`fxios`, `opr`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and
+**Ordering in `resolveBrowserIcon` is load-bearing; do not alphabetise it.** The `edg/`, `crios`,
+`fxios`, `opr/`, `ucweb` and `samsungbrowser` tokens exist for a raw UA reaching us unnormalized, and
 a raw UA names the derivative *alongside* Chrome and Safari: `Chrome/120 … Safari/537.36 OPR/106`.
 So **every branch that names a specific brand has to sit above the generic `chrome`/`safari` pair**,
 or its raw-UA token is unreachable: Opera, UC and Samsung Internet each drew Chrome, and Firefox iOS
@@ -245,11 +246,21 @@ drew Safari, for exactly that reason. `chrome` above `safari` is the same rule, 
 UA ends in `Safari`. Clean family names cannot catch a reorder, which is why `brand-icons.test.ts`
 pins the whole order with raw UA strings.
 
-Two tokens are deliberately narrower than the brand name, and both would misfire if widened:
-`samsung` is matched as `samsung internet`/`samsungbrowser`, because a plain Chrome UA carries the
-handset in the same string (`SAMSUNG SM-S918B`) and from above the `chrome` branch a bare `samsung`
-turns Chrome-on-a-Galaxy into Samsung Internet, pinned by its own test. `uc` is two letters that sit
-inside `DuckDuckGo`, kept right by both the multi-token guard *and* DuckDuckGo's earlier branch.
+Some tokens are deliberately narrower than the brand name, because a raw UA also names the handset,
+the build and other apps, and each would misfire if widened. Each is pinned by its own test:
+
+- `samsung` is matched as `samsung internet`/`samsungbrowser`: a plain Chrome UA carries the handset
+  (`SAMSUNG SM-S918B`), and from above the `chrome` branch a bare `samsung` turns Chrome-on-a-Galaxy
+  into Samsung Internet.
+- Edge's and Opera's UA tokens keep their slash (`edg/`, `opr/`), and Edge's family name is matched
+  from the start of the string: `motorola edge 40` is a handset, and `OPR6.170623.012` an Android 8
+  build ID.
+- Messenger is matched only on Meta's own tags (`fban/messenger`, `fb_iab/messenger`) and its family
+  name: every WeChat UA carries `MicroMessenger`.
+- Facebook's family name is matched whole (`^facebook\b`): Meta's crawlers carry the word too
+  (`FacebookBot`, a `facebook.com` URL in their raw UAs), and falling through keeps a bot row's robot.
+- `uc` is two letters that sit inside `DuckDuckGo`, kept right by both the multi-token guard *and*
+  DuckDuckGo's earlier branch.
 
 Known gap, same shape but not an ordering fix: Yandex and Coc Coc match only their clean family
 names, so their raw UAs (`YaBrowser/…`, `coc_coc_browser/…`) still fall through to Chrome. Closing

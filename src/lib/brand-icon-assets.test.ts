@@ -1,11 +1,11 @@
-import { existsSync, readdirSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { basename, dirname, extname, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { PLATFORMS } from '@/pages/routegen/overview/setup-platforms'
 import { BRAND_ICON_ASSETS } from './brand-icon-assets'
 
 // public/ is copied verbatim and never enters the module graph, so a typo'd or stale path is not a
-// build error — it is an <img> that 404s behind aria-hidden and renders the same as a brand we have
+// build error: it is an <img> that 404s behind aria-hidden and renders the same as a brand we have
 // no glyph for. Nothing else in the toolchain looks at these strings.
 const PUBLIC_DIR = join(process.cwd(), 'public')
 
@@ -29,4 +29,15 @@ describe.each([
     const onDisk = readdirSync(join(PUBLIC_DIR, dir)).filter(f => f !== 'NOTICE.md')
     expect(onDisk.filter(f => !referenced.has(f))).toEqual([])
   })
+
+  // A Simple Icons path ships with no fill, which an <img> renders solid black.
+  it('gives every SVG a fill of its own', () => {
+    const svgs = readdirSync(join(PUBLIC_DIR, dir)).filter(f => f.endsWith('.svg'))
+    for (const f of svgs) expect(readFileSync(join(PUBLIC_DIR, dir, f), 'utf8'), f).toMatch(/fill="(?!none")/)
+  })
+})
+
+// Two swapped paths pass every check above and draw each other's mark.
+it.each(brandPaths)('brand icon %s is named after its key', (name, path) => {
+  expect(basename(path, extname(path))).toBe(name)
 })
