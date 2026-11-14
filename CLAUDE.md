@@ -258,6 +258,12 @@ it means adding those tokens, not moving the branches.
 `android` stays **last** for the opposite reason: a Chrome-on-Android UA names the platform in the
 same string, so from higher up it would claim every Android row.
 
+**In-app browsers sit first.** The backend's parse names one after its app (`Instagram`, `Facebook`,
+`Facebook Messenger`), and its raw UA names the engine too. Messenger stays above Facebook: both its
+family and its raw `FBAN`/`FB_IAB` tags contain Facebook's tokens. On Android the SDK's client hints
+can win instead and name the WebView (`Android WebView`, the Android mark), not the app, so an app's
+traffic can read both ways; the dashboard never sees the UA, so only the SDK or the backend can fix that.
+
 Two substring traps, both guarded by tests in `brand-icons.test.ts`:
 
 - **`'ios'` must stay word-anchored.** `"kaios".includes("ios")` is true, so KaiOS (a Firefox OS

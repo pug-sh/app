@@ -47,8 +47,9 @@ SDK language and framework marks live separately, under `public/sdk/`.
 
 ## No copyright licence granted: trademark of the owner
 
-- **safari.svg**: [Simple Icons]; no licence data published. Modified: tinted to the brand hex,
-  `<title>` stripped.
+- **safari.svg**, **instagram.svg**, **facebook.svg**, **messenger.svg**: [Simple Icons]; no
+  licence data published. Modified: tinted to the brand hex, `<title>` stripped. The last three
+  mark an in-app browser on a row labelled with its app's name.
 - **brave.svg**, **chrome.svg**, **chromium.svg**, **coccoc.png**, **opera.svg**,
   **samsung-internet.svg**, **uc.svg**, **vivaldi.svg**: [browser-logos]. MIT covers the
   repository; the logos are excluded from it by its own terms.
