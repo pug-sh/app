@@ -21,7 +21,7 @@ describe('resolveDeviceModelIcon', () => {
   })
 
   // 'mac' is short enough to sit inside unrelated UA model strings, and $device is arbitrary
-  // customer/bot-supplied text — a wrong glyph is worse than none.
+  // customer/bot-supplied text: a wrong glyph is worse than none.
   it('does not read a bare "mac" substring as an Apple desktop', () => {
     expect(resolveDeviceModelIcon('Machine')).toBeNull()
     expect(resolveDeviceModelIcon('Mackerel')).toBeNull()
@@ -41,7 +41,7 @@ describe('resolveDeviceModelIcon', () => {
   })
 
   // Brand tokens run against arbitrary UA text, so a substring hit brands a Windows laptop as Android.
-  // Asus and Lenovo are out of the list entirely — same brand on both an Android phone and a laptop.
+  // Asus and Lenovo are out of the list entirely: same brand on both an Android phone and a laptop.
   it('does not brand a Windows laptop model as Android', () => {
     expect(resolveDeviceModelIcon('ASUS VivoBook 15')).toBeNull()
     expect(resolveDeviceModelIcon('Lenovo ThinkPad X1')).toBeNull()
@@ -65,6 +65,7 @@ describe('resolveBrowserIcon', () => {
   // Brave borrowed Chrome's glyph and the other three drew nothing at all.
   it('resolves each Chromium derivative to its own glyph', () => {
     expect(resolveBrowserIcon('Microsoft Edge')).toBe('edge')
+    expect(resolveBrowserIcon('Edge')).toBe('edge')
     expect(resolveBrowserIcon('Brave')).toBe('brave')
     expect(resolveBrowserIcon('Vivaldi')).toBe('vivaldi')
     expect(resolveBrowserIcon('DuckDuckGo')).toBe('duckduckgo')
@@ -84,6 +85,38 @@ describe('resolveBrowserIcon', () => {
     expect(resolveBrowserIcon('FxiOS')).toBe('firefox')
   })
 
+  // ua-parser names an in-app browser after its app, and each one drew the unknown globe.
+  it("resolves Meta's in-app browsers to the app's mark", () => {
+    expect(resolveBrowserIcon('Instagram')).toBe('instagram')
+    expect(resolveBrowserIcon('Facebook')).toBe('facebook')
+    expect(resolveBrowserIcon('Facebook Messenger')).toBe('messenger')
+
+    const facebookOnIOS =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/FBIOS;FBAV/476.0.0.37.108;FBDV/iPhone14,5;FBMD/iPhone;FBSN/iOS;FBSV/17.5;FBLC/en_US]'
+    expect(resolveBrowserIcon(facebookOnIOS)).toBe('facebook')
+
+    const messengerOnIOS =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [FBAN/MessengerForiOS;FBAV/470.0.0.37.106;FBBV/634476372;FBDV/iPhone14,5;FBMD/iPhone;FBSN/iOS;FBSV/17.5;FBSS/3;FBID/phone;FBLC/en_US;FBOP/5]'
+    expect(resolveBrowserIcon(messengerOnIOS)).toBe('messenger')
+  })
+
+  // Every WeChat UA carries "MicroMessenger", so a bare 'messenger' token would draw Meta's mark for it.
+  it('does not read WeChat as Facebook Messenger', () => {
+    const weChatOnIOS =
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003129) NetType/WIFI Language/zh_CN'
+    const weChatOnAndroid =
+      'Mozilla/5.0 (Linux; Android 13; V2227A Build/TP1A.220624.014; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/116.0.0.0 Mobile Safari/537.36 XWEB/1160065 MMWEBSDK/20231202 MMWEBID/2247 MicroMessenger/8.0.47.2560(0x28002F30) WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64'
+    expect(resolveBrowserIcon(weChatOnIOS)).toBeNull()
+    expect(resolveBrowserIcon(weChatOnAndroid)).toBe('chrome')
+  })
+
+  // Meta's crawlers carry the word too: ua-parser names them "FacebookBot", and their raw UAs link
+  // facebook.com. Falling through keeps a bot row's robot glyph.
+  it("does not draw Facebook's mark for Meta's crawlers", () => {
+    expect(resolveBrowserIcon('FacebookBot')).toBeNull()
+    expect(resolveBrowserIcon('facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)')).toBeNull()
+  })
+
   it('resolves the browsers below Opera by share', () => {
     expect(resolveBrowserIcon('Samsung Internet')).toBe('samsung-internet')
     expect(resolveBrowserIcon('UC Browser')).toBe('uc')
@@ -92,7 +125,7 @@ describe('resolveBrowserIcon', () => {
     expect(resolveBrowserIcon('Android')).toBe('android')
   })
 
-  // 'uc' is two letters. Both inputs here contain it — the previous pair ('Sogou Explorer',
+  // 'uc' is two letters. Both inputs here contain it; the previous pair ('Sogou Explorer',
   // 'Ecosia') did not, so the test passed even with the guard removed. DuckDuckGo is the live
   // hazard: it survives a bare 'uc' token today only because its branch comes first.
   it('does not read a stray "uc" as UC Browser', () => {
@@ -109,7 +142,7 @@ describe('resolveBrowserIcon', () => {
   })
 
   // The other half of that rule, and the half that was wrong: a derivative's raw UA carries its own
-  // token *plus* Chrome's and Safari's, so 'opr'/'ucweb'/'samsungbrowser'/'fxios' only ever fire
+  // token *plus* Chrome's and Safari's, so 'opr/'/'ucweb'/'samsungbrowser'/'fxios' only ever fire
   // from above the generic pair. Below it they are dead, and each of these drew Chrome or Safari.
   it('keeps every named brand above Chrome and Safari for a raw user-agent string', () => {
     const uas = {
@@ -123,6 +156,12 @@ describe('resolveBrowserIcon', () => {
       edge: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
       vivaldi:
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Vivaldi/6.5',
+      instagram:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/127.0.6533.103 Mobile Safari/537.36 Instagram 343.0.0.33.101 Android (34/14; 420dpi; 1080x2400; Google/google; Pixel 8; shiba; shiba; en_US; 627400398)',
+      facebook:
+        'Mozilla/5.0 (Linux; Android 14; SM-S918B Build/UP1A.231005.007; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/127.0.6533.103 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/476.0.0.49.74;]',
+      messenger:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8 Build/AP2A.240805.005; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/127.0.6533.103 Mobile Safari/537.36 [FB_IAB/MESSENGER;FBAV/470.0.0.40.109;]',
     }
 
     for (const [expected, ua] of Object.entries(uas)) expect(resolveBrowserIcon(ua)).toBe(expected)
@@ -136,8 +175,18 @@ describe('resolveBrowserIcon', () => {
     expect(resolveBrowserIcon(chromeOnGalaxy)).toBe('chrome')
   })
 
+  // Same shape: a bare 'edge' or 'opr' read a Motorola Edge, or an Android 8 build ID, as the browser.
+  it('does not read the handset or build in a raw user-agent as Edge or Opera', () => {
+    const chromeOnMotorolaEdge =
+      'Mozilla/5.0 (Linux; Android 11; motorola edge) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.104 Mobile Safari/537.36'
+    const chromeOnOreo =
+      'Mozilla/5.0 (Linux; Android 8.0.0; Pixel XL Build/OPR6.170623.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.98 Mobile Safari/537.36'
+    expect(resolveBrowserIcon(chromeOnMotorolaEdge)).toBe('chrome')
+    expect(resolveBrowserIcon(chromeOnOreo)).toBe('chrome')
+  })
+
   // $browser is whatever the browser declares in userAgentData.brands, so this branch is
-  // reached routinely — it is what UnknownBrowserIcon renders for.
+  // reached routinely: it is what UnknownBrowserIcon renders for.
   it('returns null for a brand it does not know, and for blanks', () => {
     expect(resolveBrowserIcon('QQ Browser')).toBeNull()
     expect(resolveBrowserIcon('Whale')).toBeNull()
@@ -192,7 +241,7 @@ describe('resolveDeviceIcon', () => {
     expect(resolveDeviceIcon(undefined, 'Windows')).toBe('windows')
   })
 
-  // isMobileOS matches 'ios' unanchored — correctly, since KaiOS is a mobile OS — so KaiOS reaches
+  // isMobileOS matches 'ios' unanchored (correctly, since KaiOS is a mobile OS), so KaiOS reaches
   // the mobile branch. It must not fall through to Android there: Nokia ships both Android and
   // KaiOS handsets, so the model string would confirm the wrong answer.
   it('does not draw Android for a mobile OS it has no glyph for', () => {
@@ -204,7 +253,7 @@ describe('resolveDeviceIcon', () => {
 
 describe('formatBrowserLabel', () => {
   // browserForPlatform drops a native row's $browser, but the backend still parsed a version off the
-  // HTTP client's UA — joined on its own that rendered a bare "3" beside the unknown-browser globe.
+  // HTTP client's UA; joined on its own, that rendered a bare "3" beside the unknown-browser globe.
   it('is empty without a name, rather than a bare version', () => {
     expect(formatBrowserLabel(undefined, '3')).toBe('')
     expect(formatBrowserLabel('   ', '3')).toBe('')
@@ -229,7 +278,7 @@ describe('formatOsName', () => {
   })
 
   // $os is whatever the SDK sent, so a bare index reached Object.prototype and rendered the
-  // function source — "function toString() { [native code] } 14" in the OS slot.
+  // function source: "function toString() { [native code] } 14" in the OS slot.
   it('does not index into Object.prototype', () => {
     expect(formatOsName('toString')).toBe('toString')
     expect(formatOsName('constructor')).toBe('constructor')
