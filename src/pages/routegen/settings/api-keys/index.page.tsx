@@ -33,7 +33,7 @@ const KIND_LABEL: Record<ApiKeyKind, string> = {
 // backend-first). Unknown kind → no label, mirroring roleLabel.
 const kindLabel = (kind: ApiKeyKind) => KIND_LABEL[kind] ?? ''
 
-// A key's value in the list. A private key has none to copy — only the mask the server rendered at
+// A key's value in the list. A private key has none to copy: only the mask the server rendered at
 // creation ("prv_...3f9c"), which is there to tell a project's private keys apart.
 const KeyValue = ({ apiKey }: { apiKey: ApiKey }) => {
   const { copied, copy } = useCopyToClipboard()
@@ -47,7 +47,7 @@ const KeyValue = ({ apiKey }: { apiKey: ApiKey }) => {
       type="button"
       onClick={() => copy(apiKey.key, 'api_key:public')}
       // The key value is this cell's only content, and an aria-label would replace it as the
-      // button's accessible name — leaving a screen reader no way to read the key itself.
+      // button's accessible name, leaving a screen reader no way to read the key itself.
       aria-label={`Copy key ${apiKey.key}`}
       className="group/copy inline-flex items-center gap-1.5 text-left font-mono text-xs transition-colors hover:text-foreground"
     >
@@ -70,13 +70,13 @@ const NewPrivateKey = ({ value, onDismiss }: { value: string; onDismiss: () => v
     <div className="mb-4 rounded-md border border-border bg-muted/40 p-3">
       <div className="mb-2 flex items-center gap-2">
         <KeyRound className="size-3.5 shrink-0 text-muted-foreground" />
-        <p className="text-xs font-medium">Copy this key now — it is never shown again.</p>
+        <p className="text-xs font-medium">Copy this key now. It is never shown again.</p>
       </div>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded bg-background px-2 py-1.5 font-mono text-xs">{value}</code>
         {/*
           Deliberately no copy context: this is the once-shown private key, a live secret. The
-          event would carry only the label, never the value — but we don't emit analytics tied to
+          event would carry only the label, never the value, but we don't emit analytics tied to
           handling a secret at all. api_key_created (scope: Private) already records that a private
           key was minted, which is the activation signal; the copy itself stays untracked.
         */}
@@ -121,7 +121,7 @@ const ApiKeys = () => {
       // scope, not displayName: which kind gets minted is the signal (a private key means someone
       // is wiring up a server SDK), while the name is the customer's own free text and buys nothing.
       trackEvent('api_key_created', { apiKeyId: resp.apiKey?.id ?? '', scope: kindLabel(kind) })
-      // A private key is returned exactly once, here — hold it until dismissed. A public key needs
+      // A private key is returned exactly once, here: hold it until dismissed. A public key needs
       // no banner: ListApiKeys returns its value in full, every time.
       if (kind === ApiKeyKind.PRIVATE) setNewPrivateKey(resp.key)
       closeCreate()
@@ -164,7 +164,7 @@ const ApiKeys = () => {
           title="API Keys"
           count={loading || error ? undefined : keys.length}
           description={
-            // Two lines, one per kind — spans (not divs) because SectionHeader renders this inside a <p>.
+            // Two lines, one per kind: spans (not divs) because SectionHeader renders this inside a <p>.
             <>
               <span className="block">Public keys ship in your app and send events.</span>
               <span className="block">
@@ -217,7 +217,7 @@ const ApiKeys = () => {
                         onMouseLeave={() => setConfirmingRevoke(null)}
                       >
                         <td className="py-2.5 pr-4 text-sm">
-                          {k.displayName || <span className="text-muted-foreground">—</span>}
+                          {k.displayName || <span className="text-muted-foreground">–</span>}
                         </td>
                         <td className="py-2.5 pr-4">
                           <Badge variant="secondary" className="text-xs">
@@ -231,7 +231,7 @@ const ApiKeys = () => {
                           {created ? (
                             <HoverSwap primary={formatRelative(created)} secondary={formatDateTime(created)} />
                           ) : (
-                            '—'
+                            '–'
                           )}
                         </td>
                         <td className="py-2.5 text-right">

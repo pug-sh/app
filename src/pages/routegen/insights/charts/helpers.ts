@@ -7,7 +7,7 @@ import { zonedCivil } from '@/lib/timezone'
 // in Intl, so fall back to UTC (mirrors the server's resolveEffectiveWindow) rather than
 // crashing a tile. Cached because toLocaleString builds a new formatter on every call.
 const formatters = new Map<string, Intl.DateTimeFormat>()
-const fmtInZone = (d: Date, timeZone: string | undefined, opts: Intl.DateTimeFormatOptions): string => {
+export const fmtInZone = (d: Date, timeZone: string | undefined, opts: Intl.DateTimeFormatOptions): string => {
   const key = `${timeZone ?? ''}|${JSON.stringify(opts)}`
   let formatter = formatters.get(key)
   if (!formatter) {

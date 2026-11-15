@@ -40,7 +40,7 @@ import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from 
 
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
   return (value: number): string => {
-    if (!Number.isFinite(value)) return '—'
+    if (!Number.isFinite(value)) return '–'
     switch (format) {
       case VisualizationOptions_YAxisFormat.PERCENT:
         return `${(value * 100).toFixed(1)}%`
@@ -68,9 +68,9 @@ const noop = () => {}
 // Presentational core of an insight tile: given an already-resolved query result
 // (from a live fetch OR a server-pre-rendered RenderedTile) plus the tile's spec,
 // derive the chart series and render either a KPI or the full InsightsContent.
-// Holds no data atoms/RPC/fetching (only subscribes to the theme so colors adapt):
-// both the authenticated tile (DashboardInsightContent) and the public shared tile
-// (SharedTileBody) render through this.
+// Holds no RPC or fetching (it reads only the theme, so colors adapt, and the active
+// project's zone, which `timeZone` overrides): both the authenticated tile
+// (DashboardInsightContent) and the public shared tile (SharedTileBody) render through this.
 export const InsightTileView = ({
   tile,
   viewMode,
@@ -89,6 +89,7 @@ export const InsightTileView = ({
   seriesColor,
   onComparisonCaption,
   emptyQualifier,
+  timeZone: timeZoneProp,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -117,14 +118,16 @@ export const InsightTileView = ({
   seriesColor?: SeriesColor
   onComparisonCaption?: (draws: boolean) => void
   emptyQualifier?: string
+  // The zone the result was bucketed in, when no active project names it (the public shared page).
+  timeZone?: string
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
 
   // The memo key for colours from the active theme's palette (see lib/event-colors.ts).
   const themeRevision = useAtomValue(themeRevisionAtom)
-  // Reporting zone for the chart's bucket grid (UTC when no project, e.g. a public shared tile).
-  const timeZone = useAtomValue(activeProjectTimezoneAtom)
+  const projectTimeZone = useAtomValue(activeProjectTimezoneAtom)
+  const timeZone = timeZoneProp ?? projectTimeZone
 
   // A configured Y-axis format drives the chart axis ticks; Plain/unspecified is
   // left undefined so charts keep their compact default.
@@ -300,6 +303,7 @@ export const InsightTileView = ({
         awaitingEvent={specHasNoSubject(spec)}
         compact={compact}
         lightNumbers={lightMetrics}
+        timeZone={timeZone}
       />
     </div>
   )

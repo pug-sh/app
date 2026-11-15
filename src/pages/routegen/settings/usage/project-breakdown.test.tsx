@@ -72,12 +72,12 @@ describe('ProjectBreakdown', () => {
     expect(screen.getByText('25.0%')).not.toBeNull()
   })
 
-  // Reachable only from an out-of-contract response, since a day with no events has no row at all
-  // — but dividing by it would put NaN% in a billing column.
+  // Reachable only from an out-of-contract response (a day with no events has no row at all), but
+  // dividing by a zero total would put NaN% in a billing column.
   it('declines to state a share when the window total is zero', () => {
     const { container } = render(<ProjectBreakdown projectTotals={[row('a', 0, 0)]} windowTotal={0} colors={colors} />)
 
-    expect(container.textContent).toContain('—')
+    expect(container.textContent).toContain('–')
     expect(container.textContent).not.toContain('NaN')
   })
 

@@ -109,7 +109,7 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
           {city || country ? (
             <LocationLabel city={city} region={region} country={country} flagSize={16} />
           ) : (
-            <div className="truncate">—</div>
+            <div className="truncate">–</div>
           )}
         </td>
         <td className="pt-[0.8rem] pb-[0.45rem] pr-2 text-xs text-muted-foreground align-middle">

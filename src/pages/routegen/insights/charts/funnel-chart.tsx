@@ -29,7 +29,7 @@ const uniqueStepLabels = (steps: FunnelSeriesData['steps']) => {
   })
 }
 
-// Wraps the vendored funnel (src/components/charts) — never edit that directory.
+// Wraps the vendored funnel (src/components/charts); never edit that directory.
 // It renders values, percentage and step name inline; the drop-off tooltip and
 // the step palette are ours to inject through props.
 const SingleFunnel = ({
@@ -154,7 +154,7 @@ export const FunnelChart = ({
   }
 
   // The vendored chart draws exactly one funnel, so a breakdown becomes small
-  // multiples — each split keeps its own taper instead of sharing a bar group.
+  // multiples: each split keeps its own taper instead of sharing a bar group.
   return (
     <div className={cn('mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2', className)}>
       {series.map(s => (
@@ -217,7 +217,7 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
           <p className="text-xs font-normal text-muted-foreground">Highest conversion rate</p>
           <div className="flex items-baseline gap-2">
             {allRatesZero ? (
-              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">–</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{highestConv?.label}</span>
@@ -232,7 +232,7 @@ export const FunnelBreakdownView = ({ series }: { series: FunnelSeriesData[] }) 
           <p className="text-xs font-normal text-muted-foreground">Most conversions</p>
           <div className="flex items-baseline gap-2">
             {allCompletedZero ? (
-              <span className="text-lg font-medium tabular-nums text-muted-foreground">—</span>
+              <span className="text-lg font-medium tabular-nums text-muted-foreground">–</span>
             ) : (
               <>
                 <span className="text-sm font-medium">{mostCompleted?.label}</span>

@@ -6,7 +6,7 @@ import { resolveTraitEmail, resolveTraitName } from '@/lib/identity-traits'
 import { structFirst, structGet } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 
-/** Stable empty journey — shared so a visitor with no trail doesn't churn memo identities. */
+/** Stable empty journey, shared so a visitor with no trail doesn't churn memo identities. */
 export const EMPTY_JOURNEY: ActivityEvent[] = []
 
 // Only set when a customer sends a picture trait on the event; profile traits aren't on it.
@@ -29,7 +29,7 @@ export type EventIdentity = {
 // Pick keeps this tied to the proto while staying trivially constructible in tests.
 type IdentitySource = Pick<ActivityEvent, 'distinctId' | 'autoProperties' | 'customProperties'>
 
-// Either bag can carry traits — the same two-bag lookup the avatar does.
+// Either bag can carry traits: the same two-bag lookup the avatar does.
 export const eventIdentity = (event: IdentitySource): EventIdentity => {
   const trait =
     resolveTraitName(event.autoProperties) ??
@@ -37,7 +37,7 @@ export const eventIdentity = (event: IdentitySource): EventIdentity => {
     resolveTraitEmail(event.autoProperties) ??
     resolveTraitEmail(event.customProperties)
   if (trait) return { label: trait, isFallback: false }
-  // An identified visitor is often keyed by their own email — that's a name, not an opaque id.
+  // An identified visitor is often keyed by their own email, which is a name, not an opaque id.
   return { label: shortId(event.distinctId) || 'anonymous', isFallback: !event.distinctId.includes('@') }
 }
 
@@ -64,7 +64,7 @@ export type CountryCount = {
 export type VisitorDeviceType = 'mobile' | 'desktop' | 'tv'
 
 // Record, not three named fields: a new device type is then a compile error everywhere the set is
-// enumerated — this map, deviceTypeLabel, and the filter bar's segments — rather than a bucket that
+// enumerated (this map, deviceTypeLabel, and the filter bar's segments) rather than a bucket that
 // silently counts nothing.
 export type DeviceBreakdown = Record<VisitorDeviceType, number>
 
@@ -104,7 +104,7 @@ export const deviceBreakdown = (visitors: ActivityEvent[]): DeviceBreakdown => {
 }
 
 export const formatPagePath = (url: string | undefined): string => {
-  if (!url) return '—'
+  if (!url) return '–'
   if (url.startsWith('http://') || url.startsWith('https://')) {
     try {
       const pathname = new URL(url).pathname
@@ -122,7 +122,7 @@ const MOBILE_PLATFORMS = new Set(['android', 'ios'])
 
 // Three rungs, because no single key covers the family. $deviceType is the Flutter SDK's own answer
 // and the only TV signal anywhere in the stack (Android leanback). $platform catches the React Native
-// SDK, which sends no $deviceType at all. $mobile is last and web-only — navigator.userAgentData, or
+// SDK, which sends no $deviceType at all. $mobile is last and web-only: navigator.userAgentData, or
 // the backend's UA parse, which on a native app reads the HTTP client and always says false, so
 // reaching it from a native event is what put every Flutter and RN phone in desktop.
 export const resolveDeviceType = (auto: JsonObject | undefined): VisitorDeviceType => {
@@ -179,7 +179,7 @@ export const describeEvent = (event: ActivityEvent): { kind: string; detail: str
 const formatPagePathOrEmpty = (url: string | undefined) => (url ? formatPagePath(url) : '')
 
 /**
- * Kind mix, count-descending then name-ascending — the one tie-break the filter bar and the map's
+ * Kind mix, count-descending then name-ascending: the one tie-break the filter bar and the map's
  * cluster popover share. Over deduped visitors this counts people by current activity; over raw
  * events it counts events.
  */
@@ -194,7 +194,7 @@ export const countKinds = (events: Iterable<ActivityEvent>): KindCount[] => {
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 }
 
-/** Coarse duration — these read at a glance in a column, not to the second. */
+/** Coarse duration: these read at a glance in a column, not to the second. */
 const formatDuration = (ms: number) => {
   const seconds = Math.round(ms / 1000)
   if (seconds < 60) return `${seconds}s`
@@ -209,7 +209,7 @@ export type SessionStat = {
   lastSeen?: Date
 }
 
-/** Per-visitor event count and span, in one pass — the panel needs this for every row at once. */
+/** Per-visitor event count and span, in one pass: the panel needs this for every row at once. */
 export const sessionStats = (events: ActivityEvent[]) => {
   const stats = new Map<string, SessionStat>()
   for (const event of events) {
@@ -235,7 +235,7 @@ export const activeSpan = (stat: SessionStat | undefined) => {
 }
 
 // Constructing one of these costs more than the format call, and a live list re-renders every row on
-// every hover — so they're kept per timezone. `null` memoizes a timezone Intl rejected.
+// every hover, so they're kept per timezone. `null` memoizes a timezone Intl rejected.
 const clockFormatters = new Map<string, Intl.DateTimeFormat | null>()
 
 const clockFormatter = (tz: string) => {

@@ -12,6 +12,9 @@ export const browserTimezone = () => {
   }
 }
 
+// The browser reports UTC as 'UTC', the server stores it as 'Etc/UTC', and older projects hold ''.
+export const isUtcZone = (zone: string | undefined) => !zone || zone === 'UTC' || zone === 'Etc/UTC'
+
 // Full IANA list for the settings picker. Empty array on engines without
 // Intl.supportedValuesOf → caller degrades to a free-text input.
 export const supportedTimezones = () => {

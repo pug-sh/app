@@ -85,7 +85,7 @@ export const TrafficStatTile = ({
   const hover = useSparklineHover()
 
   // The scalar query drives the headline number; when it fails the tile has nothing to show, so
-  // surface the error with a retry (like the breakdown panels) rather than a bare '—' that reads as
+  // surface the error with a retry (like the breakdown panels) rather than a bare '–' that reads as
   // an empty window. One tap re-runs all three tile queries: they fail together on a transient
   // error. Rendered as a <div>: the Retry button can't nest inside the selection <button> below.
   if (error) {
@@ -138,7 +138,7 @@ export const TrafficStatTile = ({
           loading && value === undefined && 'animate-pulse opacity-40',
         )}
       >
-        {shown !== undefined ? formatTrafficStatValue(statId, shown) : '—'}
+        {shown !== undefined ? formatTrafficStatValue(statId, shown) : '–'}
       </span>
       <div className="mt-1 flex h-5 items-center">
         {hovered?.time ? (

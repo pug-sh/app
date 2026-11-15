@@ -25,7 +25,7 @@ type PlatformTooltipProps = {
   os?: string
   osVersion?: string
   device?: string
-  // The SDK's own target ('web' or the native OS). Native rows drop $browser — see browserForPlatform.
+  // The SDK's own target ('web' or the native OS). Native rows drop $browser (see browserForPlatform).
   platform?: string
   bot?: boolean
 }
@@ -47,7 +47,7 @@ export const PlatformTooltip = ({
   const osIcon = resolveOsIcon(os)
   const items: ReactNode[] = []
 
-  // The icon slot only swaps when the browser is unmatched, so a datacenter Chrome keeps its mark —
+  // The icon slot only swaps when the browser is unmatched, so a datacenter Chrome keeps its mark:
   // this is the one place every bot row says so, and the only one a screen reader reaches.
   if (bot) {
     items.push(<TooltipInlineItem key="bot" label={<span className="text-muted-foreground">Automated</span>} />)
@@ -98,7 +98,7 @@ export const BrowserLabel = ({
   platform,
   bot,
   className,
-  fallback = '—',
+  fallback = '–',
   iconSize = 16,
 }: BrowserLabelProps) => {
   const browserName = browserForPlatform(browser, platform)
@@ -125,7 +125,7 @@ type OsLabelProps = {
   iconSize?: number
 }
 
-export const OsLabel = ({ os, osVersion, className, fallback = '—', iconSize = 16 }: OsLabelProps) => {
+export const OsLabel = ({ os, osVersion, className, fallback = '–', iconSize = 16 }: OsLabelProps) => {
   const label = formatOsLabel(os, osVersion)
   const icon = resolveOsIcon(os)
 
@@ -149,7 +149,7 @@ type DeviceLabelProps = {
   iconSize?: number
 }
 
-export const DeviceLabel = ({ device, os, className, fallback = '—', iconSize = 16 }: DeviceLabelProps) => {
+export const DeviceLabel = ({ device, os, className, fallback = '–', iconSize = 16 }: DeviceLabelProps) => {
   const label = formatDeviceLabel(device, os)
   const icon = resolveDeviceIcon(device, os)
 
@@ -187,16 +187,16 @@ export const PlatformLabel = ({
   platform,
   bot,
   className,
-  fallback = '—',
+  fallback = '–',
   iconSize = 14,
 }: PlatformLabelProps) => {
-  // A native row has no browser to name, so the OS leads it — the same branch a browserless web row
-  // already took, which is why suppressing here needs nothing further downstream.
+  // A native row has no browser to name, so the OS leads it: the branch a browserless web row already
+  // took, which is why suppressing here needs nothing further downstream.
   const browserName = browserForPlatform(browser, platform)?.trim()
   const primary = formatPlatformPrimary(browserName, os)
   // Single icon in the trigger, and a named browser owns that slot outright: unrecognised, it takes
-  // a neutral glyph rather than borrowing the OS mark. The OS only leads when no browser is named
-  // — and then there is no globe, which would mislabel the row. Full breakdown is in the tooltip.
+  // a neutral glyph rather than borrowing the OS mark. The OS only leads when no browser is named,
+  // and then there is no globe, which would mislabel the row. Full breakdown is in the tooltip.
   const icon = browserName ? resolveBrowserIcon(browserName) : resolveOsIcon(os)
   const unknownGlyph = browserName ? unknownBrowserGlyph(bot, iconSize) : null
 
@@ -248,7 +248,7 @@ export const PlatformStackLabel = ({
   platform,
   bot,
   className,
-  fallback = '—',
+  fallback = '–',
   iconSize = 16,
 }: PlatformStackLabelProps) => {
   // Line 1 is the browser carrying its single icon; line 2 is the OS as plain

@@ -134,7 +134,7 @@ export const useVendoredChartPrep = (
   // order is child order.
   const tooltipRows = useCallback(
     (point: Record<string, unknown>) => {
-      const value = (v: unknown) => (point[PENDING_KEY] ? '—' : Number(v ?? 0).toLocaleString())
+      const value = (v: unknown) => (point[PENDING_KEY] ? '–' : Number(v ?? 0).toLocaleString())
       const rows = seriesNames.map((name, si) => ({
         color: seriesColors[si]?.line ?? '',
         label: name,

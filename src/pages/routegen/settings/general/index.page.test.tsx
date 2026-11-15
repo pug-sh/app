@@ -409,3 +409,25 @@ describe('the default theme', () => {
     expect(screen.getByText('A theme needs a light or a dark variant')).toBeTruthy()
   })
 })
+
+describe('the reporting timezone', () => {
+  // The server stores UTC as Etc/UTC, which the picker's list doesn't carry: it has to read as UTC.
+  it.each([
+    ['an admin', OrgRole.ADMIN],
+    ['a viewer', OrgRole.VIEWER],
+  ])('shows a project stored on Etc/UTC as UTC to %s', (_, role) => {
+    const store = createStore()
+    store.set(activeOrgAtom, orgAs(role))
+    store.set(
+      activeProjectAtom,
+      create(ProjectSchema, { id: 'utc', displayName: 'Utc', orgId: 'org-a', reportingTimezone: 'Etc/UTC' }),
+    )
+    render(
+      <Provider store={store}>
+        <General />
+      </Provider>,
+    )
+    expect(screen.queryByText('Etc/UTC')).toBeNull()
+    expect(screen.getByText('UTC')).toBeTruthy()
+  })
+})

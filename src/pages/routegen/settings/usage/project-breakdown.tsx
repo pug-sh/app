@@ -26,7 +26,7 @@ const ProjectBreakdown = ({
   // A project with events should never read as a share indistinguishable from none, and toFixed(1)
   // rounds anything under 0.05% to "0.0%".
   const share = (total: number) => {
-    if (windowTotal <= 0) return '—'
+    if (windowTotal <= 0) return '–'
     const pct = (total / windowTotal) * 100
     if (pct > 0 && pct < 0.05) return '<0.1%'
     return `${pct.toFixed(1)}%`
@@ -47,7 +47,7 @@ const ProjectBreakdown = ({
           {projectTotals.map(project => {
             // Read off the row, not its position: the two disagree the moment this table is sorted
             // or filtered, and a mismatch shows only as a wrong colour, which nobody audits.
-            // Neutral past the charted set — the one spare hue belongs to the folded band and would
+            // Neutral past the charted set: the one spare hue belongs to the folded band and would
             // read as this row being that series.
             const color = project.seriesIndex === null ? undefined : colors[project.seriesIndex]
             return (

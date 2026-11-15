@@ -54,7 +54,7 @@ const formatLocation = (profile: Profile) => {
 
 const formatSeen = (value: Profile['activity'] extends infer T ? T : never, key: 'firstSeen' | 'lastSeen') => {
   const date = tsToDate(value?.[key])
-  if (!date) return '—'
+  if (!date) return '–'
 
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
@@ -458,7 +458,7 @@ const Profiles = () => {
                               flagSize={20}
                             />
                           ) : (
-                            '—'
+                            '–'
                           )}
                           {location.secondary && (
                             <div className="truncate text-xs text-muted-foreground">{location.secondary}</div>

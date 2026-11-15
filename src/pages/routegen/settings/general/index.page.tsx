@@ -13,7 +13,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { activeProjectAtom, projectHeaderAtom } from '@/data/workspace.atoms'
 import { toastRPCError } from '@/lib/rpc-error'
-import { browserTimezone } from '@/lib/timezone'
+import { browserTimezone, isUtcZone } from '@/lib/timezone'
 import DefaultTheme from './default-theme'
 import { DeleteProject } from './delete-project'
 import { TimezonePicker } from './timezone-picker'
@@ -40,8 +40,8 @@ const General = () => {
   // Browser zone surfaced as a convenience entry in the picker, not the stored value.
   const detectedTimezone = useMemo(() => browserTimezone(), [])
 
-  // Pre-fill from the project's stored zone ('' = UTC).
-  const storedTimezone = project?.reportingTimezone ?? ''
+  // Pre-fill from the project's stored zone, with both stored UTC spellings as the picker's '' (UTC).
+  const storedTimezone = isUtcZone(project?.reportingTimezone) ? '' : (project?.reportingTimezone ?? '')
 
   const projectForm = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
