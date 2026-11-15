@@ -403,89 +403,16 @@ describe('canCreateOrgAtom', () => {
 })
 
 describe('createOrgAtom', () => {
-  beforeEach(() => {
-    batchGet.mockClear()
-    projectsUpdateMeta.mockClear()
-  })
-
-  // Creating an org sends no zone, so its default project lands on UTC unless the browser's is named.
-  it("names the browser's timezone on the new org's default project before selecting the org", async () => {
+  it("sends the browser's timezone with the create, then selects the new org", async () => {
     const store = createStore()
     const created = org('org-new')
     orgsCreate.mockResolvedValueOnce({ org: created })
-    batchGet.mockResolvedValueOnce({
-      projects: [create(ProjectSchema, { id: 'default', displayName: 'default', reportingTimezone: 'Etc/UTC' })],
-    })
-    let activeOrgWhenNamed: string | undefined
-    projectsUpdateMeta.mockImplementationOnce(async () => {
-      activeOrgWhenNamed = store.get(activeOrgAtom)?.id
-      return {}
-    })
 
     expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
 
-    // Each call retains its transport deadline alongside the overall adoption bound.
-    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' }, { signal: expect.any(AbortSignal), timeoutMs: 5000 })
-    expect(projectsUpdateMeta).toHaveBeenCalledWith(
-      { reportingTimezone: 'Asia/Kolkata' },
-      { headers: { 'x-project-id': 'default' }, signal: expect.any(AbortSignal), timeoutMs: 5000 },
-    )
-    expect(activeOrgWhenNamed).toBeUndefined()
-    expect(store.get(activeOrgAtom)).toBe(created)
-  })
-
-  it.each(['lookup', 'update'])('bounds a stalled %s, including an unresponsive auth refresh', async stage => {
-    vi.useFakeTimers()
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
-    try {
-      const store = createStore()
-      const created = org('org-new')
-      orgsCreate.mockResolvedValueOnce({ org: created })
-      let finishLookup!: (value: { projects: ReturnType<typeof project>[] }) => void
-      if (stage === 'lookup') {
-        batchGet.mockImplementationOnce(
-          () =>
-            new Promise(resolve => {
-              finishLookup = resolve
-            }),
-        )
-      } else {
-        batchGet.mockResolvedValueOnce({ projects: [project('default')] })
-        projectsUpdateMeta.mockImplementationOnce(() => new Promise(() => {}))
-      }
-      const pending = store.set(createOrgAtom, 'org-new')
-      await vi.advanceTimersByTimeAsync(1999)
-      expect(store.get(activeOrgAtom)).toBeNull()
-      await vi.advanceTimersByTimeAsync(1)
-      expect(await pending).toBe(created)
-      expect(store.get(orgsAtom)).toContain(created)
-      expect(store.get(activeOrgAtom)).toBe(created)
-      expect(batchGet.mock.calls[0][1].signal.aborted).toBe(true)
-      if (stage === 'lookup') {
-        finishLookup({ projects: [project('default')] })
-        await vi.advanceTimersByTimeAsync(0)
-        expect(projectsUpdateMeta).not.toHaveBeenCalled()
-      } else {
-        expect(projectsUpdateMeta.mock.calls[0][1].signal.aborted).toBe(true)
-      }
-      expect(vi.getTimerCount()).toBe(0)
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('still creates and selects the org when naming the timezone fails', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const store = createStore()
-    const created = org('org-new')
-    orgsCreate.mockResolvedValueOnce({ org: created })
-    batchGet.mockResolvedValueOnce({ projects: [project('default')] })
-    projectsUpdateMeta.mockRejectedValueOnce(new Error('down'))
-
-    expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
-
-    expect(store.get(activeOrgAtom)).toBe(created)
+    expect(orgsCreate).toHaveBeenCalledWith({ displayName: 'org-new', reportingTimezone: 'Asia/Kolkata' })
     expect(store.get(orgsAtom)).toContain(created)
+    expect(store.get(activeOrgAtom)).toBe(created)
   })
 })
 

@@ -1,10 +1,14 @@
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
 
-// Browser IANA zone, e.g. "Asia/Kolkata". Empty string on the rare engine that
-// can't resolve one; the server treats "" as UTC.
+// The proto rule on every zone field. The transport checks it before sending, so a zone outside it fails the request.
+const SENDABLE_ZONE = /^[A-Za-z0-9_+/-]{0,64}$/
+
+// Browser IANA zone, e.g. "Asia/Kolkata", or '' (UTC to the server) when the engine has none or reports
+// an offset instead, as V8 does under TZ=GMT.
 export const browserTimezone = () => {
   try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''
+    return SENDABLE_ZONE.test(zone) ? zone : ''
   } catch (err) {
     // Distinguish a real Intl failure from the expected legacy-engine case; '' = UTC.
     console.warn('browserTimezone: could not resolve browser zone, defaulting to UTC', err)

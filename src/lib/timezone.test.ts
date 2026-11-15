@@ -1,6 +1,29 @@
-import { describe, expect, it } from 'vitest'
+import { create } from '@bufbuild/protobuf'
+import { createValidator } from '@bufbuild/protovalidate'
+import { describe, expect, it, vi } from 'vitest'
+import { CreateRequestSchema } from '@/api/genproto/dashboard/orgs/v1/orgs_pb'
 import { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { nextZoneBucket } from './timezone'
+import { browserTimezone, nextZoneBucket } from './timezone'
+
+describe('browserTimezone', () => {
+  // V8 reports '+00:00' under TZ=GMT, and no zone at all under TZ=UTC0.
+  it.each([
+    ['Asia/Kolkata', 'Asia/Kolkata'],
+    ['Etc/GMT+5', 'Etc/GMT+5'],
+    ['+00:00', ''],
+    [undefined, ''],
+  ])('reports %s as %j, which a create request carries past validation', (reported, expected) => {
+    vi.spyOn(Intl, 'DateTimeFormat').mockReturnValue({
+      resolvedOptions: () => ({ timeZone: reported }),
+    } as unknown as Intl.DateTimeFormat)
+
+    const zone = browserTimezone()
+
+    expect(zone).toBe(expected)
+    const request = create(CreateRequestSchema, { displayName: 'acme', reportingTimezone: zone })
+    expect(createValidator().validate(CreateRequestSchema, request).kind).toBe('valid')
+  })
+})
 
 describe('nextZoneBucket', () => {
   const utc = (y: number, mo: number, d: number, h = 0) => new Date(Date.UTC(y, mo, d, h))
