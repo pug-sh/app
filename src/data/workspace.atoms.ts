@@ -356,20 +356,45 @@ export const deleteProjectAtom = atom(null, async (get, set, projectId: string) 
 })
 
 // Org creation carries no zone (signup and new projects send the browser's), so the default project starts on UTC.
-// Name the browser's before the workspace loads it. Best effort: a failure only leaves UTC.
+// Name the browser's before the workspace loads it. Best effort: failure or expiry leaves UTC.
+const TIMEZONE_ADOPTION_DEADLINE_MS = 2000
 const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => {
   const reportingTimezone = browserTimezone()
   if (isUtcZone(reportingTimezone)) return
   const projectsRPC = get(projectsRPCAtom)
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  // Race the entire operation: auth may be waiting on a shared token refresh that
+  // does not observe this call's cancellation. Do not cancel that shared refresh.
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort()
+      reject(new Error('Timezone adoption deadline exceeded'))
+    }, TIMEZONE_ADOPTION_DEADLINE_MS)
+  })
   try {
-    const { projects } = await projectsRPC.batchGet({ orgId })
-    await Promise.all(
-      projects
-        .filter(project => isUtcZone(project.reportingTimezone))
-        .map(project => projectsRPC.updateMeta({ reportingTimezone }, { headers: { 'x-project-id': project.id } })),
-    )
+    await Promise.race([
+      (async () => {
+        const { projects } = await projectsRPC.batchGet({ orgId }, { signal: controller.signal })
+        // A late lookup must not start writes after the workspace has moved on.
+        controller.signal.throwIfAborted()
+        await Promise.all(
+          projects
+            .filter(project => isUtcZone(project.reportingTimezone))
+            .map(project =>
+              projectsRPC.updateMeta(
+                { reportingTimezone },
+                { headers: { 'x-project-id': project.id }, signal: controller.signal },
+              ),
+            ),
+        )
+      })(),
+      deadline,
+    ])
   } catch (err) {
     console.warn('createOrg: could not set the default project timezone, leaving UTC', err)
+  } finally {
+    clearTimeout(timer)
   }
 })
 

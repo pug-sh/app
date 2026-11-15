@@ -424,13 +424,53 @@ describe('createOrgAtom', () => {
 
     expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
 
-    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' })
+    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' }, { signal: expect.any(AbortSignal) })
     expect(projectsUpdateMeta).toHaveBeenCalledWith(
       { reportingTimezone: 'Asia/Kolkata' },
-      { headers: { 'x-project-id': 'default' } },
+      { headers: { 'x-project-id': 'default' }, signal: expect.any(AbortSignal) },
     )
     expect(activeOrgWhenNamed).toBeUndefined()
     expect(store.get(activeOrgAtom)).toBe(created)
+  })
+
+  it.each(['lookup', 'update'])('bounds a stalled %s, including an unresponsive auth refresh', async stage => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const store = createStore()
+      const created = org('org-new')
+      orgsCreate.mockResolvedValueOnce({ org: created })
+      let finishLookup!: (value: { projects: ReturnType<typeof project>[] }) => void
+      if (stage === 'lookup') {
+        batchGet.mockImplementationOnce(
+          () =>
+            new Promise(resolve => {
+              finishLookup = resolve
+            }),
+        )
+      } else {
+        batchGet.mockResolvedValueOnce({ projects: [project('default')] })
+        projectsUpdateMeta.mockImplementationOnce(() => new Promise(() => {}))
+      }
+      const pending = store.set(createOrgAtom, 'org-new')
+      await vi.advanceTimersByTimeAsync(1999)
+      expect(store.get(activeOrgAtom)).toBeNull()
+      await vi.advanceTimersByTimeAsync(1)
+      expect(await pending).toBe(created)
+      expect(store.get(orgsAtom)).toContain(created)
+      expect(store.get(activeOrgAtom)).toBe(created)
+      expect(batchGet.mock.calls[0][1].signal.aborted).toBe(true)
+      if (stage === 'lookup') {
+        finishLookup({ projects: [project('default')] })
+        await vi.advanceTimersByTimeAsync(0)
+        expect(projectsUpdateMeta).not.toHaveBeenCalled()
+      } else {
+        expect(projectsUpdateMeta.mock.calls[0][1].signal.aborted).toBe(true)
+      }
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('still creates and selects the org when naming the timezone fails', async () => {
