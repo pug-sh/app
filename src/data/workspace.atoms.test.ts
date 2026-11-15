@@ -424,10 +424,11 @@ describe('createOrgAtom', () => {
 
     expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
 
-    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' })
+    // Org creation waits on both calls, so each carries a deadline of its own.
+    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' }, { timeoutMs: expect.any(Number) })
     expect(projectsUpdateMeta).toHaveBeenCalledWith(
       { reportingTimezone: 'Asia/Kolkata' },
-      { headers: { 'x-project-id': 'default' } },
+      { headers: { 'x-project-id': 'default' }, timeoutMs: expect.any(Number) },
     )
     expect(activeOrgWhenNamed).toBeUndefined()
     expect(store.get(activeOrgAtom)).toBe(created)

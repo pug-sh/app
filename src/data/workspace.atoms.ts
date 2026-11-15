@@ -355,6 +355,9 @@ export const deleteProjectAtom = atom(null, async (get, set, projectId: string) 
   return true
 })
 
+// Org creation waits on the adoption below, so a stalled call costs seconds rather than the transport's 60s default.
+const ADOPT_TIMEZONE_DEADLINE_MS = 5000
+
 // Org creation carries no zone (signup and new projects send the browser's), so the default project starts on UTC.
 // Name the browser's before the workspace loads it. Best effort: a failure only leaves UTC.
 const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => {
@@ -362,11 +365,16 @@ const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => 
   if (isUtcZone(reportingTimezone)) return
   const projectsRPC = get(projectsRPCAtom)
   try {
-    const { projects } = await projectsRPC.batchGet({ orgId })
+    const { projects } = await projectsRPC.batchGet({ orgId }, { timeoutMs: ADOPT_TIMEZONE_DEADLINE_MS })
     await Promise.all(
       projects
         .filter(project => isUtcZone(project.reportingTimezone))
-        .map(project => projectsRPC.updateMeta({ reportingTimezone }, { headers: { 'x-project-id': project.id } })),
+        .map(project =>
+          projectsRPC.updateMeta(
+            { reportingTimezone },
+            { headers: { 'x-project-id': project.id }, timeoutMs: ADOPT_TIMEZONE_DEADLINE_MS },
+          ),
+        ),
     )
   } catch (err) {
     console.warn('createOrg: could not set the default project timezone, leaving UTC', err)
