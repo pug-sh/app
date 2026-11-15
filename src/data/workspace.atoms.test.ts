@@ -424,10 +424,11 @@ describe('createOrgAtom', () => {
 
     expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
 
-    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' }, { signal: expect.any(AbortSignal) })
+    // Each call retains its transport deadline alongside the overall adoption bound.
+    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' }, { signal: expect.any(AbortSignal), timeoutMs: 5000 })
     expect(projectsUpdateMeta).toHaveBeenCalledWith(
       { reportingTimezone: 'Asia/Kolkata' },
-      { headers: { 'x-project-id': 'default' }, signal: expect.any(AbortSignal) },
+      { headers: { 'x-project-id': 'default' }, signal: expect.any(AbortSignal), timeoutMs: 5000 },
     )
     expect(activeOrgWhenNamed).toBeUndefined()
     expect(store.get(activeOrgAtom)).toBe(created)

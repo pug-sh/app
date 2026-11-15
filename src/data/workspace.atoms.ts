@@ -358,6 +358,8 @@ export const deleteProjectAtom = atom(null, async (get, set, projectId: string) 
 // Org creation carries no zone (signup and new projects send the browser's), so the default project starts on UTC.
 // Name the browser's before the workspace loads it. Best effort: failure or expiry leaves UTC.
 const TIMEZONE_ADOPTION_DEADLINE_MS = 2000
+// Also retain a transport deadline for each RPC. The outer bound includes token refresh.
+const ADOPT_TIMEZONE_DEADLINE_MS = 5000
 const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => {
   const reportingTimezone = browserTimezone()
   if (isUtcZone(reportingTimezone)) return
@@ -375,7 +377,10 @@ const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => 
   try {
     await Promise.race([
       (async () => {
-        const { projects } = await projectsRPC.batchGet({ orgId }, { signal: controller.signal })
+        const { projects } = await projectsRPC.batchGet(
+          { orgId },
+          { signal: controller.signal, timeoutMs: ADOPT_TIMEZONE_DEADLINE_MS },
+        )
         // A late lookup must not start writes after the workspace has moved on.
         controller.signal.throwIfAborted()
         await Promise.all(
@@ -384,7 +389,11 @@ const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => 
             .map(project =>
               projectsRPC.updateMeta(
                 { reportingTimezone },
-                { headers: { 'x-project-id': project.id }, signal: controller.signal },
+                {
+                  headers: { 'x-project-id': project.id },
+                  signal: controller.signal,
+                  timeoutMs: ADOPT_TIMEZONE_DEADLINE_MS,
+                },
               ),
             ),
         )
