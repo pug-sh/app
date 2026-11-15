@@ -4,7 +4,7 @@ import type {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { SeriesColor } from '@/lib/event-colors'
 import { tsToDate } from '@/lib/timestamp'
-import { formatTooltipDate } from './helpers'
+import { fmtInZone, formatTooltipDate } from './helpers'
 
 type CohortRow = {
   label: string
@@ -34,12 +34,12 @@ export const heatStyle = (value: number) => {
   return { backgroundColor: `var(--heat-${stop})`, color: `var(--heat-${stop}-ink)` }
 }
 
-const formatCohortLabel = (value: string) => {
+const formatCohortLabel = (value: string, timeZone: string) => {
   const trimmed = value.trim()
   if (!trimmed) return '–'
   const parsed = new Date(trimmed)
   if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    return fmtInZone(parsed, timeZone, { year: 'numeric', month: 'short', day: 'numeric' })
   }
   return trimmed
 }
@@ -109,7 +109,7 @@ export const RetentionCohort = ({
                       className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: seriesColors[ri]?.dot }}
                     />
-                    <span>{formatCohortLabel(row.label)}</span>
+                    <span>{formatCohortLabel(row.label, timeZone)}</span>
                   </div>
                 </td>
                 <td className="sticky left-55 z-10 bg-background py-2 px-2 text-left text-xs tabular-nums text-muted-foreground min-w-27.5 border-r border-border/60">

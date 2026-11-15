@@ -1,15 +1,20 @@
 import { create } from '@bufbuild/protobuf'
 import { render, screen } from '@testing-library/react'
+import { createStore, Provider } from 'jotai'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import {
   AggregationType,
   Granularity,
+  RetentionCohortSchema,
   RetentionSeriesSchema,
   type UserFlowResult,
   UserFlowResultSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { activeProjectAtom } from '@/data/workspace.atoms'
 import type { SeriesColor } from '@/lib/event-colors'
+import { inZone } from '@/test/timezone'
 import type { ChartPoint } from './charts/types'
 import { InsightsContent } from './content'
 
@@ -418,5 +423,51 @@ describe('InsightsContent completed but empty', () => {
     expect(shows(render(<InsightsContent {...map} />).container, 'No location data in this period')).toBe(true)
     const { container } = render(<InsightsContent {...map} emptyQualifier="under the dashboard filters" />)
     expect(shows(container, 'No location data in this period under the dashboard filters')).toBe(true)
+  })
+})
+
+// The Insights page passes no zone, so the content reads it off the active project.
+describe('InsightsContent reporting zone', () => {
+  it("labels the days in the active project's zone", () => {
+    const store = createStore()
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'ist', reportingTimezone: 'Asia/Kolkata' }))
+    // Nov 11 and Nov 12 at IST midnight, 18:30 UTC the day before.
+    const istDays = [4, 8].map((value, i) => ({ date: new Date(Date.UTC(2026, 10, 10 + i, 18, 30)), values: [value] }))
+    // Not the project's zone, so reading the viewer's own zone can't pass for the project's.
+    inZone('America/Los_Angeles', () => {
+      const { container } = render(
+        <Provider store={store}>
+          <InsightsContent {...base} granularity={Granularity.DAY} chartData={istDays} />
+        </Provider>,
+      )
+      expect(container.textContent).toContain('Nov 12')
+    })
+  })
+
+  // A cohort is the instant its first day starts, so read in a western viewer's zone it names the day before.
+  it("names a retention cohort by its day in the active project's zone", () => {
+    const store = createStore()
+    store.set(activeProjectAtom, create(ProjectSchema, { id: 'ist', reportingTimezone: 'Asia/Kolkata' }))
+    const cohort = create(RetentionCohortSchema, {
+      cohort: '2026-11-11T00:00:00+05:30',
+      cohortSize: 10,
+      points: [{ value: 1 }],
+    })
+    inZone('America/Los_Angeles', () => {
+      const { container } = render(
+        <Provider store={store}>
+          <InsightsContent
+            {...base}
+            isTrends={false}
+            isRetention
+            resultCase="retention"
+            retentionSeriesList={[create(RetentionSeriesSchema, { cohorts: [cohort] })]}
+            retentionCohorts={[cohort]}
+            chartData={[]}
+          />
+        </Provider>,
+      )
+      expect(container.textContent).toContain('Nov 11, 2026')
+    })
   })
 })

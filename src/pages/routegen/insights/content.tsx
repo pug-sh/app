@@ -95,6 +95,7 @@ export const InsightsContent = memo(function InsightsContent({
   lightNumbers = false,
   emptyQualifier,
   awaitingEvent = false,
+  timeZone: timeZoneProp,
 }: {
   error: string | null
   retry: () => void
@@ -155,10 +156,13 @@ export const InsightsContent = memo(function InsightsContent({
   emptyQualifier?: string
   // A tile with no event never sends a request, so it must not claim to be loading.
   awaitingEvent?: boolean
+  // Overrides the active project's zone; InsightTileView always passes the one it resolved.
+  timeZone?: string
 }) {
   // Bucket labels render in the project's reporting zone so they match the
   // server-computed bucket boundaries (the server buckets in this same zone).
-  const timeZone = useAtomValue(activeProjectTimezoneAtom)
+  const projectTimeZone = useAtomValue(activeProjectTimezoneAtom)
+  const timeZone = timeZoneProp ?? projectTimeZone
   // Only the line-shaped views draw the comparison, so only they may let it stand in for live data.
   const drawableComparison = comparison && (viewMode === 'line' || viewMode === 'area') ? comparison : undefined
   // A zero window still draws when the prior one isn't: a collapse to zero is what compare is for.

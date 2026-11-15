@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { supportedTimezones } from '@/lib/timezone'
 import { cn } from '@/lib/utils'
 
-// `''` is the canonical UTC value (matches the server's zero); show it as "UTC".
+// The picker's UTC is `''`, which the server stores as Etc/UTC; show it as "UTC".
 const labelFor = (value: string) => value || 'UTC'
 
 export const TimezonePicker = ({

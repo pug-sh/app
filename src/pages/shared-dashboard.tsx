@@ -10,7 +10,7 @@ import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import LoadingSpinner from '@/components/loading-spinner'
 import { OptionChip } from '@/components/option-chip'
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
-import { clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
+import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
 import { useRouteParams } from '@/lib/route-params'
 import { toProtoTimeRange } from '@/lib/timestamp'
 import { GLOBAL_DASHBOARD_GRANULARITIES } from './routegen/dashboards/[dashboardId]/controls-helpers'
@@ -49,34 +49,41 @@ const SharedDashboard = () => {
     setGranularity(g => clampGranularity(g, clamped))
   }
 
-  const request = useMemo(
-    () =>
-      create(SharedDashboardsServiceQueryRequestSchema, {
-        shareId: shareId ?? '',
-        granularity,
-        timeRange: timeRange ? create(TimeRangeSchema, toProtoTimeRange(timeRange)) : undefined,
-      }),
-    [shareId, granularity, timeRange],
-  )
-
   const queryKey = stringifyQueryKey({ shareId, granularity, timeRange })
   const { data, error, loading } = useDebouncedQuery(
     queryKey,
     async signal => {
       const resp = await sharedRPC.query(request, { signal })
-      return resp.dashboard ?? null
+      return resp.dashboard ? { dashboard: resp.dashboard, timeZone: resp.reportingTimezone || 'UTC' } : null
     },
     { enabled: !!shareId, debounceMs: 0 },
   )
+  const dashboard = data?.dashboard
+  const timeZone = data?.timeZone ?? 'UTC'
+  const defaultGranularity = dashboard?.defaultGranularity ?? Granularity.UNSPECIFIED
+  // Chart axes use the user's chosen granularity, falling back to the dashboard's
+  // stored default when nothing is selected.
+  const resolvedGranularity = granularity === Granularity.UNSPECIFIED ? defaultGranularity : granularity
+
+  // A picked range starts on one of the share's buckets, as in-app tiles' ranges do, or the first comes back partial.
+  // It needs the response, so it follows the query that sends it: the picker only renders once a response is in.
+  const request = useMemo(() => {
+    const range = timeRange && { from: alignRangeStart(timeRange, resolvedGranularity, timeZone), to: timeRange.to }
+    return create(SharedDashboardsServiceQueryRequestSchema, {
+      shareId: shareId ?? '',
+      granularity,
+      timeRange: range ? create(TimeRangeSchema, toProtoTimeRange(range)) : undefined,
+    })
+  }, [shareId, granularity, timeRange, resolvedGranularity, timeZone])
 
   // Tiles paired with their pre-rendered results, keyed for the grid's renderTile.
   const { tiles, renderedById } = useMemo(() => {
-    const rendered = (data?.tiles ?? []).filter(entry => entry.tile !== undefined)
+    const rendered = (dashboard?.tiles ?? []).filter(entry => entry.tile !== undefined)
     return {
       tiles: rendered.map(entry => entry.tile!),
       renderedById: new Map(rendered.map(entry => [entry.tile!.id, entry])),
     }
-  }, [data])
+  }, [dashboard])
 
   if (loading && !data) {
     return (
@@ -86,7 +93,7 @@ const SharedDashboard = () => {
     )
   }
 
-  if (error || !data) {
+  if (error || !dashboard) {
     return (
       <Shell>
         <DashboardEmptyState
@@ -97,16 +104,14 @@ const SharedDashboard = () => {
     )
   }
 
-  // Chart axes use the user's chosen granularity, falling back to the dashboard's
-  // stored default when nothing is selected.
-  const resolvedGranularity = granularity === Granularity.UNSPECIFIED ? data.defaultGranularity : granularity
-
   return (
     <Shell>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl tracking-tight">{data.displayName}</h1>
-          {data.description ? <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{data.description}</p> : null}
+          <h1 className="text-3xl tracking-tight">{dashboard.displayName}</h1>
+          {dashboard.description ? (
+            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{dashboard.description}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <DateRangePicker value={timeRange} onChange={handleTimeRangeChange} allowUnset unsetLabel="Default range" />
@@ -130,7 +135,7 @@ const SharedDashboard = () => {
           renderTile={tile => {
             const rendered = renderedById.get(tile.id)
             if (!rendered) return null
-            return <SharedTileBody renderedTile={rendered} granularity={resolvedGranularity} />
+            return <SharedTileBody renderedTile={rendered} granularity={resolvedGranularity} timeZone={timeZone} />
           }}
         />
       )}

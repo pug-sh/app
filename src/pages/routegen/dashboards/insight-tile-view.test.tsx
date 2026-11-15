@@ -5,6 +5,7 @@ import { createStore, Provider } from 'jotai'
 import type { ReactNode } from 'react'
 import { expect, it, vi } from 'vitest'
 import { DashboardTileSchema, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
+import { ProjectSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import {
   AggregationType,
   DataPointSchema,
@@ -15,6 +16,7 @@ import {
   TrendSeriesSchema,
   TrendsResultSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { inZone } from '@/test/timezone'
 
 // The tile reads activeProjectTimezoneAtom, which pulls workspace.atoms → api/rpc → transport, and
 // that throws at module scope with no VITE_API_BASE_URL. Nothing here reads an RPC atom.
@@ -32,6 +34,7 @@ vi.mock('@/components/charts/chart-parent-size', () => ({
 const { InsightTileView } = await import('./insight-tile-view')
 const { compiledThemeAtom, installedThemesAtom, themeModeAtom, themeSelectionAtom } = await import('@/data/theme.atoms')
 const { setSeriesPalette } = await import('@/lib/event-colors')
+const { activeProjectAtom } = await import('@/data/workspace.atoms')
 
 const EMBER = {
   id: 'installed-ember' as const,
@@ -145,4 +148,45 @@ it.each([
     </Provider>,
   )
   expect(container.querySelector('.tabular-nums')?.textContent).toBe(shown)
+})
+
+// Two Asia/Kolkata days at IST midnight (18:30 UTC the day before), as the server buckets them.
+const istDay = (day: number) => timestampFromDate(new Date(Date.UTC(2026, 10, day - 1, 18, 30)))
+
+// Only the public shared page passes a zone in; every other tile reads it off the active project.
+it("steps and labels a tile's days in the active project's zone", () => {
+  const store = createStore()
+  store.set(activeProjectAtom, create(ProjectSchema, { id: 'ist', reportingTimezone: 'Asia/Kolkata' }))
+  // Not the project's zone, so reading the viewer's own zone can't pass for the project's.
+  inZone('America/Los_Angeles', () => {
+    const { container } = render(
+      <Provider store={store}>
+        <InsightTileView
+          viewMode={DashboardTileViewMode.LINE}
+          spec={create(InsightQuerySpecSchema, {
+            insightType: InsightType.TRENDS,
+            events: [{ event: { kind: 'page_view' }, aggregation: AggregationType.UNIQUE_USERS }],
+          })}
+          result={{
+            case: 'trends',
+            value: create(TrendsResultSchema, {
+              series: [
+                create(TrendSeriesSchema, {
+                  eventKind: 'page_view',
+                  points: [
+                    create(DataPointSchema, { time: istDay(11), value: 4 }),
+                    create(DataPointSchema, { time: istDay(12), value: 8 }),
+                  ],
+                }),
+              ],
+            }),
+          }}
+          granularity={Granularity.DAY}
+          compact
+        />
+      </Provider>,
+    )
+    expect(container.textContent).toContain('floor4')
+    expect(container.textContent).toContain('Nov 12')
+  })
 })

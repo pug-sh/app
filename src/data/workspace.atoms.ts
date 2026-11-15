@@ -8,7 +8,7 @@ import { type ListResponse, ListResponseSchema, type Org } from '@/api/genproto/
 import { type Project, UpdateMetaRequestSchema } from '@/api/genproto/dashboard/projects/v1/projects_pb'
 import { orgsRPCAtom, projectsRPCAtom } from '@/api/rpc'
 import { customerIdAtom } from '@/auth/jwt.atoms'
-import { browserTimezone } from '@/lib/timezone'
+import { browserTimezone, isUtcZone } from '@/lib/timezone'
 import { isUrlTarget, parseReference } from '@/theme/reference'
 import { parsePugThemeFile } from '@/theme/repository'
 
@@ -355,10 +355,29 @@ export const deleteProjectAtom = atom(null, async (get, set, projectId: string) 
   return true
 })
 
+// Org creation carries no zone (signup and new projects send the browser's), so the default project starts on UTC.
+// Name the browser's before the workspace loads it. Best effort: a failure only leaves UTC.
+const adoptBrowserTimezoneAtom = atom(null, async (get, _set, orgId: string) => {
+  const reportingTimezone = browserTimezone()
+  if (isUtcZone(reportingTimezone)) return
+  const projectsRPC = get(projectsRPCAtom)
+  try {
+    const { projects } = await projectsRPC.batchGet({ orgId })
+    await Promise.all(
+      projects
+        .filter(project => isUtcZone(project.reportingTimezone))
+        .map(project => projectsRPC.updateMeta({ reportingTimezone }, { headers: { 'x-project-id': project.id } })),
+    )
+  } catch (err) {
+    console.warn('createOrg: could not set the default project timezone, leaving UTC', err)
+  }
+})
+
 export const createOrgAtom = atom(null, async (get, set, displayName: string) => {
   const orgsRPC = get(orgsRPCAtom)
   const resp = await orgsRPC.create({ displayName })
   if (!resp.org) return null
+  await set(adoptBrowserTimezoneAtom, resp.org.id)
   // Push to the list first so the new org is in `orgsAtom` before any
   // subscriber sees it as the active org.
   set(orgsAtom, [...get(orgsAtom), resp.org])
@@ -445,9 +464,8 @@ export const saveProjectThemeAtom = atom(null, async (get, set, reference: strin
   trackEvent('project_theme_set', { kind, pinned })
 })
 
-// The project's reporting timezone, used to render bucketed insight/dashboard
-// times in the same zone the server bucketed them. `'UTC'` is a valid Intl zone
-// and the right default when the project stores `''` (the server's canonical UTC).
+// The project's reporting zone, for rendering bucketed times as the server cut them. '' reads as UTC: older
+// projects hold it, and General's save leaves the picker's '' in place of the stored Etc/UTC until the next load.
 export const activeProjectTimezoneAtom = atom(get => get(activeProjectAtom)?.reportingTimezone || 'UTC')
 
 export const resetWorkspaceAtom = atom(null, (_, set) => {

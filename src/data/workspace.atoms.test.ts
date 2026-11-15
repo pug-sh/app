@@ -7,16 +7,25 @@ import { ProjectSchema, UpdateMetaRequestSchema } from '@/api/genproto/dashboard
 import { rpcErrorMessage } from '@/lib/rpc-error'
 import { jwtFor } from '@/test/jwt'
 
-const { batchGet, projectsCreate, projectsDelete, projectsUpdateMeta, orgsList, orgsGet, orgsUpdateDisplayName } =
-  vi.hoisted(() => ({
-    batchGet: vi.fn(),
-    projectsCreate: vi.fn(),
-    projectsDelete: vi.fn(),
-    projectsUpdateMeta: vi.fn(),
-    orgsList: vi.fn(),
-    orgsGet: vi.fn(),
-    orgsUpdateDisplayName: vi.fn(),
-  }))
+const {
+  batchGet,
+  projectsCreate,
+  projectsDelete,
+  projectsUpdateMeta,
+  orgsCreate,
+  orgsList,
+  orgsGet,
+  orgsUpdateDisplayName,
+} = vi.hoisted(() => ({
+  batchGet: vi.fn(),
+  projectsCreate: vi.fn(),
+  projectsDelete: vi.fn(),
+  projectsUpdateMeta: vi.fn(),
+  orgsCreate: vi.fn(),
+  orgsList: vi.fn(),
+  orgsGet: vi.fn(),
+  orgsUpdateDisplayName: vi.fn(),
+}))
 
 // The RPC atoms build real ConnectRPC clients over the app's transport at read time. Swap the two
 // this module reads for hand-held fakes, so a test can decide when (and whether) a call resolves.
@@ -24,9 +33,15 @@ vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
     projectsRPCAtom: atom({ batchGet, create: projectsCreate, delete: projectsDelete, updateMeta: projectsUpdateMeta }),
-    orgsRPCAtom: atom({ list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
+    orgsRPCAtom: atom({ create: orgsCreate, list: orgsList, get: orgsGet, updateDisplayName: orgsUpdateDisplayName }),
   }
 })
+
+// The test runner's own zone would make the expected value depend on the machine.
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/timezone')>()),
+  browserTimezone: () => 'Asia/Kolkata',
+}))
 
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
@@ -43,6 +58,7 @@ const {
   bootstrapStatusAtom,
   canCreateOrgAtom,
   commitProjectsAtom,
+  createOrgAtom,
   createProjectAtom,
   deleteProjectAtom,
   fetchOrgsAtom,
@@ -383,6 +399,52 @@ describe('canCreateOrgAtom', () => {
     await store.set(refreshOrgsAtom)
 
     expect(store.get(canCreateOrgAtom)).toBe(true)
+  })
+})
+
+describe('createOrgAtom', () => {
+  beforeEach(() => {
+    batchGet.mockClear()
+    projectsUpdateMeta.mockClear()
+  })
+
+  // Creating an org sends no zone, so its default project lands on UTC unless the browser's is named.
+  it("names the browser's timezone on the new org's default project before selecting the org", async () => {
+    const store = createStore()
+    const created = org('org-new')
+    orgsCreate.mockResolvedValueOnce({ org: created })
+    batchGet.mockResolvedValueOnce({
+      projects: [create(ProjectSchema, { id: 'default', displayName: 'default', reportingTimezone: 'Etc/UTC' })],
+    })
+    let activeOrgWhenNamed: string | undefined
+    projectsUpdateMeta.mockImplementationOnce(async () => {
+      activeOrgWhenNamed = store.get(activeOrgAtom)?.id
+      return {}
+    })
+
+    expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
+
+    expect(batchGet).toHaveBeenCalledWith({ orgId: 'org-new' })
+    expect(projectsUpdateMeta).toHaveBeenCalledWith(
+      { reportingTimezone: 'Asia/Kolkata' },
+      { headers: { 'x-project-id': 'default' } },
+    )
+    expect(activeOrgWhenNamed).toBeUndefined()
+    expect(store.get(activeOrgAtom)).toBe(created)
+  })
+
+  it('still creates and selects the org when naming the timezone fails', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const store = createStore()
+    const created = org('org-new')
+    orgsCreate.mockResolvedValueOnce({ org: created })
+    batchGet.mockResolvedValueOnce({ projects: [project('default')] })
+    projectsUpdateMeta.mockRejectedValueOnce(new Error('down'))
+
+    expect(await store.set(createOrgAtom, 'org-new')).toBe(created)
+
+    expect(store.get(activeOrgAtom)).toBe(created)
+    expect(store.get(orgsAtom)).toContain(created)
   })
 })
 

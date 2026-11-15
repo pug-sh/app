@@ -9,9 +9,11 @@ import { DashboardMarkdownTile, TileShell } from './tiles'
 export const SharedTileBody = ({
   renderedTile,
   granularity,
+  timeZone,
 }: {
   renderedTile: RenderedTile
   granularity: Granularity
+  timeZone: string
 }) => {
   const tile = renderedTile.tile
   if (!tile) return null
@@ -31,6 +33,7 @@ export const SharedTileBody = ({
         result={outcome.case === 'result' ? outcome.value.result : { case: undefined, value: undefined }}
         error={outcome.case === 'errorMessage' ? outcome.value : null}
         granularity={granularity}
+        timeZone={timeZone}
         compact
       />
     </TileShell>
