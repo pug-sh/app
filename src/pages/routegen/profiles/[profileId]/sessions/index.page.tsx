@@ -141,11 +141,11 @@ const SessionsBody = ({ profileId }: { profileId: string }) => {
                   {startedAt ? (
                     <HoverSwap primary={formatDateTime(startedAt)} secondary={formatRelative(startedAt)} />
                   ) : (
-                    '—'
+                    '–'
                   )}
                 </td>
                 <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
-                  {startedAt && endedAt ? formatDuration(endedAt.getTime() - startedAt.getTime()) : '—'}
+                  {startedAt && endedAt ? formatDuration(endedAt.getTime() - startedAt.getTime()) : '–'}
                 </td>
                 <td className="py-2.5 pr-4 text-xs text-muted-foreground tabular-nums">
                   {s.eventCount.toLocaleString()}

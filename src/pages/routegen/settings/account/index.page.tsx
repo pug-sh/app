@@ -74,7 +74,7 @@ const Account = () => {
     <div className="space-y-8 max-w-2xl">
       <section>
         <SectionHeader title="Account" description="Your account email" />
-        <p className="text-sm font-mono text-muted-foreground">{me?.email ?? '—'}</p>
+        <p className="text-sm font-mono text-muted-foreground">{me?.email ?? '–'}</p>
       </section>
 
       <section>

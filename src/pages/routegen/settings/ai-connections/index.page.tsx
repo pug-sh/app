@@ -27,7 +27,7 @@ const connectHint = () => {
 
 const When = ({ grant, field }: { grant: Grant; field: 'createTime' | 'lastUsedTime' }) => {
   const date = validDate(tsToDate(grant[field]))
-  if (!date) return '—'
+  if (!date) return '–'
   return <HoverSwap primary={formatRelative(date)} secondary={formatDateTime(date)} />
 }
 
@@ -106,7 +106,7 @@ const AiConnections = () => {
                 {grant.clientName && <div className="text-xs text-muted-foreground">{grant.clientName}</div>}
               </td>
               <td className="py-2.5 pr-4 text-sm">
-                {grant.orgs.length > 0 ? grant.orgs.map(org => org.displayName).join(', ') : '—'}
+                {grant.orgs.length > 0 ? grant.orgs.map(org => org.displayName).join(', ') : '–'}
               </td>
               <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-muted-foreground">
                 <When grant={grant} field="createTime" />

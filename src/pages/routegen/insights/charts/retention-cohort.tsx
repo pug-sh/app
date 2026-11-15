@@ -17,8 +17,8 @@ const toPercent = (value: number, ratioInput: boolean) => {
   return Math.max(0, Math.min(100, percent))
 }
 
-// Value-intensity stops, low to high. Fill and text come from the theme's heat ramp — heat-1…7 and
-// heat-1-ink…heat-7-ink — with each stop's ink already picked for contrast by the registry.
+// Value-intensity stops, low to high. Fill and text come from the theme's heat ramp (heat-1…7 and
+// heat-1-ink…heat-7-ink), with each stop's ink already picked for contrast by the registry.
 const HEAT_THRESHOLDS = [10, 20, 35, 50, 65, 80]
 
 export const heatStop = (value: number) => 1 + HEAT_THRESHOLDS.filter(min => value >= min).length
@@ -36,7 +36,7 @@ export const heatStyle = (value: number) => {
 
 const formatCohortLabel = (value: string) => {
   const trimmed = value.trim()
-  if (!trimmed) return '—'
+  if (!trimmed) return '–'
   const parsed = new Date(trimmed)
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -69,7 +69,7 @@ export const RetentionCohort = ({
   return (
     <div className="mt-4 flex flex-col max-h-full">
       {/* Caption sits outside the scroll region so it stays put when the table is
-          scrolled horizontally or vertically — only the table below scrolls. */}
+          scrolled horizontally or vertically: only the table below scrolls. */}
       <div className="px-3 py-2 border-b border-border bg-muted/15 flex items-center justify-between gap-3 shrink-0">
         <p className="text-xs text-muted-foreground">Retention by cohort</p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -120,7 +120,7 @@ export const RetentionCohort = ({
                   const hasValue = value !== undefined
                   const cellDate = cohorts[ri]?.points[ci]?.time
                   const cellDateParsed = cellDate ? tsToDate(cellDate) : null
-                  const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity, timeZone) : '\u2014'
+                  const dateLabel = cellDateParsed ? formatTooltipDate(cellDateParsed, granularity, timeZone) : '\u2013'
                   const title = hasValue ? `${row.label} · ${dateLabel} · ${value.toFixed(1)}%` : `${row.label} · N/A`
                   return (
                     <td key={ci} className="py-1.5 px-1.5">
@@ -129,7 +129,7 @@ export const RetentionCohort = ({
                         style={hasValue ? heatStyle(value) : EMPTY_CELL_STYLE}
                         title={title}
                       >
-                        {hasValue ? `${Math.round(value)}%` : '—'}
+                        {hasValue ? `${Math.round(value)}%` : '–'}
                       </div>
                     </td>
                   )

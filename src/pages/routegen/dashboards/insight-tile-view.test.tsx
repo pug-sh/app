@@ -128,8 +128,8 @@ const pending = { case: undefined, value: undefined }
 it.each([
   ['a count with data', '19', AggregationType.TOTAL, result],
   ['a count that came back empty', '0', AggregationType.TOTAL, settledEmpty],
-  ['an average that came back empty', '—', AggregationType.AVG, settledEmpty],
-  ['a count still loading', '—', AggregationType.TOTAL, pending],
+  ['an average that came back empty', '–', AggregationType.AVG, settledEmpty],
+  ['a count still loading', '–', AggregationType.TOTAL, pending],
 ])('shows %s on a KPI as %s', (_, shown, aggregation, kpiResult) => {
   const { container } = render(
     <Provider store={createStore()}>

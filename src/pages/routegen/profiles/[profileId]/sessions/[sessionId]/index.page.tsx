@@ -59,7 +59,7 @@ const SessionSummary = ({
 
   const firstAuto = events.length > 0 ? events[events.length - 1].autoProperties : undefined
   const platform = platformOf(firstAuto)
-  // Suppressed at the read, so every use below — the render gate, the icon, the label — is already
+  // Suppressed at the read, so every use below (the render gate, the icon, the label) is already
   // right. On a native app $browser is the HTTP client ("Dart/3.x"), not a browser the session had.
   const browser = browserForPlatform(structGet(firstAuto, '$browser'), platform)
   const browserVersion = structGet(firstAuto, '$browserVersion')
@@ -107,7 +107,7 @@ const SessionSummary = ({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t">
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Duration</p>
-          <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '—'}</p>
+          <p className="text-sm font-medium tabular-nums">{duration > 0 ? formatDuration(duration) : '–'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Events</p>
@@ -115,11 +115,11 @@ const SessionSummary = ({
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Entry</p>
-          <p className="text-sm font-medium truncate">{entryEvent ?? '—'}</p>
+          <p className="text-sm font-medium truncate">{entryEvent ?? '–'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-0.5">Exit</p>
-          <p className="text-sm font-medium truncate">{exitEvent ?? '—'}</p>
+          <p className="text-sm font-medium truncate">{exitEvent ?? '–'}</p>
         </div>
       </div>
 
@@ -129,7 +129,7 @@ const SessionSummary = ({
           <span className="flex items-center gap-1">
             <Calendar className="w-3 h-3" />
             {formatDateTime(startTime)}
-            {endTime && ` — ${formatClock(endTime)}`}
+            {endTime && ` – ${formatClock(endTime)}`}
           </span>
         )}
         {(browser || os || device) && (
@@ -263,7 +263,7 @@ const SessionView = () => {
         <>
           <SessionSummary sessionId={sessionId ?? ''} distinctId={profileId ?? ''} events={events} />
 
-          {/* Kind legend — sticky */}
+          {/* Kind legend, sticky */}
           <div className="sticky top-0 z-10 bg-background -mx-page-gutter px-page-gutter py-3 border-b border-border/50 flex flex-wrap gap-1.5">
             {uniqueKinds.map(kind => (
               <span key={kind} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">

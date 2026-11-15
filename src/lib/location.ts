@@ -1,7 +1,7 @@
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
 
 export const formatCountryName = (code: string | undefined) => {
-  if (!code) return '—'
+  if (!code) return '–'
   if (code.length !== 2) return code
   try {
     return regionNames.of(code.toUpperCase()) ?? code
@@ -23,7 +23,7 @@ export const regionAddsDetail = (city?: string, region?: string) => {
 export const formatLocality = (city?: string, region?: string) =>
   [city?.trim(), regionAddsDetail(city, region) ? region?.trim() : undefined].filter(Boolean).join(', ')
 
-/** Full location string (city, region, country) — for tooltips and detail views. */
+/** Full location string (city, region, country), for tooltips and detail views. */
 export const formatLocationLabel = (city?: string, region?: string, country?: string) =>
   [formatLocality(city, region), countryDisplay(country)].filter(Boolean).join(', ')
 

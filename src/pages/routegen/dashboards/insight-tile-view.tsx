@@ -40,7 +40,7 @@ import { dashboardTileViewModeToViewMode, resolveDashboardLegendPosition } from 
 
 export const formatYAxisValue = (format: VisualizationOptions_YAxisFormat | undefined) => {
   return (value: number): string => {
-    if (!Number.isFinite(value)) return '—'
+    if (!Number.isFinite(value)) return '–'
     switch (format) {
       case VisualizationOptions_YAxisFormat.PERCENT:
         return `${(value * 100).toFixed(1)}%`

@@ -171,6 +171,6 @@ describe('tooltip values', () => {
     const { result } = renderHook(() => useVendoredChartPrep(pending, ['a'], COLORS, Granularity.DAY, 'UTC'))
 
     const { chartData, tooltipRows } = result.current
-    expect(tooltipRows(chartData[0]).map(row => row.value)).toEqual(['\u2014'])
+    expect(tooltipRows(chartData[0]).map(row => row.value)).toEqual(['\u2013'])
   })
 })

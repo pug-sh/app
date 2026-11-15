@@ -81,7 +81,7 @@ export const VisitorPopover = ({ marker, journey, profileHref, left }: VisitorPr
   const href = profileHref?.(marker.distinctId)
   const source = marker.referrer ?? marker.utmSource
   // For a page view the headline detail already is the path; repeating it is noise.
-  const showPage = marker.page !== '—' && marker.page !== marker.detail
+  const showPage = marker.page !== '–' && marker.page !== marker.detail
 
   return (
     <div className="text-xs">

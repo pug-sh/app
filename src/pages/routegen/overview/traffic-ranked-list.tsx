@@ -25,7 +25,7 @@ export const TrafficRankedList = ({
   isActive?: (row: RankedRow) => boolean
   // Fixed-size slot before the label; return a same-size spacer for glyph-less rows so labels align.
   renderLeading?: (row: RankedRow) => ReactNode
-  // Display-only override (e.g. country code → name) — the raw label stays the filter/query key.
+  // Display-only override (e.g. country code → name); the raw label stays the filter/query key.
   formatLabel?: (row: RankedRow) => string
   dimensionLabel?: string
   metricControl?: ReactNode
@@ -57,7 +57,7 @@ export const TrafficRankedList = ({
 
         const content = (
           <>
-            {/* Selection rail. Sits above the bar so it stays visible on a full-width one — the row tint
+            {/* Selection rail. Sits above the bar so it stays visible on a full-width one: the row tint
                 alone disappears behind the top row's bar, which is exactly where selection matters most. */}
             {active && <span className="absolute inset-y-0 left-0 z-10 w-[3px] bg-link" />}
             <span
@@ -85,13 +85,13 @@ export const TrafficRankedList = ({
             </span>
             {showShare && (
               <span className="relative w-11 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {total > 0 ? `${((row.value / total) * 100).toFixed(1)}%` : '—'}
+                {total > 0 ? `${((row.value / total) * 100).toFixed(1)}%` : '–'}
               </span>
             )}
           </>
         )
 
-        // Rows are separated by spacing, not rules, so each one reads as its own pill — which also lets
+        // Rows are separated by spacing, not rules, so each one reads as its own pill, which also lets
         // the selected row tint as a rounded block instead of a square band cutting across the list.
         // Hover is split by state: a shared hover would replace the selection tint with plain grey,
         // making a selected row look *less* selected while the pointer is on it.

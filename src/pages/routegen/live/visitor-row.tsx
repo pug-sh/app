@@ -122,7 +122,7 @@ const VisitorRow = ({ visitor, journey, stat, selected, highlighted, onClick, on
               <CountryFlag code={country} size={12} />
               {/* Two ink tiers rather than one faded with alpha, which composites per theme. */}
               <span className="truncate">
-                <span className="text-muted-foreground">{locality || countryName || '—'}</span>
+                <span className="text-muted-foreground">{locality || countryName || '–'}</span>
                 {locality && countryName && ` · ${countryName}`}
               </span>
               <span className="flex shrink-0 items-center gap-1" title={deviceModel || deviceTypeLabel[deviceType]}>
