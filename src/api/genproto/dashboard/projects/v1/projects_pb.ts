@@ -174,7 +174,9 @@ export type Project = Message<"dashboard.projects.v1.Project"> & {
 
   /**
    * IANA reporting timezone (e.g. "Asia/Kolkata") used to bucket day/week/month
-   * boundaries for this project's insights and dashboards. Empty string = UTC.
+   * boundaries for this project's insights and dashboards. UTC reads back as
+   * "Etc/UTC"; an older project may hold "", which names no zone, so its buckets
+   * follow ClickHouse's own zone.
    *
    * @generated from field: string reporting_timezone = 7;
    */
