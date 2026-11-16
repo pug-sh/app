@@ -1,10 +1,10 @@
 // UTM-source token → domain, for the Sources panel's favicons. A `$utmSource` value is a free-text
 // token ("google", "producthunt", "newsletter"), not a hostname, so the favicon service can't resolve
-// it directly — this maps the well-known ones to the domain whose favicon represents them. Unmapped
+// it directly. This maps the well-known ones to the domain whose favicon represents them. Unmapped
 // tokens (custom campaign sources, "newsletter"/"email", …) resolve to undefined and render iconless.
 //
 // Keys are separator-free lowercase (normalized below), so "product_hunt" / "product-hunt" /
-// "producthunt" all hit one entry. Curated toward a dev/SaaS audience; extend freely — a miss only
+// "producthunt" all hit one entry. Curated toward a dev/SaaS audience; extend freely: a miss only
 // costs an icon, never correctness.
 const UTM_SOURCE_DOMAINS: Record<string, string> = {
   // Search
@@ -19,6 +19,8 @@ const UTM_SOURCE_DOMAINS: Record<string, string> = {
   // Social
   facebook: 'facebook.com',
   fb: 'facebook.com',
+  // Meta's mark on a transparent PNG; meta.com serves it as an opaque JPEG, a white tile on dark.
+  meta: 'business.facebook.com',
   instagram: 'instagram.com',
   ig: 'instagram.com',
   twitter: 'twitter.com',

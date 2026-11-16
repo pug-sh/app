@@ -5,6 +5,7 @@ describe('utmSourceDomain', () => {
   it('maps a known token to its domain', () => {
     expect(utmSourceDomain('google')).toBe('google.com')
     expect(utmSourceDomain('reddit')).toBe('reddit.com')
+    expect(utmSourceDomain('meta')).toBe('business.facebook.com')
   })
 
   it('is case- and whitespace-insensitive', () => {
