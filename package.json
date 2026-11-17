@@ -71,7 +71,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.4",
+    "@biomejs/biome": "2.6.7",
     "@bufbuild/buf": "^1.75.0",
     "@bufbuild/protoc-gen-es": "^2.16.0",
     "@sentry/vite-plugin": "^11.13.0",
@@ -90,7 +90,7 @@
     "@vitejs/plugin-react": "^6.2.1",
     "@vitest/coverage-v8": "^5.1.0",
     "happy-dom": "^21.0.4",
-    "knip": "^6.44.1",
+    "knip": "^6.45.1",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.1.0"
