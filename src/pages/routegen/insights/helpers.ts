@@ -1,18 +1,20 @@
 import {
   AggregationType,
-  type DataPoint,
   type FunnelSeries,
   type Granularity,
   type InsightQuerySpec,
   InsightType,
+  type QueryRequest,
+  type QueryResponse,
   SessionMetric,
   TopKQuery_Dimension,
   type TrendSeries,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { TimeRange } from '@/components/date-range-picker'
 import { getIndexedColor, getSeriesColor, OTHERS_SERIES_COLOR, type SeriesColor } from '@/lib/event-colors'
 import { propertyValueLabel } from '@/lib/property-values'
 import { tsToDate } from '@/lib/timestamp'
-import { nextZoneBucket } from '@/lib/timezone'
+import { floorToZoneBucket, nextZoneBucket } from '@/lib/timezone'
 import { INSIGHT_TYPES } from './constants'
 import type { TopKState } from './top-k'
 
@@ -149,6 +151,18 @@ export const emptyReadsAsZero = (spec: InsightQuerySpec | undefined) => {
   return aggregations.length > 0 && aggregations.every(aggregation => ZERO_WHEN_EMPTY.has(aggregation))
 }
 
+// A result stays up while the next one loads, so it carries the granularity it was asked for and, where an empty
+// bucket reads as zero, the range its axis is filled out to.
+export const resultFor = (request: QueryRequest, { result }: QueryResponse) => {
+  const from = tsToDate(request.timeRange?.from)
+  const to = tsToDate(request.timeRange?.to)
+  return {
+    result,
+    granularity: request.granularity,
+    fillRange: from && to && emptyReadsAsZero(request.spec) ? { from, to } : undefined,
+  }
+}
+
 type ChartPoint = {
   date: Date
   values: number[]
@@ -277,29 +291,35 @@ export const disambiguateLabels = (labels: string[]) => {
 const MAX_GAP_FILL = 4096 // backstop against a non-advancing stepper
 const BUCKET_REACHED_MS = 1000 // a filler within this of the next real bucket IS it
 
-// Keep every observed bucket, and step the granularity in-zone to fill the gaps between them. Only
-// fillers come from the stepper, so its drift can't move a real bar; a null step leaves the axis.
-const fillBucketGrid = (instants: number[], granularity: Granularity, timeZone: string): number[] => {
+const bucketStart = (ms: number, granularity: Granularity, timeZone: string) =>
+  floorToZoneBucket(new Date(ms), granularity, timeZone).getTime()
+
+// A gap stops at the bucket its next one floors to: before bucketExpr's DateTime cast, a week east of the server
+// came back at the server's midnight. Only fillers come from the stepper, so its drift can't move a real bar.
+const fillBucketGrid = (instants: number[], granularity: Granularity, timeZone: string, end: number) => {
   const grid = [instants[0]]
-  for (let i = 1; i < instants.length; i++) {
-    const target = instants[i]
-    let next = nextZoneBucket(new Date(instants[i - 1]), granularity, timeZone)?.getTime()
-    for (let n = 0; next != null && next < target - BUCKET_REACHED_MS && n < MAX_GAP_FILL; n++) {
+  const fillBefore = (limit: number) => {
+    let next = nextZoneBucket(new Date(grid[grid.length - 1]), granularity, timeZone)?.getTime()
+    for (let n = 0; next != null && next < limit && n < MAX_GAP_FILL; n++) {
       grid.push(next)
       next = nextZoneBucket(new Date(next), granularity, timeZone)?.getTime()
     }
+  }
+  for (const target of instants.slice(1)) {
+    fillBefore(bucketStart(target, granularity, timeZone) - BUCKET_REACHED_MS)
     grid.push(target)
   }
+  fillBefore(end)
   return grid
 }
 
-// Backend trends are sparse in time (empty buckets dropped, and two series needn't share buckets),
-// but the vendored chart sizes bars from the row count while placing them at their true time, so a
-// gapped axis makes clustered bars overlap. Rebuild a continuous, instant-keyed grid to fix both.
+// Trends drop empty buckets, and the vendored chart sizes bars by row count but places them by time, so a gapped
+// axis overlaps them: rebuild a continuous grid, out to the queried range (up to now) when given one.
 export const buildChartData = (
   trendSeries: TrendSeries[],
   granularity: Granularity,
   timeZone: string,
+  range?: TimeRange,
 ): ChartPoint[] => {
   if (trendSeries.length === 0) return []
 
@@ -315,7 +335,15 @@ export const buildChartData = (
   const instants = [...new Set(valuesByInstant.flatMap(byInstant => [...byInstant.keys()]))].sort((a, b) => a - b)
   if (instants.length === 0) return []
 
-  return fillBucketGrid(instants, granularity, timeZone).map(ms => ({
+  let end = Number.NEGATIVE_INFINITY
+  if (range && nextZoneBucket(range.from, granularity, timeZone)) {
+    const first = bucketStart(range.from.getTime(), granularity, timeZone)
+    if (first < bucketStart(instants[0], granularity, timeZone) - BUCKET_REACHED_MS) instants.unshift(first)
+    // A custom range runs to the end of its last day, which may not have happened yet.
+    end = Math.min(range.to.getTime(), Date.now())
+  }
+
+  return fillBucketGrid(instants, granularity, timeZone, end).map(ms => ({
     date: new Date(ms),
     values: valuesByInstant.map(byInstant => byInstant.get(ms) ?? 0),
   }))
@@ -326,8 +354,8 @@ export const buildChartData = (
 // against a 31-day one), so a shorter series is resampled to full width rather than stopping short:
 // the vendored line can't skip a point, and a tail left unfilled is zeroed downstream and reads as
 // a real collapse. Nearest-neighbour: values repeat when widening, drop when narrowing.
-export const alignComparisonValues = (points: readonly DataPoint[], bucketCount: number): number[] => {
-  if (points.length === 0 || bucketCount <= 0) return []
-  const scale = bucketCount > 1 ? (points.length - 1) / (bucketCount - 1) : 0
-  return Array.from({ length: bucketCount }, (_, i) => Number(points[Math.round(i * scale)]?.value) || 0)
+export const alignComparisonValues = (values: readonly number[], bucketCount: number) => {
+  if (values.length === 0 || bucketCount <= 0) return []
+  const scale = bucketCount > 1 ? (values.length - 1) / (bucketCount - 1) : 0
+  return Array.from({ length: bucketCount }, (_, i) => values[Math.round(i * scale)] ?? 0)
 }

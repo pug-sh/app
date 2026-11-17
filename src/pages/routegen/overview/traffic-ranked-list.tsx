@@ -7,7 +7,7 @@ import type { RankedRow } from './traffic-breakdown'
 // Ranked list for the traffic breakdown panels, in the "row is the bar" style: each row carries a
 // left-anchored fill sized to its share of the top value, the label reading over it and the value +
 // share pinned right. Takes resolved RankedRows, so top-K and session breakdowns render identically.
-export const TrafficRankedList = ({
+export const TrafficRankedList = <Row extends RankedRow>({
   rows,
   showShare = false,
   onRowClick,
@@ -17,16 +17,16 @@ export const TrafficRankedList = ({
   dimensionLabel,
   metricControl,
 }: {
-  rows: RankedRow[]
+  rows: Row[]
   // The caller's promise that the rows sum to a meaningful total: true for top-K (the $others bucket
   // captures the tail), false for session breakdowns (top-N sliced, so a share would mean % of shown).
   showShare?: boolean
-  onRowClick?: (row: RankedRow) => void
-  isActive?: (row: RankedRow) => boolean
+  onRowClick?: (row: Row) => void
+  isActive?: (row: Row) => boolean
   // Fixed-size slot before the label; return a same-size spacer for glyph-less rows so labels align.
-  renderLeading?: (row: RankedRow) => ReactNode
+  renderLeading?: (row: Row) => ReactNode
   // Display-only override (e.g. country code → name); the raw label stays the filter/query key.
-  formatLabel?: (row: RankedRow) => string
+  formatLabel?: (row: Row) => string
   dimensionLabel?: string
   metricControl?: ReactNode
 }) => {

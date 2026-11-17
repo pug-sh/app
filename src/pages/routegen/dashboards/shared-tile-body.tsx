@@ -1,5 +1,7 @@
 import type { RenderedTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { TimeRange } from '@/components/date-range-picker'
+import { emptyReadsAsZero } from '../insights/helpers'
 import { InsightTileView } from './insight-tile-view'
 import { DashboardMarkdownTile, TileShell } from './tiles'
 
@@ -10,10 +12,13 @@ export const SharedTileBody = ({
   renderedTile,
   granularity,
   timeZone,
+  timeRange,
 }: {
   renderedTile: RenderedTile
   granularity: Granularity
   timeZone: string
+  // The range the viewer picked. The server resolves a default one itself and doesn't say which.
+  timeRange?: TimeRange
 }) => {
   const tile = renderedTile.tile
   if (!tile) return null
@@ -34,6 +39,7 @@ export const SharedTileBody = ({
         error={outcome.case === 'errorMessage' ? outcome.value : null}
         granularity={granularity}
         timeZone={timeZone}
+        fillRange={timeRange && emptyReadsAsZero(spec) ? timeRange : undefined}
         compact
       />
     </TileShell>

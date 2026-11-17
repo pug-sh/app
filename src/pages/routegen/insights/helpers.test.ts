@@ -9,11 +9,14 @@ import {
   Granularity,
   InsightQuerySpecSchema,
   InsightType,
+  QueryRequestSchema,
+  QueryResponseSchema,
   SessionMetric,
   SessionQuerySchema,
   TrendSeriesSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { getIndexedColor, getSeriesColor, OTHERS_SERIES_COLOR } from '@/lib/event-colors'
+import { toProtoTimeRange } from '@/lib/timestamp'
 import {
   alignComparisonValues,
   breakdownLabel,
@@ -21,6 +24,7 @@ import {
   canShareInsight,
   collapseValues,
   emptyReadsAsZero,
+  resultFor,
   SERIES_COLLAPSE,
   specAggregationResolver,
   trendSeriesColor,
@@ -143,15 +147,106 @@ describe('buildChartData', () => {
     expect(data.map(d => d.values[0])).toEqual([1, 0, 0, 4])
   })
 
-  // No fixed step for Auto: leave the axis as given, just instant-keyed and sorted.
+  // No fixed step for Auto: the axis stays as given, range or not, just instant-keyed and sorted.
   it('leaves the axis untouched when granularity has no step', () => {
     const pts: [Date, number][] = [
       [hour(3), 2],
       [hour(0), 5],
     ]
-    const data = buildChartData([seriesAt('page_view', pts)], Granularity.UNSPECIFIED, 'UTC')
+    const data = buildChartData([seriesAt('page_view', pts)], Granularity.UNSPECIFIED, 'UTC', {
+      from: new Date(Date.UTC(2026, 6, 19, 22)),
+      to: hour(23),
+    })
     expect(times(data)).toEqual([hour(0), hour(3)].map(h => h.getTime()))
     expect(data.map(d => d.values[0])).toEqual([5, 2])
+  })
+
+  describe('over the range queried', () => {
+    afterEach(() => vi.useRealTimers())
+
+    // The query drops the empty buckets past either end too, so without the range a lone bucket would be the whole axis.
+    it('spans it, from the bucket it starts in', () => {
+      const range = { from: new Date(Date.UTC(2026, 6, 19, 10, 37)), to: new Date(Date.UTC(2026, 6, 20, 10, 37)) }
+      const data = buildChartData([seriesAt('page_view', [[hour(7), 15]])], Granularity.HOUR, 'UTC', range)
+      expect(times(data)).toEqual(Array.from({ length: 25 }, (_, h) => Date.UTC(2026, 6, 19, 10 + h)))
+      expect(data.map(d => d.values[0])).toEqual(Array.from({ length: 25 }, (_, h) => (h === 21 ? 15 : 0)))
+    })
+
+    // The range's end is exclusive, as the backend's `occur_time < to` is.
+    it('adds nothing when the data already covers it', () => {
+      const pts: [Date, number][] = [
+        [hour(0), 5],
+        [hour(1), 4],
+        [hour(2), 3],
+        [hour(3), 2],
+      ]
+      const data = buildChartData([seriesAt('page_view', pts)], Granularity.HOUR, 'UTC', { from: hour(0), to: hour(4) })
+      expect(times(data)).toEqual([0, 1, 2, 3].map(h => hour(h).getTime()))
+      expect(data.map(d => d.values[0])).toEqual([5, 4, 3, 2])
+    })
+
+    // A custom range runs to the end of its last day, which may not have happened yet.
+    it('stops at the bucket in progress', () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date(Date.UTC(2026, 6, 20, 10, 37)))
+      const range = { from: hour(0), to: new Date(Date.UTC(2026, 6, 20, 23, 59, 59, 999)) }
+      const data = buildChartData([seriesAt('page_view', [[hour(3), 2]])], Granularity.HOUR, 'UTC', range)
+      expect(times(data)).toEqual(Array.from({ length: 11 }, (_, h) => hour(h).getTime()))
+    })
+
+    // Kolkata's days start at 18:30 UTC, so a range floored or stepped in UTC lands beside the real buckets.
+    it("fills it in the zone's own buckets", () => {
+      const istMidnight = (d: number) => new Date(Date.UTC(2026, 2, d - 1, 18, 30))
+      const range = { from: new Date(Date.UTC(2026, 2, 8, 7, 30)), to: new Date(Date.UTC(2026, 2, 11, 3, 30)) }
+      const pts: [Date, number][] = [[istMidnight(10), 3]]
+      const data = buildChartData([seriesAt('page_view', pts)], Granularity.DAY, 'Asia/Kolkata', range)
+      expect(times(data)).toEqual([8, 9, 10, 11].map(d => istMidnight(d).getTime()))
+      expect(data.map(d => d.values[0])).toEqual([0, 0, 3, 0])
+    })
+
+    it('steps weeks from Sunday and months from the 1st', () => {
+      const weeks = buildChartData([seriesAt('page_view', [[day(15), 7]])], Granularity.WEEK, 'UTC', {
+        from: new Date(Date.UTC(2026, 2, 4, 12)),
+        to: new Date(Date.UTC(2026, 2, 24, 12)),
+      })
+      expect(times(weeks)).toEqual([1, 8, 15, 22].map(d => day(d).getTime()))
+      expect(weeks.map(d => d.values[0])).toEqual([0, 0, 7, 0])
+
+      const firstOf = (month: number) => new Date(Date.UTC(2026, month, 1))
+      const months = buildChartData([seriesAt('page_view', [[firstOf(1), 9]])], Granularity.MONTH, 'UTC', {
+        from: new Date(Date.UTC(2026, 0, 15)),
+        to: new Date(Date.UTC(2026, 3, 10)),
+      })
+      expect(times(months)).toEqual([0, 1, 2, 3].map(m => firstOf(m).getTime()))
+      expect(months.map(d => d.values[0])).toEqual([0, 9, 0, 0])
+    })
+  })
+
+  // A backend without bucketExpr's DateTime cast stamps weeks at the ClickHouse server's midnight (UTC in these
+  // fixtures), so a gap closes at the bucket its next one floors to, or each real week gets a zero twin.
+  describe("with weeks stamped at the server's midnight", () => {
+    it('fills a range east of the server without doubling a week', () => {
+      const pts: [Date, number][] = [
+        [day(8), 4],
+        [day(22), 6],
+      ]
+      const data = buildChartData([seriesAt('page_view', pts)], Granularity.WEEK, 'Asia/Kolkata', {
+        from: new Date(Date.UTC(2026, 2, 9, 12)),
+        to: new Date(Date.UTC(2026, 2, 28, 12)),
+      })
+      expect(times(data)).toEqual([day(8).getTime(), Date.UTC(2026, 2, 14, 18, 30), day(22).getTime()])
+      expect(data.map(d => d.values[0])).toEqual([4, 0, 6])
+    })
+
+    it('adds nothing between consecutive weeks west of the server', () => {
+      const pts: [Date, number][] = [
+        [day(1), 1],
+        [day(8), 2],
+        [day(15), 3],
+      ]
+      const data = buildChartData([seriesAt('page_view', pts)], Granularity.WEEK, 'America/New_York')
+      expect(times(data)).toEqual([1, 8, 15].map(d => day(d).getTime()))
+    })
   })
 })
 
@@ -168,34 +263,57 @@ describe('trendSeriesColor', () => {
   })
 })
 
+describe('resultFor', () => {
+  const range = { from: new Date(Date.UTC(2026, 6, 20)), to: new Date(Date.UTC(2026, 6, 21)) }
+  const request = (aggregation: AggregationType) =>
+    create(QueryRequestSchema, {
+      granularity: Granularity.HOUR,
+      timeRange: toProtoTimeRange(range),
+      spec: {
+        insightType: InsightType.TRENDS,
+        events: [{ event: { kind: 'purchase' }, aggregation, aggregationProperty: 'amount' }],
+      },
+    })
+
+  // An average or minimum of an empty bucket has no value, and a zero there drags the summary's avg and min down.
+  it.each([
+    ['a count', AggregationType.TOTAL, true],
+    ['unique users', AggregationType.UNIQUE_USERS, true],
+    ['an average', AggregationType.AVG, false],
+    ['a minimum', AggregationType.MIN, false],
+  ])('fills %s out to the range only if an empty bucket reads as zero', (_, aggregation, fills) => {
+    const answered = resultFor(request(aggregation), create(QueryResponseSchema))
+    expect(answered.granularity).toBe(Granularity.HOUR)
+    expect(answered.fillRange).toEqual(fills ? range : undefined)
+  })
+})
+
 // The compare window is its own query, so its bucket count needn't match the one it's drawn over.
 describe('alignComparisonValues', () => {
-  const points = (...values: number[]) => values.map(value => create(DataPointSchema, { value }))
-
   it('maps one-to-one when the two windows bucket the same', () => {
-    expect(alignComparisonValues(points(1, 2, 3, 4), 4)).toEqual([1, 2, 3, 4])
+    expect(alignComparisonValues([1, 2, 3, 4], 4)).toEqual([1, 2, 3, 4])
   })
 
   // A 31-day month against a 30-day one. Exact, not just endpoints-and-length: asserting the shape
   // loosely passes on [10, 0, 0, 0, 30], which is the zero-collapse this function exists to avoid.
   it('stretches a shorter prior window across the full width', () => {
-    expect(alignComparisonValues(points(10, 20, 30), 5)).toEqual([10, 20, 20, 30, 30])
-    expect(alignComparisonValues(points(1, 2, 3, 4), 7)).toEqual([1, 2, 2, 3, 3, 4, 4])
+    expect(alignComparisonValues([10, 20, 30], 5)).toEqual([10, 20, 20, 30, 30])
+    expect(alignComparisonValues([1, 2, 3, 4], 7)).toEqual([1, 2, 2, 3, 3, 4, 4])
   })
 
   it('compresses a longer prior window onto the same buckets', () => {
-    const aligned = alignComparisonValues(points(1, 2, 3, 4, 5), 3)
+    const aligned = alignComparisonValues([1, 2, 3, 4, 5], 3)
     expect(aligned).toEqual([1, 3, 5])
   })
 
   it('has nothing to draw for an empty window', () => {
     expect(alignComparisonValues([], 5)).toEqual([])
-    expect(alignComparisonValues(points(1, 2), 0)).toEqual([])
+    expect(alignComparisonValues([1, 2], 0)).toEqual([])
   })
 
   // bucketCount 1 is the degenerate case the index scale divides by zero on.
   it('survives a single bucket', () => {
-    expect(alignComparisonValues(points(7, 8, 9), 1)).toEqual([7])
+    expect(alignComparisonValues([7, 8, 9], 1)).toEqual([7])
   })
 })
 

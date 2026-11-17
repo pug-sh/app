@@ -1,27 +1,33 @@
-import { Bot, Loader2 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { Bot } from 'lucide-react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 import { trackFeature } from '@/analytics/pug'
-import { DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { Granularity } from '@/api/genproto/shared/insights/v1/insights_pb'
+import { type Granularity, InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
+import { DomainFavicon } from '@/components/domain-favicon'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
-import { Button } from '@/components/ui/button'
-import {
-  CRAWLER_CATEGORY_PROPERTY,
-  CRAWLER_COMPANY_PROPERTY,
-  CRAWLER_NAME_PROPERTY,
-  CRAWLER_REQUEST_EVENT,
-  CRAWLER_VERIFIED_PROPERTY,
-} from '@/lib/crawlers'
+import { CRAWLER_CATEGORY_PROPERTY, CRAWLER_REQUEST_EVENT, STATUS_CODE_PROPERTY } from '@/lib/crawlers'
+import { compactNumber } from '@/lib/format'
 import { autoGranularity } from '@/lib/granularity'
 import { propertyValueLabel } from '@/lib/property-values'
-import { DashboardInsightContent } from '../dashboards/insight-tile-content'
-import { buildCrawlerTopKQuery, buildCrawlerTrendQuery } from './crawler-queries'
+import { cn } from '@/lib/utils'
+import { EMPTY_VALUE_LABEL } from '../insights/helpers'
+import {
+  buildAiVisitsBreakdownQuery,
+  buildAiVisitsQuery,
+  buildCrawlerPagesQuery,
+  buildCrawlerProblemsQuery,
+  buildCrawlerPurposeQuery,
+  CRAWLER_PURPOSES,
+  type CrawlerPurpose,
+} from './crawler-queries'
+import { CrawlerTable } from './crawler-table'
 import type { GlobalOverrides } from './global-overrides'
 import OverviewSectionHeader from './overview-section-header'
 import { OverviewTileShell } from './overview-tile-shell'
-import { topKToRankedRows } from './traffic-breakdown'
-import { TabStrip } from './traffic-breakdown-panel'
+import { StatTile } from './stat-tile'
+import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
+import { PanelBody, TabStrip } from './traffic-breakdown-panel'
+import { TrafficChartTile } from './traffic-chart-tile'
 import { TrafficFilterBar } from './traffic-filter-bar'
 import { filtersExcept, hasFilter, removeFilter, toggleFilter } from './traffic-filters'
 import { TrafficRankedList } from './traffic-ranked-list'
@@ -30,105 +36,207 @@ import { useTrafficQuery } from './use-traffic-query'
 
 const SETUP_DOCS_URL = 'https://docs.pug.sh/crawlers/'
 
-const SECTION_DESCRIPTION = 'AI products, search engines and SEO tools reading your site, as your server reports them.'
+const SECTION_DESCRIPTION =
+  'What AI products, search engines and SEO tools do with your site, as your server reports them, and the visits AI sends you.'
 
-type CrawlerTab = { id: string; label: string; property: string; notFound?: boolean }
-
-type CrawlerPanelConfig = { title: string; footer: string; tabs: readonly CrawlerTab[] }
-
-const CRAWLERS_PANEL: CrawlerPanelConfig = {
-  title: 'Crawlers',
-  footer: 'requests by crawler',
-  tabs: [
-    { id: 'agent', label: 'Crawlers', property: CRAWLER_NAME_PROPERTY },
-    { id: 'company', label: 'Companies', property: CRAWLER_COMPANY_PROPERTY },
-    { id: 'category', label: 'Categories', property: CRAWLER_CATEGORY_PROPERTY },
-    { id: 'verified', label: 'Verification', property: CRAWLER_VERIFIED_PROPERTY },
-  ],
+const PURPOSE_DESCRIPTIONS: Record<CrawlerPurpose, string> = {
+  answers: 'Fetched live because someone asked an AI product',
+  search: 'Builds a search index that results and AI answers draw on',
+  training: 'Collects pages to train models',
+  seo: 'Crawls for an SEO tool',
 }
 
-const PAGES_PANEL: CrawlerPanelConfig = {
-  title: 'Pages',
-  footer: 'requests by page · not found is a 404 response',
-  tabs: [
-    { id: 'pages', label: 'Pages', property: '$pathname' },
-    { id: 'notFound', label: 'Not found', property: '$pathname', notFound: true },
-  ],
-}
+const AI_VISITS = 'aiVisits'
+const AI_VISITS_LABEL = 'Visits from AI'
 
-const CrawlerPanel = ({
-  config,
+type TileId = CrawlerPurpose | typeof AI_VISITS
+
+const purposeLabel = (purpose: CrawlerPurpose) => propertyValueLabel(CRAWLER_CATEGORY_PROPERTY, purpose)
+
+type Period = { range: TimeRange; granularity: Granularity }
+
+const PurposeTile = ({
+  purpose,
+  selected,
+  onSelect,
+  filters,
   range,
   granularity,
+}: Period & {
+  purpose: CrawlerPurpose
+  selected: boolean
+  onSelect: (id: TileId) => void
+  filters: readonly ActiveFilter[]
+}) => {
+  const scalarQuery = useMemo(
+    () => buildCrawlerPurposeQuery(purpose, InsightType.SEGMENTATION, filters),
+    [purpose, filters],
+  )
+  const trendQuery = useMemo(() => buildCrawlerPurposeQuery(purpose, InsightType.TRENDS, filters), [purpose, filters])
+  return (
+    <StatTile
+      label={purposeLabel(purpose)}
+      description={PURPOSE_DESCRIPTIONS[purpose]}
+      scalarQuery={scalarQuery}
+      trendQuery={trendQuery}
+      formatValue={compactNumber}
+      selected={selected}
+      onSelect={() => onSelect(purpose)}
+      range={range}
+      granularity={granularity}
+      queryKeyPrefix={`overview-crawlers-stat-${purpose}`}
+    />
+  )
+}
+
+// People, not crawlers, so the section's crawler filters don't apply.
+const AiVisitsTile = ({
+  navName,
+  selected,
+  onSelect,
+  range,
+  granularity,
+}: Period & { navName: string; selected: boolean; onSelect: (id: TileId) => void }) => {
+  const scalarQuery = useMemo(() => buildAiVisitsQuery(navName, InsightType.SEGMENTATION), [navName])
+  const trendQuery = useMemo(() => buildAiVisitsQuery(navName, InsightType.TRENDS), [navName])
+  return (
+    <StatTile
+      label={AI_VISITS_LABEL}
+      description="Visits sent by ChatGPT, Perplexity, Claude, Gemini and other AI products"
+      scalarQuery={scalarQuery}
+      trendQuery={trendQuery}
+      formatValue={compactNumber}
+      selected={selected}
+      onSelect={() => onSelect(AI_VISITS)}
+      range={range}
+      granularity={granularity}
+      queryKeyPrefix="overview-crawlers-stat-ai-visits"
+    />
+  )
+}
+
+const PAGE_TABS = [
+  { id: 'all', label: 'All', footer: 'requests by page' },
+  { id: 'answers', label: 'Answered from', footer: 'pages AI answers fetched', purpose: 'answers' },
+  { id: 'training', label: 'Trained on', footer: 'pages training crawlers took', purpose: 'training' },
+  { id: 'problems', label: 'Problems', footer: 'error responses by page and status' },
+] as const
+
+type PageRow = RankedRow & { status?: string }
+
+const statusLeading = (row: PageRow) => (
+  <span className="w-7 shrink-0 font-mono text-negative tabular-nums">{row.muted ? null : row.status}</span>
+)
+
+const sourceLeading = (row: RankedRow) =>
+  row.muted ? <span className="size-4 shrink-0" /> : <DomainFavicon domain={row.label} />
+
+const CrawlerPagesPanel = ({
   filters,
   reportsStatusCodes,
   onAddFilter,
-}: {
-  config: CrawlerPanelConfig
-  range: TimeRange
-  granularity: Granularity
+  range,
+  granularity,
+}: Period & {
   filters: readonly ActiveFilter[]
   reportsStatusCodes: boolean
   onAddFilter: (property: string, value: string) => void
 }) => {
-  const [activeId, setActiveId] = useState(config.tabs[0].id)
-  const tab = config.tabs.find(candidate => candidate.id === activeId) ?? config.tabs[0]
+  const [activeId, setActiveId] = useState<(typeof PAGE_TABS)[number]['id']>('all')
+  const tab = PAGE_TABS.find(candidate => candidate.id === activeId) ?? PAGE_TABS[0]
+  const problems = tab.id === 'problems'
 
-  const queryFilters = useMemo(() => filtersExcept(filters, tab.property), [filters, tab.property])
-  const baseQuery = useMemo(() => buildCrawlerTopKQuery(tab.property, queryFilters, tab.notFound), [tab, queryFilters])
-  const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `overview-crawlers-${tab.id}`)
+  const queryFilters = useMemo(() => filtersExcept(filters, '$pathname'), [filters])
+  const baseQuery = useMemo(() => {
+    if (problems) return buildCrawlerProblemsQuery(queryFilters)
+    return buildCrawlerPagesQuery('purpose' in tab ? tab.purpose : undefined, queryFilters)
+  }, [problems, tab, queryFilters])
+  const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `overview-crawlers-pages-${tab.id}`)
 
-  // The previous tab's rows stay in `result` until this one lands, as in TrafficBreakdownPanel.
-  const [seen, setSeen] = useState({ result, tabId: tab.id })
-  if (seen.result !== result) setSeen({ result, tabId: tab.id })
-  const pending = seen.tabId !== tab.id || result.case === undefined
+  // One page can fail with more than one status, so a problem row is keyed by both.
+  const rows = useMemo<PageRow[]>(() => {
+    if (result.case === 'topK') return topKToRankedRows(result.value.rows)
+    if (result.case !== 'trends') return []
+    return result.value.series
+      .map(series => {
+        const path = series.breakdown.$pathname ?? ''
+        const status = series.breakdown[STATUS_CODE_PROPERTY] ?? ''
+        const value = series.points.reduce((sum, point) => sum + point.value, 0)
+        const muted = path === '$others' || !path
+        return { key: `${path}\u0000${status}`, label: path || EMPTY_VALUE_LABEL, value, muted, status }
+      })
+      .sort((a, b) => b.value - a.value)
+  }, [result])
 
-  const rows = useMemo(() => (result.case === 'topK' ? topKToRankedRows(result.value.rows) : []), [result])
-
-  let body
-  if (tab.notFound && !reportsStatusCodes) {
+  let body: ReactNode
+  if (problems && !reportsStatusCodes) {
     body = (
       <p className="flex h-full items-center justify-center px-6 text-center text-xs text-muted-foreground">
-        No status codes reported, so 404s can't be counted. A Next.js proxy runs before the page and never sees one.
+        No status codes reported, so errors can't be counted. A Next.js proxy runs before the page and never sees one.
       </p>
-    )
-  } else if (error) {
-    body = (
-      <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-        <p className="text-xs text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={retry}>
-          Retry
-        </Button>
-      </div>
-    )
-  } else if (pending) {
-    body = (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
-      </div>
     )
   } else {
     body = (
-      <TrafficRankedList
-        rows={rows}
-        showShare
-        onRowClick={row => onAddFilter(tab.property, row.label)}
-        isActive={row => hasFilter(filters, tab.property, row.label)}
-        formatLabel={row => (row.muted ? row.label : propertyValueLabel(tab.property, row.label))}
-        dimensionLabel={tab.label}
-        metricControl="Requests"
-      />
+      <PanelBody error={error} retry={retry} pending={result.case === undefined}>
+        <TrafficRankedList
+          rows={rows}
+          showShare={!problems}
+          onRowClick={row => onAddFilter('$pathname', row.label)}
+          isActive={row => hasFilter(filters, '$pathname', row.label)}
+          renderLeading={problems ? statusLeading : undefined}
+          dimensionLabel="Page"
+          metricControl="Requests"
+        />
+      </PanelBody>
     )
   }
 
   return (
     <OverviewTileShell
-      title={config.title}
-      footer={config.footer}
+      title="Pages"
+      footer={tab.footer}
       className="min-h-[420px]"
-      meta={<TabStrip tabs={config.tabs} activeId={tab.id} onSelect={setActiveId} />}
+      meta={<TabStrip tabs={PAGE_TABS} activeId={tab.id} onSelect={setActiveId} />}
     >
       <div className="absolute inset-0">{body}</div>
+    </OverviewTileShell>
+  )
+}
+
+const AI_VISIT_TABS = [
+  { id: 'sources', label: 'Sources', property: '$referrerDomain', dimension: 'Source' },
+  { id: 'landing', label: 'Landing pages', property: '$pathname', dimension: 'Page' },
+] as const
+
+const AI_VISIT_LIMIT = 50
+
+const AiVisitsPanel = ({ navName, range, granularity }: Period & { navName: string }) => {
+  const [activeId, setActiveId] = useState<(typeof AI_VISIT_TABS)[number]['id']>('sources')
+  const tab = AI_VISIT_TABS.find(candidate => candidate.id === activeId) ?? AI_VISIT_TABS[0]
+  const baseQuery = useMemo(() => buildAiVisitsBreakdownQuery(navName, tab.property), [navName, tab])
+  const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `overview-ai-visits-${tab.id}`)
+  const rows = useMemo(
+    () => (result.case === 'trends' ? rankSessionBreakdown(result.value.series, AI_VISIT_LIMIT) : []),
+    [result],
+  )
+
+  return (
+    <OverviewTileShell
+      title={AI_VISITS_LABEL}
+      footer="visits by where they started"
+      className="min-h-[420px]"
+      meta={<TabStrip tabs={AI_VISIT_TABS} activeId={tab.id} onSelect={setActiveId} />}
+    >
+      <div className="absolute inset-0">
+        <PanelBody error={error} retry={retry} pending={result.case === undefined}>
+          <TrafficRankedList
+            rows={rows}
+            renderLeading={tab.id === 'sources' ? sourceLeading : undefined}
+            dimensionLabel={tab.dimension}
+            metricControl="Visits"
+          />
+        </PanelBody>
+      </div>
     </OverviewTileShell>
   )
 }
@@ -158,9 +266,10 @@ const CrawlerSetupHint = () => (
 export const CrawlerSection = ({
   hasRequests,
   reportsStatusCodes,
+  navName,
   globalTimeRange,
   globalGranularity,
-}: GlobalOverrides & { hasRequests: boolean; reportsStatusCodes: boolean }) => {
+}: GlobalOverrides & { hasRequests: boolean; reportsStatusCodes: boolean; navName?: string }) => {
   const range = useMemo(() => globalTimeRange ?? resolveOverviewDefaultRange(), [globalTimeRange])
   const granularity = globalGranularity ?? autoGranularity(range)
 
@@ -175,42 +284,56 @@ export const CrawlerSection = ({
   )
   const clearFilters = useCallback(() => setFilters([]), [])
 
-  const chartQuery = useMemo(() => buildCrawlerTrendQuery(filters), [filters])
-  const panelProps = { range, granularity, filters, reportsStatusCodes, onAddFilter: addFilter }
+  const [selected, setSelected] = useState<TileId>('answers')
+  const visitsNav = selected === AI_VISITS ? navName : undefined
+  const chartPurpose = selected === AI_VISITS ? 'answers' : selected
+  const chartQuery = useMemo(() => {
+    if (visitsNav) return buildAiVisitsQuery(visitsNav, InsightType.TRENDS)
+    return buildCrawlerPurposeQuery(chartPurpose, InsightType.TRENDS, filters)
+  }, [visitsNav, chartPurpose, filters])
+
+  const period = { range, granularity }
 
   return (
     <section className="flex flex-col gap-4">
       <OverviewSectionHeader
         title="AI and search crawlers"
         description={
-          hasRequests ? `${SECTION_DESCRIPTION} Click any value to filter this section.` : SECTION_DESCRIPTION
+          hasRequests ? `${SECTION_DESCRIPTION} Click a crawler or a page to filter this section.` : SECTION_DESCRIPTION
         }
       />
       {hasRequests ? (
         <>
           <TrafficFilterBar filters={filters} onRemove={dropFilter} onClear={clearFilters} />
-          <OverviewTileShell
-            title="Crawler requests"
-            footer={`by category · via ${CRAWLER_REQUEST_EVENT}`}
-            contentClassName="flex flex-col"
-            className="h-[360px]"
-          >
-            <div className="min-h-0 flex-1">
-              <DashboardInsightContent
-                query={chartQuery}
-                defaultTimeRange={undefined}
-                timeRangeOverride={range}
-                granularityOverride={granularity}
-                viewMode={DashboardTileViewMode.BAR_STACKED}
-                queryKeyPrefix="overview-crawlers-chart"
-                compact
-                lightMetrics
+          <div className={cn('grid grid-cols-2 gap-3 sm:grid-cols-3', navName ? 'lg:grid-cols-5' : 'lg:grid-cols-4')}>
+            {CRAWLER_PURPOSES.map(purpose => (
+              <PurposeTile
+                key={purpose}
+                purpose={purpose}
+                selected={!visitsNav && purpose === chartPurpose}
+                onSelect={setSelected}
+                filters={filters}
+                {...period}
               />
-            </div>
-          </OverviewTileShell>
-          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-            <CrawlerPanel config={CRAWLERS_PANEL} {...panelProps} />
-            <CrawlerPanel config={PAGES_PANEL} {...panelProps} />
+            ))}
+            {navName && <AiVisitsTile navName={navName} selected={!!visitsNav} onSelect={setSelected} {...period} />}
+          </div>
+          <TrafficChartTile
+            statLabel={visitsNav ? AI_VISITS_LABEL : purposeLabel(chartPurpose)}
+            navName={visitsNav || CRAWLER_REQUEST_EVENT}
+            query={chartQuery}
+            queryKeyPrefix={`overview-crawlers-chart-${visitsNav ? AI_VISITS : chartPurpose}`}
+            {...period}
+          />
+          <CrawlerTable filters={filters} reportsStatusCodes={reportsStatusCodes} onAddFilter={addFilter} {...period} />
+          <div className={cn('grid grid-cols-1 gap-3.5', navName && 'lg:grid-cols-2')}>
+            <CrawlerPagesPanel
+              filters={filters}
+              reportsStatusCodes={reportsStatusCodes}
+              onAddFilter={addFilter}
+              {...period}
+            />
+            {navName && <AiVisitsPanel navName={navName} {...period} />}
           </div>
         </>
       ) : (

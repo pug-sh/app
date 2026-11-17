@@ -41,4 +41,9 @@ describe('rankSessionBreakdown', () => {
       muted: true,
     })
   })
+
+  // Muted, it can't be clicked into a `$pathname = $others` filter that matches nothing.
+  it('mutes the overflow past the breakdown limit', () => {
+    expect(rankSessionBreakdown([series('$others', [3])], 10)[0]).toMatchObject({ label: '$others', muted: true })
+  })
 })

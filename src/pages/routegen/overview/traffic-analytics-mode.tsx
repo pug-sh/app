@@ -43,6 +43,8 @@ type Props = GlobalOverrides & {
 
 const TrafficAnalyticsMode = ({ schema, ...props }: Props) => {
   const nav = useMemo(() => resolveNavEvent(schema.events), [schema.events])
+  // AI products link to a website, so their visits are page views even where app screens outnumber them.
+  const pageView = useMemo(() => resolveNavEvent(schema.events, ['page_view']), [schema.events])
   const hasCrawlerRequests = schema.events.some(event => event.name === CRAWLER_REQUEST_EVENT)
   const reportsStatusCodes = schema.autoPropertyKeys.some(key => key.name === STATUS_CODE_PROPERTY)
 
@@ -63,6 +65,7 @@ const TrafficAnalyticsMode = ({ schema, ...props }: Props) => {
     <CrawlerSection
       hasRequests={hasCrawlerRequests}
       reportsStatusCodes={reportsStatusCodes}
+      navName={pageView?.name}
       globalTimeRange={props.globalTimeRange}
       globalGranularity={props.globalGranularity}
     />

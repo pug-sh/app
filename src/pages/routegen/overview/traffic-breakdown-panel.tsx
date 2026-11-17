@@ -117,14 +117,14 @@ const MetricToggle = ({
   )
 }
 
-export const TabStrip = ({
+export const TabStrip = <Id extends string>({
   tabs,
   activeId,
   onSelect,
 }: {
-  tabs: readonly { id: string; label: string }[]
-  activeId: string
-  onSelect: (id: string) => void
+  tabs: readonly { id: Id; label: string }[]
+  activeId: Id
+  onSelect: (id: Id) => void
 }) => (
   <div className="flex shrink-0 items-center gap-0.5">
     {tabs.map(tab => (
@@ -142,6 +142,39 @@ export const TabStrip = ({
     ))}
   </div>
 )
+
+export const PanelBody = ({
+  error,
+  retry,
+  pending,
+  className,
+  children,
+}: {
+  error: string | null
+  retry: () => void
+  pending: boolean
+  className?: string
+  children: ReactNode
+}) => {
+  if (error) {
+    return (
+      <div className={cn('flex h-full flex-col items-center justify-center gap-2 text-center', className)}>
+        <p className="text-xs text-muted-foreground">{error}</p>
+        <Button variant="outline" size="sm" onClick={retry}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
+  if (pending) {
+    return (
+      <div className={cn('flex h-full items-center justify-center', className)}>
+        <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
+      </div>
+    )
+  }
+  return children
+}
 
 // Fixed-width box so labels stay aligned whether or not a row resolves a glyph.
 const GlyphSlot = ({ children, className }: { children?: ReactNode; className?: string }) => (
@@ -185,15 +218,14 @@ export const TrafficBreakdownPanel = ({
     () => buildTabQuery(nav.name, tab, queryFilters, propertyMetric),
     [nav, tab, queryFilters, propertyMetric],
   )
-  const { result, error, retry } = useTrafficQuery(baseQuery, range, granularity, `${queryKeyPrefix}-${tab.id}`)
-
-  // useDebouncedQuery keeps the previous `data` across a key change, so `result` alone can't say what
-  // produced it. Pin it to what the column *means* (panel, tab and metric, but not the filters), so a
-  // same-shape refetch keeps its rows and filtering doesn't flicker. Not `loading`: that's set in an
-  // effect, so it still reads false on the render the switch happens on.
-  const shape = `${nav.name}:${config.title}:${tab.id}:${propertyMetric ?? ''}`
-  const [seen, setSeen] = useState({ result, shape })
-  if (seen.result !== result) setSeen({ result, shape })
+  // The prefix names what the column means (tab and metric, not the filters), so filtering keeps the rows
+  // on screen while a new tab or metric drops them.
+  const { result, error, retry } = useTrafficQuery(
+    baseQuery,
+    range,
+    granularity,
+    `${queryKeyPrefix}-${nav.name}-${tab.id}-${propertyMetric ?? ''}`,
+  )
 
   const rows = useMemo<RankedRow[]>(() => {
     if (tab.source === 'session') {
@@ -202,9 +234,8 @@ export const TrafficBreakdownPanel = ({
     return result.case === 'topK' ? topKToRankedRows(result.value.rows) : []
   }, [tab.source, result])
 
-  // Rows answering a question this column is no longer asking, or nothing fetched yet: showing them
-  // would read as this column's data, and an empty list would claim "No data" over a live query.
-  const pending = seen.shape !== shape || result.case === undefined
+  // Nothing fetched yet for this column: an empty list would claim "No data" over a live query.
+  const pending = result.case === undefined
 
   // Property rows cross-filter the view; event-kind rows drill through (no filter, so no active state).
   let onRowClick: ((row: RankedRow) => void) | undefined
@@ -266,18 +297,7 @@ export const TrafficBreakdownPanel = ({
     >
       {/* absolute so the list scrolls at the tile's height instead of the rows setting it */}
       <div className="absolute inset-0">
-        {error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-            <p className="text-xs text-muted-foreground">{error}</p>
-            <Button variant="outline" size="sm" onClick={retry}>
-              Retry
-            </Button>
-          </div>
-        ) : pending ? (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="size-4 animate-spin text-muted-foreground/70" />
-          </div>
-        ) : (
+        <PanelBody error={error} retry={retry} pending={pending}>
           <TrafficRankedList
             rows={rows}
             showShare={isTopK}
@@ -288,7 +308,7 @@ export const TrafficBreakdownPanel = ({
             dimensionLabel={tab.label}
             metricControl={metricControl}
           />
-        )}
+        </PanelBody>
       </div>
     </OverviewTileShell>
   )

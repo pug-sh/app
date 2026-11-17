@@ -1,9 +1,9 @@
 import { create } from '@bufbuild/protobuf'
 import { timestampDate, timestampFromDate } from '@bufbuild/protobuf/wkt'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createStore, Provider } from 'jotai'
 import type { ReactNode } from 'react'
-import { expect, it, vi } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { Route, Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { RenderedTileSchema } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
@@ -79,6 +79,14 @@ const response = create(SharedDashboardsServiceQueryResponseSchema, {
   reportingTimezone: 'Asia/Kolkata',
 })
 
+afterEach(() => vi.useRealTimers())
+
+// The tile's own axis: a picked range puts its days on the picker's chip too.
+const tileDays = () =>
+  within(screen.getByText('Meta-attributed Traffic').closest('.group') as HTMLElement)
+    .queryAllByText(/^[A-Z][a-z]{2} \d{1,2}$/)
+    .map(day => day.textContent)
+
 const mount = () =>
   render(
     <Provider store={createStore()}>
@@ -116,4 +124,32 @@ it("floors a picked range to the start of the share's day", async () => {
   const from = timestampDate(query.mock.lastCall?.[0].timeRange.from)
   const istClock = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' })
   expect(istClock.format(from)).toBe('00:00')
+})
+
+// The days stay up while a new granularity loads. Stepped by the pick, they'd read as hours before any hour arrives.
+it('draws a result at the granularity it answers', async () => {
+  query.mockResolvedValue(response)
+  const { container } = await act(async () => mount())
+  await waitFor(() => expect(container.textContent).toContain('Nov 12'))
+  const days = tileDays()
+
+  query.mockImplementation(() => new Promise(() => {}))
+  fireEvent.click(screen.getByText('granularity'))
+  fireEvent.click(screen.getByRole('button', { name: 'Hour' }))
+  await waitFor(() => expect(query).toHaveBeenCalledTimes(2))
+  expect(tileDays()).toEqual(days)
+})
+
+// A count's quiet days are real zeros, so a picked range draws the days its data doesn't reach.
+it('fills a count out to the range the viewer picked', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(Date.UTC(2026, 10, 14, 12)))
+  query.mockResolvedValue(response)
+  const { container } = await act(async () => mount())
+  await waitFor(() => expect(container.textContent).toContain('Nov 12'))
+  expect(tileDays()).toHaveLength(2)
+
+  fireEvent.click(await screen.findByText('time'))
+  fireEvent.click(screen.getByText('Last 7 days'))
+  await waitFor(() => expect(tileDays().length).toBeGreaterThan(2))
 })

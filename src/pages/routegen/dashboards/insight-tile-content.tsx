@@ -23,6 +23,7 @@ import { resolveDashboardTimeRangePreset } from '@/lib/date-presets'
 import type { SeriesColor } from '@/lib/event-colors'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { resultFor } from '../insights/helpers'
 import { mapSpecIncompleteReason } from '../insights/map'
 import { topKSpecIncompleteReason } from '../insights/top-k'
 import { userFlowSpecIncompleteReason } from '../insights/user-flow'
@@ -148,8 +149,7 @@ export const DashboardInsightContent = ({
     queryKey,
     async signal => {
       if (!effectiveQuery) throw new Error('Missing tile query')
-      const resp = await queryInsights(insightsRPC, effectiveQuery, headers, signal)
-      return resp.result
+      return resultFor(effectiveQuery, await queryInsights(insightsRPC, effectiveQuery, headers, signal))
     },
     { enabled: !!effectiveQuery && !!headers && queryReady(effectiveQuery), debounceMs: 0 },
   )
@@ -168,8 +168,7 @@ export const DashboardInsightContent = ({
     comparisonQueryKey,
     async signal => {
       if (!comparisonQuery) throw new Error('Missing comparison query')
-      const resp = await queryInsights(insightsRPC, comparisonQuery, headers, signal)
-      return resp.result
+      return resultFor(comparisonQuery, await queryInsights(insightsRPC, comparisonQuery, headers, signal))
     },
     { enabled: !!comparisonQuery && !!headers, debounceMs: 0 },
   )
@@ -182,7 +181,9 @@ export const DashboardInsightContent = ({
     if (comparisonError) return { error: true, label: compareLabel }
     // Until both windows land: a comparison alone has no delta, and its fallback row is a different height.
     if (!comparisonData || !(data || error)) return { pending: true, label: compareLabel }
-    if (comparisonData.case === 'trends') return { series: [...comparisonData.value.series], label: compareLabel }
+    const { result, granularity, fillRange } = comparisonData
+    if (result.case === 'trends')
+      return { series: [...result.value.series], label: compareLabel, granularity, fillRange }
     return undefined
   }, [comparisonQuery, comparisonError, comparisonData, data, error, compareWindow])
 
@@ -191,8 +192,9 @@ export const DashboardInsightContent = ({
       tile={tile}
       viewMode={viewMode}
       spec={effectiveQuery?.spec}
-      result={data ?? { case: undefined, value: undefined }}
-      granularity={effectiveQuery?.granularity ?? effectiveGranularity}
+      result={data?.result ?? { case: undefined, value: undefined }}
+      granularity={data?.granularity ?? effectiveGranularity}
+      fillRange={data?.fillRange}
       error={error}
       onRetry={retry}
       compare={compare}

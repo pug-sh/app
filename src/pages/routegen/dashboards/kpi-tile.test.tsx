@@ -7,6 +7,7 @@ import { DashboardTileSchema } from '@/api/genproto/dashboard/dashboards/v1/dash
 import {
   AggregationType,
   DataPointSchema,
+  Granularity,
   type TrendSeries,
   TrendSeriesSchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
@@ -83,7 +84,7 @@ describe('KpiTile', () => {
       tile={create(DashboardTileSchema)}
       currentSeries={currentSeries}
       aggregationFor={() => AggregationType.TOTAL}
-      compare={{ series: [series([75])], label: 'vs previous' }}
+      compare={{ series: [series([75])], label: 'vs previous', granularity: Granularity.DAY, fillRange: undefined }}
       formatValue={String}
       formatDate={date => date.toISOString().slice(0, 10)}
     />
