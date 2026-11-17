@@ -30,6 +30,7 @@ import { useIncludeBots } from '@/hooks/use-include-bots'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { botOf, deviceModelOf, platformOf } from '@/lib/auto-properties'
 import { isCookielessId } from '@/lib/cookieless'
+import { CRAWLER_REQUEST_EVENT, crawlerOf, isCrawlerId, readsBotOnlyData } from '@/lib/crawlers'
 import { defaultRange, refreshTimeRange } from '@/lib/date-presets'
 import { getSeriesColor } from '@/lib/event-colors'
 import { rpcErrorMessage } from '@/lib/rpc-error'
@@ -37,6 +38,7 @@ import { structGet, structToEntries } from '@/lib/struct'
 import { formatDateTime, toProtoTimeRange, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { resolveInlineProps } from '@/lib/well-known-events'
+import { CrawlerLabel } from './crawler-label'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from './filter-schema.atoms'
 
 // ── Event Row ───────────────────────────────────────────────────────────────
@@ -113,16 +115,20 @@ export const EventRow = ({ event }: { event: ActivityEvent }) => {
           )}
         </td>
         <td className="pt-[0.8rem] pb-[0.45rem] pr-2 text-xs text-muted-foreground align-middle">
-          <PlatformLabel
-            browser={browser}
-            browserVersion={browserVersion}
-            os={os}
-            osVersion={osVersion}
-            device={device}
-            platform={platform}
-            bot={bot}
-            iconSize={14}
-          />
+          {event.kind === CRAWLER_REQUEST_EVENT ? (
+            <CrawlerLabel crawler={crawlerOf(event.autoProperties)} />
+          ) : (
+            <PlatformLabel
+              browser={browser}
+              browserVersion={browserVersion}
+              os={os}
+              osVersion={osVersion}
+              device={device}
+              platform={platform}
+              bot={bot}
+              iconSize={14}
+            />
+          )}
         </td>
         <td className="py-2.5 pr-2 align-middle">
           <InlineEventProps {...inlineResult} />
@@ -190,6 +196,13 @@ const EventExplorer = () => {
   const [timeRange, setTimeRange] = useState<TimeRange | undefined>(defaultRange)
   const [includeBots, setIncludeBots] = useIncludeBots()
   const { propFilters, addFilter, updateFilter, removeFilter } = useFilterState(initialFilterState.propFilters)
+  const botsForced =
+    isCrawlerId(userFilter) ||
+    readsBotOnlyData(
+      eventFilters.entries.map(entry => entry.kind),
+      [...propFilters, ...eventFilters.entries.flatMap(entry => entry.filters)],
+    )
+  const requestBots = includeBots || botsForced
   const { schema: globalSchema, schemaError: globalSchemaError } = useGlobalFilterSchema({
     baseSchema: schema,
     baseSchemaError: schemaError,
@@ -246,7 +259,7 @@ const EventExplorer = () => {
             events: protoEvents,
             pageSize: 100,
             pageToken,
-            includeBots,
+            includeBots: requestBots,
           },
           { headers },
         )
@@ -271,7 +284,7 @@ const EventExplorer = () => {
         if (seq === requestRef.current) setLoading(false)
       }
     },
-    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters, includeBots],
+    [activityRPC, headers, eventFilters.entries, userFilter, timeRange, propFilters, requestBots],
   )
 
   useEffect(() => {
@@ -366,7 +379,7 @@ const EventExplorer = () => {
             onAdd={addFilter}
             onUserIdSet={userFilter ? undefined : setUserFilter}
           />
-          <IncludeBotsToggle includeBots={includeBots} onChange={setIncludeBots} />
+          <IncludeBotsToggle includeBots={includeBots} forced={botsForced} onChange={setIncludeBots} />
           {events.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground tabular-nums">{events.length} events</span>
           )}

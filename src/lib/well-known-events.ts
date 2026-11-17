@@ -222,13 +222,13 @@ const fmtAmountReason: Formatter = p => {
   const amt = fmtAmount(p)
   const reason = structGet(p, 'reason')
   if (!amt && !reason) return null
-  return [amt, reason].filter(Boolean).join(' — ')
+  return [amt, reason].filter(Boolean).join(' · ')
 }
 
 // ── Well-known event registry ────────────────────────────────────────────────
 
 // Curated subset of event kinds with custom inline headlines. Other kinds
-// fall through to generic custom-property rendering — expand this map as
+// fall through to generic custom-property rendering; expand this map as
 // new headlines are designed.
 const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; format?: Formatter }> = {
   // navigation / interactions
@@ -309,7 +309,7 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
       const amt = fmtAmount(p)
       const reason = structGet(p, 'reason')
       if (!amt && !reason) return null
-      return [amt, reason].filter(Boolean).join(' — ')
+      return [amt, reason].filter(Boolean).join(' · ')
     },
   },
 
@@ -734,7 +734,7 @@ const WELL_KNOWN: Record<string, { schema: DescMessage; headlines: string[]; for
   },
 }
 
-// Pre-compute field names and lookup sets per kind — schemas are static
+// Pre-compute field names and lookup sets per kind: schemas are static
 const fieldCache = new Map(
   Object.entries(WELL_KNOWN).map(([kind, { schema, headlines }]) => {
     const fields = schema.fields.map(f => f.name)
@@ -769,7 +769,7 @@ export const partitionEventProps = (kind: string, customProperties: JsonObject |
 // ── Auto-property headlines ──────────────────────────────────────────────────
 // Kinds whose inline summary lives in an auto-property ($-prefixed) rather than
 // custom props (e.g. page_view's meaning is its $url). Keyed by canonical kind.
-const AUTO_HEADLINE: Record<string, string> = { page_view: '$url' }
+const AUTO_HEADLINE: Record<string, string> = { page_view: '$url', crawler_request: '$url' }
 
 const fmtUrl = (raw: string) => {
   try {

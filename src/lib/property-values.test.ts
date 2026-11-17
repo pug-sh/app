@@ -40,6 +40,13 @@ describe('propertyValueLabel', () => {
     expect(propertyValueLabel('$browser', 'Chrome')).toBe('Chrome')
     expect(propertyValueLabel('country', 'IN')).toBe('IN')
   })
+
+  it('names crawler categories and IP-check verdicts', () => {
+    expect(propertyValueLabel('$crawler_category', 'answers')).toBe('AI answers')
+    expect(propertyValueLabel('$crawler_category', 'seo')).toBe('SEO tools')
+    expect(propertyValueLabel('$crawler_verified', 'failed')).toBe('Failed IP check')
+    expect(propertyValueLabel('$crawler_category', 'ads')).toBe('ads')
+  })
 })
 
 describe('resolvePropertyValue', () => {
@@ -77,8 +84,14 @@ describe('resolvePropertyValue', () => {
     expect(resolvePropertyValue('$browser', 'chrome')).toBe('chrome')
   })
 
+  // The backend matches the stored code exactly, so a filter typed as its label has to land on it.
+  it('resolves a typed crawler label to its code', () => {
+    expect(resolvePropertyValue('$crawler_category', 'ai training')).toBe('training')
+    expect(resolvePropertyValue('$crawler_verified', 'Not checked')).toBe('unchecked')
+  })
+
   it('resolves every name and alias back to its own code', () => {
-    const strays = [COUNTRY_PROPERTY, '$continent'].flatMap(property =>
+    const strays = [COUNTRY_PROPERTY, '$continent', '$crawler_category', '$crawler_verified'].flatMap(property =>
       knownPropertyValues(property).flatMap(value =>
         propertyValueKeywords(property, value).filter(keyword => resolvePropertyValue(property, keyword) !== value),
       ),

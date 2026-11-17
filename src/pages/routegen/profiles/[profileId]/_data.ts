@@ -7,6 +7,7 @@ import { activityRPCAtom, profilesRPCAtom } from '@/api/rpc'
 import { eventAvatarUrl } from '@/components/live-map/live-visitors'
 import { projectHeaderAtom } from '@/data/workspace.atoms'
 import { isCookielessId } from '@/lib/cookieless'
+import { crawlerOf, isCrawlerId } from '@/lib/crawlers'
 import { structGet } from '@/lib/struct'
 import { tsToDate } from '@/lib/timestamp'
 
@@ -18,11 +19,11 @@ import { tsToDate } from '@/lib/timestamp'
 // Other RPC failures throw and bubble up to the router's error boundary.
 const isNotFound = (err: unknown) => err instanceof ConnectError && err.code === Code.NotFound
 
-// Always on here, unlike the list: without it an anonymous crawler reads as "not found", and an
+// Always on here, unlike the list: without it an anonymous bot reads as "not found", and an
 // identified one comes back with no activity summary at all, including the bot flag the header shows.
 export const profileFamilyAtom = atomFamily((profileId: string) =>
   atom(async get => {
-    if (isCookielessId(profileId)) return null
+    if (isCookielessId(profileId) || isCrawlerId(profileId)) return null
     const rpc = get(profilesRPCAtom)
     // Above the first await: jotai only tracks a dependency read synchronously.
     const headers = get(projectHeaderAtom)
@@ -63,6 +64,36 @@ export const profileStatsFamilyAtom = atomFamily((profileId: string) =>
       if (isAuthError(err)) throw err
       console.error('GetProfileStats failed; rendering the heatmap as unavailable:', err)
       return { resp: null, failed: true as const, error: err instanceof Error ? err.message : null }
+    }
+  }),
+)
+
+// A crawler has no profile, and a session per active day, so its totals come from one stats read
+// rather than summing an unbounded session list.
+export const crawlerFamilyAtom = atomFamily((crawlerId: string) =>
+  atomWithRefresh(async get => {
+    const rpc = get(activityRPCAtom)
+    const headers = get(projectHeaderAtom)
+    if (!headers) return { crawler: null, failed: false }
+
+    try {
+      const [{ stats }, { events }] = await Promise.all([
+        rpc.getProfileStats({ distinctId: crawlerId, includeBots: true }, { headers }),
+        rpc.getActivityFeed({ distinctId: crawlerId, pageSize: 1, includeBots: true }, { headers }),
+      ])
+      const latest = events[0]
+      if (!latest) return { crawler: null, failed: false }
+      const crawler = {
+        ...crawlerOf(latest.autoProperties),
+        requests: stats?.totalEvents ?? 0n,
+        firstSeen: tsToDate(stats?.firstSeen),
+        lastSeen: tsToDate(latest.occurTime),
+      }
+      return { crawler, failed: false }
+    } catch (err) {
+      if (isAuthError(err)) throw err
+      console.error('Crawler summary failed; rendering the header without it:', err)
+      return { crawler: null, failed: true }
     }
   }),
 )

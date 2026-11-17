@@ -12,13 +12,15 @@ import { Button } from '@/components/ui/button'
 import { projectsLoadedAtom } from '@/data/workspace.atoms'
 import { formatRelative, useRelativeTime } from '@/hooks/use-relative-time'
 import { isCookielessId } from '@/lib/cookieless'
+import { CRAWLER_CATEGORY_PROPERTY, isCrawlerId } from '@/lib/crawlers'
 import { useProjectPrefix } from '@/lib/project-path'
+import { propertyValueLabel } from '@/lib/property-values'
 import { useRouteParams } from '@/lib/route-params'
 import { formatDateTime, tsToDate } from '@/lib/timestamp'
 import { cn } from '@/lib/utils'
 import { type ProfileIdentity, resolveIdentity } from '../_identity'
 import StatusDot from '../_status-dot'
-import { profileFamilyAtom, visitorFamilyAtom } from './_data'
+import { crawlerFamilyAtom, profileFamilyAtom, visitorFamilyAtom } from './_data'
 
 // The router imports this shell eagerly, so a static avatar import puts DiceBear on every route's first load.
 const ProfileAvatar = lazy(() => import('../_avatar').then(module => ({ default: module.ProfileAvatar })))
@@ -32,7 +34,7 @@ const TABS = [
   { suffix: '/properties', label: 'Properties' },
 ]
 
-// Overview and Properties read the profile, which a visitor doesn't have.
+// Overview and Properties read the profile, which a visitor or a crawler doesn't have.
 const VISITOR_TABS = [
   { suffix: '/events', label: 'Events' },
   { suffix: '/sessions', label: 'Sessions' },
@@ -143,11 +145,20 @@ type Activity = {
   country?: string
 }
 
-const ActivityMeta = ({ activity, created }: { activity: Activity; created?: Date | null }) => {
+const ActivityMeta = ({
+  activity,
+  created,
+  children,
+}: {
+  activity: Activity
+  created?: Date | null
+  children?: ReactNode
+}) => {
   const lastSeenLive = useRelativeTime(activity.lastSeen)
 
   return (
     <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground">
+      {children}
       {activity.bot && (
         <Meta>
           <Bot className="size-3.5" aria-hidden />
@@ -301,7 +312,65 @@ const VisitorShell = ({ visitorId, base, children }: { visitorId: string; base: 
   )
 }
 
-// Events and Sessions read by the route id alone, so a cookieless visitor shares the profile route.
+const CrawlerShell = ({ crawlerId, base, children }: { crawlerId: string; base: string; children: ReactNode }) => {
+  const { crawler, failed } = useAtomValue(crawlerFamilyAtom(crawlerId))
+  const refresh = useSetAtom(crawlerFamilyAtom(crawlerId))
+
+  if (!crawler && !failed) return <EmptyShell title="Crawler" id={crawlerId} message="No requests from this crawler" />
+
+  const name = crawler?.name ?? 'Crawler'
+  const identity = { name, isFallback: false, avatarSeed: crawlerId }
+
+  const header = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div className="flex min-w-0 grow basis-[15rem] items-start gap-3">
+          <HeaderAvatar identity={identity} bot />
+          <div className="min-w-0 space-y-1">
+            <span className="block truncate text-xl">{name}</span>
+            <div className="flex text-xs text-muted-foreground">
+              <IdChip value={crawlerId} />
+            </div>
+          </div>
+        </div>
+        {crawler && (
+          <div className="flex shrink-0 gap-8 text-right">
+            <Stat label="requests" value={Number(crawler.requests)} />
+          </div>
+        )}
+      </div>
+      {failed && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          Couldn't load this crawler's summary.
+          <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => refresh()}>
+            Retry
+          </Button>
+        </div>
+      )}
+      {crawler && (
+        <ActivityMeta activity={crawler}>
+          {crawler.company && <Meta label="Company">{crawler.company}</Meta>}
+          {crawler.category && (
+            <Meta label="Category">{propertyValueLabel(CRAWLER_CATEGORY_PROPERTY, crawler.category)}</Meta>
+          )}
+        </ActivityMeta>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Requests your site's server reported for this crawler, one session per UTC day.
+      </p>
+    </div>
+  )
+
+  return (
+    <Page header={header} title={name}>
+      <ShellTabs tabs={VISITOR_TABS} base={base} />
+      {children}
+    </Page>
+  )
+}
+
+// Events and Sessions read by the route id alone, so a cookieless visitor and a crawler share the
+// profile route.
 const ProfileShell = ({ children }: { children: ReactNode }) => {
   const { profileId = '' } = useRouteParams<{ profileId: string }>()
   const [location] = useLocation()
@@ -311,7 +380,7 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
   const base = `/profiles/${encodeURIComponent(profileId)}`
 
   if (!projectsLoaded) return <LoadingSpinner />
-  if (!isCookielessId(profileId)) {
+  if (!isCookielessId(profileId) && !isCrawlerId(profileId)) {
     return (
       <PersonShell profileId={profileId} base={base}>
         {children}
@@ -319,9 +388,16 @@ const ProfileShell = ({ children }: { children: ReactNode }) => {
     )
   }
 
-  // Before VisitorShell, so a redirect never waits on the visitor read.
+  // Before the shells, so a redirect never waits on their read.
   const tail = tailOf(location, base)
   if (!VISITOR_TABS.some(t => isOnTab(tail, t.suffix))) return <Redirect to={`${prefix}${base}/events`} replace />
+  if (isCrawlerId(profileId)) {
+    return (
+      <CrawlerShell crawlerId={profileId} base={base}>
+        {children}
+      </CrawlerShell>
+    )
+  }
   return (
     <VisitorShell visitorId={profileId} base={base}>
       {children}

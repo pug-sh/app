@@ -10,11 +10,13 @@ import {
   MarkdownTileContentSchema,
 } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import IncludeCookielessToggle from '@/components/include-cookieless-toggle'
 import { OptionChip } from '@/components/option-chip'
 import { type EventFilterEntry, useEventFilters } from '@/hooks/use-event-filters'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { specReadsBotOnlyData } from '@/lib/crawlers'
 import { fetchFilterSchemaAtom, filterSchemaAtom, filterSchemaErrorAtom } from '../../events/filter-schema.atoms'
 import { eventEntryCap, INSIGHT_TYPES, isIncompleteNumericAggregation } from '../../insights/constants'
 import { InsightsRowAggregationControls } from '../../insights/controls'
@@ -82,6 +84,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
   const [topK, setTopK] = useState(defaults.topK)
   const [map, setMap] = useState(defaults.map)
   const [includeCookieless, setIncludeCookieless] = useState(defaults.includeCookieless)
+  const [includeBots, setIncludeBots] = useState(defaults.includeBots)
 
   // Truncate leftover event rows when switching to an insight type with a smaller
   // event cap (retention = 2, top-k and map = 1). See eventEntryCap.
@@ -99,7 +102,7 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
 
   // User flow narrows by its scope event, if it has one; every other insight type narrows by the
   // events in its rows. Reading the rows for a user-flow tile would intersect property keys across
-  // event rows it no longer displays and never sends — silently truncating the property list with
+  // event rows it no longer displays and never sends, silently truncating the property list with
   // the event bar that would explain it off screen. Same rule as the Insights page.
   const schemaEventKinds = () => {
     if (!isUserFlow) return eventFilters.entries.map(entry => entry.kind)
@@ -112,18 +115,35 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
     selectedEventKinds: schemaEventKinds(),
   })
 
-  useEffect(() => {
-    if (tile.content.case !== 'insight') return
-    const spec = buildInsightSpec({
+  const spec = useMemo(
+    () =>
+      buildInsightSpec({
+        insightType,
+        validEntries: eventFilters.validEntries,
+        propFilters: filterState.propFilters,
+        breakdowns,
+        userFlowConfig,
+        topK,
+        map,
+        includeCookieless,
+        includeBots,
+      }),
+    [
       insightType,
-      validEntries: eventFilters.validEntries,
-      propFilters: filterState.propFilters,
+      eventFilters.validEntries,
+      filterState.propFilters,
       breakdowns,
       userFlowConfig,
       topK,
       map,
       includeCookieless,
-    })
+      includeBots,
+    ],
+  )
+  const botsForced = specReadsBotOnlyData(spec)
+
+  useEffect(() => {
+    if (tile.content.case !== 'insight') return
     const patch: Partial<DashboardTile> = {
       content: { case: 'insight', value: create(InsightTileContentSchema, { spec }) },
     }
@@ -137,30 +157,20 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
       patch.viewMode = DEFAULT_DASHBOARD_TILE_VIEW_MODE
     }
     onPatch(patch)
-    // Exclude `tile` and `onPatch`: this fires only on editor-state changes, not
-    // on parent re-renders that produce a new tile object identity. In-place
-    // mutation of the same tile from outside the panel will not re-seed local
-    // editor state — DataTab is keyed by tile.id so cross-tile switches do
-    // re-seed cleanly.
+    // Keyed on `spec`, which every editor input feeds. Exclude `tile` and `onPatch`: this fires
+    // only on editor-state changes, not on parent re-renders that produce a new tile object
+    // identity. In-place mutation of the same tile from outside the panel will not re-seed local
+    // editor state. DataTab is keyed by tile.id so cross-tile switches do re-seed cleanly.
     //
     // The viewMode reconciliation above reads `tile.viewMode` as a decision input, not just as a
     // guard, so it is worth being explicit that the exclusion is still safe: React rebuilds this
     // closure every render and only *runs* the newest one, so the read is never stale, and the
     // silent patch lands synchronously in the draft the `tile` prop derives from. What the
-    // exclusion does mean is that the reconciliation is fire-and-forget — a viewMode changed from
+    // exclusion does mean is that the reconciliation is fire-and-forget: a viewMode changed from
     // outside this tab is not corrected until some editor state here changes. Harmless only
     // because the Display tab offers a user-flow tile no view but Sankey.
     // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
-  }, [
-    insightType,
-    eventFilters.validEntries,
-    filterState.propFilters,
-    breakdowns,
-    userFlowConfig,
-    topK,
-    map,
-    includeCookieless,
-  ])
+  }, [spec])
 
   const addBreakdown = (property: string) => {
     setBreakdowns(current => (current.includes(property) || current.length >= 5 ? current : [...current, property]))
@@ -246,15 +256,18 @@ const InsightDataTab = ({ tile, onPatch }: DataTabProps) => {
         ) : null}
       </Section>
 
-      {cookielessMatters ? (
-        <Section label="Visitors">
-          <IncludeCookielessToggle
-            includeCookieless={includeCookieless}
-            personBased={isPersonBasedInsight(insightType, topK)}
-            onChange={setIncludeCookieless}
-          />
-        </Section>
-      ) : null}
+      <Section label="Visitors">
+        <div className="flex flex-wrap items-center gap-2">
+          {cookielessMatters ? (
+            <IncludeCookielessToggle
+              includeCookieless={includeCookieless}
+              personBased={isPersonBasedInsight(insightType, topK)}
+              onChange={setIncludeCookieless}
+            />
+          ) : null}
+          <IncludeBotsToggle includeBots={includeBots} forced={botsForced} onChange={setIncludeBots} />
+        </div>
+      </Section>
 
       {tile.viewMode === DashboardTileViewMode.KPI ? (
         <Section label="Compare">

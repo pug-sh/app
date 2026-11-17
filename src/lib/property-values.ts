@@ -1,3 +1,4 @@
+import { CRAWLER_CATEGORY_PROPERTY, CRAWLER_VERIFIED_PROPERTY } from './crawlers'
 import { formatCountryName } from './location'
 
 export const COUNTRY_PROPERTY = '$country'
@@ -57,6 +58,21 @@ const CONTINENTS = new Map([
   ['T1', 'Tor network'],
 ])
 
+const CRAWLER_CATEGORIES = new Map([
+  ['answers', 'AI answers'],
+  ['search', 'Search'],
+  ['training', 'AI training'],
+  ['seo', 'SEO tools'],
+  ['other', 'Other'],
+])
+
+// Whether the request came from the operator's published IP ranges.
+const CRAWLER_VERDICTS = new Map([
+  ['verified', 'Verified'],
+  ['failed', 'Failed IP check'],
+  ['unchecked', 'Not checked'],
+])
+
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language', languageDisplay: 'standard', fallback: 'none' })
 
 // Ingest canonicalizes tags, so any other spelling matches nothing and is shown as sent.
@@ -75,6 +91,11 @@ type ValueDomain = {
   aliases?: ReadonlyMap<string, readonly string[]>
 }
 
+const namedDomain = (names: ReadonlyMap<string, string>) => ({
+  label: (value: string) => names.get(value) ?? value,
+  values: [...names.keys()],
+})
+
 const DOMAINS = new Map<string, ValueDomain>([
   [
     COUNTRY_PROPERTY,
@@ -84,8 +105,10 @@ const DOMAINS = new Map<string, ValueDomain>([
       aliases: COUNTRY_ALIASES,
     },
   ],
-  ['$continent', { label: value => CONTINENTS.get(value) ?? value, values: [...CONTINENTS.keys()] }],
+  ['$continent', namedDomain(CONTINENTS)],
   ['$locale', { label: localeLabel }],
+  [CRAWLER_CATEGORY_PROPERTY, namedDomain(CRAWLER_CATEGORIES)],
+  [CRAWLER_VERIFIED_PROPERTY, namedDomain(CRAWLER_VERDICTS)],
 ])
 
 const withoutAccents = (text: string) => text.normalize('NFD').replace(/\p{M}/gu, '')

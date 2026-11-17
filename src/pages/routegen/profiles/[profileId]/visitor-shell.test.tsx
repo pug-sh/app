@@ -10,13 +10,15 @@ import { memoryLocation } from 'wouter/memory-location'
 import {
   GetActivityFeedResponseSchema,
   GetProfileSessionsResponseSchema,
+  GetProfileStatsResponseSchema,
 } from '@/api/genproto/shared/activity/v1/activity_pb'
 import { ProfileSchema } from '@/api/genproto/shared/profiles/v1/profiles_pb'
 import { formatDateTime } from '@/lib/timestamp'
 
-const { getProfileSessions, getActivityFeed, get, getByExternalId } = vi.hoisted(() => ({
+const { getProfileSessions, getActivityFeed, getProfileStats, get, getByExternalId } = vi.hoisted(() => ({
   getProfileSessions: vi.fn(),
   getActivityFeed: vi.fn(),
+  getProfileStats: vi.fn(),
   get: vi.fn(),
   getByExternalId: vi.fn(),
 }))
@@ -24,7 +26,7 @@ const { getProfileSessions, getActivityFeed, get, getByExternalId } = vi.hoisted
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return {
-    activityRPCAtom: atom({ getProfileSessions, getActivityFeed }),
+    activityRPCAtom: atom({ getProfileSessions, getActivityFeed, getProfileStats }),
     profilesRPCAtom: atom({ get, getByExternalId }),
   }
 })
@@ -93,7 +95,7 @@ const renderShell = async (path: string, store = createStore()) => {
 }
 
 beforeEach(() => {
-  for (const fn of [getProfileSessions, getActivityFeed, get, getByExternalId]) fn.mockReset()
+  for (const fn of [getProfileSessions, getActivityFeed, getProfileStats, get, getByExternalId]) fn.mockReset()
 })
 
 describe('cookieless visitor shell', () => {
@@ -215,6 +217,80 @@ describe('cookieless visitor shell', () => {
 
     await headerLoaded()
     expect(screen.queryByText('Automated traffic') !== null).toBe(automated)
+  })
+})
+
+describe('crawler shell', () => {
+  const CRAWLER = 'crawler-gptbot'
+  const firstSeen = new Date('2026-09-01T08:00:00Z')
+
+  const respondCrawler = (requests: number) => {
+    getProfileStats.mockResolvedValue(
+      create(GetProfileStatsResponseSchema, {
+        stats: requests ? { totalEvents: BigInt(requests), firstSeen: timestampFromDate(firstSeen) } : undefined,
+      }),
+    )
+    const latest = {
+      distinctId: CRAWLER,
+      kind: 'crawler_request',
+      occurTime: timestampFromDate(start),
+      autoProperties: { $bot: true, $bot_reason: 'GPTBot', $crawler_company: 'OpenAI', $crawler_category: 'training' },
+    }
+    getActivityFeed.mockResolvedValue(create(GetActivityFeedResponseSchema, { events: requests ? [latest] : [] }))
+  }
+
+  // A crawler- id has no profile, so the person shell would say "No profile found" for every one.
+  it('names the crawler from its own requests without asking for a profile', async () => {
+    respondCrawler(1200)
+    await renderShell(`/p/p1/profiles/${CRAWLER}/events`)
+
+    expect(await screen.findByText('GPTBot')).toBeTruthy()
+    expect(screen.getByText('OpenAI')).toBeTruthy()
+    expect(screen.getByText('AI training')).toBeTruthy()
+    expect(screen.getByText('1,200').nextSibling?.textContent).toBe('requests')
+    expect(screen.getByText(formatDateTime(firstSeen))).toBeTruthy()
+    expect(screen.getByText(formatDateTime(start))).toBeTruthy()
+    expect(screen.getByText('tab body')).toBeTruthy()
+    expect(screen.queryByText('No profile found')).toBeNull()
+    expect(get).not.toHaveBeenCalled()
+    expect(getByExternalId).not.toHaveBeenCalled()
+    expect(getProfileStats.mock.calls[0][0]).toMatchObject({ distinctId: CRAWLER, includeBots: true })
+    expect(getActivityFeed.mock.calls[0][0]).toMatchObject({ distinctId: CRAWLER, includeBots: true })
+  })
+
+  it('never looks a crawler up as a profile', async () => {
+    expect(await createStore().get(profileFamilyAtom(CRAWLER))).toBeNull()
+    expect(get).not.toHaveBeenCalled()
+    expect(getByExternalId).not.toHaveBeenCalled()
+  })
+
+  it('keeps the tabs up and retries when the summary fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    respondCrawler(5)
+    getProfileStats.mockRejectedValueOnce(new ConnectError('down', Code.Unavailable))
+    await renderShell(`/p/p1/profiles/${CRAWLER}/events`)
+
+    await screen.findByText("Couldn't load this crawler's summary.")
+    expect(screen.getByText('tab body')).toBeTruthy()
+    expect(screen.queryByText('No requests from this crawler')).toBeNull()
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Retry' })))
+    expect(await screen.findByText('GPTBot')).toBeTruthy()
+    expect(screen.queryByText("Couldn't load this crawler's summary.")).toBeNull()
+  })
+
+  it('replaces the overview with the events tab', async () => {
+    respondCrawler(5)
+    const history = await renderShell(`/p/p1/profiles/${CRAWLER}`)
+
+    await waitFor(() => expect(history).toEqual([`/p/p1/profiles/${CRAWLER}/events`]))
+  })
+
+  it('says a crawler with no requests has none', async () => {
+    respondCrawler(0)
+    await renderShell(`/p/p1/profiles/${CRAWLER}/events`)
+
+    await screen.findByText('No requests from this crawler')
   })
 })
 
