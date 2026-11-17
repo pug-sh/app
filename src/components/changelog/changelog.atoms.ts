@@ -20,9 +20,10 @@ const lastReadAtom = atom(0)
 
 // Keeps what was seen before, so a tab with an older list can't un-read what a newer one read.
 export const markChangelogReadAtom = atom(null, (get, set) => {
-  const seen = new Set([...get(entriesStateAtom).map(entry => entry.slug), ...(get(seenAtom) ?? [])])
+  const entries = get(entriesStateAtom)
+  const seen = new Set([...entries.map(entry => entry.slug), ...(get(seenAtom) ?? [])])
   try {
-    set(storedAtom, { seen: [...seen].slice(0, KEPT) })
+    set(storedAtom, { seen: [...seen].slice(0, Math.max(KEPT, entries.length)) })
   } catch {
     // Storage refused the write; the read still holds for this session.
   }

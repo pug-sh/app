@@ -92,10 +92,25 @@ describe('WhatsNew', () => {
     expect(titles).toEqual(['Title pinned', 'Title fresh', 'Title old'])
   })
 
-  it('keeps what another tab read', async () => {
+  it('keeps what another tab read, before and after this one loaded', async () => {
     await mount({ seen: ['elsewhere', 'pinned', 'old'] })
+    const later = JSON.stringify({ seen: ['later', 'elsewhere', 'pinned', 'old'] })
+    localStorage.setItem('pug:changelog', later)
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: 'pug:changelog', newValue: later, storageArea: localStorage }),
+      )
+    })
     fireEvent.click(button())
-    expect(stored()).toEqual({ seen: ['fresh', 'pinned', 'old', 'elsewhere'] })
+    expect(stored()).toEqual({ seen: ['fresh', 'pinned', 'old', 'later', 'elsewhere'] })
+  })
+
+  it('reads every entry of a feed longer than the history it keeps', async () => {
+    await mount(
+      undefined,
+      Array.from({ length: 101 }, (_, i) => entry(`e${i}`)),
+    )
+    expect(button().getAttribute('aria-label')).toBe("What's new")
   })
 
   it('counts a first feed with nothing usable as nothing read', async () => {

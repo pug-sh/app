@@ -44,8 +44,14 @@ describe('parseFeed', () => {
     ['a date that is not a day', { date: 'Nov 10' }],
     ['a page that is not https', { url: 'http://docs.pug.sh/changelog/a/' }],
     ['a day that does not exist', { date: '2026-13-01' }],
+    ['a day past the end of its month', { date: '2026-02-30' }],
+    ['February 29 outside a leap year', { date: '2026-02-29' }],
   ])('leaves out an entry with %s and keeps the rest', (_kind, bad) => {
     expect(parseFeed(feed([entry('bad', bad), entry('good')]))?.map(e => e.slug)).toEqual(['good'])
+  })
+
+  it('keeps February 29 in a leap year', () => {
+    expect(parseFeed(feed([entry('leap', { date: '2024-02-29' })]))?.map(e => e.date)).toEqual(['2024-02-29'])
   })
 
   it('keeps the first of two entries with one slug', () => {

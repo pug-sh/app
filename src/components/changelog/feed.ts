@@ -27,7 +27,9 @@ const asObject = (value: unknown) =>
 
 const nonEmpty = (value: unknown) => (typeof value === 'string' && value.trim() !== '' ? value : null)
 
-const isDay = (value: string) => DAY.test(value) && !Number.isNaN(Date.parse(value))
+// Date.parse rolls an impossible day over (2026-02-30 reads as March 2), so the day has to come back unchanged.
+const isDay = (value: string) =>
+  DAY.test(value) && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().startsWith(value)
 
 // Newest first. Any other version is refused; an entry this build can't use is left out.
 export const parseFeed = (text: string) => {
