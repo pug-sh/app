@@ -131,9 +131,10 @@ export type InsightQuerySpec = Message<"shared.insights.v1.InsightQuerySpec"> & 
   map?: MapQuery | undefined;
 
   /**
-   * Traffic tagged as automated at ingest ($bot, set only on web events from a
-   * public key: a known crawler, a datacenter network or headless Chrome's
-   * 800x600 screen) is EXCLUDED by default from every insight and every metric.
+   * Traffic tagged as automated at ingest ($bot, set on web events from a public
+   * key that come from a known crawler, a datacenter network or headless Chrome's
+   * 800x600 screen, and on every crawler_request event) is EXCLUDED by default
+   * from every insight and every metric.
    * Session metrics and user flow judge a session whole: one tagged event
    * excludes the session. Set true to include bots.
    *
@@ -1487,7 +1488,12 @@ export const InsightsService: GenService<{
    * The request also carries the time range and granularity, and it is the
    * right tool for any project-wide or over-time question; per-granularity range
    * caps apply. Traffic tagged as a bot at ingest is excluded unless
-   * spec.include_bots is true.
+   * spec.include_bots is true, and that includes crawler_request events, one per
+   * crawler request a site reported. On those, $bot_reason names the crawler,
+   * $crawler_category is answers, search, training, seo or other,
+   * $crawler_company is absent for most search engines and SEO tools, and
+   * $crawler_verified is verified, failed (an IP outside the operator's published
+   * ranges) or unchecked (no ranges or no usable IP to check).
    * Discover valid event kinds and property keys with the get_insights_filter_schema tool first.
    *
    * @generated from rpc shared.insights.v1.InsightsService.Query
