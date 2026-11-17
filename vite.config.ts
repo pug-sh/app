@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
@@ -53,10 +54,12 @@ const alignYDomainToAxisTicks = (): Plugin => ({
   enforce: 'pre',
   transform(code, id) {
     if (!id.split('?')[0].endsWith('/components/charts/y-domain-utils.ts')) return
-    return Y_DOMAIN_PATCHES.reduce((patched, [from, to]) => {
-      if (!patched.includes(from)) throw new Error(`y-domain-utils.ts changed upstream; re-check: ${from}`)
-      return patched.replace(from, to)
+    const patched = Y_DOMAIN_PATCHES.reduce((source, [from, to]) => {
+      if (!source.includes(from)) throw new Error(`y-domain-utils.ts changed upstream; re-check: ${from}`)
+      return source.replace(from, to)
     }, code)
+    // No patch moves a line, so the file's own source map still holds.
+    return { code: patched, map: null }
   },
 })
 
@@ -78,6 +81,26 @@ const preconnects = (): Plugin => {
     },
   }
 }
+
+// The sentry CLI (0.49) sees a chunk's debug ID only in quotes, and the minifier turns them into backticks, so the CLI
+// prepends a second snippet to each upload and every frame maps a line off. A one-for-one swap leaves the maps valid.
+const DEBUG_ID_IN_BACKTICKS = /(\._sentryDebugIds\[[$\w]+\]=)`([0-9a-f-]{36})`/
+const QUOTED_DEBUG_ID = /\._sentryDebugIds\[[$\w]+\]="[0-9a-f-]{36}"/
+const quoteSentryDebugIds = (): Plugin => ({
+  name: 'quote-sentry-debug-ids',
+  generateBundle(_, bundle) {
+    for (const chunk of Object.values(bundle)) {
+      if (chunk.type !== 'chunk' || !chunk.code.includes('sentry-dbid-')) continue
+      chunk.code = chunk.code.replace(DEBUG_ID_IN_BACKTICKS, '$1"$2"')
+      // Fail loudly: a snippet the CLI can't see uploads maps that miss every frame, and the build still says success.
+      if (!QUOTED_DEBUG_ID.test(chunk.code))
+        throw new Error(`Sentry's debug ID snippet changed shape in ${chunk.fileName}`)
+    }
+  },
+})
+
+// `telemetry: false` below covers the plugin but not the sentry CLI it uploads through, which reports on its own.
+process.env.SENTRY_CLI_NO_TELEMETRY ??= '1'
 
 export default defineConfig({
   // react-draggable (via react-grid-layout) reads process.env.DRAGGABLE_DEBUG at
@@ -125,5 +148,19 @@ export default defineConfig({
       },
     },
   },
-  plugins: [react(), tailwindcss(), faviconFromLogo(), alignYDomainToAxisTicks(), preconnects()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    faviconFromLogo(),
+    alignYDomainToAxisTicks(),
+    preconnects(),
+    // Uploads hidden source maps and keeps them out of dist. Off without a token, so CI and local builds don't change.
+    sentryVitePlugin({
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+      telemetry: false,
+      // MapLibre's worker is bundled outside the plugin, so its map would otherwise ship.
+      sourcemaps: { filesToDeleteAfterUpload: ['dist/**/*.map'] },
+    }),
+    quoteSentryDebugIds(),
+  ],
 })
