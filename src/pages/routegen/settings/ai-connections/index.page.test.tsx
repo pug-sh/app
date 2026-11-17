@@ -158,18 +158,23 @@ describe('AI connections', () => {
 
     expect(await screen.findByText('http://vitest.invalid/mcp')).toBeTruthy()
     expect(screen.queryByRole('link', { name: "Pug in Claude's directory" })).toBeNull()
+    expect(screen.queryByRole('link', { name: "Pug in ChatGPT's plugins" })).toBeNull()
   })
 
-  it("links Claude's directory on Pug Cloud", async () => {
+  it("links Claude's directory and ChatGPT's plugins on Pug Cloud", async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.pug.sh')
     vi.resetModules()
     const { jwtAtom: cloudJwtAtom } = await import('@/auth/jwt.atoms')
     const CloudAiConnections = (await import('./index.page')).default
     mount(CloudAiConnections, cloudJwtAtom)
 
-    const link = await screen.findByRole('link', { name: "Pug in Claude's directory" })
-    expect(link.getAttribute('href')).toBe('https://claude.ai/directory/pug')
-    expect(screen.getByText(/^Connect Claude from its directory/)).toBeTruthy()
+    const claude = await screen.findByRole('link', { name: "Pug in Claude's directory" })
+    expect(claude.getAttribute('href')).toBe('https://claude.ai/directory/pug')
+    const chatgpt = screen.getByRole('link', { name: "Pug in ChatGPT's plugins" })
+    expect(chatgpt.getAttribute('href')).toBe(
+      'https://chatgpt.com/plugins/plugin_asdk_app_6af72bdabb608191b3fcd1b20baa12bc',
+    )
+    expect(screen.getByText(/^Connect Claude or ChatGPT from its listing/)).toBeTruthy()
     expect(screen.getByText('https://api.pug.sh/mcp')).toBeTruthy()
   })
 

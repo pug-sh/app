@@ -15,12 +15,22 @@ import { grantsAtom, loadGrantsAtom, revokeGrantAtom } from './grants.atoms'
 const MCP_DOCS_URL = 'https://docs.pug.sh/mcp/'
 // Sign-in works only at the OAuth issuer's /mcp, so this assumes the API origin is PUG_API_BASE_URL, as on Pug Cloud.
 const MCP_URL = `${import.meta.env.VITE_API_BASE_URL.replace(/\/+$/, '')}/mcp`
-// The directory's listing connects to Pug Cloud's /mcp, so only Pug Cloud links to it.
-const CLAUDE_DIRECTORY_URL = MCP_URL === 'https://api.pug.sh/mcp' ? 'https://claude.ai/directory/pug' : null
+// Both listings connect to Pug Cloud's /mcp, so only Pug Cloud links to them.
+const LISTINGS =
+  MCP_URL === 'https://api.pug.sh/mcp'
+    ? [
+        { app: 'Claude', label: "Pug in Claude's directory", url: 'https://claude.ai/directory/pug' },
+        {
+          app: 'ChatGPT',
+          label: "Pug in ChatGPT's plugins",
+          url: 'https://chatgpt.com/plugins/plugin_asdk_app_6af72bdabb608191b3fcd1b20baa12bc',
+        },
+      ]
+    : []
 
 const connectHint = () => {
-  if (CLAUDE_DIRECTORY_URL) {
-    return 'Connect Claude from its directory, or add this URL to another MCP client that can sign in, then click Allow when Pug asks.'
+  if (LISTINGS.length > 0) {
+    return 'Connect Claude or ChatGPT from its listing, or add this URL to another MCP client that can sign in, then click Allow when Pug asks.'
   }
   return 'Add this URL to Claude or another MCP client that can sign in, then click Allow when Pug asks.'
 }
@@ -173,20 +183,20 @@ const AiConnections = () => {
               </>
             }
           />
-          {CLAUDE_DIRECTORY_URL && (
-            <div className="flex items-center gap-4 border-b border-border/50 py-2.5">
-              <span className="w-24 shrink-0 text-xs text-muted-foreground">Claude</span>
+          {LISTINGS.map(listing => (
+            <div key={listing.app} className="flex items-center gap-4 border-b border-border/50 py-2.5">
+              <span className="w-24 shrink-0 text-xs text-muted-foreground">{listing.app}</span>
               <a
-                href={CLAUDE_DIRECTORY_URL}
+                href={listing.url}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-link underline-offset-4 hover:underline"
               >
-                Pug in Claude's directory
+                {listing.label}
                 <ExternalLink className="size-3" />
               </a>
             </div>
-          )}
+          ))}
           <CopyableCode label="Server URL" value={MCP_URL} />
         </section>
       )}
