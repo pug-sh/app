@@ -3,6 +3,12 @@ import { FilterOperator, LogicalOperator } from '@/api/genproto/common/v1/filter
 import { type ActiveFilter, createFilter } from '@/components/event-filters/filter-model'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
 import { readPropFiltersParam } from '@/hooks/use-filter-query-params'
+import {
+  CRAWLER_CATEGORY_PROPERTY,
+  CRAWLER_COMPANY_PROPERTY,
+  CRAWLER_NAME_PROPERTY,
+  CRAWLER_VERIFIED_PROPERTY,
+} from '@/lib/crawlers'
 
 // Traffic cross-filters reuse the Insights property-filter model wholesale, down to the shared `pf`
 // URL param. Same-property values are kept as one filter: EQUALS for one, IN for several.
@@ -128,6 +134,10 @@ const PROPERTY_LABELS: Record<string, string> = {
   $utmSource: 'Source',
   $utmMedium: 'Medium',
   $utmCampaign: 'Campaign',
+  [CRAWLER_NAME_PROPERTY]: 'Crawler',
+  [CRAWLER_COMPANY_PROPERTY]: 'Company',
+  [CRAWLER_CATEGORY_PROPERTY]: 'Category',
+  [CRAWLER_VERIFIED_PROPERTY]: 'Verification',
 }
 
 export const filterPropertyLabel = (property: string) => PROPERTY_LABELS[property] ?? property.replace(/^\$/, '')

@@ -15,6 +15,7 @@ import { insightsRPCAtom } from '@/api/rpc'
 import { DateRangePicker, type TimeRange } from '@/components/date-range-picker'
 import { BreakdownBuilder, BreakdownChip, EventFilterBar, FilterBuilder, FilterChip } from '@/components/event-filters'
 import { toProtoFilters } from '@/components/event-filters/filter-proto'
+import IncludeBotsToggle from '@/components/include-bots-toggle'
 import IncludeCookielessToggle from '@/components/include-cookieless-toggle'
 import Page from '@/components/layout/page'
 import NoProject from '@/components/no-project'
@@ -30,10 +31,13 @@ import {
   BREAKDOWN_MAX,
   BREAKDOWN_RESPONSE_LIMIT,
   readFilterQueryParams,
+  readIncludeBotsParam,
   writeFilterQueryParams,
+  writeIncludeBotsParam,
 } from '@/hooks/use-filter-query-params'
 import { useFilterState } from '@/hooks/use-filter-state'
 import { useGlobalFilterSchema } from '@/hooks/use-global-filter-schema'
+import { specReadsBotOnlyData } from '@/lib/crawlers'
 import { DEFAULT_INSIGHTS_RANGE, fmtDateRange } from '@/lib/date-presets'
 import { getIndexedColor, getSeriesColor } from '@/lib/event-colors'
 import { alignRangeStart, clampGranularity, clampRange, granularityDisabledReason } from '@/lib/granularity'
@@ -138,6 +142,8 @@ const Insights = () => {
   const [topK, setTopK] = useState(() => initialFilterState.topK ?? DEFAULT_TOP_K)
   const [map, setMap] = useState(() => initialFilterState.map ?? DEFAULT_MAP)
   const [includeCookieless, setIncludeCookieless] = useState(() => initialFilterState.includeCookieless)
+  // Not includeBotsAtom: showing bots on Events must not change the numbers here.
+  const [includeBots, setIncludeBots] = useState(() => readIncludeBotsParam())
 
   const addBreakdown = useCallback((prop: string) => {
     setBreakdowns(prev => {
@@ -216,6 +222,7 @@ const Insights = () => {
       map: isMap ? map : undefined,
       includeCookieless: cookielessMatters ? includeCookieless : undefined,
     })
+    writeIncludeBotsParam(includeBots)
   }, [
     eventFilters.entries,
     propFilters,
@@ -231,6 +238,7 @@ const Insights = () => {
     map,
     includeCookieless,
     cookielessMatters,
+    includeBots,
   ])
 
   const hasIncompleteNumericAggregation = useMemo(
@@ -253,6 +261,74 @@ const Insights = () => {
     return validEntries.length > 0 && !hasIncompleteNumericAggregation
   }
 
+  // Built at render, not in the query fn, so the bots chip reads the spec that is actually sent.
+  const { spec, botsForced } = useMemo(() => {
+    const globalFilters = toProtoFilters(propFilters)
+    const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
+    // Top-k and map specs carry no events/breakdowns (the backend rejects them); the scope
+    // event rides inside topK / map instead.
+    let base
+    if (isTopK) {
+      base = {
+        insightType,
+        filterGroups,
+        filterGroupsOperator: LogicalOperator.AND,
+        topK: buildTopKQuery(topK, validEntries[0]),
+        includeCookieless,
+      }
+    } else if (isMap) {
+      base = {
+        insightType,
+        filterGroups,
+        filterGroupsOperator: LogicalOperator.AND,
+        map: buildMapQuery(map, validEntries[0]),
+        includeCookieless,
+      }
+    } else {
+      base = {
+        insightType,
+        events: isUserFlow
+          ? []
+          : validEntries.map(entry => ({
+              event: {
+                kind: entry.kind,
+                filters: toProtoFilters(entry.filters),
+              },
+              aggregation:
+                insightType === InsightType.TRENDS
+                  ? (entry.aggregation ?? AggregationType.TOTAL)
+                  : AggregationType.TOTAL,
+              aggregationProperty: getAggregationProperty({
+                insightType,
+                aggregation: entry.aggregation,
+                aggregationProperty: entry.aggregationProperty,
+              }),
+            })),
+        userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
+        filterGroups,
+        filterGroupsOperator: LogicalOperator.AND,
+        breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
+        breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
+        includeCookieless,
+      }
+    }
+    const forced = specReadsBotOnlyData(base)
+    return { spec: { ...base, includeBots: includeBots || forced }, botsForced: forced }
+  }, [
+    propFilters,
+    isTopK,
+    isMap,
+    isUserFlow,
+    insightType,
+    topK,
+    map,
+    validEntries,
+    userFlowConfig,
+    breakdowns,
+    includeCookieless,
+    includeBots,
+  ])
+
   const queryKey = JSON.stringify({
     entries: eventFilters.entries,
     timeRange,
@@ -264,6 +340,7 @@ const Insights = () => {
     topK: isTopK ? topK : undefined,
     map: isMap ? map : undefined,
     includeCookieless,
+    includeBots: spec.includeBots,
     // The query's floored `from` depends on the project zone, so a zone change must refetch.
     reportingTimeZone,
   })
@@ -278,55 +355,6 @@ const Insights = () => {
   } = useDebouncedQuery(
     queryKey,
     async signal => {
-      const globalFilters = toProtoFilters(propFilters)
-      const filterGroups = globalFilters.length > 0 ? [{ filters: globalFilters, operator: LogicalOperator.AND }] : []
-      // Top-k and map specs carry no events/breakdowns (the backend rejects them); the scope
-      // event rides inside topK / map instead.
-      let spec
-      if (isTopK) {
-        spec = {
-          insightType,
-          filterGroups,
-          filterGroupsOperator: LogicalOperator.AND,
-          topK: buildTopKQuery(topK, validEntries[0]),
-          includeCookieless,
-        }
-      } else if (isMap) {
-        spec = {
-          insightType,
-          filterGroups,
-          filterGroupsOperator: LogicalOperator.AND,
-          map: buildMapQuery(map, validEntries[0]),
-          includeCookieless,
-        }
-      } else {
-        spec = {
-          insightType,
-          events: isUserFlow
-            ? []
-            : validEntries.map(entry => ({
-                event: {
-                  kind: entry.kind,
-                  filters: toProtoFilters(entry.filters),
-                },
-                aggregation:
-                  insightType === InsightType.TRENDS
-                    ? (entry.aggregation ?? AggregationType.TOTAL)
-                    : AggregationType.TOTAL,
-                aggregationProperty: getAggregationProperty({
-                  insightType,
-                  aggregation: entry.aggregation,
-                  aggregationProperty: entry.aggregationProperty,
-                }),
-              })),
-          userFlow: isUserFlow ? buildUserFlowQuery(userFlowConfig) : undefined,
-          filterGroups,
-          filterGroupsOperator: LogicalOperator.AND,
-          breakdowns: isUserFlow ? [] : breakdowns.map(property => ({ property })),
-          breakdownLimit: isUserFlow || breakdowns.length === 0 ? 0 : BREAKDOWN_RESPONSE_LIMIT,
-          includeCookieless,
-        }
-      }
       const resp = await insightsRPC.query(
         {
           granularity,
@@ -353,8 +381,9 @@ const Insights = () => {
         insightType: InsightType[insightType]?.toLowerCase() ?? 'unknown',
         eventCount: isUserFlow ? 0 : isTopK || isMap ? 1 : validEntries.length,
         breakdownCount: isUserFlow || isMap || isTopK ? 0 : breakdowns.length,
-        hasGlobalFilters: globalFilters.length > 0,
+        hasGlobalFilters: spec.filterGroups.length > 0,
         includeCookieless,
+        includeBots: spec.includeBots,
         ...(isUserFlow
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
           : {}),
@@ -625,6 +654,7 @@ const Insights = () => {
               onChange={setIncludeCookieless}
             />
           )}
+          <IncludeBotsToggle includeBots={includeBots} forced={botsForced} onChange={setIncludeBots} />
           {/* Breakdowns don't apply to top-k or map (the dimension is the breakdown) or user flow. */}
           {!isTopK && !isMap && !isUserFlow && (
             <>

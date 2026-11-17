@@ -117,12 +117,12 @@ const MetricToggle = ({
   )
 }
 
-const TabStrip = ({
+export const TabStrip = ({
   tabs,
   activeId,
   onSelect,
 }: {
-  tabs: readonly BreakdownTab[]
+  tabs: readonly { id: string; label: string }[]
   activeId: string
   onSelect: (id: string) => void
 }) => (

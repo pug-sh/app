@@ -1,10 +1,11 @@
 import type { EventNameMeta } from '@/api/genproto/common/v1/filter_schema_pb'
+import { CRAWLER_REQUEST_EVENT } from '@/lib/crawlers'
 
 // Convention-driven candidate lists. Scanned in order; the first one present
 // in the project's event schema wins. Add more entries here as we discover
 // common customer conventions.
 
-// Barely a preference order, unlike the lists below — two spellings of the same event, so the busier
+// Barely a preference order, unlike the lists below: two spellings of the same event, so the busier
 // one wins rather than a stray page_view speaking for a mobile project. Order only settles a tie.
 const PRIMARY_CANDIDATES = ['page_view', 'screen_view'] as const
 const SIGNIN_CANDIDATES = ['signin', 'signup', 'identified', 'account_created'] as const
@@ -16,7 +17,7 @@ const CONVERSION_CANDIDATES = [
   'subscription_started',
 ] as const
 // Monetization events that carry a numeric `amount` property (see the well-known
-// event schemas — all use `amount`). Ordered most-direct-revenue first.
+// event schemas, which all use `amount`). Ordered most-direct-revenue first.
 const REVENUE_CANDIDATES = [
   'purchase',
   'payment_succeeded',
@@ -30,11 +31,11 @@ type ConversionKind = (typeof CONVERSION_CANDIDATES)[number]
 type RevenueKind = (typeof REVENUE_CANDIDATES)[number]
 
 // Autocaptured kinds that fire on raw interaction rather than intent, so wherever autoCapture is on
-// they win "most events" by a wide margin — a click on every interaction, a scroll on every page —
+// they win "most events" by a wide margin (a click on every interaction, a scroll on every page)
 // and say nothing about what the project is for. Deliberately not the whole autocapture set: it also
 // includes page_view, which is the pick we want, and form_submit, which is a real user action and a
 // defensible primary for a project that has no page_view. Only consulted for the fallback below.
-const NOT_PRIMARY: ReadonlySet<string> = new Set(['click', 'dead_click', 'rage_click', 'scroll'])
+const NOT_PRIMARY: ReadonlySet<string> = new Set(['click', 'dead_click', 'rage_click', 'scroll', CRAWLER_REQUEST_EVENT])
 
 export type Bindings = Readonly<{
   // The event kind that best stands for activity in this project. Drives "active users", "event
@@ -60,7 +61,7 @@ const findFirst = <T extends string>(candidates: readonly T[], available: Set<st
 }
 
 // Walks candidates in order and only takes a strictly busier one, so an exact tie keeps the earlier
-// candidate — the same way resolveNavEvent breaks it, rather than by the schema's own event order.
+// candidate, the same way resolveNavEvent breaks it, rather than by the schema's own event order.
 const pickBusiest = <T extends string>(candidates: readonly T[], events: EventNameMeta[]): T | null => {
   let best: { kind: T; count: bigint } | null = null
   for (const candidate of candidates) {
@@ -77,11 +78,13 @@ export const pickBindings = (events: EventNameMeta[]): Bindings | null => {
   return {
     // Convention first, then the busiest event that isn't autocapture noise, and only then the
     // busiest event outright: a project whose every event is a click is better described as "via
-    // click" than by hiding the whole Overview behind a null. That last tier announces itself —
-    // every tile renders `via <kind>` — so a degraded pick is visible rather than silent.
+    // click" than by hiding the whole Overview behind a null. That last tier announces itself:
+    // every tile renders `via <kind>`, so a degraded pick is visible rather than silent. Crawler
+    // requests come last of all: they are bot-only, so every tile on them reads zero.
     primary:
       pickBusiest(PRIMARY_CANDIDATES, events) ??
       sorted.find(event => !NOT_PRIMARY.has(event.name))?.name ??
+      sorted.find(event => event.name !== CRAWLER_REQUEST_EVENT)?.name ??
       sorted[0].name,
     signinLike: findFirst(SIGNIN_CANDIDATES, available),
     conversionLike: findFirst(CONVERSION_CANDIDATES, available),

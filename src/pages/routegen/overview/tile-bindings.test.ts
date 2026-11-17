@@ -24,6 +24,12 @@ describe('pickBindings', () => {
     expect(pickBindings(events(['click', 5_000], ['purchase', 40]))?.primary).toBe('purchase')
   })
 
+  // Crawler requests are bot-only, so every product tile bound to them reads zero.
+  it('passes over crawler requests for the primary event', () => {
+    expect(pickBindings(events(['crawler_request', 90_000], ['signup', 40]))?.primary).toBe('signup')
+    expect(pickBindings(events(['crawler_request', 90_000], ['click', 40]))?.primary).toBe('click')
+  })
+
   it('resolves the other bindings by convention order', () => {
     const bindings = pickBindings(events(['page_view', 10], ['signup', 4], ['purchase', 2]))
     expect(bindings?.signinLike).toBe('signup')

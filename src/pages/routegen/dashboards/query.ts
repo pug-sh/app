@@ -14,6 +14,7 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { fromProtoFilter, toProtoFilters } from '@/components/event-filters/filter-proto'
 import type { EventFilterEntry } from '@/hooks/use-event-filters'
 import { createEntry } from '@/hooks/use-event-filters'
+import { specReadsBotOnlyData } from '@/lib/crawlers'
 import { tsToDate } from '@/lib/timestamp'
 import { isIncompleteNumericAggregation, NUMERIC_AGGREGATIONS } from '../insights/constants'
 import { buildMapQuery, DEFAULT_MAP, type MapState, parseMapFromSpec } from '../insights/map'
@@ -32,6 +33,7 @@ export type InsightEditorState = {
   topK: TopKState
   map: MapState
   includeCookieless: boolean
+  includeBots: boolean
 }
 
 export const getProtoRange = (range?: ProtoTimeRange) => {
@@ -122,19 +124,12 @@ export const getInsightEditorDefaults = (tile?: DashboardTile): InsightEditorSta
     topK: parseTopKFromSpec(spec),
     map: parseMapFromSpec(spec),
     includeCookieless: spec?.includeCookieless ?? false,
+    // A crawler query saves bots as included whatever the chip said, so that save isn't a choice.
+    includeBots: spec?.includeBots === true && !specReadsBotOnlyData(spec),
   }
 }
 
-export const buildInsightSpec = ({
-  insightType,
-  validEntries,
-  propFilters,
-  breakdowns,
-  userFlowConfig,
-  topK,
-  map,
-  includeCookieless,
-}: {
+type InsightSpecInput = {
   insightType: InsightType
   validEntries: EventFilterEntry[]
   propFilters: ActiveFilter[]
@@ -146,10 +141,28 @@ export const buildInsightSpec = ({
   userFlowConfig: UserFlowConfig
   topK?: TopKState
   map?: MapState
-  // Required for the same reason as userFlowConfig: an omitted flag reads as "exclude", which would
-  // silently drop a saved tile's opt-in the next time the editor rebuilt its spec.
+  // Both required for the same reason as userFlowConfig: an omitted flag reads as "exclude", which
+  // would silently drop a saved tile's opt-in the next time the editor rebuilt its spec.
   includeCookieless: boolean
-}) => {
+  includeBots: boolean
+}
+
+export const buildInsightSpec = (input: InsightSpecInput) => {
+  const spec = buildSpecBody(input)
+  spec.includeBots = input.includeBots || specReadsBotOnlyData(spec)
+  return spec
+}
+
+const buildSpecBody = ({
+  insightType,
+  validEntries,
+  propFilters,
+  breakdowns,
+  userFlowConfig,
+  topK,
+  map,
+  includeCookieless,
+}: InsightSpecInput) => {
   const filterGroups =
     propFilters.length > 0 ? [{ filters: toProtoFilters(propFilters), operator: LogicalOperator.AND }] : []
 

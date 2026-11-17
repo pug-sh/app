@@ -1,14 +1,16 @@
 import { Route } from 'lucide-react'
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useState } from 'react'
+import { type Dispatch, type ReactNode, type SetStateAction, useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { trackFeature } from '@/analytics/pug'
 import type { GetFilterSchemaResponse } from '@/api/genproto/common/v1/filter_schema_pb'
 import { InsightType } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { insightsEventFiltersSearch, writePropFiltersParam } from '@/hooks/use-filter-query-params'
+import { CRAWLER_REQUEST_EVENT, STATUS_CODE_PROPERTY } from '@/lib/crawlers'
 import { autoGranularity } from '@/lib/granularity'
 import { useProjectNavigate } from '@/lib/project-path'
 import { COUNTRY_PROPERTY } from '@/lib/property-values'
+import { CrawlerSection } from './crawler-section'
 import type { GlobalOverrides } from './global-overrides'
 import OverviewSectionHeader from './overview-section-header'
 import { TrafficBreakdownPanel } from './traffic-breakdown-panel'
@@ -41,6 +43,8 @@ type Props = GlobalOverrides & {
 
 const TrafficAnalyticsMode = ({ schema, ...props }: Props) => {
   const nav = useMemo(() => resolveNavEvent(schema.events), [schema.events])
+  const hasCrawlerRequests = schema.events.some(event => event.name === CRAWLER_REQUEST_EVENT)
+  const reportsStatusCodes = schema.autoPropertyKeys.some(key => key.name === STATUS_CODE_PROPERTY)
 
   // Above the empty state, not inside the view: the write-back rewrites `pf` from what was restored,
   // so a link this view can't honour is warned about and cleaned up on either branch.
@@ -54,21 +58,34 @@ const TrafficAnalyticsMode = ({ schema, ...props }: Props) => {
     writePropFiltersParam(filters)
   }, [filters])
 
+  // An app has no server for crawlers to read, so only a website gets the setup hint.
+  const crawlers = (hasCrawlerRequests || nav?.kind === 'page_view') && (
+    <CrawlerSection
+      hasRequests={hasCrawlerRequests}
+      reportsStatusCodes={reportsStatusCodes}
+      globalTimeRange={props.globalTimeRange}
+      globalGranularity={props.globalGranularity}
+    />
+  )
+
   if (!nav) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Route className="mb-4 size-10 opacity-15" />
-        <p className="mb-1 text-sm font-medium">Traffic analytics needs navigation events</p>
-        <p className="max-w-sm text-[13px] text-muted-foreground">
-          This project has no <span className="font-mono">page_view</span> or{' '}
-          <span className="font-mono">screen_view</span> events yet. Send them with the web or Flutter SDK, or switch to
-          Product analytics for an event-based overview.
-        </p>
+      <div className="flex flex-col gap-9">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Route className="mb-4 size-10 opacity-15" />
+          <p className="mb-1 text-sm font-medium">Traffic analytics needs navigation events</p>
+          <p className="max-w-sm text-[13px] text-muted-foreground">
+            This project has no <span className="font-mono">page_view</span> or{' '}
+            <span className="font-mono">screen_view</span> events yet. Send them with the web or Flutter SDK, or switch
+            to Product analytics for an event-based overview.
+          </p>
+        </div>
+        {crawlers}
       </div>
     )
   }
 
-  return <TrafficAnalyticsView nav={nav} filters={filters} setFilters={setFilters} {...props} />
+  return <TrafficAnalyticsView nav={nav} filters={filters} setFilters={setFilters} crawlers={crawlers} {...props} />
 }
 
 const TrafficAnalyticsView = ({
@@ -79,10 +96,12 @@ const TrafficAnalyticsView = ({
   onSelectStat,
   globalTimeRange,
   globalGranularity,
+  crawlers,
 }: Omit<Props, 'schema'> & {
   nav: NavEvent
   filters: ActiveFilter[]
   setFilters: Dispatch<SetStateAction<ActiveFilter[]>>
+  crawlers: ReactNode
 }) => {
   const panels = trafficPanels(nav.kind)
 
@@ -178,6 +197,8 @@ const TrafficAnalyticsView = ({
           />
         </div>
       </section>
+
+      {crawlers}
     </div>
   )
 }
