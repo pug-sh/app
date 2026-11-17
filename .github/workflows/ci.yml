@@ -44,6 +44,8 @@ jobs:
           # after it, and the air gap check below would pass for the wrong reason.
           VITE_API_BASE_URL: https://api.invalid
           VITE_AIR_GAP: 'true'
+          # On, so the air gap and not the feature switch is what keeps the changelog feed out.
+          VITE_CHANGELOG_ENABLED: 'true'
 
       - name: Check the air gap
         run: bun run check:air-gap

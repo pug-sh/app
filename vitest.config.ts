@@ -14,9 +14,10 @@ export default mergeConfig(
       env: {
         // transport throws at module scope without it, so CI (no .env) fails on the import alone.
         VITE_API_BASE_URL: 'http://vitest.invalid',
-        // Tests run as production does unless they stub otherwise, and a developer's .env can't change the result.
+        // Tests run with every opt-in off and no air gap unless they stub otherwise, and a developer's .env can't change the result.
         VITE_AIR_GAP: '',
         VITE_THEME_REPOSITORY: '',
+        VITE_CHANGELOG_ENABLED: '',
       },
     },
   }),

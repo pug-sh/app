@@ -19,6 +19,7 @@ import { Link, useLocation } from 'wouter'
 import { Can } from '@/auth/can'
 import { isDemoSessionAtom } from '@/auth/demo'
 import UsageMeter from '@/components/billing/usage-meter'
+import { WhatsNew } from '@/components/changelog/whats-new'
 import { AccountMenu } from '@/components/layout/account-menu'
 import { ThemeModeSwitch } from '@/components/layout/theme-mode-switch'
 import { NameChip } from '@/components/name-chip'
@@ -324,8 +325,9 @@ const AppSidebar = () => {
       <SidebarFooter>
         <UsageMeter href={`${prefix}/settings/billing`} />
         <AccountMenu />
-        <div className="flex items-center justify-between">
-          <ThemeModeSwitch className="group-data-[collapsible=icon]:hidden" />
+        <div className="flex items-center gap-1 group-data-[collapsible=icon]:flex-col">
+          <WhatsNew />
+          <ThemeModeSwitch className="ml-auto group-data-[collapsible=icon]:hidden" />
           {/* Desktop has no header, so this and Cmd/Ctrl+B are the toggle; on mobile the header keeps its own. */}
           <SidebarTrigger className="text-muted-foreground max-md:hidden" />
         </div>

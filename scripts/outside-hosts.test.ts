@@ -13,7 +13,7 @@ const ALLOWED: Record<string, string> = {
   'https://accounts.google.com': 'label, compared with a provider’s issuer',
   'https://cdn.pugs.dev': 'label, text in an SDK snippet',
   'https://acme.okta.com': 'label, a form placeholder',
-  'https://docs.pug.sh': 'link',
+  'https://docs.pug.sh': 'link, and the changelog feed, gated by VITE_CHANGELOG_ENABLED and VITE_AIR_GAP',
   'https://claude.ai': 'link',
   'https://api.pug.sh': 'label, compared with the API’s /mcp',
   'https://discord.gg': 'link',

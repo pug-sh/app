@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { renderMarkdownTileHTML } from './tiles'
+import { renderMarkdownHTML } from './markdown'
 
-const parse = (body: string) => new DOMParser().parseFromString(renderMarkdownTileHTML(body), 'text/html')
+const parse = (body: string) => new DOMParser().parseFromString(renderMarkdownHTML(body), 'text/html')
 
 // null when no link rendered at all, so a body snarkdown didn't parse can't pass as a dropped URL.
 const urls = (body: string) => {
@@ -9,8 +9,8 @@ const urls = (body: string) => {
   return el && [el.getAttribute('href'), el.getAttribute('src')].filter(url => url !== null)
 }
 
-// Also rendered on the public /shared route, so a tile body is untrusted markup.
-describe('renderMarkdownTileHTML', () => {
+// Tile bodies render on the public /shared route and changelog summaries come from another site, so both are untrusted.
+describe('renderMarkdownHTML', () => {
   it.each([
     'https://pug.sh/docs',
     'http://example.com',
@@ -45,5 +45,27 @@ describe('renderMarkdownTileHTML', () => {
     const link = parse('x" title="y [a](z$`)').querySelector('a')
     expect(link?.getAttributeNames()).toEqual(['href'])
     expect(link?.getAttribute('href')).toBe('z$`')
+  })
+
+  it('opens links in a new tab only when asked, and never a link it dropped', () => {
+    const links = (newTab: boolean) =>
+      [
+        ...new DOMParser()
+          .parseFromString(renderMarkdownHTML('[a](https://pug.sh) [b](javascript:x)', { newTab }), 'text/html')
+          .querySelectorAll('a'),
+      ].map(link => [link.getAttribute('target'), link.getAttribute('rel')])
+    expect(links(false)).toEqual([
+      [null, null],
+      [null, null],
+    ])
+    expect(links(true)).toEqual([
+      ['_blank', 'noreferrer'],
+      [null, null],
+    ])
+  })
+
+  it('shows text snarkdown cannot parse as text, rather than throwing', () => {
+    const html = renderMarkdownHTML(`${'- '.repeat(5000)}$<b>`)
+    expect(new DOMParser().parseFromString(html, 'text/html').body.textContent).toContain('- - $<b>')
   })
 })

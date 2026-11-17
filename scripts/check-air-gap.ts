@@ -5,7 +5,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 
-const PUG_HOSTS = ['themes.pug.sh', 'favicons.pug.sh']
+// The changelog by its path: the rest of docs.pug.sh is only ever linked to.
+const PUG_HOSTS = ['themes.pug.sh', 'favicons.pug.sh', 'docs.pug.sh/changelog']
 
 export const airGapProblems = (files: { path: string; text: string }[]) => {
   const problems = files.flatMap(file =>
