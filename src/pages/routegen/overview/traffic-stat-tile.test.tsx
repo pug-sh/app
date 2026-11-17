@@ -34,13 +34,13 @@ const { TrafficStatTile } = await import('./traffic-stat-tile')
 
 const day = (d: number) => new Date(Date.UTC(2026, 6, d))
 
-const trends = (values: number[]) => ({
+const trends = (points: [number, number][]) => ({
   result: {
     case: 'trends',
     value: {
       series: [
         create(TrendSeriesSchema, {
-          points: values.map((value, i) => create(DataPointSchema, { time: timestampFromDate(day(i + 1)), value })),
+          points: points.map(([d, value]) => create(DataPointSchema, { time: timestampFromDate(day(d)), value })),
         }),
       ],
     },
@@ -58,7 +58,13 @@ const segmentation = (req: QueryRequest) => ({
 describe('TrafficStatTile', () => {
   it('reads a hovered zero bucket into the headline in place of the delta', async () => {
     query.mockImplementation(async (req: QueryRequest) =>
-      req.spec?.insightType === InsightType.TRENDS ? trends([5, 0, 7]) : segmentation(req),
+      req.spec?.insightType === InsightType.TRENDS
+        ? trends([
+            [1, 5],
+            [2, 0],
+            [3, 7],
+          ])
+        : segmentation(req),
     )
     const { container } = render(
       <TrafficStatTile
@@ -84,5 +90,32 @@ describe('TrafficStatTile', () => {
     fireEvent.pointerLeave(sparkline)
     expect(screen.getByText('12')).toBeTruthy()
     expect(screen.getByText('20.0%')).toBeTruthy()
+  })
+
+  // An average of an empty day has no value, so the headline must never read one as zero.
+  it("leaves an average's empty days out of its sparkline", async () => {
+    query.mockImplementation(async (req: QueryRequest) =>
+      req.spec?.insightType === InsightType.TRENDS
+        ? trends([
+            [1, 52],
+            [3, 61],
+          ])
+        : segmentation(req),
+    )
+    const { container } = render(
+      <TrafficStatTile
+        statId="avgDuration"
+        nav={{ kind: 'page_view', name: 'page_view' }}
+        selected={false}
+        onSelect={() => {}}
+        range={{ from: day(1), to: day(4) }}
+        granularity={Granularity.DAY}
+        filters={[]}
+      />,
+    )
+    await waitFor(() => expect(container.querySelector('svg[role="img"]')).toBeTruthy())
+
+    fireEvent.pointerMove(container.querySelector('svg[role="img"]') as SVGSVGElement, { clientX: 100 })
+    expect(screen.getByText(/^Jul\s[13]$/)).toBeTruthy()
   })
 })

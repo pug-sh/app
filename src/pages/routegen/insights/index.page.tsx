@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf'
 import { useAtomValue, useSetAtom, useStore } from 'jotai'
 import { BarChart3, CircleHelp, Clock, Loader2, TrendingUp } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -9,6 +10,7 @@ import {
   AggregationType,
   Granularity,
   InsightType,
+  QueryRequestSchema,
   UserFlowQuery_NodeKind,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { insightsRPCAtom } from '@/api/rpc'
@@ -68,6 +70,7 @@ import {
   canShareInsight,
   disambiguateLabels,
   resolveSeriesAggregations,
+  resultFor,
   shareCardTitle,
   sortFunnelSteps,
   trendSeriesColor,
@@ -347,7 +350,7 @@ const Insights = () => {
 
   // Remote query execution.
   const {
-    data: queryResult,
+    data: queried,
     dataKey: resultKey,
     loading,
     error,
@@ -355,18 +358,16 @@ const Insights = () => {
   } = useDebouncedQuery(
     queryKey,
     async signal => {
-      const resp = await insightsRPC.query(
-        {
-          granularity,
-          timeRange: toProtoTimeRange(
-            timeRange
-              ? { from: alignRangeStart(timeRange, granularity, reportingTimeZone), to: timeRange.to }
-              : undefined,
-          ),
-          spec,
-        },
-        { headers, signal },
-      )
+      const request = create(QueryRequestSchema, {
+        granularity,
+        timeRange: toProtoTimeRange(
+          timeRange
+            ? { from: alignRangeStart(timeRange, granularity, reportingTimeZone), to: timeRange.to }
+            : undefined,
+        ),
+        spec,
+      })
+      const resp = await insightsRPC.query(request, { headers, signal })
       // One event per settled query: useDebouncedQuery re-runs this fn only when queryKey changes,
       // and the 300ms debounce collapses keystrokes, so no dedup is needed here. Shape only, never
       // filter values: insightType/counts answer "what kinds of insights get run, how complex"
@@ -388,7 +389,7 @@ const Insights = () => {
           ? { nodeKind: UserFlowQuery_NodeKind[userFlowConfig.nodeKind]?.toLowerCase() ?? 'unknown' }
           : {}),
       })
-      return resp.result
+      return resultFor(request, resp)
     },
     {
       enabled: !!project && !!timeRange && queryConfigured(),
@@ -396,7 +397,8 @@ const Insights = () => {
   )
 
   // Result normalization.
-  const result = queryResult ?? EMPTY_RESULT
+  const result = queried?.result ?? EMPTY_RESULT
+  const resultGranularity = queried?.granularity ?? granularity
   const unknownResultCase =
     result.case !== undefined &&
     result.case !== 'trends' &&
@@ -492,8 +494,8 @@ const Insights = () => {
     [eventFilters.entries, themeRevision],
   )
   const chartData = useMemo<ChartPoint[]>(
-    () => buildChartData(trendSeries, granularity, reportingTimeZone),
-    [trendSeries, granularity, reportingTimeZone],
+    () => buildChartData(trendSeries, resultGranularity, reportingTimeZone, queried?.fillRange),
+    [trendSeries, resultGranularity, reportingTimeZone, queried?.fillRange],
   )
   const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
 
@@ -697,7 +699,7 @@ const Insights = () => {
             seriesColors={seriesColors}
             seriesAggregations={seriesAggregations}
             viewMode={viewMode}
-            granularity={granularity}
+            granularity={resultGranularity}
             breakdowns={breakdowns}
             breakdownResponseLimit={BREAKDOWN_RESPONSE_LIMIT}
             retentionSeriesList={retentionSeriesList}

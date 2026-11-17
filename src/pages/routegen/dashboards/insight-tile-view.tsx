@@ -12,6 +12,7 @@ import {
   InsightType,
   type QueryResponse,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { TimeRange } from '@/components/date-range-picker'
 import { themeRevisionAtom } from '@/data/theme.atoms'
 import { activeProjectTimezoneAtom } from '@/data/workspace.atoms'
 import { fadedSeriesColor, getIndexedColor, getSeriesColor, type SeriesColor } from '@/lib/event-colors'
@@ -23,6 +24,7 @@ import {
   alignComparisonValues,
   breakdownLabel,
   buildChartData,
+  clipToElapsed,
   disambiguateLabels,
   emptyReadsAsZero,
   sortFunnelSteps,
@@ -90,6 +92,7 @@ export const InsightTileView = ({
   onComparisonCaption,
   emptyQualifier,
   timeZone: timeZoneProp,
+  fillRange,
 }: {
   // Pass either a full DashboardTile (for dashboard pages, where threshold + compare
   // + viz options apply) or just a viewMode (for overview/static tiles).
@@ -120,6 +123,8 @@ export const InsightTileView = ({
   emptyQualifier?: string
   // The zone the result was bucketed in, when no active project names it (the public shared page).
   timeZone?: string
+  // The range a trend's axis is filled out to, from the result itself (see resultFor).
+  fillRange?: TimeRange
 }) => {
   const resolvedViewMode = tile?.viewMode ?? viewMode
   const effectiveViewMode = useMemo(() => dashboardTileViewModeToViewMode(resolvedViewMode), [resolvedViewMode])
@@ -154,8 +159,8 @@ export const InsightTileView = ({
   const topKRows = useMemo(() => (result.case === 'topK' ? result.value.rows : []), [result])
   const userFlowResult = useMemo(() => (result.case === 'userFlow' ? result.value : undefined), [result])
   const chartData = useMemo(
-    () => buildChartData(trendSeries, granularity, timeZone),
-    [trendSeries, granularity, timeZone],
+    () => buildChartData(trendSeries, granularity, timeZone, fillRange),
+    [trendSeries, granularity, timeZone, fillRange],
   )
   const kindOrder = useMemo(() => (spec?.events ?? []).map(entry => entry.event?.kind ?? ''), [spec?.events])
   const breakdowns = useMemo(() => (spec?.breakdowns ?? []).map(item => item.property), [spec?.breakdowns])
@@ -211,12 +216,19 @@ export const InsightTileView = ({
   // which pairs with which, and the two windows' splits need not match.
   const chartComparison = useMemo<ChartComparison | undefined>(() => {
     if (!(comparePrior && compare && 'series' in compare)) return undefined
-    if (trendSeries.length !== 1 || chartData.length === 0) return undefined
-    const values = alignComparisonValues(compare.series[0]?.points ?? [], chartData.length)
+    // One window can land at a new granularity before the other, and its buckets can't be laid over the other's.
+    if (trendSeries.length !== 1 || chartData.length === 0 || compare.granularity !== granularity) return undefined
+    // Gridded over its own window as the current one is, so bucket i is the same hour or day into each.
+    const priorFill = compare.fillRange && fillRange && clipToElapsed(compare.fillRange, fillRange)
+    const prior = buildChartData(compare.series.slice(0, 1), compare.granularity, timeZone, priorFill)
+    const values = alignComparisonValues(
+      prior.map(point => point.values[0]),
+      chartData.length,
+    )
     const color = seriesColors[0]
     if (values.length === 0 || !color) return undefined
     return { label: compare.label, values, color: fadedSeriesColor(color) }
-  }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors])
+  }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors, granularity, timeZone, fillRange])
   // One resolver, two result sets: the series below and (for a KPI) the comparison window, which
   // is its own query and must not be read through this one's indices.
   const aggregationFor = useMemo(() => specAggregationResolver(spec), [spec])

@@ -15,7 +15,7 @@ export type RankedRow = {
 
 // Top-K rows arrive metric-descending with the synthetic $others bucket (flagged by isOthers, not by
 // label) last. Traffic breakdowns only use the PROPERTY and EVENT_KIND dimensions, so there is no profile
-// row to resolve — dimensionValue is the label, with the empty bucket shown as "(none)".
+// row to resolve: dimensionValue is the label, with the empty bucket shown as "(none)".
 export const topKToRankedRows = (rows: readonly TopKRow[]) =>
   rows.map((row, index) => {
     if (row.isOthers) return { key: '$__others', label: '$others', value: row.value, muted: true }
@@ -38,7 +38,7 @@ export const rankSessionBreakdown = (series: readonly TrendSeries[], limit: numb
           entry.points.map(point => point.value),
           'sum',
         ),
-        muted: label === EMPTY_VALUE_LABEL,
+        muted: label === EMPTY_VALUE_LABEL || Object.values(entry.breakdown).every(value => value === '$others'),
       }
     })
     .sort((a, b) => b.value - a.value)

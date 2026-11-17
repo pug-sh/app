@@ -33,9 +33,12 @@ export type NavEvent = { readonly kind: NavKind; readonly name: string }
 // The busiest navigation event wins, convention order breaks a tie: one stray page_view (a retired
 // landing page, a Flutter web build) shouldn't pin a mobile project to a vocabulary its data has
 // none of. Null = the project sends neither, the one case the view has nothing to show.
-export const resolveNavEvent = (events: readonly EventNameMeta[]): NavEvent | null => {
+export const resolveNavEvent = (
+  events: readonly EventNameMeta[],
+  kinds: readonly NavKind[] = NAV_KINDS,
+): NavEvent | null => {
   const found = events.flatMap(event => {
-    const kind = NAV_KINDS.find(candidate => resolveKind(event.name) === candidate)
+    const kind = kinds.find(candidate => resolveKind(event.name) === candidate)
     return kind ? [{ kind, name: event.name, count: event.count ?? 0n }] : []
   })
   found.sort((a, b) => Number(b.count - a.count) || NAV_KINDS.indexOf(a.kind) - NAV_KINDS.indexOf(b.kind))

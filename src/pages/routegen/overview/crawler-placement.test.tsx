@@ -10,9 +10,15 @@ vi.mock('@/api/rpc', async () => {
 })
 
 vi.mock('./crawler-section', () => ({
-  CrawlerSection: ({ hasRequests, reportsStatusCodes }: { hasRequests: boolean; reportsStatusCodes: boolean }) => (
-    <div data-testid="crawlers">{`requests:${hasRequests} statuses:${reportsStatusCodes}`}</div>
-  ),
+  CrawlerSection: ({
+    hasRequests,
+    reportsStatusCodes,
+    navName,
+  }: {
+    hasRequests: boolean
+    reportsStatusCodes: boolean
+    navName?: string
+  }) => <div data-testid="crawlers" data-nav={navName}>{`requests:${hasRequests} statuses:${reportsStatusCodes}`}</div>,
 }))
 vi.mock('./traffic-breakdown-panel', () => ({ TrafficBreakdownPanel: () => null }))
 vi.mock('./traffic-chart-tile', () => ({ TrafficChartTile: () => null }))
@@ -62,5 +68,24 @@ describe('where the crawler section shows', () => {
   it('shows nothing for a project with neither', () => {
     renderWith(['signup'])
     expect(crawlers()).toBeNull()
+  })
+
+  it('counts visits from AI on page views, not on busier app screens', () => {
+    render(
+      <TrafficAnalyticsMode
+        schema={create(GetFilterSchemaResponseSchema, {
+          events: [
+            { name: 'screen_view', count: BigInt(100) },
+            { name: 'page_view', count: BigInt(10) },
+            { name: 'crawler_request', count: BigInt(5) },
+          ],
+        })}
+        selectedStat="users"
+        onSelectStat={() => {}}
+        globalTimeRange={undefined}
+        globalGranularity={undefined}
+      />,
+    )
+    expect(screen.getByTestId('crawlers').dataset.nav).toBe('page_view')
   })
 })

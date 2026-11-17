@@ -10,6 +10,7 @@ import { activeProjectTimezoneAtom, projectHeaderAtom } from '@/data/workspace.a
 import { stringifyQueryKey, useDebouncedQuery } from '@/hooks/use-debounced-query'
 import { alignRangeStart } from '@/lib/granularity'
 import { toProtoTimeRange } from '@/lib/timestamp'
+import { resultFor } from '../insights/helpers'
 
 // Stable sentinel for the not-yet-loaded state, so a consumer's memo/effect deps (e.g. the breakdown
 // panel's rows memo, keyed on `result`) don't see a fresh object identity on every in-flight render.
@@ -66,12 +67,11 @@ export const useTrafficQuery = (
 
   const { data, error, retry, loading } = useDebouncedQuery(
     queryKey,
-    async signal => {
-      const resp = await queryInsights(insightsRPC, query, headers, signal)
-      return resp.result
-    },
+    async signal => ({ ...resultFor(query, await queryInsights(insightsRPC, query, headers, signal)), queryKeyPrefix }),
     { enabled: !!headers, debounceMs: 0 },
   )
 
-  return { result: data ?? EMPTY_RESULT, error, retry, loading }
+  // Kept across a new window or filter, not a new prefix: a panel's other tab is another question.
+  const answered = data?.queryKeyPrefix === queryKeyPrefix ? data : undefined
+  return { result: answered?.result ?? EMPTY_RESULT, answered, error, retry, loading }
 }

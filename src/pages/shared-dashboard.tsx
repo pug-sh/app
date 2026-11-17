@@ -54,7 +54,9 @@ const SharedDashboard = () => {
     queryKey,
     async signal => {
       const resp = await sharedRPC.query(request, { signal })
-      return resp.dashboard ? { dashboard: resp.dashboard, timeZone: resp.reportingTimezone || 'UTC' } : null
+      if (!resp.dashboard) return null
+      // A response stays up while the next loads, so it carries the granularity and range it was asked for.
+      return { dashboard: resp.dashboard, timeZone: resp.reportingTimezone || 'UTC', granularity, timeRange }
     },
     { enabled: !!shareId, debounceMs: 0 },
   )
@@ -64,6 +66,7 @@ const SharedDashboard = () => {
   // Chart axes use the user's chosen granularity, falling back to the dashboard's
   // stored default when nothing is selected.
   const resolvedGranularity = granularity === Granularity.UNSPECIFIED ? defaultGranularity : granularity
+  const shownGranularity = data?.granularity || defaultGranularity
 
   // A picked range starts on one of the share's buckets, as in-app tiles' ranges do, or the first comes back partial.
   // It needs the response, so it follows the query that sends it: the picker only renders once a response is in.
@@ -135,7 +138,14 @@ const SharedDashboard = () => {
           renderTile={tile => {
             const rendered = renderedById.get(tile.id)
             if (!rendered) return null
-            return <SharedTileBody renderedTile={rendered} granularity={resolvedGranularity} timeZone={timeZone} />
+            return (
+              <SharedTileBody
+                renderedTile={rendered}
+                granularity={shownGranularity}
+                timeZone={timeZone}
+                timeRange={data?.timeRange}
+              />
+            )
           }}
         />
       )}

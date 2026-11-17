@@ -2,16 +2,17 @@ import { timestampDate } from '@bufbuild/protobuf/wkt'
 import { TrendingDown, TrendingUp } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo } from 'react'
 import type { DashboardTile } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
-import type { TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
+import type { Granularity, TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { ParentSize } from '@/components/charts/chart-parent-size'
 import { AreaSparkline, useSparklineHover } from '@/components/charts/sparkline'
+import type { TimeRange } from '@/components/date-range-picker'
 import { cn } from '@/lib/utils'
 import { collapseValues, SERIES_COLLAPSE, type SeriesAggregationResolver } from '../insights/helpers'
 import { toneTextClass } from './accent-palette'
 import { evaluateThresholds } from './thresholds'
 
 export type KpiCompare =
-  | { series: TrendSeries[]; label: string }
+  | { series: TrendSeries[]; label: string; granularity: Granularity; fillRange: TimeRange | undefined }
   | { error: true; label: string }
   | { pending: true; label: string }
 
