@@ -10,6 +10,7 @@ import { AuthPending, AuthStatus } from '@/auth/auth-status'
 import { demoHandoffUrl, isDemoHost } from '@/auth/demo'
 import { customerIdAtom } from '@/auth/jwt.atoms'
 import UsageBanner from '@/components/billing/usage-banner'
+import { ChangelogUnreadMark } from '@/components/changelog/whats-new'
 import { DemoBanner } from '@/components/demo-banner'
 import LoadingSpinner from '@/components/loading-spinner'
 import { Button } from '@/components/ui/button'
@@ -375,7 +376,10 @@ const AuthenticatedApp = () => {
         <DemoBanner />
         <UsageBanner />
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-page-gutter md:hidden">
-          <SidebarTrigger className="-ml-1" />
+          <span className="relative -ml-1">
+            <SidebarTrigger />
+            <ChangelogUnreadMark on="page" className="absolute top-1 right-1" />
+          </span>
         </header>
         {/* The panel scrolls inside itself, so content would be sliced at its edges; the two fades soften
             the cut. A full-bleed page has no edge to soften. */}

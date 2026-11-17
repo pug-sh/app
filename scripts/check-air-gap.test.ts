@@ -12,7 +12,7 @@ describe('airGapProblems', () => {
     expect(airGapProblems(bundle('`https://docs.pug.sh/sdks`'))).toEqual([])
   })
 
-  it.each(['themes.pug.sh', 'favicons.pug.sh'])('names the file holding %s', host => {
+  it.each(['themes.pug.sh', 'favicons.pug.sh', 'docs.pug.sh/changelog'])('names the file holding %s', host => {
     expect(airGapProblems(bundle(`\`https://${host}\``))).toEqual([`assets/a.js holds ${host}`])
   })
 

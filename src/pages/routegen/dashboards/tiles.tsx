@@ -1,7 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { Copy, MoreHorizontal, Share, TrendingUp } from 'lucide-react'
 import { type ReactNode, type RefObject, useMemo, useRef } from 'react'
-import snarkdown from 'snarkdown'
 import { type DashboardTile, DashboardTileViewMode } from '@/api/genproto/dashboard/dashboards/v1/dashboards_pb'
 import { type Granularity, QueryRequestSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
@@ -11,40 +10,13 @@ import { TwemojiIcon } from '@/components/twemoji-icon'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { fmtDateRange, resolveDashboardTimeRangePreset } from '@/lib/date-presets'
+import { renderMarkdownHTML } from '@/lib/markdown'
 import { accentStripClass } from './accent-palette'
 import { applyDashboardFilters, dashboardFilterOverlap } from './dashboard-filters'
 import { FilterOverlapFlag, filteredEmptyQualifier } from './filter-overlap-flag'
 import { DashboardInsightContent } from './insight-tile-content'
 import { getProtoRange } from './query'
 import { TileHeaderEdit } from './tile-header-edit'
-
-// `$` too: snarkdown inserts link URLs with String.replace, where it starts a replacement pattern.
-const escapeMarkdownHTML = (value: string) =>
-  value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('$', '&#36;')
-
-const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:', 'sms:'])
-
-const isSafeURL = (url: string) => {
-  try {
-    return SAFE_PROTOCOLS.has(new URL(url, document.baseURI).protocol)
-  } catch {
-    return false
-  }
-}
-
-// snarkdown doesn't sanitize URLs. Checked on the parsed DOM, so text that imitates an attribute can't hide one.
-const sanitizeMarkdownHTML = (markup: string) => {
-  const doc = new DOMParser().parseFromString(markup, 'text/html')
-  for (const el of doc.querySelectorAll('[href], [src]')) {
-    for (const name of ['href', 'src']) {
-      const url = el.getAttribute(name)
-      if (url !== null && !isSafeURL(url)) el.removeAttribute(name)
-    }
-  }
-  return doc.body.innerHTML
-}
-
-export const renderMarkdownTileHTML = (body: string) => sanitizeMarkdownHTML(snarkdown(escapeMarkdownHTML(body)))
 
 const NO_FILTERS: readonly ActiveFilter[] = []
 
@@ -113,7 +85,7 @@ export const TileShell = ({
 export const DashboardMarkdownTile = ({ tile, editing, onPatch }: TileContentProps) => {
   if (tile.content.case !== 'markdown') return null
 
-  const html = renderMarkdownTileHTML(tile.content.value.body)
+  const html = renderMarkdownHTML(tile.content.value.body)
 
   return (
     <TileShell tile={tile} editing={editing} onPatch={onPatch}>
