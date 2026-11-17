@@ -53,19 +53,17 @@ export const StatTile = ({
   )
 
   const { result, error, retry, loading } = useTrafficQuery(scalarQuery, range, granularity, queryKeyPrefix)
-  const { result: priorResult, retry: retryPrior } = useTrafficQuery(
-    scalarQuery,
-    priorRange,
-    granularity,
-    `${queryKeyPrefix}-prev`,
-    false,
-  )
-  const { answered: trend, retry: retryTrend } = useTrafficQuery(
-    trendQuery,
-    range,
-    granularity,
-    `${queryKeyPrefix}-spark`,
-  )
+  const {
+    result: priorResult,
+    error: priorError,
+    retry: retryPrior,
+    loading: priorLoading,
+  } = useTrafficQuery(scalarQuery, priorRange, granularity, `${queryKeyPrefix}-prev`, false)
+  const {
+    answered: trend,
+    error: trendError,
+    retry: retryTrend,
+  } = useTrafficQuery(trendQuery, range, granularity, `${queryKeyPrefix}-spark`)
   const hover = useSparklineHover()
 
   // Trends drop empty buckets: a count's are real zeros, gridded like the charts, but an average's have no value.
@@ -81,12 +79,13 @@ export const StatTile = ({
 
   // A bare '–' would read as an empty window. A <div>, since Retry can't nest in the tile's <button>; it re-runs
   // all three queries, which fail together.
-  if (error) {
+  const failed = error ?? priorError ?? trendError
+  if (failed) {
     return (
       <div className="flex h-[9.25rem] min-h-0 flex-col rounded-lg border border-border bg-background px-4 py-3 text-left dark:border-foreground/15">
         <span className="truncate text-sm font-medium text-muted-foreground">{label}</span>
         <div className="flex min-h-0 flex-1 flex-col items-start justify-center gap-2">
-          <span className="text-xs text-muted-foreground" title={error}>
+          <span className="text-xs text-muted-foreground" title={failed}>
             Failed to load
           </span>
           <Button
@@ -107,7 +106,9 @@ export const StatTile = ({
 
   const value = result.case === 'segmentation' ? result.value.total : undefined
   const priorValue = priorResult.case === 'segmentation' ? priorResult.value.total : undefined
-  const delta = value !== undefined && priorValue !== undefined ? formatDelta(value, priorValue) : null
+  // Both windows reload on a new range, and either can land first: a delta waits for the pair.
+  const settled = !loading && !priorLoading
+  const delta = settled && value !== undefined && priorValue !== undefined ? formatDelta(value, priorValue) : null
   const hovered = hover.index !== null ? sparkPoints[hover.index] : undefined
   const shown = hovered?.values[0] ?? value
 

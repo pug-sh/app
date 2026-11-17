@@ -142,7 +142,7 @@ export const CrawlerTable = ({
   const impostorRows = impostors.result.case === 'topK' ? impostors.result.value.rows.filter(row => !row.isOthers) : []
 
   // A blank cell says "no errors", so it's only drawn once errors are known. Past the query's limit, a crawler with
-  // none listed may still have some in the overflow.
+  // none listed may still have some in the overflow, and other crawlers' errors are listed under their own names.
   const errorsKnown = reportsStatusCodes && errors.answered !== undefined
   const errorsOverflow =
     errors.result.case === 'trends' &&
@@ -182,7 +182,7 @@ export const CrawlerTable = ({
               group.map((row, index) => {
                 const active = !row.others && hasFilter(filters, CRAWLER_NAME_PROPERTY, row.agent)
                 const agentErrors = errorsByAgent.get(row.agent) ?? []
-                const errorsUnknown = !errorsKnown || (errorsOverflow && agentErrors.length === 0)
+                const errorsUnknown = !errorsKnown || row.others || (errorsOverflow && agentErrors.length === 0)
                 return (
                   <tr
                     key={`${row.agent}\u0000${row.purpose}`}

@@ -39,36 +39,41 @@ const purchases = (points: [Date, number][]) =>
     points: points.map(([time, value]) => ({ time: timestampFromDate(time), value })),
   })
 
+const SPEC = create(InsightQuerySpecSchema, {
+  insightType: InsightType.TRENDS,
+  events: [{ event: { kind: 'purchase' }, aggregation: AggregationType.TOTAL }],
+})
+const RESULT = {
+  case: 'trends' as const,
+  value: create(TrendsResultSchema, {
+    series: [
+      purchases([
+        [at(20, 0), 10],
+        [at(20, 1), 20],
+        [at(20, 2), 30],
+      ]),
+    ],
+  }),
+}
+
+const view = (props: Partial<Parameters<typeof InsightTileView>[0]> = {}) => (
+  <InsightTileView
+    viewMode={DashboardTileViewMode.LINE}
+    spec={SPEC}
+    result={RESULT}
+    granularity={Granularity.HOUR}
+    timeZone="UTC"
+    fillRange={{ from: at(20, 0), to: new Date(Date.UTC(2026, 6, 20, 3, 30)) }}
+    {...props}
+  />
+)
+
 const draw = (props: Partial<Parameters<typeof InsightTileView>[0]> = {}) => {
-  render(
-    <Provider store={createStore()}>
-      <InsightTileView
-        viewMode={DashboardTileViewMode.LINE}
-        spec={create(InsightQuerySpecSchema, {
-          insightType: InsightType.TRENDS,
-          events: [{ event: { kind: 'purchase' }, aggregation: AggregationType.TOTAL }],
-        })}
-        result={{
-          case: 'trends',
-          value: create(TrendsResultSchema, {
-            series: [
-              purchases([
-                [at(20, 0), 10],
-                [at(20, 1), 20],
-                [at(20, 2), 30],
-              ]),
-            ],
-          }),
-        }}
-        granularity={Granularity.HOUR}
-        timeZone="UTC"
-        fillRange={{ from: at(20, 0), to: new Date(Date.UTC(2026, 6, 20, 3, 30)) }}
-        {...props}
-      />
-    </Provider>,
-  )
+  render(<Provider store={createStore()}>{view(props)}</Provider>)
   return handed.at(-1)
 }
+
+const YESTERDAY = { from: at(19, 0), to: endOf(19) }
 
 // The prior window's empty hours are dropped too. Laid over by position its points slide toward the start;
 // gridded over its own window, bucket i is the same hour into each.
@@ -94,12 +99,37 @@ it('cuts the prior day to as far as today has run', () => {
     comparePrior: true,
     compare: {
       label: 'vs yesterday',
-      series: [purchases([[at(19, 2), 9]])],
+      series: [
+        purchases([
+          [at(19, 2), 9],
+          [at(19, 20), 5],
+        ]),
+      ],
       granularity: Granularity.HOUR,
-      fillRange: { from: at(19, 0), to: endOf(19) },
+      fillRange: YESTERDAY,
     },
   })
   expect(props?.comparison?.values).toEqual([0, 0, 9, 0])
+})
+
+// The axis is drawn when today's result lands, so yesterday's, landing after the hour turns, is cut to that axis.
+it('cuts the prior day to the hours the axis drew, not to the clock', () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(Date.UTC(2026, 6, 20, 3, 59)))
+  const store = createStore()
+  const today = { fillRange: { from: at(20, 0), to: endOf(20) }, comparePrior: true }
+  const { rerender } = render(<Provider store={store}>{view(today)}</Provider>)
+
+  vi.setSystemTime(new Date(Date.UTC(2026, 6, 20, 4, 1)))
+  const compare = {
+    label: 'vs yesterday',
+    series: [purchases([[at(19, 2), 9]])],
+    granularity: Granularity.HOUR,
+    fillRange: YESTERDAY,
+  }
+  rerender(<Provider store={store}>{view({ ...today, compare })}</Provider>)
+  expect(handed.at(-1)?.chartData).toHaveLength(4)
+  expect(handed.at(-1)?.comparison?.values).toEqual([0, 0, 9, 0])
 })
 
 // One window can land at a new granularity before the other does.

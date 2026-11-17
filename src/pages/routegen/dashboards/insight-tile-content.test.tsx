@@ -116,7 +116,10 @@ describe('a tile whose data lands in one hour', () => {
     expect(barWidths(container)).toEqual(hourly)
 
     await act(async () => land(requestsAt('2026-01-01T00:00:00Z')))
-    await waitFor(() => expect(Math.min(...barWidths(container))).toBeGreaterThan(WIDTH / 24))
+    await waitFor(() => {
+      expect(barWidths(container).length).toBeGreaterThan(0)
+      expect(Math.min(...barWidths(container))).toBeGreaterThan(WIDTH / 24)
+    })
     for (const width of barWidths(container)) expect(width).toBeLessThan(WIDTH / 7)
   })
 

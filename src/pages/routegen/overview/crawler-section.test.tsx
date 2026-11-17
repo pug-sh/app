@@ -293,6 +293,23 @@ describe('overview crawler section', () => {
     expect(within(table).getAllByText('–')).toHaveLength(AGENTS.length - 1)
   })
 
+  // ClaudeBot's 403s are listed under its own name, while it's counted in the other crawlers' row.
+  it('leaves errors unknown for other crawlers', async () => {
+    query.mockImplementation(async (request: QueryRequest) => {
+      if (breakdownsOf(request).join() !== '$bot_reason,$crawler_company,$crawler_category') return respond(request)
+      return trends([
+        series({ $bot_reason: 'GPTBot', $crawler_company: 'OpenAI', $crawler_category: 'training' }, 68),
+        series({ $bot_reason: '$others', $crawler_company: '$others', $crawler_category: '$others' }, 33),
+      ])
+    })
+    renderSection()
+    const table = await crawlerTable()
+
+    await waitFor(() => expect(within(table).getByText('3 not found')).toBeTruthy())
+    const others = within(table).getByText('Other crawlers').closest('tr') as HTMLTableRowElement
+    expect(others.cells[6].textContent).toBe('–')
+  })
+
   // A crawler recategorized inside the range comes back as one series per purpose.
   it('keeps a crawler that changed purpose on two rows', async () => {
     const keyWarnings = vi.spyOn(console, 'error')

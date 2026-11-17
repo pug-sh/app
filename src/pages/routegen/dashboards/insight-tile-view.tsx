@@ -24,7 +24,6 @@ import {
   alignComparisonValues,
   breakdownLabel,
   buildChartData,
-  clipToElapsed,
   disambiguateLabels,
   emptyReadsAsZero,
   sortFunnelSteps,
@@ -218,17 +217,17 @@ export const InsightTileView = ({
     if (!(comparePrior && compare && 'series' in compare)) return undefined
     // One window can land at a new granularity before the other, and its buckets can't be laid over the other's.
     if (trendSeries.length !== 1 || chartData.length === 0 || compare.granularity !== granularity) return undefined
-    // Gridded over its own window as the current one is, so bucket i is the same hour or day into each.
-    const priorFill = compare.fillRange && fillRange && clipToElapsed(compare.fillRange, fillRange)
-    const prior = buildChartData(compare.series.slice(0, 1), compare.granularity, timeZone, priorFill)
+    // Gridded over its own window as the current one is, so bucket i is the same hour or day into each, and cut to
+    // the buckets the current axis drew: it stops at the bucket in progress.
+    const prior = buildChartData(compare.series.slice(0, 1), compare.granularity, timeZone, compare.fillRange)
     const values = alignComparisonValues(
-      prior.map(point => point.values[0]),
+      prior.slice(0, chartData.length).map(point => point.values[0]),
       chartData.length,
     )
     const color = seriesColors[0]
     if (values.length === 0 || !color) return undefined
     return { label: compare.label, values, color: fadedSeriesColor(color) }
-  }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors, granularity, timeZone, fillRange])
+  }, [comparePrior, compare, trendSeries.length, chartData.length, seriesColors, granularity, timeZone])
   // One resolver, two result sets: the series below and (for a KPI) the comparison window, which
   // is its own query and must not be read through this one's indices.
   const aggregationFor = useMemo(() => specAggregationResolver(spec), [spec])

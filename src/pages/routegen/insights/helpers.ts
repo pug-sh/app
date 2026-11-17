@@ -349,13 +349,6 @@ export const buildChartData = (
   }))
 }
 
-// The current axis stops at the bucket in progress, so the prior window is cut to as far into itself as the
-// current one has run.
-export const clipToElapsed = (prior: TimeRange, current: TimeRange) => {
-  const elapsed = Math.min(current.to.getTime(), Date.now()) - current.from.getTime()
-  return { from: prior.from, to: new Date(Math.min(prior.to.getTime(), prior.from.getTime() + elapsed)) }
-}
-
 // Lay a comparison window's points over the current one's buckets, so both shapes read against one
 // x-axis. The windows are separate queries and their bucket counts can differ (a 30-day month
 // against a 31-day one), so a shorter series is resampled to full width rather than stopping short:
