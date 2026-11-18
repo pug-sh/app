@@ -303,6 +303,39 @@ describe('analytics identity', () => {
     )
   })
 
+  it('resets when the session dies before it was ever identified', async () => {
+    deferredMe()
+    const store = mount()
+    await settledWorkspace(store)
+    expect(identifyCustomer).not.toHaveBeenCalled()
+
+    // A stale token whose refresh the server rejects: clearSession empties the JWT while the
+    // email is still pending. The SDK holds the externalId an earlier page stored, so skipping the
+    // reset files every signed-out visit on this browser under the customer who just left.
+    act(() => {
+      store.set(jwtAtom, '')
+      store.set(refreshTokenAtom, '')
+    })
+
+    await waitFor(() => expect(resetIdentity).toHaveBeenCalledTimes(1))
+    expect(identifyCustomer).not.toHaveBeenCalled()
+  })
+
+  it('keeps the anonymous ID on a signed-out boot', async () => {
+    const store = createStore()
+    render(
+      <Provider store={store}>
+        <AnalyticsIdentity awaitWorkspace={false} />
+      </Provider>,
+    )
+
+    act(() => {
+      store.set(jwtAtom, jwtFor('cust-1'))
+    })
+    await waitFor(() => expect(identifyCustomer).toHaveBeenCalledWith('cust-1', {}))
+    expect(resetIdentity).not.toHaveBeenCalled()
+  })
+
   it('spends no lookup on a demo session', async () => {
     demoSignIn.mockResolvedValue({ token: jwtFor('snoop'), refreshToken: 'refresh-token' })
     const store = mount(null)
