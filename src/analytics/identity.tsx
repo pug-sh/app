@@ -30,10 +30,14 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   const meStatus = useAtomValue(meStatusAtom)
   const fetchMe = useSetAtom(fetchMeAtom)
 
-  // What we last sent. customerId is tracked apart from the traits so the three transitions that
-  // matter can be told apart: signed-out boot vs sign-out, a trait refresh vs an account switch.
+  // What we last sent, for the dedup. Kept apart from seenCustomerId because a session can end
+  // before its identify goes out (a refresh rejected mid-bootstrap), and the SDK still holds the
+  // externalId an earlier page stored, so whether to reset can't hang on whether we sent.
   const sentCustomerId = useRef<string | null>(null)
   const sentTraits = useRef<string | null>(null)
+  // The last real (non-demo) account this page held: tells signed-out boot from sign-out, and a
+  // trait refresh from an account switch.
+  const seenCustomerId = useRef<string | null>(null)
 
   // True exactly when the effect below issues a GetMe, so the identify gate knows whether there is
   // an email on its way to wait for. One expression rather than two: state them separately and a
@@ -48,10 +52,13 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
   }, [emailExpected, meStatus, fetchMe])
 
   useEffect(() => {
+    const previousCustomerId = seenCustomerId.current
     if (!customerId) {
-      // Only a real sign-out resets. Without the guard, every signed-out boot would clear the
-      // anonymous ID, leaving the first identify() no pre-sign-in history to merge.
-      if (sentCustomerId.current === null) return
+      // Every sign-out resets: the button, a refresh the server rejects, another tab. A signed-out
+      // boot doesn't, or it would clear the anonymous ID and leave the first identify() no
+      // pre-sign-in history to merge.
+      seenCustomerId.current = null
+      if (previousCustomerId === null) return
       sentCustomerId.current = null
       sentTraits.current = null
       resetIdentity()
@@ -65,13 +72,14 @@ const AnalyticsIdentity = ({ awaitWorkspace }: { awaitWorkspace: boolean }) => {
     // prospects, not one very busy user. Someone already identified keeps their identity through
     // the demo, so "a real customer went and poked at the demo" still shows up.
     if (isDemo) return
+    seenCustomerId.current = customerId
 
     // An account switch with no sign-out in between: applySessionAtom explicitly supports this
     // (a magic link for another account while signed in). The SDK holds identity until told
     // otherwise, so without this the new user inherits the previous user's session. Ahead of the
     // settle gate below on purpose: track() stamps the distinct ID at call time, so waiting for the
     // new workspace would bill the new user's first events to the account they just left.
-    if (sentCustomerId.current && sentCustomerId.current !== customerId) {
+    if (previousCustomerId && previousCustomerId !== customerId) {
       resetIdentity()
       sentCustomerId.current = null
       sentTraits.current = null
