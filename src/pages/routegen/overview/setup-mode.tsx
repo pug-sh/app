@@ -140,7 +140,7 @@ const SetupMode = ({ project }: { project: Project }) => {
                   type="button"
                   onClick={() => setPlatformId(id)}
                   className={cn(
-                    'inline-flex h-full items-center gap-1.5 px-2.5 transition-colors @max-sm:px-1.5',
+                    'inline-flex h-full items-center gap-1.5 px-2.5 transition-colors @max-[26rem]:px-1',
                     platformId === id ? 'bg-primary/10 text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -149,7 +149,7 @@ const SetupMode = ({ project }: { project: Project }) => {
                     alt=""
                     aria-hidden
                     draggable={false}
-                    className="size-4 saturate-[0.5] @max-xl:hidden"
+                    className="size-4 saturate-[0.5] @max-[37rem]:hidden"
                   />
                   {PLATFORMS[id].label}
                 </button>

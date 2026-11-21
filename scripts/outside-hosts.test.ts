@@ -12,6 +12,7 @@ const ALLOWED: Record<string, string> = {
   'https://challenges.cloudflare.com': 'gated by a Turnstile key',
   'https://accounts.google.com': 'label, compared with a provider’s issuer',
   'https://cdn.pugs.dev': 'label, text in an SDK snippet',
+  'https://github.com': 'label, text in an SDK snippet',
   'https://acme.okta.com': 'label, a form placeholder',
   'https://docs.pug.sh': 'link, and the changelog feed, gated by VITE_CHANGELOG_ENABLED and VITE_AIR_GAP',
   'https://claude.ai': 'link',

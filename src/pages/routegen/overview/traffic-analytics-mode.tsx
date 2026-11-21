@@ -79,8 +79,8 @@ const TrafficAnalyticsMode = ({ schema, ...props }: Props) => {
           <p className="mb-1 text-sm font-medium">Traffic analytics needs navigation events</p>
           <p className="max-w-sm text-[13px] text-muted-foreground">
             This project has no <span className="font-mono">page_view</span> or{' '}
-            <span className="font-mono">screen_view</span> events yet. Send them with the web or Flutter SDK, or switch
-            to Product analytics for an event-based overview.
+            <span className="font-mono">screen_view</span> events yet. Send them with the web SDK or a mobile SDK, or
+            switch to Product analytics for an event-based overview.
           </p>
         </div>
         {crawlers}

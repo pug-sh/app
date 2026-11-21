@@ -2,15 +2,16 @@
 //
 // Snippets are verified against the published SDKs: @pug-sh/browser (init(projectId, { apiKey })),
 // pug_flutter (Pug.init(projectId, PugOptions(apiKey))), sh.pug:android (Pug.init(context,
-// projectId, Options(apiKey))), @pug-sh/node (new Pug({ apiKey })), the pug-sh gem
+// projectId, Options(apiKey))), github.com/pug-sh/sdk-ios (Pug.initialize(projectId:options:
+// Pug.Options(apiKey:))), @pug-sh/node (new Pug({ apiKey })), the pug-sh gem
 // (Pug::Client.new(api_key:)), and github.com/pug-sh/sdk-go (pug.New(pug.Options{APIKey})). Client
-// SDKs (web, script, Flutter, Android) take the project ID at init: it namespaces the stored
+// SDKs (web, script, Android, iOS, Flutter) take the project ID at init: it namespaces the stored
 // identity/session/consent and stamps every event, so it's required, not cosmetic. The server SDKs
 // (Node, Ruby, Go) omit it: the secret private key is project-scoped, and track() takes the
 // distinctId first since a server has no ambient user.
 //
 // Only the web snippet seeds `trackingConsent: 'granted'`: the browser SDK alone defaults to
-// 'cookieless', under which identify() silently no-ops. Flutter and Android default to granted.
+// 'cookieless', under which identify() silently no-ops. Flutter, Android and iOS default to granted.
 //
 // The `script` platform is the same @pug-sh/browser SDK loaded from the CDN with no bundler: the
 // loader snippet (stubs the API, queues early calls, then pug.init) and the one-tag install
@@ -46,7 +47,7 @@ const PUG_ANDROID_VERSION = '0.1.0'
 // Order is the source of truth; PlatformId is derived so the union can't drift from the tab list.
 // Adding a platform = one entry here + one in PLATFORMS (the total Record makes the latter a
 // compile error if forgotten).
-export const PLATFORM_ORDER = ['web', 'script', 'android', 'flutter', 'node', 'go', 'ruby'] as const
+export const PLATFORM_ORDER = ['web', 'script', 'android', 'ios', 'flutter', 'node', 'go', 'ruby'] as const
 
 export type PlatformId = (typeof PLATFORM_ORDER)[number]
 
@@ -175,6 +176,47 @@ Pug.identify("user_123", mapOf("email" to "ada@example.com", "plan" to "pro"))
 
 // Track what they do
 Pug.track("signed_up", mapOf("plan" to "pro"))`,
+      },
+    ],
+  },
+  ios: {
+    label: 'iOS',
+    icon: '/sdk/ios.svg',
+    docsUrl: `${DOCS_BASE}/ios/`,
+    sections: [
+      {
+        label: 'Install in Xcode: File > Add Package Dependencies',
+        credential: 'none',
+        code: () => 'https://github.com/pug-sh/sdk-ios',
+      },
+      {
+        label: 'Initialize & track',
+        credential: 'public',
+        lang: 'swift',
+        code: (projectId, publicKey) => `import Pug
+import SwiftUI
+
+@main
+struct MyApp: App {
+  // In a UIKit app, call Pug.initialize in application(_:didFinishLaunchingWithOptions:)
+  init() {
+    do {
+      try Pug.initialize(projectId: "${projectId}", options: Pug.Options(apiKey: "${publicKey}"))
+    } catch {
+      assertionFailure("Pug was not started: \\(error)")
+    }
+  }
+
+  var body: some Scene {
+    WindowGroup { ContentView() }
+  }
+}
+
+// Tie events to a user once they sign in
+Pug.identify("user_123", traits: ["email": "ada@example.com", "plan": "pro"])
+
+// Track what they do
+Pug.track("signed_up", properties: ["plan": "pro"])`,
       },
     ],
   },

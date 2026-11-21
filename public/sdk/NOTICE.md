@@ -4,8 +4,8 @@ Language and framework marks for the Overview setup screen. As with `public/bran
 each identifies the technology it depicts, and **all logos and trademarks are the property of
 their respective owners.**
 
-All seven are [Simple Icons] paths, modified the same way: tinted to the brand hex, `<title>`
-stripped.
+Seven are [Simple Icons] paths, modified the same way: tinted to the brand hex, `<title>`
+stripped. The eighth, **ios.svg**, is not (see below).
 
 - **javascript.svg**: **MIT**
 - **android.svg**: **CC BY 3.0**, the same file as `public/brands/android.svg`. Per [Google's brand
@@ -16,9 +16,14 @@ stripped.
 
 - **flutter.svg**, **go.svg**, **html5.svg**, **nodejs.svg**, **rubygems.svg**: no licence data
   published; nominative use.
+- **ios.svg**: the same file as `public/brands/ios.svg`, [devicon] 2.17.0
+  (`icons/apple/apple-original.svg`), **MIT**, © 2015 konpa. MIT requires the notice be kept, hence
+  this row. Modified: tinted `#007AFF`, reformatted. The grant is devicon's own; the mark itself is
+  Apple's, on the nominative-use footing above.
 
 The Ruby tab shows the RubyGems mark because the Ruby logo is **CC-BY-SA-2.5**, and copyleft is
 kept out of bundled assets.
 
 [Simple Icons]: https://github.com/simple-icons/simple-icons
+[devicon]: https://github.com/devicons/devicon
 [Google's brand guidelines]: https://developer.android.com/distribute/marketing-tools/brand-guidelines#brand-android
