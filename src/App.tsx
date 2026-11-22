@@ -530,8 +530,6 @@ const App = () => {
       */}
       <AnalyticsIdentity awaitWorkspace={mountsWorkspace} />
       {content()}
-      {/* After the content: effects run in sibling order, and the bootstrap can pick the project in the commit that
-          mounts the redirect and the sidebar. A pick made before they subscribe never reaches them. */}
       {mountsWorkspace ? <WorkspaceBootstrap /> : null}
       {mountsWorkspace ? <LandingPreload /> : null}
       <Toaster position="bottom-right" />
