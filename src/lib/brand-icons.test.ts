@@ -230,6 +230,8 @@ describe('resolveOsIcon', () => {
     expect(resolveOsIcon('iOS')).toBe('ios')
     expect(resolveOsIcon('iPadOS')).toBe('ios')
     expect(resolveOsIcon('macOS')).toBe('macos')
+    expect(resolveOsIcon('tvos')).toBe('tvos')
+    expect(resolveOsIcon('tvOS')).toBe('tvos')
   })
 })
 
@@ -270,6 +272,7 @@ describe('formatOsName', () => {
     expect(formatOsName('android')).toBe('Android')
     expect(formatOsName('macos')).toBe('macOS')
     expect(formatOsName('ios')).toBe('iOS')
+    expect(formatOsName('tvos')).toBe('tvOS')
   })
 
   it('passes an already-canonical or unmapped name through', () => {

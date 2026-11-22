@@ -23,6 +23,7 @@ export const BRAND_ICON_ASSETS = {
   opera: '/brands/opera.svg',
   safari: '/brands/safari.svg',
   'samsung-internet': '/brands/samsung-internet.svg',
+  tvos: '/brands/tvos.svg',
   uc: '/brands/uc.svg',
   vivaldi: '/brands/vivaldi.svg',
   windows: '/brands/windows.svg',

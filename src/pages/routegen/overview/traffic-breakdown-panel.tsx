@@ -31,6 +31,7 @@ const OS_LABELS: Record<string, string> = {
   ios: 'iOS',
   android: 'Android',
   macos: 'macOS',
+  tvos: 'tvOS',
   windows: 'Windows',
   linux: 'Linux',
   fuchsia: 'Fuchsia',

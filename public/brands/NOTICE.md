@@ -50,6 +50,8 @@ SDK language and framework marks live separately, under `public/sdk/`.
 - **safari.svg**, **instagram.svg**, **facebook.svg**, **messenger.svg**: [Simple Icons] 16.37.0; no
   licence data published. Modified: tinted to the brand hex, `<title>` stripped. The last three
   mark an in-app browser on a row labelled with its app's name.
+- **tvos.svg**: [Simple Icons] 16.38.1 (`appletv`); no licence data published. Modified: tinted
+  `#007AFF` like ios.svg, since the brand's black vanishes on the dark canvas; `<title>` stripped.
 - **brave.svg**, **chrome.svg**, **chromium.svg**, **coccoc.png**, **opera.svg**,
   **samsung-internet.svg**, **uc.svg**, **vivaldi.svg**: [browser-logos]. MIT covers the
   repository; the logos are excluded from it by its own terms.

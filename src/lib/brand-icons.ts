@@ -15,6 +15,7 @@ const matchToken = (value: string | undefined, tokens: string[]) => {
 const APPLE_MOBILE_OS = /\bios\b/
 
 const resolveAppleIcon = (os?: string) => {
+  if (matchToken(os, ['tvos'])) return 'tvos'
   if (APPLE_MOBILE_OS.test(os?.toLowerCase() ?? '') || matchToken(os, ['ipad', 'iphone', 'ipados'])) return 'ios'
   if (matchToken(os, ['mac', 'darwin', 'macos'])) return 'macos'
   return null
@@ -153,6 +154,7 @@ const OS_DISPLAY_NAMES: Record<string, string> = {
   ios: 'iOS',
   linux: 'Linux',
   macos: 'macOS',
+  tvos: 'tvOS',
   windows: 'Windows',
 }
 
