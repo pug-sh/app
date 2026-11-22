@@ -240,8 +240,7 @@ describe('a member’s own theme by URL', () => {
   const clay = JSON.stringify({ version: 1, name: 'Clay', variants: { light: { colors: { background: '#f3eee4' } } } })
 
   // A real load reads these at import, through getOnInit, so its first render has them. A second mount shares
-  // that import, and jotai won't re-render App for what storage gives it on mount, so it fetches nothing
-  // unless it's handed what the load would have read.
+  // that import and would start from its values, so it's handed what the load would have read.
   const reload = () =>
     mount({
       seed: store => {

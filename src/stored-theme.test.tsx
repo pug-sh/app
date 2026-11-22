@@ -16,6 +16,11 @@ vi.mock('@/api/rpc', async () => {
   }
 })
 
+vi.mock('@/lib/event-colors', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/lib/event-colors')>()
+  return { ...actual, setSeriesPalette: vi.fn(actual.setSeriesPalette) }
+})
+
 vi.mock('@/analytics/pug', () => ({
   trackEvent: vi.fn(),
   trackFeature: vi.fn(),
@@ -33,11 +38,12 @@ const { getSeriesColor, setSeriesPalette } = await import('@/lib/event-colors')
 const { compileDataPalette } = await import('@/theme/data-palette')
 const { PUG_CANVAS } = await import('@/theme/fit')
 
-it('colors series for the stored theme, not the OS one', () => {
+it('colors series for the stored theme from the first render, not the OS one', () => {
   expect(window.matchMedia('(prefers-color-scheme: dark)').matches).toBe(false)
   const dark = compileDataPalette(undefined, 'dark', 'standard', PUG_CANVAS.dark).events.page_view
   setSeriesPalette(compileDataPalette(undefined, 'light', 'standard', PUG_CANVAS.light))
   expect(getSeriesColor('page_view')).not.toEqual(dark)
+  vi.mocked(setSeriesPalette).mockClear()
 
   const store = createStore()
   store.set(refreshTokenAtom, 'refresh-token')
@@ -50,6 +56,7 @@ it('colors series for the stored theme, not the OS one', () => {
     </Provider>,
   )
 
+  expect(vi.mocked(setSeriesPalette).mock.calls[0][0].events.page_view).toEqual(dark)
   expect(getSeriesColor('page_view')).toEqual(dark)
   expect(JSON.parse(localStorage.getItem('pug:theme-paint') ?? 'null')).toMatchObject({
     v: 3,

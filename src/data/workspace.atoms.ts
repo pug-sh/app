@@ -326,8 +326,7 @@ export const createProjectAtom = atom(null, async (get, set, displayName: string
   return resp.project ?? null
 })
 
-// True when it deleted the active project; the caller then goes to '/'. The list is cleared rather than committed,
-// or WorkspaceBootstrap's pick lands in the commit that mounts ProjectRedirect, before it subscribes.
+// True when it deleted the active project; the caller then goes to '/'.
 export const deleteProjectAtom = atom(null, async (get, set, projectId: string) => {
   const org = get(activeOrgAtom)
   if (!org) throw new Error('No organization selected')
@@ -342,16 +341,12 @@ export const deleteProjectAtom = atom(null, async (get, set, projectId: string) 
   trackFeature({ featureId: 'project.delete', featureName: 'Delete project' })
 
   if (get(activeOrgAtom)?.id !== org.id) return false
-  if (get(activeProjectAtom)?.id !== projectId) {
-    set(
-      projectsAtom,
-      get(projectsAtom).filter(p => p.id !== projectId),
-    )
-    return false
-  }
-  set(projectsAtom, [])
+  set(
+    projectsAtom,
+    get(projectsAtom).filter(p => p.id !== projectId),
+  )
+  if (get(activeProjectAtom)?.id !== projectId) return false
   set(activeProjectAtom, null)
-  set(projectsOrgIdAtom, null)
   return true
 })
 

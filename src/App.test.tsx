@@ -1160,8 +1160,8 @@ describe('the sidebar alongside the bootstrap', () => {
   })
 })
 
-// Through the real App, since its sibling order decides this: with the router preloaded, the redirect and the sidebar
-// mount in the commit that picks the restored project, and a pick made before they subscribe never reaches them.
+// Through the real App: with the router preloaded, the redirect and the sidebar mount in the commit that picks the
+// restored project.
 describe('a restored session on the bare app URL', () => {
   it('opens the project it left off in', async () => {
     let landOrg = (_: unknown) => {}

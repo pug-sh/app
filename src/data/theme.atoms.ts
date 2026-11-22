@@ -57,7 +57,7 @@ const persist = (get: Getter, set: Setter, writes: [StoredAtom, unknown][]) => {
 // anything under these keys, and cross-tab sync delivers it straight into the atoms. So every key is a
 // raw storage atom read through a guard (a bad value degrades to the default instead of throwing
 // inside App's render) and written through persist. getOnInit: App renders before storage loads on
-// mount, and jotai 3 won't re-render it for that.
+// mount, so its first render would otherwise read the defaults.
 const guardedStorage = <T>(key: string, initial: T, guard: (stored: unknown) => T) => {
   const stored: StoredAtom = atomWithStorage<unknown>(key, initial, undefined, { getOnInit: true })
   const guarded = atom(
