@@ -6,14 +6,14 @@ import { rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
 describe('topKToRankedRows', () => {
   it('maps dimension values and mutes $others and the empty bucket', () => {
     const rows = [
-      create(TopKRowSchema, { dimensionValue: 'Chrome', value: 10 }),
+      create(TopKRowSchema, { dimensionValue: 'google.com', value: 10 }),
       create(TopKRowSchema, { dimensionValue: '', value: 4 }),
       create(TopKRowSchema, { dimensionValue: '', value: 2, isOthers: true }),
     ]
-    expect(topKToRankedRows(rows)).toEqual([
-      { key: '0-Chrome', label: 'Chrome', value: 10, muted: false },
-      { key: 'empty-1', label: '(none)', value: 4, muted: true },
-      { key: '$__others', label: '$others', value: 2, muted: true },
+    expect(topKToRankedRows(rows, '(no referrer)')).toEqual([
+      { key: '0-google.com', label: 'google.com', value: 10, muted: false },
+      { key: 'empty-1', label: '(no referrer)', value: 4, muted: true },
+      { key: '$__others', label: '(others)', value: 2, muted: true },
     ])
   })
 })
@@ -33,17 +33,20 @@ describe('rankSessionBreakdown', () => {
     ])
   })
 
-  it('labels an empty breakdown value as (none) and mutes it', () => {
+  it('labels an empty breakdown value for its property and mutes it', () => {
     expect(rankSessionBreakdown([series('', [5])], 10)[0]).toEqual({
-      key: '0-(none)',
-      label: '(none)',
+      key: '0-(not set)',
+      label: '(not set)',
       value: 5,
       muted: true,
     })
   })
 
-  // Muted, it can't be clicked into a `$pathname = $others` filter that matches nothing.
+  // Muted, it can't be clicked into a `$pathname = (others)` filter that matches nothing.
   it('mutes the overflow past the breakdown limit', () => {
-    expect(rankSessionBreakdown([series('$others', [3])], 10)[0]).toMatchObject({ label: '$others', muted: true })
+    expect(rankSessionBreakdown([series('$others', [3])], 10)[0]).toMatchObject({
+      label: '(others)',
+      muted: true,
+    })
   })
 })

@@ -11,6 +11,7 @@ import {
 import { type ActiveFilter, activeFilterSchema } from '@/components/event-filters/filter-model'
 import { fromProtoFilter, toProtoFilters } from '@/components/event-filters/filter-proto'
 import { propertyValueLabel } from '@/lib/property-values'
+import { OTHERS_LABEL } from './helpers'
 
 export type UserFlowScope = {
   kind: string
@@ -216,7 +217,7 @@ export const sankeyIncompleteReason = ({ droppedLinks, collapsedNodes }: SankeyG
 
 // The overflow bucket is identified by is_others (never by id/label string).
 const nodeLabel = (node: UserFlowNode, property: string) =>
-  node.isOthers ? 'Others' : propertyValueLabel(property, node.label) || node.id
+  node.isOthers ? OTHERS_LABEL : propertyValueLabel(property, node.label) || node.id
 
 // The layout draws every link left-to-right from its source column, so a link that does not
 // advance exactly one step has no sensible geometry: it would run backwards across the columns

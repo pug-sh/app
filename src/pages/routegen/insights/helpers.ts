@@ -12,7 +12,7 @@ import {
 } from '@/api/genproto/shared/insights/v1/insights_pb'
 import type { TimeRange } from '@/components/date-range-picker'
 import { getIndexedColor, getSeriesColor, OTHERS_SERIES_COLOR, type SeriesColor } from '@/lib/event-colors'
-import { propertyValueLabel } from '@/lib/property-values'
+import { emptyValueLabel, propertyValueLabel } from '@/lib/property-values'
 import { tsToDate } from '@/lib/timestamp'
 import { floorToZoneBucket, nextZoneBucket } from '@/lib/timezone'
 import { INSIGHT_TYPES } from './constants'
@@ -173,14 +173,7 @@ export const sortFunnelSteps = (steps: FunnelSeries['steps'], kindOrder: string[
   return kindOrder.map((kind, i) => ({ name: kind || `Step ${i + 1}`, count: byKind.get(kind) ?? 0 }))
 }
 
-// Shown wherever a property value is empty: an event carrying no $utmSource, no $os,
-// and so on. The backend counts those events as a real bucket rather than dropping them,
-// in breakdowns and in top-k alike, so both render this. Deliberately generic: the
-// property decides what "empty" means, and one label serves every key. Resist naming it
-// for one property's story; "(direct)" would be wrong even for $utmSource, whose empty
-// bucket is every untagged visit (app sessions, organic search, untagged referrals),
-// not the referrer-derived direct traffic that name implies.
-export const EMPTY_VALUE_LABEL = '(none)'
+export const OTHERS_LABEL = '(others)'
 
 // A series with no breakdown keys is unsplit: the backend returns exactly one such
 // series when the request asked for no breakdown. That is distinct from a requested
@@ -188,10 +181,15 @@ export const EMPTY_VALUE_LABEL = '(none)'
 // mistaken for the unsplit total.
 export const hasBreakdown = (breakdown: Record<string, string>) => Object.keys(breakdown).length > 0
 
+// A series has no is_others flag (top-k rows and flow nodes do), so its overflow is `$others` in every property.
+export const isOthersBreakdown = (breakdown: Record<string, string>) =>
+  hasBreakdown(breakdown) && Object.values(breakdown).every(value => value === '$others')
+
 export const breakdownLabel = (breakdown: Record<string, string>, fallback: string) => {
   if (!hasBreakdown(breakdown)) return fallback
+  if (isOthersBreakdown(breakdown)) return OTHERS_LABEL
   return Object.entries(breakdown)
-    .map(([property, value]) => (value ? propertyValueLabel(property, value) : EMPTY_VALUE_LABEL))
+    .map(([property, value]) => (value ? propertyValueLabel(property, value) : emptyValueLabel(property)))
     .join(' / ')
 }
 
@@ -218,8 +216,7 @@ export const trendSeriesNames = (trendSeries: TrendSeries[]) => {
 // keeps its event's colour.
 export const trendSeriesColor = (series: TrendSeries, index: number): SeriesColor => {
   if (!hasBreakdown(series.breakdown)) return getSeriesColor(series.eventKind || `Series ${index + 1}`, index)
-  const isOthers = Object.values(series.breakdown).every(value => value === '$others')
-  return isOthers ? OTHERS_SERIES_COLOR : getIndexedColor(index)
+  return isOthersBreakdown(series.breakdown) ? OTHERS_SERIES_COLOR : getIndexedColor(index)
 }
 
 // An insight has no user-given name the way a dashboard tile does, so name it by what it plots.

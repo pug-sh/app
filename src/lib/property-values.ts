@@ -124,6 +124,15 @@ export const labelsPropertyValues = (property: string) => DOMAINS.has(property)
 
 export const propertyValueLabel = (property: string, value: string) => DOMAINS.get(property)?.label(value) ?? value
 
+// Not "(direct)": ingest books a tagged link that sends no referrer under its UTM's channel, and an event with no
+// $url gets no channel at all.
+const EMPTY_VALUE_LABELS = new Map([
+  ['$referrerDomain', '(no referrer)'],
+  ['$referrer', '(no referrer)'],
+])
+
+export const emptyValueLabel = (property: string) => EMPTY_VALUE_LABELS.get(property) ?? '(not set)'
+
 export const knownPropertyValues = (property: string) => DOMAINS.get(property)?.values ?? []
 
 // What a value is found by besides its code. cmdk folds case only, so "turkiye" would miss Türkiye

@@ -5,7 +5,7 @@ import { AggregationType, Granularity } from '@/api/genproto/shared/insights/v1/
 const { query } = vi.hoisted(() => ({ query: vi.fn() }))
 
 // The RPC atom builds a real ConnectRPC client at read time. Swap it for a hand-held fake so a test
-// decides when a query resolves — the only way to observe a tab switch while one is still in flight.
+// decides when a query resolves: the only way to observe a tab switch while one is still in flight.
 vi.mock('@/api/rpc', async () => {
   const { atom } = await import('jotai')
   return { insightsRPCAtom: atom({ query }) }
@@ -27,8 +27,8 @@ import type { BreakdownPanelConfig } from './traffic-breakdown-panel'
 
 const { TrafficBreakdownPanel } = await import('./traffic-breakdown-panel')
 
-// Two `property` tabs, which is the case that breaks: they share `source: 'property'`, so the rows
-// memo's deps can't tell them apart. No `valueKind`, to keep flag/brand icon assets out of the render.
+// Two `property` tabs, which is the case that breaks: both read a topK result, so the previous tab's rows
+// map cleanly under the next one. No `valueKind`, to keep flag/brand icon assets out of the render.
 const CONFIG: BreakdownPanelConfig = {
   title: 'Sources',
   footer: 'by referrer / UTM',
@@ -100,8 +100,21 @@ describe('TrafficBreakdownPanel', () => {
     await waitFor(() => expect(screen.getByText('No data')).toBeTruthy())
   })
 
+  it("names each tab's empty bucket for that tab's property", async () => {
+    const settleReferrer = deferredQuery()
+    renderPanel()
+    await settleReferrer('referrer.example', '')
+    await waitFor(() => expect(screen.getByText('(no referrer)')).toBeTruthy())
+
+    const settleSource = deferredQuery()
+    fireEvent.click(screen.getByRole('button', { name: 'Source' }))
+    await settleSource('newsletter', '')
+    await waitFor(() => expect(screen.getByText('(not set)')).toBeTruthy())
+    expect(screen.queryByText('(no referrer)')).toBeNull()
+  })
+
   // The regression: useDebouncedQuery deliberately retains `data` across a key change, so on switching
-  // Referrer -> Source the previous tab's rows stayed rendered under the new tab — and stayed clickable,
+  // Referrer -> Source the previous tab's rows stayed rendered under the new tab, and stayed clickable,
   // with onRowClick already pointing at $utmSource. One click filed a referrer domain as a UTM source.
   it("drops the previous tab's rows while the new tab's query is in flight", async () => {
     const settleReferrer = deferredQuery()

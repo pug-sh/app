@@ -8,9 +8,9 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { CRAWLER_CATEGORY_PROPERTY, CRAWLER_REQUEST_EVENT, STATUS_CODE_PROPERTY } from '@/lib/crawlers'
 import { compactNumber } from '@/lib/format'
 import { autoGranularity } from '@/lib/granularity'
-import { propertyValueLabel } from '@/lib/property-values'
+import { emptyValueLabel, propertyValueLabel } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
-import { EMPTY_VALUE_LABEL } from '../insights/helpers'
+import { isOthersBreakdown, OTHERS_LABEL } from '../insights/helpers'
 import {
   buildAiVisitsBreakdownQuery,
   buildAiVisitsQuery,
@@ -155,15 +155,17 @@ const CrawlerPagesPanel = ({
 
   // One page can fail with more than one status, so a problem row is keyed by both.
   const rows = useMemo<PageRow[]>(() => {
-    if (result.case === 'topK') return topKToRankedRows(result.value.rows)
+    const emptyLabel = emptyValueLabel('$pathname')
+    if (result.case === 'topK') return topKToRankedRows(result.value.rows, emptyLabel)
     if (result.case !== 'trends') return []
     return result.value.series
       .map(series => {
         const path = series.breakdown.$pathname ?? ''
         const status = series.breakdown[STATUS_CODE_PROPERTY] ?? ''
         const value = series.points.reduce((sum, point) => sum + point.value, 0)
-        const muted = path === '$others' || !path
-        return { key: `${path}\u0000${status}`, label: path || EMPTY_VALUE_LABEL, value, muted, status }
+        const others = isOthersBreakdown(series.breakdown)
+        const label = others ? OTHERS_LABEL : path || emptyLabel
+        return { key: `${path}\u0000${status}`, label, value, muted: others || !path, status }
       })
       .sort((a, b) => b.value - a.value)
   }, [result])

@@ -60,10 +60,6 @@ describe('PieChart', () => {
     expect(screen.getByRole('img', { name: 'loaded: 30 (71.4%)' })).toBeTruthy()
   })
 
-  it('humanizes the server Others label', () => {
-    expect(buildPieSlices(data, ['$others'], COLORS, [AggregationType.TOTAL])[0]?.name).toBe('Others')
-  })
-
   it('omits collision-prone labels for small slices without hiding their accessible name', () => {
     render(
       <PieChart

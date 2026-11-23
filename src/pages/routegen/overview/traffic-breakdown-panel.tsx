@@ -9,7 +9,7 @@ import type { ActiveFilter } from '@/components/event-filters/filter-model'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { BRAND_ICON_RESOLVERS, type BrandValueKind } from '@/lib/brand-icons'
-import { COUNTRY_PROPERTY, propertyValueLabel } from '@/lib/property-values'
+import { COUNTRY_PROPERTY, emptyValueLabel, propertyValueLabel } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
 import { OverviewTileShell } from './overview-tile-shell'
 import { type RankedRow, rankSessionBreakdown, topKToRankedRows } from './traffic-breakdown'
@@ -232,8 +232,8 @@ export const TrafficBreakdownPanel = ({
     if (tab.source === 'session') {
       return result.case === 'trends' ? rankSessionBreakdown(result.value.series, SESSION_BREAKDOWN_LIMIT) : []
     }
-    return result.case === 'topK' ? topKToRankedRows(result.value.rows) : []
-  }, [tab.source, result])
+    return result.case === 'topK' ? topKToRankedRows(result.value.rows, emptyValueLabel(selfProperty ?? '')) : []
+  }, [tab.source, selfProperty, result])
 
   // Nothing fetched yet for this column: an empty list would claim "No data" over a live query.
   const pending = result.case === undefined

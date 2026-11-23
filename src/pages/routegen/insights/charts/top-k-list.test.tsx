@@ -44,6 +44,22 @@ describe('TopKList', () => {
   })
 
   it.each([
+    ['$referrerDomain', '(no referrer)'],
+    ['$utmSource', '(not set)'],
+  ])('names the empty bucket of a %s ranking %s, and the overflow (others)', (property, empty) => {
+    render(
+      <TopKList
+        rows={[row('google'), row(''), create(TopKRowSchema, { value: 2, isOthers: true })]}
+        dimension={TopKQuery_Dimension.PROPERTY}
+        property={property}
+        metric={AggregationType.TOTAL}
+      />,
+    )
+    expect(screen.getByText(empty)).toBeTruthy()
+    expect(screen.getByText('(others)')).toBeTruthy()
+  })
+
+  it.each([
     ['$country', 'US'],
     ['$locale', 'de'],
   ])('leaves event kinds alone when a %s ranking left its property behind', (property, kind) => {

@@ -111,7 +111,7 @@ describe('buildSankeyData', () => {
       result([node('home0', 0, 'home'), node('o1', 1, '$others', true), node('real1', 1, '$others')], []),
     )
 
-    expect(graph.nodes[1]).toMatchObject({ name: 'Others', isOthers: true })
+    expect(graph.nodes[1]).toMatchObject({ name: '(others)', isOthers: true })
     expect(graph.nodes[2]).toMatchObject({ name: '$others', isOthers: false })
   })
 

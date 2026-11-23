@@ -6,6 +6,7 @@ import { OptionChip } from '@/components/option-chip'
 import { cn } from '@/lib/utils'
 import { AGGREGATIONS, NUMERIC_AGGREGATIONS } from './constants'
 import { filterNumericSchema } from './controls'
+import { OTHERS_LABEL } from './helpers'
 import { InsightPropertyChip } from './property-chip'
 import { TOP_K_DIMENSIONS, TOP_K_LIMITS, TOP_K_USER_FORBIDDEN_METRICS, type TopKState } from './top-k'
 
@@ -66,7 +67,7 @@ export const TopKControls = ({
   const numericSchema = useMemo(() => filterNumericSchema(schema), [schema])
 
   const setDimension = (dimension: TopKQuery_Dimension) => {
-    // Switching to USER can leave a forbidden metric selected — reset it.
+    // Switching to USER can leave a forbidden metric selected, so reset it.
     const metricInvalid = dimension === TopKQuery_Dimension.USER && TOP_K_USER_FORBIDDEN_METRICS.has(topK.metric)
     onChange({ ...topK, dimension, metric: metricInvalid ? AGGREGATIONS[0].value : topK.metric })
   }
@@ -115,9 +116,9 @@ export const TopKControls = ({
         onChange={limit => onChange({ ...topK, limit })}
       />
       <TopKToggleChip
-        label="Omit $others"
+        label={`Omit ${OTHERS_LABEL}`}
         checked={topK.omitOthers}
-        title="Drop the trailing $others bucket and show only the top results"
+        title={`Drop the trailing ${OTHERS_LABEL} bucket and show only the top results`}
         onChange={omitOthers => onChange({ ...topK, omitOthers })}
       />
     </>
