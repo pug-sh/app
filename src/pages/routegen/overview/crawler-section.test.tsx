@@ -408,16 +408,33 @@ describe('overview crawler section', () => {
     ])
   })
 
-  it('names a problem with no page as the other tabs do', async () => {
+  it('names a problem with no page, and the overflow, as the other tabs do, and files neither as a filter', async () => {
     query.mockImplementation(async (request: QueryRequest) => {
       if (breakdownsOf(request).join() !== '$pathname,$status_code') return respond(request)
-      return trends([series({ $pathname: '', $status_code: '500' }, 2)])
+      return trends([
+        series({ $pathname: '/old-page', $status_code: '404' }, 5),
+        series({ $pathname: '', $status_code: '500' }, 2),
+        series({ $pathname: '$others', $status_code: '$others' }, 1),
+      ])
     })
     renderSection()
     await screen.findByText('/pricing')
 
     fireEvent.click(screen.getByRole('button', { name: 'Problems' }))
-    expect(await screen.findByText('(none)')).toBeTruthy()
+    expect(await screen.findByRole('button', { name: /\/old-page/ })).toBeTruthy()
+    expect(screen.getByText('(not set)')).toBeTruthy()
+    expect(screen.getByText('(others)')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /\(not set\)|\(others\)/ })).toBeNull()
+  })
+
+  it('names AI visits that sent no referrer as such', async () => {
+    query.mockImplementation(async (request: QueryRequest) => {
+      if (!request.spec?.session || breakdownsOf(request).join() !== '$referrerDomain') return respond(request)
+      return trends([series({ $referrerDomain: 'chatgpt.com' }, 8), series({ $referrerDomain: '' }, 3)])
+    })
+    renderSection()
+
+    expect(await screen.findByText('(no referrer)')).toBeTruthy()
   })
 
   it('scopes the page tabs to what each crawler came for', async () => {

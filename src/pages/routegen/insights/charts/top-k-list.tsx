@@ -7,13 +7,13 @@ import { transitionWithDelay } from '@/components/charts/motion-utils'
 import { getIndexedColor } from '@/lib/event-colors'
 import { compactNumber } from '@/lib/format'
 import { useProjectPrefix } from '@/lib/project-path'
-import { propertyValueLabel } from '@/lib/property-values'
+import { emptyValueLabel, propertyValueLabel } from '@/lib/property-values'
 import { cn } from '@/lib/utils'
 import { resolveIdentity } from '../../profiles/_identity'
-import { EMPTY_VALUE_LABEL } from '../helpers'
+import { OTHERS_LABEL } from '../helpers'
 import { topKShareInfo } from '../top-k'
 
-const OTHERS_HINT = '$others: everything outside the top results, aggregated into a single bucket.'
+const OTHERS_HINT = 'Everything outside the top results, aggregated into a single bucket.'
 const EMPTY_HINT = 'Events carrying no value for this property. Ranked as a real bucket, not an error.'
 
 const formatValue = (value: number) => {
@@ -41,8 +41,8 @@ const ProfileLink = ({ id, className, children }: { id: string; className?: stri
 const RowLabel = ({ row, dimension, property }: { row: TopKRow; dimension: TopKQuery_Dimension; property: string }) => {
   if (row.isOthers) {
     return (
-      <span className="truncate font-mono text-muted-foreground" title={OTHERS_HINT}>
-        $others
+      <span className="block truncate text-muted-foreground" title={OTHERS_HINT}>
+        {OTHERS_LABEL}
       </span>
     )
   }
@@ -72,14 +72,12 @@ const RowLabel = ({ row, dimension, property }: { row: TopKRow; dimension: TopKQ
     )
   }
 
-  // An empty value is a real bucket the backend ranks rather than drops (isOthers is
-  // false on it), and it is routinely the largest row (untagged traffic outweighs any
-  // single $utmSource), so a blank label would leave the top bar unexplained. Muted,
-  // like $others, to read as a marker rather than a literal value.
+  // A real bucket the backend ranks (isOthers is false on it) and often the largest, so it can't render blank.
+  // Muted, like the overflow row, to read as a marker rather than a value.
   if (!row.dimensionValue) {
     return (
       <span className="block truncate text-muted-foreground" title={EMPTY_HINT}>
-        {EMPTY_VALUE_LABEL}
+        {emptyValueLabel(property)}
       </span>
     )
   }
@@ -106,7 +104,10 @@ const CoverageSummary = ({
 }) => {
   const parts = [`Top ${rankedCount}`]
   if (showShare && othersShare !== null) {
-    parts.push(`${((1 - othersShare) * 100).toFixed(1)}% of total`, `${(othersShare * 100).toFixed(1)}% in $others`)
+    parts.push(
+      `${((1 - othersShare) * 100).toFixed(1)}% of total`,
+      `${(othersShare * 100).toFixed(1)}% in ${OTHERS_LABEL}`,
+    )
   } else if (showShare) {
     parts.push('all values shown')
   }

@@ -1,5 +1,5 @@
 import type { TopKRow, TrendSeries } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { breakdownLabel, collapseValues, EMPTY_VALUE_LABEL } from '../insights/helpers'
+import { breakdownLabel, collapseValues, isOthersBreakdown, OTHERS_LABEL } from '../insights/helpers'
 
 // One row of a traffic breakdown list, already resolved to a display label and a single value.
 // Produced from either a top-K result (event-grain) or a collapsed session breakdown (Entry/Exit),
@@ -15,11 +15,11 @@ export type RankedRow = {
 
 // Top-K rows arrive metric-descending with the synthetic $others bucket (flagged by isOthers, not by
 // label) last. Traffic breakdowns only use the PROPERTY and EVENT_KIND dimensions, so there is no profile
-// row to resolve: dimensionValue is the label, with the empty bucket shown as "(none)".
-export const topKToRankedRows = (rows: readonly TopKRow[]) =>
+// row to resolve: dimensionValue is the label. Rows don't name their property, so the caller labels the empty one.
+export const topKToRankedRows = (rows: readonly TopKRow[], emptyLabel: string) =>
   rows.map((row, index) => {
-    if (row.isOthers) return { key: '$__others', label: '$others', value: row.value, muted: true }
-    if (!row.dimensionValue) return { key: `empty-${index}`, label: EMPTY_VALUE_LABEL, value: row.value, muted: true }
+    if (row.isOthers) return { key: '$__others', label: OTHERS_LABEL, value: row.value, muted: true }
+    if (!row.dimensionValue) return { key: `empty-${index}`, label: emptyLabel, value: row.value, muted: true }
     return { key: `${index}-${row.dimensionValue}`, label: row.dimensionValue, value: row.value, muted: false }
   })
 
@@ -30,7 +30,7 @@ export const topKToRankedRows = (rows: readonly TopKRow[]) =>
 export const rankSessionBreakdown = (series: readonly TrendSeries[], limit: number) =>
   series
     .map((entry, index) => {
-      const label = breakdownLabel(entry.breakdown, EMPTY_VALUE_LABEL)
+      const label = breakdownLabel(entry.breakdown, '')
       return {
         key: `${index}-${label}`,
         label,
@@ -38,7 +38,7 @@ export const rankSessionBreakdown = (series: readonly TrendSeries[], limit: numb
           entry.points.map(point => point.value),
           'sum',
         ),
-        muted: label === EMPTY_VALUE_LABEL || Object.values(entry.breakdown).every(value => value === '$others'),
+        muted: Object.values(entry.breakdown).every(value => !value) || isOthersBreakdown(entry.breakdown),
       }
     })
     .sort((a, b) => b.value - a.value)

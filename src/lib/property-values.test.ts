@@ -3,6 +3,7 @@ import { basename, join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   COUNTRY_PROPERTY,
+  emptyValueLabel,
   knownPropertyValues,
   propertyValueKeywords,
   propertyValueLabel,
@@ -46,6 +47,16 @@ describe('propertyValueLabel', () => {
     expect(propertyValueLabel('$crawler_category', 'seo')).toBe('SEO tools')
     expect(propertyValueLabel('$crawler_verified', 'failed')).toBe('Failed IP check')
     expect(propertyValueLabel('$crawler_category', 'ads')).toBe('ads')
+  })
+})
+
+describe('emptyValueLabel', () => {
+  it('calls a blank referrer no referrer, and anything else not set', () => {
+    expect(emptyValueLabel('$referrerDomain')).toBe('(no referrer)')
+    expect(emptyValueLabel('$referrer')).toBe('(no referrer)')
+    expect(emptyValueLabel('$utmSource')).toBe('(not set)')
+    expect(emptyValueLabel('$country')).toBe('(not set)')
+    expect(emptyValueLabel('')).toBe('(not set)')
   })
 })
 

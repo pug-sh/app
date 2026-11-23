@@ -13,10 +13,6 @@ export type PieSlice = {
   color: string
 }
 
-const OTHERS_NAME = 'Others'
-
-const pieName = (name: string) => (name === '$others' ? OTHERS_NAME : name)
-
 export const buildPieSlices = (
   data: ChartPoint[],
   seriesNames: string[],
@@ -27,7 +23,7 @@ export const buildPieSlices = (
     const values = data.map(point => point.values[index] ?? 0)
     const aggregation = aggregations[index] ?? AggregationType.TOTAL
     return {
-      name: pieName(name),
+      name,
       value: collapseValues(values, SERIES_COLLAPSE[aggregation]),
       color: seriesColors[index]?.line ?? 'var(--muted-foreground)',
     }

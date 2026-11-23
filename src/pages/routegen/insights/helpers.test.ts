@@ -28,9 +28,11 @@ import {
   SERIES_COLLAPSE,
   specAggregationResolver,
   trendSeriesColor,
+  trendSeriesNames,
 } from './helpers'
 
-const series = (eventKind: string) => create(TrendSeriesSchema, { eventKind })
+const series = (eventKind: string, breakdown: Record<string, string> = {}) =>
+  create(TrendSeriesSchema, { eventKind, breakdown })
 
 const sessionSpec = (metric: SessionMetric) =>
   create(InsightQuerySpecSchema, {
@@ -393,7 +395,26 @@ describe('breakdownLabel', () => {
     expect(breakdownLabel({ $country: 'IN', $os: 'Linux' }, 'Series 1')).toBe('India / Linux')
     expect(breakdownLabel({ $continent: 'NA', $country: 'NA' }, 'Series 1')).toBe('North America / Namibia')
     expect(breakdownLabel({ $utmSource: 'IN' }, 'Series 1')).toBe('IN')
-    expect(breakdownLabel({ $country: '' }, 'Series 1')).toBe('(none)')
     expect(breakdownLabel({}, 'Series 1')).toBe('Series 1')
+  })
+
+  it('names an empty value for what it means on its property', () => {
+    expect(breakdownLabel({ $referrerDomain: '' }, 'Series 1')).toBe('(no referrer)')
+    expect(breakdownLabel({ $utmSource: '' }, 'Series 1')).toBe('(not set)')
+    expect(breakdownLabel({ $referrerDomain: '', $country: '' }, 'Series 1')).toBe('(no referrer) / (not set)')
+  })
+
+  it('names the overflow once, however many properties the split had', () => {
+    expect(breakdownLabel({ $os: '$others' }, 'Series 1')).toBe('(others)')
+    expect(breakdownLabel({ $os: '$others', $country: '$others' }, 'Series 1')).toBe('(others)')
+  })
+})
+
+describe('trendSeriesNames', () => {
+  it('names the overflow behind an event prefix too', () => {
+    expect(trendSeriesNames([series('page_view', { $os: 'Linux' }), series('signup', { $os: '$others' })])).toEqual([
+      'page_view · Linux',
+      'signup · (others)',
+    ])
   })
 })
