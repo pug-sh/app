@@ -5,6 +5,7 @@ import { initAnalytics } from './analytics/pug'
 import { initSentry } from './analytics/sentry'
 import { demoHandoffUrl } from './auth/demo'
 import { TooltipProvider } from './components/ui/tooltip'
+import { tolerateTranslatedText } from './lib/translated-text'
 import './index.css'
 
 const checkBrowserStorage = () => {
@@ -88,6 +89,7 @@ const demoHandoff = window.location.pathname === '/demo' ? demoHandoffUrl() : nu
 if (demoHandoff) {
   window.location.replace(demoHandoff)
 } else {
+  tolerateTranslatedText()
   createRoot(document.getElementById('root')!, rootOptions).render(
     <StrictMode>
       <ErrorBoundary>

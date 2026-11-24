@@ -77,6 +77,7 @@ export const DeltaBadge = ({
   const good = lowerIsBetter ? pct <= 0 : pct >= 0
   return (
     <span
+      translate="no"
       className={cn(
         'inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs tabular-nums',
         'font-medium',
