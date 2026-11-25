@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import { GetFilterSchemaResponseSchema } from '@/api/genproto/common/v1/filter_schema_pb'
+import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
 import { buildTemplateContext, TILE_TEMPLATES } from './templates'
 
 const schemaWith = (...events: [string, number][]) =>
@@ -25,6 +26,17 @@ describe('crawler tile templates', () => {
     for (const id of ['crawler-requests', 'top-crawlers']) {
       const content = TILE_TEMPLATES.find(template => template.id === id)?.build(ctx).content
       expect(content?.case === 'insight' && content.value.spec?.includeBots).toBe(true)
+    }
+  })
+
+  it('count no request that failed its IP check', () => {
+    const ctx = buildTemplateContext(schemaWith(['crawler_request', 5]))
+    for (const id of ['crawler-requests', 'top-crawlers']) {
+      const content = TILE_TEMPLATES.find(template => template.id === id)?.build(ctx).content
+      const spec = content?.case === 'insight' ? content.value.spec : undefined
+      expect((spec?.topK?.scope ?? spec?.events[0]?.event)?.filters).toMatchObject([
+        { property: '$crawler_verified', operator: FilterOperator.NOT_EQUALS, value: 'failed' },
+      ])
     }
   })
 

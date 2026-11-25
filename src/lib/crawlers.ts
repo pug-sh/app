@@ -1,5 +1,6 @@
-import type { JsonObject, MessageInitShape } from '@bufbuild/protobuf'
-import { FilterOperator } from '@/api/genproto/common/v1/filters_pb'
+import { create, type JsonObject, type MessageInitShape } from '@bufbuild/protobuf'
+import { PropertySource } from '@/api/genproto/common/v1/filter_schema_pb'
+import { EventFilterSchema, FilterOperator, type PropertyFilterSchema } from '@/api/genproto/common/v1/filters_pb'
 import type { InsightQuerySpecSchema } from '@/api/genproto/shared/insights/v1/insights_pb'
 import { structGet } from './struct'
 
@@ -17,6 +18,21 @@ export const CRAWLER_COMPANY_PROPERTY = '$crawler_company'
 export const CRAWLER_CATEGORY_PROPERTY = '$crawler_category'
 export const CRAWLER_VERIFIED_PROPERTY = '$crawler_verified'
 export const STATUS_CODE_PROPERTY = '$status_code'
+
+// A failed IP check means the name can't be trusted, so the request counts as no crawler.
+export const crawlerRequestScope = (filters: MessageInitShape<typeof PropertyFilterSchema>[] = []) =>
+  create(EventFilterSchema, {
+    kind: CRAWLER_REQUEST_EVENT,
+    filters: [
+      {
+        property: CRAWLER_VERIFIED_PROPERTY,
+        source: PropertySource.AUTO,
+        operator: FilterOperator.NOT_EQUALS,
+        value: 'failed',
+      },
+      ...filters,
+    ],
+  })
 
 // Search engines and SEO tools from the crawler-user-agents list carry no company.
 export const crawlerOf = (auto: JsonObject | undefined) => ({

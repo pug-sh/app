@@ -76,6 +76,17 @@ const series = (breakdown: Record<string, string>, value: number) => ({
 const trends = (list: ReturnType<typeof series>[]) =>
   create(QueryResponseSchema, { result: { case: 'trends', value: { series: list } } })
 
+const verdicts = (counts: Record<string, number>) =>
+  trends(Object.entries(counts).map(([verdict, requests]) => series({ $crawler_verified: verdict }, requests)))
+const isChecks = (request: QueryRequest) => breakdownsOf(request).join(',') === '$crawler_verified'
+const agentRows = (agents: typeof AGENTS) =>
+  trends(
+    agents.map(row =>
+      series({ $bot_reason: row.agent, $crawler_company: row.company, $crawler_category: row.purpose }, row.requests),
+    ),
+  )
+const CDN_LINE = /^Every IP check failed:/
+
 const respond = (request: QueryRequest) => {
   const spec = request.spec
   if (spec?.insightType === InsightType.SEGMENTATION) {
@@ -83,24 +94,17 @@ const respond = (request: QueryRequest) => {
     return create(QueryResponseSchema, { result: { case: 'segmentation', value: { total } } })
   }
   if (spec?.insightType === InsightType.TOP_K) {
-    const rows =
-      spec.topK?.property === '$bot_reason'
-        ? [{ dimensionValue: 'GPTBot', value: 10 }]
-        : [
-            { dimensionValue: '/pricing', value: 18 },
-            { dimensionValue: '/docs/install', value: 9 },
-          ]
+    const rows = [
+      { dimensionValue: '/pricing', value: 18 },
+      { dimensionValue: '/docs/install', value: 9 },
+    ]
     return create(QueryResponseSchema, { result: { case: 'topK', value: { rows } } })
   }
   const by = breakdownsOf(request).join(',')
+  if (by === '$crawler_verified') return verdicts({ verified: 79 })
   if (spec?.session && by === '$referrerDomain')
     return trends([series({ $referrerDomain: 'chatgpt.com' }, 8), series({ $referrerDomain: 'perplexity.ai' }, 4)])
-  if (by === '$bot_reason,$crawler_company,$crawler_category')
-    return trends(
-      AGENTS.map(row =>
-        series({ $bot_reason: row.agent, $crawler_company: row.company, $crawler_category: row.purpose }, row.requests),
-      ),
-    )
+  if (by === '$bot_reason,$crawler_company,$crawler_category') return agentRows(AGENTS)
   if (by === '$bot_reason,$status_code')
     return trends([
       series({ $bot_reason: 'ClaudeBot', $status_code: '403' }, 30),
@@ -109,6 +113,12 @@ const respond = (request: QueryRequest) => {
   if (by === '$pathname,$status_code') return trends([series({ $pathname: '/old-page', $status_code: '404' }, 5)])
   return trends([series({}, 44)])
 }
+
+const answerChecks = (counts: Record<string, number>) =>
+  query.mockImplementation(async (request: QueryRequest) => {
+    if (isChecks(request) && request.spec?.insightType === InsightType.TRENDS) return verdicts(counts)
+    return respond(request)
+  })
 
 // `nav: null` is a project that sends no page views.
 const renderSection = ({ hasRequests = true, reportsStatusCodes = true, nav = 'page_view' as string | null } = {}) =>
@@ -327,28 +337,110 @@ describe('overview crawler section', () => {
     expect(keyWarnings.mock.calls.some(call => String(call[0]).includes('same key'))).toBe(false)
   })
 
-  // A collector behind a CDN reports the CDN's address, which fails every check a crawler gets.
-  it('says when every request from a crawler failed its check', async () => {
-    query.mockImplementation(async (request: QueryRequest) => {
-      if (request.spec?.topK?.property !== '$bot_reason') return respond(request)
-      const rows = [{ dimensionValue: 'GPTBot', value: 68 }]
-      return create(QueryResponseSchema, { result: { case: 'topK', value: { rows } } })
-    })
+  it('counts a request that failed its IP check as no crawler', async () => {
     renderSection()
     await crawlerTable()
+    fireEvent.click(screen.getByRole('button', { name: 'Problems' }))
+    await screen.findByText('/old-page')
 
-    expect(await screen.findByText(/^Every GPTBot request failed OpenAI's IP check/)).toBeTruthy()
+    const counted = requests().filter(request => scopeOf(request)?.kind === 'crawler_request' && !isChecks(request))
+    expect(counted.some(request => breakdownsOf(request).join() === '$pathname,$status_code')).toBe(true)
+    for (const request of counted) {
+      expect(scopeFilter(request, '$crawler_verified')).toMatchObject({
+        operator: FilterOperator.NOT_EQUALS,
+        value: 'failed',
+      })
+    }
+    expect(
+      requests()
+        .filter(isChecks)
+        .map(request => scopeFilter(request, '$crawler_verified')),
+    ).toMatchObject([{ operator: FilterOperator.IN, values: ['verified', 'failed'] }])
   })
 
-  it('warns about requests that only claimed to be a crawler', async () => {
+  it('lists failed IP checks in one last row, and suspects no CDN while any passed', async () => {
+    answerChecks({ verified: 79, failed: 500 })
     renderSection()
-    await crawlerTable()
+    const table = await crawlerTable()
 
-    expect(await screen.findByText("10 requests claimed to be GPTBot but failed OpenAI's IP check")).toBeTruthy()
-    const impostors = requests().filter(request => request.spec?.topK?.property === '$bot_reason')
-    expect(impostors.map(request => scopeFilter(request, '$crawler_verified'))).toMatchObject([
-      { operator: FilterOperator.EQUALS, value: 'failed' },
-    ])
+    const row = (await within(table).findByText('Failed IP check')).closest('tr') as HTMLElement
+    expect(within(row).getByText('500')).toBeTruthy()
+    expect(within(row).queryByRole('button')).toBeNull()
+    expect(table.querySelector('tbody tr:last-child')).toBe(row)
+    expect(screen.queryByText(CDN_LINE)).toBeNull()
+  })
+
+  // Crawlers whose operators publish no address ranges still fill the table.
+  it('suspects a CDN when no request passed its IP check', async () => {
+    answerChecks({ failed: 68 })
+    renderSection()
+    const table = await crawlerTable()
+
+    expect(await screen.findByText(CDN_LINE)).toBeTruthy()
+    expect(within(table).getByText('Failed IP check')).toBeTruthy()
+  })
+
+  it('draws no failed row or CDN line when no request was checked', async () => {
+    answerChecks({})
+    renderSection()
+    const table = await crawlerTable()
+
+    expect(within(table).queryByText('Failed IP check')).toBeNull()
+    expect(screen.queryByText(CDN_LINE)).toBeNull()
+  })
+
+  it('says when the IP checks could not be loaded, and retries them', async () => {
+    let fail = true
+    query.mockImplementation(async (request: QueryRequest) => {
+      if (!isChecks(request)) return respond(request)
+      if (fail) throw new Error('unavailable')
+      return verdicts({ verified: 79, failed: 10 })
+    })
+    renderSection()
+    const table = await crawlerTable()
+
+    expect(await screen.findByText(/Couldn't load error counts or IP checks/)).toBeTruthy()
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(await within(table).findByText('Failed IP check')).toBeTruthy()
+    expect(screen.queryByText(/Couldn't load/)).toBeNull()
+  })
+
+  it('waits for the IP checks before calling a period empty, and retries them', async () => {
+    const checks: ((fail: boolean) => void)[] = []
+    query.mockImplementation(async (request: QueryRequest) => {
+      if (breakdownsOf(request).join(',') === '$bot_reason,$crawler_company,$crawler_category') return agentRows([])
+      if (!isChecks(request)) return respond(request)
+      if (await new Promise<boolean>(resolve => checks.push(resolve))) throw new Error('unavailable')
+      return verdicts({ failed: 68 })
+    })
+    renderSection()
+    await screen.findByText('/pricing')
+    await waitFor(() => expect(checks).toHaveLength(1))
+    expect(screen.queryByText('No crawler requests in this period')).toBeNull()
+
+    checks[0](true)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(checks).toHaveLength(2))
+    checks[1](false)
+    expect(await screen.findByText('Failed IP check')).toBeTruthy()
+    expect(screen.getByText(CDN_LINE)).toBeTruthy()
+  })
+
+  it('scopes the IP checks to a clicked page, not a clicked crawler, and suspects a CDN only site-wide', async () => {
+    query.mockImplementation(async (request: QueryRequest) => {
+      if (!isChecks(request)) return respond(request)
+      return verdicts(sectionFilters(request)?.length ? { failed: 3 } : { verified: 79, failed: 10 })
+    })
+    renderSection()
+    const table = await crawlerTable()
+    fireEvent.click(crawlerButton('GPTBot'))
+    fireEvent.click(await screen.findByRole('button', { name: /\/pricing/ }))
+
+    const failedRow = () => within(table).getByText('Failed IP check').closest('tr') as HTMLElement
+    await waitFor(() => expect(within(failedRow()).getByText('3')).toBeTruthy())
+    expect(sectionFilters(requests().filter(isChecks).at(-1) as QueryRequest)).toEqual([['$pathname', '/pricing']])
+    expect(screen.queryByText(CDN_LINE)).toBeNull()
   })
 
   it('filters the rest of the section by a clicked crawler', async () => {

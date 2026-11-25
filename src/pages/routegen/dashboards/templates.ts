@@ -21,7 +21,12 @@ import {
   TopKQuery_Dimension,
   TopKQuerySchema,
 } from '@/api/genproto/shared/insights/v1/insights_pb'
-import { CRAWLER_CATEGORY_PROPERTY, CRAWLER_NAME_PROPERTY, CRAWLER_REQUEST_EVENT } from '@/lib/crawlers'
+import {
+  CRAWLER_CATEGORY_PROPERTY,
+  CRAWLER_NAME_PROPERTY,
+  CRAWLER_REQUEST_EVENT,
+  crawlerRequestScope,
+} from '@/lib/crawlers'
 import { type Bindings, composeFunnelSteps, pickBindings } from '../overview/tile-bindings'
 import { BREAKDOWN_RESPONSE_LIMIT } from './constants'
 
@@ -247,7 +252,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
               insightType: InsightType.TRENDS,
               events: [
                 create(EventQuerySchema, {
-                  event: create(EventFilterSchema, { kind: CRAWLER_REQUEST_EVENT }),
+                  event: crawlerRequestScope(),
                   aggregation: AggregationType.TOTAL,
                 }),
               ],
@@ -279,7 +284,7 @@ const TILE_TEMPLATES_BY_ID: Record<TileTemplateId, TileTemplate> = {
               topK: create(TopKQuerySchema, {
                 dimension: TopKQuery_Dimension.PROPERTY,
                 property: CRAWLER_NAME_PROPERTY,
-                scope: create(EventFilterSchema, { kind: CRAWLER_REQUEST_EVENT }),
+                scope: crawlerRequestScope(),
                 metric: AggregationType.TOTAL,
                 limit: 10,
               }),

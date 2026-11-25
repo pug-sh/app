@@ -22,6 +22,7 @@ import {
   CRAWLER_NAME_PROPERTY,
   CRAWLER_REQUEST_EVENT,
   CRAWLER_VERIFIED_PROPERTY,
+  crawlerRequestScope,
   STATUS_CODE_PROPERTY,
 } from '@/lib/crawlers'
 import { AI_CHANNEL, AI_REFERRER_DOMAINS, AI_UTM_SOURCES } from './ai-referrers'
@@ -39,18 +40,20 @@ const PAGE_LIMIT = 50
 const crawlerQuery = (spec: MessageInitShape<typeof InsightQuerySpecSchema>) =>
   create(QueryRequestSchema, { spec: { ...spec, includeBots: true } })
 
-const crawlerScope = (filters: ActiveFilter[] = []) =>
-  create(EventFilterSchema, { kind: CRAWLER_REQUEST_EVENT, filters: toProtoFilters(filters) })
-
 const autoFilter = (property: string, operator: FilterOperator, value: string | string[]) =>
   createFilter(property, PropertySource.AUTO, operator, value)
 
 const purposeIs = (purpose: CrawlerPurpose) => autoFilter(CRAWLER_CATEGORY_PROPERTY, FilterOperator.EQUALS, purpose)
 const anError = () => autoFilter(STATUS_CODE_PROPERTY, FilterOperator.GTE, '400')
 
-const requests = (filters: ActiveFilter[] = []) => [
-  create(EventQuerySchema, { event: crawlerScope(filters), aggregation: AggregationType.TOTAL }),
+const anyRequest = (filters: ActiveFilter[]) =>
+  create(EventFilterSchema, { kind: CRAWLER_REQUEST_EVENT, filters: toProtoFilters(filters) })
+const crawlerScope = (filters: ActiveFilter[]) => crawlerRequestScope(toProtoFilters(filters))
+
+const total = (event: ReturnType<typeof anyRequest>) => [
+  create(EventQuerySchema, { event, aggregation: AggregationType.TOTAL }),
 ]
+const requests = (filters: ActiveFilter[] = []) => total(crawlerScope(filters))
 
 const breakdowns = (...properties: string[]) => properties.map(property => create(BreakdownSchema, { property }))
 
@@ -60,7 +63,7 @@ export const buildCrawlerPurposeQuery = (
   filters: readonly ActiveFilter[],
 ) => crawlerQuery({ insightType, events: requests([purposeIs(purpose)]), ...filterGroupFields(filters) })
 
-// A crawler has one company and one purpose, so splitting by them too costs no rows and gives each row both.
+// A crawler has one company and nearly always one purpose, so splitting by them too gives each row both.
 export const buildCrawlerAgentsQuery = (filters: readonly ActiveFilter[]) =>
   crawlerQuery({
     insightType: InsightType.TRENDS,
@@ -79,18 +82,12 @@ export const buildCrawlerErrorsQuery = (filters: readonly ActiveFilter[]) =>
     ...filterGroupFields(filters),
   })
 
-// Requests that named a crawler but came from outside the addresses its operator publishes.
-export const buildCrawlerImpostorsQuery = (filters: readonly ActiveFilter[]) =>
+// Verified too, so the table can suspect a CDN only when nothing passed.
+export const buildCrawlerChecksQuery = (filters: readonly ActiveFilter[]) =>
   crawlerQuery({
-    insightType: InsightType.TOP_K,
-    topK: create(TopKQuerySchema, {
-      dimension: TopKQuery_Dimension.PROPERTY,
-      property: CRAWLER_NAME_PROPERTY,
-      scope: crawlerScope([autoFilter(CRAWLER_VERIFIED_PROPERTY, FilterOperator.EQUALS, 'failed')]),
-      metric: AggregationType.TOTAL,
-      limit: 3,
-      omitOthers: true,
-    }),
+    insightType: InsightType.TRENDS,
+    events: total(anyRequest([autoFilter(CRAWLER_VERIFIED_PROPERTY, FilterOperator.IN, ['verified', 'failed'])])),
+    breakdowns: breakdowns(CRAWLER_VERIFIED_PROPERTY),
     ...filterGroupFields(filters),
   })
 
