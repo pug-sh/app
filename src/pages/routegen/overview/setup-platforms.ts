@@ -37,7 +37,7 @@ const DOCS_BASE = 'https://docs.pug.sh/sdks'
 // Web tab's unpinned `npm install` drifts ahead of it. Unlike sdk-web, nothing here gates this
 // version against the SDK release, so the bump is manual. Pre-1.0 pins the exact version; at 1.0
 // this becomes a rolling `v1` alias.
-const PUG_CDN_VERSION = 'v0.1.5'
+const PUG_CDN_VERSION = 'v0.1.8'
 const PUG_CDN_URL = `https://cdn.pugs.dev/${PUG_CDN_VERSION}/pug.min.js`
 
 // Gradle can't add a dependency without naming a version, unlike npm/pub/bundle, so bump this on
