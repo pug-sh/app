@@ -52,9 +52,9 @@ export const SummaryStats = ({
         const collapse = SERIES_COLLAPSE[aggregation]
         const headline = collapseValues(vals, collapse)
 
-        // Which two figures give the headline context isn't derivable from the collapse rule — an
+        // Which two figures give the headline context isn't derivable from the collapse rule: an
         // averaged headline wants different neighbours depending on whether it averages counts of
-        // people or averages of averages — so it stays a ladder. AVG is checked ahead of the
+        // people or averages of averages, so it stays a ladder. AVG is checked ahead of the
         // collapse it shares with the user counts.
         let stats: DetailStat[] = [
           { label: 'avg', value: compactNumber(Math.round(avg)) },
@@ -103,7 +103,7 @@ export const SummaryStats = ({
               )}
               <p
                 className={cn(
-                  'whitespace-nowrap leading-tight tracking-tight tabular-nums text-foreground',
+                  'whitespace-nowrap tracking-tight tabular-nums text-foreground',
                   'font-medium',
                   compact ? 'text-lg' : 'text-[22px]',
                 )}
